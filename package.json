@@ -1,0 +1,21 @@
+{
+  "name": "fohow-interactive-board",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Интерактивная доска (лицензии/линии): React-оболочка + Vanilla TS рендерер",
+  "author": "sergeyxmao",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@9.12.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "pnpm -C apps/web dev",
+    "build": "pnpm -C apps/web build",
+    "preview": "pnpm -C apps/web preview",
+    "test": "echo \"(todo) tests\"",
+    "lint": "echo \"(todo) eslint\"",
+    "format": "echo \"(todo) prettier\""
+  }
+}

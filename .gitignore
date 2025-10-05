@@ -1,0 +1,33 @@
+# зависимости
+node_modules/
+.pnp.cjs
+.pnp.loader.mjs
+
+# сборки и кэш
+dist/
+build/
+.cache/
+.temp/
+.vite/
+coverage/
+
+# IDE / ОС
+.vscode/*.log
+.DS_Store
+Thumbs.db
+
+# env / локальные файлы
+*.local
+.env
+.env.*
+!.env.example
+
+# тестовые снимки
+*.snap
+
+# лог-файлы
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
