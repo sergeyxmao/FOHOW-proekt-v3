@@ -1,8 +1,8 @@
-import { projectStore } from "../state/projectStore.js";
+import { projectStore } from "./state/projectStore.js";
 
 export function mountCanvas() {
   const app = document.getElementById("app");
-  app.innerHTML = ""; // очищаем всё (раньше там была стартовая карточка)
+  app.innerHTML = "";
 
   const stage = document.createElement("div");
   stage.className = "stage";
@@ -15,15 +15,13 @@ export function mountCanvas() {
   svg.setAttribute("id", "svg-layer");
   svg.setAttribute("width", "100%");
   svg.setAttribute("height", "100%");
-  svg.setAttribute("viewBox", "0 0 100 100"); // пока заглушка
+  svg.setAttribute("viewBox", "0 0 100 100");
 
   const hint = document.createElement("div");
   hint.className = "canvas-hint";
   hint.innerHTML = `
     <b>M2 — Макет готов.</b><br/>
-    Слева — рабочая панель (Сохранить/Загрузить, сетка, режимы).<br/>
-    На M3 добавим панорамирование, зум к курсору, направляющие.<br/>
-    На M4+ появятся карточки, связи и расчёты.
+    Слева — панель (💾 📂 ▦ …). На M3 добавим пан/зум и направляющие.
   `;
 
   stage.appendChild(canvas);
@@ -31,7 +29,7 @@ export function mountCanvas() {
   stage.appendChild(hint);
   app.appendChild(stage);
 
-  // Подписка на изменения холста (сетка)
+  // Обновление сетки по state
   projectStore.subscribe((topic) => {
     if (topic === "canvas:changed") {
       canvas.classList.toggle("grid-on", projectStore.getState().canvas.grid);
