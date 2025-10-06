@@ -1,0 +1,109 @@
+/* ===== Макет приложения ===== */
+.layout {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 240px 1fr 280px;
+  grid-template-rows: 1fr;
+  gap: 0;
+}
+
+.panel {
+  padding: 12px;
+  overflow: auto;
+  background: rgba(255,255,255,0.02);
+}
+
+.panel-left {
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+.panel-right {
+  border-left: 1px solid rgba(255,255,255,0.08);
+}
+
+.center {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ===== Холст ===== */
+.stage {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+}
+.stage.grid-on {
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0, rgba(255,255,255,0.06) 1px, transparent 1px, transparent 70px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.06) 0, rgba(255,255,255,0.06) 1px, transparent 1px, transparent 70px);
+}
+
+.canvas, .svg-layer {
+  position: absolute;
+  inset: 0;
+}
+.svg-layer {
+  pointer-events: none;
+}
+
+/* ===== Панели: группы и кнопки ===== */
+.panel-title {
+  font-weight: 700;
+  opacity: 0.9;
+  margin: 4px 2px 10px;
+}
+
+.panel-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px dashed rgba(255,255,255,0.08);
+}
+.panel-group:first-of-type { border-top: 0; padding-top: 0; }
+
+.tool-btn, .panel a.tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  min-width: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.03);
+  color: var(--fg);
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  font-size: 13px;
+}
+.tool-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.tool-btn[data-active="1"] {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.25);
+}
+
+/* ===== Поля справа ===== */
+.field {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+.field > span {
+  font-size: 12px;
+  opacity: 0.8;
+}
+.field input[type="range"],
+.field input[type="color"],
+.field select {
+  width: 100%;
+  background: #0b1220;
+  border: 1px solid #374151;
+  border-radius: 10px;
+  color: var(--fg);
+  padding: 6px 8px;
+}
