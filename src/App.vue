@@ -5,12 +5,18 @@ import ControlPanel from './components/Panels/ControlPanel.vue'
 import RightPanel from './components/Panels/RightPanel.vue'
 
 const isModernTheme = ref(false)
+const isLeftPanelCollapsed = ref(false)  
 
 function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
 }
 
 watchEffect(() => {
+
+function toggleLeftPanel() {
+  isLeftPanelCollapsed.value = !isLeftPanelCollapsed.value
+}
+  
   document.body.classList.toggle('theme-modern', isModernTheme.value)
 })  
 </script>
@@ -18,8 +24,22 @@ watchEffect(() => {
 <template>
   <div id="app" :class="{ 'theme-modern': isModernTheme }">
     <!-- Левая панель -->
-    <div class="ui-panel-left">
-      <ControlPanel :is-modern-theme="isModernTheme" @toggle-theme="toggleTheme" />
+    <div
+      :class="[
+        'ui-panel-left',
+        {
+          collapsed: isLeftPanelCollapsed,
+          'ui-panel-left--modern': isModernTheme,
+          'ui-panel-left--classic': !isModernTheme
+        }
+      ]"
+    >
+      <ControlPanel
+        :is-modern-theme="isModernTheme"
+        :is-collapsed="isLeftPanelCollapsed"
+        @toggle-theme="toggleTheme"
+        @toggle-collapse="toggleLeftPanel"
+      />
     </div>
 
     <!-- Правая панель -->
@@ -61,16 +81,27 @@ html,body{
 
 /* Панели */
 .ui-panel-left{
-  position:fixed; top:20px; left:20px; z-index:2000;
-  display:flex; align-items:center; gap:8px;
+  position: fixed;
+  top: 20px;
+  left: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 20px;
   background: var(--panel);
-  padding:6px 8px; border-radius: var(--radius); box-shadow: var(--shadow);
+  border-radius: 0 24px 24px 0;
+  box-shadow: var(--shadow);
+  transition: top .3s ease, transform .3s ease, padding .3s ease;}
+
+.ui-panel-left--classic {
+  gap: 16px;
 }
-.ui-panel-left.collapsed{
-  padding-right:6px;
-}
-.ui-panel-left.collapsed .ui-btn:not(#undo-btn):not(#redo-btn):not(.ui-panel-toggle){
-  display:none;
+
+.ui-panel-left.collapsed {
+  top: 16px;
+  transform: none !important;
+  padding: 16px 20px;
 }
 /* Canvas/SVG */
 #canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
@@ -92,23 +123,27 @@ body.theme-modern {
   color: #f4f7fb;
 }
 
-.theme-modern .ui-panel-left{
-  top:50%;
-  left:32px;
+
+.ui-panel-left--modern {
+  top: 50%;
   transform: translateY(-50%);
-  flex-direction: column;
   align-items: stretch;
-  padding: 24px 16px;
-  gap: 18px;
-  width: 88px;
-  min-height: 400px;
-  border-radius: 26px;
+  padding: 28px 26px;
+  width: 220px;
+  min-height: 420px;
+  border-radius: 0 32px 32px 0;
   background: linear-gradient(190deg, rgba(19,25,38,0.95) 0%, rgba(9,14,24,0.96) 100%);
-  box-shadow: 0 20px 40px rgba(5, 8, 14, 0.65);
+  box-shadow: 0 24px 48px rgba(5, 8, 14, 0.68);
 }
 
-.theme-modern .ui-panel-left.collapsed{
-  padding-right: 16px;
+.ui-panel-left--modern.collapsed {
+  width: auto;
+  min-height: auto;
+  padding: 20px 24px;
+  background: linear-gradient(190deg, rgba(19,25,38,0.92) 0%, rgba(9,14,24,0.94) 100%);}
+
+.ui-panel-left.collapsed.ui-panel-left--modern {
+  top: 16px;
 }
 
 .theme-modern #canvas{
@@ -116,7 +151,7 @@ body.theme-modern {
   top: 32px;
   right: 32px;
   bottom: 32px;
-  left: 128px;  
+  left: 240px;  
   background: rgba(255,255,255,0.45);
   border-radius: 28px;
   box-shadow: 0 28px 48px rgba(6, 11, 21, 0.22);
