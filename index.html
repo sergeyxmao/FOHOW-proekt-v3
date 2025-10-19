@@ -5,17 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="./favicon.ico">
   <title>Интерактивная доска FOHOW</title>
+  <link rel="stylesheet" href="./assets/css/global.css">
+  <link rel="stylesheet" href="./assets/css/layout.css">
+  <link rel="stylesheet" href="./assets/css/ui.css">
+  <link rel="stylesheet" href="./assets/css/auth.css">
 </head>
 <body>
-  <div id="app"></div>
-  <script type="importmap">
-    {
-      "imports": {
-        "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js",
-        "pinia": "https://unpkg.com/pinia@2/dist/pinia.esm-browser.js"
-      }
-    }
-  </script>
-  <script type="module" src="./src/main.js"></script>
+  <div id="app" class="app">
+    <div class="card" id="boot-hint">
+      <h1>Загрузка интерактивной доски…</h1>
+      <p>Если экран долго пустой, убедитесь, что JavaScript включён и обновите страницу.</p>
+    </div>
+  </div>
+  <script type="module" src="./assets/js/main.js"></script>
 </body>
 </html>
