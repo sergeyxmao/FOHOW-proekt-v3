@@ -3,6 +3,15 @@ import { ref } from 'vue'
 import { useCardsStore } from '../../stores/cards.js'
 import { useHistoryStore } from '../../stores/history.js'
 
+const props = defineProps({
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  }
+})
+
+const emit = defineEmits(['toggle-theme'])
+  
 const cardsStore = useCardsStore()
 const historyStore = useHistoryStore()
 
@@ -105,8 +114,15 @@ const handleToggleGuides = () => {
 </script>
 
 <template>
-  <div class="left-panel-controls">
-    <button class="ui-btn" title="Отменить (Ctrl+Z)" @click="handleUndo" :disabled="!historyStore.canUndo">↶</button>
+  <div :class="['left-panel-controls', { 'left-panel-controls--modern': props.isModernTheme }]">
+    <button
+      class="ui-btn theme-toggle"
+      type="button"
+      :title="props.isModernTheme ? 'Вернуться к классическому интерфейсу' : 'Включить новый интерфейс'"
+      @click="emit('toggle-theme')"
+    >
+      <span class="theme-toggle__icon" aria-hidden="true"></span>
+    </button>    <button class="ui-btn" title="Отменить (Ctrl+Z)" @click="handleUndo" :disabled="!historyStore.canUndo">↶</button>
     <button class="ui-btn" title="Повторить (Ctrl+Shift+Z)" @click="handleRedo" :disabled="!historyStore.canRedo">↷</button>
 
     <button class="ui-btn ui-panel-toggle" title="Свернуть панель" aria-expanded="true">❮</button>
@@ -132,4 +148,74 @@ const handleToggleGuides = () => {
   align-items: center;
   gap: 8px;
 }
+
+.left-panel-controls--modern {
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.theme-toggle {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(160deg, rgba(89, 208, 255, 0.18) 0%, rgba(89, 208, 255, 0.05) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: transform .25s ease, box-shadow .25s ease, background .25s ease;
+}
+
+.theme-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(17, 203, 255, 0.35);
+}
+
+.left-panel-controls:not(.left-panel-controls--modern) .theme-toggle {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(15,98,254,0.12), rgba(15,98,254,0.22));
+}
+
+.theme-toggle__icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  margin: 0 auto;
+  position: relative;
+  background: radial-gradient(circle at 30% 30%, #59d0ff 0%, #11cbff 45%, rgba(17,203,255,0.2) 70%, transparent 100%);
+}
+
+.left-panel-controls:not(.left-panel-controls--modern) .theme-toggle__icon {
+  background: radial-gradient(circle at 30% 30%, #0f62fe 0%, rgba(15,98,254,0.55) 60%, transparent 100%);
+}
+
+.left-panel-controls--modern .ui-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: rgba(28, 38, 58, 0.75);
+  color: #e5f3ff;
+  border: 1px solid rgba(96, 164, 255, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(89, 208, 255, 0.12);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.left-panel-controls--modern .ui-btn:hover {
+  transform: translateX(4px);
+  background: rgba(37, 51, 76, 0.95);
+  box-shadow: 0 14px 28px rgba(13, 20, 34, 0.45);
+}
+
+.left-panel-controls--modern .ui-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.left-panel-controls--modern .ui-panel-toggle {
+  display: none;
+}  
 </style>
