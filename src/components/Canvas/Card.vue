@@ -1,7 +1,6 @@
 <script setup>
 import { ref, nextTick, computed } from 'vue';
 import { useCardsStore } from '../../stores/cards';
-import CardContextMenu from './CardContextMenu.vue';
 
 const props = defineProps({
   card: {
@@ -27,8 +26,6 @@ const cardsStore = useCardsStore();
 const isEditing = ref(false);
 const editText = ref(props.card.text);
 const textInput = ref(null);
-const showContextMenu = ref(false);
-const contextMenuPosition = ref({ x: 0, y: 0 });
 
 // Вычисляемое свойство для проверки, является ли карточка большой
 const isLargeCard = computed(() => props.card.width >= 494);
