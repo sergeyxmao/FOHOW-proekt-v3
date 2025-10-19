@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест исправленных кнопок</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        .info {
+            background-color: #d9edf7;
+            color: #31708f;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            margin-top: 20px;
+        }
+        .log-container {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+        .checklist {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .checklist li {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #f0f0f0;
+        }
+        .checklist li:before {
+            content: "□ ";
+            color: #333;
+            font-weight: bold;
+        }
+        .checklist li.completed:before {
+            content: "✓ ";
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Тест исправленных кнопок "Добавить лицензию" и "Добавить шаблон"</h1>
+        
+        <div class="test-section">
+            <h2>Что было исправлено</h2>
+            <div class="info">
+                <ul>
+                    <li>Удалена сложная логика отслеживания состояния кнопки шаблона</li>
+                    <li>Убрано прямое манипулирование DOM из функций addCard и addTemplate</li>
+                    <li>Удален явный обработчик событий в onMounted, который конфликтовал с Vue</li>
+                    <li>Сохранены диагностические функции для отладки</li>
+                    <li>Упрощена структура компонента для соответствия принципам Vue</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Инструкции по тестированию</h2>
+            <ol>
+                <li>Откройте приложение в iframe ниже</li>
+                <li>Откройте консоль разработчика (F12) в приложении</li>
+                <li>Проверьте начальное состояние кнопок</li>
+                <li>Нажмите кнопку "Добавить лицензию" (□)</li>
+                <li>Проверьте, что карточка добавилась корректно</li>
+                <li>Нажмите кнопку "Добавить шаблон" (⧉)</li>
+                <li>Проверьте, что шаблон загрузился корректно</li>
+                <li>Отметьте выполненные шаги в чек-листе ниже</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h2>Приложение для тестирования</h2>
+            <iframe id="appFrame" src="http://localhost:5174"></iframe>
+        </div>
+        
+        <div class="test-section">
+            <h2>Чек-лист тестирования</h2>
+            <ul class="checklist" id="checklist">
+                <li id="step1">Приложение загрузилось без ошибок</li>
+                <li id="step2">Кнопка "Добавить лицензия" работает корректно</li>
+                <li id="step3">После добавления лицензии кнопка "Добавить шаблон" продолжает работать</li>
+                <li id="step4">Кнопка "Добавить шаблон" загружает 7 карточек с соединениями</li>
+                <li id="step5">В консоли нет ошибок JavaScript</li>
+                <li id="step6">Диагностические сообщения в консоли отображаются корректно</li>
+            </ul>
+            <button onclick="resetChecklist()" style="margin-top: 10px; padding: 8px 16px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">Сбросить чек-лист</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>Ожидаемые результаты в консоли</h2>
+            <div class="info">
+                <p>При нажатии на "Добавить лицензию" вы должны увидеть:</p>
+                <pre>
+=== addCard called ===
+isLarge = false
+headerColor.value = #5D8BF4
+headerColorIndex.value = 0
+Creating card object: {...}
+Calling cardsStore.addCard...
+Card created successfully: {...}
+Total cards in store after adding: X
+=== addCard finished ===
+                </pre>
+            </div>
+            
+            <div class="info">
+                <p>При нажатии на "Добавить шаблон" вы должны увидеть:</p>
+                <pre>
+=== addTemplate called ===
+Creating template cards...
+Template cards definition: [...]
+Creating template card: lena
+...
+All template cards created. Total cards in store: X
+Creating template connections...
+Template lines definition: [...]
+Creating connection: {...}
+...
+Total connections after template creation: X
+=== addTemplate finished ===
+                </pre>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Код для проверки в консоли</h2>
+            <p>Скопируйте и выполните этот код в консоли приложения для дополнительной проверки:</p>
+            <div class="log-container">
+// Проверка состояния кнопок
+function checkButtons() {
+    const licenseBtn = document.querySelector('[title="Добавить лицензию"]');
+    const templateBtn = document.querySelector('[title="Добавить шаблон"]');
+    
+    console.log('=== Проверка состояния кнопок ===');
+    
+    if (licenseBtn) {
+        console.log('Кнопка "Добавить лицензия":', {
+            exists: true,
+            disabled: licenseBtn.disabled,
+            classList: Array.from(licenseBtn.classList)
+        });
+    } else {
+        console.log('Кнопка "Добавить лицензия" не найдена');
+    }
+    
+    if (templateBtn) {
+        console.log('Кнопка "Добавить шаблон":', {
+            exists: true,
+            disabled: templateBtn.disabled,
+            classList: Array.from(templateBtn.classList)
+        });
+    } else {
+        console.log('Кнопка "Добавить шаблон" не найдена');
+    }
+}
+
+// Проверка состояния хранилища
+function checkStoreState() {
+    try {
+        const app = document.querySelector('#app').__vue_app__;
+        if (app && app.config.globalProperties.$pinia) {
+            const pinia = app.config.globalProperties.$pinia;
+            const cardsStore = pinia._s.get('cards');
+            const connectionsStore = pinia._s.get('connections');
+            
+            if (cardsStore) {
+                console.log('Состояние хранилища карточек:', {
+                    cardsCount: cardsStore.cards.length,
+                    selectedCardIds: cardsStore.selectedCardIds
+                });
+            }
+            
+            if (connectionsStore) {
+                console.log('Состояние хранилища соединений:', {
+                    connectionsCount: connectionsStore.connections.length
+                });
+            }
+        }
+    } catch (e) {
+        console.log('Не удалось получить доступ к хранилищу:', e);
+    }
+}
+
+// Запуск проверок
+checkButtons();
+checkStoreState();
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Функция для отметки выполненных шагов
+        function toggleStep(stepId) {
+            const step = document.getElementById(stepId);
+            if (step.classList.contains('completed')) {
+                step.classList.remove('completed');
+            } else {
+                step.classList.add('completed');
+            }
+        }
+        
+        // Функция для сброса чек-листа
+        function resetChecklist() {
+            const steps = document.querySelectorAll('.checklist li');
+            steps.forEach(step => step.classList.remove('completed'));
+        }
+        
+        // Добавляем обработчики кликов для элементов чек-листа
+        document.addEventListener('DOMContentLoaded', function() {
+            const steps = document.querySelectorAll('.checklist li');
+            steps.forEach(step => {
+                step.addEventListener('click', function() {
+                    toggleStep(this.id);
+                });
+                step.style.cursor = 'pointer';
+            });
+        });
+    </script>
+</body>
+</html>
