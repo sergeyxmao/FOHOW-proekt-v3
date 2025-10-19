@@ -437,13 +437,6 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
         @start-drag="startDrag"
       />
       
-      <!-- Временный элемент для отладки количества карточек -->
-      <div
-        v-if="cards.length > 0"
-        style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); color: white; padding: 5px; border-radius: 3px; font-size: 12px; z-index: 1000;"
-      >
-        Карточек: {{ cards.length }}
-      </div>
     </div>
   </div>
 </template>
