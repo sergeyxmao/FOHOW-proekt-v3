@@ -5,70 +5,59 @@ import { getHeaderColorRgb } from '../utils/constants'
 
 export const useCardsStore = defineStore('cards', {
   state: () => ({
-    cards: [
-      {
-        id: 'default-card',
-        x: 100,
-        y: 100,
-        text: 'Демонстрационная карточка',
-        width: 150,
-        height: 80,
-        fill: '#4CAF50',
-        stroke: '#2E7D32',
-        strokeWidth: 2,
-        headerBg: getHeaderColorRgb(0), // Цвет заголовка по умолчанию (синий)
-        colorIndex: 0,                   // Индекс цвета в палитре
-        selected: false                  // Флаг выделения карточки
-      }
-    ],
-    selectedCardIds: [] // Массив ID выделенных карточек
+    cards: [],
+    selectedCardIds: []
   }),
   
   actions: {
     addCard(card) {
       console.log('=== cardsStore.addCard called ===');
       console.log('Input card data:', card);
-      console.log('Current cards count before adding:', this.cards.length);
       
-      // Проверяем состояние кнопки шаблона в хранилище ДО добавления
-      console.log('Store state before adding card:', {
-        cardsCount: this.cards.length,
-        selectedCardIds: [...this.selectedCardIds],
-        hasSelectedCards: this.hasSelectedCards
-      });
+      // Генерируем случайный номер лицензии, если не указан
+      const generateLicenseNumber = () => {
+        const prefix = 'RUY';
+        const number = Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
+        return prefix + number;
+      };
       
       const newCard = {
-        id: Date.now().toString(), // Генерируем уникальный ID на основе временной метки
-        x: card.x || 0,
-        y: card.y || 0,
-        text: card.text || '',
-        width: card.width || 150,
-        height: card.height || 80,
-        fill: card.fill || '#4CAF50',
-        stroke: card.stroke || '#2E7D32',
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        x: card.x || 100,
+        y: card.y || 100,
+        text: card.text || generateLicenseNumber(),
+        width: card.width || 380,
+        height: 280,
+        fill: card.fill || '#ffffff',
+        stroke: card.stroke || '#000000',
         strokeWidth: card.strokeWidth || 2,
-        headerBg: card.headerBg || getHeaderColorRgb(0), // Цвет заголовка по умолчанию
-        colorIndex: card.colorIndex || 0,                 // Индекс цвета по умолчанию
-        selected: false,                                  // Флаг выделения карточки
-        bodyHTML: card.bodyHTML || ''                     // HTML содержимое тела карточки
+        headerBg: card.headerBg || getHeaderColorRgb(0),
+        colorIndex: card.colorIndex || 0,
+        selected: false,
+        
+        // Новые поля для лицензий
+        pv: card.pv || '330/330pv',
+        balance: card.balance || '0 / 0',
+        activePv: card.activePv || '0 / 0',
+        cycle: card.cycle || '0',
+        coinFill: card.coinFill || '#ffd700',
+        
+        // Значки
+        showSlfBadge: card.showSlfBadge || false,
+        showFendouBadge: card.showFendouBadge || false,
+        rankBadge: card.rankBadge || null, // null, '1', '2', '3', etc.
+        
+        // Дополнительные свойства
+        bodyHTML: card.bodyHTML || ''
       }
+      
       console.log('Created newCard object:', newCard);
-      
       this.cards.push(newCard)
-      console.log('Card added to store. Total cards:', this.cards.length);
-      console.log('Cards array after adding:', this.cards.map(c => ({ id: c.id, text: c.text })));
+      console.log('Card added. Total cards:', this.cards.length);
       
-      // Сохраняем состояние в историю
       const historyStore = useHistoryStore()
       historyStore.setActionMetadata('create', `Создана карточка "${newCard.text}"`)
       historyStore.saveState()
-      
-      // Проверяем состояние кнопки шаблона в хранилище ПОСЛЕ добавления
-      console.log('Store state after adding card:', {
-        cardsCount: this.cards.length,
-        selectedCardIds: [...this.selectedCardIds],
-        hasSelectedCards: this.hasSelectedCards
-      });
       
       console.log('=== cardsStore.addCard finished ===');
       return newCard
@@ -80,7 +69,6 @@ export const useCardsStore = defineStore('cards', {
         card.x = x
         card.y = y
         
-        // Сохраняем состояние в историю
         const historyStore = useHistoryStore()
         historyStore.setActionMetadata('update', `Перемещена карточка "${card.text}"`)
         historyStore.saveState()
@@ -91,13 +79,9 @@ export const useCardsStore = defineStore('cards', {
     updateCard(cardId, updates) {
       const card = this.cards.find(c => c.id === cardId)
       if (card) {
-        // Сохраняем старые значения для описания
         const oldText = card.text
-        
-        // Обновляем свойства карточки
         Object.assign(card, updates)
         
-        // Сохраняем состояние в историю
         const historyStore = useHistoryStore()
         const description = oldText !== updates.text
           ? `Изменена карточка "${updates.text}"`
@@ -109,32 +93,23 @@ export const useCardsStore = defineStore('cards', {
     },
     
     removeCard(cardId) {
-      // Получаем доступ к хранилищу соединений
       const connectionsStore = useConnectionsStore()
-      
-      // Находим карточку для получения информации
       const card = this.cards.find(c => c.id === cardId)
       
-      // Сохраняем состояние до удаления
       const historyStore = useHistoryStore()
       historyStore.setActionMetadata('delete', `Удалена карточка "${card?.text || 'Без названия'}"`)
       
-      // Удаляем все соединения, связанные с этой карточкой
       connectionsStore.removeConnectionsByCardId(cardId)
       
-      // Удаляем саму карточку
       const index = this.cards.findIndex(c => c.id === cardId)
       if (index !== -1) {
         this.cards.splice(index, 1)
-        
-        // Сохраняем состояние после удаления
         historyStore.saveState()
         return true
       }
       return false
     },
     
-    // Групповая операция для перемещения нескольких карточек
     updateMultipleCardsPositions(updates) {
       const updatedCards = []
       
@@ -147,7 +122,6 @@ export const useCardsStore = defineStore('cards', {
         }
       })
       
-      // Сохраняем состояние в историю после всех обновлений
       if (updatedCards.length > 0) {
         const historyStore = useHistoryStore()
         historyStore.setActionMetadata('update', `Перемещено ${updatedCards.length} карточек`)
@@ -157,7 +131,6 @@ export const useCardsStore = defineStore('cards', {
       return updatedCards
     },
     
-    // Обновить цвет заголовка для одной или нескольких карточек
     updateCardHeaderColor(cardIds, colorIndex) {
       const updatedCards = []
       const headerBg = getHeaderColorRgb(colorIndex)
@@ -171,7 +144,6 @@ export const useCardsStore = defineStore('cards', {
         }
       })
       
-      // Сохраняем состояние в историю после всех обновлений
       if (updatedCards.length > 0) {
         const historyStore = useHistoryStore()
         const description = updatedCards.length === 1
@@ -184,7 +156,6 @@ export const useCardsStore = defineStore('cards', {
       return updatedCards
     },
     
-    // Выделить карточку
     selectCard(cardId) {
       const card = this.cards.find(c => c.id === cardId)
       if (card && !card.selected) {
@@ -193,7 +164,6 @@ export const useCardsStore = defineStore('cards', {
       }
     },
     
-    // Снять выделение с карточки
     deselectCard(cardId) {
       const card = this.cards.find(c => c.id === cardId)
       if (card && card.selected) {
@@ -205,7 +175,6 @@ export const useCardsStore = defineStore('cards', {
       }
     },
     
-    // Переключить выделение карточки
     toggleCardSelection(cardId) {
       const card = this.cards.find(c => c.id === cardId)
       if (card) {
@@ -217,7 +186,6 @@ export const useCardsStore = defineStore('cards', {
       }
     },
     
-    // Снять выделение со всех карточек
     deselectAllCards() {
       this.cards.forEach(card => {
         card.selected = false
@@ -225,50 +193,60 @@ export const useCardsStore = defineStore('cards', {
       this.selectedCardIds = []
     },
     
-    // Выделить все карточки
     selectAllCards() {
       this.cards.forEach(card => {
         card.selected = true
       })
       this.selectedCardIds = this.cards.map(card => card.id)
-    }
-  },
-  
-  getters: {
-    // Получить выделенные карточки
-    selectedCards: (state) => {
-      return state.cards.filter(card => card.selected)
     },
     
-    // Проверить, есть ли выделенные карточки
-    hasSelectedCards: (state) => {
-      return state.selectedCards.length > 0
-    },
-    
-    // Загрузка карточек из проекта
     loadCards(cardsData) {
-      // Очищаем текущие карточки
       this.cards = []
       this.selectedCardIds = []
       
-      // Загружаем новые карточки
       cardsData.forEach(cardData => {
+        const generateLicenseNumber = () => {
+          const prefix = 'RUY';
+          const number = Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
+          return prefix + number;
+        };
+        
         this.cards.push({
           id: cardData.id || Date.now().toString(),
           x: cardData.x || 0,
           y: cardData.y || 0,
-          text: cardData.text || '',
-          width: cardData.width || 150,
-          height: cardData.height || 80,
-          fill: cardData.fill || '#4CAF50',
-          stroke: cardData.stroke || '#2E7D32',
+          text: cardData.text || generateLicenseNumber(),
+          width: cardData.width || 380,
+          height: 280,
+          fill: cardData.fill || '#ffffff',
+          stroke: cardData.stroke || '#000000',
           strokeWidth: cardData.strokeWidth || 2,
           headerBg: cardData.headerBg || getHeaderColorRgb(0),
           colorIndex: cardData.colorIndex || 0,
           selected: false,
+          pv: cardData.pv || '330/330pv',
+          balance: cardData.balance || '0 / 0',
+          activePv: cardData.activePv || '0 / 0',
+          cycle: cardData.cycle || '0',
+          coinFill: cardData.coinFill || '#ffd700',
+          showSlfBadge: cardData.showSlfBadge || false,
+          showFendouBadge: cardData.showFendouBadge || false,
+          rankBadge: cardData.rankBadge || null,
           bodyHTML: cardData.bodyHTML || ''
         })
       })
+    }
+  }
+})
+  },
+  
+  getters: {
+    selectedCards: (state) => {
+      return state.cards.filter(card => card.selected)
+    },
+    
+    hasSelectedCards: (state) => {
+      return state.selectedCards.length > 0
     }
   }
 })
