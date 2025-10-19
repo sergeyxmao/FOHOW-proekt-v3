@@ -1,19 +1,29 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watchEffect } from 'vue'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import ControlPanel from './components/Panels/ControlPanel.vue'
 import RightPanel from './components/Panels/RightPanel.vue'
+
+const isModernTheme = ref(false)
+
+function toggleTheme() {
+  isModernTheme.value = !isModernTheme.value
+}
+
+watchEffect(() => {
+  document.body.classList.toggle('theme-modern', isModernTheme.value)
+})  
 </script>
 
 <template>
-  <div id="app">
+  <div id="app" :class="{ 'theme-modern': isModernTheme }">
     <!-- Левая панель -->
     <div class="ui-panel-left">
-      <ControlPanel />
+      <ControlPanel :is-modern-theme="isModernTheme" @toggle-theme="toggleTheme" />
     </div>
 
     <!-- Правая панель -->
-    <RightPanel />
+    <RightPanel :is-modern-theme="isModernTheme" />
 
     <div id="canvas">
       <CanvasBoard />
@@ -58,4 +68,47 @@ html,body{
 }
 /* Canvas/SVG */
 #canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
+
+#app.theme-modern {
+  --card-width: 400px;
+  --bg: #efe4d1;
+  --panel: rgba(18, 24, 34, 0.88);
+  --surface: rgba(24, 32, 46, 0.92);
+  --ink: #f4f7fb;
+  --muted: #9ba5b7;
+  --brand: #59d0ff;
+  --radius: 18px;
+  --shadow: 0 16px 34px rgba(8, 11, 18, 0.45);
+}
+
+body.theme-modern {
+  background: linear-gradient(145deg, #f3e9d6 0%, #efe3ce 48%, #f8efe0 100%);
+  color: #f4f7fb;
+}
+
+.theme-modern .ui-panel-left{
+  top:50%;
+  left:32px;
+  transform: translateY(-50%);
+  flex-direction: column;
+  align-items: stretch;
+  padding: 24px 16px;
+  gap: 18px;
+  width: 88px;
+  min-height: 400px;
+  border-radius: 26px;
+  background: linear-gradient(190deg, rgba(19,25,38,0.95) 0%, rgba(9,14,24,0.96) 100%);
+  box-shadow: 0 20px 40px rgba(5, 8, 14, 0.65);
+}
+
+.theme-modern .ui-panel-left.collapsed{
+  padding-right: 16px;
+}
+
+.theme-modern #canvas{
+  background: rgba(255,255,255,0.45);
+  border-radius: 26px;
+  margin: 24px 140px;
+  height: calc(100% - 48px);
+}  
 </style>
