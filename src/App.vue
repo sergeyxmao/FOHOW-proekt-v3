@@ -53,6 +53,12 @@ html,body{
   user-select: none;
 }
 
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 /* Панели */
 .ui-panel-left{
   position:fixed; top:20px; left:20px; z-index:2000;
@@ -106,9 +112,13 @@ body.theme-modern {
 }
 
 .theme-modern #canvas{
+  position: absolute;
+  top: 32px;
+  right: 32px;
+  bottom: 32px;
+  left: 128px;  
   background: rgba(255,255,255,0.45);
-  border-radius: 26px;
-  margin: 24px 140px;
-  height: calc(100% - 48px);
-}  
+  border-radius: 28px;
+  box-shadow: 0 28px 48px rgba(6, 11, 21, 0.22);
+}
 </style>
