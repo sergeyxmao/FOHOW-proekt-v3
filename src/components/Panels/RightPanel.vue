@@ -302,15 +302,17 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 <template>
   <div :class="['ui-panel-right', { collapsed: isCollapsed, 'ui-panel-right--modern': props.isModernTheme }]">
     <div :class="['ui-panel-right__container', { 'ui-panel-right__container--modern': props.isModernTheme }]">
-      <button
-        class="ui-btn panel-collapse-btn"
-        :class="{ 'panel-collapse-btn--modern': props.isModernTheme }"
-        title="Свернуть настройки"
-        aria-expanded="true"
-        @click="togglePanel"
-      >
-        ❯
-      </button>
+      <template v-if="!(props.isModernTheme && isCollapsed)">
+        <button
+          class="ui-btn panel-collapse-btn"
+          :class="{ 'panel-collapse-btn--modern': props.isModernTheme }"
+          :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
+          :aria-expanded="!isCollapsed"
+          @click="togglePanel"
+        >
+          <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
+        </button>
+      </template>
       <div :class="['ui-panel-right__body', { 'ui-panel-right__body--modern': props.isModernTheme }]">
         <div class="line-controls-panel">
           <div class="line-color-group">
@@ -441,6 +443,16 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
     </div>
 
     <div :class="['ui-panel-right__actions', 'row', { 'ui-panel-right__actions--modern': props.isModernTheme }]">
+      <template v-if="props.isModernTheme && isCollapsed">
+        <button
+          class="ui-btn panel-collapse-btn panel-collapse-btn--modern panel-collapse-btn--floating"
+          :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
+          :aria-expanded="!isCollapsed"
+          @click="togglePanel"
+        >
+          <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
+        </button>
+      </template>      
       <button
         class="add-btn"
         :class="{ 'add-btn--modern': props.isModernTheme }"
@@ -595,6 +607,11 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   box-shadow: 0 6px 14px rgba(0,0,0,.1);
 }
 
+.panel-collapse-btn--floating {
+  display: grid;
+  place-items: center;
+}
+  
 .ui-panel-right.collapsed .panel-collapse-btn {
   align-self: flex-end;
 }
@@ -931,6 +948,15 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   box-shadow: inset 0 0 0 1px rgba(126, 184, 255, 0.2);
 }
 
+.panel-collapse-btn--modern.panel-collapse-btn--floating {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background: rgba(24, 34, 52, 0.9);
+  border: 1px solid rgba(94, 156, 244, 0.28);
+  box-shadow: 0 20px 36px rgba(5, 10, 20, 0.45);
+}
+  
 .ui-panel-right__body--modern {
   background: rgba(20, 28, 42, 0.95);
   border-radius: 28px;
@@ -1106,6 +1132,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 }
 
 .ui-panel-right--modern.collapsed .ui-panel-right__container {
-  gap: 0;
+  display: none;
 }
+  
 </style>
