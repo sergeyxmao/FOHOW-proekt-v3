@@ -9,6 +9,16 @@ export const useCardsStore = defineStore('cards', {
     selectedCardIds: []
   }),
   
+  getters: {
+    selectedCards: (state) => {
+      return state.cards.filter(card => card.selected)
+    },
+    
+    hasSelectedCards: (state) => {
+      return state.selectedCards.length > 0
+    }
+  },
+  
   actions: {
     addCard(card) {
       console.log('=== cardsStore.addCard called ===');
@@ -235,18 +245,6 @@ export const useCardsStore = defineStore('cards', {
           bodyHTML: cardData.bodyHTML || ''
         })
       })
-    }
-  }
-})
-  },
-  
-  getters: {
-    selectedCards: (state) => {
-      return state.cards.filter(card => card.selected)
-    },
-    
-    hasSelectedCards: (state) => {
-      return state.selectedCards.length > 0
     }
   }
 })
