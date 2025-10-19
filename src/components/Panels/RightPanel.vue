@@ -550,7 +550,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 .ui-panel-right {
   position: fixed;
   top: 20px;
-  right: 20px;
+  right: 0px;
   z-index: 2000;
   display: flex;
   flex-direction: column;
@@ -561,7 +561,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 .ui-panel-right__container {
   display: flex;
   align-items: stretch;
-  gap: 12px;
+  gap: 0px;
 }
 
 .ui-panel-right__body {
@@ -673,7 +673,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   width: 40px;
   height: 40px;
   padding: 0;
-  border-radius: 12px;
+  border-radius: 12px 0 0 12px;
   box-shadow: 0 6px 14px rgba(0,0,0,.1);
 }
 
@@ -998,7 +998,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 .ui-panel-right--modern {
   top: auto;
   bottom: 60px;
-  right: 72px;
+  right: 0px;
   align-items: flex-start;
   gap: 24px;
 }
@@ -1011,7 +1011,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 .panel-collapse-btn--modern {
   width: 58px;
   height: 58px;
-  border-radius: 20px;
+  border-radius: 0px;
   background: rgba(27, 36, 52, 0.96);
   border: 1px solid rgba(90, 148, 240, 0.32);
   color: #ebf3ff;
@@ -1021,7 +1021,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 .panel-collapse-btn--modern.panel-collapse-btn--floating {
   width: 46px;
   height: 46px;
-  border-radius: 16px;
+  border-radius: 18px;
   background: rgba(24, 34, 52, 0.9);
   border: 1px solid rgba(94, 156, 244, 0.28);
   box-shadow: 0 20px 36px rgba(5, 10, 20, 0.45);
