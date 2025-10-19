@@ -1,6 +1,7 @@
 <script setup>
 import { ref, nextTick, computed } from 'vue';
 import { useCardsStore } from '../../stores/cards';
+import CardContextMenu from './CardContextMenu.vue';
 
 const props = defineProps({
   card: {
@@ -26,6 +27,8 @@ const cardsStore = useCardsStore();
 const isEditing = ref(false);
 const editText = ref(props.card.text);
 const textInput = ref(null);
+const showContextMenu = ref(false);
+const contextMenuPosition = ref({ x: 0, y: 0 });
 
 // Вычисляемое свойство для проверки, является ли карточка большой
 const isLargeCard = computed(() => props.card.width >= 494);
@@ -377,21 +380,27 @@ export default {
   top: 15px;
   left: 15px;
   color: #ffc700;
+  font-weight: 900;
   font-size: 36px;
-  /* Ваши изменения */
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .fendou-badge {
   top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: red;
+  font-weight: 900;
   font-size: 56px;
-  /* Ваши изменения */
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .rank-badge {
   top: -15px;
   right: 15px;
   width: 80px;
-  /* Ваши изменения */
+  height: auto;
+  transform: rotate(15deg);
 }
 
 /* Соединительные точки */
