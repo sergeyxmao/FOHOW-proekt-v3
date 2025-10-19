@@ -205,11 +205,17 @@ export const useCardsStore = defineStore('cards', {
       this.selectedCardIds = []
       
       cardsData.forEach(cardData => {
+        const generateLicenseNumber = () => {
+          const prefix = 'RUY';
+          const number = Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
+          return prefix + number;
+        };
+        
         this.cards.push({
           id: cardData.id || Date.now().toString(),
           x: cardData.x || 0,
           y: cardData.y || 0,
-          text: cardData.text || 'RUY1234567890',
+          text: cardData.text || generateLicenseNumber(),
           width: cardData.width || 380,
           height: 280,
           fill: cardData.fill || '#ffffff',
@@ -230,6 +236,8 @@ export const useCardsStore = defineStore('cards', {
         })
       })
     }
+  }
+})
   },
   
   getters: {
