@@ -167,19 +167,95 @@ function addLargeCard() {
   console.log('=== addLargeCard finished ===');
 }
 
+// Добавьте эту обновленную версию функции addTemplate в RightPanel.vue
+
 function addTemplate() {
   console.log('=== addTemplate called ===');
   console.log('Creating template cards...');
   
-  // Создаем шаблон карточек
+  // Создаем шаблон карточек с правильными данными
   const templateCards = [
-    { key: 'lena', x: 2240, y: -770, title: 'Елена', pv: '330/330pv', coinFill: '#ffd700', isLarge: true },
-    { key: 'a',    x: 1750, y: -420, title: 'A',     pv: '30/330pv', coinFill: '#ffd700' },
-    { key: 'c',    x: 1470, y:  -70, title: 'C',     pv: '30/330pv', coinFill: '#ffd700' },
-    { key: 'd',    x: 2030, y:  -70, title: 'D',     pv: '30/330pv', coinFill: '#ffd700' },
-    { key: 'b',    x: 2870, y: -420, title: 'B',     pv: '30/330pv', coinFill: '#ffd700' },
-    { key: 'e',    x: 2590, y:  -70, title: 'E',     pv: '30/330pv', coinFill: '#ffd700' },
-    { key: 'f',    x: 3150, y:  -70, title: 'F',     pv: '30/330pv', coinFill: '#ffd700' },
+    { 
+      key: 'lena', 
+      x: 2240, 
+      y: -770, 
+      text: 'Елена',
+      pv: '330/330pv',
+      balance: '0 / 0',
+      activePv: '0 / 0',
+      cycle: '0',
+      coinFill: '#ffd700', 
+      isLarge: true,
+      showSlfBadge: false,
+      showFendouBadge: false,
+      rankBadge: null
+    },
+    { 
+      key: 'a', 
+      x: 1750, 
+      y: -420, 
+      text: 'A',
+      pv: '30/330pv',
+      balance: '0 / 0',
+      activePv: '0 / 0',
+      cycle: '0',
+      coinFill: '#ffd700'
+    },
+    { 
+      key: 'c', 
+      x: 1470, 
+      y: -70, 
+      text: 'C',
+      pv: '30/330pv',
+      balance: '0 / 0',
+      activePv: '0 / 0',
+      cycle: '0',
+      coinFill: '#ffd700'
+    },
+    { 
+      key: 'd', 
+      x: 2030, 
+      y: -70, 
+      text: 'D',
+      pv: '30/330pv',
+      balance: '0 / 0',
+      activePv: '0 / 0',
+      cycle: '0',
+      coinFill: '#ffd700'
+    },
+    { 
+      key: 'b', 
+      x: 2870, 
+      y: -420, 
+      text: 'B',
+      pv: '30/330pv',
+      balance: '0 / 0',
+      activePv: '0 / 0',
+      cycle: '0',
+      coinFill: '#ffd700'
+    },
+    { 
+      key: 'e', 
+      x: 2590, 
+      y: -70, 
+      text: 'E',
+      pv: '30/330pv',
+      balance: '0 / 0',
+      activePv: '0 / 0',
+      cycle: '0',
+      coinFill: '#ffd700'
+    },
+    { 
+      key: 'f', 
+      x: 3150, 
+      y: -70, 
+      text: 'F',
+      pv: '30/330pv',
+      balance: '0 / 0',
+      activePv: '0 / 0',
+      cycle: '0',
+      coinFill: '#ffd700'
+    },
   ];
 
   console.log('Template cards definition:', templateCards);
@@ -187,27 +263,25 @@ function addTemplate() {
 
   templateCards.forEach(cardDef => {
     console.log('Creating template card:', cardDef.key);
-    const bodyHTML = `
-      <div class="card-row">
-        <svg class="coin-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="50" cy="50" r="45" fill="${cardDef.coinFill}" stroke="#DAA520" stroke-width="5"/>
-        </svg>
-        <span class="value" contenteditable="true">${cardDef.pv}</span>
-      </div>
-      <div class="card-row"><span class="label">Баланс:</span><span class="value" contenteditable="true">0 / 0</span></div>
-      <div class="card-row"><span class="label">Актив-заказы PV:</span><span class="value" contenteditable="true">0 / 0</span></div>
-      <div class="card-row"><span class="label">Цикл:</span><span class="value" contenteditable="true">0</span></div>
-    `;
+    
     const cardData = cardsStore.addCard({
       x: cardDef.x,
       y: cardDef.y,
-      text: cardDef.title,
+      text: cardDef.text,
       width: cardDef.isLarge ? 494 : 380,
       height: 280,
-      headerBg: 'rgb(93, 139, 244)',
-      colorIndex: 0,
-      bodyHTML: bodyHTML
+      headerBg: headerColor.value,
+      colorIndex: headerColorIndex.value,
+      pv: cardDef.pv,
+      balance: cardDef.balance,
+      activePv: cardDef.activePv,
+      cycle: cardDef.cycle,
+      coinFill: cardDef.coinFill,
+      showSlfBadge: cardDef.showSlfBadge || false,
+      showFendouBadge: cardDef.showFendouBadge || false,
+      rankBadge: cardDef.rankBadge || null
     });
+    
     createdCardsMap.set(cardDef.key, cardData);
     console.log('Template card created:', cardDef.key, cardData);
   });
@@ -240,7 +314,7 @@ function addTemplate() {
       startCard.id,
       endCard.id,
       {
-        color: '#3d85c6',
+        color: lineColor.value,
         thickness: lineDef.thickness
       }
     );
