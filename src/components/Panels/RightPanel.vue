@@ -167,13 +167,10 @@ function addLargeCard() {
   console.log('=== addLargeCard finished ===');
 }
 
-// Добавьте эту обновленную версию функции addTemplate в RightPanel.vue
-
 function addTemplate() {
   console.log('=== addTemplate called ===');
   console.log('Creating template cards...');
   
-  // Создаем шаблон карточек с правильными данными
   const templateCards = [
     { 
       key: 'lena', 
@@ -289,7 +286,6 @@ function addTemplate() {
   console.log('All template cards created. Total cards in store:', cardsStore.cards.length);
   console.log('Creating template connections...');
 
-  // Создаем соединения для шаблона
   const templateLines = [
     { startKey: 'b', startSide: 'right', endKey: 'f', endSide: 'top', thickness: 4 },
     { startKey: 'b', startSide: 'left',  endKey: 'e', endSide: 'top', thickness: 4 },
