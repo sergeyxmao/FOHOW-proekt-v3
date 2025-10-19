@@ -324,41 +324,6 @@ function addTemplate() {
   console.log('=== addTemplate finished ===');
 }
 
-  // Создаем соединения для шаблона
-  const templateLines = [
-    { startKey: 'b', startSide: 'right', endKey: 'f', endSide: 'top', thickness: 4 },
-    { startKey: 'b', startSide: 'left',  endKey: 'e', endSide: 'top', thickness: 4 },
-    { startKey: 'a', startSide: 'right', endKey: 'd', endSide: 'top', thickness: 4 },
-    { startKey: 'a', startSide: 'left',  endKey: 'c', endSide: 'top', thickness: 4 },
-    { startKey: 'lena', startSide: 'left',  endKey: 'a', endSide: 'top', thickness: 4 },
-    { startKey: 'lena', startSide: 'right', endKey: 'b', endSide: 'top', thickness: 4 },
-  ];
-
-  console.log('Template lines definition:', templateLines);
-
-  templateLines.forEach(lineDef => {
-    const startCard = createdCardsMap.get(lineDef.startKey);
-    const endCard   = createdCardsMap.get(lineDef.endKey);
-    if (!startCard || !endCard) {
-      console.log('Skipping connection - missing cards:', lineDef);
-      return;
-    }
-
-    console.log('Creating connection:', lineDef);
-    connectionsStore.addConnection(
-      startCard.id,
-      endCard.id,
-      {
-        color: lineColor.value,
-        thickness: lineDef.thickness
-      }
-    );
-  });
-  
-  console.log('Total connections after template creation:', connectionsStore.connections.length);
-  console.log('=== addTemplate finished ===');
-}
-
 // Обработчики событий для DOM элементов
 function handleLineColorChange(e) {
   updateLineColor(e.target.value)
