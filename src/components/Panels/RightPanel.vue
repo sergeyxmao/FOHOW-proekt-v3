@@ -5,6 +5,14 @@ import { useCanvasStore } from '../../stores/canvas'
 import { useConnectionsStore } from '../../stores/connections'
 import { HEADER_COLORS, getHeaderColorRgb } from '../../utils/constants'
 
+const props = defineProps({
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  }
+})
+
+  
 // Stores
 const cardsStore = useCardsStore()
 const canvasStore = useCanvasStore()
@@ -292,15 +300,21 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 </script>
 
 <template>
-  <div class="ui-panel-right" :class="{ collapsed: isCollapsed }">
-    <div class="ui-panel-right__container">
-      <button class="ui-btn panel-collapse-btn" title="Свернуть настройки" aria-expanded="true" @click="togglePanel">
+  <div :class="['ui-panel-right', { collapsed: isCollapsed, 'ui-panel-right--modern': props.isModernTheme }]">
+    <div :class="['ui-panel-right__container', { 'ui-panel-right__container--modern': props.isModernTheme }]">
+      <button
+        class="ui-btn panel-collapse-btn"
+        :class="{ 'panel-collapse-btn--modern': props.isModernTheme }"
+        title="Свернуть настройки"
+        aria-expanded="true"
+        @click="togglePanel"
+      >
         ❯
       </button>
-      <div class="ui-panel-right__body">
+      <div :class="['ui-panel-right__body', { 'ui-panel-right__body--modern': props.isModernTheme }]">
         <div class="line-controls-panel">
           <div class="line-color-group">
-            <div 
+            <div
               class="line-color-trigger" 
               :style="{ backgroundColor: lineColor }" 
               title="Выбрать цвет линии"
@@ -368,10 +382,11 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
         <div class="card-header-panel" aria-label="Настройки заголовка лицензии">
           <span class="card-header-panel__label">Заголовок</span>
           <div class="card-header-panel__controls">
-            <button 
-              class="card-header-color-btn" 
-              type="button" 
-              title="Выбрать цвет заголовка" 
+            <button
+              class="card-header-color-btn"
+              :class="{ 'card-header-color-btn--modern': props.isModernTheme }"
+              type="button"
+              title="Выбрать цвет заголовка"
               :style="{ backgroundColor: headerColor }"
               @click="openHeaderColorPicker"
             ></button>
@@ -384,7 +399,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
               ⟳
             </button>
           </div>
-          <input 
+          <input
             ref="hiddenHeaderColorPicker"
             type="color" 
             :value="headerColor" 
@@ -425,19 +440,22 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
       </div>
     </div>
 
-    <div class="ui-panel-right__actions row">
-      <button 
-        class="add-btn" 
+    <div :class="['ui-panel-right__actions', 'row', { 'ui-panel-right__actions--modern': props.isModernTheme }]">
+      <button
+        class="add-btn"
+        :class="{ 'add-btn--modern': props.isModernTheme }"
         title="Добавить лицензию"
         @click="addCard"
       >□</button>
-      <button 
-        class="add-btn add-btn--large" 
+      <button
+        class="add-btn add-btn--large"
+        :class="{ 'add-btn--modern': props.isModernTheme }"
         title="Добавить большую лицензию"
         @click="addLargeCard"
       >⧠</button>
       <button
         class="add-btn"
+        class="{ 'add-btn--modern': props.isModernTheme }"
         title="Добавить шаблон"
         @click="addTemplate"
       >⧉</button>
@@ -888,5 +906,206 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   border-color: #0f62fe;
   color: #0f62fe;
   box-shadow: inset 0 -2px 0 rgba(255,255,255,.75), 0 10px 20px rgba(15,98,254,.25);
+}
+
+.ui-panel-right--modern {
+  top: auto;
+  bottom: 60px;
+  right: 72px;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.ui-panel-right__container--modern {
+  gap: 20px;
+  align-items: center;
+}
+
+.panel-collapse-btn--modern {
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+  background: rgba(27, 36, 52, 0.96);
+  border: 1px solid rgba(90, 148, 240, 0.32);
+  color: #ebf3ff;
+  box-shadow: inset 0 0 0 1px rgba(126, 184, 255, 0.2);
+}
+
+.ui-panel-right__body--modern {
+  background: rgba(20, 28, 42, 0.95);
+  border-radius: 28px;
+  padding: 32px 34px;
+  min-width: 320px;
+  color: #f4f7fb;
+  box-shadow: 0 28px 46px rgba(5, 9, 18, 0.55);
+  border: 1px solid rgba(92, 154, 240, 0.24);
+}
+
+.ui-panel-right__body--modern .line-controls-panel {
+  gap: 24px;
+}
+
+.ui-panel-right__body--modern .line-color-group {
+  gap: 18px;
+  justify-content: flex-start;
+}
+
+.ui-panel-right__body--modern .line-color-trigger {
+  border-radius: 18px;
+  box-shadow: 0 16px 28px rgba(9, 14, 24, 0.6);
+  border: 1px solid rgba(99, 166, 255, 0.35);
+}
+
+.ui-panel-right__body--modern .line-color-trigger:hover {
+  transform: translateY(-2px) scale(1.06);
+}
+
+.ui-panel-right__body--modern .apply-all-btn {
+  background: rgba(33, 46, 66, 0.82);
+  border: 1px solid rgba(114, 182, 255, 0.32);
+  color: #e3f2ff;
+  box-shadow: 0 20px 36px rgba(5, 10, 20, 0.45);
+}
+
+.ui-panel-right__body--modern .apply-all-btn:hover,
+.panel-collapse-btn--modern:hover {
+  transform: translateY(-3px);
+  background: rgba(45, 62, 88, 0.95);
+  border-color: rgba(140, 198, 255, 0.48);
+  box-shadow: 0 26px 44px rgba(5, 9, 18, 0.6);
+}
+
+.ui-panel-right__body--modern .apply-all-btn.active {
+  background: rgba(84, 158, 255, 0.18);
+  border-color: rgba(140, 198, 255, 0.52);
+  color: #8cd4ff;
+}
+
+.ui-panel-right__body--modern .line-controls-col label {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: #d8e6ff;
+}
+
+.ui-panel-right__body--modern .thickness-row {
+  background: rgba(30, 44, 68, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(74, 130, 208, 0.24);
+}
+
+.ui-panel-right__body--modern .thickness-slider {
+  accent-color: #63caff;
+}
+
+.ui-panel-right__body--modern .animation-controls {
+  color: #b2c4e6;
+  gap: 18px;
+}
+
+.ui-panel-right__body--modern .animation-label {
+  color: #9fb7de;
+}
+
+.ui-panel-right__body--modern .animation-block {
+  background: rgba(28, 40, 62, 0.65);
+  padding: 16px 18px;
+  border-radius: 20px;
+  box-shadow: inset 0 0 0 1px rgba(70, 124, 198, 0.2);
+}
+
+.ui-panel-right__body--modern .animation-input-group {
+  background: transparent;
+  box-shadow: none;
+}
+
+.ui-panel-right__body--modern .animation-duration-input {
+  background: rgba(12, 18, 30, 0.88);
+  border: 1px solid rgba(90, 150, 236, 0.36);
+  color: #f4f9ff;
+  box-shadow: inset 0 0 0 1px rgba(74, 130, 208, 0.2);
+}
+
+.ui-panel-right__body--modern .animation-duration-input:focus {
+  outline: 2px solid rgba(89, 208, 255, 0.32);
+  border-color: rgba(89, 208, 255, 0.5);
+}
+
+.ui-panel-right__body--modern .animation-unit {
+  color: #8ea6cc;
+}
+
+.ui-panel-right__body--modern .gradient-selector {
+  background: transparent;
+  box-shadow: none;
+  gap: 14px;
+}
+
+.ui-panel-right__body--modern .grad-btn {
+  border: 1px solid rgba(110, 176, 255, 0.32);
+  box-shadow: 0 18px 32px rgba(6, 11, 21, 0.45);
+}
+
+.ui-panel-right__body--modern .grad-btn:hover {
+  transform: translateY(-2px);
+}
+
+.ui-panel-right__body--modern .gradient-title {
+  color: #d1e0fb;
+  letter-spacing: 0.08em;
+}
+
+.ui-panel-right__body--modern .card-header-panel {
+  background: rgba(33, 44, 66, 0.6);
+  border: 1px solid rgba(92, 154, 240, 0.28);
+}
+
+.card-header-color-btn--modern {
+  box-shadow: 0 18px 32px rgba(9, 14, 24, 0.55);
+  border: 1px solid rgba(120, 186, 255, 0.3);
+}
+
+.card-header-cycle-btn--modern {
+  background: rgba(29, 40, 60, 0.92);
+  border: 1px solid rgba(100, 164, 255, 0.35);
+  color: #d7e6ff;
+  box-shadow: 0 18px 32px rgba(6, 11, 21, 0.45);
+}
+
+.card-header-cycle-btn--modern:hover {
+  border-color: rgba(148, 206, 255, 0.55);
+  color: #8bd3ff;
+}
+
+.ui-panel-right__actions--modern {
+  position: fixed;
+  top: 34px;
+  right: 44px;
+  flex-direction: row;
+  gap: 12px;
+  align-items: center;
+  z-index: 2050;
+}
+
+.add-btn--modern {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background: rgba(24, 34, 52, 0.9);
+  border: 1px solid rgba(94, 156, 244, 0.28);
+  color: #f3f8ff;
+  box-shadow: 0 20px 36px rgba(5, 10, 20, 0.45);
+}
+
+.add-btn--modern:hover {
+  transform: translateY(-4px);
+  background: rgba(35, 48, 72, 0.95);
+  box-shadow: 0 26px 44px rgba(4, 8, 16, 0.55);
+}
+
+.ui-panel-right--modern .row {
+  justify-content: flex-start;
+}
+
+.ui-panel-right--modern.collapsed .ui-panel-right__container {
+  gap: 0;
 }
 </style>
