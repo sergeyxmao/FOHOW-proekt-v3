@@ -455,7 +455,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
       >⧠</button>
       <button
         class="add-btn"
-        class="{ 'add-btn--modern': props.isModernTheme }"
+        :class="{ 'add-btn--modern': props.isModernTheme }"
         title="Добавить шаблон"
         @click="addTemplate"
       >⧉</button>
