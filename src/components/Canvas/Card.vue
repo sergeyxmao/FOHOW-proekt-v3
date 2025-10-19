@@ -377,27 +377,21 @@ export default {
   top: 15px;
   left: 15px;
   color: #ffc700;
-  font-weight: 900;
   font-size: 36px;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  /* Ваши изменения */
 }
 
 .fendou-badge {
   top: -25px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: red;
-  font-weight: 900;
   font-size: 56px;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  /* Ваши изменения */
 }
 
 .rank-badge {
   top: -15px;
   right: 15px;
   width: 80px;
-  height: auto;
-  transform: rotate(15deg);
+  /* Ваши изменения */
 }
 
 /* Соединительные точки */
