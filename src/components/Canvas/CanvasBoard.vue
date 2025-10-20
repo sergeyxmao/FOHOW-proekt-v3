@@ -541,8 +541,17 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('keydown', handleDeletionKeydown);});
-const resetView = () => {
+  window.removeEventListener('keydown', handleDeletionKeydown);
+  window.removeEventListener('pointermove', handleMouseMove);
+});
+
+watch(isDrawingLine, (isActive) => {
+  if (isActive) {
+    window.addEventListener('pointermove', handleMouseMove);
+  } else {
+    window.removeEventListener('pointermove', handleMouseMove);
+  }
+});const resetView = () => {
   canvasScale.value = 1;
   canvasTranslation.value = clampTranslation({ x: 0, y: 0 }, 1);
 };
