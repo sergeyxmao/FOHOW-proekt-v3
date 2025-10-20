@@ -18,16 +18,34 @@ const cardsStore = useCardsStore()
 const canvasStore = useCanvasStore()
 const connectionsStore = useConnectionsStore()
 
+// Константы линий
+const MIN_ANIMATION_SECONDS = 2
+const MAX_ANIMATION_SECONDS = 999
+
+const defaultLineColor = connectionsStore.defaultLineColor || '#0f62fe'
+const defaultLineThickness = connectionsStore.defaultLineThickness || 5
+const defaultAnimationSeconds = Math.min(
+  Math.max(Math.round((connectionsStore.defaultAnimationDuration || (MIN_ANIMATION_SECONDS * 1000)) / 1000), MIN_ANIMATION_SECONDS),
+  MAX_ANIMATION_SECONDS
+)
+
+function clampAnimationSeconds(value) {
+  if (Number.isNaN(value)) {
+    return MIN_ANIMATION_SECONDS
+  }
+
+  return Math.min(Math.max(value, MIN_ANIMATION_SECONDS), MAX_ANIMATION_SECONDS)
+}
 // Базовая реактивность
 const isCollapsed = ref(false)
 
 // Управление линиями
-const lineColor = ref('#0f62fe') // DEFAULT_LINE_COLOR
-const thickness = ref(5)
+const lineColor = ref(defaultLineColor)
+const thickness = ref(defaultLineThickness)
 const isGlobalLineMode = ref(false) // применить ко всем линиям
 
 // Управление анимацией
-const animationDuration = ref(2) // в секундах
+const animationDuration = ref(defaultAnimationSeconds) // в секундах
 
 // Управление цветом заголовка
 const headerColor = ref('#5D8BF4')
@@ -60,7 +78,8 @@ function updateLineColor(color) {
 }
 
 function updateThickness(value) {
-  thickness.value = Number(value)
+  const numericValue = Math.min(Math.max(Number(value), 1), 20)
+  thickness.value = numericValue
   
   if (isGlobalLineMode.value) {
     // Применяем ко всем линиям
@@ -78,16 +97,23 @@ function toggleGlobalLineMode() {
 function updateSliderTrack(val) {
   const min = 1
   const max = 20
-  const percent = Math.round(((val - min) / (max - min)) * 100)
-  return `linear-gradient(90deg, ${lineColor.value} 0%, ${lineColor.value} ${percent}%, #e5e7eb ${percent}%)`
+  const clampedValue = Math.min(Math.max(val, min), max)
+  const percent = ((clampedValue - min) / (max - min)) * 100
+  return `linear-gradient(to right, ${lineColor.value} 0%, ${lineColor.value} ${percent}%, #e5e7eb ${percent}%, #e5e7eb 100%)`
 }
 
 // Управление анимацией
 function updateAnimationDuration(value) {
-  const seconds = Number(value)
-  if (seconds >= 2 && seconds <= 999) {
-    animationDuration.value = seconds
+  const seconds = clampAnimationSeconds(Number(value))
+  const durationMs = seconds * 1000
+
+  animationDuration.value = seconds
+
+  if (isGlobalLineMode.value) {
+    connectionsStore.updateAllConnections({ animationDuration: durationMs })
   }
+  
+    connectionsStore.setDefaultConnectionParameters(lineColor.value, thickness.value, durationMs)
 }
 
 // Управление цветом заголовка
@@ -311,8 +337,10 @@ function addTemplate() {
       endCard.id,
       {
         color: lineColor.value,
-        thickness: lineDef.thickness
-      }
+        thickness: lineDef.thickness,
+        fromSide: lineDef.startSide,
+        toSide: lineDef.endSide,
+        animationDuration: animationDuration.value * 1000      }
     );
   });
   
@@ -358,14 +386,17 @@ onMounted(() => {
   updateBackground(backgroundGradient.value)
   
   // Устанавливаем параметры по умолчанию для новых соединений
-  connectionsStore.setDefaultConnectionParameters(lineColor.value, thickness.value)
-  
+  connectionsStore.setDefaultConnectionParameters(
+    lineColor.value,
+    thickness.value,
+    animationDuration.value * 1000
+  )  
   console.log('RightPanel mounted successfully');
 })
 
 // Следим за изменениями параметров линий и обновляем значения по умолчанию
-watch([lineColor, thickness], ([newColor, newThickness]) => {
-  connectionsStore.setDefaultConnectionParameters(newColor, newThickness)
+watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDuration]) => {
+  connectionsStore.setDefaultConnectionParameters(newColor, newThickness, newDuration * 1000)
 })
 </script>
 
@@ -407,18 +438,20 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
             @input="handleLineColorChange"
           >
           <div class="line-controls-col">
-            <label for="thickness-slider">Толщина: <span>{{ thickness }}</span>px</label>
+            <label for="thickness-slider">Толщина линии</label>
             <div class="thickness-row">
-              <input 
-                type="range" 
-                id="thickness-slider" 
-                class="thickness-slider" 
-                min="1" 
-                max="20" 
+              <input
+                type="range"
+                id="thickness-slider"
+                class="thickness-slider"
+                min="1"
+                max="20"
+                step="1"
                 :value="thickness"
                 :style="{ background: sliderTrackStyle }"
                 @input="updateThickness($event.target.value)"
               />
+              <span id="thickness-value">{{ thickness }}px</span>
             </div>
           </div>
           <div class="animation-controls" aria-label="Настройки анимации">
@@ -780,108 +813,160 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 .line-controls-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  align-items: stretch;
+  gap: 14px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
 }
 
 .line-color-group {
   display: flex;
+  gap: 10px;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
 }
 
 .line-color-trigger {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 3px solid rgba(255, 255, 255, .85);
+  box-shadow: inset 0 0 0 2px rgba(15, 98, 254, .25),
+              0 8px 16px rgba(15, 98, 254, .18);
   cursor: pointer;
-  background-color: var(--brand);
-  box-shadow: inset 0 0 0 4px rgba(255,255,255,.65), 0 8px 16px rgba(15,98,254,.28);
-  transition: transform .15s, box-shadow .15s;
+  transition: all .2s;
 }
 
 .line-color-trigger:hover {
-  transform: translateY(-1px) scale(1.04);
-  box-shadow: inset 0 0 0 4px rgba(255,255,255,.75), 0 10px 20px rgba(15,98,254,.32);
+  transform: translateY(-2px);
+  box-shadow: inset 0 0 0 2px rgba(15, 98, 254, .35),
+              0 10px 20px rgba(15, 98, 254, .25);
+}
+
+.apply-all-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #6b7280;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all .2s;
+}
+
+.apply-all-btn:hover {
+  background: #f9fafb;
+  border-color: #0f62fe;
+  color: #0f62fe;
+}
+
+.apply-all-btn.active {
+  background: #eaf1ff;
+  border-color: #0f62fe;
+  color: #0f62fe;
 }
 
 .line-controls-col {
-  text-align: left;
-}
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #1f2937;}
 
 .line-controls-col label {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: var(--right-panel-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 
 .thickness-row {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 8px 10px;
+  gap: 10px;
+  padding: 10px 12px;
   border-radius: 14px;
-  background: var(--right-panel-surface);
-  box-shadow: var(--right-panel-surface-shadow);
+  background: var(--right-panel-surface, #f3f4f6);
+  box-shadow: var(--right-panel-surface-shadow, inset 0 -1px 0 rgba(255, 255, 255, .8));
 }
 
-.apply-all-btn {
-  width: 46px;
-  height: 46px;
-  padding: 0;
-  border-radius: 14px;
-  background: var(--right-panel-apply-bg);
-  border: 1px solid var(--right-panel-apply-border);
-  color: var(--right-panel-apply-color);
+.thickness-slider {
+  width: 100%;
+  height: 8px;
+  border-radius: 6px;
+  background: linear-gradient(
+    to right,
+    #0f62fe 0%,
+    #0f62fe 20%,
+    #e5e7eb 20%,
+    #e5e7eb 100%
+  );
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.thickness-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #0f62fe;
   cursor: pointer;
-  display: grid;
-  place-items: center;
-  transition: .2s;
-  box-shadow: var(--right-panel-apply-shadow);
+  box-shadow: 0 4px 10px rgba(15, 98, 254, .28);
+  transition: all .15s;
 }
 
-.apply-all-btn:hover {
-  border-color: var(--right-panel-apply-hover-border);
-  color: var(--right-panel-apply-hover-color);
-  box-shadow: var(--right-panel-apply-hover-shadow);
-  background: var(--right-panel-apply-hover-bg);
+.thickness-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 14px rgba(15, 98, 254, .4);
 }
 
-.apply-all-btn.active {
-  background: var(--right-panel-apply-hover-bg);
-  border-color: var(--right-panel-apply-hover-border);
-  color: var(--right-panel-apply-hover-color);
-  box-shadow: var(--right-panel-apply-hover-shadow);
+.thickness-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #0f62fe;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(15, 98, 254, .28);
+  transition: all .15s;
+}
+
+.thickness-slider::-moz-range-thumb:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 14px rgba(15, 98, 254, .4);
+}
+
+#thickness-value {
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  margin-left: 8px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .85);
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .45);
+  color: #1f2937;
 }
 
 .animation-controls {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--right-panel-muted);
 }
 
 .animation-label {
   font-size: 13px;
   font-weight: 700;
-  color: var(--right-panel-title-color);
-  text-align: left;
+  color: var(--right-panel-title-color, #374151);
 }
 
 .animation-block {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
 }
 
@@ -889,10 +974,8 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-weight: 600;
-  color: var(--right-panel-muted);
   flex: 1;
-  position: relative;
+  color: var(--right-panel-muted, #6b7280);
 }
 
 .animation-duration-label {
@@ -902,7 +985,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0,0,0,0);
+  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
 }
@@ -910,82 +993,29 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 .animation-input-group {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: var(--right-panel-surface);
-  border-radius: 14px;
-  padding: 6px 8px;
-  box-shadow: var(--right-panel-surface-shadow);
+  gap: 6px;
 }
 
 .animation-duration-input {
-  width: calc(3ch + 12px);
-  height: 42px;
-  border-radius: 14px;
-  border: 1px solid var(--right-panel-input-border);
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--right-panel-input-color);
+  width: 60px;
+  height: 36px;
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
   text-align: center;
-  background: var(--right-panel-input-bg);
-  box-shadow: var(--right-panel-input-shadow);
+  outline: none;
 }
 
 .animation-duration-input:focus {
-  outline: 2px solid var(--right-panel-input-focus-outline);
-  outline-offset: 1px;
-  border-color: var(--right-panel-input-focus-border);
+  border-color: #0f62fe;
+  box-shadow: 0 0 0 3px rgba(15, 98, 254, .1);
 }
 
 .animation-unit {
-  font-size: 12px;
-  text-transform: lowercase;
-  color: var(--right-panel-unit-color);
-  margin-left: auto;
-}
-
-/* Слайдеры */
-.thickness-slider {
-  appearance: none;
-  width: 100%;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--right-panel-slider-track);
-  outline: none;
-  accent-color: var(--brand);
-}
-
-.thickness-slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--brand);
-  box-shadow: 0 4px 10px rgba(15,98,254,.35);
-  cursor: pointer;
-  border: 3px solid #fff;
-  transition: transform .15s, box-shadow .15s;
-}
-
-.thickness-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.08);
-  box-shadow: 0 6px 14px rgba(15,98,254,.4);
-}
-
-.thickness-slider::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--brand);
-  box-shadow: 0 4px 10px rgba(15,98,254,.35);
-  border: 3px solid #fff;
-  cursor: pointer;
-  transition: transform .15s, box-shadow .15s;
-}
-
-.thickness-slider::-moz-range-thumb:hover {
-  transform: scale(1.08);
-  box-shadow: 0 6px 14px rgba(15,98,254,.4);
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
 }
 
 /* Фон */
