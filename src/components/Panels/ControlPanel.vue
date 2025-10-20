@@ -116,7 +116,7 @@ const handleToggleGuides = () => {
 </script>
 
 <template>
- <div
+  <div
     :class="[
       'left-panel-controls',
       {
@@ -195,6 +195,7 @@ const handleToggleGuides = () => {
   width: 100%;
 }
 
+.left-panel-controls--modern {
   --left-panel-btn-size: 80px;
   --left-panel-btn-radius: 24px;
   --left-panel-btn-font: 34px;
@@ -211,7 +212,7 @@ const handleToggleGuides = () => {
 
 .left-panel-controls__top {
   display: grid;
-  grid-template-columns: auto 1fr auto;  flex-direction: column;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 16px;
 }
@@ -269,7 +270,8 @@ const handleToggleGuides = () => {
   place-items: center;
   cursor: pointer;
   transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
-  box-shadow: var(--left-panel-btn-shadow);}
+  box-shadow: var(--left-panel-btn-shadow);
+}
 
 .left-panel-controls .ui-btn:hover:not(:disabled) {
   transform: translateY(-4px);
