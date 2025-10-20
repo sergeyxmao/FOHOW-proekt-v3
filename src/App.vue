@@ -11,12 +11,11 @@ function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
 }
 
-watchEffect(() => {
-
 function toggleLeftPanel() {
   isLeftPanelCollapsed.value = !isLeftPanelCollapsed.value
 }
-  
+
+watchEffect(() => {
   document.body.classList.toggle('theme-modern', isModernTheme.value)
 })  
 </script>
@@ -65,7 +64,10 @@ function toggleLeftPanel() {
 }
 
 html,body{
-  margin:0; padding:0; width:100%; height:100%;
+  margin:0; 
+  padding:0; 
+  width:100%; 
+  height:100%;
   overflow:hidden;
   background: var(--bg);
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -79,88 +81,74 @@ html,body{
   height: 100%;
 }
 
-/* Панели */
+/* Левая панель - статичная, не зависит от масштабирования */
 .ui-panel-left{
   position: fixed;
   top: 20px;
   left: 0;
   z-index: 2000;
   display: flex;
-  align-items: stretch;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: center;
   padding: 18px 20px;
   background: var(--panel);
   border-radius: 0 24px 24px 0;
   box-shadow: var(--shadow);
-  transition: top .3s ease, transform .3s ease, padding .3s ease;}
+  transition: all .3s ease;
+}
 
 .ui-panel-left--classic {
-  width: 320px;
-  padding: 24px 22px;
+  gap: 16px;
 }
 
-.ui-panel-left--classic.collapsed {
-  width: auto;
-  padding: 16px 20px;}
+/* Классический интерфейс - кнопки увеличены в 2 раза */
+.ui-panel-left--classic .ui-btn {
+  width: 80px !important;
+  height: 80px !important;
+  font-size: 36px !important;
+}
 
+.ui-panel-left--classic .theme-toggle__icon {
+  width: 28px !important;
+  height: 28px !important;
+}
+
+.ui-panel-left--classic .left-panel-controls__collapse {
+  width: 56px !important;
+  font-size: 27px !important;
+}
+
+/* При свертывании левой панели - показываем только верхние кнопки */
 .ui-panel-left.collapsed {
   top: 16px;
+  left: 0;
   transform: none !important;
   padding: 16px 20px;
-  justify-content: flex-start;
-  align-items: flex-start;  
 }
+
+.ui-panel-left.collapsed .left-panel-controls__grid {
+  display: none !important;
+}
+
+/* Кнопка свернуть в классическом интерфейсе - на правом краю панели */
+.ui-panel-left--classic .left-panel-controls__top {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.ui-panel-left--classic .left-panel-controls__collapse {
+  order: 3;
+}
+
 /* Canvas/SVG */
-#canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
-
-#app.theme-modern {
-  --card-width: 400px;
-  --bg: #efe4d1;
-  --panel: rgba(18, 24, 34, 0.88);
-  --surface: rgba(24, 32, 46, 0.92);
-  --ink: #f4f7fb;
-  --muted: #9ba5b7;
-  --brand: #59d0ff;
-  --radius: 18px;
-  --shadow: 0 16px 34px rgba(8, 11, 18, 0.45);
-}
-
-body.theme-modern {
-  background: linear-gradient(145deg, #f3e9d6 0%, #efe3ce 48%, #f8efe0 100%);
-  color: #f4f7fb;
-}
-
-
-.ui-panel-left--modern {
-  top: 50%;
-  transform: translateY(-50%);
-  align-items: stretch;
-  padding: 32px 28px;
-  width: 280px;
-  min-height: 420px;
-  border-radius: 0 32px 32px 0;
-  background: linear-gradient(190deg, rgba(19,25,38,0.95) 0%, rgba(9,14,24,0.96) 100%);
-  box-shadow: 0 24px 48px rgba(5, 8, 14, 0.68);
-}
-
-.ui-panel-left--modern.collapsed {
-  width: auto;
-  min-height: auto;
-  padding: 20px 24px;
-  background: linear-gradient(190deg, rgba(19,25,38,0.92) 0%, rgba(9,14,24,0.94) 100%);}
-
-.ui-panel-left.collapsed.ui-panel-left--modern {
-  top: 16px;
-}
-
-.theme-modern #canvas{
-  position: absolute;
-  top: 32px;
-  right: 32px;
-  bottom: 32px;
-  left: 240px;  
-  background: rgba(255,255,255,0.45);
-  border-radius: 28px;
-  box-shadow: 0 28px 48px rgba(6, 11, 21, 0.22);
+#canvas { 
+  position: relative; 
+  width: 100%; 
+  height: 100%; 
+  transform-origin: 0 0; 
+  cursor: default;
 }
 </style>
