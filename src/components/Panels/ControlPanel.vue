@@ -125,16 +125,57 @@ const handleToggleGuides = () => {
       }
     ]"
   >
-    <div class="left-panel-controls__top left-panel-controls__section">
-      <button
-        class="ui-btn theme-toggle"
-        type="button"
-        :title="props.isModernTheme ? 'Вернуться к классическому интерфейсу' : 'Включить новый интерфейс'"
-        @click="emit('toggle-theme')"
-      >
-        <span class="theme-toggle__icon" aria-hidden="true"></span>
-      </button>
-      <div class="left-panel-controls__history left-panel-controls__section">
+    <template v-if="props.isCollapsed">
+      <div class="left-panel-controls__collapsed">
+        <button
+          class="ui-btn theme-toggle"
+          type="button"
+          :title="props.isModernTheme ? 'Вернуться к классическому интерфейсу' : 'Включить новый интерфейс'"
+          @click="emit('toggle-theme')"
+        >
+          <span class="theme-toggle__icon" aria-hidden="true"></span>
+        </button>
+        <div class="left-panel-controls__history">
+          <button
+            class="ui-btn"
+            id="undo-btn"
+            title="Отменить (Ctrl+Z)"
+            @click="handleUndo"
+            :disabled="!historyStore.canUndo"
+          >
+            ↶
+          </button>
+          <button
+            class="ui-btn"
+            id="redo-btn"
+            title="Повторить (Ctrl+Shift+Z)"
+            @click="handleRedo"
+            :disabled="!historyStore.canRedo"
+          >
+            ↷
+          </button>
+        </div>
+        <button
+          class="ui-btn left-panel-controls__collapse"
+          type="button"
+          :title="props.isCollapsed ? 'Развернуть панель' : 'Свернуть панель'"
+          :aria-expanded="!props.isCollapsed"
+          @click="emit('toggle-collapse')"
+        >
+          <span aria-hidden="true">{{ props.isCollapsed ? '❯' : '❮' }}</span>
+        </button>
+      </div>
+    </template>
+    <template v-else>
+      <div class="left-panel-controls__grid">
+        <button
+          class="ui-btn theme-toggle left-panel-controls__grid-item--full"
+          type="button"
+          :title="props.isModernTheme ? 'Вернуться к классическому интерфейсу' : 'Включить новый интерфейс'"
+          @click="emit('toggle-theme')"
+        >
+          <span class="theme-toggle__icon" aria-hidden="true"></span>
+        </button>
         <button
           class="ui-btn"
           id="undo-btn"
@@ -153,21 +194,6 @@ const handleToggleGuides = () => {
         >
           ↷
         </button>
-      </div>
-      <button
-         v-if="props.isCollapsed"
-        class="ui-btn left-panel-controls__collapse"
-        type="button"
-        :title="props.isCollapsed ? 'Развернуть панель' : 'Свернуть панель'"
-        :aria-expanded="!props.isCollapsed"
-        @click="emit('toggle-collapse')"
-      >
-        <span aria-hidden="true">{{ props.isCollapsed ? '❯' : '❮' }}</span>
-      </button>
-    </div>
-
-    <div v-if="!props.isCollapsed" class="left-panel-controls__content">
-      <div class="left-panel-controls__grid left-panel-controls__section">
         <button class="ui-btn" title="Сохранить проект (JSON)" @click="handleSaveProject">💾</button>
         <button class="ui-btn" title="Экспорт в HTML (просмотр)" @click="handleExportHTML">📄</button>
         <button class="ui-btn" title="Экспорт в SVG (вектор)" @click="handleExportSVG">🖋️</button>
@@ -176,8 +202,6 @@ const handleToggleGuides = () => {
         <button class="ui-btn" title="Список заметок" @click="handleNotesList" disabled>🗒️</button>
         <button class="ui-btn" title="Режим выделения (Esc)" @click="handleSelectionMode">⬚</button>
         <button class="ui-btn" title="Режим иерархии" @click="handleHierarchicalDragMode">🌳</button>
-      </div>
-      <div class="left-panel-controls__footer left-panel-controls__section">
         <button class="ui-btn" title="Показать/скрыть направляющие" @click="handleToggleGuides">📐</button>
         <button
           class="ui-btn left-panel-controls__collapse"
@@ -189,7 +213,7 @@ const handleToggleGuides = () => {
           <span aria-hidden="true">{{ props.isCollapsed ? '❯' : '❮' }}</span>
         </button>
       </div>
-    </div>
+    </template>
     <input type="file" accept=".json,application/json" style="display:none">
   </div>
 </template>
@@ -208,8 +232,8 @@ const handleToggleGuides = () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--left-panel-section-gap);  width: 100%;
-}
+  gap: var(--left-panel-section-gap);
+  width: 100%;}
 
 .left-panel-controls--modern {
   --left-panel-btn-size: 80px;
@@ -224,29 +248,42 @@ const handleToggleGuides = () => {
 
 .left-panel-controls--collapsed {
   --left-panel-section-gap: 14px;
-  gap: var(--left-panel-section-gap);}
-
-.left-panel-controls__section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
   gap: var(--left-panel-section-gap);
 }
-
-.left-panel-controls__content {
+.left-panel-controls__collapsed {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--left-panel-section-gap);
+  gap: calc(var(--left-panel-section-gap) * 0.85);
+  width: 100%;
+}
+
+.left-panel-controls__history {
+  display: grid;
+  grid-template-columns: repeat(2, var(--left-panel-btn-size));  
+  justify-content: center;
+  justify-items: center;
+  column-gap: calc(var(--left-panel-section-gap) * 0.6);
+  row-gap: calc(var(--left-panel-section-gap) * 0.6);
+  width: 100%;
+}
+
+.left-panel-controls__grid {
+  display: grid;
+  grid-template-columns: repeat(2, var(--left-panel-btn-size));
+  justify-content: center;
+  justify-items: center;
+  column-gap: calc(var(--left-panel-section-gap) * 0.75);
+  row-gap: calc(var(--left-panel-section-gap) * 0.75);
   width: 100%;
 }
 
 .left-panel-controls__grid .ui-btn {
   width: var(--left-panel-btn-size);
 }
-
+.left-panel-controls__grid-item--full {
+  grid-column: 1 / -1;
+}
 .left-panel-controls .ui-btn {
   width: var(--left-panel-btn-size);
   height: var(--left-panel-btn-size);
