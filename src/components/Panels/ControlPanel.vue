@@ -130,7 +130,7 @@ const handleToggleGuides = () => {
         <button
           class="ui-btn theme-toggle"
           type="button"
-          :title="props.isModernTheme ? 'Вернуться к классическому интерфейсу' : 'Включить новый интерфейс'"
+          :title="props.isModernTheme ? 'Вернуть светлое меню' : 'Включить тёмное меню'"
           @click="emit('toggle-theme')"
         >
           <span class="theme-toggle__icon" aria-hidden="true"></span>
@@ -171,7 +171,7 @@ const handleToggleGuides = () => {
         <button
           class="ui-btn theme-toggle left-panel-controls__grid-item--full"
           type="button"
-          :title="props.isModernTheme ? 'Вернуться к классическому интерфейсу' : 'Включить новый интерфейс'"
+          :title="props.isModernTheme ? 'Вернуть светлое меню' : 'Включить тёмное меню'"
           @click="emit('toggle-theme')"
         >
           <span class="theme-toggle__icon" aria-hidden="true"></span>
@@ -236,14 +236,10 @@ const handleToggleGuides = () => {
   width: 100%;}
 
 .left-panel-controls--modern {
-  --left-panel-btn-size: 80px;
-  --left-panel-btn-radius: 24px;
-  --left-panel-btn-font: 34px;
-  --left-panel-btn-bg: rgba(28, 38, 58, 0.78);
-  --left-panel-btn-border: rgba(96, 164, 255, 0.24);
+  --left-panel-btn-bg: rgba(28, 38, 58, 0.9);
+  --left-panel-btn-border: rgba(96, 164, 255, 0.35);
   --left-panel-btn-color: #e5f3ff;
-  --left-panel-btn-shadow: 0 24px 44px rgba(8, 12, 22, 0.55);
-  --left-panel-section-gap: 24px;
+  --left-panel-btn-shadow: 0 18px 34px rgba(6, 11, 21, 0.45);
 }
 
 .left-panel-controls--collapsed {
