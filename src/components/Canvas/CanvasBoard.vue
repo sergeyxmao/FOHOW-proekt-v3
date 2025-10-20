@@ -33,11 +33,90 @@ useKeyboardShortcuts({
   feedbackDuration: 300,
   disableOnInput: true
 });
+const canvasContainer = ref(null);
+const canvasScale = ref(1);
+const canvasTranslation = ref({ x: 0, y: 0 });
 
+const MIN_CANVAS_SCALE = 0.5;
+const MAX_CANVAS_SCALE = 2;
+const CANVAS_SCALE_STEP = 0.1;
 const stageConfig = ref({
   width: 0,
   height: 0
 });
+const contentTransformStyle = computed(() => ({
+  transform: `translate(${canvasTranslation.value.x}px, ${canvasTranslation.value.y}px) scale(${canvasScale.value})`,
+  transformOrigin: '0 0'
+}));
+
+const screenToWorld = (clientX, clientY) => {
+  const rect = canvasContainer.value?.getBoundingClientRect();
+  if (!rect) {
+    return { x: 0, y: 0 };
+  }
+
+  const relativeX = clientX - rect.left;
+  const relativeY = clientY - rect.top;
+
+  return {
+    x: (relativeX - canvasTranslation.value.x) / canvasScale.value,
+    y: (relativeY - canvasTranslation.value.y) / canvasScale.value
+  };
+};
+
+const clampTranslation = (translation, scale) => {
+  if (!canvasContainer.value) {
+    return translation;
+  }
+
+  const containerWidth = canvasContainer.value.clientWidth;
+  const containerHeight = canvasContainer.value.clientHeight;
+  const scaledWidth = containerWidth * scale;
+  const scaledHeight = containerHeight * scale;
+
+  const minX = Math.min(0, containerWidth - scaledWidth);
+  const maxX = Math.max(0, containerWidth - scaledWidth);
+  const minY = Math.min(0, containerHeight - scaledHeight);
+  const maxY = Math.max(0, containerHeight - scaledHeight);
+
+  return {
+    x: Math.min(Math.max(translation.x, minX), maxX),
+    y: Math.min(Math.max(translation.y, minY), maxY)
+  };
+};
+
+const handleWheel = (event) => {
+  event.preventDefault();
+
+  const rect = canvasContainer.value?.getBoundingClientRect();
+  if (!rect) {
+    return;
+  }
+
+  const zoomDirection = event.deltaY < 0 ? 1 : -1;
+  const scaleDelta = 1 + CANVAS_SCALE_STEP * zoomDirection;
+  let nextScale = canvasScale.value * scaleDelta;
+  nextScale = Math.min(MAX_CANVAS_SCALE, Math.max(MIN_CANVAS_SCALE, nextScale));
+
+  if (nextScale === canvasScale.value) {
+    return;
+  }
+
+  const cursorX = event.clientX - rect.left;
+  const cursorY = event.clientY - rect.top;
+
+  const worldPosition = {
+    x: (cursorX - canvasTranslation.value.x) / canvasScale.value,
+    y: (cursorY - canvasTranslation.value.y) / canvasScale.value
+  };
+
+  canvasScale.value = nextScale;
+  const nextTranslation = {
+    x: cursorX - worldPosition.x * nextScale,
+    y: cursorY - worldPosition.y * nextScale
+  };
+  canvasTranslation.value = clampTranslation(nextTranslation, nextScale);
+};
 
 // Состояние для создания соединений
 const selectedCardId = ref(null);
@@ -158,9 +237,9 @@ const startDrag = (event, cardId) => {
   draggedCardId.value = cardId;
   const card = cards.find(c => c.id === cardId);
   if (card) {
-    dragOffset.value = {
-      x: event.clientX - card.x,
-      y: event.clientY - card.y
+    const pointer = screenToWorld(event.clientX, event.clientY);    dragOffset.value = {
+      x: pointer.x - card.x,
+      y: pointer.y - card.y
     };
   }
   
@@ -174,9 +253,10 @@ const startDrag = (event, cardId) => {
 
 const handleDrag = (event) => {
   if (!draggedCardId.value) return;
-  
-  const newX = event.clientX - dragOffset.value.x;
-  const newY = event.clientY - dragOffset.value.y;
+
+  const pointer = screenToWorld(event.clientX, event.clientY);
+  const newX = pointer.x - dragOffset.value.x;
+   const newY = pointer.y - dragOffset.value.y;
   
   cardsStore.updateCardPosition(draggedCardId.value, newX, newY);
 };
@@ -193,12 +273,8 @@ const endDrag = () => {
 // Обработчик движения мыши для обновления временной линии
 const handleMouseMove = (event) => {
   if (isDrawingLine.value) {
-    // Обновляем позицию мыши
-    const rect = event.currentTarget.getBoundingClientRect();
-    mousePosition.value = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
-    };
+    // Обновляем позицию мыши в координатах рабочей области
+    mousePosition.value = screenToWorld(event.clientX, event.clientY);
   }
 };
 
@@ -335,15 +411,23 @@ const deleteSelectedCard = () => {
 onMounted(() => {
   // Устанавливаем размеры сцены равными размерам родительского контейнера
   const resizeStage = () => {
-    const container = document.querySelector('.canvas-container');
-    if (container) {
-      stageConfig.value.width = container.clientWidth;
-      stageConfig.value.height = container.clientHeight;
+    if (canvasContainer.value) {
+      stageConfig.value.width = canvasContainer.value.clientWidth;
+      stageConfig.value.height = canvasContainer.value.clientHeight;
+      canvasTranslation.value = clampTranslation(canvasTranslation.value, canvasScale.value);
     }
   };
 
   resizeStage();
   window.addEventListener('resize', resizeStage);
+});
+const resetView = () => {
+  canvasScale.value = 1;
+  canvasTranslation.value = clampTranslation({ x: 0, y: 0 }, 1);
+};
+
+defineExpose({
+  resetView
 });
 
 // Следим за изменением статуса соединения и эмитим событие
@@ -364,79 +448,85 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
 </script>
 
 <template>
-  <div class="canvas-container" :style="{ backgroundColor: canvasStore.backgroundColor }">
-    
-    <!-- SVG слой для отрисовки линий соединений -->
-    <svg
-      class="svg-layer"
-      :width="stageConfig.width"
-      :height="stageConfig.height"
-      style="position: absolute; top: 0; left: 0; z-index: 1;"
-    >
-      <defs>
-        <marker
-          id="marker-dot"
-          viewBox="0 0 10 10"
-          refX="5"
-          refY="5"
-          markerWidth="6"
-          markerHeight="6"
-          fill="currentColor"
-        >
-          <circle cx="5" cy="5" r="4"/>
-        </marker>
-      </defs>
-      
-      <!-- Отрисовка Г-образных линий соединений -->
-      <path
-        v-for="path in connectionPaths"
-        :key="path.id"
-        :d="path.d"
-        :stroke="path.stroke"
-        :stroke-width="path.strokeWidth"
-        :fill="path.fill"
-        marker-start="url(#marker-dot)"
-        marker-end="url(#marker-dot)"
-        style="pointer-events: stroke;"
-      />
-      
-      <!-- Временная линия при рисовании соединения -->
-      <path
-        v-if="previewLinePath"
-        :d="previewLinePath.d"
-        :stroke="previewLinePath.stroke"
-        :stroke-width="previewLinePath.strokeWidth"
-        :fill="previewLinePath.fill"
-        :stroke-dasharray="previewLinePath.strokeDasharray"
-        marker-start="url(#marker-dot)"
-        marker-end="url(#marker-dot)"
-      />
-    </svg>
-    
-    <!-- Контейнер для карточек (обычный HTML/DOM) -->
-    <div
-      class="cards-container"
-      :style="{
-        width: stageConfig.width + 'px',
-        height: stageConfig.height + 'px',
-        position: 'relative',
-        zIndex: 2
-      }"
-      @click="handleStageClick"
-      @mousemove="handleMouseMove"
-      @pointerdown="handlePointerDown"
-    >
-      <!-- Отрисовка карточек -->
-      <Card
-        v-for="card in cards"
-        :key="card.id"
-        :card="card"
-        :is-selected="card.selected"
-        :is-connecting="isDrawingLine && connectionStart?.cardId === card.id"
-        @card-click="(event) => handleCardClick(event, card.id)"
-        @start-drag="startDrag"
-      />
-      
+  <div
+    class="canvas-container"
+    ref="canvasContainer"
+    :style="{ backgroundColor: canvasStore.backgroundColor }"
+    @wheel="handleWheel"
+  >
+    <div class="canvas-content" :style="contentTransformStyle">
+      <!-- SVG слой для отрисовки линий соединений -->
+      <svg
+        class="svg-layer"
+        :width="stageConfig.width"
+        :height="stageConfig.height"
+        style="position: absolute; top: 0; left: 0; z-index: 1;"
+      >
+        <defs>
+          <marker
+            id="marker-dot"
+            viewBox="0 0 10 10"
+            refX="5"
+            refY="5"
+            markerWidth="6"
+            markerHeight="6"
+            fill="currentColor"
+          >
+            <circle cx="5" cy="5" r="4"/>
+          </marker>
+        </defs>
+
+        <!-- Отрисовка Г-образных линий соединений -->
+        <path
+          v-for="path in connectionPaths"
+          :key="path.id"
+          :d="path.d"
+          :stroke="path.stroke"
+          :stroke-width="path.strokeWidth"
+          :fill="path.fill"
+          marker-start="url(#marker-dot)"
+          marker-end="url(#marker-dot)"
+          style="pointer-events: stroke;"
+        />
+
+        <!-- Временная линия при рисовании соединения -->
+        <path
+          v-if="previewLinePath"
+          :d="previewLinePath.d"
+          :stroke="previewLinePath.stroke"
+          :stroke-width="previewLinePath.strokeWidth"
+          :fill="previewLinePath.fill"
+          :stroke-dasharray="previewLinePath.strokeDasharray"
+          marker-start="url(#marker-dot)"
+          marker-end="url(#marker-dot)"
+        />
+      </svg>
+
+      <!-- Контейнер для карточек (обычный HTML/DOM) -->
+      <div
+        class="cards-container"
+        :style="{
+          width: stageConfig.width + 'px',
+          height: stageConfig.height + 'px',
+          position: 'relative',
+          zIndex: 2
+        }"
+        @click="handleStageClick"
+        @mousemove="handleMouseMove"
+        @pointerdown="handlePointerDown"
+      >
+        <!-- Отрисовка карточек -->
+        <Card
+          v-for="card in cards"
+          :key="card.id"
+          :card="card"
+          :is-selected="card.selected"
+          :is-connecting="isDrawingLine && connectionStart?.cardId === card.id"
+          @card-click="(event) => handleCardClick(event, card.id)"
+          @start-drag="startDrag"
+        />
+
+      </div>   
     </div>
   </div>
 </template>
@@ -448,4 +538,12 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
   overflow: hidden;
   position: relative;
 }
-</style>
+
+.canvas-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+}</style>
