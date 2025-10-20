@@ -5,6 +5,14 @@ import { useCanvasStore } from '../../stores/canvas'
 import { useConnectionsStore } from '../../stores/connections'
 import { HEADER_COLORS, getHeaderColorRgb } from '../../utils/constants'
 
+const props = defineProps({
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  }
+})
+
+  
 // Stores
 const cardsStore = useCardsStore()
 const canvasStore = useCanvasStore()
@@ -362,8 +370,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 </script>
 
 <template>
-  <div :class="['ui-panel-right', { collapsed: isCollapsed }]">
-    <div class="ui-panel-right__container">
+  <div :class="['ui-panel-right', { collapsed: isCollapsed, 'ui-panel-right--modern': props.isModernTheme }]">    <div class="ui-panel-right__container">
       <button
         class="ui-btn panel-collapse-btn"
         :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
@@ -531,7 +538,115 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   flex-direction: column;
   align-items: flex-end;
   gap: 14px;
+  --right-panel-bg: #fff;
+  --right-panel-text: var(--ink);
+  --right-panel-shadow: 10px 12px 24px rgba(15,35,95,.16), -6px -6px 18px rgba(255,255,255,.85);
+  --right-panel-btn-bg: #fff;
+  --right-panel-btn-border: #e5e7eb;
+  --right-panel-btn-color: var(--ink);
+  --right-panel-btn-shadow: 0 2px 6px rgba(0,0,0,.06);
+  --right-panel-btn-hover-bg: #fff;
+  --right-panel-btn-hover-border: #d1d5db;
+  --right-panel-btn-hover-shadow: 0 6px 14px rgba(0,0,0,.12);
+  --right-panel-btn-active-bg: #eaf1ff;
+  --right-panel-btn-active-border: #cfe0ff;
+  --right-panel-btn-active-color: #0b5bd3;
+  --right-panel-add-btn-bg: #fff;
+  --right-panel-add-btn-color: var(--brand);
+  --right-panel-add-btn-border: #e5e7eb;
+  --right-panel-add-btn-shadow: var(--shadow);
+  --right-panel-add-btn-hover-border: #cfe0ff;
+  --right-panel-add-btn-hover-shadow: 0 10px 22px rgba(0,0,0,.14);
+  --right-panel-muted: #7b849a;
+  --right-panel-surface: rgba(255,255,255,.65);
+  --right-panel-surface-shadow: inset 0 2px 6px rgba(175,188,210,.45);
+  --right-panel-input-bg: #fff;
+  --right-panel-input-border: rgba(167,178,204,.45);
+  --right-panel-input-shadow: inset 0 -2px 0 rgba(255,255,255,.45);
+  --right-panel-input-color: #111827;
+  --right-panel-input-focus-outline: rgba(15,98,254,.25);
+  --right-panel-input-focus-border: #0f62fe;
+  --right-panel-unit-color: #9ca3af;
+  --right-panel-apply-bg: rgba(255,255,255,.8);
+  --right-panel-apply-border: rgba(167,178,204,.5);
+  --right-panel-apply-color: #5d6b8a;
+  --right-panel-apply-shadow: inset 0 -2px 0 rgba(255,255,255,.45), 0 6px 12px rgba(88,112,160,.18);
+  --right-panel-apply-hover-bg: rgba(255,255,255,.92);
+  --right-panel-apply-hover-border: #0f62fe;
+  --right-panel-apply-hover-color: #0f62fe;
+  --right-panel-apply-hover-shadow: inset 0 -2px 0 rgba(255,255,255,.65), 0 10px 18px rgba(15,98,254,.22);
+  --right-panel-card-bg: rgba(15,98,254,.05);
+  --right-panel-card-border: rgba(15,98,254,.12);
+  --right-panel-card-label: #5d6b8a;
+  --right-panel-card-btn-bg: #fff;
+  --right-panel-card-btn-border: #d1d5db;
+  --right-panel-card-btn-color: #4b5563;
+  --right-panel-card-btn-shadow: inset 0 -2px 0 rgba(255,255,255,.55), 0 8px 16px rgba(88,112,160,.18);
+  --right-panel-card-btn-hover-border: #0f62fe;
+  --right-panel-card-btn-hover-color: #0f62fe;
+  --right-panel-card-btn-hover-shadow: inset 0 -2px 0 rgba(255,255,255,.75), 0 10px 20px rgba(15,98,254,.25);
+  --right-panel-gradient-bg: #fff;
+  --right-panel-gradient-shadow: var(--shadow);
+  --right-panel-grad-btn-border: #e5e7eb;
+  --right-panel-grad-btn-shadow: 0 2px 6px rgba(0,0,0,.06);
+  --right-panel-title-color: #374151;
+  --right-panel-slider-track: #dbe3f4;
 }
+
+.ui-panel-right--modern {
+  --right-panel-bg: linear-gradient(165deg, rgba(18,28,48,.98) 0%, rgba(14,20,36,.95) 100%);
+  --right-panel-text: #e5f3ff;
+  --right-panel-shadow: 0 24px 48px rgba(6,12,21,.65);
+  --right-panel-btn-bg: rgba(33,43,66,.88);
+  --right-panel-btn-border: rgba(96,164,255,.35);
+  --right-panel-btn-color: #e5f3ff;
+  --right-panel-btn-shadow: 0 12px 26px rgba(5,10,20,.5);
+  --right-panel-btn-hover-bg: rgba(44,58,88,.95);
+  --right-panel-btn-hover-border: rgba(136,188,255,.6);
+  --right-panel-btn-hover-shadow: 0 18px 34px rgba(4,9,18,.55);
+  --right-panel-btn-active-bg: rgba(44,58,88,.96);
+  --right-panel-btn-active-border: rgba(156,206,255,.65);
+  --right-panel-btn-active-color: #66b7ff;
+  --right-panel-add-btn-bg: rgba(33,43,66,.92);
+  --right-panel-add-btn-color: #66b7ff;
+  --right-panel-add-btn-border: rgba(96,164,255,.35);
+  --right-panel-add-btn-shadow: 0 20px 36px rgba(5,10,20,.55);
+  --right-panel-add-btn-hover-border: rgba(156,206,255,.65);
+  --right-panel-add-btn-hover-shadow: 0 28px 44px rgba(5,10,20,.6);
+  --right-panel-muted: #93a8d6;
+  --right-panel-surface: rgba(33,43,66,.8);
+  --right-panel-surface-shadow: inset 0 2px 6px rgba(9,15,28,.55);
+  --right-panel-input-bg: rgba(21,29,46,.9);
+  --right-panel-input-border: rgba(96,164,255,.35);
+  --right-panel-input-shadow: inset 0 -2px 0 rgba(255,255,255,.08);
+  --right-panel-input-color: #e5f3ff;
+  --right-panel-input-focus-outline: rgba(102,170,255,.35);
+  --right-panel-input-focus-border: rgba(136,188,255,.65);
+  --right-panel-unit-color: #b5c9f0;
+  --right-panel-apply-bg: rgba(33,43,66,.88);
+  --right-panel-apply-border: rgba(96,164,255,.35);
+  --right-panel-apply-color: #cfe4ff;
+  --right-panel-apply-shadow: inset 0 -2px 0 rgba(255,255,255,.12), 0 12px 24px rgba(5,10,20,.5);
+  --right-panel-apply-hover-bg: rgba(44,58,88,.96);
+  --right-panel-apply-hover-border: rgba(136,188,255,.65);
+  --right-panel-apply-hover-color: #66b7ff;
+  --right-panel-apply-hover-shadow: inset 0 -2px 0 rgba(255,255,255,.18), 0 18px 30px rgba(5,10,20,.55);
+  --right-panel-card-bg: rgba(33,43,66,.82);
+  --right-panel-card-border: rgba(96,164,255,.25);
+  --right-panel-card-label: #9db5e6;
+  --right-panel-card-btn-bg: rgba(24,34,52,.9);
+  --right-panel-card-btn-border: rgba(96,164,255,.35);
+  --right-panel-card-btn-color: #dce9ff;
+  --right-panel-card-btn-shadow: inset 0 -2px 0 rgba(255,255,255,.12), 0 12px 26px rgba(5,10,20,.5);
+  --right-panel-card-btn-hover-border: rgba(156,206,255,.65);
+  --right-panel-card-btn-hover-color: #66b7ff;
+  --right-panel-card-btn-hover-shadow: inset 0 -2px 0 rgba(255,255,255,.18), 0 18px 32px rgba(5,10,20,.55);
+  --right-panel-gradient-bg: rgba(33,43,66,.88);
+  --right-panel-gradient-shadow: 0 18px 34px rgba(5,10,20,.5);
+  --right-panel-grad-btn-border: rgba(96,164,255,.35);
+  --right-panel-grad-btn-shadow: 0 12px 24px rgba(5,10,20,.45);
+  --right-panel-title-color: #b5c9f0;
+  --right-panel-slider-track: rgba(64,84,124,.9);}
 
 .ui-panel-right__container {
   display: flex;
@@ -543,10 +658,10 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  background: #fff;
-  padding: 20px 22px;
+  background: var(--right-panel-bg);
+  color: var(--right-panel-text);  padding: 20px 22px;
   border-radius: 22px;
-  box-shadow: 10px 12px 24px rgba(15,35,95,.16), -6px -6px 18px rgba(255,255,255,.85);
+  box-shadow: var(--right-panel-shadow);
   min-width: 240px;
 }
 
@@ -577,28 +692,29 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   min-width: 40px;
   height: 40px;
   padding: 0 10px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--right-panel-btn-bg);
+  border: 1px solid var(--right-panel-btn-border);
   border-radius: 10px;
   font-size: 18px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,.06);
+  box-shadow: var(--right-panel-btn-shadow);
   transition: transform .15s, box-shadow .15s, background-color .15s, border-color .15s;
   display: grid;
   place-items: center;
-  color: var(--ink);
+  color: var(--right-panel-btn-color);
 }
 
 .ui-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(0,0,0,.12);
-  border-color: #d1d5db;
+  box-shadow: var(--right-panel-btn-hover-shadow);
+  border-color: var(--right-panel-btn-hover-border);
+  background: var(--right-panel-btn-hover-bg);
 }
 
 .ui-btn.active {
-  background: #eaf1ff;
-  border-color: #cfe0ff;
-  color: #0b5bd3;
+  background: var(--right-panel-btn-active-bg);
+  border-color: var(--right-panel-btn-active-border);
+  color: var(--right-panel-btn-active-color);
 }
 
 .ui-btn:disabled {
@@ -610,14 +726,14 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 .add-btn {
   width: 56px;
   height: 56px;
-  background: #fff;
-  color: var(--brand);
-  border: 1px solid #e5e7eb;
+  background: var(--right-panel-add-btn-bg);
+  color: var(--right-panel-add-btn-color);
+  border: 1px solid var(--right-panel-add-btn-border);
   border-radius: 12px;
   font-size: 28px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: var(--shadow);
+  box-shadow: var(--right-panel-add-btn-shadow);
   transition: transform .15s, box-shadow .15s, border-color .15s;
   display: grid;
   place-items: center;
@@ -625,8 +741,8 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 
 .add-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(0,0,0,.14);
-  border-color: #cfe0ff;
+  box-shadow: var(--right-panel-add-btn-hover-shadow);
+  border-color: var(--right-panel-add-btn-hover-border);
 }
 
 .add-btn--triangle {
@@ -649,7 +765,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   height: 40px;
   padding: 0;
   border-radius: 12px 0 0 12px;
-  box-shadow: 0 6px 14px rgba(0,0,0,.1);
+  box-shadow: var(--right-panel-btn-shadow);
 }
 
 .panel-collapse-btn--floating {
@@ -702,7 +818,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #7b849a;
+  color: var(--right-panel-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -713,8 +829,8 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   justify-content: center;
   padding: 8px 10px;
   border-radius: 14px;
-  background: rgba(255,255,255,.65);
-  box-shadow: inset 0 2px 6px rgba(175,188,210,.45);
+  background: var(--right-panel-surface);
+  box-shadow: var(--right-panel-surface-shadow);
 }
 
 .apply-all-btn {
@@ -722,28 +838,28 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   height: 46px;
   padding: 0;
   border-radius: 14px;
-  background: rgba(255,255,255,.8);
-  border: 1px solid rgba(167,178,204,.5);
-  color: #5d6b8a;
+  background: var(--right-panel-apply-bg);
+  border: 1px solid var(--right-panel-apply-border);
+  color: var(--right-panel-apply-color);
   cursor: pointer;
   display: grid;
   place-items: center;
   transition: .2s;
-  box-shadow: inset 0 -2px 0 rgba(255,255,255,.45), 0 6px 12px rgba(88,112,160,.18);
+  box-shadow: var(--right-panel-apply-shadow);
 }
 
 .apply-all-btn:hover {
-  border-color: #0f62fe;
-  color: #0f62fe;
-  box-shadow: inset 0 -2px 0 rgba(255,255,255,.65), 0 10px 18px rgba(15,98,254,.22);
-  background: rgba(255,255,255,.92);
+  border-color: var(--right-panel-apply-hover-border);
+  color: var(--right-panel-apply-hover-color);
+  box-shadow: var(--right-panel-apply-hover-shadow);
+  background: var(--right-panel-apply-hover-bg);
 }
 
 .apply-all-btn.active {
-  background: rgba(15,98,254,.12);
-  border-color: #0f62fe;
-  color: #0f62fe;
-  box-shadow: inset 0 -2px 0 rgba(255,255,255,.75), 0 10px 20px rgba(15,98,254,.25);
+  background: var(--right-panel-apply-hover-bg);
+  border-color: var(--right-panel-apply-hover-border);
+  color: var(--right-panel-apply-hover-color);
+  box-shadow: var(--right-panel-apply-hover-shadow);
 }
 
 .animation-controls {
@@ -752,13 +868,13 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   gap: 10px;
   font-size: 12px;
   font-weight: 600;
-  color: #6f7b96;
+  color: var(--right-panel-muted);
 }
 
 .animation-label {
   font-size: 13px;
   font-weight: 700;
-  color: #414c67;
+  color: var(--right-panel-title-color);
   text-align: left;
 }
 
@@ -774,7 +890,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   flex-direction: column;
   gap: 6px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--right-panel-muted);
   flex: 1;
   position: relative;
 }
@@ -796,35 +912,35 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  background: rgba(255,255,255,.75);
+  background: var(--right-panel-surface);
   border-radius: 14px;
   padding: 6px 8px;
-  box-shadow: inset 0 2px 6px rgba(175,188,210,.35);
+  box-shadow: var(--right-panel-surface-shadow);
 }
 
 .animation-duration-input {
   width: calc(3ch + 12px);
   height: 42px;
   border-radius: 14px;
-  border: 1px solid rgba(167,178,204,.45);
+  border: 1px solid var(--right-panel-input-border);
   font-size: 18px;
   font-weight: 600;
-  color: #111827;
+  color: var(--right-panel-input-color);
   text-align: center;
-  background: #fff;
-  box-shadow: inset 0 -2px 0 rgba(255,255,255,.45);
+  background: var(--right-panel-input-bg);
+  box-shadow: var(--right-panel-input-shadow);
 }
 
 .animation-duration-input:focus {
-  outline: 2px solid rgba(15,98,254,.25);
+  outline: 2px solid var(--right-panel-input-focus-outline);
   outline-offset: 1px;
-  border-color: #0f62fe;
+  border-color: var(--right-panel-input-focus-border);
 }
 
 .animation-unit {
   font-size: 12px;
   text-transform: lowercase;
-  color: #9ca3af;
+  color: var(--right-panel-unit-color);
   margin-left: auto;
 }
 
@@ -834,7 +950,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   width: 100%;
   height: 8px;
   border-radius: 999px;
-  background: #dbe3f4;
+  background: var(--right-panel-slider-track);
   outline: none;
   accent-color: var(--brand);
 }
@@ -877,10 +993,10 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   display: grid;
   grid-template-columns: repeat(3, 45px);
   gap: 8px;
-  background: #fff;
+  background: var(--right-panel-gradient-bg);
   padding: 10px 12px;
   border-radius: 12px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--right-panel-gradient-shadow);
   justify-items: center;
   align-items: center;
 }
@@ -890,18 +1006,18 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   font-size: 13px;
   font-weight: 700;
   margin-bottom: 2px;
-  color: #374151;
+  color: var(--right-panel-title-color);
 }
 
 .grad-btn {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--right-panel-grad-btn-border);
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,.06);
+  box-shadow: var(--right-panel-grad-btn-shadow);
   transition: transform .15s;
-  background: #fff;
+  background: var(--right-panel-btn-bg);
 }
 
 .grad-btn:hover {
@@ -915,8 +1031,8 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   gap: 12px;
   padding: 14px;
   border-radius: 18px;
-  background: rgba(15,98,254,.05);
-  border: 1px solid rgba(15,98,254,.12);
+  background: var(--right-panel-card-bg);
+  border: 1px solid var(--right-panel-card-border);
 }
 
 .card-header-panel__label {
@@ -924,7 +1040,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #5d6b8a;
+  color: var(--right-panel-card-label);
 }
 
 .card-header-panel__controls {
@@ -952,21 +1068,21 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   width: 46px;
   height: 46px;
   border-radius: 14px;
-  border: 1px solid #d1d5db;
-  background: #fff;
-  color: #4b5563;
+  border: 1px solid var(--right-panel-card-btn-border);
+  background: var(--right-panel-card-btn-bg);
+  color: var(--right-panel-card-btn-color);
   cursor: pointer;
   display: grid;
   place-items: center;
   font-size: 22px;
   line-height: 1;
-  box-shadow: inset 0 -2px 0 rgba(255,255,255,.55), 0 8px 16px rgba(88,112,160,.18);
+  box-shadow: var(--right-panel-card-btn-shadow);
   transition: .2s;
 }
 
 .card-header-cycle-btn:hover {
-  border-color: #0f62fe;
-  color: #0f62fe;
-  box-shadow: inset 0 -2px 0 rgba(255,255,255,.75), 0 10px 20px rgba(15,98,254,.25);
+  border-color: var(--right-panel-card-btn-hover-border);
+  color: var(--right-panel-card-btn-hover-color);
+  box-shadow: var(--right-panel-card-btn-hover-shadow);
 }
 </style>
