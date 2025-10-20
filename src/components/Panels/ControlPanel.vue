@@ -125,7 +125,7 @@ const handleToggleGuides = () => {
       }
     ]"
   >
-    <div class="left-panel-controls__top">
+    <div class="left-panel-controls__top left-panel-controls__section">
       <button
         class="ui-btn theme-toggle"
         type="button"
@@ -134,7 +134,7 @@ const handleToggleGuides = () => {
       >
         <span class="theme-toggle__icon" aria-hidden="true"></span>
       </button>
-      <div class="left-panel-controls__history">
+      <div class="left-panel-controls__history left-panel-controls__section">
         <button
           class="ui-btn"
           id="undo-btn"
@@ -167,7 +167,7 @@ const handleToggleGuides = () => {
     </div>
 
     <div v-if="!props.isCollapsed" class="left-panel-controls__content">
-      <div class="left-panel-controls__grid">
+      <div class="left-panel-controls__grid left-panel-controls__section">
         <button class="ui-btn" title="Сохранить проект (JSON)" @click="handleSaveProject">💾</button>
         <button class="ui-btn" title="Экспорт в HTML (просмотр)" @click="handleExportHTML">📄</button>
         <button class="ui-btn" title="Экспорт в SVG (вектор)" @click="handleExportSVG">🖋️</button>
@@ -177,7 +177,7 @@ const handleToggleGuides = () => {
         <button class="ui-btn" title="Режим выделения (Esc)" @click="handleSelectionMode">⬚</button>
         <button class="ui-btn" title="Режим иерархии" @click="handleHierarchicalDragMode">🌳</button>
       </div>
-      <div class="left-panel-controls__footer">
+      <div class="left-panel-controls__footer left-panel-controls__section">
         <button class="ui-btn" title="Показать/скрыть направляющие" @click="handleToggleGuides">📐</button>
         <button
           class="ui-btn left-panel-controls__collapse"
@@ -203,10 +203,12 @@ const handleToggleGuides = () => {
   --left-panel-btn-border: rgba(15, 23, 42, 0.14);
   --left-panel-btn-color: #111827;
   --left-panel-btn-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  --left-panel-section-gap: 18px;
+
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  width: 100%;
+  align-items: center;
+  gap: var(--left-panel-section-gap);  width: 100%;
 }
 
 .left-panel-controls--modern {
@@ -217,76 +219,34 @@ const handleToggleGuides = () => {
   --left-panel-btn-border: rgba(96, 164, 255, 0.24);
   --left-panel-btn-color: #e5f3ff;
   --left-panel-btn-shadow: 0 24px 44px rgba(8, 12, 22, 0.55);
-  gap: 24px;
+  --left-panel-section-gap: 24px;
 }
 
 .left-panel-controls--collapsed {
-  gap: 12px;
-}
+  --left-panel-section-gap: 14px;
+  gap: var(--left-panel-section-gap);}
 
-.left-panel-controls__top {
+.left-panel-controls__section {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px;
-  width: 100%;}
-
-.left-panel-controls__history {
-  display: flex;
-  flex-direction: column;
-  align-items: center;  justify-content: center;
-  gap: 18px;
   width: 100%;
+  gap: var(--left-panel-section-gap);
 }
 
-.left-panel-controls--modern .left-panel-controls__top {
-  gap: 24px;
-
-}
-
-.left-panel-controls--modern .left-panel-controls__history {
-  gap: 24px;
-
-}
-
-.left-panel-controls--collapsed .left-panel-controls__top {
-  gap: 14px;
-
-}
 .left-panel-controls__content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-.left-panel-controls__grid {
-  display: flex;
-  flex-direction: column;
-  align-items: center;  gap: 16px;
+  align-items: center;
+  gap: var(--left-panel-section-gap);
   width: 100%;
-  
 }
 
 .left-panel-controls__grid .ui-btn {
   width: var(--left-panel-btn-size);
 }
-.left-panel-controls__footer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  width: 100%;  
-}
 
-.left-panel-controls--modern .left-panel-controls__content {
-  gap: 24px;
-}
-.left-panel-controls--modern .left-panel-controls__grid {
-  gap: 24px;
-}
-.left-panel-controls--modern .left-panel-controls__footer {
-  gap: 24px;
-}
 .left-panel-controls .ui-btn {
   width: var(--left-panel-btn-size);
   height: var(--left-panel-btn-size);
@@ -357,10 +317,6 @@ const handleToggleGuides = () => {
 }
 .left-panel-controls--modern.left-panel-controls--collapsed .left-panel-controls__collapse {
   width: calc(var(--left-panel-btn-size) * 0.6);
-}
-
-.left-panel-controls--collapsed .left-panel-controls__history {
-  gap: 12px;
 }
 
 .left-panel-controls--collapsed .ui-btn {
