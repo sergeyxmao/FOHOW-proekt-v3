@@ -12,7 +12,12 @@ const canvasRef = ref(null)
 const PANEL_SCALE_MIN = 1
 const PANEL_SCALE_MAX = 1.5
 const PANEL_SCALE_STEP = 0.1
-function toggleTheme() {
+const WHEEL_LISTENER_OPTIONS = { passive: false }
+
+function setPanelScale(value) {
+  const clamped = Math.min(PANEL_SCALE_MAX, Math.max(PANEL_SCALE_MIN, value))
+  panelScale.value = Number(clamped.toFixed(2))
+}function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
 }
 
@@ -35,8 +40,30 @@ function handlePanelCtrlClick(event) {
     nextScale = PANEL_SCALE_MIN
   }
 
-  panelScale.value = Number(nextScale.toFixed(2))
+  setPanelScale(nextScale)
 }
+
+function handlePanelCtrlWheel(event) {
+  if (!event.ctrlKey) {
+    return
+  }
+
+  const tagName = event.target?.tagName
+  const isEditableTarget = event.target?.isContentEditable
+  if (tagName === 'INPUT' || tagName === 'TEXTAREA' || isEditableTarget) {
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  const direction = event.deltaY < 0 ? 1 : event.deltaY > 0 ? -1 : 0
+  if (direction === 0) {
+    return
+  }
+
+  const nextScale = panelScale.value + direction * PANEL_SCALE_STEP
+  setPanelScale(nextScale)}
 
 function handleGlobalKeydown(event) {
   const isResetCombo = event.ctrlKey && !event.shiftKey && (event.code === 'Digit0' || event.code === 'Numpad0')
@@ -45,16 +72,18 @@ function handleGlobalKeydown(event) {
   }
 
   event.preventDefault()
-  panelScale.value = 1
+  setPanelScale(1)
   canvasRef.value?.resetView()
 }
 
 onMounted(() => {
   window.addEventListener('keydown', handleGlobalKeydown)
+  window.addEventListener('wheel', handlePanelCtrlWheel, WHEEL_LISTENER_OPTIONS)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
+  window.removeEventListener('wheel', handlePanelCtrlWheel, WHEEL_LISTENER_OPTIONS)
 })
 
 const leftPanelStyle = computed(() => ({
@@ -179,8 +208,8 @@ body.theme-modern {
 
 
 .ui-panel-left--modern {
-  top: 50%;
-  transform: translateY(-50%);
+  top: 20px;
+  transform: none;
   align-items: stretch;
   padding: 28px 26px;
   width: 220px;
@@ -194,8 +223,8 @@ body.theme-modern {
   width: auto;
   min-height: auto;
   padding: 20px 24px;
-  background: transparent;}
-
+  background: transparent;
+}
 .ui-panel-left.collapsed.ui-panel-left--modern {
   top: 16px;
 }
