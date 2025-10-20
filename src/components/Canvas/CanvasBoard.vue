@@ -86,6 +86,10 @@ const clampTranslation = (translation, scale) => {
 };
 
 const handleWheel = (event) => {
+  if (event.ctrlKey) {
+    event.preventDefault();
+    return;
+  }
   event.preventDefault();
 
   const rect = canvasContainer.value?.getBoundingClientRect();
@@ -300,7 +304,10 @@ const handlePointerDown = (event) => {
       endDrawingLine(cardId, side);
     }
   } else if (!event.target.closest('.card')) {
-    // Если клик не по карточке и не по точке соединения, отменяем рисование
+    if (event.button === 0) {
+      event.preventDefault();
+    }
+// Если клик не по карточке и не по точке соединения, отменяем рисование
     cancelDrawing();
   }
 };
@@ -514,7 +521,9 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
         @click="handleStageClick"
         @mousemove="handleMouseMove"
         @pointerdown="handlePointerDown"
-      >
+        @dragstart.prevent
+
+   >
         <!-- Отрисовка карточек -->
         <Card
           v-for="card in cards"
