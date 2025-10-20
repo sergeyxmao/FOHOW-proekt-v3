@@ -1,14 +1,14 @@
 <script setup>
 import { ref } from 'vue'
-import { useCardsStore } from '@/stores/cardsStore'
-import { useLinesStore } from '@/stores/linesStore'
+import { useCardsStore } from '@/stores/cards'
+import { useConnectionsStore } from '@/stores/connections'
 
 const props = defineProps({
   isModernTheme: Boolean
 })
 
 const cardsStore = useCardsStore()
-const linesStore = useLinesStore()
+const connectionsStore = useConnectionsStore()
 
 const isCollapsed = ref(false)
 const headerColor = ref('#5D8BF4')
@@ -68,9 +68,9 @@ function handleLineColorChange(e) {
 }
 
 function applyLineSettingsToAll() {
-  linesStore.updateAllLines({
-    stroke: lineColor.value,
-    strokeWidth: lineThickness.value
+  connectionsStore.connections.forEach(connection => {
+    connection.color = lineColor.value
+    connection.thickness = lineThickness.value
   })
 }
 
@@ -81,24 +81,28 @@ function addCard(isLarge = false) {
   console.log('headerColorIndex.value =', headerColorIndex.value)
 
   const newCard = {
-    id: `card-${Date.now()}`,
     x: 100,
     y: 100,
     width: isLarge ? 520 : 380,
     height: isLarge ? 400 : 280,
-    headerColor: headerColor.value,
-    title: isLarge ? 'Большая лицензия' : 'Новая лицензия',
-    fields: []
+    headerBg: headerColor.value,
+    text: isLarge ? 'Большая лицензия' : 'Новая лицензия',
+    fill: '#ffffff',
+    stroke: '#000000',
+    strokeWidth: 2,
+    colorIndex: headerColorIndex.value
   }
 
   console.log('Creating card object:', newCard)
   console.log('Calling cardsStore.addCard...')
   
-  cardsStore.addCard(newCard)
+  const createdCard = cardsStore.addCard(newCard)
   
-  console.log('Card created successfully:', newCard)
+  console.log('Card created successfully:', createdCard)
   console.log('Total cards in store after adding:', cardsStore.cards.length)
   console.log('=== addCard finished ===')
+  
+  return createdCard
 }
 
 function addLargeCard() {
@@ -120,13 +124,23 @@ function addTemplate() {
   ]
 
   console.log('Template cards definition:', templateCards)
+  
+  const createdCardsIds = []
 
   templateCards.forEach(card => {
     console.log('Creating template card:', card.id)
-    cardsStore.addCard({
-      ...card,
-      fields: []
+    const newCard = cardsStore.addCard({
+      x: card.x,
+      y: card.y,
+      text: card.title,
+      width: card.width,
+      height: card.height,
+      headerBg: card.headerColor,
+      fill: '#ffffff',
+      stroke: '#000000',
+      strokeWidth: 2
     })
+    createdCardsIds.push({ key: card.id, id: newCard.id })
   })
 
   console.log('All template cards created. Total cards in store:', cardsStore.cards.length)
@@ -145,18 +159,19 @@ function addTemplate() {
   console.log('Template lines definition:', templateLines)
 
   templateLines.forEach(line => {
-    const connectionData = {
-      id: `line-${Date.now()}-${Math.random()}`,
-      fromCardId: line.from,
-      toCardId: line.to,
-      stroke: lineColor.value,
-      strokeWidth: lineThickness.value
+    const fromCard = createdCardsIds.find(c => c.key === line.from)
+    const toCard = createdCardsIds.find(c => c.key === line.to)
+    
+    if (fromCard && toCard) {
+      console.log('Creating connection from', line.from, 'to', line.to)
+      connectionsStore.addConnection(fromCard.id, toCard.id, {
+        color: lineColor.value,
+        thickness: lineThickness.value
+      })
     }
-    console.log('Creating connection:', connectionData)
-    linesStore.addLine(connectionData)
   })
 
-  console.log('Total connections after template creation:', linesStore.lines.length)
+  console.log('Total connections after template creation:', connectionsStore.connections.length)
   console.log('=== addTemplate finished ===')
 }
 </script>
