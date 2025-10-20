@@ -1,11 +1,12 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useCardsStore } from '../../stores/cards';
 import { useConnectionsStore } from '../../stores/connections';
 import { useCanvasStore } from '../../stores/canvas';
 import Card from './Card.vue';
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { getHeaderColorRgb } from '../../utils/constants';
+import { batchDeleteCards } from '../../utils/historyOperations';
 
 // Определяем emit для событий
 const emit = defineEmits(['update-connection-status']);
@@ -406,14 +407,49 @@ const addNewCard = () => {
   cardsStore.addCard(newCard);
 };
 
-const deleteSelectedCard = () => {
-  if (selectedCardId.value) {
-    cardsStore.removeCard(selectedCardId.value);
-    selectedCardId.value = null;
-    isConnecting.value = false;
-    cancelDrawing();
+const deleteSelectedCards = () => {
+  const uniqueIds = Array.from(new Set(cardsStore.selectedCardIds));
+
+  if (uniqueIds.length === 0) {
+    return;
   }
+
+  batchDeleteCards(uniqueIds);
+
+  cardsStore.selectedCardIds = [];
+  selectedCardId.value = null;
+  isConnecting.value = false;
+  cancelDrawing();
 };
+
+const handleDeletionKeydown = (event) => {
+  const isDeleteKey = event.key === 'Delete' || event.code === 'Delete';
+  const isSpaceKey = event.code === 'Space' || event.key === ' ';
+
+  if (!isDeleteKey && !isSpaceKey) {
+    return;
+  }
+
+  const target = event.target;
+  const tagName = target?.tagName?.toLowerCase?.();
+  const isEditableElement =
+    tagName === 'input' ||
+    tagName === 'textarea' ||
+    tagName === 'select' ||
+    tagName === 'button' ||
+    tagName === 'a' ||
+    target?.isContentEditable;
+
+  if (isEditableElement) {
+    return;
+  }
+
+  if (cardsStore.selectedCardIds.length === 0) {
+    return;
+  }
+
+  event.preventDefault();
+  deleteSelectedCards();};
 
 onMounted(() => {
   // Устанавливаем размеры сцены равными размерам родительского контейнера
@@ -427,7 +463,11 @@ onMounted(() => {
 
   resizeStage();
   window.addEventListener('resize', resizeStage);
+  window.addEventListener('keydown', handleDeletionKeydown);
 });
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleDeletionKeydown);});
 const resetView = () => {
   canvasScale.value = 1;
   canvasTranslation.value = clampTranslation({ x: 0, y: 0 }, 1);
