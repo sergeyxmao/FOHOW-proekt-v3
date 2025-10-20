@@ -252,20 +252,26 @@ const handleToggleGuides = () => {
 }
 .left-panel-controls__collapsed {
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: calc(var(--left-panel-section-gap) * 0.85);
   width: 100%;
+  flex-wrap: nowrap;
+}
+
+.left-panel-controls__collapsed .ui-btn {
+  width: var(--left-panel-btn-size);  
 }
 
 .left-panel-controls__history {
-  display: grid;
-  grid-template-columns: repeat(2, var(--left-panel-btn-size));  
+  display: flex;
+  align-items: center; 
   justify-content: center;
-  justify-items: center;
-  column-gap: calc(var(--left-panel-section-gap) * 0.6);
-  row-gap: calc(var(--left-panel-section-gap) * 0.6);
-  width: 100%;
+  gap: calc(var(--left-panel-section-gap) * 0.6);
+}
+
+.left-panel-controls__history .ui-btn {
+  width: var(--left-panel-btn-size);
 }
 
 .left-panel-controls__grid {
@@ -346,7 +352,7 @@ const handleToggleGuides = () => {
   font-size: calc(var(--left-panel-btn-font) * 0.75);
 }
 .left-panel-controls--collapsed .left-panel-controls__collapse {
-  width: calc(var(--left-panel-btn-size) * 0.7);
+  width: var(--left-panel-btn-size);
 }
 
 .left-panel-controls--modern .left-panel-controls__collapse {
