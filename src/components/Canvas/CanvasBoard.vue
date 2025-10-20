@@ -436,8 +436,6 @@ const handleDeletionKeydown = (event) => {
     tagName === 'input' ||
     tagName === 'textarea' ||
     tagName === 'select' ||
-    tagName === 'button' ||
-    tagName === 'a' ||
     target?.isContentEditable;
 
   if (isEditableElement) {
