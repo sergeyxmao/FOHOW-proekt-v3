@@ -225,34 +225,34 @@ const handleToggleGuides = () => {
 }
 
 .left-panel-controls__top {
-  display: grid;
-  grid-template-columns: auto 1fr;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
-}
+  justify-content: center;
+  gap: 18px;
+  width: 100%;}
 
 .left-panel-controls__history {
   display: flex;
-  gap: 16px;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;  justify-content: center;
+  gap: 18px;
+  width: 100%;
 }
 
 .left-panel-controls--modern .left-panel-controls__top {
-  grid-template-columns: 1fr;
-  justify-items: center;
-  gap: 22px;
+  gap: 24px;
+
 }
 
 .left-panel-controls--modern .left-panel-controls__history {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 22px;
+  gap: 24px;
+
 }
 
 .left-panel-controls--collapsed .left-panel-controls__top {
-  grid-template-columns: repeat(3, auto);
-  justify-content: flex-start;
+  gap: 14px;
+
 }
 .left-panel-controls__content {
   display: flex;
@@ -261,28 +261,28 @@ const handleToggleGuides = () => {
 }
 .left-panel-controls__grid {
   display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+  flex-direction: column;
+  align-items: center;  gap: 16px;
+  width: 100%;
+  
 }
 
 .left-panel-controls__grid .ui-btn {
-  flex: 1 1 calc(50% - 8px);
+  width: var(--left-panel-btn-size);
 }
 .left-panel-controls__footer {
-  display: grid;
-  grid-template-columns: repeat(2, auto);
-  justify-content: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 16px;
+  width: 100%;  
 }
 
 .left-panel-controls--modern .left-panel-controls__content {
   gap: 24px;
 }
 .left-panel-controls--modern .left-panel-controls__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
-  justify-items: center;
 }
 .left-panel-controls--modern .left-panel-controls__footer {
   gap: 24px;
