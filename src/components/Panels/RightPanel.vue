@@ -617,3 +617,20 @@ function addTemplate() {
   border-color: #0f62fe;
   box-shadow: 0 8px 16px rgba(0,0,0,.12);
 }
+
+/* Стили для модерного интерфейса */
+.add-btn--modern {
+  background: linear-gradient(145deg, #ffffff, #f0f4f8);
+  box-shadow: 0 10px 24px rgba(15,98,254,.18);
+}
+
+.add-btn--modern:hover {
+  background: linear-gradient(145deg, #f0f4f8, #e1e8f0);
+  box-shadow: 0 14px 32px rgba(15,98,254,.24);
+}
+
+.panel-collapse-btn--modern {
+  background: linear-gradient(145deg, #ffffff, #f0f4f8);
+  box-shadow: 0 8px 18px rgba(0,0,0,.12);
+}
+</style>
