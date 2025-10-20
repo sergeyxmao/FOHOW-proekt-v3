@@ -10,9 +10,6 @@ defineProps({
 const cardsStore = useCardsStore()
 const connectionsStore = useConnectionsStore()
 
-const cardsStore = useCardsStore()
-const connectionsStore = useConnectionsStore()
-
 const isCollapsed = ref(false)
 const headerColor = ref('#5D8BF4')
 const headerColorIndex = ref(0)
@@ -89,7 +86,7 @@ function addCard(isLarge = false) {
     width: isLarge ? 520 : 380,
     height: isLarge ? 400 : 280,
     headerBg: headerColor.value,
-    text: isLarge ? 'Большая лицензия' : 'Новая лицензия',
+    text: isLarge ? 'Ð'Ð¾Ð»ÑŒÑˆÐ°Ñ Ð»Ð¸Ñ†ÐµÐ½Ð·Ð¸Ñ' : 'ÐÐ¾Ð²Ð°Ñ Ð»Ð¸Ñ†ÐµÐ½Ð·Ð¸Ñ',
     fill: '#ffffff',
     stroke: '#000000',
     strokeWidth: 2,
@@ -117,13 +114,13 @@ function addTemplate() {
   console.log('Creating template cards...')
   
   const templateCards = [
-    { id: 'lena', title: 'Лена', x: 100, y: 100, width: 380, height: 280, headerColor: '#5D8BF4' },
-    { id: 'mikhail', title: 'Михаил', x: 550, y: 100, width: 380, height: 280, headerColor: '#22C55E' },
-    { id: 'katya', title: 'Катя', x: 1000, y: 100, width: 380, height: 280, headerColor: '#EF4444' },
-    { id: 'ivan', title: 'Иван', x: 100, y: 450, width: 380, height: 280, headerColor: '#F59E0B' },
-    { id: 'olga', title: 'Ольга', x: 550, y: 450, width: 380, height: 280, headerColor: '#8B5CF6' },
-    { id: 'sergey', title: 'Сергей', x: 1000, y: 450, width: 380, height: 280, headerColor: '#EC4899' },
-    { id: 'maria', title: 'Мария', x: 550, y: 800, width: 380, height: 280, headerColor: '#10B981' }
+    { id: 'lena', title: 'Ð›ÐµÐ½Ð°', x: 100, y: 100, width: 380, height: 280, headerColor: '#5D8BF4' },
+    { id: 'mikhail', title: 'ÐœÐ¸Ñ…Ð°Ð¸Ð»', x: 550, y: 100, width: 380, height: 280, headerColor: '#22C55E' },
+    { id: 'katya', title: 'ÐšÐ°Ñ‚Ñ', x: 1000, y: 100, width: 380, height: 280, headerColor: '#EF4444' },
+    { id: 'ivan', title: 'Ð˜Ð²Ð°Ð½', x: 100, y: 450, width: 380, height: 280, headerColor: '#F59E0B' },
+    { id: 'olga', title: 'ÐžÐ»ÑŒÐ³Ð°', x: 550, y: 450, width: 380, height: 280, headerColor: '#8B5CF6' },
+    { id: 'sergey', title: 'Ð¡ÐµÑ€Ð³ÐµÐ¹', x: 1000, y: 450, width: 380, height: 280, headerColor: '#EC4899' },
+    { id: 'maria', title: 'ÐœÐ°Ñ€Ð¸Ñ', x: 550, y: 800, width: 380, height: 280, headerColor: '#10B981' }
   ]
 
   console.log('Template cards definition:', templateCards)
@@ -184,20 +181,20 @@ function addTemplate() {
     <div class="ui-panel-right__container">
       <div v-if="!isCollapsed" class="ui-panel-right__body">
         <div class="header-color-selector">
-          <div class="header-color-title">Цвет заголовка</div>
+          <div class="header-color-title">Ð¦Ð²ÐµÑ‚ Ð·Ð°Ð³Ð¾Ð»Ð¾Ð²ÐºÐ°</div>
           <div class="header-color-controls">
             <button 
               class="header-color-preview" 
               :style="{ backgroundColor: headerColor }"
-              title="Выбрать цвет заголовка"
+              title="Ð'Ñ‹Ð±Ñ€Ð°Ñ‚ÑŒ Ñ†Ð²ÐµÑ‚ Ð·Ð°Ð³Ð¾Ð»Ð¾Ð²ÐºÐ°"
               @click="openHeaderPicker"
             ></button>
             <button
               class="header-color-cycle"
-              title="Сменить цвет заголовка"
+              title="Ð¡Ð¼ÐµÐ½Ð¸Ñ‚ÑŒ Ñ†Ð²ÐµÑ‚ Ð·Ð°Ð³Ð¾Ð»Ð¾Ð²ÐºÐ°"
               @click="cycleHeaderColor"
             >
-              ⟳
+              âŸ³
             </button>
           </div>
           <input
@@ -210,26 +207,26 @@ function addTemplate() {
         </div>
 
         <div class="gradient-selector">
-          <div class="gradient-title">Фон</div>
+          <div class="gradient-title">Ð¤Ð¾Ð½</div>
           <button 
             class="grad-btn" 
             data-gradient="#f5f7fb" 
-            title="Светлый"
+            title="Ð¡Ð²ÐµÑ‚Ð»Ñ‹Ð¹"
             :style="{ backgroundColor: '#f5f7fb' }"
             @click="updateBackground('#f5f7fb')"
           ></button>
           <button 
             class="grad-btn" 
             data-gradient="linear-gradient(135deg,#eef1f5,#dde3ea)" 
-            title="Серый"
+            title="Ð¡ÐµÑ€Ñ‹Ð¹"
             :style="{ background: 'linear-gradient(135deg,#eef1f5,#dde3ea)' }"
             @click="updateBackground('linear-gradient(135deg,#eef1f5,#dde3ea)')"
           ></button>
           <button 
             class="grad-btn" 
-            title="Выбрать цвет"
+            title="Ð'Ñ‹Ð±Ñ€Ð°Ñ‚ÑŒ Ñ†Ð²ÐµÑ‚"
             @click="openBackgroundPicker"
-          >🎨</button>
+          >ðŸŽ¨</button>
           <input 
             ref="hiddenBackgroundPicker"
             type="color" 
@@ -244,12 +241,12 @@ function addTemplate() {
             <button 
               class="line-color-trigger"
               :style="{ backgroundColor: lineColor }"
-              title="Цвет линии"
+              title="Ð¦Ð²ÐµÑ‚ Ð»Ð¸Ð½Ð¸Ð¸"
               @click="openLineColorPicker"
             ></button>
             <div class="line-controls-col">
               <label>
-                Толщина
+                Ð¢Ð¾Ð»Ñ‰Ð¸Ð½Ð°
                 <span>{{ lineThickness }}px</span>
               </label>
               <div class="thickness-row">
@@ -264,9 +261,9 @@ function addTemplate() {
             </div>
             <button 
               class="apply-all-btn"
-              title="Применить ко всем линиям"
+              title="ÐŸÑ€Ð¸Ð¼ÐµÐ½Ð¸Ñ‚ÑŒ ÐºÐ¾ Ð²ÑÐµÐ¼ Ð»Ð¸Ð½Ð¸ÑÐ¼"
               @click="applyLineSettingsToAll"
-            >✓</button>
+            >âœ"</button>
           </div>
           <input
             ref="hiddenLineColorPicker"
@@ -279,51 +276,51 @@ function addTemplate() {
       </div>
       
       <button
-        v-if="!props.isModernTheme"
+        v-if="!$props.isModernTheme"
         class="ui-btn panel-collapse-btn"
-        :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
+        :title="isCollapsed ? 'Ð Ð°Ð·Ð²ÐµÑ€Ð½ÑƒÑ‚ÑŒ Ð½Ð°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ¸' : 'Ð¡Ð²ÐµÑ€Ð½ÑƒÑ‚ÑŒ Ð½Ð°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ¸'"
         :aria-expanded="!isCollapsed"
         @click="togglePanel"
       >
-        <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
+        <span aria-hidden="true">{{ isCollapsed ? 'â®' : 'â¯' }}</span>
       </button>
     </div>
 
     <div class="ui-panel-right__actions">
-      <template v-if="props.isModernTheme">
+      <template v-if="$props.isModernTheme">
         <button
           class="ui-btn panel-collapse-btn panel-collapse-btn--modern"
-          :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
+          :title="isCollapsed ? 'Ð Ð°Ð·Ð²ÐµÑ€Ð½ÑƒÑ‚ÑŒ Ð½Ð°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ¸' : 'Ð¡Ð²ÐµÑ€Ð½ÑƒÑ‚ÑŒ Ð½Ð°ÑÑ‚Ñ€Ð¾Ð¹ÐºÐ¸'"
           :aria-expanded="!isCollapsed"
           @click="togglePanel"
         >
-          <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
+          <span aria-hidden="true">{{ isCollapsed ? 'â®' : 'â¯' }}</span>
         </button>
       </template>      
       <button
         class="add-btn"
-        :class="{ 'add-btn--modern': props.isModernTheme }"
-        title="Добавить лицензию"
+        :class="{ 'add-btn--modern': $props.isModernTheme }"
+        title="Ð"Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð»Ð¸Ñ†ÐµÐ½Ð·Ð¸ÑŽ"
         @click="addCard"
-      >□</button>
+      >â–¡</button>
       <button
         class="add-btn add-btn--large"
-        :class="{ 'add-btn--modern': props.isModernTheme }"
-        title="Добавить большую лицензию"
+        :class="{ 'add-btn--modern': $props.isModernTheme }"
+        title="Ð"Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð±Ð¾Ð»ÑŒÑˆÑƒÑŽ Ð»Ð¸Ñ†ÐµÐ½Ð·Ð¸ÑŽ"
         @click="addLargeCard"
-      >⧠</button>
+      >â§ </button>
       <button
         class="add-btn"
-        :class="{ 'add-btn--modern': props.isModernTheme }"
-        title="Добавить шаблон"
+        :class="{ 'add-btn--modern': $props.isModernTheme }"
+        title="Ð"Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ ÑˆÐ°Ð±Ð»Ð¾Ð½"
         @click="addTemplate"
-      >⧉</button>
+      >â§‰</button>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Правая панель */
+/* ÐŸÑ€Ð°Ð²Ð°Ñ Ð¿Ð°Ð½ÐµÐ»ÑŒ */
 .ui-panel-right {
   position: fixed;
   top: 20px;
@@ -408,7 +405,7 @@ function addTemplate() {
   cursor: not-allowed;
 }
 
-/* Кнопки + и ▶ в едином стиле */
+/* ÐšÐ½Ð¾Ð¿ÐºÐ¸ + Ð¸ â–¶ Ð² ÐµÐ´Ð¸Ð½Ð¾Ð¼ ÑÑ‚Ð¸Ð»Ðµ */
 .add-btn {
   width: 56px;
   height: 56px;
@@ -443,7 +440,7 @@ function addTemplate() {
   padding-bottom: 4px;
 }
 
-/* Обновленная панель управления линиями */
+/* ÐžÐ±Ð½Ð¾Ð²Ð»ÐµÐ½Ð½Ð°Ñ Ð¿Ð°Ð½ÐµÐ»ÑŒ ÑƒÐ¿Ñ€Ð°Ð²Ð»ÐµÐ½Ð¸Ñ Ð»Ð¸Ð½Ð¸ÑÐ¼Ð¸ */
 .panel-collapse-btn {
   font-size: 18px;
   width: 40px;
@@ -544,7 +541,7 @@ function addTemplate() {
   box-shadow: inset 0 -2px 0 rgba(255,255,255,.65), 0 10px 18px rgba(88,112,160,.26);
 }
 
-/* Селектор цвета заголовка */
+/* Ð¡ÐµÐ»ÐµÐºÑ‚Ð¾Ñ€ Ñ†Ð²ÐµÑ‚Ð° Ð·Ð°Ð³Ð¾Ð»Ð¾Ð²ÐºÐ° */
 .header-color-selector {
   display: flex;
   flex-direction: column;
@@ -601,7 +598,7 @@ function addTemplate() {
   transform: rotate(90deg);
 }
 
-/* Селектор градиента фона */
+/* Ð¡ÐµÐ»ÐµÐºÑ‚Ð¾Ñ€ Ð³Ñ€Ð°Ð´Ð¸ÐµÐ½Ñ‚Ð° Ñ„Ð¾Ð½Ð° */
 .gradient-selector {
   display: flex;
   gap: 10px;
@@ -636,7 +633,7 @@ function addTemplate() {
   box-shadow: 0 8px 16px rgba(0,0,0,.12);
 }
 
-/* Стили для модерного интерфейса */
+/* Ð¡Ñ‚Ð¸Ð»Ð¸ Ð´Ð»Ñ Ð¼Ð¾Ð´ÐµÑ€Ð½Ð¾Ð³Ð¾ Ð¸Ð½Ñ‚ÐµÑ€Ñ„ÐµÐ¹ÑÐ° */
 .add-btn--modern {
   background: linear-gradient(145deg, #ffffff, #f0f4f8);
   box-shadow: 0 10px 24px rgba(15,98,254,.18);
