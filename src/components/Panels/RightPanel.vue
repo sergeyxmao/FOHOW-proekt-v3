@@ -12,50 +12,32 @@ const props = defineProps({
   }
 })
 
-  
-// Stores
 const cardsStore = useCardsStore()
 const canvasStore = useCanvasStore()
 const connectionsStore = useConnectionsStore()
 
-// Базовая реактивность
 const isCollapsed = ref(false)
-
-// Управление линиями
-const lineColor = ref('#0f62fe') // DEFAULT_LINE_COLOR
+const lineColor = ref('#0f62fe')
 const thickness = ref(5)
-const isGlobalLineMode = ref(false) // применить ко всем линиям
-
-// Управление анимацией
-const animationDuration = ref(2) // в секундах
-
-// Управление цветом заголовка
+const isGlobalLineMode = ref(false)
+const animationDuration = ref(2)
 const headerColor = ref('#5D8BF4')
 const headerColorIndex = ref(0)
-
-// Управление фоном
 const backgroundGradient = ref('#f5f7fb')
 
-// Ссылки на DOM элементы
 const hiddenLineColorPicker = ref(null)
 const hiddenHeaderColorPicker = ref(null)
 const hiddenBackgroundPicker = ref(null)
 
-// Методы для управления панелью
 function togglePanel() {
   isCollapsed.value = !isCollapsed.value
 }
 
-// Управление линиями
 function updateLineColor(color) {
   lineColor.value = color
   
   if (isGlobalLineMode.value) {
-    // Применяем ко всем линиям
     connectionsStore.updateAllConnectionsColor(color)
-  } else {
-    // Применяем только к выделенным линиям (если есть)
-    // TODO: Добавить логику для выделенных линий
   }
 }
 
@@ -63,11 +45,7 @@ function updateThickness(value) {
   thickness.value = Number(value)
   
   if (isGlobalLineMode.value) {
-    // Применяем ко всем линиям
     connectionsStore.updateAllConnectionsThickness(thickness.value)
-  } else {
-    // Применяем только к выделенным линиям (если есть)
-    // TODO: Добавить логику для выделенных линий
   }
 }
 
@@ -79,193 +57,88 @@ function updateSliderTrack(val) {
   const min = 1
   const max = 20
   const percent = Math.round(((val - min) / (max - min)) * 100)
-  return `linear-gradient(90deg, ${lineColor.value} 0%, ${lineColor.value} ${percent}%, #e5e7eb ${percent}%)`
+  return `linear-gradient(to right, #0f62fe 0%, #0f62fe ${percent}%, #dbe3f4 ${percent}%, #dbe3f4 100%)`
 }
 
-// Управление анимацией
-function updateAnimationDuration(value) {
-  const seconds = Number(value)
-  if (seconds >= 2 && seconds <= 999) {
-    animationDuration.value = seconds
-  }
-}
-
-// Управление цветом заголовка
 function updateHeaderColor(color) {
   headerColor.value = color
-  
-  // Находим индекс цвета в палитре
-  const colorIndex = HEADER_COLORS.findIndex(c => c.rgb === color)
-  if (colorIndex !== -1) {
-    headerColorIndex.value = colorIndex
-  } else {
-    headerColorIndex.value = -1 // Пользовательский цвет
-  }
-  
-  // Применяем к выделенным карточкам
-  const selectedCards = cardsStore.selectedCards
-  if (selectedCards.length > 0) {
-    const cardIds = selectedCards.map(card => card.id)
-    cardsStore.updateCardHeaderColor(cardIds, headerColorIndex.value)
-  }
 }
 
 function cycleHeaderColor() {
-  // Вычисляем следующий индекс цвета
-  const nextIndex = headerColorIndex.value >= 0 
-    ? (headerColorIndex.value + 1) % HEADER_COLORS.length 
-    : 0
-  
-  headerColorIndex.value = nextIndex
-  headerColor.value = getHeaderColorRgb(nextIndex)
-  
-  // Применяем к выделенным карточкам
-  const selectedCards = cardsStore.selectedCards
-  if (selectedCards.length > 0) {
-    const cardIds = selectedCards.map(card => card.id)
-    cardsStore.updateCardHeaderColor(cardIds, nextIndex)
-  }
+  headerColorIndex.value = (headerColorIndex.value + 1) % HEADER_COLORS.length
+  headerColor.value = HEADER_COLORS[headerColorIndex.value]
 }
 
-// Управление фоном
 function updateBackground(gradient) {
   backgroundGradient.value = gradient
-  canvasStore.setBackgroundGradient(gradient)
+  canvasStore.setBackground(gradient)
 }
 
-// Добавление карточек
-function addCard(isLarge = false) {
-  console.log('=== addCard called ===');
-  console.log('isLarge =', isLarge);
-  console.log('headerColor.value =', headerColor.value);
-  console.log('headerColorIndex.value =', headerColorIndex.value);
-  
-  const newCard = {
-    x: 100,
-    y: 100,
-    text: 'RUY1234567890',
-    width: isLarge ? 494 : 380,
+function addCard() {
+  console.log('=== addCard called ===')
+  console.log('isLarge = false')
+  console.log('headerColor.value =', headerColor.value)
+  console.log('headerColorIndex.value =', headerColorIndex.value)
+
+  const cardData = {
+    x: 50 + Math.random() * 200,
+    y: 50 + Math.random() * 200,
+    width: 380,
     height: 280,
-    fill: '#ffffff',
-    stroke: '#000000',
-    strokeWidth: 2,
+    text: 'Новая карточка',
+    headerBg: headerColor.value,
+    colorIndex: headerColorIndex.value
+  }
+
+  console.log('Creating card object:', cardData)
+  console.log('Calling cardsStore.addCard...')
+  
+  cardsStore.addCard(cardData)
+  
+  console.log('Card created successfully:', cardData)
+  console.log('Total cards in store after adding:', cardsStore.cards.length)
+  console.log('=== addCard finished ===')
+}
+
+function addLargeCard() {
+  const cardData = {
+    x: 50 + Math.random() * 200,
+    y: 50 + Math.random() * 200,
+    width: 494,
+    height: 280,
+    text: 'Большая карточка',
     headerBg: headerColor.value,
     colorIndex: headerColorIndex.value
   }
   
-  console.log('Creating card object:', newCard);
-  console.log('Calling cardsStore.addCard...');
-  const createdCard = cardsStore.addCard(newCard);
-  console.log('Card created successfully:', createdCard);
-  console.log('Total cards in store after adding:', cardsStore.cards.length);
-  console.log('=== addCard finished ===');
-}
-
-function addLargeCard() {
-  console.log('=== addLargeCard called ===');
-  addCard(true)
-  console.log('=== addLargeCard finished ===');
+  cardsStore.addCard(cardData)
 }
 
 function addTemplate() {
-  console.log('=== addTemplate called ===');
-  console.log('Creating template cards...');
-  
-  const templateCards = [
-    { 
-      key: 'lena', 
-      x: 2240, 
-      y: -770, 
-      text: 'Елена',
-      pv: '330/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700', 
-      isLarge: true,
-      showSlfBadge: false,
-      showFendouBadge: false,
-      rankBadge: null
-    },
-    { 
-      key: 'a', 
-      x: 1750, 
-      y: -420, 
-      text: 'A',
-      pv: '30/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700'
-    },
-    { 
-      key: 'c', 
-      x: 1470, 
-      y: -70, 
-      text: 'C',
-      pv: '30/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700'
-    },
-    { 
-      key: 'd', 
-      x: 2030, 
-      y: -70, 
-      text: 'D',
-      pv: '30/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700'
-    },
-    { 
-      key: 'b', 
-      x: 2870, 
-      y: -420, 
-      text: 'B',
-      pv: '30/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700'
-    },
-    { 
-      key: 'e', 
-      x: 2590, 
-      y: -70, 
-      text: 'E',
-      pv: '30/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700'
-    },
-    { 
-      key: 'f', 
-      x: 3150, 
-      y: -70, 
-      text: 'F',
-      pv: '30/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700'
-    },
-  ];
+  console.log('=== addTemplate called ===')
+  console.log('Creating template cards...')
 
-  console.log('Template cards definition:', templateCards);
-  const createdCardsMap = new Map();
+  const templateCards = [
+    { key: 'lena', x: 640, y: 140, text: 'Лена', pv: 300000, balance: 8640, activePv: 300000, cycle: 4, coinFill: 'silver' },
+    { key: 'a', x: 375, y: 340, text: 'A', pv: 150000, balance: 4320, activePv: 150000, cycle: 3, coinFill: 'bronze' },
+    { key: 'b', x: 905, y: 340, text: 'B', pv: 150000, balance: 4320, activePv: 150000, cycle: 3, coinFill: 'bronze' },
+    { key: 'c', x: 210, y: 540, text: 'C', pv: 75000, balance: 2160, activePv: 75000, cycle: 2, coinFill: 'none' },
+    { key: 'd', x: 540, y: 540, text: 'D', pv: 75000, balance: 2160, activePv: 75000, cycle: 2, coinFill: 'none' },
+    { key: 'e', x: 740, y: 540, text: 'E', pv: 75000, balance: 2160, activePv: 75000, cycle: 2, coinFill: 'none' },
+    { key: 'f', x: 1070, y: 540, text: 'F', pv: 75000, balance: 2160, activePv: 75000, cycle: 2, coinFill: 'none' }
+  ]
+
+  console.log('Template cards definition:', templateCards)
+
+  const createdCardsMap = new Map()
 
   templateCards.forEach(cardDef => {
-    console.log('Creating template card:', cardDef.key);
-    
+    console.log('Creating template card:', cardDef.key)
     const cardData = cardsStore.addCard({
       x: cardDef.x,
       y: cardDef.y,
       text: cardDef.text,
-      width: cardDef.isLarge ? 494 : 380,
+      width: 380,
       height: 280,
       headerBg: headerColor.value,
       colorIndex: headerColorIndex.value,
@@ -277,14 +150,14 @@ function addTemplate() {
       showSlfBadge: cardDef.showSlfBadge || false,
       showFendouBadge: cardDef.showFendouBadge || false,
       rankBadge: cardDef.rankBadge || null
-    });
+    })
     
-    createdCardsMap.set(cardDef.key, cardData);
-    console.log('Template card created:', cardDef.key, cardData);
-  });
+    createdCardsMap.set(cardDef.key, cardData)
+    console.log('Template card created:', cardDef.key, cardData)
+  })
 
-  console.log('All template cards created. Total cards in store:', cardsStore.cards.length);
-  console.log('Creating template connections...');
+  console.log('All template cards created. Total cards in store:', cardsStore.cards.length)
+  console.log('Creating template connections...')
 
   const templateLines = [
     { startKey: 'b', startSide: 'right', endKey: 'f', endSide: 'top', thickness: 4 },
@@ -293,19 +166,19 @@ function addTemplate() {
     { startKey: 'a', startSide: 'left',  endKey: 'c', endSide: 'top', thickness: 4 },
     { startKey: 'lena', startSide: 'left',  endKey: 'a', endSide: 'top', thickness: 4 },
     { startKey: 'lena', startSide: 'right', endKey: 'b', endSide: 'top', thickness: 4 },
-  ];
+  ]
 
-  console.log('Template lines definition:', templateLines);
+  console.log('Template lines definition:', templateLines)
 
   templateLines.forEach(lineDef => {
-    const startCard = createdCardsMap.get(lineDef.startKey);
-    const endCard   = createdCardsMap.get(lineDef.endKey);
+    const startCard = createdCardsMap.get(lineDef.startKey)
+    const endCard   = createdCardsMap.get(lineDef.endKey)
     if (!startCard || !endCard) {
-      console.log('Skipping connection - missing cards:', lineDef);
-      return;
+      console.log('Skipping connection - missing cards:', lineDef)
+      return
     }
 
-    console.log('Creating connection:', lineDef);
+    console.log('Creating connection:', lineDef)
     connectionsStore.addConnection(
       startCard.id,
       endCard.id,
@@ -313,14 +186,13 @@ function addTemplate() {
         color: lineColor.value,
         thickness: lineDef.thickness
       }
-    );
-  });
+    )
+  })
   
-  console.log('Total connections after template creation:', connectionsStore.connections.length);
-  console.log('=== addTemplate finished ===');
+  console.log('Total connections after template creation:', connectionsStore.connections.length)
+  console.log('=== addTemplate finished ===')
 }
 
-// Обработчики событий для DOM элементов
 function handleLineColorChange(e) {
   updateLineColor(e.target.value)
 }
@@ -345,25 +217,20 @@ function openBackgroundPicker() {
   hiddenBackgroundPicker.value?.click()
 }
 
-// Вычисляемые свойства
 const sliderTrackStyle = computed(() => {
   return updateSliderTrack(thickness.value)
 })
 
-// Инициализация
 onMounted(() => {
-  // Устанавливаем начальные значения
   updateLineColor(lineColor.value)
   updateHeaderColor(headerColor.value)
   updateBackground(backgroundGradient.value)
   
-  // Устанавливаем параметры по умолчанию для новых соединений
   connectionsStore.setDefaultConnectionParameters(lineColor.value, thickness.value)
   
-  console.log('RightPanel mounted successfully');
+  console.log('RightPanel mounted successfully')
 })
 
-// Следим за изменениями параметров линий и обновляем значения по умолчанию
 watch([lineColor, thickness], ([newColor, newThickness]) => {
   connectionsStore.setDefaultConnectionParameters(newColor, newThickness)
 })
@@ -372,18 +239,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 <template>
   <div :class="['ui-panel-right', { collapsed: isCollapsed, 'ui-panel-right--modern': props.isModernTheme }]">
     <div :class="['ui-panel-right__container', { 'ui-panel-right__container--modern': props.isModernTheme }]">
-      <template v-if="!(props.isModernTheme && isCollapsed)">
-        <button
-          class="ui-btn panel-collapse-btn"
-          :class="{ 'panel-collapse-btn--modern': props.isModernTheme }"
-          :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
-          :aria-expanded="!isCollapsed"
-          @click="togglePanel"
-        >
-          <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
-        </button>
-      </template>
-      <div :class="['ui-panel-right__body', { 'ui-panel-right__body--modern': props.isModernTheme }]">
+      <div :class="['ui-panel-right__body', { 'ui-panel-right__body--modern': props.isModernTheme }]" v-if="!isCollapsed">
         <div class="line-controls-panel">
           <div class="line-color-group">
             <div
@@ -425,46 +281,41 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
               />
             </div>
           </div>
-          <div class="animation-controls" aria-label="Настройки анимации">
-            <span class="animation-label">Анимация</span>
+
+          <div class="animation-controls">
+            <div class="animation-label">Анимация линий</div>
             <div class="animation-block">
-              <label class="animation-duration-wrapper" for="animation-duration-input">
-                <span class="animation-duration-label">Продолжительность</span>
+              <div class="animation-duration-wrapper">
+                <label class="animation-duration-label" for="animation-duration-input">Длительность анимации</label>
                 <div class="animation-input-group">
                   <input 
-                    type="number" 
-                    id="animation-duration-input" 
-                    class="animation-duration-input" 
-                    min="2" 
-                    max="999" 
-                    step="1" 
-                    :value="animationDuration"
-                    @input="updateAnimationDuration($event.target.value)"
-                    title="Продолжительность анимации в секундах" 
-                    inputmode="numeric" 
-                    maxlength="3"
+                    id="animation-duration-input"
+                    class="animation-duration-input"
+                    type="number"
+                    min="0.5"
+                    max="10"
+                    step="0.5"
+                    v-model.number="animationDuration"
                   />
                   <span class="animation-unit">сек</span>
                 </div>
-              </label>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="card-header-panel" aria-label="Настройки заголовка лицензии">
-          <span class="card-header-panel__label">Заголовок</span>
-          <div class="card-header-panel__controls">
+        <div class="card-header-panel">
+          <div class="card-header-color-group">
             <button
               class="card-header-color-btn"
               :class="{ 'card-header-color-btn--modern': props.isModernTheme }"
-              type="button"
-              title="Выбрать цвет заголовка"
               :style="{ backgroundColor: headerColor }"
+              title="Выбрать цвет заголовка"
               @click="openHeaderColorPicker"
             ></button>
-            <button 
-              class="card-header-cycle-btn" 
-              type="button" 
+            <button
+              class="card-header-cycle-btn"
+              :class="{ 'card-header-cycle-btn--modern': props.isModernTheme }"
               title="Сменить цвет заголовка"
               @click="cycleHeaderColor"
             >
@@ -509,20 +360,32 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
             @input="handleBackgroundChange"
           >
         </div>
-      </div>
-    </div>
 
-    <div :class="['ui-panel-right__actions', 'row', { 'ui-panel-right__actions--modern': props.isModernTheme }]">
-      <template v-if="props.isModernTheme && isCollapsed">
         <button
-          class="ui-btn panel-collapse-btn panel-collapse-btn--modern panel-collapse-btn--floating"
+          class="ui-btn panel-collapse-btn"
+          :class="{ 'panel-collapse-btn--modern': props.isModernTheme }"
           :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
           :aria-expanded="!isCollapsed"
           @click="togglePanel"
         >
-          <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
+          <span aria-hidden="true">❯</span>
         </button>
-      </template>      
+      </div>
+
+      <template v-if="isCollapsed">
+        <button
+          class="ui-btn panel-collapse-btn"
+          :class="{ 'panel-collapse-btn--modern': props.isModernTheme, 'panel-collapse-btn--floating': true }"
+          :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
+          :aria-expanded="!isCollapsed"
+          @click="togglePanel"
+        >
+          <span aria-hidden="true">❮</span>
+        </button>
+      </template>
+    </div>
+
+    <div :class="['ui-panel-right__actions', 'row', { 'ui-panel-right__actions--modern': props.isModernTheme }]">
       <button
         class="add-btn"
         :class="{ 'add-btn--modern': props.isModernTheme }"
@@ -546,7 +409,6 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 </template>
 
 <style scoped>
-/* Правая панель */
 .ui-panel-right {
   position: fixed;
   top: 20px;
@@ -560,7 +422,8 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 
 .ui-panel-right__container {
   display: flex;
-  align-items: stretch;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 0px;
 }
 
@@ -570,7 +433,7 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   gap: 18px;
   background: #fff;
   padding: 20px 22px;
-  border-radius: 22px;
+  border-radius: 22px 0 0 22px;
   box-shadow: 10px 12px 24px rgba(15,35,95,.16), -6px -6px 18px rgba(255,255,255,.85);
   min-width: 240px;
 }
@@ -631,7 +494,6 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   cursor: not-allowed;
 }
 
-/* Кнопки + и ▶ в едином стиле */
 .add-btn {
   width: 56px;
   height: 56px;
@@ -654,11 +516,6 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   border-color: #cfe0ff;
 }
 
-.add-btn--triangle {
-  color: #111;
-  font-size: 24px;
-}
-
 .add-btn--large {
   font-size: 32px;
   font-weight: 500;
@@ -666,8 +523,6 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   padding-bottom: 4px;
 }
 
-
-/* Обновленная панель управления линиями */
 .panel-collapse-btn {
   font-size: 18px;
   width: 40px;
@@ -675,15 +530,13 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   padding: 0;
   border-radius: 12px 0 0 12px;
   box-shadow: 0 6px 14px rgba(0,0,0,.1);
+  margin-top: auto;
 }
 
 .panel-collapse-btn--floating {
+  border-radius: 12px;
   display: grid;
   place-items: center;
-}
-  
-.ui-panel-right.collapsed .panel-collapse-btn {
-  align-self: flex-end;
 }
 
 .line-controls-panel {
@@ -853,7 +706,6 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   margin-left: auto;
 }
 
-/* Слайдеры */
 .thickness-slider {
   appearance: none;
   width: 100%;
@@ -887,81 +739,29 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   border-radius: 50%;
   background: var(--brand);
   box-shadow: 0 4px 10px rgba(15,98,254,.35);
-  border: 3px solid #fff;
   cursor: pointer;
+  border: 3px solid #fff;
   transition: transform .15s, box-shadow .15s;
 }
 
-.thickness-slider::-moz-range-thumb:hover {
-  transform: scale(1.08);
-  box-shadow: 0 6px 14px rgba(15,98,254,.4);
-}
-
-/* Фон */
-.gradient-selector {
-  display: grid;
-  grid-template-columns: repeat(3, 45px);
-  gap: 8px;
-  background: #fff;
-  padding: 10px 12px;
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-  justify-items: center;
-  align-items: center;
-}
-
-.gradient-title {
-  grid-column: 1/-1;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 2px;
-  color: #374151;
-}
-
-.grad-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0,0,0,.06);
-  transition: transform .15s;
-  background: #fff;
-}
-
-.grad-btn:hover {
-  transform: translateY(-1px);
-}
-
-/* Настройки заголовка */
 .card-header-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 18px;
-  background: rgba(15,98,254,.05);
-  border: 1px solid rgba(15,98,254,.12);
+  background: rgba(245,247,251,.8);
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(209,213,219,.6);
 }
 
-.card-header-panel__label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #5d6b8a;
-}
-
-.card-header-panel__controls {
+.card-header-color-group {
   display: flex;
-  gap: 12px;
   align-items: center;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 .card-header-color-btn {
   width: 46px;
   height: 46px;
-  border-radius: 14px;
+  border-radius: 50%;
   border: none;
   cursor: pointer;
   box-shadow: inset 0 0 0 4px rgba(255,255,255,.65), 0 8px 16px rgba(93,139,244,.28);
@@ -976,31 +776,64 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 .card-header-cycle-btn {
   width: 46px;
   height: 46px;
+  padding: 0;
   border-radius: 14px;
-  border: 1px solid #d1d5db;
-  background: #fff;
-  color: #4b5563;
+  background: rgba(255,255,255,.85);
+  border: 1px solid rgba(167,178,204,.5);
+  color: #5d6b8a;
   cursor: pointer;
+  font-size: 20px;
   display: grid;
   place-items: center;
-  font-size: 22px;
-  line-height: 1;
-  box-shadow: inset 0 -2px 0 rgba(255,255,255,.55), 0 8px 16px rgba(88,112,160,.18);
   transition: .2s;
+  box-shadow: inset 0 -2px 0 rgba(255,255,255,.45), 0 6px 12px rgba(88,112,160,.18);
 }
 
 .card-header-cycle-btn:hover {
-  border-color: #0f62fe;
-  color: #0f62fe;
-  box-shadow: inset 0 -2px 0 rgba(255,255,255,.75), 0 10px 20px rgba(15,98,254,.25);
+  border-color: #5d8bf4;
+  color: #5d8bf4;
+  box-shadow: inset 0 -2px 0 rgba(255,255,255,.65), 0 10px 18px rgba(93,139,244,.22);
+}
+
+.gradient-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(245,247,251,.65);
+  border-radius: 16px;
+  box-shadow: inset 0 2px 6px rgba(175,188,210,.3);
+}
+
+.gradient-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7b849a;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.grad-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(209,213,219,.6);
+  cursor: pointer;
+  background: #fff;
+  box-shadow: 0 4px 8px rgba(0,0,0,.08);
+  transition: transform .15s, box-shadow .15s;
+  font-size: 20px;
+  display: grid;
+  place-items: center;
+}
+
+.grad-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(0,0,0,.12);
 }
 
 .ui-panel-right--modern {
-  top: auto;
-  bottom: 60px;
   right: 0px;
-  align-items: flex-start;
-  gap: 24px;
 }
 
 .ui-panel-right__container--modern {
@@ -1029,146 +862,12 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   
 .ui-panel-right__body--modern {
   background: rgba(20, 28, 42, 0.95);
-  border-radius: 28px;
+  border-radius: 28px 0 0 28px;
   padding: 32px 34px;
   min-width: 320px;
   color: #f4f7fb;
   box-shadow: 0 28px 46px rgba(5, 9, 18, 0.55);
   border: 1px solid rgba(92, 154, 240, 0.24);
-}
-
-.ui-panel-right__body--modern .line-controls-panel {
-  gap: 24px;
-}
-
-.ui-panel-right__body--modern .line-color-group {
-  gap: 18px;
-  justify-content: flex-start;
-}
-
-.ui-panel-right__body--modern .line-color-trigger {
-  border-radius: 18px;
-  box-shadow: 0 16px 28px rgba(9, 14, 24, 0.6);
-  border: 1px solid rgba(99, 166, 255, 0.35);
-}
-
-.ui-panel-right__body--modern .line-color-trigger:hover {
-  transform: translateY(-2px) scale(1.06);
-}
-
-.ui-panel-right__body--modern .apply-all-btn {
-  background: rgba(33, 46, 66, 0.82);
-  border: 1px solid rgba(114, 182, 255, 0.32);
-  color: #e3f2ff;
-  box-shadow: 0 20px 36px rgba(5, 10, 20, 0.45);
-}
-
-.ui-panel-right__body--modern .apply-all-btn:hover,
-.panel-collapse-btn--modern:hover {
-  transform: translateY(-3px);
-  background: rgba(45, 62, 88, 0.95);
-  border-color: rgba(140, 198, 255, 0.48);
-  box-shadow: 0 26px 44px rgba(5, 9, 18, 0.6);
-}
-
-.ui-panel-right__body--modern .apply-all-btn.active {
-  background: rgba(84, 158, 255, 0.18);
-  border-color: rgba(140, 198, 255, 0.52);
-  color: #8cd4ff;
-}
-
-.ui-panel-right__body--modern .line-controls-col label {
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  color: #d8e6ff;
-}
-
-.ui-panel-right__body--modern .thickness-row {
-  background: rgba(30, 44, 68, 0.72);
-  box-shadow: inset 0 0 0 1px rgba(74, 130, 208, 0.24);
-}
-
-.ui-panel-right__body--modern .thickness-slider {
-  accent-color: #63caff;
-}
-
-.ui-panel-right__body--modern .animation-controls {
-  color: #b2c4e6;
-  gap: 18px;
-}
-
-.ui-panel-right__body--modern .animation-label {
-  color: #9fb7de;
-}
-
-.ui-panel-right__body--modern .animation-block {
-  background: rgba(28, 40, 62, 0.65);
-  padding: 16px 18px;
-  border-radius: 20px;
-  box-shadow: inset 0 0 0 1px rgba(70, 124, 198, 0.2);
-}
-
-.ui-panel-right__body--modern .animation-input-group {
-  background: transparent;
-  box-shadow: none;
-}
-
-.ui-panel-right__body--modern .animation-duration-input {
-  background: rgba(12, 18, 30, 0.88);
-  border: 1px solid rgba(90, 150, 236, 0.36);
-  color: #f4f9ff;
-  box-shadow: inset 0 0 0 1px rgba(74, 130, 208, 0.2);
-}
-
-.ui-panel-right__body--modern .animation-duration-input:focus {
-  outline: 2px solid rgba(89, 208, 255, 0.32);
-  border-color: rgba(89, 208, 255, 0.5);
-}
-
-.ui-panel-right__body--modern .animation-unit {
-  color: #8ea6cc;
-}
-
-.ui-panel-right__body--modern .gradient-selector {
-  background: transparent;
-  box-shadow: none;
-  gap: 14px;
-}
-
-.ui-panel-right__body--modern .grad-btn {
-  border: 1px solid rgba(110, 176, 255, 0.32);
-  box-shadow: 0 18px 32px rgba(6, 11, 21, 0.45);
-}
-
-.ui-panel-right__body--modern .grad-btn:hover {
-  transform: translateY(-2px);
-}
-
-.ui-panel-right__body--modern .gradient-title {
-  color: #d1e0fb;
-  letter-spacing: 0.08em;
-}
-
-.ui-panel-right__body--modern .card-header-panel {
-  background: rgba(33, 44, 66, 0.6);
-  border: 1px solid rgba(92, 154, 240, 0.28);
-}
-
-.card-header-color-btn--modern {
-  box-shadow: 0 18px 32px rgba(9, 14, 24, 0.55);
-  border: 1px solid rgba(120, 186, 255, 0.3);
-}
-
-.card-header-cycle-btn--modern {
-  background: rgba(29, 40, 60, 0.92);
-  border: 1px solid rgba(100, 164, 255, 0.35);
-  color: #d7e6ff;
-  box-shadow: 0 18px 32px rgba(6, 11, 21, 0.45);
-}
-
-.card-header-cycle-btn--modern:hover {
-  border-color: rgba(148, 206, 255, 0.55);
-  color: #8bd3ff;
 }
 
 .ui-panel-right__actions--modern {
@@ -1196,13 +895,4 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   background: rgba(35, 48, 72, 0.95);
   box-shadow: 0 26px 44px rgba(4, 8, 16, 0.55);
 }
-
-.ui-panel-right--modern .row {
-  justify-content: flex-start;
-}
-
-.ui-panel-right--modern.collapsed .ui-panel-right__container {
-  display: none;
-}
-  
 </style>
