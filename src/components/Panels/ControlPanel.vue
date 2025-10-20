@@ -116,7 +116,7 @@ const handleToggleGuides = () => {
 </script>
 
 <template>
- </div>
+ </dvi>
     :class="[
       'left-panel-controls',
       {
