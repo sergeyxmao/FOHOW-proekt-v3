@@ -155,6 +155,7 @@ const handleToggleGuides = () => {
         </button>
       </div>
       <button
+         v-if="props.isCollapsed"
         class="ui-btn left-panel-controls__collapse"
         type="button"
         :title="props.isCollapsed ? 'Развернуть панель' : 'Свернуть панель'"
@@ -165,16 +166,29 @@ const handleToggleGuides = () => {
       </button>
     </div>
 
-    <div v-if="!props.isCollapsed" class="left-panel-controls__grid">
-      <button class="ui-btn" title="Сохранить проект (JSON)" @click="handleSaveProject">💾</button>
-      <button class="ui-btn" title="Экспорт в HTML (просмотр)" @click="handleExportHTML">📄</button>
-      <button class="ui-btn" title="Экспорт в SVG (вектор)" @click="handleExportSVG">🖋️</button>
-      <button class="ui-btn" title="Печать / Экспорт в PDF" @click="handlePrint">🖨️</button>
-      <button class="ui-btn" title="Загрузить проект из JSON" @click="handleLoadProject">📂</button>
-      <button class="ui-btn" title="Список заметок" @click="handleNotesList" disabled>🗒️</button>
-      <button class="ui-btn" title="Режим выделения (Esc)" @click="handleSelectionMode">⬚</button>
-      <button class="ui-btn" title="Режим иерархии" @click="handleHierarchicalDragMode">🌳</button>
-      <button class="ui-btn" title="Показать/скрыть направляющие" @click="handleToggleGuides">📐</button>
+    <div v-if="!props.isCollapsed" class="left-panel-controls__content">
+      <div class="left-panel-controls__grid">
+        <button class="ui-btn" title="Сохранить проект (JSON)" @click="handleSaveProject">💾</button>
+        <button class="ui-btn" title="Экспорт в HTML (просмотр)" @click="handleExportHTML">📄</button>
+        <button class="ui-btn" title="Экспорт в SVG (вектор)" @click="handleExportSVG">🖋️</button>
+        <button class="ui-btn" title="Печать / Экспорт в PDF" @click="handlePrint">🖨️</button>
+        <button class="ui-btn" title="Загрузить проект из JSON" @click="handleLoadProject">📂</button>
+        <button class="ui-btn" title="Список заметок" @click="handleNotesList" disabled>🗒️</button>
+        <button class="ui-btn" title="Режим выделения (Esc)" @click="handleSelectionMode">⬚</button>
+        <button class="ui-btn" title="Режим иерархии" @click="handleHierarchicalDragMode">🌳</button>
+      </div>
+      <div class="left-panel-controls__footer">
+        <button class="ui-btn" title="Показать/скрыть направляющие" @click="handleToggleGuides">📐</button>
+        <button
+          class="ui-btn left-panel-controls__collapse"
+          type="button"
+          :title="props.isCollapsed ? 'Развернуть панель' : 'Свернуть панель'"
+          :aria-expanded="!props.isCollapsed"
+          @click="emit('toggle-collapse')"
+        >
+          <span aria-hidden="true">{{ props.isCollapsed ? '❯' : '❮' }}</span>
+        </button>
+      </div>
     </div>
     <input type="file" accept=".json,application/json" style="display:none">
   </div>
@@ -212,7 +226,7 @@ const handleToggleGuides = () => {
 
 .left-panel-controls__top {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 16px;
 }
@@ -240,7 +254,11 @@ const handleToggleGuides = () => {
   grid-template-columns: repeat(3, auto);
   justify-content: flex-start;
 }
-
+.left-panel-controls__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 .left-panel-controls__grid {
   display: flex;
   flex-wrap: wrap;
@@ -250,14 +268,25 @@ const handleToggleGuides = () => {
 .left-panel-controls__grid .ui-btn {
   flex: 1 1 calc(50% - 8px);
 }
+.left-panel-controls__footer {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  justify-content: center;
+  gap: 16px;
+}
 
+.left-panel-controls--modern .left-panel-controls__content {
+  gap: 24px;
+}
 .left-panel-controls--modern .left-panel-controls__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
   justify-items: center;
 }
-
+.left-panel-controls--modern .left-panel-controls__footer {
+  gap: 24px;
+}
 .left-panel-controls .ui-btn {
   width: var(--left-panel-btn-size);
   height: var(--left-panel-btn-size);
@@ -316,13 +345,18 @@ const handleToggleGuides = () => {
 }
 
 .left-panel-controls__collapse {
-  width: calc(var(--left-panel-btn-size) * 0.7);
+  width: var(--left-panel-btn-size);
   font-size: calc(var(--left-panel-btn-font) * 0.75);
+}
+.left-panel-controls--collapsed .left-panel-controls__collapse {
+  width: calc(var(--left-panel-btn-size) * 0.7);
 }
 
 .left-panel-controls--modern .left-panel-controls__collapse {
-  width: calc(var(--left-panel-btn-size) * 0.6);
   box-shadow: 0 18px 34px rgba(6, 11, 21, 0.52);
+}
+.left-panel-controls--modern.left-panel-controls--collapsed .left-panel-controls__collapse {
+  width: calc(var(--left-panel-btn-size) * 0.6);
 }
 
 .left-panel-controls--collapsed .left-panel-controls__history {
