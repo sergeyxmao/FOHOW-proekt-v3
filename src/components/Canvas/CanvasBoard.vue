@@ -129,6 +129,7 @@ const isConnecting = ref(false);
 const connectionStart = ref(null); // Хранит информацию о начальной точке соединения
 const isDrawingLine = ref(false); // Флаг рисования линии
 const previewLine = ref(null); // Временная линия при рисовании
+const previewLineWidth = computed(() => connectionsStore.defaultLineThickness || 2);
 const mousePosition = ref({ x: 0, y: 0 }); // Позиция мыши
 const selectedConnectionId = ref(null);
 
