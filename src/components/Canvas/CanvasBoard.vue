@@ -242,7 +242,7 @@ const previewLinePath = computed(() => {
   return {
     d: pathData,
     color: '#ff9800',
-    strokeWidth: PREVIEW_LINE_WIDTH,
+    strokeWidth: previewLineWidth.value,
     strokeDasharray: '5,5'
   };
 });
