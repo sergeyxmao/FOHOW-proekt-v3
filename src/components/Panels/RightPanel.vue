@@ -372,10 +372,9 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 <template>
   <div :class="['ui-panel-right', { collapsed: isCollapsed, 'ui-panel-right--modern': props.isModernTheme }]">
     <div :class="['ui-panel-right__container', { 'ui-panel-right__container--modern': props.isModernTheme }]">
-      <template v-if="!(props.isModernTheme && isCollapsed)">
+      <template v-if="!props.isModernTheme">
         <button
           class="ui-btn panel-collapse-btn"
-          :class="{ 'panel-collapse-btn--modern': props.isModernTheme }"
           :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
           :aria-expanded="!isCollapsed"
           @click="togglePanel"
@@ -482,9 +481,9 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 
         <div class="gradient-selector">
           <div class="gradient-title">Фон</div>
-          <button 
-            class="grad-btn" 
-            data-gradient="#f5f7fb" 
+          <button
+            class="grad-btn"
+            data-gradient="#f5f7fb"
             title="Светлый"
             :style="{ backgroundColor: '#f5f7fb' }"
             @click="updateBackground('#f5f7fb')"
@@ -509,6 +508,15 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
             @input="handleBackgroundChange"
           >
         </div>
+        <button
+          v-if="props.isModernTheme"
+          class="ui-btn panel-collapse-btn panel-collapse-btn--modern panel-collapse-btn--inline"
+          :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
+          :aria-expanded="!isCollapsed"
+          @click="togglePanel"
+        >
+          <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
+        </button>        
       </div>
     </div>
 
@@ -1018,6 +1026,14 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
   box-shadow: inset 0 0 0 1px rgba(126, 184, 255, 0.2);
 }
 
+.panel-collapse-btn--inline {
+  margin: 0 auto;
+  margin-top: 12px;
+  border-radius: 20px;
+  width: 64px;
+  height: 52px;
+}
+  
 .panel-collapse-btn--modern.panel-collapse-btn--floating {
   width: 46px;
   height: 46px;
