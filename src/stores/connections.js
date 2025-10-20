@@ -173,7 +173,7 @@ export const useConnectionsStore = defineStore('connections', {
           normalizedUpdates.animationDuration = clampAnimationDuration(normalizedUpdates.animationDuration)
         }
 
-        Object.assign(connection, normalizedUpdates)        updatedConnections.push(connection)
+        Object.assign(connection, normalizedUpdates);        updatedConnections.push(connection)
       })
 
 
