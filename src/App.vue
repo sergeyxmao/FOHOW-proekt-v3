@@ -11,12 +11,11 @@ function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
 }
 
-watchEffect(() => {
-
 function toggleLeftPanel() {
   isLeftPanelCollapsed.value = !isLeftPanelCollapsed.value
 }
-  
+
+watchEffect(() => { 
   document.body.classList.toggle('theme-modern', isModernTheme.value)
 })  
 </script>
