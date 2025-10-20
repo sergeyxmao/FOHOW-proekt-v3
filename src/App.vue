@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watchEffect, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import ControlPanel from './components/Panels/ControlPanel.vue'
 import RightPanel from './components/Panels/RightPanel.vue'
@@ -17,7 +17,9 @@ const WHEEL_LISTENER_OPTIONS = { passive: false }
 function setPanelScale(value) {
   const clamped = Math.min(PANEL_SCALE_MAX, Math.max(PANEL_SCALE_MIN, value))
   panelScale.value = Number(clamped.toFixed(2))
-}function toggleTheme() {
+}
+
+function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
 }
 
@@ -63,8 +65,8 @@ function handlePanelCtrlWheel(event) {
   }
 
   const nextScale = panelScale.value + direction * PANEL_SCALE_STEP
-  setPanelScale(nextScale)}
-
+  setPanelScale(nextScale)
+}
 function handleGlobalKeydown(event) {
   const isResetCombo = event.ctrlKey && !event.shiftKey && (event.code === 'Digit0' || event.code === 'Numpad0')
   if (!isResetCombo) {
@@ -96,24 +98,21 @@ const rightPanelStyle = computed(() => ({
   transformOrigin: 'right top'
 }))
 
-watchEffect(() => {  document.body.classList.toggle('theme-modern', isModernTheme.value)
-})  
 </script>
 
 <template>
-  <div id="app" :class="{ 'theme-modern': isModernTheme }">
+  <div id="app">
     <!-- Левая панель -->
     <div
       :class="[
         'ui-panel-left',
         {
-          collapsed: isLeftPanelCollapsed,
-          'ui-panel-left--modern': isModernTheme,
-          'ui-panel-left--classic': !isModernTheme
+          collapsed: isLeftPanelCollapsed
         }
       ]"
       :style="leftPanelStyle"
-      @click.capture="handlePanelCtrlClick"    >
+      @click.capture="handlePanelCtrlClick"
+    >
       <ControlPanel
         :is-modern-theme="isModernTheme"
         :is-collapsed="isLeftPanelCollapsed"
@@ -124,7 +123,6 @@ watchEffect(() => {  document.body.classList.toggle('theme-modern', isModernThem
 
     <!-- Правая панель -->
     <RightPanel
-      :is-modern-theme="isModernTheme"
       :style="rightPanelStyle"
       @click.capture="handlePanelCtrlClick"
     />
@@ -177,10 +175,6 @@ html,body{
   box-shadow: var(--shadow);
   transition: top .3s ease, transform .3s ease, padding .3s ease;}
 
-.ui-panel-left--classic {
-  gap: 16px;
-}
-
 .ui-panel-left.collapsed {
   top: 16px;
   transform: none !important;
@@ -188,55 +182,4 @@ html,body{
 }
 /* Canvas/SVG */
 #canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
-
-#app.theme-modern {
-  --card-width: 400px;
-  --bg: #efe4d1;
-  --panel: rgba(18, 24, 34, 0.88);
-  --surface: rgba(24, 32, 46, 0.92);
-  --ink: #f4f7fb;
-  --muted: #9ba5b7;
-  --brand: #59d0ff;
-  --radius: 18px;
-  --shadow: 0 16px 34px rgba(8, 11, 18, 0.45);
-}
-
-body.theme-modern {
-  background: linear-gradient(145deg, #f3e9d6 0%, #efe3ce 48%, #f8efe0 100%);
-  color: #f4f7fb;
-}
-
-
-.ui-panel-left--modern {
-  top: 20px;
-  transform: none;
-  align-items: stretch;
-  padding: 28px 26px;
-  width: 220px;
-  min-height: 420px;
-  border-radius: 0 32px 32px 0;
-  background: transparent;
-  box-shadow: 0 24px 48px rgba(5, 8, 14, 0.68);
-}
-
-.ui-panel-left--modern.collapsed {
-  width: auto;
-  min-height: auto;
-  padding: 20px 24px;
-  background: transparent;
-}
-.ui-panel-left.collapsed.ui-panel-left--modern {
-  top: 16px;
-}
-
-.theme-modern #canvas{
-  position: absolute;
-  top: 32px;
-  right: 32px;
-  bottom: 32px;
-  left: 240px;  
-  background: rgba(255,255,255,0.45);
-  border-radius: 28px;
-  box-shadow: 0 28px 48px rgba(6, 11, 21, 0.22);
-}
 </style>
