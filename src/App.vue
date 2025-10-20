@@ -123,6 +123,7 @@ const rightPanelStyle = computed(() => ({
 
     <!-- Правая панель -->
     <RightPanel
+      :is-modern-theme="isModernTheme"
       :style="rightPanelStyle"
       @click.capture="handlePanelCtrlClick"
     />
