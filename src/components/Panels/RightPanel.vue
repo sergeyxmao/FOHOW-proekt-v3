@@ -300,7 +300,7 @@ function addTemplate() {
       <button
         class="add-btn"
         :class="{ 'add-btn--modern': $props.isModernTheme }"
-        title="Ð"Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð»Ð¸Ñ†ÐµÐ½Ð·Ð¸ÑŽ"
+        title="Добавить лицензию"
         @click="addCard"
       >□</button>
       <button
