@@ -4,6 +4,7 @@ import { useCardsStore } from '@/stores/cards'
 import { useConnectionsStore } from '@/stores/connections'
 
 const connectionsStore = useConnectionsStore()
+defineProps({
   isModernTheme: Boolean
 })
 
