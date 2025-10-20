@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useCardsStore } from '@/stores/cards'
 import { useConnectionsStore } from '@/stores/connections'
 
-const props = defineProps({
+const connectionsStore = useConnectionsStore()
   isModernTheme: Boolean
 })
 
