@@ -196,9 +196,9 @@ const handleToggleGuides = () => {
 
 <style scoped>
 .left-panel-controls {
-  --left-panel-btn-size: 64px;
-  --left-panel-btn-radius: 18px;
-  --left-panel-btn-font: 28px;
+  --left-panel-btn-size: 72px;
+  --left-panel-btn-radius: 22px;
+  --left-panel-btn-font: 30px;
   --left-panel-btn-bg: rgba(255, 255, 255, 0.92);
   --left-panel-btn-border: rgba(15, 23, 42, 0.14);
   --left-panel-btn-color: #111827;
