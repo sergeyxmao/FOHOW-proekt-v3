@@ -1,12 +1,17 @@
 <script setup>
-import { ref, watchEffect } from 'vue'
+import { ref, watchEffect, computed, onMounted, onBeforeUnmount } from 'vue'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import ControlPanel from './components/Panels/ControlPanel.vue'
 import RightPanel from './components/Panels/RightPanel.vue'
 
 const isModernTheme = ref(false)
-const isLeftPanelCollapsed = ref(false)  
+const isLeftPanelCollapsed = ref(false)
+const panelScale = ref(1)
+const canvasRef = ref(null)
 
+const PANEL_SCALE_MIN = 1
+const PANEL_SCALE_MAX = 1.5
+const PANEL_SCALE_STEP = 0.1
 function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
 }
@@ -15,8 +20,54 @@ function toggleLeftPanel() {
   isLeftPanelCollapsed.value = !isLeftPanelCollapsed.value
 }
 
-watchEffect(() => { 
-  document.body.classList.toggle('theme-modern', isModernTheme.value)
+function handlePanelCtrlClick(event) {
+  const isLeftButton = event.button === undefined || event.button === 0
+  if (!event.ctrlKey || !isLeftButton) {
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+  event.stopImmediatePropagation?.()
+
+  let nextScale = panelScale.value + PANEL_SCALE_STEP
+  if (nextScale > PANEL_SCALE_MAX) {
+    nextScale = PANEL_SCALE_MIN
+  }
+
+  panelScale.value = Number(nextScale.toFixed(2))
+}
+
+function handleGlobalKeydown(event) {
+  const isResetCombo = event.ctrlKey && !event.shiftKey && (event.code === 'Digit0' || event.code === 'Numpad0')
+  if (!isResetCombo) {
+    return
+  }
+
+  event.preventDefault()
+  panelScale.value = 1
+  canvasRef.value?.resetView()
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleGlobalKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleGlobalKeydown)
+})
+
+const leftPanelStyle = computed(() => ({
+  transform: `scale(${panelScale.value})`,
+  transformOrigin: 'left top'
+}))
+
+const rightPanelStyle = computed(() => ({
+  transform: `scale(${panelScale.value})`,
+  transformOrigin: 'right top'
+}))
+
+watchEffect(() => {  document.body.classList.toggle('theme-modern', isModernTheme.value)
 })  
 </script>
 
@@ -32,7 +83,8 @@ watchEffect(() => {
           'ui-panel-left--classic': !isModernTheme
         }
       ]"
-    >
+      :style="leftPanelStyle"
+      @click.capture="handlePanelCtrlClick"    >
       <ControlPanel
         :is-modern-theme="isModernTheme"
         :is-collapsed="isLeftPanelCollapsed"
@@ -42,10 +94,13 @@ watchEffect(() => {
     </div>
 
     <!-- Правая панель -->
-    <RightPanel :is-modern-theme="isModernTheme" />
-
+    <RightPanel
+      :is-modern-theme="isModernTheme"
+      :style="rightPanelStyle"
+      @click.capture="handlePanelCtrlClick"
+    />
     <div id="canvas">
-      <CanvasBoard />
+      <CanvasBoard ref="canvasRef" />
     </div>
   </div>
 </template>
