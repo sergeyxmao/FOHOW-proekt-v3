@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
-import { useCardsStore } from '@/stores/cardsStore'
-import { useHistoryStore } from '@/stores/historyStore'
+import { useCardsStore } from '@/stores/cards'
+import { useHistoryStore } from '@/stores/history'
 
 const props = defineProps({
   isModernTheme: Boolean,
