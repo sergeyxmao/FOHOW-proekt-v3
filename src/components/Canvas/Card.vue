@@ -84,9 +84,7 @@ const handleBlur = () => {
 // Обработчик для удаления карточки
 const handleDelete = (event) => {
   event.stopPropagation();
-  if (confirm(`Удалить карточку "${props.card.text}"?`)) {
-    cardsStore.removeCard(props.card.id);
-  }
+  cardsStore.removeCard(props.card.id);
 };
 
 // Обработчик для обновления значений
