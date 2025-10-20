@@ -116,7 +116,7 @@ const handleToggleGuides = () => {
 </script>
 
 <template>
- </dvi>
+  <div
     :class="[
       'left-panel-controls',
       {
@@ -127,37 +127,39 @@ const handleToggleGuides = () => {
   >
     <div class="left-panel-controls__content">
       <div class="left-panel-controls__top">
-      <div class="left-panel-controls__history">
-        <button
-          class="ui-btn theme-toggle"
-          type="button"
-          :title="props.isModernTheme ? 'Вернуться к классическому интерфейсу' : 'Включить новый интерфейс'"
-          @click="emit('toggle-theme')"
-        >
-          <span class="theme-toggle__icon" aria-hidden="true"></span>
-          ↷
-        </button>
-         <div class="left-panel-controls__history">
+        <div class="left-panel-controls__history">
           <button
-            class="ui-btn"
-            id="undo-btn"
-            title="Отменить (Ctrl+Z)"
-            @click="handleUndo"
-            :disabled="!historyStore.canUndo"
+            class="ui-btn theme-toggle"
+            type="button"
+            :title="props.isModernTheme ? 'Вернуться к классическому интерфейсу' : 'Включить новый интерфейс'"
+            @click="emit('toggle-theme')"
           >
-            ↶
-          </button>
-          <button
-            class="ui-btn"
-            id="redo-btn"
-            title="Повторить (Ctrl+Shift+Z)"
-            @click="handleRedo"
-            :disabled="!historyStore.canRedo"
-          >
+            <span class="theme-toggle__icon" aria-hidden="true"></span>
             ↷
           </button>
-        </div>       
+          <div class="left-panel-controls__history">
+            <button
+              class="ui-btn"
+              id="undo-btn"
+              title="Отменить (Ctrl+Z)"
+              @click="handleUndo"
+              :disabled="!historyStore.canUndo"
+            >
+              ↶
+            </button>
+            <button
+              class="ui-btn"
+              id="redo-btn"
+              title="Повторить (Ctrl+Shift+Z)"
+              @click="handleRedo"
+              :disabled="!historyStore.canRedo"
+            >
+              ↷
+            </button>
+          </div>       
+        </div>
       </div>
+      
       <div v-if="!props.isCollapsed" class="left-panel-controls__grid">
         <button class="ui-btn" title="Сохранить проект (JSON)" @click="handleSaveProject">💾</button>
         <button class="ui-btn" title="Экспорт в HTML (просмотр)" @click="handleExportHTML">📄</button>
@@ -201,7 +203,8 @@ const handleToggleGuides = () => {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 16px;  width: 100%;
+  gap: 16px;
+  width: 100%;
 }
 
 .left-panel-controls__content {
@@ -224,7 +227,8 @@ const handleToggleGuides = () => {
 
 .left-panel-controls__history {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
   width: 100%;
 }
 
@@ -239,7 +243,8 @@ const handleToggleGuides = () => {
   width: auto;
 }
 
-.left-panel-controls__grid {  display: grid;
+.left-panel-controls__grid {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
 }
@@ -262,6 +267,7 @@ const handleToggleGuides = () => {
 .left-panel-controls__grid .ui-btn {
   width: 100%;
 }
+
 .left-panel-controls .ui-btn:hover:not(:disabled) {
   transform: translateY(-4px);
   box-shadow: 0 18px 32px rgba(15, 23, 42, 0.22);
@@ -329,7 +335,6 @@ const handleToggleGuides = () => {
   background: rgba(44, 58, 82, 0.95);
   box-shadow: 0 32px 52px rgba(8, 12, 22, 0.58);
 }
-
 
 .left-panel-controls--modern.left-panel-controls--collapsed .left-panel-controls__content {
   align-items: flex-start;
