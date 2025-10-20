@@ -17,7 +17,6 @@ const emit = defineEmits(['toggle-theme', 'toggle-collapse'])
 const cardsStore = useCardsStore()
 const historyStore = useHistoryStore()
 
-// Обработчики для кнопок левой панели
 const handleUndo = () => {
   historyStore.undo()
 }
@@ -27,7 +26,6 @@ const handleRedo = () => {
 }
 
 const handleSaveProject = () => {
-  // Сохранение проекта в JSON
   const projectData = {
     cards: cardsStore.cards,
     timestamp: Date.now()
@@ -43,12 +41,10 @@ const handleSaveProject = () => {
 }
 
 const handleExportHTML = () => {
-  // Экспорт в HTML
   window.print()
 }
 
 const handleExportSVG = () => {
-  // Экспорт в SVG
   const svgElement = document.querySelector('#svg-layer')
   if (!svgElement) return
   
@@ -65,12 +61,10 @@ const handleExportSVG = () => {
 }
 
 const handlePrint = () => {
-  // Печать / Экспорт в PDF
   window.print()
 }
 
 const handleLoadProject = () => {
-  // Загрузка проекта из JSON
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = '.json,application/json'
@@ -95,28 +89,24 @@ const handleLoadProject = () => {
 }
 
 const handleNotesList = () => {
-  // Список заметок
   console.log('Открыть список заметок')
 }
 
 const handleSelectionMode = () => {
-  // Режим выделения
   console.log('Переключить режим выделения')
 }
 
 const handleHierarchicalDragMode = () => {
-  // Режим иерархии
   console.log('Переключить режим иерархии')
 }
 
 const handleToggleGuides = () => {
-  // Показать/скрыть направляющие
   console.log('Переключить направляющие')
 }
 </script>
 
 <template>
- <div
+  <div
     :class="[
       'left-panel-controls',
       {
@@ -182,9 +172,9 @@ const handleToggleGuides = () => {
 
 <style scoped>
 .left-panel-controls {
-  --left-panel-btn-size: 64px;
+  --left-panel-btn-size: 80px;
   --left-panel-btn-radius: 18px;
-  --left-panel-btn-font: 28px;
+  --left-panel-btn-font: 32px;
   --left-panel-btn-bg: rgba(255, 255, 255, 0.92);
   --left-panel-btn-border: rgba(15, 23, 42, 0.14);
   --left-panel-btn-color: #111827;
@@ -193,8 +183,11 @@ const handleToggleGuides = () => {
   flex-direction: column;
   gap: 18px;
   width: 100%;
+  position: fixed;
+  z-index: 2000;
 }
 
+.left-panel-controls--modern {
   --left-panel-btn-size: 80px;
   --left-panel-btn-radius: 24px;
   --left-panel-btn-font: 34px;
@@ -210,10 +203,11 @@ const handleToggleGuides = () => {
 }
 
 .left-panel-controls__top {
-  display: grid;
-  grid-template-columns: auto 1fr auto;  flex-direction: column;
+  display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 16px;
+  justify-content: space-between;
 }
 
 .left-panel-controls__history {
@@ -222,39 +216,20 @@ const handleToggleGuides = () => {
   justify-content: center;
 }
 
-.left-panel-controls--modern .left-panel-controls__top {
-  grid-template-columns: 1fr;
-  justify-items: center;
-  gap: 22px;
-}
-
-.left-panel-controls--modern .left-panel-controls__history {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 22px;
-}
-
 .left-panel-controls--collapsed .left-panel-controls__top {
-  grid-template-columns: repeat(3, auto);
   justify-content: flex-start;
 }
 
 .left-panel-controls__grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
-}
-
-.left-panel-controls__grid .ui-btn {
-  flex: 1 1 calc(50% - 8px);
 }
 
 .left-panel-controls--modern .left-panel-controls__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
-  justify-items: center;
 }
 
 .left-panel-controls .ui-btn {
@@ -269,7 +244,8 @@ const handleToggleGuides = () => {
   place-items: center;
   cursor: pointer;
   transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
-  box-shadow: var(--left-panel-btn-shadow);}
+  box-shadow: var(--left-panel-btn-shadow);
+}
 
 .left-panel-controls .ui-btn:hover:not(:disabled) {
   transform: translateY(-4px);
