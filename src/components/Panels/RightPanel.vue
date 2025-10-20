@@ -372,17 +372,6 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 <template>
   <div :class="['ui-panel-right', { collapsed: isCollapsed, 'ui-panel-right--modern': props.isModernTheme }]">
     <div :class="['ui-panel-right__container', { 'ui-panel-right__container--modern': props.isModernTheme }]">
-      <template v-if="!(props.isModernTheme && isCollapsed)">
-        <button
-          class="ui-btn panel-collapse-btn"
-          :class="{ 'panel-collapse-btn--modern': props.isModernTheme }"
-          :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
-          :aria-expanded="!isCollapsed"
-          @click="togglePanel"
-        >
-          <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
-        </button>
-      </template>
       <div :class="['ui-panel-right__body', { 'ui-panel-right__body--modern': props.isModernTheme }]">
         <div class="line-controls-panel">
           <div class="line-color-group">
@@ -403,22 +392,22 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
               </svg>
             </button>
           </div>
-          <input 
+          <input
             ref="hiddenLineColorPicker"
-            type="color" 
-            :value="lineColor" 
+            type="color"
+            :value="lineColor"
             style="display:none;"
             @input="handleLineColorChange"
           >
           <div class="line-controls-col">
             <label for="thickness-slider">Толщина: <span>{{ thickness }}</span>px</label>
             <div class="thickness-row">
-              <input 
-                type="range" 
-                id="thickness-slider" 
-                class="thickness-slider" 
-                min="1" 
-                max="20" 
+              <input
+                type="range"
+                id="thickness-slider"
+                class="thickness-slider"
+                min="1"
+                max="20"
                 :value="thickness"
                 :style="{ background: sliderTrackStyle }"
                 @input="updateThickness($event.target.value)"
@@ -431,17 +420,17 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
               <label class="animation-duration-wrapper" for="animation-duration-input">
                 <span class="animation-duration-label">Продолжительность</span>
                 <div class="animation-input-group">
-                  <input 
-                    type="number" 
-                    id="animation-duration-input" 
-                    class="animation-duration-input" 
-                    min="2" 
-                    max="999" 
-                    step="1" 
+                  <input
+                    type="number"
+                    id="animation-duration-input"
+                    class="animation-duration-input"
+                    min="2"
+                    max="999"
+                    step="1"
                     :value="animationDuration"
                     @input="updateAnimationDuration($event.target.value)"
-                    title="Продолжительность анимации в секундах" 
-                    inputmode="numeric" 
+                    title="Продолжительность анимации в секундах"
+                    inputmode="numeric"" 
                     maxlength="3"
                   />
                   <span class="animation-unit">сек</span>
@@ -462,9 +451,9 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
               :style="{ backgroundColor: headerColor }"
               @click="openHeaderColorPicker"
             ></button>
-            <button 
-              class="card-header-cycle-btn" 
-              type="button" 
+            <button
+              class="card-header-cycle-btn"
+              type="button"
               title="Сменить цвет заголовка"
               @click="cycleHeaderColor"
             >
@@ -473,8 +462,8 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
           </div>
           <input
             ref="hiddenHeaderColorPicker"
-            type="color" 
-            :value="headerColor" 
+            type="color"
+            :value="headerColor"
             style="display:none;"
             @input="handleHeaderColorChange"
           >
@@ -482,47 +471,46 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 
         <div class="gradient-selector">
           <div class="gradient-title">Фон</div>
-          <button 
-            class="grad-btn" 
-            data-gradient="#f5f7fb" 
+          <button
+            class="grad-btn"
+            data-gradient="#f5f7fb"
             title="Светлый"
             :style="{ backgroundColor: '#f5f7fb' }"
             @click="updateBackground('#f5f7fb')"
           ></button>
-          <button 
-            class="grad-btn" 
-            data-gradient="linear-gradient(135deg,#eef1f5,#dde3ea)" 
+          <button
+            class="grad-btn"
+            data-gradient="linear-gradient(135deg,#eef1f5,#dde3ea)"
             title="Серый"
             :style="{ background: 'linear-gradient(135deg,#eef1f5,#dde3ea)' }"
             @click="updateBackground('linear-gradient(135deg,#eef1f5,#dde3ea)')"
           ></button>
-          <button 
+          <button
             class="grad-btn" 
             title="Выбрать цвет"
             @click="openBackgroundPicker"
           >🎨</button>
-          <input 
+          <input
             ref="hiddenBackgroundPicker"
-            type="color" 
-            :value="backgroundGradient" 
+            type="color"
+            :value="backgroundGradient"
             style="display:none;"
             @input="handleBackgroundChange"
           >
         </div>
       </div>
+       <button
+        class="ui-btn panel-collapse-btn panel-collapse-btn--docked"
+        :class="{ 'panel-collapse-btn--modern': props.isModernTheme }"
+        :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
+        :aria-expanded="!isCollapsed"
+        @click="togglePanel"
+      >
+        <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
+      </button>     
     </div>
 
-    <div :class="['ui-panel-right__actions', 'row', { 'ui-panel-right__actions--modern': props.isModernTheme }]">
-      <template v-if="props.isModernTheme && isCollapsed">
-        <button
-          class="ui-btn panel-collapse-btn panel-collapse-btn--modern panel-collapse-btn--floating"
-          :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
-          :aria-expanded="!isCollapsed"
-          @click="togglePanel"
-        >
-          <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
-        </button>
-      </template>      
+    <div class="ui-panel-right__actions" :class="{ 'ui-panel-right__actions--modern': props.isModernTheme }">    
       <button
         class="add-btn"
         :class="{ 'add-btn--modern': props.isModernTheme }"
@@ -550,29 +538,30 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 .ui-panel-right {
   position: fixed;
   top: 20px;
-  right: 0px;
+  right: 0;
   z-index: 2000;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 14px;
+  gap: 16px;
 }
 
 .ui-panel-right__container {
   display: flex;
+  flex-direction: column;  
   align-items: stretch;
-  gap: 0px;
-}
+  gap: 12px;
+  width: max-content}
 
 .ui-panel-right__body {
   display: flex;
   flex-direction: column;
   gap: 18px;
   background: #fff;
-  padding: 20px 22px;
-  border-radius: 22px;
+  padding: 20px 22px 24px;
+  border-radius: 22px 0 0 18px;
   box-shadow: 10px 12px 24px rgba(15,35,95,.16), -6px -6px 18px rgba(255,255,255,.85);
-  min-width: 240px;
+  min-width: 260px;
 }
 
 .ui-panel-right__actions {
@@ -584,18 +573,6 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 
 .ui-panel-right.collapsed .ui-panel-right__body {
   display: none;
-}
-
-.ui-panel-right.collapsed .ui-panel-right__container {
-  gap: 0;
-}
-
-.ui-panel-right .row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .ui-btn {
@@ -669,22 +646,25 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 
 /* Обновленная панель управления линиями */
 .panel-collapse-btn {
-  font-size: 18px;
-  width: 40px;
-  height: 40px;
+  font-size: 20px;
+  width: 100%;
+  height: 52px;
   padding: 0;
-  border-radius: 12px 0 0 12px;
-  box-shadow: 0 6px 14px rgba(0,0,0,.1);
-}
-
-.panel-collapse-btn--floating {
+  border-radius: 0 0 0 18px;
+  box-shadow: 0 12px 26px rgba(15,35,95,.16);
   display: grid;
   place-items: center;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: var(--ink);  
 }
-  
+
+.panel-collapse-btn--docked {
+  align-self: stretch;
+}
+
 .ui-panel-right.collapsed .panel-collapse-btn {
-  align-self: flex-end;
-}
+  border-radius: 18px 0 0 18px;}
 
 .line-controls-panel {
   display: flex;
@@ -1005,31 +985,19 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 
 .ui-panel-right__container--modern {
   gap: 20px;
-  align-items: center;
-}
+  align-items: stretch;}
 
 .panel-collapse-btn--modern {
-  width: 58px;
-  height: 58px;
-  border-radius: 0px;
   background: rgba(27, 36, 52, 0.96);
   border: 1px solid rgba(90, 148, 240, 0.32);
   color: #ebf3ff;
-  box-shadow: inset 0 0 0 1px rgba(126, 184, 255, 0.2);
-}
+  box-shadow: 0 24px 44px rgba(8, 12, 22, 0.55);
 
-.panel-collapse-btn--modern.panel-collapse-btn--floating {
-  width: 46px;
-  height: 46px;
-  border-radius: 18px;
-  background: rgba(24, 34, 52, 0.9);
-  border: 1px solid rgba(94, 156, 244, 0.28);
-  box-shadow: 0 20px 36px rgba(5, 10, 20, 0.45);
 }
   
 .ui-panel-right__body--modern {
   background: rgba(20, 28, 42, 0.95);
-  border-radius: 28px;
+  border-radius: 32px 0 0 28px;
   padding: 32px 34px;
   min-width: 320px;
   color: #f4f7fb;
