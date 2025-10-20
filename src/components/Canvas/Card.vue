@@ -153,35 +153,52 @@ const updateValue = (event, field) => {
         <svg class="coin-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
           <circle cx="50" cy="50" r="45" :fill="card.coinFill || '#ffd700'" stroke="#DAA520" stroke-width="5"/>
         </svg>
-        <span class="value pv-value" contenteditable="true" @blur="updateValue($event, 'pv')">
-          {{ card.pv || '330/330pv' }}
+        <span
+          class="value pv-value"
+          contenteditable="true"
+          @blur="updateValue($event, 'pv')"
+        >          {{ card.pv || '330/330pv' }}
         </span>
       </div>
       
       <!-- Баланс -->
       <div class="card-row">
         <span class="label">Баланс:</span>
-        <span class="value" contenteditable="true" @blur="updateValue($event, 'balance')">
-          {{ card.balance || '0 / 0' }}
+        <span
+          class="value"
+          contenteditable="true"
+          @blur="updateValue($event, 'balance')"
+        >          {{ card.balance || '0 / 0' }}
         </span>
       </div>
       
       <!-- Актив-заказы PV -->
       <div class="card-row">
         <span class="label">Актив-заказы PV:</span>
-        <span class="value" contenteditable="true" @blur="updateValue($event, 'activePv')">
-          {{ card.activePv || '0 / 0' }}
+        <span
+          class="value"
+          contenteditable="true"
+          @blur="updateValue($event, 'activePv')"
+        >          {{ card.activePv || '0 / 0' }}
         </span>
       </div>
       
       <!-- Цикл -->
       <div class="card-row">
         <span class="label">Цикл:</span>
-        <span class="value" contenteditable="true" @blur="updateValue($event, 'cycle')">
-          {{ card.cycle || '0' }}
+        <span
+          class="value"
+          contenteditable="true"
+          @blur="updateValue($event, 'cycle')"
+        >          {{ card.cycle || '0' }}
         </span>
       </div>
-    </div>
+
+      <div
+        v-if="card.bodyHTML"
+        class="card-body-html"
+        v-html="card.bodyHTML"
+      ></div>    </div>
     
     <!-- Значки -->
     <div v-if="card.showSlfBadge" class="slf-badge visible">SLF</div>
@@ -220,7 +237,7 @@ const updateValue = (event, field) => {
 <style scoped>
 .card {
   border-radius: 16px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  box-shadow: 10px 12px 24px rgba(15, 35, 95, 0.16), -6px -6px 18px rgba(255, 255, 255, 0.85);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   overflow: visible;
   min-height: 280px;
@@ -235,6 +252,25 @@ const updateValue = (event, field) => {
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.6), 0 12px 26px rgba(0, 0, 0, 0.18);
 }
 
+.card.note-active {
+  position: relative;
+}
+
+.card.note-active::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid rgba(225, 29, 72, 0.55);
+  box-shadow: 0 0 12px rgba(225, 29, 72, 0.35);
+  pointer-events: none;
+}
+
+.card.note-active .card-header {
+  box-shadow: inset 0 -2px 0 rgba(225, 29, 72, 0.45);
+}
+
+  
 .card-header {
   padding: 10px 44px 10px 10px;
   position: relative;
@@ -282,7 +318,7 @@ const updateValue = (event, field) => {
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.25);
   color: #fff;
-  font-size: 24px;
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -297,48 +333,46 @@ const updateValue = (event, field) => {
 }
 
 .card-body {
-  padding: 15px;
-  background: #fff;
+  padding: 16px;
+  background: var(--surface, #ffffff);
   border-radius: 0 0 16px 16px;
-}
+  display: flex;
+  flex-direction: column;
+  gap: 12px}
 
 .card-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
-}
-
-.card-row:last-child {
-  margin-bottom: 0;
+  gap: 10px;
 }
 
 .card-row.pv-row {
-  justify-content: center;
+  justify-content: flex-start;
   gap: 10px;
-  margin-bottom: 15px;
 }
 
 .coin-icon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
 }
 
 .label {
-  font-weight: 700;
-  color: #374151;
+  font-weight: 500;
+  color: #6b7280;
   font-size: 14px;
 }
 
 .value {
   color: #111827;
-  font-weight: 800;
-  font-size: 20px;
+  font-weight: 600;
+  font-size: 15px;
   outline: none;
   padding: 3px 6px;
-  border-radius: 5px;
-  transition: background 0.15s ease;
+  border-radius: 6px;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  cursor: text;
 }
 
 .value:focus {
@@ -348,6 +382,7 @@ const updateValue = (event, field) => {
 
 .pv-value {
   font-size: 18px;
+  font-weight: 600;
 }
 
 /* Значки */
@@ -404,7 +439,7 @@ const updateValue = (event, field) => {
   cursor: pointer;
   transform: translate(-50%, -50%);
   display: none;
-  transition: background 0.15s, transform 0.15s;
+  transition: background 0.15s ease, transform 0.15s ease;
   z-index: 101;
 }
 
@@ -437,6 +472,13 @@ const updateValue = (event, field) => {
   left: 100%;
 }
 
+.card-body-html {
+  font-size: 14px;
+  color: #111827;
+  line-height: 1.5;
+}
+
+  
 /* Большая карточка */
 .card--large {
   min-height: 280px;
