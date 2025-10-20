@@ -624,6 +624,7 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   --right-panel-grad-btn-shadow: 0 2px 6px rgba(0,0,0,.06);
   --right-panel-title-color: #374151;
   --right-panel-slider-track: #dbe3f4;
+  --right-panel-section-shadow: 0 4px 10px rgba(0,0,0,.08);
 }
 
 .ui-panel-right--modern {
@@ -679,8 +680,9 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   --right-panel-grad-btn-border: rgba(96,164,255,.35);
   --right-panel-grad-btn-shadow: 0 12px 24px rgba(5,10,20,.45);
   --right-panel-title-color: #b5c9f0;
-  --right-panel-slider-track: rgba(64,84,124,.9);}
-
+  --right-panel-slider-track: rgba(64,84,124,.9);
+  --right-panel-section-shadow: 0 18px 34px rgba(5,10,20,.5);
+}
 .ui-panel-right__container {
   display: flex;
   align-items: stretch;
@@ -815,10 +817,11 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   flex-direction: column;
   gap: 14px;
   padding: 16px;
-  background: #fff;
+  background: var(--right-panel-surface, #fff);
   border-radius: 18px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, .08);
-}
+  box-shadow: var(--right-panel-section-shadow, 0 4px 10px rgba(0, 0, 0, .08));
+  color: var(--right-panel-text, #1f2937);
+  border: 1px solid var(--right-panel-card-border, transparent);}
 
 .line-color-group {
   display: flex;
@@ -847,33 +850,35 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  border: 1px solid #d1d5db;
-  background: #fff;
-  color: #6b7280;
+  border: 1px solid var(--right-panel-apply-border, #d1d5db);
+  background: var(--right-panel-apply-bg, #fff);
+  color: var(--right-panel-apply-color, #6b7280);
   cursor: pointer;
   display: grid;
   place-items: center;
   transition: all .2s;
+  box-shadow: var(--right-panel-apply-shadow, inset 0 -2px 0 rgba(255,255,255,.45));
 }
 
 .apply-all-btn:hover {
-  background: #f9fafb;
-  border-color: #0f62fe;
-  color: #0f62fe;
+  background: var(--right-panel-apply-hover-bg, #f9fafb);
+  border-color: var(--right-panel-apply-hover-border, #0f62fe);
+  color: var(--right-panel-apply-hover-color, #0f62fe);
+  box-shadow: var(--right-panel-apply-hover-shadow, inset 0 -2px 0 rgba(255,255,255,.65));
 }
 
 .apply-all-btn.active {
-  background: #eaf1ff;
-  border-color: #0f62fe;
-  color: #0f62fe;
+  background: var(--right-panel-btn-active-bg, #eaf1ff);
+  border-color: var(--right-panel-btn-active-border, #0f62fe);
+  color: var(--right-panel-btn-active-color, #0f62fe);
 }
 
 .line-controls-col {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  color: #1f2937;}
-
+  color: var(--right-panel-text, #1f2937);
+}
 .line-controls-col label {
   font-size: 13px;
   font-weight: 600;
@@ -947,9 +952,10 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   height: 24px;
   margin-left: 8px;
   border-radius: 9px;
-  background: rgba(255, 255, 255, .85);
-  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .45);
-  color: #1f2937;
+  background: var(--right-panel-apply-bg, rgba(255, 255, 255, .85));
+  box-shadow: var(--right-panel-apply-shadow, inset 0 -2px 0 rgba(255, 255, 255, .45));
+  color: var(--right-panel-text, #1f2937);
+  border: 1px solid var(--right-panel-apply-border, transparent);
 }
 
 .animation-controls {
@@ -1000,21 +1006,23 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   width: 60px;
   height: 36px;
   padding: 4px 8px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--right-panel-input-border, #d1d5db);
   border-radius: 8px;
   font-size: 14px;
   text-align: center;
   outline: none;
-}
+  background: var(--right-panel-input-bg, #fff);
+  color: var(--right-panel-input-color, #111827);
+  box-shadow: var(--right-panel-input-shadow, inset 0 -2px 0 rgba(255,255,255,.45));}
 
 .animation-duration-input:focus {
-  border-color: #0f62fe;
-  box-shadow: 0 0 0 3px rgba(15, 98, 254, .1);
+  border-color: var(--right-panel-input-focus-border, #0f62fe);
+  box-shadow: 0 0 0 3px var(--right-panel-input-focus-outline, rgba(15, 98, 254, .1));
 }
 
 .animation-unit {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--right-panel-unit-color, #6b7280);
   font-weight: 500;
 }
 
