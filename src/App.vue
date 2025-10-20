@@ -88,7 +88,7 @@ html,body{
   align-items: center;
   justify-content: center;
   padding: 18px 20px;
-  background: var(--panel);
+  background: transparent;
   border-radius: 0 24px 24px 0;
   box-shadow: var(--shadow);
   transition: top .3s ease, transform .3s ease, padding .3s ease;}
@@ -131,7 +131,7 @@ body.theme-modern {
   width: 220px;
   min-height: 420px;
   border-radius: 0 32px 32px 0;
-  background: linear-gradient(190deg, rgba(19,25,38,0.95) 0%, rgba(9,14,24,0.96) 100%);
+  background: transparent;
   box-shadow: 0 24px 48px rgba(5, 8, 14, 0.68);
 }
 
@@ -139,7 +139,7 @@ body.theme-modern {
   width: auto;
   min-height: auto;
   padding: 20px 24px;
-  background: linear-gradient(190deg, rgba(19,25,38,0.92) 0%, rgba(9,14,24,0.94) 100%);}
+  background: transparent;}
 
 .ui-panel-left.collapsed.ui-panel-left--modern {
   top: 16px;
