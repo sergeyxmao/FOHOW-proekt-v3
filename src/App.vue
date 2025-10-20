@@ -79,62 +79,81 @@ html,body{
   height: 100%;
 }
 
-/* Левая панель */
+/* Панели */
 .ui-panel-left{
   position: fixed;
   top: 20px;
   left: 0;
   z-index: 2000;
   display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  padding: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 20px;
   background: var(--panel);
   border-radius: 0 24px 24px 0;
   box-shadow: var(--shadow);
+  transition: top .3s ease, transform .3s ease, padding .3s ease;}
+
+.ui-panel-left--classic {
+  gap: 16px;
 }
 
 .ui-panel-left.collapsed {
-  top: 20px;
+  top: 16px;
+  transform: none !important;
   padding: 16px 20px;
 }
+/* Canvas/SVG */
+#canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
+
+#app.theme-modern {
+  --card-width: 400px;
+  --bg: #efe4d1;
+  --panel: rgba(18, 24, 34, 0.88);
+  --surface: rgba(24, 32, 46, 0.92);
+  --ink: #f4f7fb;
+  --muted: #9ba5b7;
+  --brand: #59d0ff;
+  --radius: 18px;
+  --shadow: 0 16px 34px rgba(8, 11, 18, 0.45);
+}
+
+body.theme-modern {
+  background: linear-gradient(145deg, #f3e9d6 0%, #efe3ce 48%, #f8efe0 100%);
+  color: #f4f7fb;
+}
+
 
 .ui-panel-left--modern {
-  background: rgba(28, 38, 58, 0.92);
-  box-shadow: 0 24px 44px rgba(8, 12, 22, 0.55);
+  top: 50%;
+  transform: translateY(-50%);
+  align-items: stretch;
+  padding: 28px 26px;
+  width: 220px;
+  min-height: 420px;
+  border-radius: 0 32px 32px 0;
+  background: linear-gradient(190deg, rgba(19,25,38,0.95) 0%, rgba(9,14,24,0.96) 100%);
+  box-shadow: 0 24px 48px rgba(5, 8, 14, 0.68);
 }
 
-/* Canvas/SVG */
-#canvas{ 
-  position:relative; 
-  width:100%; 
-  height:100%; 
-  transform-origin:0 0; 
-  cursor:default;
+.ui-panel-left--modern.collapsed {
+  width: auto;
+  min-height: auto;
+  padding: 20px 24px;
+  background: linear-gradient(190deg, rgba(19,25,38,0.92) 0%, rgba(9,14,24,0.94) 100%);}
+
+.ui-panel-left.collapsed.ui-panel-left--modern {
+  top: 16px;
 }
 
-#svg-layer{
-  position:absolute; 
-  inset:0; 
-  pointer-events:none; 
-  overflow:visible;
-  z-index:10;
-}
-
-.line{
-  fill:none; 
-  stroke:currentColor; 
-  stroke-linecap:round;
-  pointer-events:stroke;
-  cursor:pointer;
-  transition:stroke-width .15s, opacity .15s;
-}
-
-.line:hover{
-  opacity:.85;
-}
-
-.line.selected{
-  opacity:.7;
+.theme-modern #canvas{
+  position: absolute;
+  top: 32px;
+  right: 32px;
+  bottom: 32px;
+  left: 240px;  
+  background: rgba(255,255,255,0.45);
+  border-radius: 28px;
+  box-shadow: 0 28px 48px rgba(6, 11, 21, 0.22);
 }
 </style>
