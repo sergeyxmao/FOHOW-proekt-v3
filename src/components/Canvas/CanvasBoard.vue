@@ -331,6 +331,7 @@ const handlePointerDown = (event) => {
   
   if (connectionPoint) {
     event.stopPropagation();
+    event.preventDefault(); // КРИТИЧЕСКИ ВАЖНО - предотвращаем стандартное поведение
     
     // Извлекаем данные из атрибутов
     const cardId = connectionPoint.dataset.cardId;
@@ -345,12 +346,14 @@ const handlePointerDown = (event) => {
       // Завершаем рисование линии
       endDrawingLine(cardId, side);
     }
-  } else if (!event.target.closest('.card')) {
-    if (event.button === 0) {
-      event.preventDefault();
+    return; // КРИТИЧЕСКИ ВАЖНО - выходим из функции после обработки точки соединения
+  } 
+  
+  if (!event.target.closest('.card')) {
+    // Если клик не по карточке и не по точке соединения, отменяем рисование
+    if (isDrawingLine.value) {
+      cancelDrawing();
     }
-// Если клик не по карточке и не по точке соединения, отменяем рисование
-    cancelDrawing();
   }
 };
 
