@@ -1,18 +1,23 @@
 <script setup>
-import { ref } from 'vue'
-import { useCardsStore } from '@/stores/cards'
-import { useHistoryStore } from '@/stores/history'
+import { useCardsStore } from '../../stores/cards.js'
+import { useHistoryStore } from '../../stores/history.js'
 
 const props = defineProps({
-  isModernTheme: Boolean,
-  isCollapsed: Boolean
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  },
+  isCollapsed: {
+    type: Boolean,
+    default: false    
+  }
 })
 
-const emit = defineEmits(['toggle-theme', 'toggle-collapse'])
-
+const emit = defineEmits(['toggle-theme', 'toggle-collapse'])  
 const cardsStore = useCardsStore()
 const historyStore = useHistoryStore()
 
+// Обработчики для кнопок левой панели
 const handleUndo = () => {
   historyStore.undo()
 }
@@ -22,39 +27,57 @@ const handleRedo = () => {
 }
 
 const handleSaveProject = () => {
+  // Сохранение проекта в JSON
   const projectData = {
     cards: cardsStore.cards,
-    timestamp: new Date().toISOString()
+    timestamp: Date.now()
   }
-  const json = JSON.stringify(projectData, null, 2)
-  const blob = new Blob([json], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `fohow-project-${Date.now()}.json`
-  a.click()
+  const dataStr = JSON.stringify(projectData, null, 2)
+  const dataBlob = new Blob([dataStr], {type: 'application/json'})
+  const url = URL.createObjectURL(dataBlob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `fohow-project-${Date.now()}.json`
+  link.click()
   URL.revokeObjectURL(url)
 }
 
 const handleExportHTML = () => {
-  console.log('Экспорт в HTML')
+  // Экспорт в HTML
+  window.print()
 }
 
 const handleExportSVG = () => {
-  console.log('Экспорт в SVG')
+  // Экспорт в SVG
+  const svgElement = document.querySelector('#svg-layer')
+  if (!svgElement) return
+  
+  const svgData = new XMLSerializer().serializeToString(svgElement)
+  const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'})
+  const svgUrl = URL.createObjectURL(svgBlob)
+  const downloadLink = document.createElement('a')
+  downloadLink.href = svgUrl
+  downloadLink.download = `fohow-board-${Date.now()}.svg`
+  document.body.appendChild(downloadLink)
+  downloadLink.click()
+  document.body.removeChild(downloadLink)
+  URL.revokeObjectURL(svgUrl)
 }
 
 const handlePrint = () => {
+  // Печать / Экспорт в PDF
   window.print()
 }
 
 const handleLoadProject = () => {
+  // Загрузка проекта из JSON
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = '.json,application/json'
   input.onchange = (e) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files[0]
     if (!file) return
+    
     const reader = new FileReader()
     reader.onload = (event) => {
       try {
@@ -72,18 +95,22 @@ const handleLoadProject = () => {
 }
 
 const handleNotesList = () => {
+  // Список заметок
   console.log('Открыть список заметок')
 }
 
 const handleSelectionMode = () => {
+  // Режим выделения
   console.log('Переключить режим выделения')
 }
 
 const handleHierarchicalDragMode = () => {
+  // Режим иерархии
   console.log('Переключить режим иерархии')
 }
 
 const handleToggleGuides = () => {
+  // Показать/скрыть направляющие
   console.log('Переключить направляющие')
 }
 </script>
@@ -168,7 +195,6 @@ const handleToggleGuides = () => {
   width: 100%;
 }
 
-.left-panel-controls--modern {
   --left-panel-btn-size: 80px;
   --left-panel-btn-radius: 24px;
   --left-panel-btn-font: 34px;
@@ -184,11 +210,10 @@ const handleToggleGuides = () => {
 }
 
 .left-panel-controls__top {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: auto 1fr auto;  flex-direction: column;
   align-items: center;
   gap: 16px;
-  justify-content: space-between;
 }
 
 .left-panel-controls__history {
@@ -198,7 +223,7 @@ const handleToggleGuides = () => {
 }
 
 .left-panel-controls--modern .left-panel-controls__top {
-  flex-direction: column;
+  grid-template-columns: 1fr;
   justify-items: center;
   gap: 22px;
 }
@@ -211,14 +236,18 @@ const handleToggleGuides = () => {
 }
 
 .left-panel-controls--collapsed .left-panel-controls__top {
-  flex-direction: column;
+  grid-template-columns: repeat(3, auto);
   justify-content: flex-start;
 }
 
 .left-panel-controls__grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 16px;
+}
+
+.left-panel-controls__grid .ui-btn {
+  flex: 1 1 calc(50% - 8px);
 }
 
 .left-panel-controls--modern .left-panel-controls__grid {
@@ -240,8 +269,7 @@ const handleToggleGuides = () => {
   place-items: center;
   cursor: pointer;
   transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
-  box-shadow: var(--left-panel-btn-shadow);
-}
+  box-shadow: var(--left-panel-btn-shadow);}
 
 .left-panel-controls .ui-btn:hover:not(:disabled) {
   transform: translateY(-4px);
