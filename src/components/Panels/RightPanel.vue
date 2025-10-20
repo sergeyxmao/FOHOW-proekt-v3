@@ -1004,11 +1004,11 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 }
 
 .ui-panel-right--modern {
-  top: auto;
-  bottom: 60px;
-  right: 0px;
-  align-items: flex-start;
-  gap: 24px;
+  top: 20px;
+  bottom: auto;
+  right: 0;
+  align-items: flex-end;
+  gap: 14px;
 }
 
 .ui-panel-right__container--modern {
@@ -1189,8 +1189,8 @@ watch([lineColor, thickness], ([newColor, newThickness]) => {
 
 .ui-panel-right__actions--modern {
   position: fixed;
-  top: 34px;
-  right: 44px;
+  top: 24px;
+  right: 36px;
   flex-direction: row;
   gap: 12px;
   align-items: center;
