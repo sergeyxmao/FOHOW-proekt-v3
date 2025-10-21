@@ -252,10 +252,10 @@ const endDrag = () => {
 // Обработчик движения мыши для обновления временной линии
 const handleMouseMove = (event) => {
   if (isDrawingLine.value) {
-    const rect = event.currentTarget.getBoundingClientRect();
+    const canvasPos = screenToCanvas(event.clientX, event.clientY);
     mousePosition.value = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
+      x: canvasPos.x,
+      y: canvasPos.y
     };
   }
 };
