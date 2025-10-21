@@ -337,7 +337,31 @@ const handleLineClick = (event, connectionId) => {
   isConnecting.value = false;
   cancelDrawing();
 };
-  
+
+let skipNextLineClick = false;
+
+const handleLinePointerDown = (event, connectionId) => {
+  event.stopPropagation();
+  event.preventDefault();
+
+  skipNextLineClick = true;
+  requestAnimationFrame(() => {
+    skipNextLineClick = false;
+  });
+
+  toggleConnectionSelection(connectionId);
+};
+
+const handleLineClick = (event, connectionId) => {
+  event.stopPropagation();
+  event.preventDefault();
+
+  if (skipNextLineClick) {
+    return;
+  }
+
+  toggleConnectionSelection(connectionId);
+};  
 // Обработчик клика по карточке
 const handleCardClick = (event, cardId) => {
   const isCtrlPressed = event.ctrlKey || event.metaKey;
@@ -552,8 +576,7 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
             '--line-animation-duration': `${path.animationDuration}ms`,
             color: path.color
           }"
-          @pointerdown.stop.prevent
-          @click="(event) => handleLineClick(event, path.id)"
+          @pointerdown.stop.prevent="(event) => handleLinePointerDown(event, path.id)"          @click="(event) => handleLineClick(event, path.id)"
         />
 
         <!-- Временная линия при рисовании соединения -->
@@ -632,6 +655,8 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
 
 .line.selected {
   stroke-dasharray: 6 6;
+  stroke-width: calc(var(--line-width, 5px) + 2px);
+  stroke-linecap: round;  
 }
 
 .line--preview {
