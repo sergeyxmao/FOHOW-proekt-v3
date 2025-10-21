@@ -351,11 +351,6 @@ const handleLinePointerDown = (event, connectionId) => {
 
   toggleConnectionSelection(connectionId);
 };
-
-  if (skipNextLineClick) {
-    return;
-  }
-
   toggleConnectionSelection(connectionId);
 };  
 // Обработчик клика по карточке
