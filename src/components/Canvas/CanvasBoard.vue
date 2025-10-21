@@ -352,10 +352,6 @@ const handleLinePointerDown = (event, connectionId) => {
   toggleConnectionSelection(connectionId);
 };
 
-const handleLineClick = (event, connectionId) => {
-  event.stopPropagation();
-  event.preventDefault();
-
   if (skipNextLineClick) {
     return;
   }
