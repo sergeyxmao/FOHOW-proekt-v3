@@ -599,8 +599,8 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
         class="svg-layer"
         :width="stageConfig.width"
         :height="stageConfig.height"
-        style="position: absolute; top: 0; left: 0; z-index: 1;"
-      >
+        style="position: absolute; top: 0; left: 0; z-index: 1; overflow: visible;"
+     >
         <defs>
           <marker
             id="marker-dot"
