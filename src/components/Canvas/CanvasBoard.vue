@@ -7,7 +7,8 @@ import Card from './Card.vue';
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { getHeaderColorRgb } from '../../utils/constants';
 import { batchDeleteCards } from '../../utils/historyOperations';
-
+import { usePanZoom } from '../../composables/usePanZoom';
+  
 // Определяем emit для событий
 const emit = defineEmits(['update-connection-status']);
 
@@ -34,94 +35,10 @@ useKeyboardShortcuts({
   feedbackDuration: 300,
   disableOnInput: true
 });
-const canvasContainer = ref(null);
-const canvasScale = ref(1);
-const canvasTranslation = ref({ x: 0, y: 0 });
-
-const MIN_CANVAS_SCALE = 0.5;
-const MAX_CANVAS_SCALE = 2;
-const CANVAS_SCALE_STEP = 0.1;
 const stageConfig = ref({
   width: 0,
   height: 0
 });
-const contentTransformStyle = computed(() => ({
-  transform: `translate(${canvasTranslation.value.x}px, ${canvasTranslation.value.y}px) scale(${canvasScale.value})`,
-  transformOrigin: '0 0'
-}));
-
-const screenToWorld = (clientX, clientY) => {
-  const rect = canvasContainer.value?.getBoundingClientRect();
-  if (!rect) {
-    return { x: 0, y: 0 };
-  }
-
-  const relativeX = clientX - rect.left;
-  const relativeY = clientY - rect.top;
-
-  return {
-    x: (relativeX - canvasTranslation.value.x) / canvasScale.value,
-    y: (relativeY - canvasTranslation.value.y) / canvasScale.value
-  };
-};
-
-const clampTranslation = (translation, scale) => {
-  if (!canvasContainer.value) {
-    return translation;
-  }
-
-  const containerWidth = canvasContainer.value.clientWidth;
-  const containerHeight = canvasContainer.value.clientHeight;
-  const scaledWidth = containerWidth * scale;
-  const scaledHeight = containerHeight * scale;
-
-  const minX = Math.min(0, containerWidth - scaledWidth);
-  const maxX = Math.max(0, containerWidth - scaledWidth);
-  const minY = Math.min(0, containerHeight - scaledHeight);
-  const maxY = Math.max(0, containerHeight - scaledHeight);
-
-  return {
-    x: Math.min(Math.max(translation.x, minX), maxX),
-    y: Math.min(Math.max(translation.y, minY), maxY)
-  };
-};
-
-const handleWheel = (event) => {
-  if (event.ctrlKey) {
-    event.preventDefault();
-    return;
-  }
-  event.preventDefault();
-
-  const rect = canvasContainer.value?.getBoundingClientRect();
-  if (!rect) {
-    return;
-  }
-
-  const zoomDirection = event.deltaY < 0 ? 1 : -1;
-  const scaleDelta = 1 + CANVAS_SCALE_STEP * zoomDirection;
-  let nextScale = canvasScale.value * scaleDelta;
-  nextScale = Math.min(MAX_CANVAS_SCALE, Math.max(MIN_CANVAS_SCALE, nextScale));
-
-  if (nextScale === canvasScale.value) {
-    return;
-  }
-
-  const cursorX = event.clientX - rect.left;
-  const cursorY = event.clientY - rect.top;
-
-  const worldPosition = {
-    x: (cursorX - canvasTranslation.value.x) / canvasScale.value,
-    y: (cursorY - canvasTranslation.value.y) / canvasScale.value
-  };
-
-  canvasScale.value = nextScale;
-  const nextTranslation = {
-    x: cursorX - worldPosition.x * nextScale,
-    y: cursorY - worldPosition.y * nextScale
-  };
-  canvasTranslation.value = clampTranslation(nextTranslation, nextScale);
-};
 
 // Состояние для создания соединений
 const selectedCardId = ref(null);
@@ -131,7 +48,9 @@ const isDrawingLine = ref(false); // Флаг рисования линии
 const previewLine = ref(null); // Временная линия при рисовании
 const previewLineWidth = computed(() => connectionsStore.defaultLineThickness || 2);
 const mousePosition = ref({ x: 0, y: 0 }); // Позиция мыши
-const selectedConnectionId = ref(null);
+const canvasContainerRef = ref(null);
+const selectedConnectionId = ref(null); // Реф для контейнера canvas
+usePanZoom(canvasContainerRef);  // Подключаем зум и панорамирование
 
 // Константа для смещения маркеров
 const MARKER_OFFSET = 12;
@@ -587,13 +506,12 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
 </script>
 
 <template>
-  <div
-    class="canvas-container" :style="{ backgroundColor: canvasStore.backgroundColor }" ref="canvasContainer">
-    ref="canvasContainer"
-    :style="{ backgroundColor: canvasStore.backgroundColor }"
-    @wheel="handleWheel"
-  >
-    <div class="canvas-content" :style="contentTransformStyle">
+<div 
+  ref="canvasContainerRef" 
+  class="canvas-container" 
+  :style="{ backgroundColor: canvasStore.backgroundColor }"
+>
+    <div class="canvas-content">
       <!-- SVG слой для отрисовки линий соединений -->
       <svg
         class="svg-layer"
