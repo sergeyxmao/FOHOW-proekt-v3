@@ -12,14 +12,14 @@ export function usePanZoom(canvasElement) {
   let startX = 0
   let startY = 0
   
-const updateTransform = () => {
-  if (!containerRef.value) return
-  const canvasContent = containerRef.value.querySelector('.canvas-content')
-  if (canvasContent) {
-    canvasContent.style.transform = 
-      `translate(${translateX.value}px, ${translateY.value}px) scale(${scale.value})`
+  const updateTransform = () => {
+    if (!canvasElement.value) return
+    const canvasContent = canvasElement.value.querySelector('.canvas-content')
+    if (canvasContent) {
+      canvasContent.style.transform = 
+        `translate(${translateX.value}px, ${translateY.value}px) scale(${scale.value})`
+    }
   }
-}
   
   const handleWheel = (event) => {
     if (!canvasElement.value) return
