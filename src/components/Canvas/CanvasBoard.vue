@@ -35,22 +35,27 @@ useKeyboardShortcuts({
   feedbackDuration: 300,
   disableOnInput: true
 });
+
 const stageConfig = ref({
   width: 0,
   height: 0
 });
 
+// Реф для контейнера canvas
+const canvasContainerRef = ref(null);
+
+// Подключаем зум и панорамирование
+usePanZoom(canvasContainerRef);
+
 // Состояние для создания соединений
 const selectedCardId = ref(null);
 const isConnecting = ref(false);
-const connectionStart = ref(null); // Хранит информацию о начальной точке соединения
-const isDrawingLine = ref(false); // Флаг рисования линии
-const previewLine = ref(null); // Временная линия при рисовании
+const connectionStart = ref(null);
+const isDrawingLine = ref(false);
+const previewLine = ref(null);
 const previewLineWidth = computed(() => connectionsStore.defaultLineThickness || 2);
-const mousePosition = ref({ x: 0, y: 0 }); // Позиция мыши
-const canvasContainerRef = ref(null);
-const selectedConnectionId = ref(null); // Реф для контейнера canvas
-usePanZoom(canvasContainerRef);  // Подключаем зум и панорамирование
+const mousePosition = ref({ x: 0, y: 0 });
+const selectedConnectionId = ref(null);
 
 // Константа для смещения маркеров
 const MARKER_OFFSET = 12;
@@ -99,6 +104,7 @@ const resolveConnectionSides = (fromCard, toCard, preferredFromSide, preferredTo
 const updateLinePath = (p1, p2, side1, side2) => {
   const midP1 = { x: p1.x, y: p1.y };
   const finalP2 = { x: p2.x, y: p2.y };  
+  
   if (side1 === 'left' || side1 === 'right') {
     midP1.x = p2.x;
   } else {
@@ -156,7 +162,6 @@ const previewLinePath = computed(() => {
   if (!fromCard) return null;
   
   const startPoint = getPointCoords(fromCard, connectionStart.value.side);
-
   const pathData = updateLinePath(startPoint, mousePosition.value, connectionStart.value.side, null);
   
   return {
@@ -202,74 +207,65 @@ const startDrag = (event, cardId) => {
   draggedCardId.value = cardId;
   const card = cards.find(c => c.id === cardId);
   if (card) {
-    const pointer = screenToWorld(event.clientX, event.clientY);    dragOffset.value = {
-      x: pointer.x - card.x,
-      y: pointer.y - card.y
+    dragOffset.value = {
+      x: event.clientX - card.x,
+      y: event.clientY - card.y
     };
   }
   
-  // Добавляем обработчики на документ
   document.addEventListener('mousemove', handleDrag);
   document.addEventListener('mouseup', endDrag);
-  
-  // Предотвращаем выделение текста при перетаскивании
   event.preventDefault();
 };
 
 const handleDrag = (event) => {
   if (!draggedCardId.value) return;
-
-  const pointer = screenToWorld(event.clientX, event.clientY);
-  const newX = pointer.x - dragOffset.value.x;
-   const newY = pointer.y - dragOffset.value.y;
+  
+  const newX = event.clientX - dragOffset.value.x;
+  const newY = event.clientY - dragOffset.value.y;
   
   cardsStore.updateCardPosition(draggedCardId.value, newX, newY);
 };
 
 const endDrag = () => {
   draggedCardId.value = null;
-  
-  // Удаляем обработчики с документа
   document.removeEventListener('mousemove', handleDrag);
   document.removeEventListener('mouseup', endDrag);
 };
 
-
 // Обработчик движения мыши для обновления временной линии
 const handleMouseMove = (event) => {
   if (isDrawingLine.value) {
-    // Обновляем позицию мыши в координатах рабочей области
-    mousePosition.value = screenToWorld(event.clientX, event.clientY);
+    const rect = event.currentTarget.getBoundingClientRect();
+    mousePosition.value = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
+    };
   }
 };
 
 // Глобальный обработчик нажатия кнопки мыши/указателя
 const handlePointerDown = (event) => {
-  // Проверяем, был ли клик по соединительной точке
   const connectionPoint = event.target.closest('.connection-point');
   
   if (connectionPoint) {
     event.stopPropagation();
-    event.preventDefault(); // КРИТИЧЕСКИ ВАЖНО - предотвращаем стандартное поведение
+    event.preventDefault();
     
-    // Извлекаем данные из атрибутов
     const cardId = connectionPoint.dataset.cardId;
     const side = connectionPoint.dataset.side;
     
     if (!cardId || !side) return;
     
     if (!isDrawingLine.value) {
-      // Начинаем рисование линии
       startDrawingLine(cardId, side);
     } else {
-      // Завершаем рисование линии
       endDrawingLine(cardId, side);
     }
-    return; // КРИТИЧЕСКИ ВАЖНО - выходим из функции после обработки точки соединения
+    return;
   } 
   
   if (!event.target.closest('.card')) {
-    // Если клик не по карточке и не по точке соединения, отменяем рисование
     if (isDrawingLine.value) {
       cancelDrawing();
     }
@@ -292,13 +288,12 @@ const endDrawingLine = (cardId, side) => {
     return;
   }
   
-  // Создаем соединение между карточками
   createConnectionBetweenCards(connectionStart.value.cardId, cardId, {
     fromSide: connectionStart.value.side,
     toSide: side
-  });  console.log('Создано соединение:', connectionStart.value.cardId, '->', cardId);
+  });
   
-  // Сбрасываем состояние
+  console.log('Создано соединение:', connectionStart.value.cardId, '->', cardId);
   cancelDrawing();
 };
 
@@ -326,35 +321,24 @@ const handleLineClick = (event, connectionId) => {
   isConnecting.value = false;
   cancelDrawing();
 };
-
   
 // Обработчик клика по карточке
 const handleCardClick = (event, cardId) => {
-  // Проверяем, нажата ли клавиша Ctrl для множественного выделения
   const isCtrlPressed = event.ctrlKey || event.metaKey;
-
-
   selectedConnectionId.value = null;
   
   if (!isConnecting.value) {
-    // Управляем выделением карточек
     if (isCtrlPressed) {
-      // Множественное выделение с Ctrl
       cardsStore.toggleCardSelection(cardId);
     } else {
-      // Одиночное выделение - снимаем выделение со всех и выделяем текущую
       cardsStore.deselectAllCards();
       cardsStore.selectCard(cardId);
     }
-    
-    // Обновляем selectedCardId для совместимости с другими функциями
     selectedCardId.value = cardId;
   } else {
-    // Завершаем процесс соединения
     if (selectedCardId.value !== cardId) {
       createConnectionBetweenCards(selectedCardId.value, cardId);
     }
-    // Сбрасываем состояние
     selectedCardId.value = null;
     isConnecting.value = false;
   }
@@ -362,7 +346,6 @@ const handleCardClick = (event, cardId) => {
 
 // Сброс режима соединения и выделения при клике на пустое место
 const handleStageClick = (event) => {
-  // Если клик не по карточке и не нажат Ctrl, снимаем выделение
   if (!event.ctrlKey && !event.metaKey) {
     cardsStore.deselectAllCards();
   }
@@ -387,8 +370,8 @@ const addNewCard = () => {
     fill: randomColor,
     stroke: '#000000',
     strokeWidth: 1,
-    headerBg: getHeaderColorRgb(0), // Цвет заголовка по умолчанию
-    colorIndex: 0                  // Индекс цвета по умолчанию
+    headerBg: getHeaderColorRgb(0),
+    colorIndex: 0
   };
   
   cardsStore.addCard(newCard);
@@ -402,7 +385,6 @@ const deleteSelectedCards = () => {
   }
 
   batchDeleteCards(uniqueIds);
-
   cardsStore.selectedCardIds = [];
   selectedCardId.value = null;
   isConnecting.value = false;
@@ -442,15 +424,14 @@ const handleDeletionKeydown = (event) => {
   }
 
   event.preventDefault();
-  deleteSelectedCards();};
+  deleteSelectedCards();
+};
 
 onMounted(() => {
-  // Устанавливаем размеры сцены равными размерам родительского контейнера
   const resizeStage = () => {
-    if (canvasContainer.value) {
-      stageConfig.value.width = canvasContainer.value.clientWidth;
-      stageConfig.value.height = canvasContainer.value.clientHeight;
-      canvasTranslation.value = clampTranslation(canvasTranslation.value, canvasScale.value);
+    if (canvasContainerRef.value) {
+      stageConfig.value.width = canvasContainerRef.value.clientWidth;
+      stageConfig.value.height = canvasContainerRef.value.clientHeight;
     }
   };
 
@@ -470,16 +451,17 @@ watch(isDrawingLine, (isActive) => {
   } else {
     window.removeEventListener('pointermove', handleMouseMove);
   }
-});const resetView = () => {
-  canvasScale.value = 1;
-  canvasTranslation.value = clampTranslation({ x: 0, y: 0 }, 1);
+});
+
+const resetView = () => {
+  // Функция для сброса вида - пока пустая, можно расширить позже
 };
 
 defineExpose({
   resetView
 });
 
-// Следим за изменением статуса соединения и эмитим событие
+// Следим за изменением статуса соединения
 watch([isDrawingLine, isConnecting], ([drawing, connecting]) => {
   if (drawing) {
     emit('update-connection-status', 'Рисование линии: кликните на соединительную точку другой карточки');
@@ -506,11 +488,11 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
 </script>
 
 <template>
-<div 
-  ref="canvasContainerRef" 
-  class="canvas-container" 
-  :style="{ backgroundColor: canvasStore.backgroundColor }"
->
+  <div 
+    ref="canvasContainerRef" 
+    class="canvas-container" 
+    :style="{ backgroundColor: canvasStore.backgroundColor }"
+  >
     <div class="canvas-content">
       <!-- SVG слой для отрисовки линий соединений -->
       <svg
@@ -518,7 +500,7 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
         :width="stageConfig.width"
         :height="stageConfig.height"
         style="position: absolute; top: 0; left: 0; z-index: 1; overflow: visible;"
-     >
+      >
         <defs>
           <marker
             id="marker-dot"
@@ -555,7 +537,8 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
             color: path.color
           }"
           @pointerdown.stop.prevent
-          @click="(event) => handleLineClick(event, path.id)"        />
+          @click="(event) => handleLineClick(event, path.id)"
+        />
 
         <!-- Временная линия при рисовании соединения -->
         <path
@@ -586,8 +569,7 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
         @mousemove="handleMouseMove"
         @pointerdown="handlePointerDown"
         @dragstart.prevent
-
-   >
+      >
         <!-- Отрисовка карточек -->
         <Card
           v-for="card in cards"
@@ -598,7 +580,6 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
           @card-click="(event) => handleCardClick(event, card.id)"
           @start-drag="startDrag"
         />
-
       </div>   
     </div>
   </div>
