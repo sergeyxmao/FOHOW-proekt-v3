@@ -357,6 +357,12 @@ const handleLinePointerDown = (event, connectionId) => {
     cancelDrawing();
   }
 };
+
+// Обработчик клика по карточке
+const handleCardClick = (event, cardId) => {
+  const isCtrlPressed = event.ctrlKey || event.metaKey;
+  selectedConnectionId.value = null;
+  
   if (!isConnecting.value) {
     if (isCtrlPressed) {
       cardsStore.toggleCardSelection(cardId);
