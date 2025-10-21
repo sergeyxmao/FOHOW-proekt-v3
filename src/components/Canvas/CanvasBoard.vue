@@ -45,7 +45,7 @@ const stageConfig = ref({
 const canvasContainerRef = ref(null);
 
 // Подключаем зум и панорамирование
-usePanZoom(canvasContainerRef);
+const { scale: canvasScale, translateX: canvasTranslateX, translateY: canvasTranslateY } = usePanZoom(canvasContainerRef);
 
 // Состояние для создания соединений
 const selectedCardId = ref(null);
@@ -202,14 +202,29 @@ const createConnectionBetweenCards = (fromCardId, toCardId, options = {}) => {
 const draggedCardId = ref(null);
 const dragOffset = ref({ x: 0, y: 0 });
 
+// Получаем значения масштаба и сдвига из usePanZoom
+const { scale: canvasScale, translateX: canvasTranslateX, translateY: canvasTranslateY } = usePanZoom(canvasContainerRef);
+
+// Функция для преобразования координат экрана в координаты canvas
+const screenToCanvas = (clientX, clientY) => {
+  if (!canvasContainerRef.value) return { x: clientX, y: clientY };
+  
+  const rect = canvasContainerRef.value.getBoundingClientRect();
+  const x = (clientX - rect.left - canvasTranslateX.value) / canvasScale.value;
+  const y = (clientY - rect.top - canvasTranslateY.value) / canvasScale.value;
+  
+  return { x, y };
+};
+
 // Обработчики для перетаскивания карточек
 const startDrag = (event, cardId) => {
   draggedCardId.value = cardId;
   const card = cards.find(c => c.id === cardId);
   if (card) {
+    const canvasPos = screenToCanvas(event.clientX, event.clientY);
     dragOffset.value = {
-      x: event.clientX - card.x,
-      y: event.clientY - card.y
+      x: canvasPos.x - card.x,
+      y: canvasPos.y - card.y
     };
   }
   
@@ -221,8 +236,9 @@ const startDrag = (event, cardId) => {
 const handleDrag = (event) => {
   if (!draggedCardId.value) return;
   
-  const newX = event.clientX - dragOffset.value.x;
-  const newY = event.clientY - dragOffset.value.y;
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+  const newX = canvasPos.x - dragOffset.value.x;
+  const newY = canvasPos.y - dragOffset.value.y;
   
   cardsStore.updateCardPosition(draggedCardId.value, newX, newY);
 };
