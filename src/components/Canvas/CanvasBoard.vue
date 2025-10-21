@@ -45,7 +45,7 @@ const stageConfig = ref({
 const canvasContainerRef = ref(null);
 
 // Подключаем зум и панорамирование
-const { scale: canvasScale, translateX: canvasTranslateX, translateY: canvasTranslateY } = usePanZoom(canvasContainerRef);
+const { scale: zoomScale, translateX: zoomTranslateX, translateY: zoomTranslateY } = usePanZoom(canvasContainerRef);
 
 // Состояние для создания соединений
 const selectedCardId = ref(null);
@@ -210,8 +210,8 @@ const screenToCanvas = (clientX, clientY) => {
   if (!canvasContainerRef.value) return { x: clientX, y: clientY };
   
   const rect = canvasContainerRef.value.getBoundingClientRect();
-  const x = (clientX - rect.left - canvasTranslateX.value) / canvasScale.value;
-  const y = (clientY - rect.top - canvasTranslateY.value) / canvasScale.value;
+  const x = (clientX - rect.left - zoomTranslateX.value) / zoomScale.value;
+  const y = (clientY - rect.top - zoomTranslateY.value) / zoomScale.value;
   
   return { x, y };
 };
