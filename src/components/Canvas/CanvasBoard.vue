@@ -1,4 +1,5 @@
 <script setup>
+import { usePanZoom } from '../../composables/usePanZoom'
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useCardsStore } from '../../stores/cards';
 import { useConnectionsStore } from '../../stores/connections';
@@ -131,6 +132,11 @@ const isDrawingLine = ref(false); // Флаг рисования линии
 const previewLine = ref(null); // Временная линия при рисовании
 const previewLineWidth = computed(() => connectionsStore.defaultLineThickness || 2);
 const mousePosition = ref({ x: 0, y: 0 }); // Позиция мыши
+// Ссылка на контейнер canvas
+const canvasContainer = ref(null)
+
+// Подключаем панорамирование и зум
+const { scale, translateX, translateY } = usePanZoom(canvasContainer)
 const selectedConnectionId = ref(null);
 
 // Константа для смещения маркеров
@@ -588,7 +594,7 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
 
 <template>
   <div
-    class="canvas-container"
+    class="canvas-container" :style="{ backgroundColor: canvasStore.backgroundColor }" ref="canvasContainer">
     ref="canvasContainer"
     :style="{ backgroundColor: canvasStore.backgroundColor }"
     @wheel="handleWheel"
