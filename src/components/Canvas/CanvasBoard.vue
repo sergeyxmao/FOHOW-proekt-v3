@@ -325,12 +325,10 @@ const cancelDrawing = () => {
 const handleLineClick = (event, connectionId) => {
   event.stopPropagation();
   event.preventDefault();
-
   if (selectedConnectionId.value === connectionId) {
     selectedConnectionId.value = null;
     return;
   }
-
   selectedConnectionId.value = connectionId;
   cardsStore.deselectAllCards();
   selectedCardId.value = null;
@@ -343,21 +341,22 @@ let skipNextLineClick = false;
 const handleLinePointerDown = (event, connectionId) => {
   event.stopPropagation();
   event.preventDefault();
-
   skipNextLineClick = true;
   requestAnimationFrame(() => {
     skipNextLineClick = false;
   });
-
-  toggleConnectionSelection(connectionId);
-};
-  toggleConnectionSelection(connectionId);
-};  
-// Обработчик клика по карточке
-const handleCardClick = (event, cardId) => {
-  const isCtrlPressed = event.ctrlKey || event.metaKey;
-  selectedConnectionId.value = null;
   
+  // Переключаем выделение соединения
+  if (selectedConnectionId.value === connectionId) {
+    selectedConnectionId.value = null;
+  } else {
+    selectedConnectionId.value = connectionId;
+    cardsStore.deselectAllCards();
+    selectedCardId.value = null;
+    isConnecting.value = false;
+    cancelDrawing();
+  }
+};
   if (!isConnecting.value) {
     if (isCtrlPressed) {
       cardsStore.toggleCardSelection(cardId);
