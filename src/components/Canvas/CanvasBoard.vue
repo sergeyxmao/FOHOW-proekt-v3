@@ -497,12 +497,12 @@ watch(
   :style="{ backgroundColor: backgroundColor }"
 >
     <div class="canvas-content">
-      <svg
+<svg
         class="svg-layer"
         :width="stageConfig.width"
         :height="stageConfig.height"
-        style="position: absolute; top: 0; left: 0; z-index: 1; overflow: visible; pointer-events: none;"
-		@click="handleStageClick"
+        style="position: absolute; top: 0; left: 0; z-index: 1; overflow: visible; pointer-events: auto;"
+        @click="handleStageClick"
       >
         <defs>
           <marker
@@ -522,6 +522,7 @@ watch(
           v-for="path in connectionPaths"
           :key="path.id"
           class="line-group"
+          @click.stop="(event) => handleLineClick(event, path.id)"
         >
           <!-- Невидимая область для клика (hitbox) -->
           <path
@@ -568,14 +569,14 @@ watch(
         />
       </svg>
 
-      <div
+<div
         class="cards-container"
         :style="{
           width: stageConfig.width + 'px',
           height: stageConfig.height + 'px',
           position: 'relative',
-          zIndex: 2
-		  pointerEvents: 'none'
+          zIndex: 2,
+          pointerEvents: 'none'
         }"
         @dragstart.prevent
       >
