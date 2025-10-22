@@ -322,9 +322,8 @@ const cancelDrawing = () => {
   console.log('Рисование линии отменено');
 };
 
-const handleLineClick = (event, connectionId) => {
-  event.stopPropagation();
-  event.preventDefault();
+const toggleConnectionSelection = (connectionId) => {
+
   if (selectedConnectionId.value === connectionId) {
     selectedConnectionId.value = null;
     return;
@@ -341,21 +340,24 @@ let skipNextLineClick = false;
 const handleLinePointerDown = (event, connectionId) => {
   event.stopPropagation();
   event.preventDefault();
+
   skipNextLineClick = true;
   requestAnimationFrame(() => {
     skipNextLineClick = false;
   });
-  
-  // Переключаем выделение соединения
-  if (selectedConnectionId.value === connectionId) {
-    selectedConnectionId.value = null;
-  } else {
-    selectedConnectionId.value = connectionId;
-    cardsStore.deselectAllCards();
-    selectedCardId.value = null;
-    isConnecting.value = false;
-    cancelDrawing();
+
+  toggleConnectionSelection(connectionId);
+};
+
+const handleLineClick = (event, connectionId) => {
+  event.stopPropagation();
+  event.preventDefault();
+
+  if (skipNextLineClick) {
+    return;
   }
+
+  toggleConnectionSelection(connectionId);
 };
 
 // Обработчик клика по карточке
@@ -524,10 +526,14 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
 </script>
 
 <template>
-  <div 
-    ref="canvasContainerRef" 
-    class="canvas-container" 
+  <div
+    ref="canvasContainerRef"
+    class="canvas-container"
     :style="{ backgroundColor: canvasStore.backgroundColor }"
+    @click="handleStageClick"
+    @pointerdown="handlePointerDown"
+    @mousemove="handleMouseMove"
+    @dragstart.prevent
   >
     <div class="canvas-content">
       <!-- SVG слой для отрисовки линий соединений -->
@@ -572,7 +578,8 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
             '--line-animation-duration': `${path.animationDuration}ms`,
             color: path.color
           }"
-          @pointerdown.stop.prevent="(event) => handleLinePointerDown(event, path.id)"          @click="(event) => handleLineClick(event, path.id)"
+          @pointerdown.stop.prevent="(event) => handleLinePointerDown(event, path.id)"
+		  @click="(event) => handleLineClick(event, path.id)"
         />
 
         <!-- Временная линия при рисовании соединения -->
@@ -600,10 +607,6 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
           position: 'relative',
           zIndex: 2
         }"
-        @click="handleStageClick"
-        @mousemove="handleMouseMove"
-        @pointerdown="handlePointerDown"
-        @dragstart.prevent
       >
         <!-- Отрисовка карточек -->
         <Card
@@ -635,6 +638,14 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
   width: 100%;
   height: 100%;
   transform-origin: 0 0;
+}
+
+.cards-container {
+  pointer-events: none;
+}
+
+.cards-container :deep(.card) {
+  pointer-events: auto;
 }
 
 .line {
