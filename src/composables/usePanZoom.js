@@ -23,6 +23,11 @@ export function usePanZoom(canvasElement) {
   
   const handleWheel = (event) => {
     if (!canvasElement.value) return
+
+
+    if (event.ctrlKey) {
+      return
+    }
     
     // Игнорируем если wheel над панелями
     if (event.target.closest('.ui-panel-left') || event.target.closest('.ui-panel-right')) {
