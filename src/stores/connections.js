@@ -15,6 +15,7 @@ function clampAnimationDuration(duration) {
 export const useConnectionsStore = defineStore('connections', {
   state: () => ({
     connections: [],
+	selectedConnectionIds: [],
     // Параметры по умолчанию для новых соединений
     defaultLineColor: '#0f62fe',
     defaultLineThickness: 5,
@@ -50,6 +51,7 @@ export const useConnectionsStore = defineStore('connections', {
         animationDuration      }
       
       this.connections.push(newConnection)
+	  
       
       // Сохраняем состояние в историю
       const historyStore = useHistoryStore()
@@ -236,6 +238,62 @@ export const useConnectionsStore = defineStore('connections', {
         historyStore.setActionMetadata('delete', `Удалено ${removedConnections.length} соединений`)
         historyStore.saveState()
       }
+	  
+	    // ДОБАВИТЬ эти новые actions:
+  selectConnection(connectionId) {
+    if (!this.selectedConnectionIds.includes(connectionId)) {
+      this.selectedConnectionIds.push(connectionId)
+    }
+  },
+  
+  deselectConnection(connectionId) {
+    const index = this.selectedConnectionIds.indexOf(connectionId)
+    if (index > -1) {
+      this.selectedConnectionIds.splice(index, 1)
+    }
+  },
+  
+  toggleConnectionSelection(connectionId) {
+    const index = this.selectedConnectionIds.indexOf(connectionId)
+    if (index > -1) {
+      this.selectedConnectionIds.splice(index, 1)
+    } else {
+      this.selectedConnectionIds.push(connectionId)
+    }
+  },
+  
+  deselectAllConnections() {
+    this.selectedConnectionIds = []
+  },
+  
+  selectMultipleConnections(connectionIds) {
+    this.selectedConnectionIds = [...new Set([...this.selectedConnectionIds, ...connectionIds])]
+  },
+  
+  // Обновить существующий метод для очистки выделения при удалении
+  removeMultipleConnections(connectionIds) {
+    const removedConnections = []
+    
+    connectionIds.forEach(id => {
+      const index = this.connections.findIndex(conn => conn.id === id)
+      if (index !== -1) {
+        removedConnections.push(this.connections[index])
+        this.connections.splice(index, 1)
+        // Удаляем из выделенных
+        this.deselectConnection(id)
+      }
+    })
+    
+    // Сохраняем состояние в историю после всех удалений
+    if (removedConnections.length > 0) {
+      const historyStore = useHistoryStore()
+      historyStore.setActionMetadata('delete', `Удалено ${removedConnections.length} соединений`)
+      historyStore.saveState()
+    }
+    
+    return removedConnections
+  }
+}
       
       return removedConnections
     }
