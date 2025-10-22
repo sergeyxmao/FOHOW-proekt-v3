@@ -94,39 +94,47 @@ const resolveConnectionSides = (fromCard, toCard, preferredFromSide, preferredTo
 };
   
 const updateLinePath = (p1, p2, side1, side2) => {
-  const startP1 = { ...p1 };
-  const finalP2 = { ...p2 };
-  
-  // Отступ для начальной точки
-  switch (side1) {
-    case 'top':    startP1.y -= MARKER_OFFSET; break;
-    case 'bottom': startP1.y += MARKER_OFFSET; break;
-    case 'left':   startP1.x -= MARKER_OFFSET; break;
-    case 'right':  startP1.x += MARKER_OFFSET; break;
+  const startPoint = { ...p1 };
+  const endPoint = { ...p2 };
+  let midPoint = {}; // Точка "колена"
+
+  // 1. Определяем базовое положение "колена"
+  if (side1 === 'left' || side1 === 'right') {
+    // Линия начинается горизонтально
+    midPoint = { x: p2.x, y: p1.y };
+  } else {
+    // Линия начинается вертикально
+    midPoint = { x: p1.x, y: p2.y };
   }
 
-  // Отступ для конечной точки (если она есть)
+  // 2. Применяем отступы к начальной и конечной точкам
+  switch (side1) {
+    case 'top':    startPoint.y -= MARKER_OFFSET; break;
+    case 'bottom': startPoint.y += MARKER_OFFSET; break;
+    case 'left':   startPoint.x -= MARKER_OFFSET; break;
+    case 'right':  startPoint.x += MARKER_OFFSET; break;
+  }
+  
   if (side2) {
     switch (side2) {
-      case 'top':    finalP2.y -= MARKER_OFFSET; break;
-      case 'bottom': finalP2.y += MARKER_OFFSET; break;
-      case 'left':   finalP2.x -= MARKER_OFFSET; break;
-      case 'right':  finalP2.x += MARKER_OFFSET; break;
+      case 'top':    endPoint.y -= MARKER_OFFSET; break;
+      case 'bottom': endPoint.y += MARKER_OFFSET; break;
+      case 'left':   endPoint.x -= MARKER_OFFSET; break;
+      case 'right':  endPoint.x += MARKER_OFFSET; break;
     }
   }
 
-  const midP1 = { ...startP1 };
-
-  // Логика для создания "колена" под прямым углом
+  // 3. Корректируем положение "колена", чтобы оно совпадало со смещенными точками
   if (side1 === 'left' || side1 === 'right') {
-    midP1.x = finalP2.x;
+    midPoint.y = startPoint.y; // Y "колена" = Y смещенного старта
+    midPoint.x = endPoint.x;   // X "колена" = X смещенного конца
   } else {
-    midP1.y = finalP2.y;
+    midPoint.x = startPoint.x; // X "колена" = X смещенного старта
+    midPoint.y = endPoint.y;   // Y "колена" = Y смещенного конца
   }
   
-  return `M ${startP1.x} ${startP1.y} L ${midP1.x} ${midP1.y} L ${finalP2.x} ${finalP2.y}`;
+  return `M ${startPoint.x} ${startPoint.y} L ${midPoint.x} ${midPoint.y} L ${endPoint.x} ${endPoint.y}`;
 };
-
 const connectionPaths = computed(() => {
   return connections.value
     .map(connection => {
