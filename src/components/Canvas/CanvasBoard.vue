@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useCardsStore } from '../../stores/cards';
 import { useConnectionsStore } from '../../stores/connections';
 import { useCanvasStore } from '../../stores/canvas';
@@ -8,15 +9,17 @@ import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { getHeaderColorRgb } from '../../utils/constants';
 import { batchDeleteCards } from '../../utils/historyOperations';
 import { usePanZoom } from '../../composables/usePanZoom';
-  
+
 const emit = defineEmits(['update-connection-status']);
 
 const cardsStore = useCardsStore();
 const connectionsStore = useConnectionsStore();
 const canvasStore = useCanvasStore();
-const { cards } = cardsStore;
-const { connections } = connectionsStore;
 
+const { cards } = storeToRefs(cardsStore);
+const { connections } = storeToRefs(connectionsStore);
+const { backgroundColor } = storeToRefs(canvasStore);
+  
 watch(() => cardsStore.cards, (newCards, oldCards) => {
   console.log('=== Cards array updated ===');
   console.log('Previous cards count:', oldCards.length);
@@ -479,15 +482,14 @@ watch(
   }
 );
   
-watch(() => canvasStore.backgroundColor, () => {}, { immediate: true });
 </script>
 
 <template>
-  <div 
-    ref="canvasContainerRef" 
-    class="canvas-container" 
-    :style="{ backgroundColor: canvasStore.backgroundColor }"
-  >
+<div 
+  ref="canvasContainerRef" 
+  class="canvas-container" 
+  :style="{ backgroundColor: backgroundColor }"
+>
     <div class="canvas-content">
       <svg
         class="svg-layer"
