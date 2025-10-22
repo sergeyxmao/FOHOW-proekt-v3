@@ -114,10 +114,10 @@ const updateLinePath = (p1, p2, side1, side2) => {
 };
 
 const connectionPaths = computed(() => {
-  return connections
+  return connections.value
     .map(connection => {
-      const fromCard = cards.find(card => card.id === connection.from);
-      const toCard = cards.find(card => card.id === connection.to);
+      const fromCard = cards.value.find(card => card.id === connection.from);
+      const toCard = cards.value.find(card => card.id === connection.to);
 
       if (!fromCard || !toCard) return null;
 
@@ -147,7 +147,7 @@ const connectionPaths = computed(() => {
 const previewLinePath = computed(() => {
   if (!isDrawingLine.value || !connectionStart.value) return null;
   
-  const fromCard = cards.find(card => card.id === connectionStart.value.cardId);
+  const fromCard = cards.value.find(card => card.id === connectionStart.value.cardId);
   if (!fromCard) return null;
   
   const startPoint = getPointCoords(fromCard, connectionStart.value.side);
@@ -164,8 +164,8 @@ const previewLinePath = computed(() => {
 const createConnectionBetweenCards = (fromCardId, toCardId, options = {}) => {
   if (fromCardId === toCardId) return null;
 
-  const fromCard = cards.find(card => card.id === fromCardId);
-  const toCard = cards.find(card => card.id === toCardId);
+  const fromCard = cards.value.find(card => card.id === fromCardId);
+  const toCard = cards.value.find(card => card.id === toCardId);
 
   if (!fromCard || !toCard) return null;
 
@@ -198,7 +198,7 @@ const screenToCanvas = (clientX, clientY) => {
 
 const startDrag = (event, cardId) => {
   draggedCardId.value = cardId;
-  const card = cards.find(c => c.id === cardId);
+  const card = cards.value.find(c => c.id === cardId);
   if (card) {
     const canvasPos = screenToCanvas(event.clientX, event.clientY);
     dragOffset.value = {
@@ -355,7 +355,7 @@ const addNewCard = () => {
   const newCard = {
     x: Math.random() * (stageConfig.value.width - 150),
     y: Math.random() * (stageConfig.value.height - 80),
-    text: `Карточка ${cards.length + 1}`,
+    text: `Карточка ${cards.value.length + 1}`,
     width: 150,
     height: 80,
     fill: randomColor,
