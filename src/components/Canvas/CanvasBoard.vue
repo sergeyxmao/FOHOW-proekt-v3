@@ -14,9 +14,9 @@ const emit = defineEmits(['update-connection-status']);
 const cardsStore = useCardsStore();
 const connectionsStore = useConnectionsStore();
 const canvasStore = useCanvasStore();
-const { cards } = cardsStore;
-const { connections } = connectionsStore;
-const { selectedConnectionIds } = connectionsStore;
+const cards = computed(() => cardsStore.cards);
+const connections = computed(() => connectionsStore.connections);
+const selectedConnectionIds = computed(() => connectionsStore.selectedConnectionIds);
 
 watch(() => cardsStore.cards, (newCards, oldCards) => {
   console.log('=== Cards array updated ===');
@@ -111,40 +111,59 @@ const updateLinePath = (p1, p2, side1, side2) => {
 };
 
 const connectionPaths = computed(() => {
-  return connections
-    .map(connection => {
-      const fromCard = cards.find(card => card.id === connection.from);
-      const toCard = cards.find(card => card.id === connection.to);
+  return connections.value.map(connection => {
+    const fromCard = cards.value.find(card => card.id === connection.from);
+    const toCard = cards.value.find(card => card.id === connection.to); // ← ИСПРАВЛЕНО
 
-      if (!fromCard || !toCard) return null;
+    if (!fromCard || !toCard) return null;
 
-      const { fromSide, toSide } = resolveConnectionSides(
-        fromCard,
-        toCard,
-        connection.fromSide,
-        connection.toSide
-      );
+    const { fromSide, toSide } = resolveConnectionSides(
+      fromCard,
+      toCard,
+      connection.fromSide,
+      connection.toSide
+    );
 
-      const startPoint = getPointCoords(fromCard, fromSide);
-      const endPoint = getPointCoords(toCard, toSide);
-      const pathData = updateLinePath(startPoint, endPoint, fromSide, toSide);
+    const startPoint = getPointCoords(fromCard, fromSide);
+    const endPoint = getPointCoords(toCard, toSide);
+    const pathData = updateLinePath(startPoint, endPoint, fromSide, toSide);
 
-      return {
-        id: connection.id,
-        d: pathData,
-        color: connection.color || connectionsStore.defaultLineColor,
-        strokeWidth: connection.thickness || connectionsStore.defaultLineThickness,
-        highlightType: connection.highlightType || null,
-        animationDuration: connection.animationDuration ?? connectionsStore.defaultAnimationDuration
-      };
-    })
-    .filter(Boolean);
+    return {
+      id: connection.id,
+      d: pathData,
+      color: connection.color || connectionsStore.defaultLineColor,
+      strokeWidth: connection.thickness || connectionsStore.defaultLineThickness,
+      highlightType: connection.highlightType || null,
+      animationDuration: connection.animationDuration ?? connectionsStore.defaultAnimationDuration
+    };
+  })
+  .filter(Boolean);
 });
+
+const addNewCard = () => {
+  const colors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336'];
+  const randomColor = colors[Math.floor(Math.random() * colors.length)];
+  
+  const newCard = {
+    x: Math.random() * (stageConfig.value.width - 150),
+    y: Math.random() * (stageConfig.value.height - 80),
+    text: `Карточка ${cards.value.length + 1}`, // ← ЗАПЯТАЯ УДАЛЕНА
+    width: 150,
+    height: 80,
+    fill: randomColor,
+    stroke: '#000000',
+    strokeWidth: 1,
+    headerBg: getHeaderColorRgb(0),
+    colorIndex: 0
+  };
+  
+  cardsStore.addCard(newCard);
+};
 
 const previewLinePath = computed(() => {
   if (!isDrawingLine.value || !connectionStart.value) return null;
   
-  const fromCard = cards.find(card => card.id === connectionStart.value.cardId);
+  const fromCard = cards.value.find(card => card.id === connectionStart.value.cardId);
   if (!fromCard) return null;
   
   const startPoint = getPointCoords(fromCard, connectionStart.value.side);
@@ -161,8 +180,8 @@ const previewLinePath = computed(() => {
 const createConnectionBetweenCards = (fromCardId, toCardId, options = {}) => {
   if (fromCardId === toCardId) return null;
 
-  const fromCard = cards.find(card => card.id === fromCardId);
-  const toCard = cards.find(card => card.id === toCardId);
+  const fromCard = cards.value.find(card => card.id === fromCardId);
+  const toCard = cards.value.find(card => card.id === connection.to);
 
   if (!fromCard || !toCard) return null;
 
@@ -195,7 +214,7 @@ const screenToCanvas = (clientX, clientY) => {
 
 const startDrag = (event, cardId) => {
   draggedCardId.value = cardId;
-  const card = cards.find(c => c.id === cardId);
+  const card = cards.value.find(c => c.id === cardId);
   if (card) {
     const canvasPos = screenToCanvas(event.clientX, event.clientY);
     dragOffset.value = {
@@ -297,7 +316,7 @@ const handleLineClick = (event, connectionId) => {
     connectionsStore.toggleConnectionSelection(connectionId);
   } else {
     // Одиночное выделение без Ctrl
-    if (selectedConnectionIds.length === 1 && selectedConnectionIds[0] === connectionId) {
+    if (selectedConnectionIds.value.length === 1 && selectedConnectionIds.value[0] === connectionId) {
       connectionsStore.deselectAllConnections();
     } else {
       connectionsStore.deselectAllConnections();
@@ -355,7 +374,7 @@ const addNewCard = () => {
   const newCard = {
     x: Math.random() * (stageConfig.value.width - 150),
     y: Math.random() * (stageConfig.value.height - 80),
-    text: `Карточка ${cards.length + 1}`,
+    text: `Карточка ${cards.value.length + 1}`, // ← УДАЛИТЬ ЛИШНЮЮ ЗАПЯТУЮ
     width: 150,
     height: 80,
     fill: randomColor,
@@ -381,9 +400,9 @@ const deleteSelectedCards = () => {
 };
 
 const deleteSelectedConnections = () => {
-  if (selectedConnectionIds.length === 0) return;
-  
-  console.log('Deleting connections:', selectedConnectionIds);
+  if (selectedConnectionIds.value.length === 0) return;
+  console.log('Deleting connections:', selectedConnectionIds.value);
+
   connectionsStore.removeMultipleConnections([...selectedConnectionIds]);
   console.log('Connections deleted');
 };
@@ -419,7 +438,7 @@ const handleKeydown = (event) => {
   event.preventDefault();
 
   // Удаление выделенных линий
-  if (selectedConnectionIds.length > 0) {
+  if (selectedConnectionIds.value.length > 0) {
     deleteSelectedConnections();
     return;
   }
@@ -556,15 +575,15 @@ watch(() => canvasStore.backgroundColor, () => {}, { immediate: true });
         @pointerdown="handlePointerDown"
         @dragstart.prevent
       >
-        <Card
-          v-for="card in cards"
-          :key="card.id"
-          :card="card"
-          :is-selected="card.selected"
-          :is-connecting="isDrawingLine && connectionStart?.cardId === card.id"
-          @card-click="(event) => handleCardClick(event, card.id)"
-          @start-drag="startDrag"
-        />
+<Card
+  v-for="card in cards"
+  :key="card.id"
+  :card="card"
+  :is-selected="card.selected"
+  :is-connecting="isDrawingLine && connectionStart?.cardId === card.id"
+  @card-click="(event) => handleCardClick(event, card.id)"
+  @start-drag="startDrag"
+/>
       </div>   
     </div>
   </div>
