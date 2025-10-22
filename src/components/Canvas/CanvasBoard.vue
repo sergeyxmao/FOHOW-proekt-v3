@@ -94,8 +94,10 @@ const resolveConnectionSides = (fromCard, toCard, preferredFromSide, preferredTo
 };
   
 const updateLinePath = (p1, p2, side1, side2) => {
-  const startPoint = { ...p1 };
-  const endPoint = { ...p2 };
+  const startAnchor = { ...p1 };
+  const endAnchor = { ...p2 };
+  const startPoint = { ...startAnchor };
+  const endPoint = { ...endAnchor };
   let midPoint = {}; // Точка "колена"
 
   // 1. Определяем базовое положение "колена"
@@ -133,7 +135,33 @@ const updateLinePath = (p1, p2, side1, side2) => {
     midPoint.y = endPoint.y;   // Y "колена" = Y смещенного конца
   }
   
-  return `M ${startPoint.x} ${startPoint.y} L ${midPoint.x} ${midPoint.y} L ${endPoint.x} ${endPoint.y}`;
+
+  const pathPoints = [
+    startAnchor,
+    startPoint,
+    midPoint,
+    endPoint,
+    endAnchor
+  ].filter(Boolean);
+
+  const dedupedPoints = pathPoints.filter((point, index, array) => {
+    if (!point) return false;
+    if (index === 0) return true;
+    const prevPoint = array[index - 1];
+    return !(prevPoint && prevPoint.x === point.x && prevPoint.y === point.y);
+  });
+
+  if (!dedupedPoints.length) {
+    return '';
+  }
+
+  const [firstPoint, ...otherPoints] = dedupedPoints;
+  const commands = [`M ${firstPoint.x} ${firstPoint.y}`];
+  otherPoints.forEach(point => {
+    commands.push(`L ${point.x} ${point.y}`);
+  });
+
+  return commands.join(' ');
 };
 const connectionPaths = computed(() => {
   return connections.value
