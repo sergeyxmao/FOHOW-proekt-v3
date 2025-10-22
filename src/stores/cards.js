@@ -32,16 +32,16 @@ addCard(options = {}) {
       // Пресеты для разных типов лицензий
       const presets = {
         large: {
-          width: 380,
-          height: 280,
+          width: 494,
+          height: 364,
           pv: '330/330pv',
           text: generateLicenseNumber(),
           historyText: 'Создана большая лицензия'
         },
         small: {
-          width: 250,
-          height: 180,
-          pv: '110/110pv',
+          width: 380,
+          height: 280,
+          pv: '330/330pv',
           text: 'Малая лицензия',
           historyText: 'Создана малая лицензия'
         }
