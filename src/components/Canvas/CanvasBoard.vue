@@ -254,7 +254,6 @@ const handlePointerDown = (event) => {
   
   if (connectionPoint) {
     event.stopPropagation();
-    event.preventDefault();
     
     const cardId = connectionPoint.dataset.cardId;
     const side = connectionPoint.dataset.side;
@@ -302,7 +301,6 @@ const cancelDrawing = () => {
 
 const handleLineClick = (event, connectionId) => {
   event.stopPropagation();
-  event.preventDefault();
   
   const isCtrlPressed = event.ctrlKey || event.metaKey;
   
@@ -442,14 +440,23 @@ onMounted(() => {
     }
   };
 
+  if (canvasContainerRef.value) { // Добавляем проверку
+    canvasContainerRef.value.addEventListener('pointermove', handleMouseMove);
+    canvasContainerRef.value.addEventListener('pointerdown', handlePointerDown);
+  }
+
   resizeStage();
   window.addEventListener('resize', resizeStage);
   window.addEventListener('keydown', handleKeydown);
 });
 
 onBeforeUnmount(() => {
+  if (canvasContainerRef.value) { // Добавляем проверку
+    canvasContainerRef.value.removeEventListener('pointermove', handleMouseMove);
+    canvasContainerRef.value.removeEventListener('pointerdown', handlePointerDown);
+  }
   window.removeEventListener('keydown', handleKeydown);
-  window.removeEventListener('pointermove', handleMouseMove);
+  window.removeEventListener('pointermove', handleMouseMove); // Эту строку можно оставить или удалить, т.к. мы управляем ей в watch
 });
 
 watch(isDrawingLine, (isActive) => {
@@ -495,6 +502,7 @@ watch(
         :width="stageConfig.width"
         :height="stageConfig.height"
         style="position: absolute; top: 0; left: 0; z-index: 1; overflow: visible; pointer-events: none;"
+		@click="handleStageClick"
       >
         <defs>
           <marker
@@ -519,7 +527,7 @@ watch(
           <path
             :d="path.d"
             class="line-hitbox"
-            @click="(event) => handleLineClick(event, path.id)"
+            @click.stop="(event) => handleLineClick(event, path.id)"
           />
           <!-- Видимая линия -->
           <path
@@ -567,10 +575,8 @@ watch(
           height: stageConfig.height + 'px',
           position: 'relative',
           zIndex: 2
+		  pointerEvents: 'none'
         }"
-        @click="handleStageClick"
-        @mousemove="handleMouseMove"
-        @pointerdown="handlePointerDown"
         @dragstart.prevent
       >
         <Card
@@ -581,6 +587,7 @@ watch(
           :is-connecting="isDrawingLine && connectionStart?.cardId === card.id"
           @card-click="(event) => handleCardClick(event, card.id)"
           @start-drag="startDrag"
+          style="pointer-events: auto;"		  
         />
       </div>   
     </div>
