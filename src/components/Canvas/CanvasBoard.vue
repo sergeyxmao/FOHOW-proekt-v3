@@ -51,8 +51,31 @@ const previewLine = ref(null);
 const previewLineWidth = computed(() => connectionsStore.defaultLineThickness || 2);
 const mousePosition = ref({ x: 0, y: 0 });
 const selectedConnectionIds = ref([]);
-const dragState = ref(null);  
+const dragState = ref(null);
+const isSelecting = ref(false);
+const selectionRect = ref(null);
+let selectionStartPoint = null;
+let selectionBaseSelection = new Set();
+let suppressNextStageClick = false;
 
+const canvasContainerClasses = computed(() => ({
+  'canvas-container--selection-mode': isSelectionMode.value
+}));
+
+const selectionBoxStyle = computed(() => {
+  if (!selectionRect.value) {
+    return { display: 'none' };
+  }
+
+  const { left, top, width, height } = selectionRect.value;
+
+  return {
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${width}px`,
+    height: `${height}px`
+  };
+});
 const MARKER_OFFSET = 12;
 
 const getPointCoords = (card, side) => {
@@ -356,6 +379,148 @@ const screenToCanvas = (clientX, clientY) => {
   return { x, y };
 };
 
+const removeSelectionListeners = () => {
+  window.removeEventListener('pointermove', handleSelectionPointerMove);
+  window.removeEventListener('pointerup', handleSelectionPointerUp);
+  window.removeEventListener('pointercancel', handleSelectionPointerCancel);
+};
+
+const applySelectionFromRect = (rect) => {
+  const nextSelectionIds = new Set(selectionBaseSelection);
+
+  if (canvasContainerRef.value) {
+    const cardElements = canvasContainerRef.value.querySelectorAll('.card');
+    cardElements.forEach((element) => {
+      const cardId = element.dataset.cardId;
+      if (!cardId) {
+        return;
+      }
+
+      const cardRect = element.getBoundingClientRect();
+      const intersects =
+        cardRect.left < rect.right &&
+        cardRect.right > rect.left &&
+        cardRect.top < rect.bottom &&
+        cardRect.bottom > rect.top;
+
+      if (intersects) {
+        nextSelectionIds.add(cardId);
+      }
+    });
+  }
+
+  cardsStore.deselectAllCards();
+
+  const orderedIds = Array.from(nextSelectionIds);
+  orderedIds.forEach((id) => {
+    cardsStore.selectCard(id);
+  });
+
+  selectedCardId.value = orderedIds.length > 0 ? orderedIds[orderedIds.length - 1] : null;
+};
+
+const updateSelectionRectFromEvent = (event) => {
+  if (!selectionStartPoint) {
+    return;
+  }
+
+  const currentX = event.clientX;
+  const currentY = event.clientY;
+
+  const left = Math.min(selectionStartPoint.x, currentX);
+  const top = Math.min(selectionStartPoint.y, currentY);
+  const width = Math.abs(currentX - selectionStartPoint.x);
+  const height = Math.abs(currentY - selectionStartPoint.y);
+
+  const rect = {
+    left,
+    top,
+    width,
+    height,
+    right: left + width,
+    bottom: top + height
+  };
+
+  selectionRect.value = rect;
+  applySelectionFromRect(rect);
+};
+
+const finishSelection = ({ toggleMode = true } = {}) => {
+  if (!isSelecting.value) {
+    return;
+  }
+
+  removeSelectionListeners();
+  isSelecting.value = false;
+  selectionRect.value = null;
+  selectionStartPoint = null;
+  selectionBaseSelection = new Set();
+
+  if (toggleMode && cardsStore.selectedCardIds.length > 0) {
+    canvasStore.setSelectionMode(false);
+  }
+
+  setTimeout(() => {
+    suppressNextStageClick = false;
+  }, 50);
+};
+
+const handleSelectionPointerMove = (event) => {
+  if (!isSelecting.value) {
+    return;
+  }
+
+  event.preventDefault();
+  updateSelectionRectFromEvent(event);
+};
+
+const handleSelectionPointerUp = (event) => {
+  if (isSelecting.value) {
+    updateSelectionRectFromEvent(event);
+  }
+  finishSelection({ toggleMode: true });
+};
+
+const handleSelectionPointerCancel = (event) => {
+  if (isSelecting.value) {
+    updateSelectionRectFromEvent(event);
+  }
+  finishSelection({ toggleMode: true });
+};
+
+const startSelection = (event) => {
+  if (event.button !== 0) {
+    return;
+  }
+
+  event.preventDefault();
+  suppressNextStageClick = true;
+  isSelecting.value = true;
+  selectionStartPoint = { x: event.clientX, y: event.clientY };
+  selectionBaseSelection = new Set(event.ctrlKey || event.metaKey ? cardsStore.selectedCardIds : []);
+
+  if (!(event.ctrlKey || event.metaKey)) {
+    cardsStore.deselectAllCards();
+  }
+
+  selectedConnectionIds.value = [];
+  selectedCardId.value = null;
+  cancelDrawing();
+
+  selectionRect.value = {
+    left: selectionStartPoint.x,
+    top: selectionStartPoint.y,
+    width: 0,
+    height: 0,
+    right: selectionStartPoint.x,
+    bottom: selectionStartPoint.y
+  };
+
+  window.addEventListener('pointermove', handleSelectionPointerMove, { passive: false });
+  window.addEventListener('pointerup', handleSelectionPointerUp);
+  window.addEventListener('pointercancel', handleSelectionPointerCancel);
+};  
+
 const startDrag = (event, cardId) => {
   if (event.button !== 0) {
     return;
@@ -475,6 +640,16 @@ const handlePointerDown = (event) => {
     }
     return;
   }
+
+  if (isSelectionMode.value && !isSelecting.value) {
+    const isCardTarget = event.target.closest('.card');
+    const interactiveTarget = event.target.closest('button, input, textarea, select, [contenteditable="true"], a[href]');
+
+    if (!isCardTarget && !interactiveTarget) {
+      startSelection(event);
+      return;
+    }
+  }  
 };
 
 const startDrawingLine = (cardId, side) => {
@@ -548,6 +723,10 @@ const handleCardClick = (event, cardId) => {
 };
 
 const handleStageClick = (event) => {
+  if (suppressNextStageClick) {
+    suppressNextStageClick = false;
+    return;
+  }  
   if (!event.ctrlKey && !event.metaKey) {
     cardsStore.deselectAllCards();
     selectedConnectionIds.value = [];
@@ -617,6 +796,13 @@ const handleKeydown = (event) => {
       selectedConnectionIds.value = [];
       selectedCardId.value = null;
       cancelDrawing();
+        finishSelection({ toggleMode: false });
+      if (isSelectionMode.value) {
+        canvasStore.setSelectionMode(false);
+      }
+      if (isHierarchicalDragMode.value) {
+        canvasStore.setHierarchicalDragMode(false);
+      }    
     }
     return;
   }
@@ -667,6 +853,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('pointermove', handleMouseMove); // Эту строку можно оставить или удалить, т.к. мы управляем ей в watch
   document.removeEventListener('mousemove', handleDrag);
   document.removeEventListener('mouseup', endDrag);
+  removeSelectionListeners();
+  
 });
 
 watch(isDrawingLine, (isActive) => {
@@ -676,7 +864,11 @@ watch(isDrawingLine, (isActive) => {
     window.removeEventListener('pointermove', handleMouseMove);
   }
 });
-
+watch(isSelectionMode, (active) => {
+  if (!active) {
+    finishSelection({ toggleMode: false });
+  }
+});
 const resetView = () => {};
 
 defineExpose({
@@ -701,11 +893,16 @@ watch(
 </script>
 
 <template>
-<div 
-  ref="canvasContainerRef" 
-  class="canvas-container" 
+<div
+  ref="canvasContainerRef"
+  :class="['canvas-container', canvasContainerClasses]"
   :style="{ backgroundColor: backgroundColor }"
 >
+    <div
+      v-if="selectionRect"
+      class="selection-box"
+      :style="selectionBoxStyle"
+    ></div>  
     <div class="canvas-content">
 <svg
         class="svg-layer"
@@ -812,6 +1009,14 @@ watch(
   overflow: hidden;
   position: relative;
 }
+.canvas-container--selection-mode {
+  cursor: crosshair;
+}
+
+.canvas-container--selection-mode .cards-container,
+.canvas-container--selection-mode .svg-layer {
+  cursor: crosshair;
+}
 
 .canvas-content {
   position: absolute;
@@ -904,7 +1109,13 @@ watch(
     color: var(--line-color, currentColor);
   }
 }
-
+.selection-box {
+  position: fixed;
+  border: 1px dashed rgba(59, 130, 246, 0.9);
+  background: rgba(59, 130, 246, 0.15);
+  pointer-events: none;
+  z-index: 4000;
+}
 @keyframes linePvFlow {
   0% {
     stroke-dashoffset: -18;
