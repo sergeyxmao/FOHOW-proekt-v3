@@ -15,7 +15,7 @@ function clampAnimationDuration(duration) {
 export const useConnectionsStore = defineStore('connections', {
   state: () => ({
     connections: [],
-	selectedConnectionIds: [],
+    selectedConnectionIds: [],
     // Параметры по умолчанию для новых соединений
     defaultLineColor: '#0f62fe',
     defaultLineThickness: 5,
@@ -45,13 +45,14 @@ export const useConnectionsStore = defineStore('connections', {
         from: fromCardId,
         to: toCardId,
         fromSide: options.fromSide || 'right',
-        toSide: options.toSide || 'left',        color: options.color || this.defaultLineColor,
+        toSide: options.toSide || 'left',
+        color: options.color || this.defaultLineColor,
         thickness: options.thickness || this.defaultLineThickness,
         highlightType: options.highlightType ?? this.defaultHighlightType,
-        animationDuration      }
+        animationDuration
+      }
       
       this.connections.push(newConnection)
-	  
       
       // Сохраняем состояние в историю
       const historyStore = useHistoryStore()
@@ -152,7 +153,7 @@ export const useConnectionsStore = defineStore('connections', {
         updatedConnections.push(connection)
       })
 
-    this.defaultLineThickness = thickness
+      this.defaultLineThickness = thickness
       
       // Сохраняем состояние в историю
       if (updatedConnections.length > 0) {
@@ -175,7 +176,8 @@ export const useConnectionsStore = defineStore('connections', {
           normalizedUpdates.animationDuration = clampAnimationDuration(normalizedUpdates.animationDuration)
         }
 
-        Object.assign(connection, normalizedUpdates);        updatedConnections.push(connection)
+        Object.assign(connection, normalizedUpdates);
+        updatedConnections.push(connection)
       })
 
 
@@ -229,6 +231,8 @@ export const useConnectionsStore = defineStore('connections', {
         if (index !== -1) {
           removedConnections.push(this.connections[index])
           this.connections.splice(index, 1)
+          // Удаляем из выделенных
+          this.deselectConnection(id)
         }
       })
       
@@ -238,64 +242,39 @@ export const useConnectionsStore = defineStore('connections', {
         historyStore.setActionMetadata('delete', `Удалено ${removedConnections.length} соединений`)
         historyStore.saveState()
       }
-	  
-	    // ДОБАВИТЬ эти новые actions:
-  selectConnection(connectionId) {
-    if (!this.selectedConnectionIds.includes(connectionId)) {
-      this.selectedConnectionIds.push(connectionId)
-    }
-  },
-  
-  deselectConnection(connectionId) {
-    const index = this.selectedConnectionIds.indexOf(connectionId)
-    if (index > -1) {
-      this.selectedConnectionIds.splice(index, 1)
-    }
-  },
-  
-  toggleConnectionSelection(connectionId) {
-    const index = this.selectedConnectionIds.indexOf(connectionId)
-    if (index > -1) {
-      this.selectedConnectionIds.splice(index, 1)
-    } else {
-      this.selectedConnectionIds.push(connectionId)
-    }
-  },
-  
-  deselectAllConnections() {
-    this.selectedConnectionIds = []
-  },
-  
-  selectMultipleConnections(connectionIds) {
-    this.selectedConnectionIds = [...new Set([...this.selectedConnectionIds, ...connectionIds])]
-  },
-  
-  // Обновить существующий метод для очистки выделения при удалении
-  removeMultipleConnections(connectionIds) {
-    const removedConnections = []
-    
-    connectionIds.forEach(id => {
-      const index = this.connections.findIndex(conn => conn.id === id)
-      if (index !== -1) {
-        removedConnections.push(this.connections[index])
-        this.connections.splice(index, 1)
-        // Удаляем из выделенных
-        this.deselectConnection(id)
-      }
-    })
-    
-    // Сохраняем состояние в историю после всех удалений
-    if (removedConnections.length > 0) {
-      const historyStore = useHistoryStore()
-      historyStore.setActionMetadata('delete', `Удалено ${removedConnections.length} соединений`)
-      historyStore.saveState()
-    }
-    
-    return removedConnections
-  }
-}
       
       return removedConnections
+    },
+
+    // Новые actions для управления выделением линий
+    selectConnection(connectionId) {
+      if (!this.selectedConnectionIds.includes(connectionId)) {
+        this.selectedConnectionIds.push(connectionId)
+      }
+    },
+    
+    deselectConnection(connectionId) {
+      const index = this.selectedConnectionIds.indexOf(connectionId)
+      if (index > -1) {
+        this.selectedConnectionIds.splice(index, 1)
+      }
+    },
+    
+    toggleConnectionSelection(connectionId) {
+      const index = this.selectedConnectionIds.indexOf(connectionId)
+      if (index > -1) {
+        this.selectedConnectionIds.splice(index, 1)
+      } else {
+        this.selectedConnectionIds.push(connectionId)
+      }
+    },
+    
+    deselectAllConnections() {
+      this.selectedConnectionIds = []
+    },
+    
+    selectMultipleConnections(connectionIds) {
+      this.selectedConnectionIds = [...new Set([...this.selectedConnectionIds, ...connectionIds])]
     }
   }
 })
