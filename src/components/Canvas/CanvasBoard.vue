@@ -16,6 +16,7 @@ const connectionsStore = useConnectionsStore();
 const canvasStore = useCanvasStore();
 const { cards } = cardsStore;
 const { connections } = connectionsStore;
+const { selectedConnectionIds } = connectionsStore;
 
 watch(() => cardsStore.cards, (newCards, oldCards) => {
   console.log('=== Cards array updated ===');
@@ -46,8 +47,6 @@ const isDrawingLine = ref(false);
 const previewLine = ref(null);
 const previewLineWidth = computed(() => connectionsStore.defaultLineThickness || 2);
 const mousePosition = ref({ x: 0, y: 0 });
-const connectionsStore = useConnectionsStore();
-const { selectedConnectionIds } = connectionsStore;
 
 const MARKER_OFFSET = 12;
 
@@ -258,7 +257,7 @@ const handlePointerDown = (event) => {
 };
 
 const startDrawingLine = (cardId, side) => {
-  selectedConnectionIds.value = [];
+  connectionsStore.deselectAllConnections();
   connectionStart.value = { cardId, side };
   isDrawingLine.value = true;
   emit('update-connection-status', 'Рисование линии: кликните на соединительную точку другой карточки');
@@ -278,6 +277,13 @@ const endDrawingLine = (cardId, side) => {
   
   console.log('Создано соединение:', connectionStart.value.cardId, '->', cardId);
   cancelDrawing();
+};
+
+const cancelDrawing = () => {
+  connectionStart.value = null;
+  isDrawingLine.value = false;
+  previewLine.value = null;
+  emit('update-connection-status', 'Кликните на соединительную точку для создания линии');
 };
 
 const handleLineClick = (event, connectionId) => {
@@ -332,7 +338,6 @@ const handleCardClick = (event, cardId) => {
 };
 
 const handleStageClick = (event) => {
-const handleStageClick = (event) => {
   if (!event.ctrlKey && !event.metaKey) {
     cardsStore.deselectAllCards();
     connectionsStore.deselectAllConnections();
@@ -371,7 +376,7 @@ const deleteSelectedCards = () => {
   cardsStore.selectedCardIds = [];
   selectedCardId.value = null;
   isConnecting.value = false;
-  selectedConnectionIds.value = [];
+  connectionsStore.deselectAllConnections();
   cancelDrawing();
 };
 
@@ -380,10 +385,6 @@ const deleteSelectedConnections = () => {
   
   console.log('Deleting connections:', selectedConnectionIds);
   connectionsStore.removeMultipleConnections([...selectedConnectionIds]);
-  console.log('Connections deleted');
-};
-  
-  selectedConnectionIds.value = [];
   console.log('Connections deleted');
 };
 
