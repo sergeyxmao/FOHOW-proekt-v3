@@ -286,6 +286,18 @@ const cancelDrawing = () => {
   emit('update-connection-status', 'Кликните на соединительную точку для создания линии');
 };
 
+const handleCardDelete = (cardId) => {
+  // Сбрасываем состояние рисования если удаляется карточка, участвующая в процессе рисования
+  if (connectionStart.value?.cardId === cardId) {
+    cancelDrawing();
+  }
+  // Также сбрасываем выбор если удаляется выбранная карточка
+  if (selectedCardId.value === cardId) {
+    selectedCardId.value = null;
+    isConnecting.value = false;
+  }
+};
+
 const handleLineClick = (event, connectionId) => {
   event.stopPropagation();
   event.preventDefault();
@@ -570,6 +582,7 @@ watch(() => canvasStore.backgroundColor, () => {}, { immediate: true });
           :is-connecting="isDrawingLine && connectionStart?.cardId === card.id"
           @card-click="(event) => handleCardClick(event, card.id)"
           @start-drag="startDrag"
+          @card-delete="handleCardDelete"
         />
       </div>   
     </div>

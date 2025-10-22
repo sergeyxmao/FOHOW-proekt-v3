@@ -19,7 +19,8 @@ const props = defineProps({
 
 const emit = defineEmits([
   'card-click',
-  'start-drag'
+  'start-drag',
+  'card-delete'
 ]);
 
 const cardsStore = useCardsStore();
@@ -90,6 +91,7 @@ const handleBlur = () => {
 // Обработчик для удаления карточки
 const handleDelete = (event) => {
   event.stopPropagation();
+  emit('card-delete', props.card.id);
   cardsStore.removeCard(props.card.id);
 };
 
