@@ -498,16 +498,16 @@ watch(
           </marker>
         </defs>
 
- <g
+<g
           v-for="path in connectionPaths"
           :key="path.id"
           class="line-group"
-          @click="(event) => handleLineClick(event, path.id)"
         >
           <!-- Невидимая область для клика (hitbox) -->
           <path
             :d="path.d"
             class="line-hitbox"
+            @click="(event) => handleLineClick(event, path.id)"
           />
           <!-- Видимая линия -->
           <path
