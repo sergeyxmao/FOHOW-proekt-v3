@@ -43,7 +43,6 @@ const canvasContainerRef = ref(null);
 const { scale: zoomScale, translateX: zoomTranslateX, translateY: zoomTranslateY } = usePanZoom(canvasContainerRef);
 
 const selectedCardId = ref(null);
-const isConnecting = ref(false);
 const connectionStart = ref(null);
 const isDrawingLine = ref(false);
 const previewLine = ref(null);
@@ -312,7 +311,6 @@ const handleLineClick = (event, connectionId) => {
   
   cardsStore.deselectAllCards();
   selectedCardId.value = null;
-  isConnecting.value = false;
   cancelDrawing();
 };
 
@@ -320,21 +318,15 @@ const handleCardClick = (event, cardId) => {
   const isCtrlPressed = event.ctrlKey || event.metaKey;
   selectedConnectionIds.value = [];
   
-  if (!isConnecting.value) {
-    if (isCtrlPressed) {
-      cardsStore.toggleCardSelection(cardId);
-    } else {
+  if (isCtrlPressed) {
+    cardsStore.toggleCardSelection(cardId);
+  } else {
+    if (!cardsStore.selectedCardIds.includes(cardId) || cardsStore.selectedCardIds.length > 1) {
       cardsStore.deselectAllCards();
       cardsStore.selectCard(cardId);
     }
-    selectedCardId.value = cardId;
-  } else {
-    if (selectedCardId.value !== cardId) {
-      createConnectionBetweenCards(selectedCardId.value, cardId);
-    }
-    selectedCardId.value = null;
-    isConnecting.value = false;
   }
+  selectedCardId.value = cardId;
 };
 
 const handleStageClick = (event) => {
@@ -344,7 +336,6 @@ const handleStageClick = (event) => {
   }
   
   selectedCardId.value = null;
-  isConnecting.value = false;
   cancelDrawing();
 };
 
@@ -375,7 +366,6 @@ const deleteSelectedCards = () => {
   batchDeleteCards(uniqueIds);
   cardsStore.selectedCardIds = [];
   selectedCardId.value = null;
-  isConnecting.value = false;
   selectedConnectionIds.value = [];
   cancelDrawing();
 };
@@ -408,7 +398,6 @@ const handleKeydown = (event) => {
       cardsStore.deselectAllCards();
       selectedConnectionIds.value = [];
       selectedCardId.value = null;
-      isConnecting.value = false;
       cancelDrawing();
     }
     return;
@@ -465,11 +454,9 @@ defineExpose({
   resetView
 });
 
-watch([isDrawingLine, isConnecting], ([drawing, connecting]) => {
-  if (drawing) {
+watch(isDrawingLine, (isDrawing) => {
+  if (isDrawing) {
     emit('update-connection-status', 'Рисование линии: кликните на соединительную точку другой карточки');
-  } else if (connecting) {
-    emit('update-connection-status', 'Выберите вторую карточку для соединения');
   } else {
     emit('update-connection-status', 'Кликните на соединительную точку для создания линии');
   }
@@ -511,30 +498,40 @@ watch(
           </marker>
         </defs>
 
-        <path
+ <g
           v-for="path in connectionPaths"
           :key="path.id"
-          :d="path.d"
-          :class="[
-            'line',
-            {
-              selected: selectedConnectionIds.includes(path.id),
-              'line--balance-highlight': path.highlightType === 'balance',
-              'line--pv-highlight': path.highlightType === 'pv'
-            }
-          ]"
-          marker-start="url(#marker-dot)"
-          marker-end="url(#marker-dot)"
-          :style="{
-            '--line-color': path.color,
-            '--line-width': `${path.strokeWidth}px`,
-            '--line-animation-duration': `${path.animationDuration}ms`,
-            color: path.color,
-            stroke: path.color,
-            strokeWidth: path.strokeWidth
-          }"
+          class="line-group"
           @click="(event) => handleLineClick(event, path.id)"
-        />
+        >
+          <!-- Невидимая область для клика (hitbox) -->
+          <path
+            :d="path.d"
+            class="line-hitbox"
+          />
+          <!-- Видимая линия -->
+          <path
+            :d="path.d"
+            :class="[
+              'line',
+              {
+                selected: selectedConnectionIds.includes(path.id),
+                'line--balance-highlight': path.highlightType === 'balance',
+                'line--pv-highlight': path.highlightType === 'pv'
+              }
+            ]"
+            marker-start="url(#marker-dot)"
+            marker-end="url(#marker-dot)"
+            :style="{
+              '--line-color': path.color,
+              '--line-width': `${path.strokeWidth}px`,
+              '--line-animation-duration': `${path.animationDuration}ms`,
+              color: path.color,
+              stroke: path.color,
+              strokeWidth: path.strokeWidth
+            }"
+          />
+        </g>
 
         <path
           v-if="previewLinePath"
@@ -595,12 +592,24 @@ watch(
   transform-origin: 0 0;
 }
 
+.line-group {
+  cursor: pointer;
+}
+
+.line-hitbox {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 25px; /* Широкая область для клика */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: stroke;
+}
+
 .line {
   fill: none;
   stroke: var(--line-color, #0f62fe);
   stroke-width: var(--line-width, 5px);
-  pointer-events: stroke;
-  cursor: pointer;
+  pointer-events: none; /* Клики проходят сквозь видимую линию к hitbox */
   filter: drop-shadow(0 0 5px rgba(0, 0, 0, .15));
   transition: stroke-width 0.2s ease, filter 0.2s ease, stroke 0.2s ease;
 }
