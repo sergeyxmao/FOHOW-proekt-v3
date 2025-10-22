@@ -97,12 +97,22 @@ const updateLinePath = (p1, p2, side1, side2) => {
   const startP1 = { ...p1 };
   const finalP2 = { ...p2 };
   
-  // Отступ для начальной точки, чтобы освободить место для маркера
+  // Отступ для начальной точки
   switch (side1) {
     case 'top':    startP1.y -= MARKER_OFFSET; break;
     case 'bottom': startP1.y += MARKER_OFFSET; break;
     case 'left':   startP1.x -= MARKER_OFFSET; break;
     case 'right':  startP1.x += MARKER_OFFSET; break;
+  }
+
+  // Отступ для конечной точки (если она есть)
+  if (side2) {
+    switch (side2) {
+      case 'top':    finalP2.y -= MARKER_OFFSET; break;
+      case 'bottom': finalP2.y += MARKER_OFFSET; break;
+      case 'left':   finalP2.x -= MARKER_OFFSET; break;
+      case 'right':  finalP2.x += MARKER_OFFSET; break;
+    }
   }
 
   const midP1 = { ...startP1 };
@@ -113,16 +123,7 @@ const updateLinePath = (p1, p2, side1, side2) => {
   } else {
     midP1.y = finalP2.y;
   }
-
-  // Отступ для конечной точки, чтобы освободить место для маркера
-  if (side2) {
-    if (Math.abs(finalP2.x - midP1.x) > Math.abs(finalP2.y - midP1.y)) {
-      finalP2.x += (finalP2.x > midP1.x ? -MARKER_OFFSET : MARKER_OFFSET);
-    } else {
-      finalP2.y += (finalP2.y > midP1.y ? -MARKER_OFFSET : MARKER_OFFSET);
-    }
-  }
-
+  
   return `M ${startP1.x} ${startP1.y} L ${midP1.x} ${midP1.y} L ${finalP2.x} ${finalP2.y}`;
 };
 
