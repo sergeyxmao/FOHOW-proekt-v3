@@ -41,6 +41,12 @@ const handleCardClick = (event) => {
 
 const handleMouseDown = (event) => {
   if (isEditing.value) return;
+
+  // Не начинаем перетаскивание, если кликнули на точку соединения
+  if (event.target.classList.contains('connection-point')) {
+    return;
+  }
+
   emit('start-drag', event, props.card.id);
 };
 
