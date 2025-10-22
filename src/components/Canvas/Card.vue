@@ -109,11 +109,12 @@ const updateValue = (event, field) => {
       'editing': isEditing,
       'card--large': isLargeCard
     }"
-    :style="{
+:style="{
       position: 'absolute',
       left: card.x + 'px',
       top: card.y + 'px',
       width: card.width + 'px',
+      height: card.height + 'px',
       backgroundColor: card.fill,
       border: `${card.strokeWidth}px solid ${card.stroke}`,
     }"
@@ -246,7 +247,6 @@ const updateValue = (event, field) => {
   box-shadow: 10px 12px 24px rgba(15, 35, 95, 0.16), -6px -6px 18px rgba(255, 255, 255, 0.85);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   overflow: visible;
-  min-height: 280px;
 }
 
 .card:hover {
