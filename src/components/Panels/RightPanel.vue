@@ -563,7 +563,11 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
 .ui-panel-right__container {
   display: flex;
   align-items: stretch;
-  gap: 0px;
+  gap: 0; /* Убираем зазор */
+  /* Переносим тень на контейнер, чтобы она была общей */
+  box-shadow: var(--right-panel-shadow);
+  /* Скругляем углы контейнера, чтобы тень была правильной */
+  border-radius: 12px;
 }
 
 .ui-panel-right__body {
@@ -571,9 +575,12 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   flex-direction: column;
   gap: 18px;
   background: var(--right-panel-bg);
-  color: var(--right-panel-text);  padding: 20px 22px;
-  border-radius: 22px;
-  box-shadow: var(--right-panel-shadow);
+  color: var(--right-panel-text);
+  padding: 20px 22px;
+  /* Скругляем только правые углы */
+  border-radius: 0 12px 12px 0;
+  /* Убираем собственную тень, так как она теперь на контейнере */
+  box-shadow: none;
   min-width: 240px;
 }
 
@@ -676,8 +683,15 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   width: 40px;
   height: 40px;
   padding: 0;
+  /* Скругляем только левые углы */
   border-radius: 12px 0 0 12px;
-  box-shadow: var(--right-panel-btn-shadow);
+  /* Убираем тень и правую рамку для слияния */
+  box-shadow: none;
+  border-right: none;
+  /* Фон делаем таким же, как у панели */
+  background: var(--right-panel-bg);
+  /* Убеждаемся, что рамка слева такая же, как у всей панели */
+  border: 1px solid var(--right-panel-btn-border);
 }
 
 .panel-collapse-btn--floating {
