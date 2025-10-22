@@ -109,6 +109,7 @@ const updateValue = (event, field) => {
 <template>
   <div
     class="card"
+    :data-card-id="card.id"    
     :class="{
       'selected': isSelected,
       'connecting': isConnecting,
