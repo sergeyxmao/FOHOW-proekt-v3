@@ -160,157 +160,46 @@ function updateBackground(gradient) {
 }
 
 // Добавление карточек
-function addCard(isLarge = false) {
-  console.log('=== addCard called ===');
-  console.log('isLarge =', isLarge);
-  console.log('headerColor.value =', headerColor.value);
-  console.log('headerColorIndex.value =', headerColorIndex.value);
-  
-  const newCard = {
-    x: 100,
-    y: 100,
-    text: 'RUY1234567890',
-    width: isLarge ? 494 : 380,
-    height: 280,
-    fill: '#ffffff',
-    stroke: '#000000',
-    strokeWidth: 2,
+function addCard() {
+  // Эта функция вызывается кнопкой "Добавить лицензию" (маленькую)
+  cardsStore.addCard({ 
+    type: 'small',
     headerBg: headerColor.value,
     colorIndex: headerColorIndex.value
-  }
-  
-  console.log('Creating card object:', newCard);
-  console.log('Calling cardsStore.addCard...');
-  const createdCard = cardsStore.addCard(newCard);
-  console.log('Card created successfully:', createdCard);
-  console.log('Total cards in store after adding:', cardsStore.cards.length);
-  console.log('=== addCard finished ===');
+  });
 }
 
 function addLargeCard() {
-  console.log('=== addLargeCard called ===');
-  addCard(true)
-  console.log('=== addLargeCard finished ===');
+  // Эта функция вызывается кнопкой "Добавить большую лицензию"
+  cardsStore.addCard({ 
+    type: 'large',
+    headerBg: headerColor.value,
+    colorIndex: headerColorIndex.value
+  });
 }
 
 function addTemplate() {
-  console.log('=== addTemplate called ===');
-  console.log('Creating template cards...');
-  
   const templateCards = [
-    { 
-      key: 'lena', 
-      x: 2240, 
-      y: -770, 
-      text: 'Елена',
-      pv: '330/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700', 
-      isLarge: true,
-      showSlfBadge: false,
-      showFendouBadge: false,
-      rankBadge: null
-    },
-    { 
-      key: 'a', 
-      x: 1750, 
-      y: -420, 
-      text: 'A',
-      pv: '30/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700'
-    },
-    { 
-      key: 'c', 
-      x: 1470, 
-      y: -70, 
-      text: 'C',
-      pv: '30/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700'
-    },
-    { 
-      key: 'd', 
-      x: 2030, 
-      y: -70, 
-      text: 'D',
-      pv: '30/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700'
-    },
-    { 
-      key: 'b', 
-      x: 2870, 
-      y: -420, 
-      text: 'B',
-      pv: '30/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700'
-    },
-    { 
-      key: 'e', 
-      x: 2590, 
-      y: -70, 
-      text: 'E',
-      pv: '30/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700'
-    },
-    { 
-      key: 'f', 
-      x: 3150, 
-      y: -70, 
-      text: 'F',
-      pv: '30/330pv',
-      balance: '0 / 0',
-      activePv: '0 / 0',
-      cycle: '0',
-      coinFill: '#ffd700'
-    },
+    { key: 'lena', x: 2240, y: -770, text: 'Елена', pv: '330/330pv', isLarge: true, showSlfBadge: false, showFendouBadge: false, rankBadge: null },
+    { key: 'a', x: 1750, y: -420, text: 'A', pv: '30/330pv' },
+    { key: 'c', x: 1470, y: -70, text: 'C', pv: '30/330pv' },
+    { key: 'd', x: 2030, y: -70, text: 'D', pv: '30/330pv' },
+    { key: 'b', x: 2870, y: -420, text: 'B', pv: '30/330pv' },
+    { key: 'e', x: 2590, y: -70, text: 'E', pv: '30/330pv' },
+    { key: 'f', x: 3150, y: -70, text: 'F', pv: '30/330pv' },
   ];
 
-  console.log('Template cards definition:', templateCards);
   const createdCardsMap = new Map();
 
   templateCards.forEach(cardDef => {
-    console.log('Creating template card:', cardDef.key);
-    
     const cardData = cardsStore.addCard({
-      x: cardDef.x,
-      y: cardDef.y,
-      text: cardDef.text,
-      width: cardDef.isLarge ? 494 : 380,
-      height: 280,
+      type: cardDef.isLarge ? 'large' : 'small',
+      ...cardDef, // Передаем все свойства из шаблона (x, y, text, pv и т.д.)
       headerBg: headerColor.value,
       colorIndex: headerColorIndex.value,
-      pv: cardDef.pv,
-      balance: cardDef.balance,
-      activePv: cardDef.activePv,
-      cycle: cardDef.cycle,
-      coinFill: cardDef.coinFill,
-      showSlfBadge: cardDef.showSlfBadge || false,
-      showFendouBadge: cardDef.showFendouBadge || false,
-      rankBadge: cardDef.rankBadge || null
     });
-    
     createdCardsMap.set(cardDef.key, cardData);
-    console.log('Template card created:', cardDef.key, cardData);
   });
-
-  console.log('All template cards created. Total cards in store:', cardsStore.cards.length);
-  console.log('Creating template connections...');
 
   const templateLines = [
     { startKey: 'b', startSide: 'right', endKey: 'f', endSide: 'top', thickness: 4 },
@@ -321,32 +210,19 @@ function addTemplate() {
     { startKey: 'lena', startSide: 'right', endKey: 'b', endSide: 'top', thickness: 4 },
   ];
 
-  console.log('Template lines definition:', templateLines);
-
   templateLines.forEach(lineDef => {
     const startCard = createdCardsMap.get(lineDef.startKey);
     const endCard   = createdCardsMap.get(lineDef.endKey);
-    if (!startCard || !endCard) {
-      console.log('Skipping connection - missing cards:', lineDef);
-      return;
-    }
+    if (!startCard || !endCard) return;
 
-    console.log('Creating connection:', lineDef);
-    connectionsStore.addConnection(
-      startCard.id,
-      endCard.id,
-      {
-        color: lineColor.value,
-        thickness: lineDef.thickness,
-        fromSide: lineDef.startSide,
-        toSide: lineDef.endSide,
-        animationDuration: animationDuration.value * 1000      }
-    );
+    connectionsStore.addConnection(startCard.id, endCard.id, {
+      color: lineColor.value,
+      thickness: lineDef.thickness,
+      fromSide: lineDef.startSide,
+      toSide: lineDef.endSide,
+      animationDuration: animationDuration.value * 1000
+    });
   });
-  
-  console.log('Total connections after template creation:', connectionsStore.connections.length);
-  console.log('=== addTemplate finished ===');
-}
 
 // Обработчики событий для DOM элементов
 function handleLineColorChange(e) {
