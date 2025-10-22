@@ -445,20 +445,13 @@ const updateSelectionRectFromEvent = (event) => {
   applySelectionFromRect(rect);
 };
 
-const finishSelection = ({ toggleMode = true } = {}) => {
-  if (!isSelecting.value) {
-    return;
-  }
+const finishSelection = () => {
 
   removeSelectionListeners();
   isSelecting.value = false;
   selectionRect.value = null;
   selectionStartPoint = null;
   selectionBaseSelection = new Set();
-
-  if (toggleMode && cardsStore.selectedCardIds.length > 0) {
-    canvasStore.setSelectionMode(false);
-  }
 
   setTimeout(() => {
     suppressNextStageClick = false;
@@ -478,14 +471,14 @@ const handleSelectionPointerUp = (event) => {
   if (isSelecting.value) {
     updateSelectionRectFromEvent(event);
   }
-  finishSelection({ toggleMode: true });
+  finishSelection();
 };
 
 const handleSelectionPointerCancel = (event) => {
   if (isSelecting.value) {
     updateSelectionRectFromEvent(event);
   }
-  finishSelection({ toggleMode: true });
+  finishSelection();
 };
 
 const startSelection = (event) => {
@@ -525,8 +518,8 @@ const startDrag = (event, cardId) => {
   if (event.button !== 0) {
     return;
   }
-  
-  if (isSelectionMode.value) {
+
+  if (isSelecting.value) {
     return;
   }
 
@@ -726,14 +719,20 @@ const handleStageClick = (event) => {
   if (suppressNextStageClick) {
     suppressNextStageClick = false;
     return;
-  }  
+  }
+  const preserveCardSelection = isSelectionMode.value;
   if (!event.ctrlKey && !event.metaKey) {
-    cardsStore.deselectAllCards();
-    selectedConnectionIds.value = [];
+    if (!preserveCardSelection) {
+      cardsStore.deselectAllCards();
+    }
   }
   
-  selectedCardId.value = null;
+  selectedConnectionIds.value = [];
   cancelDrawing();
+
+  if (!preserveCardSelection) {
+    selectedCardId.value = null;
+  }  
 };
 
 const addNewCard = () => {
@@ -796,7 +795,7 @@ const handleKeydown = (event) => {
       selectedConnectionIds.value = [];
       selectedCardId.value = null;
       cancelDrawing();
-        finishSelection({ toggleMode: false });
+      finishSelection();
       if (isSelectionMode.value) {
         canvasStore.setSelectionMode(false);
       }
@@ -866,7 +865,7 @@ watch(isDrawingLine, (isActive) => {
 });
 watch(isSelectionMode, (active) => {
   if (!active) {
-    finishSelection({ toggleMode: false });
+    finishSelection();
   }
 });
 const resetView = () => {};
