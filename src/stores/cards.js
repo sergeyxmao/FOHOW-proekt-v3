@@ -20,86 +20,75 @@ export const useCardsStore = defineStore('cards', {
   },
   
   actions: {
-    addCard(card) {
-      console.log('=== cardsStore.addCard called ===');
-      console.log('Input card data:', card);
-      
-      // Генерируем случайный номер лицензии, если не указан
+addCard(options = {}) {
+      const { type = 'large', ...cardData } = options;
+
       const generateLicenseNumber = () => {
         const prefix = 'RUY';
         const number = Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
         return prefix + number;
       };
-      
+
+      // Пресеты для разных типов лицензий
+      const presets = {
+        large: {
+          width: 380,
+          height: 280,
+          pv: '330/330pv',
+          text: generateLicenseNumber(),
+          historyText: 'Создана большая лицензия'
+        },
+        small: {
+          width: 250,
+          height: 180,
+          pv: '110/110pv',
+          text: 'Малая лицензия',
+          historyText: 'Создана малая лицензия'
+        }
+      };
+
+      const preset = presets[type] || presets.large;
+
       const newCard = {
+        // Базовые свойства
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        x: card.x || 100,
-        y: card.y || 100,
-        text: card.text || generateLicenseNumber(),
-        width: card.width || 380,
-        height: 280,
-        fill: card.fill || '#ffffff',
-        stroke: card.stroke || '#000000',
-        strokeWidth: card.strokeWidth || 2,
-        headerBg: card.headerBg || getHeaderColorRgb(0),
-        colorIndex: card.colorIndex || 0,
+        x: 100,
+        y: 100,
+        fill: '#ffffff',
+        stroke: '#000000',
+        strokeWidth: 2,
+        headerBg: getHeaderColorRgb(0),
+        colorIndex: 0,
         selected: false,
         
-        // Новые поля для лицензий
-        pv: card.pv || '330/330pv',
-        balance: card.balance || '0 / 0',
-        activePv: card.activePv || '0 / 0',
-        cycle: card.cycle || '0',
-        coinFill: card.coinFill || '#ffd700',
+        // Свойства из пресета
+        ...preset,
+
+        // Новые поля для лицензий (переопределяем из пресета, если нужно)
+        balance: '0 / 0',
+        activePv: '0 / 0',
+        cycle: '0',
+        coinFill: '#ffd700',
         
         // Значки
-        showSlfBadge: card.showSlfBadge || false,
-        showFendouBadge: card.showFendouBadge || false,
-        rankBadge: card.rankBadge || null, // null, '1', '2', '3', etc.
+        showSlfBadge: false,
+        showFendouBadge: false,
+        rankBadge: null,
         
         // Дополнительные свойства
-        bodyHTML: card.bodyHTML || ''
-      }
+        bodyHTML: '',
+
+        // Переданные вручную свойства (например, x, y) имеют наивысший приоритет
+        ...cardData
+      };
       
-      console.log('Created newCard object:', newCard);
-      this.cards.push(newCard)
-      console.log('Card added. Total cards:', this.cards.length);
+      this.cards.push(newCard);
       
-      const historyStore = useHistoryStore()
-      historyStore.setActionMetadata('create', `Создана карточка "${newCard.text}"`)
-      historyStore.saveState()
+      const historyStore = useHistoryStore();
+      historyStore.setActionMetadata('create', `${preset.historyText} "${newCard.text}"`);
+      historyStore.saveState();
       
-      console.log('=== cardsStore.addCard finished ===');
-      return newCard
-    },
-    
-    updateCardPosition(cardId, x, y) {
-      const card = this.cards.find(c => c.id === cardId)
-      if (card) {
-        card.x = x
-        card.y = y
-        
-        const historyStore = useHistoryStore()
-        historyStore.setActionMetadata('update', `Перемещена карточка "${card.text}"`)
-        historyStore.saveState()
-      }
-      return card
-    },
-    
-    updateCard(cardId, updates) {
-      const card = this.cards.find(c => c.id === cardId)
-      if (card) {
-        const oldText = card.text
-        Object.assign(card, updates)
-        
-        const historyStore = useHistoryStore()
-        const description = oldText !== updates.text
-          ? `Изменена карточка "${updates.text}"`
-          : `Изменены свойства карточки "${card.text}"`
-        historyStore.setActionMetadata('update', description)
-        historyStore.saveState()
-      }
-      return card
+      return newCard;
     },
     
 removeCard(cardId) {
