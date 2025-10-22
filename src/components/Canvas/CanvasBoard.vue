@@ -94,24 +94,36 @@ const resolveConnectionSides = (fromCard, toCard, preferredFromSide, preferredTo
 };
   
 const updateLinePath = (p1, p2, side1, side2) => {
-  const midP1 = { x: p1.x, y: p1.y };
-  const finalP2 = { x: p2.x, y: p2.y };  
+  const startP1 = { ...p1 };
+  const finalP2 = { ...p2 };
   
-  if (side1 === 'left' || side1 === 'right') {
-    midP1.x = p2.x;
-  } else {
-    midP1.y = p2.y;
+  // Отступ для начальной точки, чтобы освободить место для маркера
+  switch (side1) {
+    case 'top':    startP1.y -= MARKER_OFFSET; break;
+    case 'bottom': startP1.y += MARKER_OFFSET; break;
+    case 'left':   startP1.x -= MARKER_OFFSET; break;
+    case 'right':  startP1.x += MARKER_OFFSET; break;
   }
 
+  const midP1 = { ...startP1 };
+
+  // Логика для создания "колена" под прямым углом
+  if (side1 === 'left' || side1 === 'right') {
+    midP1.x = finalP2.x;
+  } else {
+    midP1.y = finalP2.y;
+  }
+
+  // Отступ для конечной точки, чтобы освободить место для маркера
   if (side2) {
-    if (side1 === 'left' || side1 === 'right') {
-      finalP2.y = p2.y + (p2.y > p1.y ? -MARKER_OFFSET : MARKER_OFFSET);
+    if (Math.abs(finalP2.x - midP1.x) > Math.abs(finalP2.y - midP1.y)) {
+      finalP2.x += (finalP2.x > midP1.x ? -MARKER_OFFSET : MARKER_OFFSET);
     } else {
-      finalP2.x = p2.x + (p2.x > p1.x ? -MARKER_OFFSET : MARKER_OFFSET);
+      finalP2.y += (finalP2.y > midP1.y ? -MARKER_OFFSET : MARKER_OFFSET);
     }
   }
-  
-  return `M ${p1.x} ${p1.y} L ${midP1.x} ${midP1.y} L ${finalP2.x} ${finalP2.y}`;
+
+  return `M ${startP1.x} ${startP1.y} L ${midP1.x} ${midP1.y} L ${finalP2.x} ${finalP2.y}`;
 };
 
 const connectionPaths = computed(() => {
