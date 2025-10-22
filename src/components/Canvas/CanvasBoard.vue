@@ -46,7 +46,8 @@ const isDrawingLine = ref(false);
 const previewLine = ref(null);
 const previewLineWidth = computed(() => connectionsStore.defaultLineThickness || 2);
 const mousePosition = ref({ x: 0, y: 0 });
-const selectedConnectionIds = ref([]);
+const connectionsStore = useConnectionsStore();
+const { selectedConnectionIds } = connectionsStore;
 
 const MARKER_OFFSET = 12;
 
@@ -279,13 +280,6 @@ const endDrawingLine = (cardId, side) => {
   cancelDrawing();
 };
 
-const cancelDrawing = () => {
-  connectionStart.value = null;
-  isDrawingLine.value = false;
-  previewLine.value = null;
-  emit('update-connection-status', 'Кликните на соединительную точку для создания линии');
-};
-
 const handleLineClick = (event, connectionId) => {
   event.stopPropagation();
   event.preventDefault();
@@ -293,20 +287,19 @@ const handleLineClick = (event, connectionId) => {
   const isCtrlPressed = event.ctrlKey || event.metaKey;
   
   if (isCtrlPressed) {
-    const index = selectedConnectionIds.value.indexOf(connectionId);
-    if (index > -1) {
-      selectedConnectionIds.value.splice(index, 1);
-    } else {
-      selectedConnectionIds.value.push(connectionId);
-    }
+    // Множественное выделение с Ctrl
+    connectionsStore.toggleConnectionSelection(connectionId);
   } else {
-    if (selectedConnectionIds.value.length === 1 && selectedConnectionIds.value[0] === connectionId) {
-      selectedConnectionIds.value = [];
+    // Одиночное выделение без Ctrl
+    if (selectedConnectionIds.length === 1 && selectedConnectionIds[0] === connectionId) {
+      connectionsStore.deselectAllConnections();
     } else {
-      selectedConnectionIds.value = [connectionId];
+      connectionsStore.deselectAllConnections();
+      connectionsStore.selectConnection(connectionId);
     }
   }
   
+  // Снимаем выделение с карточек
   cardsStore.deselectAllCards();
   selectedCardId.value = null;
   isConnecting.value = false;
@@ -315,7 +308,11 @@ const handleLineClick = (event, connectionId) => {
 
 const handleCardClick = (event, cardId) => {
   const isCtrlPressed = event.ctrlKey || event.metaKey;
-  selectedConnectionIds.value = [];
+  
+  // Снимаем выделение с линий при клике на карточку
+  if (!isCtrlPressed) {
+    connectionsStore.deselectAllConnections();
+  }
   
   if (!isConnecting.value) {
     if (isCtrlPressed) {
@@ -335,9 +332,10 @@ const handleCardClick = (event, cardId) => {
 };
 
 const handleStageClick = (event) => {
+const handleStageClick = (event) => {
   if (!event.ctrlKey && !event.metaKey) {
     cardsStore.deselectAllCards();
-    selectedConnectionIds.value = [];
+    connectionsStore.deselectAllConnections();
   }
   
   selectedCardId.value = null;
@@ -378,13 +376,12 @@ const deleteSelectedCards = () => {
 };
 
 const deleteSelectedConnections = () => {
-  if (selectedConnectionIds.value.length === 0) return;
+  if (selectedConnectionIds.length === 0) return;
   
-  console.log('Deleting connections:', selectedConnectionIds.value);
-  
-  selectedConnectionIds.value.forEach(connectionId => {
-    connectionsStore.removeConnection(connectionId);
-  });
+  console.log('Deleting connections:', selectedConnectionIds);
+  connectionsStore.removeMultipleConnections([...selectedConnectionIds]);
+  console.log('Connections deleted');
+};
   
   selectedConnectionIds.value = [];
   console.log('Connections deleted');
@@ -399,11 +396,12 @@ const handleKeydown = (event) => {
     tagName === 'select' ||
     target?.isContentEditable;
 
+  // Обработка Escape
   if (event.key === 'Escape' || event.code === 'Escape') {
     if (!isEditableElement) {
       event.preventDefault();
       cardsStore.deselectAllCards();
-      selectedConnectionIds.value = [];
+      connectionsStore.deselectAllConnections();
       selectedCardId.value = null;
       isConnecting.value = false;
       cancelDrawing();
@@ -419,11 +417,13 @@ const handleKeydown = (event) => {
 
   event.preventDefault();
 
-  if (selectedConnectionIds.value.length > 0) {
+  // Удаление выделенных линий
+  if (selectedConnectionIds.length > 0) {
     deleteSelectedConnections();
     return;
   }
   
+  // Удаление выделенных карточек
   if (cardsStore.selectedCardIds.length > 0) {
     deleteSelectedCards();
     return;
@@ -471,13 +471,6 @@ watch([isDrawingLine, isConnecting], ([drawing, connecting]) => {
     emit('update-connection-status', 'Кликните на соединительную точку для создания линии');
   }
 });
-
-watch(
-  () => connections.map(connection => connection.id),
-  (newIds) => {
-    selectedConnectionIds.value = selectedConnectionIds.value.filter(id => newIds.includes(id));
-  }
-);
   
 watch(() => canvasStore.backgroundColor, () => {}, { immediate: true });
 </script>
