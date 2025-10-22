@@ -102,21 +102,27 @@ export const useCardsStore = defineStore('cards', {
       return card
     },
     
-    removeCard(cardId) {
+removeCard(cardId) {
       const connectionsStore = useConnectionsStore()
       const card = this.cards.find(c => c.id === cardId)
-      
+      if (!card) return false
+
       const historyStore = useHistoryStore()
-      historyStore.setActionMetadata('delete', `Удалена карточка "${card?.text || 'Без названия'}"`)
-      
-      connectionsStore.removeConnectionsByCardId(cardId)
-      
+      // Устанавливаем метаданные до всех изменений
+      historyStore.setActionMetadata('delete', `Удалена карточка "${card.text}"`)
+
+      // Выполняем мутации состояния без сохранения в историю
+      connectionsStore.removeConnectionsByCardId(cardId, { saveToHistory: false })
+
       const index = this.cards.findIndex(c => c.id === cardId)
       if (index !== -1) {
         this.cards.splice(index, 1)
+        
+        // Теперь сохраняем итоговое состояние в историю один раз
         historyStore.saveState()
         return true
       }
+
       return false
     },
     
