@@ -493,7 +493,7 @@ watch(() => canvasStore.backgroundColor, () => {}, { immediate: true });
         class="svg-layer"
         :width="stageConfig.width"
         :height="stageConfig.height"
-        style="position: absolute; top: 0; left: 0; z-index: 1; overflow: visible;"
+        style="position: absolute; top: 0; left: 0; z-index: 1; overflow: visible; pointer-events: none;"
       >
         <defs>
           <marker
@@ -600,7 +600,7 @@ watch(() => canvasStore.backgroundColor, () => {}, { immediate: true });
   pointer-events: stroke;
   cursor: pointer;
   filter: drop-shadow(0 0 5px rgba(0, 0, 0, .15));
-  transition: stroke-width 0.2s ease, filter 0.2s ease;
+  transition: stroke-width 0.2s ease, filter 0.2s ease, stroke 0.2s ease;
 }
 
 .line.selected {
