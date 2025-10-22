@@ -222,20 +222,49 @@ const getBranchDescendants = (startCardId, branchFilter) => {
 
   while (queue.length > 0) {
     const currentId = queue.shift();
-    const childConnections = connections.value.filter(connection => connection.from === currentId);
 
-    for (const connection of childConnections) {
-      if (isInitialCard) {
-        const branchMatches =
-          (branchFilter === 'all' && ['left', 'right', 'bottom'].includes(connection.fromSide)) ||
+    for (const connection of connections.value) {
+      const fromCard = findCardById(connection.from);
+      const toCard = findCardById(connection.to);
+
+      if (!fromCard || !toCard) {
+        continue;
+      }
+
+      const fromTop = fromCard.y;
+      const toTop = toCard.y;
+
+      let parentId = connection.from;
+      let childId = connection.to;
+      let parentSide = connection.fromSide;
+
+      if (fromTop > toTop) {
+        parentId = connection.to;
+        childId = connection.from;
+        parentSide = connection.toSide;
+      } else if (fromTop === toTop) {
+        // Если карточки расположены на одной горизонтали, оставляем ориентацию соединения без изменений
+        parentId = connection.from;
+        childId = connection.to;
+        parentSide = connection.fromSide;
+      }
           connection.fromSide === branchFilter;
 
-        if (!branchMatches) {
-          continue;
+      if (parentId !== currentId) {
+        continue;
+      }
+
+      const normalizedParentSide = parentSide || 'bottom';
+
+      if (isInitialCard) {
+        if (branchFilter === 'all') {
+          if (!['left', 'right', 'bottom'].includes(normalizedParentSide)) {
+            continue;
+          }
+        } else if (branchFilter && normalizedParentSide !== branchFilter) {          continue;
         }
       }
 
-      const childId = connection.to;
       if (!visited.has(childId)) {
         visited.add(childId);
         descendants.add(childId);
