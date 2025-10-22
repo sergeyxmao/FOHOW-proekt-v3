@@ -32,11 +32,8 @@ const isLargeCard = computed(() => props.card.width >= 494);
 
 const handleCardClick = (event) => {
   event.stopPropagation();
-  if (event.target.classList.contains('card-title') && props.isSelected) {
-    startEditing();
-  } else {
-    emit('card-click', event, props.card.id);
-  }
+  emit('card-click', event, props.card.id);
+
 };
 
 const handleMouseDown = (event) => {
@@ -61,6 +58,15 @@ const startEditing = () => {
   });
 };
 
+const handleTitleDblClick = (event) => {
+  event.stopPropagation();
+  event.preventDefault();
+  if (!isEditing.value) {
+    startEditing();
+  }
+};
+
+  
 const finishEditing = () => {
   if (isEditing.value) {
     if (editText.value !== props.card.text) {
@@ -138,8 +144,8 @@ const updateValue = (event, field) => {
       <div
         v-else
         class="card-title"
-        :title="isSelected ? 'Кликните для редактирования' : ''"
-      >
+        :title="isSelected ? 'Двойной клик для редактирования' : ''"
+        @dblclick.stop="handleTitleDblClick"      >
         {{ card.text }}
       </div>
       
