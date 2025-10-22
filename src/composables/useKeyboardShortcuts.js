@@ -82,7 +82,6 @@ export function useKeyboardShortcuts(options = {}) {
           highlightButton('undo')
         }
       }
-	  
     }
     
     // Ctrl+Shift+Z (или Cmd+Shift+Z на Mac) - повтор действия
@@ -113,19 +112,6 @@ export function useKeyboardShortcuts(options = {}) {
       }
     }
   }
-  
-  // Delete - удаление выделенных элементов
-if (event.key === 'Delete' || event.code === 'Delete') {
-  // Пропускаем обработку, если фокус в поле ввода
-  if (isInputElement(event)) return;
-  
-  // Здесь логика удаления будет обрабатываться в CanvasBoard.vue
-  // Мы просто предотвращаем стандартное поведение
-  if (preventDefault) {
-    event.preventDefault();
-  }
-}
-  
   
   // Функция для включения/выключения горячих клавиш
   const setEnabled = (value) => {
