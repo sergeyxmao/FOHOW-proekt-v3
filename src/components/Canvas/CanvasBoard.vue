@@ -9,7 +9,9 @@ import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { getHeaderColorRgb } from '../../utils/constants';
 import { batchDeleteCards } from '../../utils/historyOperations';
 import { usePanZoom } from '../../composables/usePanZoom';
+import { useHistoryStore } from '../../stores/history.js';  
 
+const historyStore = useHistoryStore();  
 const emit = defineEmits(['update-connection-status']);
 
 const cardsStore = useCardsStore();
@@ -218,10 +220,20 @@ const handleDrag = (event) => {
   const newX = canvasPos.x - dragOffset.value.x;
   const newY = canvasPos.y - dragOffset.value.y;
   
-  cardsStore.updateCardPosition(draggedCardId.value, newX, newY);
+  // Обновляем позицию без сохранения в историю
+  cardsStore.updateCardPosition(draggedCardId.value, newX, newY, { saveToHistory: false });
 };
 
 const endDrag = () => {
+  if (draggedCardId.value) {
+    const card = cards.value.find(c => c.id === draggedCardId.value);
+    if (card) {
+      // Устанавливаем метаданные и сохраняем в историю ОДИН РАЗ в конце
+      historyStore.setActionMetadata('update', `Перемещена карточка "${card.text}"`);
+      historyStore.saveState();
+    }
+  }
+
   draggedCardId.value = null;
   document.removeEventListener('mousemove', handleDrag);
   document.removeEventListener('mouseup', endDrag);
