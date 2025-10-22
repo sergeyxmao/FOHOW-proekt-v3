@@ -77,27 +77,27 @@ export const useConnectionsStore = defineStore('connections', {
       }
       return false
     },
-    
-    removeConnectionsByCardId(cardId) {
-      // Удаляем все соединения, связанные с указанной карточкой
-      const initialLength = this.connections.length
+  
+removeConnectionsByCardId(cardId, options = { saveToHistory: true }) {
       const removedCount = this.connections.filter(
         conn => conn.from === cardId || conn.to === cardId
       ).length
-      
-      this.connections = this.connections.filter(
-        conn => conn.from !== cardId && conn.to !== cardId
-      )
-      
-      // Сохраняем состояние в историю, если были удалены соединения
+
       if (removedCount > 0) {
-        const historyStore = useHistoryStore()
-        historyStore.setActionMetadata('delete', `Удалено ${removedCount} соединений`)
-        historyStore.saveState()
+        this.connections = this.connections.filter(
+          conn => conn.from !== cardId && conn.to !== cardId
+        )
+
+        if (options.saveToHistory) {
+          const historyStore = useHistoryStore()
+          historyStore.setActionMetadata('delete', `Удалено ${removedCount} соединений`)
+          historyStore.saveState()
+        }
       }
-      
-      return removedCount // Возвращаем количество удаленных соединений
+
+      return removedCount
     },
+  
     
     // Метод для обновления свойств соединения
     updateConnection(connectionId, updates) {
