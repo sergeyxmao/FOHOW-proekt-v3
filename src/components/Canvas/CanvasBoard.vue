@@ -181,7 +181,7 @@ const createConnectionBetweenCards = (fromCardId, toCardId, options = {}) => {
   if (fromCardId === toCardId) return null;
 
   const fromCard = cards.value.find(card => card.id === fromCardId);
-  const toCard = cards.value.find(card => card.id === connection.to);
+  const toCard = cards.value.find(card => card.id === toCardId);
 
   if (!fromCard || !toCard) return null;
 
@@ -365,26 +365,6 @@ const handleStageClick = (event) => {
   selectedCardId.value = null;
   isConnecting.value = false;
   cancelDrawing();
-};
-
-const addNewCard = () => {
-  const colors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336'];
-  const randomColor = colors[Math.floor(Math.random() * colors.length)];
-  
-  const newCard = {
-    x: Math.random() * (stageConfig.value.width - 150),
-    y: Math.random() * (stageConfig.value.height - 80),
-    text: `Карточка ${cards.value.length + 1}`, // ← УДАЛИТЬ ЛИШНЮЮ ЗАПЯТУЮ
-    width: 150,
-    height: 80,
-    fill: randomColor,
-    stroke: '#000000',
-    strokeWidth: 1,
-    headerBg: getHeaderColorRgb(0),
-    colorIndex: 0
-  };
-  
-  cardsStore.addCard(newCard);
 };
 
 const deleteSelectedCards = () => {
