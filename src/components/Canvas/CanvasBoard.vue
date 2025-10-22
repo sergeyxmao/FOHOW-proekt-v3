@@ -263,13 +263,9 @@ const handlePointerDown = (event) => {
       endDrawingLine(cardId, side);
     }
     return;
-  } 
-  
-  if (!event.target.closest('.card')) {
-    if (isDrawingLine.value) {
-      cancelDrawing();
-    }
   }
+  
+  // НЕ отменяем рисование - линия должна следовать за мышкой
 };
 
 const startDrawingLine = (cardId, side) => {
