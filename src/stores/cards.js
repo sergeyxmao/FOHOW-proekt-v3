@@ -115,25 +115,19 @@ removeCard(cardId) {
       return false
     },
     
-    updateMultipleCardsPositions(updates) {
-      const updatedCards = []
-      
-      updates.forEach(({ cardId, x, y }) => {
-        const card = this.cards.find(c => c.id === cardId)
-        if (card) {
-          card.x = x
-          card.y = y
-          updatedCards.push(card)
+updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
+      const card = this.cards.find(c => c.id === cardId)
+      if (card) {
+        card.x = x
+        card.y = y
+        
+        if (options.saveToHistory) {
+          const historyStore = useHistoryStore()
+          historyStore.setActionMetadata('update', `Перемещена карточка "${card.text}"`)
+          historyStore.saveState()
         }
-      })
-      
-      if (updatedCards.length > 0) {
-        const historyStore = useHistoryStore()
-        historyStore.setActionMetadata('update', `Перемещено ${updatedCards.length} карточек`)
-        historyStore.saveState()
       }
-      
-      return updatedCards
+      return card
     },
     
     updateCardHeaderColor(cardIds, colorIndex) {
