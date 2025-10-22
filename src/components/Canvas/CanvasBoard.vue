@@ -20,7 +20,7 @@ const canvasStore = useCanvasStore();
 
 const { cards } = storeToRefs(cardsStore);
 const { connections } = storeToRefs(connectionsStore);
-const { backgroundColor } = storeToRefs(canvasStore);
+const { backgroundColor, isHierarchicalDragMode, isSelectionMode } = storeToRefs(canvasStore);
   
 watch(() => cardsStore.cards, (newCards, oldCards) => {
   console.log('=== Cards array updated ===');
@@ -51,6 +51,7 @@ const previewLine = ref(null);
 const previewLineWidth = computed(() => connectionsStore.defaultLineThickness || 2);
 const mousePosition = ref({ x: 0, y: 0 });
 const selectedConnectionIds = ref([]);
+const dragState = ref(null);  
 
 const MARKER_OFFSET = 12;
 
@@ -211,6 +212,89 @@ const previewLinePath = computed(() => {
   };
 });
 
+const findCardById = (cardId) => cards.value.find(card => card.id === cardId);
+
+const getBranchDescendants = (startCardId, branchFilter) => {
+  const visited = new Set([startCardId]);
+  const descendants = new Set();
+  const queue = [startCardId];
+  let isInitialCard = true;
+
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+    const childConnections = connections.value.filter(connection => connection.from === currentId);
+
+    for (const connection of childConnections) {
+      if (isInitialCard) {
+        const branchMatches =
+          (branchFilter === 'all' && ['left', 'right', 'bottom'].includes(connection.fromSide)) ||
+          connection.fromSide === branchFilter;
+
+        if (!branchMatches) {
+          continue;
+        }
+      }
+
+      const childId = connection.to;
+      if (!visited.has(childId)) {
+        visited.add(childId);
+        descendants.add(childId);
+        queue.push(childId);
+      }
+    }
+
+    isInitialCard = false;
+  }
+
+  return descendants;
+};
+
+const collectDragTargets = (cardId, event) => {
+  const dragIds = new Set();
+
+  if (isHierarchicalDragMode.value) {
+    const branchTarget = event.target;
+    let branchFilter = null;
+
+    if (branchTarget.closest('.card-header')) {
+      branchFilter = 'all';
+    } else {
+      const bodyElement = branchTarget.closest('.card-body');
+      if (!bodyElement) {
+        return [];
+      }
+      const bodyRect = bodyElement.getBoundingClientRect();
+      const offsetX = event.clientX - bodyRect.left;
+      branchFilter = offsetX < bodyRect.width / 2 ? 'left' : 'right';
+    }
+
+    cardsStore.deselectAllCards();
+    dragIds.add(cardId);
+    cardsStore.selectCard(cardId);
+
+    const descendants = getBranchDescendants(cardId, branchFilter);
+    descendants.forEach(descendantId => {
+      dragIds.add(descendantId);
+      cardsStore.selectCard(descendantId);
+    });
+  } else {
+    const isCardAlreadySelected = cardsStore.selectedCardIds.includes(cardId);
+
+    if (isCardAlreadySelected) {
+      cardsStore.selectedCardIds.forEach(id => dragIds.add(id));
+    } else {
+      cardsStore.deselectAllCards();
+      cardsStore.selectCard(cardId);
+      dragIds.add(cardId);
+    }
+  }
+
+  selectedCardId.value = cardId;
+  selectedConnectionIds.value = [];
+
+  return Array.from(dragIds);
+};
+  
 const createConnectionBetweenCards = (fromCardId, toCardId, options = {}) => {
   if (fromCardId === toCardId) return null;
 
@@ -233,9 +317,6 @@ const createConnectionBetweenCards = (fromCardId, toCardId, options = {}) => {
   });
 };
   
-const draggedCardId = ref(null);
-const dragOffset = ref({ x: 0, y: 0 });
-
 const screenToCanvas = (clientX, clientY) => {
   if (!canvasContainerRef.value) return { x: clientX, y: clientY };
   
@@ -247,43 +328,92 @@ const screenToCanvas = (clientX, clientY) => {
 };
 
 const startDrag = (event, cardId) => {
-  draggedCardId.value = cardId;
-  const card = cards.value.find(c => c.id === cardId);
-  if (card) {
-    const canvasPos = screenToCanvas(event.clientX, event.clientY);
-    dragOffset.value = {
-      x: canvasPos.x - card.x,
-      y: canvasPos.y - card.y
-    };
+  if (event.button !== 0) {
+    return;
   }
   
+  if (isSelectionMode.value) {
+    return;
+  }
+
+  const interactiveTarget = event.target.closest('button, input, textarea, select, [contenteditable="true"], a[href]');
+  if (interactiveTarget) {
+    return;
+  }
+
+  const dragTargetIds = collectDragTargets(cardId, event);
+  if (dragTargetIds.length === 0) {
+    return;
+  }
+
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+  const cardsToDrag = dragTargetIds
+    .map(id => {
+      const card = findCardById(id);
+      if (!card) return null;
+      return {
+        id: card.id,
+        startX: card.x,
+        startY: card.y
+      };
+    })
+    .filter(Boolean);
+
+  if (cardsToDrag.length === 0) {
+    return;
+  }
+
+  dragState.value = {
+    cards: cardsToDrag,
+    startPointer: canvasPos,
+    hasMoved: false
+  };
+
   document.addEventListener('mousemove', handleDrag);
   document.addEventListener('mouseup', endDrag);
   event.preventDefault();
 };
 
 const handleDrag = (event) => {
-  if (!draggedCardId.value) return;
-  
+  if (!dragState.value || dragState.value.cards.length === 0) {
+    return;
+  }
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
-  const newX = canvasPos.x - dragOffset.value.x;
-  const newY = canvasPos.y - dragOffset.value.y;
-  
-  // Обновляем позицию без сохранения в историю
-  cardsStore.updateCardPosition(draggedCardId.value, newX, newY, { saveToHistory: false });
+  const dx = canvasPos.x - dragState.value.startPointer.x;
+  const dy = canvasPos.y - dragState.value.startPointer.y;
+
+  dragState.value.cards.forEach(item => {
+    cardsStore.updateCardPosition(
+      item.id,
+      item.startX + dx,
+      item.startY + dy,
+      { saveToHistory: false }
+    );
+  });
+
+  if (dx !== 0 || dy !== 0) {
+    dragState.value.hasMoved = true;
+  }
 };
 
 const endDrag = () => {
-  if (draggedCardId.value) {
-    const card = cards.value.find(c => c.id === draggedCardId.value);
-    if (card) {
-      // Устанавливаем метаданные и сохраняем в историю ОДИН РАЗ в конце
-      historyStore.setActionMetadata('update', `Перемещена карточка "${card.text}"`);
-      historyStore.saveState();
+  if (dragState.value && dragState.value.hasMoved) {
+    const movedCardIds = dragState.value.cards.map(item => item.id);
+    const movedCount = movedCardIds.length;
+
+    let description = '';
+    if (movedCount === 1) {
+      const card = findCardById(movedCardIds[0]);
+      description = card ? `Перемещена карточка "${card.text}"` : 'Перемещена карточка';
+    } else {
+      description = `Перемещено ${movedCount} карточек`;
     }
+
+    historyStore.setActionMetadata('update', description);
+    historyStore.saveState();    
   }
 
-  draggedCardId.value = null;
+  dragState.value = null;
   document.removeEventListener('mousemove', handleDrag);
   document.removeEventListener('mouseup', endDrag);
 };
@@ -506,6 +636,8 @@ onBeforeUnmount(() => {
   }
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('pointermove', handleMouseMove); // Эту строку можно оставить или удалить, т.к. мы управляем ей в watch
+  document.removeEventListener('mousemove', handleDrag);
+  document.removeEventListener('mouseup', endDrag);
 });
 
 watch(isDrawingLine, (isActive) => {
