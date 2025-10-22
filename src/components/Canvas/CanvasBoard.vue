@@ -9,7 +9,6 @@ import { getHeaderColorRgb } from '../../utils/constants';
 import { batchDeleteCards } from '../../utils/historyOperations';
 import { usePanZoom } from '../../composables/usePanZoom';
   
-// Определяем emit для событий
 const emit = defineEmits(['update-connection-status']);
 
 const cardsStore = useCardsStore();
@@ -18,7 +17,6 @@ const canvasStore = useCanvasStore();
 const { cards } = cardsStore;
 const { connections } = connectionsStore;
 
-// Добавляем отслеживание изменений в массиве карточек
 watch(() => cardsStore.cards, (newCards, oldCards) => {
   console.log('=== Cards array updated ===');
   console.log('Previous cards count:', oldCards.length);
@@ -27,7 +25,6 @@ watch(() => cardsStore.cards, (newCards, oldCards) => {
   console.log('=== Cards update end ===');
 }, { deep: true });
 
-// Инициализируем горячие клавиши
 useKeyboardShortcuts({
   enabled: true,
   preventDefault: true,
@@ -41,13 +38,9 @@ const stageConfig = ref({
   height: 0
 });
 
-// Реф для контейнера canvas
 const canvasContainerRef = ref(null);
-
-// Подключаем зум и панорамирование
 const { scale: zoomScale, translateX: zoomTranslateX, translateY: zoomTranslateY } = usePanZoom(canvasContainerRef);
 
-// Состояние для создания соединений
 const selectedCardId = ref(null);
 const isConnecting = ref(false);
 const connectionStart = ref(null);
@@ -55,12 +48,12 @@ const isDrawingLine = ref(false);
 const previewLine = ref(null);
 const previewLineWidth = computed(() => connectionsStore.defaultLineThickness || 2);
 const mousePosition = ref({ x: 0, y: 0 });
-const selectedConnectionId = ref(null);
 
-// Константа для смещения маркеров
+// Массив для хранения выделенных линий
+const selectedConnectionIds = ref([]);
+
 const MARKER_OFFSET = 12;
 
-// Функция для получения координат точки подключения на карточке
 const getPointCoords = (card, side) => {
   const halfWidth = card.width / 2;
   const halfHeight = card.height / 2;
@@ -100,7 +93,6 @@ const resolveConnectionSides = (fromCard, toCard, preferredFromSide, preferredTo
   return { fromSide, toSide };
 };
   
-// Функция для вычисления Г-образного пути
 const updateLinePath = (p1, p2, side1, side2) => {
   const midP1 = { x: p1.x, y: p1.y };
   const finalP2 = { x: p2.x, y: p2.y };  
@@ -122,7 +114,6 @@ const updateLinePath = (p1, p2, side1, side2) => {
   return `M ${p1.x} ${p1.y} L ${midP1.x} ${midP1.y} L ${finalP2.x} ${finalP2.y}`;
 };
 
-// Вычисляемые свойства для SVG путей соединений
 const connectionPaths = computed(() => {
   return connections
     .map(connection => {
@@ -154,7 +145,6 @@ const connectionPaths = computed(() => {
     .filter(Boolean);
 });
 
-// Вычисляемое свойство для временной линии при рисовании
 const previewLinePath = computed(() => {
   if (!isDrawingLine.value || !connectionStart.value) return null;
   
@@ -198,14 +188,11 @@ const createConnectionBetweenCards = (fromCardId, toCardId, options = {}) => {
   });
 };
   
-// Состояние для перетаскивания
 const draggedCardId = ref(null);
 const dragOffset = ref({ x: 0, y: 0 });
 
-// Получаем значения масштаба и сдвига из usePanZoom
 const { scale: canvasScale, translateX: canvasTranslateX, translateY: canvasTranslateY } = usePanZoom(canvasContainerRef);
 
-// Функция для преобразования координат экрана в координаты canvas
 const screenToCanvas = (clientX, clientY) => {
   if (!canvasContainerRef.value) return { x: clientX, y: clientY };
   
@@ -216,7 +203,6 @@ const screenToCanvas = (clientX, clientY) => {
   return { x, y };
 };
 
-// Обработчики для перетаскивания карточек
 const startDrag = (event, cardId) => {
   draggedCardId.value = cardId;
   const card = cards.find(c => c.id === cardId);
@@ -249,7 +235,6 @@ const endDrag = () => {
   document.removeEventListener('mouseup', endDrag);
 };
 
-// Обработчик движения мыши для обновления временной линии
 const handleMouseMove = (event) => {
   if (isDrawingLine.value) {
     const canvasPos = screenToCanvas(event.clientX, event.clientY);
@@ -260,7 +245,6 @@ const handleMouseMove = (event) => {
   }
 };
 
-// Глобальный обработчик нажатия кнопки мыши/указателя
 const handlePointerDown = (event) => {
   const connectionPoint = event.target.closest('.connection-point');
   
@@ -288,16 +272,14 @@ const handlePointerDown = (event) => {
   }
 };
 
-// Начало рисования линии
 const startDrawingLine = (cardId, side) => {
-  selectedConnectionId.value = null;
+  selectedConnectionIds.value = [];
   connectionStart.value = { cardId, side };
   isDrawingLine.value = true;
   emit('update-connection-status', 'Рисование линии: кликните на соединительную точку другой карточки');
   console.log('Начало рисования линии:', connectionStart.value);
 };
 
-// Завершение рисования линии
 const endDrawingLine = (cardId, side) => {
   if (!connectionStart.value || connectionStart.value.cardId === cardId) {
     cancelDrawing();
@@ -313,7 +295,6 @@ const endDrawingLine = (cardId, side) => {
   cancelDrawing();
 };
 
-// Отмена рисования линии
 const cancelDrawing = () => {
   connectionStart.value = null;
   isDrawingLine.value = false;
@@ -322,53 +303,58 @@ const cancelDrawing = () => {
   console.log('Рисование линии отменено');
 };
 
-const toggleConnectionSelection = (connectionId) => {
-
-  if (selectedConnectionId.value === connectionId) {
-    selectedConnectionId.value = null;
-    return;
+// ОБРАБОТЧИКИ КЛИКОВ ПО ЛИНИЯМ С МНОЖЕСТВЕННЫМ ВЫДЕЛЕНИЕМ
+const handleLineClick = (event, connectionId) => {
+  event.stopPropagation();
+  event.preventDefault();
+  
+  const isCtrlPressed = event.ctrlKey || event.metaKey;
+  
+  console.log('Line clicked:', connectionId, 'Ctrl:', isCtrlPressed);
+  
+  if (isCtrlPressed) {
+    // Множественное выделение с Ctrl
+    const index = selectedConnectionIds.value.indexOf(connectionId);
+    if (index > -1) {
+      // Снимаем выделение
+      selectedConnectionIds.value.splice(index, 1);
+    } else {
+      // Добавляем к выделенным
+      selectedConnectionIds.value.push(connectionId);
+    }
+  } else {
+    // Одиночное выделение
+    if (selectedConnectionIds.value.length === 1 && selectedConnectionIds.value[0] === connectionId) {
+      // Если линия уже выделена одна, снимаем выделение
+      selectedConnectionIds.value = [];
+    } else {
+      // Выделяем только эту линию
+      selectedConnectionIds.value = [connectionId];
+    }
   }
-  selectedConnectionId.value = connectionId;
+  
+  // Снимаем выделение с карточек при выборе линий
   cardsStore.deselectAllCards();
   selectedCardId.value = null;
   isConnecting.value = false;
   cancelDrawing();
+  
+  console.log('Selected connections:', selectedConnectionIds.value);
 };
 
-let skipNextLineClick = false;
-
-const handleLinePointerDown = (event, connectionId) => {
-  event.stopPropagation();
-  event.preventDefault();
-
-  skipNextLineClick = true;
-  requestAnimationFrame(() => {
-    skipNextLineClick = false;
-  });
-
-  toggleConnectionSelection(connectionId);
-};
-
-const handleLineClick = (event, connectionId) => {
-  event.stopPropagation();
-  event.preventDefault();
-
-  if (skipNextLineClick) {
-    return;
-  }
-
-  toggleConnectionSelection(connectionId);
-};
-
-// Обработчик клика по карточке
+// ОБРАБОТЧИК КЛИКА ПО КАРТОЧКЕ С МНОЖЕСТВЕННЫМ ВЫДЕЛЕНИЕМ
 const handleCardClick = (event, cardId) => {
   const isCtrlPressed = event.ctrlKey || event.metaKey;
-  selectedConnectionId.value = null;
+  
+  // Снимаем выделение с линий при клике на карточку
+  selectedConnectionIds.value = [];
   
   if (!isConnecting.value) {
     if (isCtrlPressed) {
+      // Множественное выделение с Ctrl
       cardsStore.toggleCardSelection(cardId);
     } else {
+      // Одиночное выделение
       cardsStore.deselectAllCards();
       cardsStore.selectCard(cardId);
     }
@@ -382,19 +368,19 @@ const handleCardClick = (event, cardId) => {
   }
 };
 
-// Сброс режима соединения и выделения при клике на пустое место
+// ОБРАБОТЧИК КЛИКА НА ПУСТОЕ МЕСТО - СНИМАЕТ ВСЕ ВЫДЕЛЕНИЯ
 const handleStageClick = (event) => {
+  // Снимаем выделение только если не зажат Ctrl
   if (!event.ctrlKey && !event.metaKey) {
     cardsStore.deselectAllCards();
+    selectedConnectionIds.value = [];
   }
   
   selectedCardId.value = null;
   isConnecting.value = false;
-  selectedConnectionId.value = null;
   cancelDrawing();
 };
 
-// Функции для управления карточками
 const addNewCard = () => {
   const colors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336'];
   const randomColor = colors[Math.floor(Math.random() * colors.length)];
@@ -415,6 +401,7 @@ const addNewCard = () => {
   cardsStore.addCard(newCard);
 };
 
+// УДАЛЕНИЕ ВЫДЕЛЕННЫХ КАРТОЧЕК
 const deleteSelectedCards = () => {
   const uniqueIds = Array.from(new Set(cardsStore.selectedCardIds));
 
@@ -426,18 +413,31 @@ const deleteSelectedCards = () => {
   cardsStore.selectedCardIds = [];
   selectedCardId.value = null;
   isConnecting.value = false;
-  selectedConnectionId.value = null;
+  selectedConnectionIds.value = [];
   cancelDrawing();
 };
 
-const handleDeletionKeydown = (event) => {
-  const isDeleteKey = event.key === 'Delete' || event.code === 'Delete';
-  const isBackspaceKey = event.key === 'Backspace' || event.code === 'Backspace';
-
-  if (!isDeleteKey && !isBackspaceKey) {
+// УДАЛЕНИЕ ВЫДЕЛЕННЫХ ЛИНИЙ
+const deleteSelectedConnections = () => {
+  if (selectedConnectionIds.value.length === 0) {
     return;
   }
+  
+  console.log('Deleting connections:', selectedConnectionIds.value);
+  
+  // Удаляем каждую выделенную линию
+  selectedConnectionIds.value.forEach(connectionId => {
+    connectionsStore.removeConnection(connectionId);
+  });
+  
+  // Очищаем массив выделенных линий
+  selectedConnectionIds.value = [];
+  
+  console.log('Connections deleted');
+};
 
+// ОБРАБОТЧИК КЛАВИШ DELETE/BACKSPACE И ESCAPE
+const handleKeydown = (event) => {
   const target = event.target;
   const tagName = target?.tagName?.toLowerCase?.();
   const isEditableElement =
@@ -446,23 +446,44 @@ const handleDeletionKeydown = (event) => {
     tagName === 'select' ||
     target?.isContentEditable;
 
+  // ESCAPE - снимает все выделения
+  if (event.key === 'Escape' || event.code === 'Escape') {
+    if (!isEditableElement) {
+      event.preventDefault();
+      cardsStore.deselectAllCards();
+      selectedConnectionIds.value = [];
+      selectedCardId.value = null;
+      isConnecting.value = false;
+      cancelDrawing();
+      console.log('All selections cleared');
+    }
+    return;
+  }
+
+  // DELETE/BACKSPACE - удаляет выделенные элементы
+  const isDeleteKey = event.key === 'Delete' || event.code === 'Delete';
+  const isBackspaceKey = event.key === 'Backspace' || event.code === 'Backspace';
+
+  if (!isDeleteKey && !isBackspaceKey) {
+    return;
+  }
+
   if (isEditableElement) {
     return;
   }
 
-  if (selectedConnectionId.value) {
-    event.preventDefault();
-    connectionsStore.removeConnection(selectedConnectionId.value);
-    selectedConnectionId.value = null;
+  event.preventDefault();
+
+  // Приоритет удаления: сначала линии, потом карточки
+  if (selectedConnectionIds.value.length > 0) {
+    deleteSelectedConnections();
     return;
   }
   
-  if (cardsStore.selectedCardIds.length === 0) {
+  if (cardsStore.selectedCardIds.length > 0) {
+    deleteSelectedCards();
     return;
   }
-
-  event.preventDefault();
-  deleteSelectedCards();
 };
 
 onMounted(() => {
@@ -475,12 +496,13 @@ onMounted(() => {
 
   resizeStage();
   window.addEventListener('resize', resizeStage);
-  window.addEventListener('keydown', handleDeletionKeydown);
+  window.addEventListener('keydown', handleKeydown);
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('keydown', handleDeletionKeydown);
+  window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('pointermove', handleMouseMove);
+  window.removeEventListener('resize', resizeStage);
 });
 
 watch(isDrawingLine, (isActive) => {
@@ -492,14 +514,13 @@ watch(isDrawingLine, (isActive) => {
 });
 
 const resetView = () => {
-  // Функция для сброса вида - пока пустая, можно расширить позже
+  // Функция для сброса вида
 };
 
 defineExpose({
   resetView
 });
 
-// Следим за изменением статуса соединения
 watch([isDrawingLine, isConnecting], ([drawing, connecting]) => {
   if (drawing) {
     emit('update-connection-status', 'Рисование линии: кликните на соединительную точку другой карточки');
@@ -510,33 +531,26 @@ watch([isDrawingLine, isConnecting], ([drawing, connecting]) => {
   }
 });
 
+// Очищаем выделение линий, если линия была удалена
 watch(
   () => connections.map(connection => connection.id),
   (newIds) => {
-    if (selectedConnectionId.value && !newIds.includes(selectedConnectionId.value)) {
-      selectedConnectionId.value = null;
-    }
+    selectedConnectionIds.value = selectedConnectionIds.value.filter(id => newIds.includes(id));
   }
 );
   
-// Следим за изменением цвета фона в store
 watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
-  // Цвет фона изменен, реактивное обновление произойдет автоматически
+  // Цвет фона изменен
 }, { immediate: true });
 </script>
 
 <template>
-  <div
-    ref="canvasContainerRef"
-    class="canvas-container"
+  <div 
+    ref="canvasContainerRef" 
+    class="canvas-container" 
     :style="{ backgroundColor: canvasStore.backgroundColor }"
-    @click="handleStageClick"
-    @pointerdown="handlePointerDown"
-    @mousemove="handleMouseMove"
-    @dragstart.prevent
   >
     <div class="canvas-content">
-      <!-- SVG слой для отрисовки линий соединений -->
       <svg
         class="svg-layer"
         :width="stageConfig.width"
@@ -557,7 +571,6 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
           </marker>
         </defs>
 
-        <!-- Отрисовка Г-образных линий соединений -->
         <path
           v-for="path in connectionPaths"
           :key="path.id"
@@ -565,7 +578,7 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
           :class="[
             'line',
             {
-              selected: path.id === selectedConnectionId,
+              selected: selectedConnectionIds.includes(path.id),
               'line--balance-highlight': path.highlightType === 'balance',
               'line--pv-highlight': path.highlightType === 'pv'
             }
@@ -576,13 +589,13 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
             '--line-color': path.color,
             '--line-width': `${path.strokeWidth}px`,
             '--line-animation-duration': `${path.animationDuration}ms`,
-            color: path.color
+            color: path.color,
+            stroke: path.color,
+            strokeWidth: path.strokeWidth
           }"
-          @pointerdown.stop.prevent="(event) => handleLinePointerDown(event, path.id)"
-		  @click="(event) => handleLineClick(event, path.id)"
+          @click="(event) => handleLineClick(event, path.id)"
         />
 
-        <!-- Временная линия при рисовании соединения -->
         <path
           v-if="previewLinePath"
           :d="previewLinePath.d"
@@ -598,7 +611,6 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
         />
       </svg>
 
-      <!-- Контейнер для карточек (обычный HTML/DOM) -->
       <div
         class="cards-container"
         :style="{
@@ -607,8 +619,11 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
           position: 'relative',
           zIndex: 2
         }"
+        @click="handleStageClick"
+        @mousemove="handleMouseMove"
+        @pointerdown="handlePointerDown"
+        @dragstart.prevent
       >
-        <!-- Отрисовка карточек -->
         <Card
           v-for="card in cards"
           :key="card.id"
@@ -640,30 +655,29 @@ watch(() => canvasStore.backgroundColor, (newColor, oldColor) => {
   transform-origin: 0 0;
 }
 
-.cards-container {
-  pointer-events: none;
-}
-
-.cards-container :deep(.card) {
-  pointer-events: auto;
-}
-
 .line {
   fill: none;
   stroke: var(--line-color, #0f62fe);
   stroke-width: var(--line-width, 5px);
-  pointer-events: auto;
+  pointer-events: stroke;
   cursor: pointer;
   filter: drop-shadow(0 0 5px rgba(0, 0, 0, .15));
-  marker-start: url(#marker-dot);
-  marker-end: url(#marker-dot);
-  transition: stroke-dashoffset .3s ease;
+  transition: stroke-width 0.2s ease, filter 0.2s ease;
 }
 
 .line.selected {
-  stroke-dasharray: 6 6;
-  stroke-width: calc(var(--line-width, 5px) + 2px);
-  stroke-linecap: round;  
+  stroke: #ff0000 !important;
+  stroke-dasharray: 8 8;
+  stroke-width: calc(var(--line-width, 5px) + 3px) !important;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 12px rgba(255, 0, 0, 0.8));
+  animation: dash-animation 0.5s linear infinite;
+}
+
+@keyframes dash-animation {
+  to {
+    stroke-dashoffset: 16;
+  }
 }
 
 .line--preview {
