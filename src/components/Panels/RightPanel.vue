@@ -577,11 +577,10 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   background: var(--right-panel-bg);
   color: var(--right-panel-text);
   padding: 20px 22px;
-  /* Скругляем только правые углы */
   border-radius: 0 12px 12px 0;
-  /* Убираем собственную тень, так как она теперь на контейнере */
   box-shadow: none;
   min-width: 240px;
+  border-left: none; /* <-- Добавлена эта строка для удаления линии */
 }
 
 .ui-panel-right__actions {
