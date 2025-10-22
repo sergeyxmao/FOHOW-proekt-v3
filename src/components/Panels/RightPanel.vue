@@ -222,7 +222,8 @@ function addTemplate() {
       toSide: lineDef.endSide,
       animationDuration: animationDuration.value * 1000
     });
-  });
+   });
+} 
 
 // Обработчики событий для DOM элементов
 function handleLineColorChange(e) {
