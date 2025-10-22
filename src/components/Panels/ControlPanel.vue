@@ -1,6 +1,8 @@
 <script setup>
+import { storeToRefs } from 'pinia'  
 import { useCardsStore } from '../../stores/cards.js'
 import { useHistoryStore } from '../../stores/history.js'
+import { useCanvasStore } from '../../stores/canvas.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -13,9 +15,12 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['toggle-theme', 'toggle-collapse'])  
+const emit = defineEmits(['toggle-theme', 'toggle-collapse'])
 const cardsStore = useCardsStore()
 const historyStore = useHistoryStore()
+const canvasStore = useCanvasStore()
+
+const { isSelectionMode, isHierarchicalDragMode, guidesEnabled } = storeToRefs(canvasStore)  
 
 // Обработчики для кнопок левой панели
 const handleUndo = () => {
@@ -100,18 +105,18 @@ const handleNotesList = () => {
 }
 
 const handleSelectionMode = () => {
-  // Режим выделения
-  console.log('Переключить режим выделения')
+  canvasStore.toggleSelectionMode()
+
 }
 
 const handleHierarchicalDragMode = () => {
-  // Режим иерархии
-  console.log('Переключить режим иерархии')
+  canvasStore.toggleHierarchicalDragMode()
+
 }
 
 const handleToggleGuides = () => {
-  // Показать/скрыть направляющие
-  console.log('Переключить направляющие')
+  canvasStore.toggleGuides()
+
 }
 </script>
 
@@ -200,9 +205,33 @@ const handleToggleGuides = () => {
         <button class="ui-btn" title="Печать / Экспорт в PDF" @click="handlePrint">🖨️</button>
         <button class="ui-btn" title="Загрузить проект из JSON" @click="handleLoadProject">📂</button>
         <button class="ui-btn" title="Список заметок" @click="handleNotesList" disabled>🗒️</button>
-        <button class="ui-btn" title="Режим выделения (Esc)" @click="handleSelectionMode">⬚</button>
-        <button class="ui-btn" title="Режим иерархии" @click="handleHierarchicalDragMode">🌳</button>
-        <button class="ui-btn" title="Показать/скрыть направляющие" @click="handleToggleGuides">📐</button>
+        <button
+          class="ui-btn"
+          :class="{ active: isSelectionMode }"
+          :aria-pressed="isSelectionMode"
+          title="Режим выделения (Esc)"
+          @click="handleSelectionMode"
+        >
+          ⬚
+        </button>
+        <button
+          class="ui-btn"
+          :class="{ active: isHierarchicalDragMode }"
+          :aria-pressed="isHierarchicalDragMode"
+          title="Режим иерархии"
+          @click="handleHierarchicalDragMode"
+        >
+          🌳
+        </button>
+        <button
+          class="ui-btn"
+          :class="{ active: guidesEnabled }"
+          :aria-pressed="guidesEnabled"
+          title="Показать/скрыть направляющие"
+          @click="handleToggleGuides"
+        >
+          📐
+        </button>
         <button
           class="ui-btn left-panel-controls__collapse"
           type="button"
@@ -306,6 +335,11 @@ const handleToggleGuides = () => {
   box-shadow: 0 18px 32px rgba(15, 23, 42, 0.22);
 }
 
+.left-panel-controls .ui-btn.active {
+  border-color: rgba(15, 98, 254, 0.85);
+  box-shadow: 0 22px 36px rgba(15, 98, 254, 0.28);
+}
+  
 .left-panel-controls--modern .ui-btn:hover:not(:disabled) {
   background: rgba(44, 58, 82, 0.95);
   box-shadow: 0 32px 52px rgba(8, 12, 22, 0.58);
@@ -343,6 +377,11 @@ const handleToggleGuides = () => {
   background: radial-gradient(circle at 30% 30%, #0f62fe 0%, rgba(15,98,254,0.55) 60%, transparent 100%);
 }
 
+.left-panel-controls--modern .ui-btn.active {
+  border-color: rgba(89, 208, 255, 0.65);
+  box-shadow: 0 30px 48px rgba(17, 203, 255, 0.32);
+}
+  
 .left-panel-controls__collapse {
   width: var(--left-panel-btn-size);
   font-size: calc(var(--left-panel-btn-font) * 0.75);
