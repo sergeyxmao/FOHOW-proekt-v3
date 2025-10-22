@@ -20,6 +20,28 @@ export const useCardsStore = defineStore('cards', {
   },
   
   actions: {
+    updateCard(cardId, updates = {}, options = {}) {
+      const card = this.cards.find(c => c.id === cardId)
+      if (!card) {
+        return null
+      }
+
+      const normalizedUpdates = { ...updates }
+
+      Object.assign(card, normalizedUpdates)
+
+      const { saveToHistory = true, description } = options
+
+      if (saveToHistory) {
+        const historyStore = useHistoryStore()
+        const actionDescription = description || `Обновлена карточка "${card.text}"`
+        historyStore.setActionMetadata('update', actionDescription)
+        historyStore.saveState()
+      }
+
+      return card
+    },
+    
 addCard(options = {}) {
       const { type = 'large', ...cardData } = options;
 
