@@ -52,6 +52,7 @@ const previewLineWidth = computed(() => connectionsStore.defaultLineThickness ||
 const mousePosition = ref({ x: 0, y: 0 });
 const selectedConnectionIds = ref([]);
 const dragState = ref(null);
+const suppressNextCardClick = ref(false);  
 const isSelecting = ref(false);
 const selectionRect = ref(null);
 let selectionStartPoint = null;
@@ -599,7 +600,13 @@ const endDrag = () => {
     }
 
     historyStore.setActionMetadata('update', description);
-    historyStore.saveState();    
+    historyStore.saveState();
+    historyStore.saveState();
+
+    suppressNextCardClick.value = true;
+    setTimeout(() => {
+      suppressNextCardClick.value = false;
+    }, 0);    
   }
 
   dragState.value = null;
@@ -703,6 +710,10 @@ const handleLineClick = (event, connectionId) => {
 };
 
 const handleCardClick = (event, cardId) => {
+  if (suppressNextCardClick.value) {
+    suppressNextCardClick.value = false;
+    return;
+  }  
   const isCtrlPressed = event.ctrlKey || event.metaKey;
   selectedConnectionIds.value = [];
   
