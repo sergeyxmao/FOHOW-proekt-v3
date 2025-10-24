@@ -74,8 +74,9 @@ addCard(options = {}) {
       const newCard = {
         // Базовые свойства
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        x: 100,
-        y: 100,
+        // Размещаем новую лицензию в верхнем левом секторе рядом с панелью управления
+        x: 320,
+        y: 160,
         fill: '#ffffff',
         stroke: '#000000',
         strokeWidth: 2,
