@@ -475,22 +475,22 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   z-index: 2000;
   display: flex;
   align-items: flex-end;
-  --panel-bg: rgba(255, 255, 255, 0.86);
-  --panel-border: rgba(255, 255, 255, 0.55);
+  --panel-bg: rgba(255, 255, 255, 0.6);
+  --panel-border: rgba(15, 23, 42, 0.12);
   --panel-text: #17223b;
   --panel-shadow: 0 18px 36px rgba(16, 33, 67, 0.18);
   --panel-muted: rgba(23, 34, 59, 0.58);
-  --panel-highlight: rgba(15, 98, 254, 0.18);
-  --panel-button-bg: rgba(255, 255, 255, 0.92);
+  --panel-highlight: rgba(15, 98, 254, 0.14);
+  --panel-button-bg: rgba(255, 255, 255, 0.68);
   --panel-button-border: rgba(15, 98, 254, 0.18);
   --panel-button-shadow: 0 14px 26px rgba(15, 98, 254, 0.2);
   --panel-button-hover-shadow: 0 20px 36px rgba(15, 98, 254, 0.28);
   --panel-button-color: #0f62fe;
-  --panel-surface: rgba(255, 255, 255, 0.7);
-  --panel-surface-border: rgba(15, 98, 254, 0.14);
+  --panel-surface: rgba(255, 255, 255, 0.48);
+  --panel-surface-border: rgba(15, 98, 254, 0.12);
   --panel-contrast: #0f62fe;
-  --panel-card-btn-bg: rgba(255, 255, 255, 0.94);
-  --panel-card-btn-border: rgba(15, 98, 254, 0.22);
+  --panel-card-btn-bg: rgba(255, 255, 255, 0.75);
+  --panel-card-btn-border: rgba(15, 98, 254, 0.18);
   --panel-card-btn-shadow: 0 18px 30px rgba(15, 98, 254, 0.22);
   --panel-card-btn-hover-shadow: 0 26px 40px rgba(15, 98, 254, 0.28);
   --panel-card-btn-color: #1d3f8f;
@@ -500,21 +500,21 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
 }
 
 .right-control-panel--modern {
-  --panel-bg: linear-gradient(164deg, rgba(32, 44, 72, 0.96) 0%, rgba(18, 28, 48, 0.94) 100%);
+  --panel-bg: rgba(32, 44, 72, 0.88);
   --panel-border: rgba(114, 182, 255, 0.35);
   --panel-text: #e6f2ff;
   --panel-shadow: 0 28px 48px rgba(6, 12, 21, 0.62);
   --panel-muted: rgba(172, 198, 247, 0.78);
-  --panel-highlight: rgba(102, 176, 255, 0.22);
-  --panel-button-bg: rgba(44, 58, 88, 0.9);
+  --panel-highlight: rgba(102, 176, 255, 0.18);
+  --panel-button-bg: rgba(44, 58, 88, 0.78);
   --panel-button-border: rgba(136, 188, 255, 0.4);
   --panel-button-shadow: 0 18px 34px rgba(5, 10, 20, 0.52);
   --panel-button-hover-shadow: 0 26px 42px rgba(5, 10, 20, 0.6);
   --panel-button-color: #73c8ff;
-  --panel-surface: rgba(28, 38, 62, 0.86);
+  --panel-surface: rgba(40, 56, 90, 0.8);
   --panel-surface-border: rgba(114, 182, 255, 0.28);
   --panel-contrast: #73c8ff;
-  --panel-card-btn-bg: rgba(28, 38, 62, 0.94);
+  --panel-card-btn-bg: rgba(28, 38, 62, 0.8);
   --panel-card-btn-border: rgba(136, 188, 255, 0.42);
   --panel-card-btn-shadow: 0 20px 36px rgba(5, 10, 20, 0.58);
   --panel-card-btn-hover-shadow: 0 28px 46px rgba(5, 10, 20, 0.64);
