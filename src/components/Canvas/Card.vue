@@ -29,11 +29,17 @@ const textInput = ref(null);
 
 // Вычисляемое свойство для проверки, является ли карточка большой
 const isLargeCard = computed(() => props.card.width >= 494);
+const ignoreNextClick = ref(false);
 
 const handleCardClick = (event) => {
   event.stopPropagation();
-  emit('card-click', event, props.card.id);
 
+  if (ignoreNextClick.value) {
+    ignoreNextClick.value = false;
+    return;
+  }
+
+  emit('card-click', event, props.card.id);
 };
 
 const handleMouseDown = (event) => {
@@ -41,6 +47,24 @@ const handleMouseDown = (event) => {
 
   // Не начинаем перетаскивание, если кликнули на точку соединения
   if (event.target.classList.contains('connection-point')) {
+    return;
+  }
+  if (event.ctrlKey || event.metaKey) {
+    event.stopPropagation();
+    ignoreNextClick.value = true;
+
+    const clearIgnoreFlag = () => {
+      setTimeout(() => {
+        ignoreNextClick.value = false;
+      }, 0);
+      window.removeEventListener('pointerup', clearIgnoreFlag);
+      window.removeEventListener('pointercancel', clearIgnoreFlag);
+    };
+
+    window.addEventListener('pointerup', clearIgnoreFlag, { once: true });
+    window.addEventListener('pointercancel', clearIgnoreFlag, { once: true });
+
+    emit('card-click', event, props.card.id);
     return;
   }
 
