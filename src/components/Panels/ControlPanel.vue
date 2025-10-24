@@ -786,12 +786,12 @@ const handleToggleGuides = () => {
 .theme-toggle {
   position: relative;
   border: none;
-  background: linear-gradient(145deg, rgba(15,98,254,0.18), rgba(15,98,254,0.08));
+  background: var(--left-panel-btn-bg);
   box-shadow: inset 0 2px 0 rgba(255,255,255,0.25), 0 18px 30px rgba(15, 23, 42, 0.16);
 }
 
 .left-panel-controls--modern .theme-toggle {
-  background: linear-gradient(160deg, rgba(89, 208, 255, 0.22) 0%, rgba(89, 208, 255, 0.05) 100%);
+  background: var(--left-panel-btn-bg);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 32px 50px rgba(6, 11, 21, 0.48);
 }
 
@@ -814,8 +814,48 @@ const handleToggleGuides = () => {
 }
   
 .left-panel-controls__collapse {
+  position: relative;
+  overflow: hidden;  
   width: var(--left-panel-btn-size);
   font-size: calc(var(--left-panel-btn-font) * 0.75);
+ border: none;
+  box-shadow: none;
+  background: transparent;
+  transform: none;
+}
+
+.left-panel-controls__collapse span {
+  position: relative;
+  z-index: 1;
+}
+
+.left-panel-controls__collapse:hover {
+  transform: none;
+}
+
+.left-panel-controls__collapse::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--left-panel-btn-radius);
+  background: var(--left-panel-btn-bg);
+  border: 1px solid var(--left-panel-btn-border);
+  box-shadow: var(--left-panel-btn-shadow);
+  pointer-events: none;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+
+.left-panel-controls__collapse:hover::before {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.22);
+}
+
+.left-panel-controls--modern .left-panel-controls__collapse::before {
+  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.45);
+}
+
+.left-panel-controls--modern .left-panel-controls__collapse:hover::before {
+  box-shadow: 0 32px 52px rgba(8, 12, 22, 0.58);  
 }
 .left-panel-controls--collapsed .left-panel-controls__collapse {
   width: var(--left-panel-btn-size);
