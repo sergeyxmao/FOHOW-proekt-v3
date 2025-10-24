@@ -287,7 +287,8 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
       }
     ]"
   >
-    <div class="right-control-panel__shell">      <button
+    <div class="right-control-panel__shell">
+      <button
         class="right-control-panel__collapse"
         type="button"
         :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
@@ -457,6 +458,11 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
           <button class="add-card-btn" type="button" title="Добавить шаблон" @click="addTemplate">⧉</button>
         </div>
       </div>
+      <div v-else class="right-control-panel__collapsed-actions">
+        <button class="add-card-btn" type="button" title="Добавить лицензию" @click="addCard">□</button>
+        <button class="add-card-btn add-card-btn--large" type="button" title="Добавить большую лицензию" @click="addLargeCard">⧠</button>
+        <button class="add-card-btn" type="button" title="Добавить шаблон" @click="addTemplate">⧉</button>
+      </div>      
     </div>
   </div>
 </template>
@@ -520,11 +526,6 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
 .right-control-panel__shell {
   display: flex;
   align-items: stretch;
-  gap: 12px;
-}
-
-.right-control-panel--collapsed .right-control-panel__shell {
-
   gap: 0;
 }
 
@@ -536,7 +537,8 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   border: 1px solid var(--panel-border);
   border-right: none;
   background: var(--panel-bg);
-  color: var(--panel-button-color);  display: flex;
+  color: var(--panel-button-color);
+  display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
@@ -554,8 +556,21 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
 }
 
 .right-control-panel--collapsed .right-control-panel__collapse {
-  border-radius: 20px;
-  border-right: 1px solid var(--panel-border);
+  border-radius: 20px 0 0 20px;
+  border-right: none;
+}
+
+.right-control-panel__collapsed-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 18px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-left: none;
+  border-radius: 0 20px 20px 0;
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(22px);
 }
 
 .right-control-panel__card {
