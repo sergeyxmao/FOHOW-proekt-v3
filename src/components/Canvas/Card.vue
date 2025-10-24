@@ -29,45 +29,18 @@ const textInput = ref(null);
 
 // Вычисляемое свойство для проверки, является ли карточка большой
 const isLargeCard = computed(() => props.card.width >= 494);
-const ignoreNextClick = ref(false);
 
 const handleCardClick = (event) => {
   event.stopPropagation();
-
-  if (ignoreNextClick.value) {
-    ignoreNextClick.value = false;
-    return;
+  if (event.target.classList.contains('card-title') && props.isSelected) {
+    startEditing();
+  } else {
+    emit('card-click', event, props.card.id);
   }
-
-  emit('card-click', event, props.card.id);
 };
 
-const handlePointerDown = (event) => {
+const handleMouseDown = (event) => {
   if (isEditing.value) return;
-
-  // Не начинаем перетаскивание, если кликнули на точку соединения
-  if (event.target.classList.contains('connection-point')) {
-    return;
-  }
-  if (event.ctrlKey || event.metaKey) {
-    event.stopPropagation();
-    ignoreNextClick.value = true;
-
-    const clearIgnoreFlag = () => {
-      setTimeout(() => {
-        ignoreNextClick.value = false;
-      }, 0);
-      window.removeEventListener('pointerup', clearIgnoreFlag);
-      window.removeEventListener('pointercancel', clearIgnoreFlag);
-    };
-
-    window.addEventListener('pointerup', clearIgnoreFlag, { once: true });
-    window.addEventListener('pointercancel', clearIgnoreFlag, { once: true });
-
-    emit('card-click', event, props.card.id);
-    return;
-  }
-
   emit('start-drag', event, props.card.id);
 };
 
@@ -82,15 +55,6 @@ const startEditing = () => {
   });
 };
 
-const handleTitleDblClick = (event) => {
-  event.stopPropagation();
-  event.preventDefault();
-  if (!isEditing.value) {
-    startEditing();
-  }
-};
-
-  
 const finishEditing = () => {
   if (isEditing.value) {
     if (editText.value !== props.card.text) {
@@ -120,7 +84,9 @@ const handleBlur = () => {
 // Обработчик для удаления карточки
 const handleDelete = (event) => {
   event.stopPropagation();
-  cardsStore.removeCard(props.card.id);
+  if (confirm(`Удалить карточку "${props.card.text}"?`)) {
+    cardsStore.removeCard(props.card.id);
+  }
 };
 
 // Обработчик для обновления значений
@@ -133,24 +99,22 @@ const updateValue = (event, field) => {
 <template>
   <div
     class="card"
-    :data-card-id="card.id"    
     :class="{
       'selected': isSelected,
       'connecting': isConnecting,
       'editing': isEditing,
       'card--large': isLargeCard
     }"
-:style="{
+    :style="{
       position: 'absolute',
       left: card.x + 'px',
       top: card.y + 'px',
       width: card.width + 'px',
-      height: card.height + 'px',
       backgroundColor: card.fill,
       border: `${card.strokeWidth}px solid ${card.stroke}`,
     }"
     @click="handleCardClick"
-    @pointerdown="handlePointerDown"
+    @mousedown="handleMouseDown"
   >
     <!-- Заголовок карточки -->
     <div
@@ -169,8 +133,8 @@ const updateValue = (event, field) => {
       <div
         v-else
         class="card-title"
-        :title="isSelected ? 'Двойной клик для редактирования' : ''"
-        @dblclick.stop="handleTitleDblClick"      >
+        :title="isSelected ? 'Кликните для редактирования' : ''"
+      >
         {{ card.text }}
       </div>
       
@@ -191,52 +155,35 @@ const updateValue = (event, field) => {
         <svg class="coin-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
           <circle cx="50" cy="50" r="45" :fill="card.coinFill || '#ffd700'" stroke="#DAA520" stroke-width="5"/>
         </svg>
-        <span
-          class="value pv-value"
-          contenteditable="true"
-          @blur="updateValue($event, 'pv')"
-        >          {{ card.pv || '330/330pv' }}
+        <span class="value pv-value" contenteditable="true" @blur="updateValue($event, 'pv')">
+          {{ card.pv || '330/330pv' }}
         </span>
       </div>
       
       <!-- Баланс -->
       <div class="card-row">
         <span class="label">Баланс:</span>
-        <span
-          class="value"
-          contenteditable="true"
-          @blur="updateValue($event, 'balance')"
-        >          {{ card.balance || '0 / 0' }}
+        <span class="value" contenteditable="true" @blur="updateValue($event, 'balance')">
+          {{ card.balance || '0 / 0' }}
         </span>
       </div>
       
       <!-- Актив-заказы PV -->
       <div class="card-row">
         <span class="label">Актив-заказы PV:</span>
-        <span
-          class="value"
-          contenteditable="true"
-          @blur="updateValue($event, 'activePv')"
-        >          {{ card.activePv || '0 / 0' }}
+        <span class="value" contenteditable="true" @blur="updateValue($event, 'activePv')">
+          {{ card.activePv || '0 / 0' }}
         </span>
       </div>
       
       <!-- Цикл -->
       <div class="card-row">
         <span class="label">Цикл:</span>
-        <span
-          class="value"
-          contenteditable="true"
-          @blur="updateValue($event, 'cycle')"
-        >          {{ card.cycle || '0' }}
+        <span class="value" contenteditable="true" @blur="updateValue($event, 'cycle')">
+          {{ card.cycle || '0' }}
         </span>
       </div>
-
-      <div
-        v-if="card.bodyHTML"
-        class="card-body-html"
-        v-html="card.bodyHTML"
-      ></div>    </div>
+    </div>
     
     <!-- Значки -->
     <div v-if="card.showSlfBadge" class="slf-badge visible">SLF</div>
@@ -275,10 +222,10 @@ const updateValue = (event, field) => {
 <style scoped>
 .card {
   border-radius: 16px;
-  box-shadow: 10px 12px 24px rgba(15, 35, 95, 0.16), -6px -6px 18px rgba(255, 255, 255, 0.85);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   overflow: visible;
-  touch-action: none;
+  min-height: 280px;
 }
 
 .card:hover {
@@ -290,25 +237,6 @@ const updateValue = (event, field) => {
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.6), 0 12px 26px rgba(0, 0, 0, 0.18);
 }
 
-.card.note-active {
-  position: relative;
-}
-
-.card.note-active::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: inherit;
-  border: 2px solid rgba(225, 29, 72, 0.55);
-  box-shadow: 0 0 12px rgba(225, 29, 72, 0.35);
-  pointer-events: none;
-}
-
-.card.note-active .card-header {
-  box-shadow: inset 0 -2px 0 rgba(225, 29, 72, 0.45);
-}
-
-  
 .card-header {
   padding: 10px 44px 10px 10px;
   position: relative;
@@ -356,7 +284,7 @@ const updateValue = (event, field) => {
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.25);
   color: #fff;
-  font-size: 18px;
+  font-size: 24px;
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -371,46 +299,51 @@ const updateValue = (event, field) => {
 }
 
 .card-body {
-  padding: 16px;
-  background: var(--surface, #ffffff);
+  padding: 15px;
+  background: #fff;
   border-radius: 0 0 16px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px}
+  text-align: center; /* ИЗМЕНЕНИЕ: Центрируем весь текст */
+}
 
 .card-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: center; /* ИЗМЕНЕНИЕ: Центрируем содержимое */
   align-items: center;
-  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.card-row:last-child {
+  margin-bottom: 0;
 }
 
 .card-row.pv-row {
-  justify-content: flex-start;
+  justify-content: center;
   gap: 10px;
+  margin-bottom: 15px;
 }
 
 .coin-icon {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
 }
 
 .label {
-  font-weight: 500;
-  color: #6b7280;
+  font-weight: 700;
+  color: #374151;
   font-size: 14px;
+  text-align: center; /* ИЗМЕНЕНИЕ: Центрируем label */
 }
 
 .value {
   color: #111827;
-  font-weight: 600;
-  font-size: 15px;
+  font-weight: 800;
+  font-size: 20px;
   outline: none;
   padding: 3px 6px;
-  border-radius: 6px;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
-  cursor: text;
+  border-radius: 5px;
+  transition: background 0.15s ease;
+  text-align: center; /* ИЗМЕНЕНИЕ: Центрируем value */
 }
 
 .value:focus {
@@ -420,7 +353,23 @@ const updateValue = (event, field) => {
 
 .pv-value {
   font-size: 18px;
-  font-weight: 600;
+}
+
+/* ИЗМЕНЕНИЕ: Увеличение текста на 30% для большой лицензии */
+.card--large .card-title {
+  font-size: 26px; /* 20px * 1.3 = 26px */
+}
+
+.card--large .label {
+  font-size: 18.2px; /* 14px * 1.3 = 18.2px */
+}
+
+.card--large .value {
+  font-size: 26px; /* 20px * 1.3 = 26px */
+}
+
+.card--large .pv-value {
+  font-size: 23.4px; /* 18px * 1.3 = 23.4px */
 }
 
 /* Значки */
@@ -477,7 +426,7 @@ const updateValue = (event, field) => {
   cursor: pointer;
   transform: translate(-50%, -50%);
   display: none;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: background 0.15s, transform 0.15s;
   z-index: 101;
 }
 
@@ -510,13 +459,6 @@ const updateValue = (event, field) => {
   left: 100%;
 }
 
-.card-body-html {
-  font-size: 14px;
-  color: #111827;
-  line-height: 1.5;
-}
-
-  
 /* Большая карточка */
 .card--large {
   min-height: 280px;
