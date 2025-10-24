@@ -546,4 +546,3 @@ const updateValue = (event, field) => {
   font-size: 23.4px;
 }
 </style>  
-</style>
