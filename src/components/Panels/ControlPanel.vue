@@ -300,6 +300,8 @@ const handleExportSVG = async () => {
 
   try {
     const PADDING = 100
+    const VIEWPORT_PADDING = 400
+    
     const cards = cardsStore.cards.map(card => ({
       ...card,
       width: Number(card.width) || 380,
@@ -421,7 +423,7 @@ const handleExportSVG = async () => {
 
     const svgStyle = `
       <style>
-        .card { position: relative; display: inline-block; box-sizing: border-box; border-radius: 16px; overflow: visible; box-shadow: 10px 12px 24px rgba(15,35,95,0.16), -6px -6px 18px rgba(255,255,255,0.85); }
+        .card { position: relative; display: inline-block; box-sizing: border-box; border-radius: 16px; overflow: visible; box-shadow: 10px 12px 24px rgba(15,35,95,0.16), -6px -6px 18px rgba(255,255,255,0.85); border: 2px solid #000000; }
         .card-header { height: 52px; border-radius: 16px 16px 0 0; display: flex; align-items: center; justify-content: center; padding: 10px 44px; color: #fff; font-weight: 700; font-size: 20px; box-sizing: border-box; }
         .card-title { width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; text-align: center; color: #111827; }
@@ -440,9 +442,12 @@ const handleExportSVG = async () => {
     `
 
     const background = backgroundColor.value || '#ffffff'
-
+    const totalWidth = contentWidth + PADDING * 2
+    const totalHeight = contentHeight + PADDING * 2
+    const viewBoxWidth = totalWidth + VIEWPORT_PADDING * 2
+    const viewBoxHeight = totalHeight + VIEWPORT_PADDING * 2
     const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${contentWidth + PADDING * 2} ${contentHeight + PADDING * 2}" width="${contentWidth + PADDING * 2}" height="${contentHeight + PADDING * 2}" style="background:${background};">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-VIEWPORT_PADDING} ${-VIEWPORT_PADDING} ${viewBoxWidth} ${viewBoxHeight}" width="${viewBoxWidth}" height="${viewBoxHeight}" style="background:${background};">
   <defs>
     ${svgStyle}
     <marker id="marker-dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" fill="currentColor">
