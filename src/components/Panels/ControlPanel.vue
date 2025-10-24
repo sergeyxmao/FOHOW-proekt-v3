@@ -328,7 +328,6 @@ const handleExportSVG = async () => {
       const rankSrc = card.rankBadge ? await imageToDataUri(`/rank-${card.rankBadge}.png`) : ''
 
       const rows = [
-        { label: 'PV:', value: card.pv || '330/330pv' },
         { label: 'Баланс:', value: card.balance || '0 / 0' },
         { label: 'Актив-заказы PV:', value: card.activePv || '0 / 0' },
         { label: 'Цикл:', value: card.cycle || '0' }
