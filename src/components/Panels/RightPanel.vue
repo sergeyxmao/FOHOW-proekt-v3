@@ -179,17 +179,20 @@ function addLargeCard() {
 }
 
 function addTemplate() {
+  const baseX = 760;
+  const baseY = 160;  
   const templateCards = [
-    { key: 'lena', x: 2240, y: -770, text: 'Елена', pv: '330/330pv', isLarge: true, showSlfBadge: false, showFendouBadge: false, rankBadge: null },
-    { key: 'a', x: 1750, y: -420, text: 'A', pv: '30/330pv' },
-    { key: 'c', x: 1470, y: -70, text: 'C', pv: '30/330pv' },
-    { key: 'd', x: 2030, y: -70, text: 'D', pv: '30/330pv' },
-    { key: 'b', x: 2870, y: -420, text: 'B', pv: '30/330pv' },
-    { key: 'e', x: 2590, y: -70, text: 'E', pv: '30/330pv' },
-    { key: 'f', x: 3150, y: -70, text: 'F', pv: '30/330pv' },
+    { key: 'lena', x: baseX, y: baseY, text: 'Елена', pv: '330/330pv', isLarge: true, showSlfBadge: false, showFendouBadge: false, rankBadge: null },
+    { key: 'a', x: baseX - 360, y: baseY + 420, text: 'A', pv: '30/330pv' },
+    { key: 'c', x: baseX - 520, y: baseY + 720, text: 'C', pv: '30/330pv' },
+    { key: 'd', x: baseX - 160, y: baseY + 720, text: 'D', pv: '30/330pv' },
+    { key: 'b', x: baseX + 420, y: baseY + 420, text: 'B', pv: '30/330pv' },
+    { key: 'e', x: baseX + 260, y: baseY + 720, text: 'E', pv: '30/330pv' },
+    { key: 'f', x: baseX + 620, y: baseY + 720, text: 'F', pv: '30/330pv' },
   ];
 
   const createdCardsMap = new Map();
+  const createdCardIds = [];
 
   templateCards.forEach(cardDef => {
     const cardData = cardsStore.addCard({
@@ -199,6 +202,8 @@ function addTemplate() {
       colorIndex: headerColorIndex.value,
     });
     createdCardsMap.set(cardDef.key, cardData);
+    createdCardIds.push(cardData.id);
+   
   });
 
   const templateLines = [
@@ -223,7 +228,11 @@ function addTemplate() {
       animationDuration: animationDuration.value * 1000
     });
    });
-} 
+
+  // После создания шаблона выделяем все его карточки для удобного перемещения
+  cardsStore.deselectAllCards();
+  createdCardIds.forEach(id => cardsStore.selectCard(id));
+}
 
 // Обработчики событий для DOM элементов
 function handleLineColorChange(e) {
