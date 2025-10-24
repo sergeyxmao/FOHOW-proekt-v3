@@ -45,6 +45,11 @@ const CANVAS_PADDING = 400;
 const canvasContainerRef = ref(null);
 const { scale: zoomScale, translateX: zoomTranslateX, translateY: zoomTranslateY } = usePanZoom(canvasContainerRef);
 
+const canvasContentStyle = computed(() => ({
+  width: `${stageConfig.value.width}px`,
+  height: `${stageConfig.value.height}px`
+}));
+  
 const selectedCardId = ref(null);
 const connectionStart = ref(null);
 const isDrawingLine = ref(false);
@@ -400,9 +405,11 @@ const updateStageSize = () => {
 
   const maxRight = Math.max(...cards.value.map(card => card.x + card.width));
   const maxBottom = Math.max(...cards.value.map(card => card.y + card.height));
+  const dynamicPadding = Math.max(CANVAS_PADDING, containerWidth, containerHeight);
 
-  stageConfig.value.width = Math.max(containerWidth, maxRight + CANVAS_PADDING);
-  stageConfig.value.height = Math.max(containerHeight, maxBottom + CANVAS_PADDING);
+
+  stageConfig.value.width = Math.max(containerWidth, maxRight + dynamicPadding);
+  stageConfig.value.height = Math.max(containerHeight, maxBottom + dynamicPadding);
 };
 
 const removeSelectionListeners = () => {
@@ -626,6 +633,7 @@ const handleDrag = (event) => {
       { saveToHistory: false }
     );
   });
+  updateStageSize();
 
   if (dx !== 0 || dy !== 0) {
     dragState.value.hasMoved = true;
@@ -982,7 +990,7 @@ watch(cards, () => {
       class="selection-box"
       :style="selectionBoxStyle"
     ></div>  
-    <div class="canvas-content">
+    <div class="canvas-content" :style="canvasContentStyle">
 <svg
         class="svg-layer"
         :width="stageConfig.width"
