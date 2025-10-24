@@ -42,7 +42,7 @@ const handleCardClick = (event) => {
   emit('card-click', event, props.card.id);
 };
 
-const handleMouseDown = (event) => {
+const handlePointerDown = (event) => {
   if (isEditing.value) return;
 
   // Не начинаем перетаскивание, если кликнули на точку соединения
@@ -150,7 +150,7 @@ const updateValue = (event, field) => {
       border: `${card.strokeWidth}px solid ${card.stroke}`,
     }"
     @click="handleCardClick"
-    @mousedown="handleMouseDown"
+    @pointerdown="handlePointerDown"
   >
     <!-- Заголовок карточки -->
     <div
@@ -278,6 +278,7 @@ const updateValue = (event, field) => {
   box-shadow: 10px 12px 24px rgba(15, 35, 95, 0.16), -6px -6px 18px rgba(255, 255, 255, 0.85);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   overflow: visible;
+  touch-action: none;
 }
 
 .card:hover {
