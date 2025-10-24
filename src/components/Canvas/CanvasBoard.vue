@@ -40,6 +40,7 @@ const stageConfig = ref({
   width: 0,
   height: 0
 });
+const CANVAS_PADDING = 400;
 
 const canvasContainerRef = ref(null);
 const { scale: zoomScale, translateX: zoomTranslateX, translateY: zoomTranslateY } = usePanZoom(canvasContainerRef);
@@ -52,6 +53,8 @@ const previewLineWidth = computed(() => connectionsStore.defaultLineThickness ||
 const mousePosition = ref({ x: 0, y: 0 });
 const selectedConnectionIds = ref([]);
 const dragState = ref(null);
+let activeDragPointerId = null;
+let dragPointerCaptureElement = null;  
 const suppressNextCardClick = ref(false);  
 const isSelecting = ref(false);
 const selectionRect = ref(null);
@@ -381,6 +384,26 @@ const screenToCanvas = (clientX, clientY) => {
   
   return { x, y };
 };
+const updateStageSize = () => {
+  if (!canvasContainerRef.value) {
+    return;
+  }
+
+  const containerWidth = canvasContainerRef.value.clientWidth;
+  const containerHeight = canvasContainerRef.value.clientHeight;
+
+  if (!cards.value.length) {
+    stageConfig.value.width = containerWidth;
+    stageConfig.value.height = containerHeight;
+    return;
+  }
+
+  const maxRight = Math.max(...cards.value.map(card => card.x + card.width));
+  const maxBottom = Math.max(...cards.value.map(card => card.y + card.height));
+
+  stageConfig.value.width = Math.max(containerWidth, maxRight + CANVAS_PADDING);
+  stageConfig.value.height = Math.max(containerHeight, maxBottom + CANVAS_PADDING);
+};
 
 const removeSelectionListeners = () => {
   window.removeEventListener('pointermove', handleSelectionPointerMove);
@@ -559,8 +582,19 @@ const startDrag = (event, cardId) => {
     hasMoved: false
   };
 
-  document.addEventListener('mousemove', handleDrag);
-  document.addEventListener('mouseup', endDrag);
+  const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent;
+
+  if (isPointerEvent) {
+    activeDragPointerId = event.pointerId;
+    dragPointerCaptureElement = event.target;
+    dragPointerCaptureElement?.setPointerCapture?.(activeDragPointerId);
+    window.addEventListener('pointermove', handleDrag, { passive: false });
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+  } else {
+    window.addEventListener('mousemove', handleDrag);
+    window.addEventListener('mouseup', endDrag);
+  }
   event.preventDefault();
 };
 
@@ -568,6 +602,18 @@ const handleDrag = (event) => {
   if (!dragState.value || dragState.value.cards.length === 0) {
     return;
   }
+ 
+  if (
+    activeDragPointerId !== null &&
+    event.pointerId !== undefined &&
+    event.pointerId !== activeDragPointerId
+  ) {
+    return;
+  }
+
+  if (event.cancelable) {
+    event.preventDefault();
+  } 
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
   const dx = canvasPos.x - dragState.value.startPointer.x;
   const dy = canvasPos.y - dragState.value.startPointer.y;
@@ -586,7 +632,15 @@ const handleDrag = (event) => {
   }
 };
 
-const endDrag = () => {
+const endDrag = (event) => {
+  if (
+    event &&
+    activeDragPointerId !== null &&
+    event.pointerId !== undefined &&
+    event.pointerId !== activeDragPointerId
+  ) {
+    return;
+  }
   if (dragState.value && dragState.value.hasMoved) {
     const movedCardIds = dragState.value.cards.map(item => item.id);
     const movedCount = movedCardIds.length;
@@ -610,8 +664,16 @@ const endDrag = () => {
   }
 
   dragState.value = null;
-  document.removeEventListener('mousemove', handleDrag);
-  document.removeEventListener('mouseup', endDrag);
+  if (activeDragPointerId !== null) {
+    dragPointerCaptureElement?.releasePointerCapture?.(activeDragPointerId);
+  }
+  activeDragPointerId = null;
+  dragPointerCaptureElement = null;
+  window.removeEventListener('pointermove', handleDrag);
+  window.removeEventListener('pointerup', endDrag);
+  window.removeEventListener('pointercancel', endDrag);
+  window.removeEventListener('mousemove', handleDrag);
+  window.removeEventListener('mouseup', endDrag);
 };
 
 const handleMouseMove = (event) => {
@@ -840,10 +902,8 @@ const handleKeydown = (event) => {
 
 onMounted(() => {
   const resizeStage = () => {
-    if (canvasContainerRef.value) {
-      stageConfig.value.width = canvasContainerRef.value.clientWidth;
-      stageConfig.value.height = canvasContainerRef.value.clientHeight;
-    }
+    updateStageSize();
+
   };
 
   if (canvasContainerRef.value) { // Добавляем проверку
@@ -862,9 +922,12 @@ onBeforeUnmount(() => {
     canvasContainerRef.value.removeEventListener('pointerdown', handlePointerDown);
   }
   window.removeEventListener('keydown', handleKeydown);
-  window.removeEventListener('pointermove', handleMouseMove); // Эту строку можно оставить или удалить, т.к. мы управляем ей в watch
-  document.removeEventListener('mousemove', handleDrag);
-  document.removeEventListener('mouseup', endDrag);
+  window.removeEventListener('pointermove', handleMouseMove); // Управляем подпиской в watch
+  window.removeEventListener('pointermove', handleDrag);
+  window.removeEventListener('pointerup', endDrag);
+  window.removeEventListener('pointercancel', endDrag);
+  window.removeEventListener('mousemove', handleDrag);
+  window.removeEventListener('mouseup', endDrag);
   removeSelectionListeners();
   
 });
@@ -901,6 +964,10 @@ watch(
     selectedConnectionIds.value = selectedConnectionIds.value.filter(id => newIds.includes(id));
   }
 );
+
+watch(cards, () => {
+  updateStageSize();
+}, { deep: true });  
   
 </script>
 
