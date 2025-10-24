@@ -15,7 +15,6 @@ function clampAnimationDuration(duration) {
 export const useConnectionsStore = defineStore('connections', {
   state: () => ({
     connections: [],
-    // Параметры по умолчанию для новых соединений
     defaultLineColor: '#0f62fe',
     defaultLineThickness: 5,
     defaultHighlightType: null,
@@ -24,14 +23,13 @@ export const useConnectionsStore = defineStore('connections', {
   
   actions: {
     addConnection(fromCardId, toCardId, options = {}) {
-      // Проверяем, что соединение еще не существует
       const existingConnection = this.connections.find(
         conn => (conn.from === fromCardId && conn.to === toCardId) ||
                 (conn.from === toCardId && conn.to === fromCardId)
       )
       
       if (existingConnection) {
-        return null // Соединение уже существует
+        return null
       }
 
       const animationDuration = clampAnimationDuration(
@@ -44,10 +42,12 @@ export const useConnectionsStore = defineStore('connections', {
         from: fromCardId,
         to: toCardId,
         fromSide: options.fromSide || 'right',
-        toSide: options.toSide || 'left',        color: options.color || this.defaultLineColor,
+        toSide: options.toSide || 'left',
+        color: options.color || this.defaultLineColor, 
         thickness: options.thickness || this.defaultLineThickness,
         highlightType: options.highlightType ?? this.defaultHighlightType,
-        animationDuration      }
+        animationDuration 
+      }
       
       this.connections.push(newConnection)
       
@@ -62,10 +62,7 @@ export const useConnectionsStore = defineStore('connections', {
     removeConnection(connectionId) {
       const index = this.connections.findIndex(conn => conn.id === connectionId)
       if (index !== -1) {
-        // Получаем информацию о соединении перед удалением
-        const connection = this.connections[index]
-        
-        // Сохраняем состояние до удаления
+
         const historyStore = useHistoryStore()
         historyStore.setActionMetadata('delete', `Удалено соединение`)
         
@@ -78,7 +75,7 @@ export const useConnectionsStore = defineStore('connections', {
       return false
     },
   
-removeConnectionsByCardId(cardId, options = { saveToHistory: true }) {
+    removeConnectionsByCardId(cardId, options = { saveToHistory: true }) {
       const removedCount = this.connections.filter(
         conn => conn.from === cardId || conn.to === cardId
       ).length
@@ -114,13 +111,12 @@ removeConnectionsByCardId(cardId, options = { saveToHistory: true }) {
         
         // Сохраняем состояние в историю
         const historyStore = useHistoryStore()
-        historyStore.setActionMetadata('update', `Изменены свойства соединения`)
+        historyStore.setActionMetadata('update', 'Изменены свойства соединения')
         historyStore.saveState()
       }
       return connection
     },
-    
-    // Обновить цвет всех соединений
+
     updateAllConnectionsColor(color) {
       const updatedConnections = []
       
@@ -130,11 +126,10 @@ removeConnectionsByCardId(cardId, options = { saveToHistory: true }) {
       })
 
       this.defaultLineColor = color
-      
-      // Сохраняем состояние в историю
+
       if (updatedConnections.length > 0) {
         const historyStore = useHistoryStore()
-        historyStore.setActionMetadata('update', `Изменен цвет всех соединений`)
+        historyStore.setActionMetadata('update', 'Изменен цвет всех соединений')
         historyStore.saveState()
       }
       
@@ -150,19 +145,17 @@ removeConnectionsByCardId(cardId, options = { saveToHistory: true }) {
         updatedConnections.push(connection)
       })
 
-    this.defaultLineThickness = thickness
-      
-      // Сохраняем состояние в историю
+      this.defaultLineThickness = thickness
+
       if (updatedConnections.length > 0) {
         const historyStore = useHistoryStore()
-        historyStore.setActionMetadata('update', `Изменена толщина всех соединений`)
+        historyStore.setActionMetadata('update', 'Изменена толщина всех соединений')
         historyStore.saveState()
       }
       
       return updatedConnections
     },
-    
-    // Обновить параметры всех соединений
+
     updateAllConnections(updates) {
       const updatedConnections = []
       
@@ -173,7 +166,8 @@ removeConnectionsByCardId(cardId, options = { saveToHistory: true }) {
           normalizedUpdates.animationDuration = clampAnimationDuration(normalizedUpdates.animationDuration)
         }
 
-        Object.assign(connection, normalizedUpdates);        updatedConnections.push(connection)
+        Object.assign(connection, normalizedUpdates)
+        updatedConnections.push(connection)
       })
 
 
@@ -192,18 +186,16 @@ removeConnectionsByCardId(cardId, options = { saveToHistory: true }) {
       if (Object.prototype.hasOwnProperty.call(updates, 'animationDuration')) {
         this.defaultAnimationDuration = clampAnimationDuration(updates.animationDuration)
       }
-      
-      // Сохраняем состояние в историю
+
       if (updatedConnections.length > 0) {
         const historyStore = useHistoryStore()
-        historyStore.setActionMetadata('update', `Изменены параметры всех соединений`)
+        historyStore.setActionMetadata('update', 'Изменены параметры всех соединений')
         historyStore.saveState()
       }
       
       return updatedConnections
     },
     
-    // Установить параметры по умолчанию для новых соединений
     setDefaultConnectionParameters(color, thickness, animationDuration) {
       if (typeof color === 'string') {
         this.defaultLineColor = color
@@ -217,8 +209,52 @@ removeConnectionsByCardId(cardId, options = { saveToHistory: true }) {
         this.defaultAnimationDuration = clampAnimationDuration(animationDuration)
       }
     },
-    
-    // Групповая операция для удаления нескольких соединений
+
+    loadConnections(connectionsData = []) {
+      if (!Array.isArray(connectionsData)) {
+        this.connections = []
+        return this.connections
+      }
+
+      const normalizedConnections = connectionsData
+        .map(connection => {
+          if (!connection || typeof connection !== 'object') {
+            return null
+          }
+
+          if (!connection.from || !connection.to) {
+            return null
+          }
+
+          const thickness = typeof connection.thickness === 'number' && !Number.isNaN(connection.thickness)
+            ? connection.thickness
+            : this.defaultLineThickness
+
+          const animationDuration = clampAnimationDuration(
+            typeof connection.animationDuration === 'number' && !Number.isNaN(connection.animationDuration)
+              ? connection.animationDuration
+              : this.defaultAnimationDuration
+          )
+
+          return {
+            id: connection.id || `${Date.now().toString()}-${Math.random().toString(36).slice(2, 9)}`,
+            from: connection.from,
+            to: connection.to,
+            fromSide: connection.fromSide || 'right',
+            toSide: connection.toSide || 'left',
+            color: connection.color || this.defaultLineColor,
+            thickness,
+            highlightType: Object.prototype.hasOwnProperty.call(connection, 'highlightType')
+              ? connection.highlightType
+              : this.defaultHighlightType,
+            animationDuration
+          }
+        })
+        .filter(Boolean)
+
+      this.connections = normalizedConnections
+      return this.connections
+    },
     removeMultipleConnections(connectionIds) {
       const removedConnections = []
       
@@ -229,8 +265,7 @@ removeConnectionsByCardId(cardId, options = { saveToHistory: true }) {
           this.connections.splice(index, 1)
         }
       })
-      
-      // Сохраняем состояние в историю после всех удалений
+
       if (removedConnections.length > 0) {
         const historyStore = useHistoryStore()
         historyStore.setActionMetadata('delete', `Удалено ${removedConnections.length} соединений`)
