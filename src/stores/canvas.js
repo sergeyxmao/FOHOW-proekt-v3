@@ -2,25 +2,24 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useCanvasStore = defineStore('canvas', () => {
-  // State
+  
   const backgroundColor = ref('#ffffff')
-    const isSelectionMode = ref(false)
+  const isSelectionMode = ref(false)
   const isHierarchicalDragMode = ref(false)
   const guidesEnabled = ref(true)
-  // Actions
+
   function setBackgroundColor(color) {
-    backgroundColor.value = color;
-    // Применяем цвет к body
+    backgroundColor.value = color
     if (typeof document !== 'undefined') {
-      document.body.style.background = color;
+      document.body.style.background = color
     }
   }
   
   function setBackgroundGradient(gradient) {
-    backgroundColor.value = gradient;
-    // Применяем градиент к body
+    backgroundColor.value = gradient
+
     if (typeof document !== 'undefined') {
-      document.body.style.background = gradient;
+      document.body.style.background = gradient
     }
   }
 
@@ -55,16 +54,39 @@ export const useCanvasStore = defineStore('canvas', () => {
   function toggleGuides() {
     setGuidesEnabled(!guidesEnabled.value)
   }
-  
-  
-  // Return public API
+
+  function applyState(state = {}) {
+    if (!state || typeof state !== 'object') {
+      return
+    }
+
+    if (typeof state.backgroundColor === 'string') {
+      const value = state.backgroundColor
+
+      if (value.includes('gradient(')) {
+        setBackgroundGradient(value)
+      } else {
+        setBackgroundColor(value)
+      }
+    }
+
+    if (typeof state.isSelectionMode === 'boolean') {
+      setSelectionMode(state.isSelectionMode)
+    }
+
+    if (typeof state.isHierarchicalDragMode === 'boolean') {
+      setHierarchicalDragMode(state.isHierarchicalDragMode)
+    }
+
+    if (typeof state.guidesEnabled === 'boolean') {
+      setGuidesEnabled(state.guidesEnabled)
+    }
+  }
   return {
-    // State
     backgroundColor,
     isSelectionMode,
     isHierarchicalDragMode,
-    guidesEnabled,    
-    // Actions
+    guidesEnabled,
     setBackgroundColor,
     setBackgroundGradient,
     setSelectionMode,
@@ -72,5 +94,6 @@ export const useCanvasStore = defineStore('canvas', () => {
     setHierarchicalDragMode,
     toggleHierarchicalDragMode,
     setGuidesEnabled,
-    toggleGuides  }
-})
+    toggleGuides,
+    applyState
+  }})
