@@ -334,6 +334,8 @@ const collectDragTargets = (cardId, event) => {
 
     if (isCardAlreadySelected) {
       cardsStore.selectedCardIds.forEach(id => dragIds.add(id));
+    } else if (event?.ctrlKey || event?.metaKey) {
+      return [];    
     } else {
       cardsStore.deselectAllCards();
       cardsStore.selectCard(cardId);
