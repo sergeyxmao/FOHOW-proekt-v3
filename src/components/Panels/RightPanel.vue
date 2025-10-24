@@ -278,108 +278,131 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
 </script>
 
 <template>
-  <div :class="['ui-panel-right', { collapsed: isCollapsed, 'ui-panel-right--modern': props.isModernTheme }]">    <div class="ui-panel-right__container">
-      <button
-        class="ui-btn panel-collapse-btn"
+  <div
+    :class="[
+      'right-control-panel',
+      {
+        'right-control-panel--collapsed': isCollapsed,
+        'right-control-panel--modern': props.isModernTheme
+      }
+    ]"
+  >
+    <div class="right-control-panel__shell">      <button
+        class="right-control-panel__collapse"
+        type="button"
         :title="isCollapsed ? 'Развернуть настройки' : 'Свернуть настройки'"
         :aria-expanded="!isCollapsed"
         @click="togglePanel"
       >
         <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
       </button>
-      <div class="ui-panel-right__body">
-        <div class="line-controls-panel settings-card">
-          <div class="settings-card__row line-color-group">
-            <div
-              class="line-color-trigger" 
-              :style="{ backgroundColor: lineColor }" 
-              title="Выбрать цвет линии"
-              @click="openLineColorPicker"
-            ></div>
-            <button 
-              class="apply-all-btn" 
-              title="Применить ко всем линиям"
-              :class="{ active: isGlobalLineMode }"
-              @click="toggleGlobalLineMode"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-              </svg>
-            </button>
-          </div>
-          <input
-            ref="hiddenLineColorPicker"
-            type="color"
-            :value="lineColor"
-            style="display:none;"
-            @input="handleLineColorChange"
+
+      <div v-if="!isCollapsed" class="right-control-panel__card">
+        <div class="right-control-panel__top">
+          <button
+            class="line-color-button"
+            type="button"
+            :style="{ backgroundColor: lineColor }"
+            title="Выбрать цвет линии"
+            @click="openLineColorPicker"
+          ></button>
+          <button
+            class="global-mode-button"
+            type="button"
+            :class="{ active: isGlobalLineMode }"
+            title="Применить ко всем линиям"
+            @click="toggleGlobalLineMode"
           >
-          <div class="settings-card__section">
-            <div class="settings-card__header">
-              <span class="settings-card__title" id="thickness-slider-label">Толщина линии</span>
-              <span class="settings-card__value">{{ thickness }}px</span>
-            </div>
-            <div class="thickness-row">
-              <input
-                type="range"
-                id="thickness-slider"
-                class="thickness-slider"
-                min="1"
-                max="20"
-                step="1"
-                :value="thickness"
-                :style="{ background: sliderTrackStyle }"
-                @input="updateThickness($event.target.value)"
-                aria-labelledby="thickness-slider-label"
-              />
-            </div>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+          </button>
+        </div>
+
+        <input
+          ref="hiddenLineColorPicker"
+          type="color"
+          :value="lineColor"
+          style="display: none"
+          @input="handleLineColorChange"
+        >
+
+        <div class="control-section">
+          <div class="control-section__header">
+            <span class="control-section__title" id="thickness-slider-label">Толщина линии</span>
+            <span class="control-section__value">{{ thickness }}px</span>
           </div>
-          <div class="settings-card__section">
-            <div class="settings-card__header">
-              <span class="settings-card__title">Анимация</span>
-            </div>
-            <div class="animation-controls" aria-label="Настройки анимации">
-              <label class="animation-input" for="animation-duration-input">
-                <input
-                  type="number"
-                  id="animation-duration-input"
-                  class="animation-duration-input"
-                  min="2"
-                  max="999"
-                  step="1"
-                  :value="animationDuration"
-                  @input="updateAnimationDuration($event.target.value)"
-                  title="Продолжительность анимации в секундах"
-                  inputmode="numeric"
-                  maxlength="3"
-                />
-                <span class="animation-unit">сек</span>
-              </label>
-                 <button
-                class="animation-infinity-btn"
-                type="button"
-                title="Бесконечная анимация"
-                aria-label="Бесконечная анимация"
-              >
-                ∞
-              </button>           
-            </div>
+          <div class="control-section__slider">
+            <input
+              id="thickness-slider"
+              class="thickness-slider"
+              type="range"
+              min="1"
+              max="20"
+              step="1"
+              :value="thickness"
+              :style="{ background: sliderTrackStyle }"
+              aria-labelledby="thickness-slider-label"
+              @input="updateThickness($event.target.value)"
+            />
           </div>
         </div>
 
-        <div class="card-header-panel settings-card" aria-label="Настройки заголовка лицензии">
-          <span class="card-header-panel__label">Заголовок</span>
-          <div class="card-header-panel__controls">
+        <div class="control-section">
+          <span class="control-section__title">Анимация</span>
+          <div class="animation-row" aria-label="Настройки анимации">
+            <label class="animation-input" for="animation-duration-input">
+              <input
+                id="animation-duration-input"
+                class="animation-duration-input"
+                type="number"
+                min="2"
+                max="999"
+                step="1"
+                :value="animationDuration"
+                title="Продолжительность анимации в секундах"
+                inputmode="numeric"
+                maxlength="3"
+                @input="updateAnimationDuration($event.target.value)"
+              />
+              <span class="animation-unit">сек</span>
+            </label>
             <button
-              class="card-header-color-btn"
+              class="animation-infinity-btn"
               type="button"
-              title="Выбрать цвет заголовка"
+              title="Бесконечная анимация"
+              aria-label="Бесконечная анимация"
+            >
+              ∞
+            </button>
+          </div>
+        </div>
+
+        <div class="control-section control-section--accent">
+          <span class="control-section__title control-section__title--accent">Заголовок</span>
+          <div class="control-section__actions">
+            <button
+              class="header-color-button"
+              type="button"
               :style="{ backgroundColor: headerColor }"
+               title="Выбрать цвет заголовка"
+             
               @click="openHeaderColorPicker"
             ></button>
-            <button 
-              class="card-header-cycle-btn" 
-              type="button" 
+            <button
+              class="header-cycle-button"
+              type="button"
               title="Сменить цвет заголовка"
               @click="cycleHeaderColor"
             >
@@ -388,450 +411,280 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
           </div>
           <input
             ref="hiddenHeaderColorPicker"
-            type="color" 
-            :value="headerColor" 
-            style="display:none;"
+            type="color"
+            :value="headerColor"
+            style="display: none"
             @input="handleHeaderColorChange"
           >
         </div>
 
-        <div class="gradient-selector settings-card">
-          <div class="gradient-title">Фон</div>
-          <div class="gradient-options">
+        <div class="control-section control-section--accent">
+          <span class="control-section__title control-section__title--accent">Фон</span>
+          <div class="background-row">
             <button
-              class="grad-btn"
-              data-gradient="#f5f7fb"
-              title="Светлый"
+              class="background-button"
+              type="button"
               :style="{ backgroundColor: '#f5f7fb' }"
+              title="Светлый фон"          
               @click="updateBackground('#f5f7fb')"
             ></button>
             <button
-              class="grad-btn"
-              data-gradient="linear-gradient(135deg,#eef1f5,#dde3ea)"
-              title="Серый"
+              class="background-button"
+              type="button"
+              :style="{ background: 'linear-gradient(135deg, #eef1f5, #dde3ea)' }"
+              title="Серый фон"
               :style="{ background: 'linear-gradient(135deg,#eef1f5,#dde3ea)' }"
               @click="updateBackground('linear-gradient(135deg,#eef1f5,#dde3ea)')"
             ></button>
             <button
-              class="grad-btn"
+              class="background-button background-button--icon"
+              type="button"
               title="Выбрать цвет"
               @click="openBackgroundPicker"
             >🎨</button>
           </div>
           <input 
             ref="hiddenBackgroundPicker"
-            type="color" 
-            :value="backgroundGradient" 
-            style="display:none;"
+            type="color"
+            :value="backgroundGradient"
+            style="display: none"
             @input="handleBackgroundChange"
           >
-        </div>    
-      </div>
-    </div>
+        </div>
 
-    <div class="ui-panel-right__actions row">  
-      <button
-        class="add-btn"
-        title="Добавить лицензию"
-        @click="addCard"
-      >□</button>
-      <button
-        class="add-btn add-btn--large"
-        title="Добавить большую лицензию"
-        @click="addLargeCard"
-      >⧠</button>
-      <button
-        class="add-btn"
-        title="Добавить шаблон"
-        @click="addTemplate"
-      >⧉</button>
+        <div class="control-section control-section--footer">
+          <button class="add-card-btn" type="button" title="Добавить лицензию" @click="addCard">□</button>
+          <button class="add-card-btn add-card-btn--large" type="button" title="Добавить большую лицензию" @click="addLargeCard">⧠</button>
+          <button class="add-card-btn" type="button" title="Добавить шаблон" @click="addTemplate">⧉</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Правая панель */
-.ui-panel-right {
+.right-control-panel {
   position: fixed;
-  top: 20px;
-  right: 0px;
+  top: 24px;
+  right: 24px;
   z-index: 2000;
   display: flex;
-  flex-direction: column;
   align-items: flex-end;
-  gap: 14px;
-  --right-panel-bg: #fff;
-  --right-panel-text: var(--ink);
-  --right-panel-shadow: 10px 12px 24px rgba(15,35,95,.16), -6px -6px 18px rgba(255,255,255,.85);
-  --right-panel-btn-bg: #fff;
-  --right-panel-btn-border: #e5e7eb;
-  --right-panel-btn-color: var(--ink);
-  --right-panel-btn-shadow: 0 2px 6px rgba(0,0,0,.06);
-  --right-panel-btn-hover-bg: #fff;
-  --right-panel-btn-hover-border: #d1d5db;
-  --right-panel-btn-hover-shadow: 0 6px 14px rgba(0,0,0,.12);
-  --right-panel-btn-active-bg: #eaf1ff;
-  --right-panel-btn-active-border: #cfe0ff;
-  --right-panel-btn-active-color: #0b5bd3;
-  --right-panel-add-btn-bg: #fff;
-  --right-panel-add-btn-color: var(--brand);
-  --right-panel-add-btn-border: #e5e7eb;
-  --right-panel-add-btn-shadow: var(--shadow);
-  --right-panel-add-btn-hover-border: #cfe0ff;
-  --right-panel-add-btn-hover-shadow: 0 10px 22px rgba(0,0,0,.14);
-  --right-panel-muted: #7b849a;
-  --right-panel-surface: rgba(255,255,255,.65);
-  --right-panel-surface-shadow: inset 0 2px 6px rgba(175,188,210,.45);
-  --right-panel-input-bg: #fff;
-  --right-panel-input-border: rgba(167,178,204,.45);
-  --right-panel-input-shadow: inset 0 -2px 0 rgba(255,255,255,.45);
-  --right-panel-input-color: #111827;
-  --right-panel-input-focus-outline: rgba(15,98,254,.25);
-  --right-panel-input-focus-border: #0f62fe;
-  --right-panel-unit-color: #9ca3af;
-  --right-panel-apply-bg: rgba(255,255,255,.8);
-  --right-panel-apply-border: rgba(167,178,204,.5);
-  --right-panel-apply-color: #5d6b8a;
-  --right-panel-apply-shadow: inset 0 -2px 0 rgba(255,255,255,.45), 0 6px 12px rgba(88,112,160,.18);
-  --right-panel-apply-hover-bg: rgba(255,255,255,.92);
-  --right-panel-apply-hover-border: #0f62fe;
-  --right-panel-apply-hover-color: #0f62fe;
-  --right-panel-apply-hover-shadow: inset 0 -2px 0 rgba(255,255,255,.65), 0 10px 18px rgba(15,98,254,.22);
-  --right-panel-card-bg: rgba(15,98,254,.05);
-  --right-panel-card-border: rgba(15,98,254,.12);
-  --right-panel-card-label: #5d6b8a;
-  --right-panel-card-btn-bg: #fff;
-  --right-panel-card-btn-border: #d1d5db;
-  --right-panel-card-btn-color: #4b5563;
-  --right-panel-card-btn-shadow: inset 0 -2px 0 rgba(255,255,255,.55), 0 8px 16px rgba(88,112,160,.18);
-  --right-panel-card-btn-hover-border: #0f62fe;
-  --right-panel-card-btn-hover-color: #0f62fe;
-  --right-panel-card-btn-hover-shadow: inset 0 -2px 0 rgba(255,255,255,.75), 0 10px 20px rgba(15,98,254,.25);
-  --right-panel-gradient-bg: #fff;
-  --right-panel-gradient-shadow: var(--shadow);
-  --right-panel-grad-btn-border: #e5e7eb;
-  --right-panel-grad-btn-shadow: 0 2px 6px rgba(0,0,0,.06);
-  --right-panel-title-color: #374151;
-  --right-panel-slider-track: #dbe3f4;
-  --right-panel-section-shadow: 0 4px 10px rgba(0,0,0,.08);
+  --panel-bg: rgba(255, 255, 255, 0.86);
+  --panel-border: rgba(255, 255, 255, 0.55);
+  --panel-text: #17223b;
+  --panel-shadow: 0 18px 36px rgba(16, 33, 67, 0.18);
+  --panel-muted: rgba(23, 34, 59, 0.58);
+  --panel-highlight: rgba(15, 98, 254, 0.18);
+  --panel-button-bg: rgba(255, 255, 255, 0.92);
+  --panel-button-border: rgba(15, 98, 254, 0.18);
+  --panel-button-shadow: 0 14px 26px rgba(15, 98, 254, 0.2);
+  --panel-button-hover-shadow: 0 20px 36px rgba(15, 98, 254, 0.28);
+  --panel-button-color: #0f62fe;
+  --panel-surface: rgba(255, 255, 255, 0.7);
+  --panel-surface-border: rgba(15, 98, 254, 0.14);
+  --panel-contrast: #0f62fe;
+  --panel-card-btn-bg: rgba(255, 255, 255, 0.94);
+  --panel-card-btn-border: rgba(15, 98, 254, 0.22);
+  --panel-card-btn-shadow: 0 18px 30px rgba(15, 98, 254, 0.22);
+  --panel-card-btn-hover-shadow: 0 26px 40px rgba(15, 98, 254, 0.28);
+  --panel-card-btn-color: #1d3f8f;
+  --panel-badge-bg: rgba(15, 98, 254, 0.1);
+  --panel-badge-text: rgba(23, 34, 59, 0.75);
+  color: var(--panel-text);
 }
 
-.ui-panel-right--modern {
-  --right-panel-bg: linear-gradient(165deg, rgba(18,28,48,.98) 0%, rgba(14,20,36,.95) 100%);
-  --right-panel-text: #e5f3ff;
-  --right-panel-shadow: 0 24px 48px rgba(6,12,21,.65);
-  --right-panel-btn-bg: rgba(33,43,66,.88);
-  --right-panel-btn-border: rgba(96,164,255,.35);
-  --right-panel-btn-color: #e5f3ff;
-  --right-panel-btn-shadow: 0 12px 26px rgba(5,10,20,.5);
-  --right-panel-btn-hover-bg: rgba(44,58,88,.95);
-  --right-panel-btn-hover-border: rgba(136,188,255,.6);
-  --right-panel-btn-hover-shadow: 0 18px 34px rgba(4,9,18,.55);
-  --right-panel-btn-active-bg: rgba(44,58,88,.96);
-  --right-panel-btn-active-border: rgba(156,206,255,.65);
-  --right-panel-btn-active-color: #66b7ff;
-  --right-panel-add-btn-bg: rgba(33,43,66,.92);
-  --right-panel-add-btn-color: #66b7ff;
-  --right-panel-add-btn-border: rgba(96,164,255,.35);
-  --right-panel-add-btn-shadow: 0 20px 36px rgba(5,10,20,.55);
-  --right-panel-add-btn-hover-border: rgba(156,206,255,.65);
-  --right-panel-add-btn-hover-shadow: 0 28px 44px rgba(5,10,20,.6);
-  --right-panel-muted: #93a8d6;
-  --right-panel-surface: rgba(33,43,66,.8);
-  --right-panel-surface-shadow: inset 0 2px 6px rgba(9,15,28,.55);
-  --right-panel-input-bg: rgba(21,29,46,.9);
-  --right-panel-input-border: rgba(96,164,255,.35);
-  --right-panel-input-shadow: inset 0 -2px 0 rgba(255,255,255,.08);
-  --right-panel-input-color: #e5f3ff;
-  --right-panel-input-focus-outline: rgba(102,170,255,.35);
-  --right-panel-input-focus-border: rgba(136,188,255,.65);
-  --right-panel-unit-color: #b5c9f0;
-  --right-panel-apply-bg: rgba(33,43,66,.88);
-  --right-panel-apply-border: rgba(96,164,255,.35);
-  --right-panel-apply-color: #cfe4ff;
-  --right-panel-apply-shadow: inset 0 -2px 0 rgba(255,255,255,.12), 0 12px 24px rgba(5,10,20,.5);
-  --right-panel-apply-hover-bg: rgba(44,58,88,.96);
-  --right-panel-apply-hover-border: rgba(136,188,255,.65);
-  --right-panel-apply-hover-color: #66b7ff;
-  --right-panel-apply-hover-shadow: inset 0 -2px 0 rgba(255,255,255,.18), 0 18px 30px rgba(5,10,20,.55);
-  --right-panel-card-bg: rgba(33,43,66,.82);
-  --right-panel-card-border: rgba(96,164,255,.25);
-  --right-panel-card-label: #9db5e6;
-  --right-panel-card-btn-bg: rgba(24,34,52,.9);
-  --right-panel-card-btn-border: rgba(96,164,255,.35);
-  --right-panel-card-btn-color: #dce9ff;
-  --right-panel-card-btn-shadow: inset 0 -2px 0 rgba(255,255,255,.12), 0 12px 26px rgba(5,10,20,.5);
-  --right-panel-card-btn-hover-border: rgba(156,206,255,.65);
-  --right-panel-card-btn-hover-color: #66b7ff;
-  --right-panel-card-btn-hover-shadow: inset 0 -2px 0 rgba(255,255,255,.18), 0 18px 32px rgba(5,10,20,.55);
-  --right-panel-gradient-bg: rgba(33,43,66,.88);
-  --right-panel-gradient-shadow: 0 18px 34px rgba(5,10,20,.5);
-  --right-panel-grad-btn-border: rgba(96,164,255,.35);
-  --right-panel-grad-btn-shadow: 0 12px 24px rgba(5,10,20,.45);
-  --right-panel-title-color: #b5c9f0;
-  --right-panel-slider-track: rgba(64,84,124,.9);
-  --right-panel-section-shadow: 0 18px 34px rgba(5,10,20,.5);
+.right-control-panel--modern {
+  --panel-bg: linear-gradient(164deg, rgba(32, 44, 72, 0.96) 0%, rgba(18, 28, 48, 0.94) 100%);
+  --panel-border: rgba(114, 182, 255, 0.35);
+  --panel-text: #e6f2ff;
+  --panel-shadow: 0 28px 48px rgba(6, 12, 21, 0.62);
+  --panel-muted: rgba(172, 198, 247, 0.78);
+  --panel-highlight: rgba(102, 176, 255, 0.22);
+  --panel-button-bg: rgba(44, 58, 88, 0.9);
+  --panel-button-border: rgba(136, 188, 255, 0.4);
+  --panel-button-shadow: 0 18px 34px rgba(5, 10, 20, 0.52);
+  --panel-button-hover-shadow: 0 26px 42px rgba(5, 10, 20, 0.6);
+  --panel-button-color: #73c8ff;
+  --panel-surface: rgba(28, 38, 62, 0.86);
+  --panel-surface-border: rgba(114, 182, 255, 0.28);
+  --panel-contrast: #73c8ff;
+  --panel-card-btn-bg: rgba(28, 38, 62, 0.94);
+  --panel-card-btn-border: rgba(136, 188, 255, 0.42);
+  --panel-card-btn-shadow: 0 20px 36px rgba(5, 10, 20, 0.58);
+  --panel-card-btn-hover-shadow: 0 28px 46px rgba(5, 10, 20, 0.64);
+  --panel-card-btn-color: #e8f5ff;
+  --panel-badge-bg: rgba(255, 215, 64, 0.25);
+  --panel-badge-text: rgba(229, 243, 255, 0.92);
 }
-.ui-panel-right__container {
+
+.right-control-panel__shell {
   display: flex;
   align-items: stretch;
-  gap: 0; /* Убираем зазор */
-  /* Переносим тень на контейнер, чтобы она была общей */
-  box-shadow: var(--right-panel-shadow);
-  /* Скругляем углы контейнера, чтобы тень была правильной */
-  border-radius: 12px;
-}
-
-.ui-panel-right__body {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  background: var(--right-panel-bg);
-  color: var(--right-panel-text);
-  padding: 20px 22px;
-  border-radius: 0 12px 12px 0;
-  box-shadow: none;
-  min-width: 240px;
-  border-left: none; /* <-- Добавлена эта строка для удаления линии */
-}
-
-.ui-panel-right__actions {
-  display: flex;
-  flex-direction: column;
   gap: 12px;
-  align-items: flex-end;
 }
 
-.ui-panel-right.collapsed .ui-panel-right__body {
-  display: none;
-}
+.right-control-panel--collapsed .right-control-panel__shell {
 
-.ui-panel-right.collapsed .ui-panel-right__container {
   gap: 0;
 }
 
-.ui-panel-right .row {
-  display: flex;
-  gap: 10px;
+.right-control-panel__collapse {
+  width: 46px;
+  height: 64px;
+  padding: 0;
+  border-radius: 20px 0 0 20px;
+  border: 1px solid var(--panel-border);
+  border-right: none;
+  background: var(--panel-bg);
+  color: var(--panel-button-color);  display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.ui-btn {
-  min-width: 40px;
-  height: 40px;
-  padding: 0 10px;
-  background: var(--right-panel-btn-bg);
-  border: 1px solid var(--right-panel-btn-border);
-  border-radius: 10px;
-  font-size: 18px;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: var(--right-panel-btn-shadow);
-  transition: transform .15s, box-shadow .15s, background-color .15s, border-color .15s;
-  display: grid;
-  place-items: center;
-  color: var(--right-panel-btn-color);
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(22px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
-.ui-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--right-panel-btn-hover-shadow);
-  border-color: var(--right-panel-btn-hover-border);
-  background: var(--right-panel-btn-hover-bg);
+.right-control-panel__collapse:hover {
+  transform: translateX(-2px);
+  box-shadow: 0 22px 42px rgba(15, 98, 254, 0.25);
+  color: var(--panel-contrast);
 }
 
-.ui-btn.active {
-  background: var(--right-panel-btn-active-bg);
-  border-color: var(--right-panel-btn-active-border);
-  color: var(--right-panel-btn-active-color);
+.right-control-panel--collapsed .right-control-panel__collapse {
+  border-radius: 20px;
+  border-right: 1px solid var(--panel-border);
 }
 
-.ui-btn:disabled {
-  opacity: .45;
-  cursor: not-allowed;
+.right-control-panel__card {
+  width: 268px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 22px 20px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 26px;
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: blur(28px);
 }
 
-/* Кнопки + и ▶ в едином стиле */
-.add-btn {
+.right-control-panel__top {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--panel-surface);
+  border: 1px solid var(--panel-surface-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.line-color-button {
   width: 56px;
   height: 56px;
-  background: var(--right-panel-add-btn-bg);
-  color: var(--right-panel-add-btn-color);
-  border: 1px solid var(--right-panel-add-btn-border);
-  border-radius: 12px;
-  font-size: 28px;
-  font-weight: 700;
+  border-radius: 18px;
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 0 0 2px rgba(15, 98, 254, 0.22), 0 16px 28px rgba(15, 98, 254, 0.2);
   cursor: pointer;
-  box-shadow: var(--right-panel-add-btn-shadow);
-  transition: transform .15s, box-shadow .15s, border-color .15s;
-  display: grid;
-  place-items: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.add-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--right-panel-add-btn-hover-shadow);
-  border-color: var(--right-panel-add-btn-hover-border);
+.line-color-button:hover {
+  transform: translateY(-2px);
+  box-shadow: inset 0 0 0 2px rgba(15, 98, 254, 0.32), 0 22px 34px rgba(15, 98, 254, 0.28);
 }
 
-.add-btn--triangle {
-  color: #111;
-  font-size: 24px;
-}
-
-.add-btn--large {
-  font-size: 32px;
-  font-weight: 500;
-  line-height: 1;
-  padding-bottom: 4px;
-}
-
-
-/* Обновленная панель управления линиями */
-.panel-collapse-btn {
-  font-size: 18px;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  /* Скругляем только левые углы */
-  border-radius: 12px 0 0 12px;
-  /* Убираем тень и правую рамку для слияния */
-  box-shadow: none;
-  border-right: none;
-  /* Фон делаем таким же, как у панели */
-  background: var(--right-panel-bg);
-  /* Убеждаемся, что рамка слева такая же, как у всей панели */
-  border: 1px solid var(--right-panel-btn-border);
-}
-
-.panel-collapse-btn--floating {
-  display: grid;
-  place-items: center;
-}
-  
-.ui-panel-right.collapsed .panel-collapse-btn {
-  align-self: flex-end;
-}
-
-.line-controls-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  color: var(--right-panel-text, #1f2937);
-}
-
-.settings-card {
-  background: var(--right-panel-surface, #fff);
-  border-radius: 20px;
-  padding: 18px;
-  box-shadow: var(--right-panel-section-shadow, 0 4px 10px rgba(0, 0, 0, .08));
-  border: 1px solid var(--right-panel-card-border, transparent);
-}
-
-.settings-card__row {
+.global-mode-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  border: 1px solid var(--panel-button-border);
+  background: var(--panel-button-bg);
+  color: var(--panel-button-color);
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  box-shadow: var(--panel-button-shadow);
 }
 
-.settings-card__section {
+.global-mode-button svg {
+  stroke: currentColor;
+}
+
+.global-mode-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--panel-button-hover-shadow);
+  border-color: var(--panel-contrast);
+}
+
+.global-mode-button.active {
+  background: var(--panel-contrast);
+  color: #fff;
+  border-color: var(--panel-contrast);
+  box-shadow: 0 20px 36px rgba(15, 98, 254, 0.32);
+}
+
+.control-section {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--panel-surface);
+  border: 1px solid var(--panel-surface-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);  
 }
 
-.settings-card__header {
+.control-section__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;  
 }
 
-.settings-card__title {
-  text-transform: uppercase;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+.control-section__title {
+
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--panel-text);
+}
+
+.control-section__title--accent {
   font-size: 12px;
-  color: var(--right-panel-title-color, #374151);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--panel-muted);
 }
 
-.settings-card__value {
+.control-section__value {
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: var(--panel-badge-bg);
+  color: var(--panel-contrast);
   font-size: 13px;
   font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 10px;
-  background: rgba(15, 98, 254, .1);
-  color: var(--right-panel-btn-active-color, #0b5bd3);
-  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .65);
 }
 
-.line-color-group {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
+.control-section__slider {
 
-.line-color-trigger {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  border: 3px solid rgba(255, 255, 255, .85);
-  box-shadow: inset 0 0 0 2px rgba(15, 98, 254, .25),
-              0 8px 16px rgba(15, 98, 254, .18);
-  cursor: pointer;
-  transition: all .2s;
-}
-
-.line-color-trigger:hover {
-  transform: translateY(-2px);
-  box-shadow: inset 0 0 0 2px rgba(15, 98, 254, .35),
-              0 10px 20px rgba(15, 98, 254, .25);
-}
-
-.apply-all-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  border: 1px solid var(--right-panel-apply-border, #d1d5db);
-  background: var(--right-panel-apply-bg, #fff);
-  color: var(--right-panel-apply-color, #6b7280);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  transition: all .2s;
-  box-shadow: var(--right-panel-apply-shadow, inset 0 -2px 0 rgba(255,255,255,.45));
-}
-
-.apply-all-btn:hover {
-  background: var(--right-panel-apply-hover-bg, #f9fafb);
-  border-color: var(--right-panel-apply-hover-border, #0f62fe);
-  color: var(--right-panel-apply-hover-color, #0f62fe);
-  box-shadow: var(--right-panel-apply-hover-shadow, inset 0 -2px 0 rgba(255,255,255,.65));
-}
-
-.apply-all-btn.active {
-  background: var(--right-panel-btn-active-bg, #eaf1ff);
-  border-color: var(--right-panel-btn-active-border, #0f62fe);
-  color: var(--right-panel-btn-active-color, #0f62fe);
-}
-.thickness-row {
   padding: 12px 14px;
   border-radius: 16px;
-  background: rgba(15, 98, 254, .06);
-  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .65);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(15, 98, 254, 0.12);
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.45);
 }
 
 .thickness-slider {
   width: 100%;
-  height: 8px;
-  border-radius: 6px;
-  background: linear-gradient(
-    to right,
-    #0f62fe 0%,
-    #0f62fe 20%,
-    #e5e7eb 20%,
-    #e5e7eb 100%
-  );
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #0f62fe 0%, #0f62fe 20%, rgba(203, 213, 225, 0.7) 20%, rgba(203, 213, 225, 0.7) 100%);
   outline: none;
   -webkit-appearance: none;
   appearance: none;
@@ -839,38 +692,36 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
 
 .thickness-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: #fff;
-  border: 3px solid #0f62fe;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(15, 98, 254, .28);
-  transition: all .15s;
+  border: 4px solid #0f62fe;  cursor: pointer;
+  box-shadow: 0 10px 18px rgba(15, 98, 254, 0.32);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .thickness-slider::-webkit-slider-thumb:hover {
   transform: scale(1.08);
-  box-shadow: 0 6px 14px rgba(15, 98, 254, .4);
-}
+  box-shadow: 0 16px 26px rgba(15, 98, 254, 0.4);}
 
 .thickness-slider::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: #fff;
-  border: 3px solid #0f62fe;
+  border: 4px solid #0f62fe;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(15, 98, 254, .28);
-  transition: all .15s;
+  box-shadow: 0 10px 18px rgba(15, 98, 254, 0.32);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .thickness-slider::-moz-range-thumb:hover {
   transform: scale(1.08);
-  box-shadow: 0 6px 14px rgba(15, 98, 254, .4);
+  box-shadow: 0 16px 26px rgba(15, 98, 254, 0.4);
 }
 
-.animation-controls {
+.animation-row {
 
   display: flex;
   align-items: center;
@@ -880,17 +731,17 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
 .animation-input {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
-  border-radius: 14px;
-  background: rgba(255, 198, 48, .18);
-  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .6);
-  border: 1px solid rgba(255, 198, 48, .35);
-  color: var(--right-panel-text, #1f2937);  
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: rgba(255, 200, 68, 0.2);
+  border: 1px solid rgba(255, 200, 68, 0.34);
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.45);
+  color: var(--panel-text);
 }
 
 .animation-duration-input {
-  width: 52px;
+  width: 56px;
   border: none;
   background: transparent;
   font-size: 16px;
@@ -907,10 +758,6 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   margin: 0;
 }
 
-.animation-duration-input:focus {
-  box-shadow: none;
-}
-
 .animation-unit {
   font-size: 14px;
   font-weight: 600;
@@ -918,126 +765,195 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
 }
 
 .animation-infinity-btn {
-  display: inline-flex;
-  align-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-button-border);
+  background: var(--panel-highlight);
+  color: var(--panel-button-color);
+  display: flex  align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  border: 1px solid rgba(15, 98, 254, .4);
-  background: rgba(15, 98, 254, .12);
-  color: var(--right-panel-btn-active-color, #0b5bd3);
   font-size: 22px;
-  line-height: 1;
   cursor: pointer;
-  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .65);
-  transition: transform .2s, box-shadow .2s, border-color .2s;
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.45);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .animation-infinity-btn:hover {
-  transform: translateY(-1px);
-  border-color: var(--right-panel-btn-active-border, #0f62fe);
-  box-shadow: 0 10px 20px rgba(15, 98, 254, .18);
+  transform: translateY(-2px);
+  border-color: var(--panel-contrast);
+  box-shadow: 0 18px 28px rgba(15, 98, 254, 0.22);
 }
 
-/* Фон */
-.gradient-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
+.control-section__actions {
 
-.gradient-title {
-  align-self: flex-start;
-  padding: 6px 14px;
-  border-radius: 14px;
-  background: rgba(255, 215, 64, .22);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;  color: var(--right-panel-title-color);
-}
-.gradient-options {
-  display: flex;
-  gap: 12px;
-}
-.grad-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  border: 1px solid var(--right-panel-grad-btn-border);
-  cursor: pointer;
-  box-shadow: var(--right-panel-grad-btn-shadow);
-  transition: transform .15s, box-shadow .15s, border-color .15s;
-  background: var(--right-panel-btn-bg);
-}
-
-.grad-btn:hover {
-  transform: translateY(-1px);
-  border-color: var(--right-panel-btn-active-border, #0f62fe);
-  box-shadow: 0 10px 20px rgba(15, 98, 254, .18);  
-}
-
-/* Настройки заголовка */
-.card-header-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-
-}
-
-.card-header-panel__label {
-  align-self: flex-start;
-  padding: 6px 16px;
-  border-radius: 16px;
-  font-size: 12px;  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--right-panel-card-label);
-  background: rgba(93, 139, 244, .18);
-  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .65);  
-}
-
-.card-header-panel__controls {
   display: flex;
   gap: 12px;
   align-items: center;
 }
 
-.card-header-color-btn {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  border: none;
+.header-color-button {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  border: 3px solid rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  box-shadow: inset 0 0 0 4px rgba(255,255,255,.65), 0 8px 16px rgba(93,139,244,.28);
-  transition: transform .15s, box-shadow .15s;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.45), 0 18px 30px rgba(93, 139, 244, 0.24);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.card-header-color-btn:hover {
-  transform: translateY(-1px) scale(1.04);
-  box-shadow: inset 0 0 0 4px rgba(255,255,255,.75), 0 10px 20px rgba(93,139,244,.32);
+.header-color-button:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.6), 0 24px 36px rgba(93, 139, 244, 0.3);
 }
 
-.card-header-cycle-btn {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  border: 1px solid var(--right-panel-card-btn-border);
-  background: var(--right-panel-card-btn-bg);
-  color: var(--right-panel-card-btn-color);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  font-size: 22px;
+.header-cycle-button {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  border: 1px solid var(--panel-card-btn-border);
+  background: var(--panel-card-btn-bg);
+  color: var(--panel-card-btn-color);
+  font-size: 24px;
   line-height: 1;
-  box-shadow: var(--right-panel-card-btn-shadow);
-  transition: .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--panel-card-btn-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
-.card-header-cycle-btn:hover {
-  border-color: var(--right-panel-card-btn-hover-border);
-  color: var(--right-panel-card-btn-hover-color);
-  box-shadow: var(--right-panel-card-btn-hover-shadow);
+.header-cycle-button:hover {
+  transform: translateY(-2px);
+  border-color: var(--panel-contrast);
+  color: var(--panel-contrast);
+  box-shadow: var(--panel-card-btn-hover-shadow, 0 24px 38px rgba(15, 98, 254, 0.28));  
+}
+
+.background-row {
+  display: flex;
+  gap: 12px;
+}
+
+.background-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  border: 1px solid var(--panel-card-btn-border);
+  box-shadow: var(--panel-card-btn-shadow);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  background-size: cover;
+  background-position: center;
+}
+
+.background-button:hover {
+  transform: translateY(-2px);
+  border-color: var(--panel-contrast);
+  box-shadow: var(--panel-card-btn-hover-shadow, 0 24px 38px rgba(15, 98, 254, 0.28));
+}
+
+.background-button--icon {
+  background: var(--panel-card-btn-bg);
+  color: var(--panel-card-btn-color);
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-section--accent {
+  gap: 14px;
+}
+
+.control-section--footer {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.add-card-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  border: 1px solid var(--panel-card-btn-border);
+  background: var(--panel-card-btn-bg);
+  color: var(--panel-card-btn-color);
+  font-size: 28px;
+  font-weight: 700;  
+  cursor: pointer;
+  box-shadow: var(--panel-card-btn-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.add-card-btn--large {
+  font-size: 32px;
+}
+
+.add-card-btn:hover {
+  transform: translateY(-2px);
+  border-color: var(--panel-contrast);
+  color: var(--panel-contrast);
+  box-shadow: var(--panel-card-btn-hover-shadow, 0 26px 40px rgba(15, 98, 254, 0.3));
+}
+
+.right-control-panel--modern .control-section__slider {
+  background: rgba(32, 44, 72, 0.78);
+  border-color: rgba(114, 182, 255, 0.24);
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.08);
+}
+
+.right-control-panel--modern .thickness-slider {
+  background: linear-gradient(to right, rgba(114, 182, 255, 0.95) 0%, rgba(114, 182, 255, 0.95) 20%, rgba(62, 82, 124, 0.85) 20%, rgba(62, 82, 124, 0.85) 100%);
+}
+
+.right-control-panel--modern .thickness-slider::-webkit-slider-thumb,
+.right-control-panel--modern .thickness-slider::-moz-range-thumb {
+  border-color: #73c8ff;
+  box-shadow: 0 12px 22px rgba(114, 182, 255, 0.35);
+}
+
+.right-control-panel--modern .animation-input {
+  background: rgba(255, 200, 68, 0.24);
+  border-color: rgba(255, 200, 68, 0.38);
+  color: #fff;
+}
+
+.right-control-panel--modern .animation-infinity-btn {
+  background: rgba(114, 182, 255, 0.22);
+  color: #73c8ff;
+}
+
+.right-control-panel--modern .background-button {
+  background-color: rgba(44, 58, 88, 0.92);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+@media (max-width: 1440px) {
+  .right-control-panel {
+    top: 16px;
+    right: 16px;
+  }
+
+  .right-control-panel__card {
+    width: 252px;
+    padding: 22px 20px 18px;
+  }
 }
 </style>
