@@ -433,7 +433,6 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
               type="button"
               :style="{ background: 'linear-gradient(135deg, #eef1f5, #dde3ea)' }"
               title="Серый фон"
-              :style="{ background: 'linear-gradient(135deg,#eef1f5,#dde3ea)' }"
               @click="updateBackground('linear-gradient(135deg,#eef1f5,#dde3ea)')"
             ></button>
             <button
@@ -771,8 +770,8 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   border: 1px solid var(--panel-button-border);
   background: var(--panel-highlight);
   color: var(--panel-button-color);
-  display: flex  align-items: center;
-  justify-content: center;
+  display: flex;
+  align-items: center;  justify-content: center;
   font-size: 22px;
   cursor: pointer;
   box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.45);
