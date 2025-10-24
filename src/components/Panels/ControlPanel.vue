@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useCardsStore } from '../../stores/cards.js'
 import { useHistoryStore } from '../../stores/history.js'
 import { useCanvasStore } from '../../stores/canvas.js'
+import { useConnectionsStore } from '../../stores/connections.js'  
 
 const props = defineProps({
   isModernTheme: {
@@ -19,9 +20,10 @@ const emit = defineEmits(['toggle-theme', 'toggle-collapse'])
 const cardsStore = useCardsStore()
 const historyStore = useHistoryStore()
 const canvasStore = useCanvasStore()
+const connectionsStore = useConnectionsStore()
+  
 
-const { isSelectionMode, isHierarchicalDragMode, guidesEnabled } = storeToRefs(canvasStore)  
-
+const { backgroundColor, isSelectionMode, isHierarchicalDragMode, guidesEnabled } = storeToRefs(canvasStore)
 // Обработчики для кнопок левой панели
 const handleUndo = () => {
   historyStore.undo()
@@ -34,8 +36,22 @@ const handleRedo = () => {
 const handleSaveProject = () => {
   // Сохранение проекта в JSON
   const projectData = {
-    cards: cardsStore.cards,
-    timestamp: Date.now()
+    version: '1.0',
+    timestamp: Date.now(),
+    cards: JSON.parse(JSON.stringify(cardsStore.cards)),
+    connections: JSON.parse(JSON.stringify(connectionsStore.connections)),
+    connectionDefaults: {
+      color: connectionsStore.defaultLineColor,
+      thickness: connectionsStore.defaultLineThickness,
+      highlightType: connectionsStore.defaultHighlightType,
+      animationDuration: connectionsStore.defaultAnimationDuration
+    },
+    canvas: {
+      backgroundColor: backgroundColor.value,
+      isSelectionMode: isSelectionMode.value,
+      isHierarchicalDragMode: isHierarchicalDragMode.value,
+      guidesEnabled: guidesEnabled.value
+    }
   }
   const dataStr = JSON.stringify(projectData, null, 2)
   const dataBlob = new Blob([dataStr], {type: 'application/json'})
@@ -90,6 +106,30 @@ const handleLoadProject = () => {
         if (projectData.cards) {
           cardsStore.loadCards(projectData.cards)
         }
+         if (projectData.connections) {
+          connectionsStore.loadConnections(projectData.connections)
+        }
+        if (projectData.connectionDefaults) {
+          const defaults = projectData.connectionDefaults
+          const color = typeof defaults.color === 'string'
+            ? defaults.color
+            : connectionsStore.defaultLineColor
+          const thickness = typeof defaults.thickness === 'number' && !Number.isNaN(defaults.thickness)
+            ? defaults.thickness
+            : connectionsStore.defaultLineThickness
+          const animationDuration = typeof defaults.animationDuration === 'number' && !Number.isNaN(defaults.animationDuration)
+            ? defaults.animationDuration
+            : connectionsStore.defaultAnimationDuration
+
+          connectionsStore.setDefaultConnectionParameters(color, thickness, animationDuration)
+
+          if (Object.prototype.hasOwnProperty.call(defaults, 'highlightType')) {
+            connectionsStore.defaultHighlightType = defaults.highlightType
+          }
+        }
+        if (projectData.canvas && typeof canvasStore.applyState === 'function') {
+          canvasStore.applyState(projectData.canvas)
+        }       
       } catch (error) {
         console.error('Ошибка при загрузке проекта:', error)
       }
