@@ -21,10 +21,6 @@ const canvasStore = useCanvasStore();
 const { cards } = storeToRefs(cardsStore);
 const { connections } = storeToRefs(connectionsStore);
 const { backgroundColor, isHierarchicalDragMode, isSelectionMode } = storeToRefs(canvasStore);
-
-// Групповое перетаскивание
-const draggedCards = ref([]); // Массив перетаскиваемых карточек с их начальными позициями
-const isDraggingGroup = ref(false); // Флаг группового перетаскивания
   
 watch(() => cardsStore.cards, (newCards, oldCards) => {
   console.log('=== Cards array updated ===');
@@ -521,93 +517,92 @@ const startSelection = (event) => {
 };  
 
 const startDrag = (event, cardId) => {
-  const card = cards.find(c => c.id === cardId);
-  if (!card) return;
-  
-  // Проверяем, является ли карточка частью выделенной группы
-  const selectedCards = cards.filter(c => c.selected);
-  
-  if (card.selected && selectedCards.length > 1) {
-    // Групповое перетаскивание
-    isDraggingGroup.value = true;
-    draggedCardId.value = cardId; // Основная карточка для расчета смещения
-    
-    // Сохраняем начальные позиции всех выделенных карточек
-    draggedCards.value = selectedCards.map(c => ({
-      id: c.id,
-      startX: c.x,
-      startY: c.y
-    }));
-    
-    // Рассчитываем смещение от курсора до основной карточки
-    dragOffset.value = {
-      x: event.clientX - card.x,
-      y: event.clientY - card.y
-    };
-  } else {
-    // Одиночное перетаскивание
-    isDraggingGroup.value = false;
-    draggedCardId.value = cardId;
-    draggedCards.value = [];
-    
-    // Если карточка не выделена, выделяем только её
-    if (!card.selected) {
-      cardsStore.deselectAllCards();
-      cardsStore.selectCard(cardId);
-    }
-    
-    dragOffset.value = {
-      x: event.clientX - card.x,
-      y: event.clientY - card.y
-    };
+  if (event.button !== 0) {
+    return;
   }
-  
-  // Добавляем обработчики на документ
+
+  if (isSelecting.value) {
+    return;
+  }
+
+  const interactiveTarget = event.target.closest('button, input, textarea, select, [contenteditable="true"], a[href]');
+  if (interactiveTarget) {
+    return;
+  }
+
+  const dragTargetIds = collectDragTargets(cardId, event);
+  if (dragTargetIds.length === 0) {
+    return;
+  }
+
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+  const cardsToDrag = dragTargetIds
+    .map(id => {
+      const card = findCardById(id);
+      if (!card) return null;
+      return {
+        id: card.id,
+        startX: card.x,
+        startY: card.y
+      };
+    })
+    .filter(Boolean);
+
+  if (cardsToDrag.length === 0) {
+    return;
+  }
+
+  dragState.value = {
+    cards: cardsToDrag,
+    startPointer: canvasPos,
+    hasMoved: false
+  };
+
   document.addEventListener('mousemove', handleDrag);
   document.addEventListener('mouseup', endDrag);
-  
-  // Предотвращаем выделение текста при перетаскивании
   event.preventDefault();
 };
 
 const handleDrag = (event) => {
-  if (!draggedCardId.value) return;
-  
-  const newX = event.clientX - dragOffset.value.x;
-  const newY = event.clientY - dragOffset.value.y;
-  
-  if (isDraggingGroup.value && draggedCards.value.length > 0) {
-    // Групповое перетаскивание
-    const mainCard = draggedCards.value.find(c => c.id === draggedCardId.value);
-    if (!mainCard) return;
-    
-    // Рассчитываем смещение относительно начальной позиции основной карточки
-    const deltaX = newX - mainCard.startX;
-    const deltaY = newY - mainCard.startY;
-    
-    // Обновляем позиции всех выделенных карточек
-    const updates = draggedCards.value.map(cardInfo => ({
-      cardId: cardInfo.id,
-      x: cardInfo.startX + deltaX,
-      y: cardInfo.startY + deltaY
-    }));
-    
-    // Используем метод для обновления множества карточек
-    cardsStore.updateMultipleCardsPositions(updates);
-  } else {
-    // Одиночное перетаскивание
-    cardsStore.updateCardPosition(draggedCardId.value, newX, newY);
+  if (!dragState.value || dragState.value.cards.length === 0) {
+    return;
+  }
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+  const dx = canvasPos.x - dragState.value.startPointer.x;
+  const dy = canvasPos.y - dragState.value.startPointer.y;
+
+  dragState.value.cards.forEach(item => {
+    cardsStore.updateCardPosition(
+      item.id,
+      item.startX + dx,
+      item.startY + dy,
+      { saveToHistory: false }
+    );
+  });
+
+  if (dx !== 0 || dy !== 0) {
+    dragState.value.hasMoved = true;
   }
 };
 
 const endDrag = () => {
-  // НЕ сбрасываем выделение после перемещения!
-  // Только очищаем временные переменные для перетаскивания
-  draggedCardId.value = null;
-  draggedCards.value = [];
-  isDraggingGroup.value = false;
-  
-  // Удаляем обработчики с документа
+  if (dragState.value && dragState.value.hasMoved) {
+    const movedCardIds = dragState.value.cards.map(item => item.id);
+    const movedCount = movedCardIds.length;
+
+    let description = '';
+    if (movedCount === 1) {
+      const card = findCardById(movedCardIds[0]);
+      description = card ? `Перемещена карточка "${card.text}"` : 'Перемещена карточка';
+    } else {
+      description = `Перемещено ${movedCount} карточек`;
+    }
+
+    historyStore.setActionMetadata('update', description);
+    historyStore.saveState();    
+  }
+
+  dragState.value = null;
   document.removeEventListener('mousemove', handleDrag);
   document.removeEventListener('mouseup', endDrag);
 };
@@ -708,50 +703,38 @@ const handleLineClick = (event, connectionId) => {
 };
 
 const handleCardClick = (event, cardId) => {
-  // Проверяем, нажата ли клавиша Ctrl для множественного выделения
   const isCtrlPressed = event.ctrlKey || event.metaKey;
+  selectedConnectionIds.value = [];
   
-  if (!isConnecting.value) {
-    if (isCtrlPressed) {
-      // Множественное выделение с Ctrl - переключаем выделение карточки
-      cardsStore.toggleCardSelection(cardId);
-    } else {
-      // Клик без Ctrl
-      const card = cards.find(c => c.id === cardId);
-      if (card && !card.selected) {
-        // Если кликнули на невыделенную карточку - сбрасываем всё выделение и выделяем только её
-        cardsStore.deselectAllCards();
-        cardsStore.selectCard(cardId);
-      }
-      // Если кликнули на уже выделенную карточку - оставляем выделение как есть
-    }
-    
-    selectedCardId.value = cardId;
+  if (isCtrlPressed) {
+    cardsStore.toggleCardSelection(cardId);
   } else {
-    // Завершаем процесс соединения
-    if (selectedCardId.value !== cardId) {
-      connectionsStore.addConnection(selectedCardId.value, cardId);
+    if (!cardsStore.selectedCardIds.includes(cardId) || cardsStore.selectedCardIds.length > 1) {
+      cardsStore.deselectAllCards();
+      cardsStore.selectCard(cardId);
     }
-    selectedCardId.value = null;
-    isConnecting.value = false;
   }
+  selectedCardId.value = cardId;
 };
 
 const handleStageClick = (event) => {
-  // Проверяем, был ли клик по карточке
-  if (event.target.closest('.card')) {
-    return; // Не сбрасываем выделение при клике по карточке
+  if (suppressNextStageClick) {
+    suppressNextStageClick = false;
+    return;
   }
-  
-  // Клик в пустое место холста - сбрасываем выделение
+  const preserveCardSelection = isSelectionMode.value;
   if (!event.ctrlKey && !event.metaKey) {
-    cardsStore.deselectAllCards();
+    if (!preserveCardSelection) {
+      cardsStore.deselectAllCards();
+    }
   }
   
-  // Сбрасываем другие состояния
-  selectedCardId.value = null;
-  isConnecting.value = false;
+  selectedConnectionIds.value = [];
   cancelDrawing();
+
+  if (!preserveCardSelection) {
+    selectedCardId.value = null;
+  }  
 };
 
 const addNewCard = () => {
