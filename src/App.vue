@@ -178,7 +178,6 @@ html,body{
 
 .ui-panel-left.collapsed {
   top: 16px;
-  transform: none !important;
   padding: 16px 20px;
 }
 /* Canvas/SVG */
