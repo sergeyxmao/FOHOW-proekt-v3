@@ -288,8 +288,8 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
         <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
       </button>
       <div class="ui-panel-right__body">
-        <div class="line-controls-panel">
-          <div class="line-color-group">
+        <div class="line-controls-panel settings-card">
+          <div class="settings-card__row line-color-group">
             <div
               class="line-color-trigger" 
               :style="{ backgroundColor: lineColor }" 
@@ -307,15 +307,18 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
               </svg>
             </button>
           </div>
-          <input 
+          <input
             ref="hiddenLineColorPicker"
-            type="color" 
-            :value="lineColor" 
+            type="color"
+            :value="lineColor"
             style="display:none;"
             @input="handleLineColorChange"
           >
-          <div class="line-controls-col">
-            <label for="thickness-slider">Толщина линии</label>
+          <div class="settings-card__section">
+            <div class="settings-card__header">
+              <span class="settings-card__title" id="thickness-slider-label">Толщина линии</span>
+              <span class="settings-card__value">{{ thickness }}px</span>
+            </div>
             <div class="thickness-row">
               <input
                 type="range"
@@ -327,37 +330,44 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
                 :value="thickness"
                 :style="{ background: sliderTrackStyle }"
                 @input="updateThickness($event.target.value)"
+                aria-labelledby="thickness-slider-label"
               />
-              <span id="thickness-value">{{ thickness }}px</span>
             </div>
           </div>
-          <div class="animation-controls" aria-label="Настройки анимации">
-            <span class="animation-label">Анимация</span>
-            <div class="animation-block">
-              <label class="animation-duration-wrapper" for="animation-duration-input">
-                <span class="animation-duration-label">Продолжительность</span>
-                <div class="animation-input-group">
-                  <input 
-                    type="number" 
-                    id="animation-duration-input" 
-                    class="animation-duration-input" 
-                    min="2" 
-                    max="999" 
-                    step="1" 
-                    :value="animationDuration"
-                    @input="updateAnimationDuration($event.target.value)"
-                    title="Продолжительность анимации в секундах" 
-                    inputmode="numeric" 
-                    maxlength="3"
-                  />
-                  <span class="animation-unit">сек</span>
-                </div>
+          <div class="settings-card__section">
+            <div class="settings-card__header">
+              <span class="settings-card__title">Анимация</span>
+            </div>
+            <div class="animation-controls" aria-label="Настройки анимации">
+              <label class="animation-input" for="animation-duration-input">
+                <input
+                  type="number"
+                  id="animation-duration-input"
+                  class="animation-duration-input"
+                  min="2"
+                  max="999"
+                  step="1"
+                  :value="animationDuration"
+                  @input="updateAnimationDuration($event.target.value)"
+                  title="Продолжительность анимации в секундах"
+                  inputmode="numeric"
+                  maxlength="3"
+                />
+                <span class="animation-unit">сек</span>
               </label>
+                 <button
+                class="animation-infinity-btn"
+                type="button"
+                title="Бесконечная анимация"
+                aria-label="Бесконечная анимация"
+              >
+                ∞
+              </button>           
             </div>
           </div>
         </div>
 
-        <div class="card-header-panel" aria-label="Настройки заголовка лицензии">
+        <div class="card-header-panel settings-card" aria-label="Настройки заголовка лицензии">
           <span class="card-header-panel__label">Заголовок</span>
           <div class="card-header-panel__controls">
             <button
@@ -385,27 +395,29 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
           >
         </div>
 
-        <div class="gradient-selector">
+        <div class="gradient-selector settings-card">
           <div class="gradient-title">Фон</div>
-          <button
-            class="grad-btn"
-            data-gradient="#f5f7fb"
-            title="Светлый"
-            :style="{ backgroundColor: '#f5f7fb' }"
-            @click="updateBackground('#f5f7fb')"
-          ></button>
-          <button 
-            class="grad-btn" 
-            data-gradient="linear-gradient(135deg,#eef1f5,#dde3ea)" 
-            title="Серый"
-            :style="{ background: 'linear-gradient(135deg,#eef1f5,#dde3ea)' }"
-            @click="updateBackground('linear-gradient(135deg,#eef1f5,#dde3ea)')"
-          ></button>
-          <button 
-            class="grad-btn" 
-            title="Выбрать цвет"
-            @click="openBackgroundPicker"
-          >🎨</button>
+          <div class="gradient-options">
+            <button
+              class="grad-btn"
+              data-gradient="#f5f7fb"
+              title="Светлый"
+              :style="{ backgroundColor: '#f5f7fb' }"
+              @click="updateBackground('#f5f7fb')"
+            ></button>
+            <button
+              class="grad-btn"
+              data-gradient="linear-gradient(135deg,#eef1f5,#dde3ea)"
+              title="Серый"
+              :style="{ background: 'linear-gradient(135deg,#eef1f5,#dde3ea)' }"
+              @click="updateBackground('linear-gradient(135deg,#eef1f5,#dde3ea)')"
+            ></button>
+            <button
+              class="grad-btn"
+              title="Выбрать цвет"
+              @click="openBackgroundPicker"
+            >🎨</button>
+          </div>
           <input 
             ref="hiddenBackgroundPicker"
             type="color" 
@@ -705,17 +717,57 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
 .line-controls-panel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 16px;
-  background: var(--right-panel-surface, #fff);
-  border-radius: 18px;
-  box-shadow: var(--right-panel-section-shadow, 0 4px 10px rgba(0, 0, 0, .08));
+  gap: 18px;
   color: var(--right-panel-text, #1f2937);
-  border: 1px solid var(--right-panel-card-border, transparent);}
+}
+
+.settings-card {
+  background: var(--right-panel-surface, #fff);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: var(--right-panel-section-shadow, 0 4px 10px rgba(0, 0, 0, .08));
+  border: 1px solid var(--right-panel-card-border, transparent);
+}
+
+.settings-card__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-card__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-card__title {
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  color: var(--right-panel-title-color, #374151);
+}
+
+.settings-card__value {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(15, 98, 254, .1);
+  color: var(--right-panel-btn-active-color, #0b5bd3);
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .65);
+}
 
 .line-color-group {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
 }
 
@@ -762,26 +814,11 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   border-color: var(--right-panel-btn-active-border, #0f62fe);
   color: var(--right-panel-btn-active-color, #0f62fe);
 }
-
-.line-controls-col {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  color: var(--right-panel-text, #1f2937);
-}
-.line-controls-col label {
-  font-size: 13px;
-  font-weight: 600;
-}
-
 .thickness-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: var(--right-panel-surface, #f3f4f6);
-  box-shadow: var(--right-panel-surface-shadow, inset 0 -1px 0 rgba(255, 255, 255, .8));
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(15, 98, 254, .06);
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .65);
 }
 
 .thickness-slider {
@@ -833,142 +870,132 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   box-shadow: 0 6px 14px rgba(15, 98, 254, .4);
 }
 
-#thickness-value {
-  font-variant-numeric: tabular-nums;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 26px;
-  height: 24px;
-  margin-left: 8px;
-  border-radius: 9px;
-  background: var(--right-panel-apply-bg, rgba(255, 255, 255, .85));
-  box-shadow: var(--right-panel-apply-shadow, inset 0 -2px 0 rgba(255, 255, 255, .45));
-  color: var(--right-panel-text, #1f2937);
-  border: 1px solid var(--right-panel-apply-border, transparent);
-}
-
 .animation-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
 
-.animation-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--right-panel-title-color, #374151);
-}
-
-.animation-block {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.animation-duration-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 1;
-  color: var(--right-panel-muted, #6b7280);
-}
-
-.animation-duration-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.animation-input-group {
-  display: flex;
+.animation-input {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 198, 48, .18);
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .6);
+  border: 1px solid rgba(255, 198, 48, .35);
+  color: var(--right-panel-text, #1f2937);  
 }
 
 .animation-duration-input {
-  width: 60px;
-  height: 36px;
-  padding: 4px 8px;
-  border: 1px solid var(--right-panel-input-border, #d1d5db);
-  border-radius: 8px;
-  font-size: 14px;
-  text-align: center;
+  width: 52px;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: right;
+  color: inherit;
   outline: none;
-  background: var(--right-panel-input-bg, #fff);
-  color: var(--right-panel-input-color, #111827);
-  box-shadow: var(--right-panel-input-shadow, inset 0 -2px 0 rgba(255,255,255,.45));}
+  -moz-appearance: textfield;
+}
+
+.animation-duration-input::-webkit-outer-spin-button,
+.animation-duration-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 
 .animation-duration-input:focus {
-  border-color: var(--right-panel-input-focus-border, #0f62fe);
-  box-shadow: 0 0 0 3px var(--right-panel-input-focus-outline, rgba(15, 98, 254, .1));
+  box-shadow: none;
 }
 
 .animation-unit {
-  font-size: 13px;
-  color: var(--right-panel-unit-color, #6b7280);
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.animation-infinity-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 98, 254, .4);
+  background: rgba(15, 98, 254, .12);
+  color: var(--right-panel-btn-active-color, #0b5bd3);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .65);
+  transition: transform .2s, box-shadow .2s, border-color .2s;
+}
+
+.animation-infinity-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--right-panel-btn-active-border, #0f62fe);
+  box-shadow: 0 10px 20px rgba(15, 98, 254, .18);
 }
 
 /* Фон */
 .gradient-selector {
-  display: grid;
-  grid-template-columns: repeat(3, 45px);
-  gap: 8px;
-  background: var(--right-panel-gradient-bg);
-  padding: 10px 12px;
-  border-radius: 12px;
-  box-shadow: var(--right-panel-gradient-shadow);
-  justify-items: center;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .gradient-title {
-  grid-column: 1/-1;
-  font-size: 13px;
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: 14px;
+  background: rgba(255, 215, 64, .22);
+  font-size: 12px;
   font-weight: 700;
-  margin-bottom: 2px;
-  color: var(--right-panel-title-color);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;  color: var(--right-panel-title-color);
 }
-
+.gradient-options {
+  display: flex;
+  gap: 12px;
+}
 .grad-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   border: 1px solid var(--right-panel-grad-btn-border);
   cursor: pointer;
   box-shadow: var(--right-panel-grad-btn-shadow);
-  transition: transform .15s;
+  transition: transform .15s, box-shadow .15s, border-color .15s;
   background: var(--right-panel-btn-bg);
 }
 
 .grad-btn:hover {
   transform: translateY(-1px);
+  border-color: var(--right-panel-btn-active-border, #0f62fe);
+  box-shadow: 0 10px 20px rgba(15, 98, 254, .18);  
 }
 
 /* Настройки заголовка */
 .card-header-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 18px;
-  background: var(--right-panel-card-bg);
-  border: 1px solid var(--right-panel-card-border);
+  gap: 16px;
+
 }
 
 .card-header-panel__label {
-  font-size: 11px;
-  font-weight: 700;
+  align-self: flex-start;
+  padding: 6px 16px;
+  border-radius: 16px;
+  font-size: 12px;  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--right-panel-card-label);
+  background: rgba(93, 139, 244, .18);
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, .65);  
 }
 
 .card-header-panel__controls {
