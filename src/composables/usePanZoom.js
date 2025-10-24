@@ -5,7 +5,7 @@ export function usePanZoom(canvasElement) {
   const translateX = ref(0)
   const translateY = ref(0)
   
-  const MIN_SCALE = 0.05  // Минимальное уменьшение - 5%
+  const MIN_SCALE = 0.01  // Минимальное уменьшение - 1%
   const MAX_SCALE = 5     // Максимальное увеличение - 500%
   
   let isPanning = false
