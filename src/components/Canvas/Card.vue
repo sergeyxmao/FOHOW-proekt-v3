@@ -376,17 +376,20 @@ const updateValue = (event, field) => {
   border-radius: 0 0 16px 16px;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 12px}
 
 .card-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   gap: 10px;
+  text-align: center;
+  
 }
 
 .card-row.pv-row {
-  justify-content: flex-start;
+  justify-content: center;
   gap: 10px;
 }
 
@@ -400,6 +403,8 @@ const updateValue = (event, field) => {
   font-weight: 500;
   color: #6b7280;
   font-size: 14px;
+  text-align: center;
+  
 }
 
 .value {
@@ -411,6 +416,8 @@ const updateValue = (event, field) => {
   border-radius: 6px;
   transition: background 0.15s ease, box-shadow 0.15s ease;
   cursor: text;
+  text-align: center;
+  
 }
 
 .value:focus {
@@ -521,4 +528,22 @@ const updateValue = (event, field) => {
 .card--large {
   min-height: 280px;
 }
+
+.card--large .card-title,
+.card--large .card-title-input {
+  font-size: 26px;
+}
+
+.card--large .label {
+  font-size: 18.2px;
+}
+
+.card--large .value {
+  font-size: 19.5px;
+}
+
+.card--large .pv-value {
+  font-size: 23.4px;
+}
+</style>  
 </style>
