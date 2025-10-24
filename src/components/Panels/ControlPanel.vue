@@ -63,26 +63,413 @@ const handleSaveProject = () => {
   URL.revokeObjectURL(url)
 }
 
-const handleExportHTML = () => {
-  // Экспорт в HTML
-  window.print()
+const imageDataUriCache = new Map()
+
+const normalizeAssetUrl = (src) => {
+  try {
+    return new URL(src, window.location.href).href
+  } catch (_) {
+    return src
+  }
 }
 
-const handleExportSVG = () => {
-  // Экспорт в SVG
-  const svgElement = document.querySelector('#svg-layer')
-  if (!svgElement) return
-  
-  const svgData = new XMLSerializer().serializeToString(svgElement)
-  const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'})
-  const svgUrl = URL.createObjectURL(svgBlob)
-  const downloadLink = document.createElement('a')
-  downloadLink.href = svgUrl
-  downloadLink.download = `fohow-board-${Date.now()}.svg`
-  document.body.appendChild(downloadLink)
-  downloadLink.click()
-  document.body.removeChild(downloadLink)
-  URL.revokeObjectURL(svgUrl)
+const arrayBufferToBase64 = (buffer) => {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk))
+  }
+  return window.btoa(binary)
+}
+
+const imageToDataUri = async (src) => {
+  if (!src) return ''
+  const normalized = normalizeAssetUrl(src)
+  if (imageDataUriCache.has(normalized)) {
+    return imageDataUriCache.get(normalized)
+  }
+
+  try {
+    const response = await fetch(normalized)
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const buffer = await response.arrayBuffer()
+    const mime = response.headers.get('Content-Type') || 'image/png'
+    const base64 = arrayBufferToBase64(buffer)
+    const dataUri = `data:${mime};base64,${base64}`
+    imageDataUriCache.set(normalized, dataUri)
+    return dataUri
+  } catch (error) {
+    console.warn('Не удалось получить данные изображения для экспорта:', src, error)
+    return src
+  }
+}
+
+const inlineImages = async (root) => {
+  const images = Array.from(root.querySelectorAll('img'))
+  await Promise.all(
+    images.map(async (img) => {
+      const src = img.getAttribute('src')
+      if (!src || src.startsWith('data:') || /^(https?:)?\/\//i.test(src)) return
+      const dataUri = await imageToDataUri(src)
+      img.setAttribute('src', dataUri)
+    })
+  )
+}
+
+const parseTransform = (transform) => {
+  if (!transform || transform === 'none') {
+    return { x: 0, y: 0, scale: 1 }
+  }
+
+  const match = transform.match(/matrix\(([^)]+)\)/)
+  if (!match) {
+    return { x: 0, y: 0, scale: 1 }
+  }
+
+  const values = match[1].split(',').map(v => parseFloat(v.trim()))
+  if (values.length < 6 || values.some(value => Number.isNaN(value))) {
+    return { x: 0, y: 0, scale: 1 }
+  }
+
+  const [a, b,, , e, f] = values
+  const scale = Math.sqrt(a * a + b * b) || 1
+  return { x: e || 0, y: f || 0, scale }
+}
+
+const buildViewOnlyScript = ({ x, y, scale }) => `\n<script>\ndocument.addEventListener('DOMContentLoaded', () => {\n  const root = document.getElementById('canvas');\n  if (!root) return;\n  const content = root.querySelector('.canvas-content') || root.firstElementChild;\n  if (!content) return;\n  let tx = ${Number.isFinite(x) ? x : 0};\n  let ty = ${Number.isFinite(y) ? y : 0};\n  let s = ${Number.isFinite(scale) ? scale : 1};\n  const clamp = (value) => Math.max(0.05, Math.min(5, value));\n  const update = () => {\n    content.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')';\n  };\n  let pan = false;\n  let panId = null;\n  let lastX = 0;\n  let lastY = 0;\n  const pointers = new Map();\n  let pinch = null;\n  const tryPinch = () => {\n    if (pinch) return;\n    const touches = Array.from(pointers.entries()).filter(([, info]) => info.type === 'touch');\n    if (touches.length < 2) return;\n    const [first, second] = touches;\n    const distance = Math.hypot(second[1].x - first[1].x, second[1].y - first[1].y);\n    if (!distance) return;\n    pinch = {\n      id1: first[0],\n      id2: second[0],\n      distance,\n      scale: s,\n      midX: (first[1].x + second[1].x) / 2,\n      midY: (first[1].y + second[1].y) / 2\n    };\n    if (pan && panId != null && root.releasePointerCapture) {\n      try { root.releasePointerCapture(panId); } catch (_) {}\n    }\n    pan = false;\n    panId = null;\n  };\n  const handlePinch = () => {\n    if (!pinch) return;\n    const first = pointers.get(pinch.id1);\n    const second = pointers.get(pinch.id2);\n    if (!first || !second) return;\n    const midX = (first.x + second.x) / 2;\n    const midY = (first.y + second.y) / 2;\n    tx += midX - pinch.midX;\n    ty += midY - pinch.midY;\n    const distance = Math.hypot(second.x - first.x, second.y - first.y);\n    if (distance) {\n      const nextScale = clamp(pinch.scale * distance / pinch.distance);\n      const ratio = nextScale / s;\n      tx = midX - (midX - tx) * ratio;\n      ty = midY - (midY - ty) * ratio;\n      s = nextScale;\n    }\n    pinch.midX = midX;\n    pinch.midY = midY;\n    update();\n  };\n  const endPinch = (pointerId) => {\n    if (pinch && (pointerId === pinch.id1 || pointerId === pinch.id2)) {\n      pinch = null;\n    }\n  };\n  const stopPan = (pointerId) => {\n    if (pan && pointerId === panId) {\n      pan = false;\n      panId = null;\n      if (root.releasePointerCapture) {\n        try { root.releasePointerCapture(pointerId); } catch (_) {}\n      }\n      document.body.style.cursor = 'default';\n    }\n  };\n  root.addEventListener('pointerdown', (event) => {\n    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY, type: event.pointerType });\n    if (event.pointerType === 'touch') {\n      tryPinch();\n      if (!pinch && !pan) {\n        pan = true;\n        panId = event.pointerId;\n        lastX = event.clientX;\n        lastY = event.clientY;\n        if (root.setPointerCapture) {\n          try { root.setPointerCapture(event.pointerId); } catch (_) {}\n        }\n        document.body.style.cursor = 'move';\n      }\n      return;\n    }\n    if (event.button === 1) {\n      event.preventDefault();\n      pan = true;\n      panId = event.pointerId;\n      lastX = event.clientX;\n      lastY = event.clientY;\n      if (root.setPointerCapture) {\n        try { root.setPointerCapture(event.pointerId); } catch (_) {}\n      }\n      document.body.style.cursor = 'move';\n    }\n  });\n  root.addEventListener('pointermove', (event) => {\n    const info = pointers.get(event.pointerId);\n    if (info) {\n      info.x = event.clientX;\n      info.y = event.clientY;\n    }\n    if (pinch && (event.pointerId === pinch.id1 || event.pointerId === pinch.id2)) {\n      handlePinch();\n      return;\n    }\n    if (pan && event.pointerId === panId) {\n      event.preventDefault();\n      tx += event.clientX - lastX;\n      ty += event.clientY - lastY;\n      lastX = event.clientX;\n      lastY = event.clientY;\n      update();\n    }\n  });\n  const clearPointer = (event) => {\n    pointers.delete(event.pointerId);\n    endPinch(event.pointerId);\n    stopPan(event.pointerId);\n  };\n  root.addEventListener('pointerup', clearPointer);\n  root.addEventListener('pointercancel', clearPointer);\n  root.addEventListener('wheel', (event) => {\n    event.preventDefault();\n    const rect = root.getBoundingClientRect();\n    const mouseX = event.clientX - rect.left;\n    const mouseY = event.clientY - rect.top;\n    const nextScale = clamp(s - 0.001 * event.deltaY);\n    const ratio = nextScale / s;\n    tx = mouseX - (mouseX - tx) * ratio;\n    ty = mouseY - (mouseY - ty) * ratio;\n    s = nextScale;\n    update();\n  }, { passive: false });\n  update();\n});\n<\/script>\n`
+
+const getExportHtmlCss = () => `html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#111827;}#canvas{position:relative;width:100%;height:100%;overflow:hidden;}#canvas .canvas-container{position:absolute;inset:0;overflow:visible;touch-action:none;}#canvas .canvas-content{position:absolute;top:0;left:0;width:100%;height:100%;transform-origin:0 0;}#canvas .svg-layer{position:absolute;inset:0;pointer-events:none;overflow:visible;}#canvas .line-group{pointer-events:none;}#canvas .line{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(0,0,0,.15));}#canvas .line.line--balance-highlight{stroke-dasharray:16;animation:lineBalanceFlow 2s ease-in-out infinite;}#canvas .line.line--pv-highlight{stroke-dasharray:14;animation:linePvFlow 2s ease-in-out infinite;}@keyframes lineBalanceFlow{0%{stroke-dashoffset:-24;}50%{stroke:#d93025;}100%{stroke-dashoffset:24;}}@keyframes linePvFlow{0%{stroke-dashoffset:-18;}50%{stroke:#0f62fe;}100%{stroke-dashoffset:18;}}#canvas .cards-container{position:absolute;inset:0;pointer-events:none;}#canvas .card{position:absolute;box-sizing:border-box;border-radius:16px;box-shadow:10px 12px 24px rgba(15,35,95,.16),-6px -6px 18px rgba(255,255,255,.85);overflow:visible;background:#fff;color:#111827;transition:none;}#canvas .card-header{position:relative;height:52px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:center;padding:10px 44px;font-weight:700;font-size:20px;color:#fff;box-sizing:border-box;}#canvas .card-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:center;}#canvas .card-body{padding:16px;display:flex;flex-direction:column;gap:12px;text-align:center;}#canvas .card-row{display:flex;align-items:center;justify-content:center;gap:10px;}#canvas .label{color:#6b7280;font-weight:600;}#canvas .value{color:#111827;font-weight:700;}#canvas .coin-icon{width:28px;height:28px;}#canvas .slf-badge,#canvas .fendou-badge,#canvas .rank-badge{position:absolute;display:none;pointer-events:none;user-select:none;}#canvas .slf-badge.visible{display:block;top:15px;left:15px;font-size:24px;font-weight:900;color:#ffc700;text-shadow:1px 1px 2px rgba(0,0,0,.5);}#canvas .fendou-badge.visible{display:block;top:-28px;left:50%;transform:translateX(-50%);font-size:36px;font-weight:900;color:#ff2d55;text-shadow:0 2px 6px rgba(0,0,0,.25);}#canvas .rank-badge.visible{display:block;top:-18px;right:18px;width:80px;height:auto;transform:rotate(15deg);}#canvas .card-body-html{margin-top:8px;text-align:left;}#canvas [data-side]{display:none;}`
+
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;')
+
+const MARKER_OFFSET = 12
+const EXTRA_PADDING_TOP = 60
+const EXTRA_PADDING_SIDE = 50
+
+const getConnectionPath = (fromCard, toCard, fromSide, toSide) => {
+  const getCoords = (card, side) => {
+    const width = Number(card.width) || 380
+    const height = Number(card.height) || 280
+    switch (side) {
+      case 'top':
+        return { x: card.x + width / 2, y: card.y }
+      case 'bottom':
+        return { x: card.x + width / 2, y: card.y + height }
+      case 'left':
+        return { x: card.x, y: card.y + height / 2 }
+      case 'right':
+        return { x: card.x + width, y: card.y + height / 2 }
+      default:
+        return { x: card.x + width / 2, y: card.y + height / 2 }
+    }
+  }
+
+  const normalizeSide = (side) => {
+    const value = String(side || '').toLowerCase()
+    if (['top', 'bottom', 'left', 'right'].includes(value)) return value
+    return 'right'
+  }
+
+  const startSide = normalizeSide(fromSide)
+  const endSide = normalizeSide(toSide)
+
+  const startAnchor = getCoords(fromCard, startSide)
+  const endAnchor = getCoords(toCard, endSide)
+
+  const offsetPoint = (point, side) => {
+    const result = { ...point }
+    switch (side) {
+      case 'top':
+        result.y -= MARKER_OFFSET
+        break
+      case 'bottom':
+        result.y += MARKER_OFFSET
+        break
+      case 'left':
+        result.x -= MARKER_OFFSET
+        break
+      case 'right':
+        result.x += MARKER_OFFSET
+        break
+      default:
+        break
+    }
+    return result
+  }
+
+  const startPoint = offsetPoint(startAnchor, startSide)
+  const endPoint = offsetPoint(endAnchor, endSide)
+
+  const midPoint = (startSide === 'left' || startSide === 'right')
+    ? { x: endPoint.x, y: startPoint.y }
+    : { x: startPoint.x, y: endPoint.y }
+
+  const points = [startAnchor, startPoint, midPoint, endPoint, endAnchor]
+    .filter(Boolean)
+    .filter((point, index, array) => {
+      if (index === 0) return true
+      const prev = array[index - 1]
+      return !(prev && prev.x === point.x && prev.y === point.y)
+    })
+
+  if (!points.length) {
+    return ''
+  }
+
+  const [first, ...rest] = points
+  const commands = [`M ${first.x} ${first.y}`]
+  rest.forEach((point) => {
+    commands.push(`L ${point.x} ${point.y}`)
+  })
+  return commands.join(' ')
+}
+
+const handleExportHTML = async () => {
+  const canvasRoot = document.getElementById('canvas')
+  if (!canvasRoot) {
+    console.warn('Элемент #canvas не найден, экспорт невозможен')
+    return
+  }
+
+  const canvasContent = canvasRoot.querySelector('.canvas-content')
+  if (!canvasContent) {
+    alert('Не удалось найти содержимое холста для экспорта.')
+    return
+  }
+
+  if (cardsStore.cards.length === 0 && connectionsStore.connections.length === 0) {
+    alert('На доске нет элементов для экспорта.')
+    return
+  }
+
+  const clone = canvasRoot.cloneNode(true)
+
+  const selectorsToRemove = [
+    '.card-close-btn',
+    '.connection-point',
+    '.line-hitbox',
+    '.selection-box'
+  ]
+
+  clone.querySelectorAll(selectorsToRemove.join(', ')).forEach((element) => {
+    element.remove()
+  })
+
+  clone.querySelectorAll('.card').forEach((cardEl) => {
+    cardEl.classList.remove('selected', 'connecting', 'editing')
+    cardEl.style.cursor = 'default'
+  })
+
+  clone.querySelectorAll('[contenteditable]').forEach((element) => {
+    element.setAttribute('contenteditable', 'false')
+    element.style.pointerEvents = 'none'
+    element.style.userSelect = 'text'
+  })
+
+  await inlineImages(clone)
+
+  const originalTransform = window.getComputedStyle(canvasContent).transform
+  const transformValues = parseTransform(originalTransform)
+  const viewOnlyScript = buildViewOnlyScript(transformValues)
+
+  const cssText = getExportHtmlCss()
+  const bodyBackground = backgroundColor.value || window.getComputedStyle(document.body).backgroundColor || '#ffffff'
+
+  const htmlContent = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Просмотр схемы</title><style>${cssText}<\/style></head><body style="background:${bodyBackground};">${clone.outerHTML}${viewOnlyScript}</body></html>`
+
+  const blob = new Blob([htmlContent], { type: 'text/html' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `scheme-${Date.now()}.html`
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+const handleExportSVG = async () => {
+  if (cardsStore.cards.length === 0) {
+    alert('На доске нет элементов для экспорта.')
+    return
+  }
+
+  try {
+    const PADDING = 100
+    const cards = cardsStore.cards.map(card => ({
+      ...card,
+      width: Number(card.width) || 380,
+      height: Number(card.height) || 280,
+      x: Number(card.x) || 0,
+      y: Number(card.y) || 0
+    }))
+
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = -Infinity
+    let maxY = -Infinity
+
+    cards.forEach((card) => {
+      minX = Math.min(minX, card.x)
+      minY = Math.min(minY, card.y)
+      maxX = Math.max(maxX, card.x + card.width)
+      maxY = Math.max(maxY, card.y + card.height)
+    })
+
+    const contentWidth = maxX - minX
+    const contentHeight = maxY - minY
+
+    const cardHtmlList = await Promise.all(cards.map(async (card) => {
+      const headerBg = card.headerBg || '#5D8BF4'
+      const rankSrc = card.rankBadge ? await imageToDataUri(`/rank-${card.rankBadge}.png`) : ''
+
+      const rows = [
+        { label: 'PV:', value: card.pv || '330/330pv' },
+        { label: 'Баланс:', value: card.balance || '0 / 0' },
+        { label: 'Актив-заказы PV:', value: card.activePv || '0 / 0' },
+        { label: 'Цикл:', value: card.cycle || '0' }
+      ]
+
+      const rowsHtml = rows.map(row => `
+        <div class="card-row">
+          <span class="label">${escapeHtml(row.label)}</span>
+          <span class="value">${escapeHtml(row.value)}</span>
+        </div>`).join('')
+
+      const bodyExtra = card.bodyHTML ? `<div class="card-body-html">${card.bodyHTML}</div>` : ''
+
+      const badgeHtml = [
+        card.showSlfBadge ? '<div class="slf-badge visible">SLF</div>' : '',
+        card.showFendouBadge ? '<div class="fendou-badge visible">奋斗</div>' : '',
+        card.rankBadge && rankSrc ? `<img class="rank-badge visible" src="${rankSrc}" alt="Ранговый значок" />` : ''
+      ].join('')
+
+      return `
+        <div class="card" style="width:${card.width}px;height:${card.height}px;">
+          <div class="card-header" style="background:${headerBg};">
+            <div class="card-title">${escapeHtml(card.text)}</div>
+          </div>
+          <div class="card-body">
+            <div class="card-row pv-row">
+              <svg class="coin-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="45" fill="${escapeHtml(card.coinFill || '#ffd700')}" stroke="#DAA520" stroke-width="5" />
+              </svg>
+              <span class="value">${escapeHtml(card.pv || '330/330pv')}</span>
+            </div>
+            ${rowsHtml}
+            ${bodyExtra}
+          </div>
+          ${badgeHtml}
+        </div>`
+    }))
+
+    const cardObjects = cardHtmlList.map((html, index) => {
+      const card = cards[index]
+      const totalWidth = card.width + EXTRA_PADDING_SIDE * 2
+      const totalHeight = card.height + EXTRA_PADDING_TOP
+      const foreignX = card.x - minX + PADDING - EXTRA_PADDING_SIDE
+      const foreignY = card.y - minY + PADDING - EXTRA_PADDING_TOP
+
+      return `<foreignObject x="${foreignX}" y="${foreignY}" width="${totalWidth}" height="${totalHeight}">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="position:relative;top:${EXTRA_PADDING_TOP}px;left:${EXTRA_PADDING_SIDE}px;">
+          ${html}
+        </div>
+      </foreignObject>`
+    }).join('\n')
+
+    const connectionMap = new Map(cards.map(card => [card.id, card]))
+
+    const lineObjects = connectionsStore.connections.map((connection) => {
+      const fromCard = connectionMap.get(connection.from)
+      const toCard = connectionMap.get(connection.to)
+      if (!fromCard || !toCard) return ''
+
+      const pathD = getConnectionPath(
+        {
+          ...fromCard,
+          x: fromCard.x - minX + PADDING,
+          y: fromCard.y - minY + PADDING
+        },
+        {
+          ...toCard,
+          x: toCard.x - minX + PADDING,
+          y: toCard.y - minY + PADDING
+        },
+        connection.fromSide,
+        connection.toSide
+      )
+
+      if (!pathD) return ''
+
+      const color = connection.color || connectionsStore.defaultLineColor || '#0f62fe'
+      const width = connection.thickness || connectionsStore.defaultLineThickness || 5
+
+      const classes = ['line']
+      if (connection.highlightType === 'balance') {
+        classes.push('line--balance-highlight')
+      } else if (connection.highlightType === 'pv') {
+        classes.push('line--pv-highlight')
+      }
+
+      return `<path d="${pathD}" class="${classes.join(' ')}" stroke="${color}" stroke-width="${width}" fill="none" marker-start="url(#marker-dot)" marker-end="url(#marker-dot)" />`
+    }).filter(Boolean).join('\n')
+
+    const panScript = `<script><![CDATA[(function(){const svg=document.documentElement;const content=document.getElementById&&document.getElementById('svg-pan-content');if(!svg||!content||!svg.addEventListener)return;let isPanning=false,panId=null,lastX=0,lastY=0,offsetX=0,offsetY=0;const update=()=>content.setAttribute('transform','translate('+offsetX+' '+offsetY+')');const endPan=(e)=>{if(!isPanning||e.pointerId!==panId)return;isPanning=false;panId=null;svg.style.cursor='grab';if(svg.releasePointerCapture){try{svg.releasePointerCapture(e.pointerId);}catch(err){}}};svg.addEventListener('pointerdown',function(e){if(e.button!==1)return;e.preventDefault();isPanning=true;panId=e.pointerId;lastX=e.clientX;lastY=e.clientY;svg.style.cursor='grabbing';if(svg.setPointerCapture){try{svg.setPointerCapture(e.pointerId);}catch(err){}}});svg.addEventListener('pointermove',function(e){if(!isPanning||e.pointerId!==panId)return;e.preventDefault();offsetX+=e.clientX-lastX;offsetY+=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;update();});svg.addEventListener('pointerup',endPan);svg.addEventListener('pointercancel',endPan);svg.addEventListener('wheel',function(e){if(isPanning)e.preventDefault();},{passive:false});svg.style.cursor='grab';update();})();]]><\/script>`
+
+    const svgStyle = `
+      <style>
+        .card { position: relative; display: inline-block; box-sizing: border-box; border-radius: 16px; overflow: visible; box-shadow: 10px 12px 24px rgba(15,35,95,0.16), -6px -6px 18px rgba(255,255,255,0.85); }
+        .card-header { height: 52px; border-radius: 16px 16px 0 0; display: flex; align-items: center; justify-content: center; padding: 10px 44px; color: #fff; font-weight: 700; font-size: 20px; box-sizing: border-box; }
+        .card-title { width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; text-align: center; color: #111827; }
+        .card-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .label { color: #6b7280; font-weight: 600; }
+        .value { color: #111827; font-weight: 700; }
+        .coin-icon { width: 28px; height: 28px; }
+        .slf-badge, .fendou-badge, .rank-badge { position: absolute; display: none; pointer-events: none; user-select: none; }
+        .slf-badge.visible { display: block; top: 15px; left: 15px; font-size: 24px; font-weight: 900; color: #ffc700; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        .fendou-badge.visible { display: block; top: -28px; left: 50%; transform: translateX(-50%); font-size: 36px; font-weight: 900; color: #ff2d55; text-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+        .rank-badge.visible { display: block; top: -18px; right: 18px; width: 80px; height: auto; transform: rotate(15deg); }
+        .line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+        .line--balance-highlight { stroke-dasharray: 16; }
+        .line--pv-highlight { stroke-dasharray: 14; }
+      <\/style>
+    `
+
+    const background = backgroundColor.value || '#ffffff'
+
+    const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${contentWidth + PADDING * 2} ${contentHeight + PADDING * 2}" width="${contentWidth + PADDING * 2}" height="${contentHeight + PADDING * 2}" style="background:${background};">
+  <defs>
+    ${svgStyle}
+    <marker id="marker-dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" fill="currentColor">
+      <circle cx="5" cy="5" r="4" />
+    </marker>
+  </defs>
+  <g id="svg-pan-content">
+    <g style="color:#000000;">
+      ${lineObjects}
+    </g>
+    ${cardObjects}
+  </g>
+  ${panScript}
+</svg>`
+
+    const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `scheme-${Date.now()}.svg`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Ошибка при экспорте в SVG:', error)
+    alert('Экспорт в SVG завершился ошибкой. Подробности в консоли.')
+  }
 }
 
 const handlePrint = () => {
