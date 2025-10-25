@@ -1,0 +1,107 @@
+{
+  "cards": [
+    {
+      "key": "lena",
+      "type": "large",
+      "x": 760,
+      "y": 160,
+      "text": "Елена",
+      "pv": "330/330pv",
+      "showSlfBadge": false,
+      "showFendouBadge": false,
+      "rankBadge": null
+    },
+    {
+      "key": "a",
+      "type": "small",
+      "x": 400,
+      "y": 580,
+      "text": "A",
+      "pv": "30/330pv"
+    },
+    {
+      "key": "c",
+      "type": "small",
+      "x": 240,
+      "y": 880,
+      "text": "C",
+      "pv": "30/330pv"
+    },
+    {
+      "key": "d",
+      "type": "small",
+      "x": 600,
+      "y": 880,
+      "text": "D",
+      "pv": "30/330pv"
+    },
+    {
+      "key": "b",
+      "type": "small",
+      "x": 1180,
+      "y": 580,
+      "text": "B",
+      "pv": "30/330pv"
+    },
+    {
+      "key": "e",
+      "type": "small",
+      "x": 1020,
+      "y": 880,
+      "text": "E",
+      "pv": "30/330pv"
+    },
+    {
+      "key": "f",
+      "type": "small",
+      "x": 1380,
+      "y": 880,
+      "text": "F",
+      "pv": "30/330pv"
+    }
+  ],
+  "connections": [
+    {
+      "startKey": "b",
+      "endKey": "f",
+      "startSide": "right",
+      "endSide": "top",
+      "thickness": 4
+    },
+    {
+      "startKey": "b",
+      "endKey": "e",
+      "startSide": "left",
+      "endSide": "top",
+      "thickness": 4
+    },
+    {
+      "startKey": "a",
+      "endKey": "d",
+      "startSide": "right",
+      "endSide": "top",
+      "thickness": 4
+    },
+    {
+      "startKey": "a",
+      "endKey": "c",
+      "startSide": "left",
+      "endSide": "top",
+      "thickness": 4
+    },
+    {
+      "startKey": "lena",
+      "endKey": "a",
+      "startSide": "left",
+      "endSide": "top",
+      "thickness": 4
+    },
+    {
+      "startKey": "lena",
+      "endKey": "b",
+      "startSide": "right",
+      "endSide": "top",
+      "thickness": 4
+    }
+  ]
+}
