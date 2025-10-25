@@ -1,7 +1,14 @@
 <script setup>
 import { ref, nextTick, computed } from 'vue';
 import { useCardsStore } from '../../stores/cards';
-
+import { useHistoryStore } from '../../stores/history';
+import {
+  defaultNotePositionFromRect,
+  getNoteIndicatorColor,
+  hasAnyEntry,
+  NOTE_DEFAULT_SIZE
+} from '../../utils/notes';
+  
 const props = defineProps({
   card: {
     type: Object,
@@ -23,9 +30,11 @@ const emit = defineEmits([
 ]);
 
 const cardsStore = useCardsStore();
+const historyStore = useHistoryStore();
 const isEditing = ref(false);
 const editText = ref(props.card.text);
 const textInput = ref(null);
+const cardRef = ref(null);
 
 // Вычисляемое свойство для проверки, является ли карточка большой
 const isLargeCard = computed(() => {
@@ -73,6 +82,9 @@ const handlePointerDown = (event) => {
   if (event.target.classList.contains('connection-point')) {
     return;
   }
+   if (event.target.closest('.card-controls')) {
+    return;
+  } 
   if (event.ctrlKey || event.metaKey) {
     event.stopPropagation();
     ignoreNextClick.value = true;
@@ -152,10 +164,60 @@ const updateValue = (event, field) => {
   const newValue = event.target.textContent.trim();
   cardsStore.updateCard(props.card.id, { [field]: newValue });
 };
+
+const noteHasText = computed(() => hasAnyEntry(props.card.note));
+const noteIndicatorColor = computed(() => {
+  if (!props.card.note) return '';
+  return getNoteIndicatorColor(props.card.note);
+});
+const noteButtonStyle = computed(() => {
+  const style = {};
+  if (noteIndicatorColor.value) {
+    style['--note-indicator-color'] = noteIndicatorColor.value;
+  }
+  return style;
+});
+const noteButtonLabel = computed(() => (noteHasText.value ? '❗' : '📝'));
+
+const handleNoteButtonClick = () => {
+  const note = cardsStore.ensureCardNote(props.card.id);
+  if (!note) return;
+  if (!note.visible) {
+    const cardElement = cardRef.value;
+    const rect = cardElement ? cardElement.getBoundingClientRect() : null;
+    cardsStore.updateCardNote(props.card.id, (mutableNote) => {
+      if (!Number.isFinite(mutableNote.width) || mutableNote.width < NOTE_DEFAULT_SIZE.width) {
+        mutableNote.width = NOTE_DEFAULT_SIZE.width;
+      }
+      if (!Number.isFinite(mutableNote.height) || mutableNote.height < NOTE_DEFAULT_SIZE.height) {
+        mutableNote.height = NOTE_DEFAULT_SIZE.height;
+      }
+      const needsPosition = !Number.isFinite(mutableNote.x)
+        || !Number.isFinite(mutableNote.y)
+        || (mutableNote.x === 0 && mutableNote.y === 0);
+      if (rect && needsPosition) {
+        const pos = defaultNotePositionFromRect(rect);
+        mutableNote.x = pos.x;
+        mutableNote.y = pos.y;
+      }
+      mutableNote.visible = true;
+    });
+    historyStore.setActionMetadata('update', `Открыта заметка карточки "${props.card.text}"`);
+    historyStore.saveState();
+  } else {
+    cardsStore.updateCardNote(props.card.id, (mutableNote) => {
+      mutableNote.visible = false;
+    });
+    historyStore.setActionMetadata('update', `Закрыта заметка карточки "${props.card.text}"`);
+    historyStore.saveState();
+  }
+};  
 </script>
 
 <template>
   <div
+    ref="cardRef"
+    
     class="card"
     :data-card-id="card.id"    
     :class="{
@@ -163,7 +225,8 @@ const updateValue = (event, field) => {
       'connecting': isConnecting,
       'editing': isEditing,
       'card--large': isLargeCard,
-      'card--gold': card.type === 'gold'
+      'card--gold': card.type === 'gold',
+      'note-active': card.note?.visible
     }"
     :style="cardStyle"
     @click="handleCardClick"
@@ -255,6 +318,22 @@ const updateValue = (event, field) => {
         v-html="card.bodyHTML"
       ></div>    </div>
     
+    <div class="card-controls">
+      <button
+        class="card-control-btn note-btn"
+        type="button"
+        :class="{
+          'has-text': noteHasText,
+          'has-color': !!noteIndicatorColor
+        }"
+        :style="noteButtonStyle"
+        title="Заметка"
+        @click.stop="handleNoteButtonClick"
+      >
+        {{ noteButtonLabel }}
+      </button>
+    </div>
+
     <!-- Значки -->
     <div v-if="card.showSlfBadge" class="slf-badge visible">SLF</div>
     <div v-if="card.showFendouBadge" class="fendou-badge visible">奋斗</div>
@@ -587,4 +666,65 @@ const updateValue = (event, field) => {
   font-size: 26px;
   font-weight: 800;
 }
-</style>  
+
+.card-controls {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  z-index: 102;
+}
+
+.card-control-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.14);
+  font-size: 18px;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card-control-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
+}
+
+.note-btn {
+  position: relative;
+}
+
+.note-btn::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(17, 24, 39, 0.45);
+  bottom: 2px;
+  right: 2px;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.note-btn.has-color::after {
+  opacity: 1;
+  transform: scale(1);
+  background: var(--note-indicator-color, transparent);
+}
+
+.note-btn.has-text {
+  background: #e11d48;
+  color: #fff;
+}
+
+.note-btn.has-text.has-color::after {
+  border-color: rgba(255, 255, 255, 0.75);
+}
+</style>
