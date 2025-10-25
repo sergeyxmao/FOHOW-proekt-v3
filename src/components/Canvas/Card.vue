@@ -190,7 +190,7 @@ const openNote = () => {
     }
   });
   historyStore.setActionMetadata('update', `Открыта заметка карточки "${props.card.text}"`);
-  historyStore.saveState();
+  historyStore.saveStateSoon();
 };
 
 const closeNote = () => {
@@ -200,7 +200,7 @@ const closeNote = () => {
     }
   });
   historyStore.setActionMetadata('update', `Закрыта заметка карточки "${props.card.text}"`);
-  historyStore.saveState();
+  historyStore.saveStateSoon();
 };
 
 const handleNoteButtonClick = (event) => {
@@ -234,8 +234,7 @@ const updateValue = (event, field) => {
     :style="cardStyle"
     @click="handleCardClick"
     @pointerdown="handlePointerDown"
-     ref="cardRef"
-   
+    ref="cardRef"   
   >
     <!-- Заголовок карточки -->
     <div
@@ -255,23 +254,10 @@ const updateValue = (event, field) => {
         v-else
         class="card-title"
         :title="isSelected ? 'Двойной клик для редактирования' : ''"
-        @dblclick.stop="handleTitleDblClick"      >
-        {{ card.text }}
-      </div>
-        <!-- Кнопка заметки -->
-      <button
-        class="card-note-btn"
-        :class="{
-          'card-note-btn--has-text': noteHasText,
-          'card-note-btn--active': isNoteVisible
-        }"
-        type="button"
-        :title="noteButtonTitle"
-        :style="noteIndicatorStyle"
-        @click="handleNoteButtonClick"
+        @dblclick.stop="handleTitleDblClick"
       >
-        📝
-      </button>    
+        {{ card.text }}
+      </div> 
       <!-- Кнопка закрытия -->
       <button
         class="card-close-btn"
@@ -334,8 +320,9 @@ const updateValue = (event, field) => {
         v-if="card.bodyHTML"
         class="card-body-html"
         v-html="card.bodyHTML"
-      ></div>    </div>
-    
+      ></div>
+    </div>
+
     <!-- Значки -->
     <div v-if="card.showSlfBadge" class="slf-badge visible">SLF</div>
     <div v-if="card.showFendouBadge" class="fendou-badge visible">奋斗</div>
@@ -367,6 +354,20 @@ const updateValue = (event, field) => {
       :data-card-id="card.id"
       data-side="left"
     ></div>
+    <!-- Кнопка заметки -->
+    <button
+      class="card-note-btn"
+      :class="{
+        'card-note-btn--has-text': noteHasText,
+        'card-note-btn--active': isNoteVisible
+      }"
+      type="button"
+      :title="noteButtonTitle"
+      :style="noteIndicatorStyle"
+      @click="handleNoteButtonClick"
+    >
+      📝
+    </button>    
   </div>
 </template>
 
@@ -486,8 +487,8 @@ const updateValue = (event, field) => {
 }
 .card-note-btn {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  bottom: 16px;
+  right: 16px;
   width: 28px;
   height: 28px;
   border: none;
@@ -502,6 +503,7 @@ const updateValue = (event, field) => {
   justify-content: center;
   transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+  z-index: 120;  
 }
 
 .card-note-btn::after {
@@ -538,6 +540,7 @@ const updateValue = (event, field) => {
 
 .card-body {
   padding: 16px;
+  padding-bottom: 72px; 
   background: var(--card-body-gradient, var(--surface, #ffffff));
   border-radius: 0 0 16px 16px;
   display: flex;
