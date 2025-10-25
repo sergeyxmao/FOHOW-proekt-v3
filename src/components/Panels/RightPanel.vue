@@ -92,7 +92,7 @@ const templateOptions = computed(() =>
       id: template.id,
       label: template.label,
       fileName: template.fileName,
-      displayText: `${template.label} — это ${template.fileName}`
+      displayText: template.label
     }))
 )
   
