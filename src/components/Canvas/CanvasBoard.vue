@@ -20,8 +20,14 @@ const canvasStore = useCanvasStore();
 
 const { cards } = storeToRefs(cardsStore);
 const { connections } = storeToRefs(connectionsStore);
-const { backgroundColor, isHierarchicalDragMode, isSelectionMode } = storeToRefs(canvasStore);
-  
+const {
+  backgroundColor,
+  isHierarchicalDragMode,
+  isSelectionMode,
+  guidesEnabled,
+  gridStep: gridStepRef,
+  isGridBackgroundVisible
+} = storeToRefs(canvasStore);  
 watch(() => cardsStore.cards, (newCards, oldCards) => {
   console.log('=== Cards array updated ===');
   console.log('Previous cards count:', oldCards.length);
@@ -45,10 +51,28 @@ const CANVAS_PADDING = 400;
 const canvasContainerRef = ref(null);
 const { scale: zoomScale, translateX: zoomTranslateX, translateY: zoomTranslateY } = usePanZoom(canvasContainerRef);
 
-const canvasContentStyle = computed(() => ({
-  width: `${stageConfig.value.width}px`,
-  height: `${stageConfig.value.height}px`
-}));
+const canvasContentStyle = computed(() => {
+  const style = {
+    width: `${stageConfig.value.width}px`,
+    height: `${stageConfig.value.height}px`
+  };
+
+  const step = gridStepRef.value;
+
+  if (isGridBackgroundVisible.value && step > 0) {
+    const lineColor = 'rgba(79, 85, 99, 0.15)';
+    style.backgroundImage = `
+      linear-gradient(to right, ${lineColor} 1px, transparent 1px),
+      linear-gradient(to bottom, ${lineColor} 1px, transparent 1px)
+    `;
+    style.backgroundSize = `${step}px ${step}px`;
+    style.backgroundPosition = '0 0';
+  } else {
+    style.backgroundImage = 'none';
+  }
+
+  return style;
+});
   
 const selectedCardId = ref(null);
 const connectionStart = ref(null);
@@ -58,15 +82,162 @@ const previewLineWidth = computed(() => connectionsStore.defaultLineThickness ||
 const mousePosition = ref({ x: 0, y: 0 });
 const selectedConnectionIds = ref([]);
 const dragState = ref(null);
+const activeGuides = ref({ vertical: null, horizontal: null });
 let activeDragPointerId = null;
-let dragPointerCaptureElement = null;  
-const suppressNextCardClick = ref(false);  
+let dragPointerCaptureElement = null;
+const suppressNextCardClick = ref(false);
 const isSelecting = ref(false);
 const selectionRect = ref(null);
 let selectionStartPoint = null;
 let selectionBaseSelection = new Set();
 let suppressNextStageClick = false;
 
+const GUIDE_SNAP_THRESHOLD = 10;
+
+const resetActiveGuides = () => {
+  activeGuides.value = { vertical: null, horizontal: null };
+};
+
+const snapDelta = (value) => {
+  const step = gridStepRef.value;
+
+  if (!step || step <= 0) {
+    return value;
+  }
+
+  return Math.round(value / step) * step;
+};
+
+const computeGuideSnap = (primaryCardId, proposedX, proposedY) => {
+  if (!guidesEnabled.value || !primaryCardId) {
+    return null;
+  }
+
+  const primaryCard = findCardById(primaryCardId);
+  if (!primaryCard) {
+    return null;
+  }
+
+  const movingIds = dragState.value?.movingIds;
+  const cardWidth = primaryCard.width || 0;
+  const cardHeight = primaryCard.height || 0;
+
+  const currentEdges = {
+    left: proposedX,
+    center: proposedX + cardWidth / 2,
+    right: proposedX + cardWidth
+  };
+  const currentRows = {
+    top: proposedY,
+    middle: proposedY + cardHeight / 2,
+    bottom: proposedY + cardHeight
+  };
+
+  const bestMatch = {
+    vertical: { diff: GUIDE_SNAP_THRESHOLD + 1 },
+    horizontal: { diff: GUIDE_SNAP_THRESHOLD + 1 }
+  };
+
+  cards.value.forEach(otherCard => {
+    if (!otherCard || otherCard.id === primaryCardId) {
+      return;
+    }
+
+    if (movingIds && typeof movingIds.has === 'function' && movingIds.has(otherCard.id)) {
+      return;
+    }
+
+    const otherEdges = {
+      left: otherCard.x,
+      center: otherCard.x + (otherCard.width || 0) / 2,
+      right: otherCard.x + (otherCard.width || 0)
+    };
+    const otherRows = {
+      top: otherCard.y,
+      middle: otherCard.y + (otherCard.height || 0) / 2,
+      bottom: otherCard.y + (otherCard.height || 0)
+    };
+
+    Object.entries(currentEdges).forEach(([position, value]) => {
+      Object.entries(otherEdges).forEach(([otherPosition, otherValue]) => {
+        const diff = Math.abs(value - otherValue);
+        if (diff < bestMatch.vertical.diff && diff <= GUIDE_SNAP_THRESHOLD) {
+          let targetX = proposedX;
+          switch (position) {
+            case 'left':
+              targetX = otherValue;
+              break;
+            case 'center':
+              targetX = otherValue - cardWidth / 2;
+              break;
+            case 'right':
+              targetX = otherValue - cardWidth;
+              break;
+          }
+          bestMatch.vertical = {
+            diff,
+            guidePosition: otherValue,
+            adjust: targetX - proposedX
+          };
+        }
+      });
+    });
+
+    Object.entries(currentRows).forEach(([position, value]) => {
+      Object.entries(otherRows).forEach(([otherPosition, otherValue]) => {
+        const diff = Math.abs(value - otherValue);
+        if (diff < bestMatch.horizontal.diff && diff <= GUIDE_SNAP_THRESHOLD) {
+          let targetY = proposedY;
+          switch (position) {
+            case 'top':
+              targetY = otherValue;
+              break;
+            case 'middle':
+              targetY = otherValue - cardHeight / 2;
+              break;
+            case 'bottom':
+              targetY = otherValue - cardHeight;
+              break;
+          }
+          bestMatch.horizontal = {
+            diff,
+            guidePosition: otherValue,
+            adjust: targetY - proposedY
+          };
+        }
+      });
+    });
+  });
+
+  const result = {
+    adjustX: 0,
+    adjustY: 0,
+    guides: { vertical: null, horizontal: null }
+  };
+
+  if (bestMatch.vertical.diff <= GUIDE_SNAP_THRESHOLD) {
+    result.adjustX = bestMatch.vertical.adjust;
+    result.guides.vertical = bestMatch.vertical.guidePosition;
+  }
+
+  if (bestMatch.horizontal.diff <= GUIDE_SNAP_THRESHOLD) {
+    result.adjustY = bestMatch.horizontal.adjust;
+    result.guides.horizontal = bestMatch.horizontal.guidePosition;
+  }
+
+  if (!result.guides.vertical && !result.guides.horizontal) {
+    return null;
+  }
+
+  return result;
+};
+
+const guideOverlayStyle = computed(() => ({
+  width: `${stageConfig.value.width}px`,
+  height: `${stageConfig.value.height}px`
+}));
+
+  
 const canvasContainerClasses = computed(() => ({
   'canvas-container--selection-mode': isSelectionMode.value
 }));
@@ -582,12 +753,16 @@ const startDrag = (event, cardId) => {
   if (cardsToDrag.length === 0) {
     return;
   }
-
+  const movingIds = new Set(cardsToDrag.map(item => item.id));
+  const primaryEntry = cardsToDrag.find(item => item.id === cardId) || cardsToDrag[0] || null;
   dragState.value = {
     cards: cardsToDrag,
     startPointer: canvasPos,
-    hasMoved: false
-  };
+    hasMoved: false,
+    movingIds,
+    primaryCardId: primaryEntry ? primaryEntry.id : null,
+    primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null  };
+  resetActiveGuides();
 
   const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent;
 
@@ -622,14 +797,37 @@ const handleDrag = (event) => {
     event.preventDefault();
   } 
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
-  const dx = canvasPos.x - dragState.value.startPointer.x;
-  const dy = canvasPos.y - dragState.value.startPointer.y;
+  let dx = canvasPos.x - dragState.value.startPointer.x;
+  let dy = canvasPos.y - dragState.value.startPointer.y;
+
+  dx = snapDelta(dx);
+  dy = snapDelta(dy);
+
+  let guideAdjustX = 0;
+  let guideAdjustY = 0;
+
+  if (dragState.value.primaryCardId && dragState.value.primaryCardStart) {
+    const proposedX = dragState.value.primaryCardStart.x + dx;
+    const proposedY = dragState.value.primaryCardStart.y + dy;
+    const guideResult = computeGuideSnap(dragState.value.primaryCardId, proposedX, proposedY);
+
+    if (guideResult) {
+      guideAdjustX = guideResult.adjustX;
+      guideAdjustY = guideResult.adjustY;
+      activeGuides.value = guideResult.guides;
+    } else {
+      resetActiveGuides();
+    }
+  }
+
+  const finalDx = dx + guideAdjustX;
+  const finalDy = dy + guideAdjustY;
 
   dragState.value.cards.forEach(item => {
     cardsStore.updateCardPosition(
       item.id,
-      item.startX + dx,
-      item.startY + dy,
+      item.startX + finalDx,
+      item.startY + finalDy,
       { saveToHistory: false }
     );
   });
@@ -672,6 +870,8 @@ const endDrag = (event) => {
   }
 
   dragState.value = null;
+    resetActiveGuides();
+
   if (activeDragPointerId !== null) {
     dragPointerCaptureElement?.releasePointerCapture?.(activeDragPointerId);
   }
@@ -975,8 +1175,14 @@ watch(
 
 watch(cards, () => {
   updateStageSize();
-}, { deep: true });  
-  
+}, { deep: true });
+
+watch(guidesEnabled, (enabled) => {
+  if (!enabled) {
+    resetActiveGuides();
+  }
+});
+
 </script>
 
 <template>
@@ -991,6 +1197,22 @@ watch(cards, () => {
       :style="selectionBoxStyle"
     ></div>  
     <div class="canvas-content" :style="canvasContentStyle">
+      <div
+        v-if="guidesEnabled && (activeGuides.vertical !== null || activeGuides.horizontal !== null)"
+        class="guides-overlay"
+        :style="guideOverlayStyle"
+      >
+        <div
+          v-if="activeGuides.horizontal !== null"
+          class="guide-line guide-line--horizontal"
+          :style="{ top: `${activeGuides.horizontal}px` }"
+        ></div>
+        <div
+          v-if="activeGuides.vertical !== null"
+          class="guide-line guide-line--vertical"
+          :style="{ left: `${activeGuides.vertical}px` }"
+        ></div>
+      </div>      
 <svg
         class="svg-layer"
         :width="stageConfig.width"
@@ -1178,6 +1400,29 @@ watch(cards, () => {
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
   filter: drop-shadow(0 0 10px var(--line-highlight-color));
+}
+.guides-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.guide-line {
+  position: absolute;
+  background: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+.guide-line--horizontal {
+  width: 100%;
+  height: 1px;
+}
+
+.guide-line--vertical {
+  height: 100%;
+  width: 1px;
 }
 
 @keyframes lineBalanceFlow {
