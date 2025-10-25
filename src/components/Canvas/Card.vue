@@ -41,6 +41,7 @@ const cardStyle = computed(() => {
     left: `${props.card.x}px`,
     top: `${props.card.y}px`,
     width: `${props.card.width}px`,
+    height: Number.isFinite(props.card.height) ? `${props.card.height}px` : 'auto',  
     background: bodyBackground,
     background: props.card.fill || '#ffffff',
     border: `${strokeWidth}px solid ${props.card.stroke || '#000000'}`
@@ -295,6 +296,8 @@ const updateValue = (event, field) => {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   overflow: visible;
   touch-action: none;
+  display: flex;
+  flex-direction: column;  
 }
 
 .card:hover {
@@ -335,6 +338,7 @@ const updateValue = (event, field) => {
   align-items: center;
   justify-content: center;
   text-align: center;
+  flex-shrink: 0;
   
 }
 
@@ -408,6 +412,8 @@ const updateValue = (event, field) => {
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  flex: 1 1 auto;
+  width: 100%;  
 }
 .card--large .card-body,
 .card--gold .card-body {
