@@ -23,8 +23,14 @@ const canvasStore = useCanvasStore()
 const connectionsStore = useConnectionsStore()
   
 
-const { backgroundColor, isSelectionMode, isHierarchicalDragMode, guidesEnabled } = storeToRefs(canvasStore)
-// Обработчики для кнопок левой панели
+const {
+  backgroundColor,
+  isSelectionMode,
+  isHierarchicalDragMode,
+  guidesEnabled,
+  gridStep,
+  isGridBackgroundVisible
+} = storeToRefs(canvasStore)// Обработчики для кнопок левой панели
 const handleUndo = () => {
   historyStore.undo()
 }
@@ -50,8 +56,9 @@ const handleSaveProject = () => {
       backgroundColor: backgroundColor.value,
       isSelectionMode: isSelectionMode.value,
       isHierarchicalDragMode: isHierarchicalDragMode.value,
-      guidesEnabled: guidesEnabled.value
-    }
+      guidesEnabled: guidesEnabled.value,
+      gridStep: gridStep.value,
+      isGridBackgroundVisible: isGridBackgroundVisible.value    }
   }
   const dataStr = JSON.stringify(projectData, null, 2)
   const dataBlob = new Blob([dataStr], {type: 'application/json'})
