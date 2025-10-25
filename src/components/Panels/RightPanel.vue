@@ -325,7 +325,8 @@ function insertTemplate(templateData) {
       ? lineDef.thickness
       : Number.isFinite(lineDef.lineWidth)
         ? lineDef.lineWidth
-        : thickness.value    const animationMs = Number.isFinite(lineDef.animationDurationMs)
+        : thickness.value
+		const animationMs = Number.isFinite(lineDef.animationDurationMs)
       ? lineDef.animationDurationMs
       : Number.isFinite(lineDef.animationDuration)
         ? lineDef.animationDuration
