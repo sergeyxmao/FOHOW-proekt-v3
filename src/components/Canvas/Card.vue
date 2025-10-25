@@ -1,6 +1,13 @@
 <script setup>
 import { ref, nextTick, computed } from 'vue';
 import { useCardsStore } from '../../stores/cards';
+import { useHistoryStore } from '../../stores/history';
+import {
+  defaultNotePositionFromRect,
+  getNoteIndicatorColor,
+  hasAnyEntry,
+  NOTE_DEFAULT_SIZE
+} from '../../utils/notes';  
 
 const props = defineProps({
   card: {
@@ -23,9 +30,27 @@ const emit = defineEmits([
 ]);
 
 const cardsStore = useCardsStore();
+const historyStore = useHistoryStore(); 
 const isEditing = ref(false);
 const editText = ref(props.card.text);
 const textInput = ref(null);
+const cardRef = ref(null);
+
+const noteHasText = computed(() => hasAnyEntry(props.card.note));
+const isNoteVisible = computed(() => Boolean(props.card.note?.visible));
+const noteIndicatorStyle = computed(() => {
+  if (!noteHasText.value) {
+    return {};
+  }
+  const color = getNoteIndicatorColor(props.card.note);
+  return color ? { '--note-indicator-color': color } : {};
+});
+const noteButtonTitle = computed(() => {
+  if (isNoteVisible.value) {
+    return 'Скрыть заметку';
+  }
+  return noteHasText.value ? 'Показать заметку' : 'Добавить заметку';
+});  
 
 // Вычисляемое свойство для проверки, является ли карточка большой
 const isLargeCard = computed(() => {
@@ -146,6 +171,46 @@ const handleDelete = (event) => {
   event.stopPropagation();
   cardsStore.removeCard(props.card.id);
 };
+const openNote = () => {
+  cardsStore.ensureCardNote(props.card.id);
+  const element = cardRef.value;
+  cardsStore.updateCardNote(props.card.id, (mutableNote) => {
+    mutableNote.visible = true;
+    if (!Number.isFinite(mutableNote.width) || mutableNote.width < NOTE_DEFAULT_SIZE.width) {
+      mutableNote.width = NOTE_DEFAULT_SIZE.width;
+    }
+    if (!Number.isFinite(mutableNote.height) || mutableNote.height < NOTE_DEFAULT_SIZE.height) {
+      mutableNote.height = NOTE_DEFAULT_SIZE.height;
+    }
+    if (element) {
+      const rect = element.getBoundingClientRect();
+      const position = defaultNotePositionFromRect(rect);
+      mutableNote.x = position.x;
+      mutableNote.y = position.y;
+    }
+  });
+  historyStore.setActionMetadata('update', `Открыта заметка карточки "${props.card.text}"`);
+  historyStore.saveState();
+};
+
+const closeNote = () => {
+  cardsStore.updateCardNote(props.card.id, (mutableNote) => {
+    if (mutableNote) {
+      mutableNote.visible = false;
+    }
+  });
+  historyStore.setActionMetadata('update', `Закрыта заметка карточки "${props.card.text}"`);
+  historyStore.saveState();
+};
+
+const handleNoteButtonClick = (event) => {
+  event.stopPropagation();
+  if (isNoteVisible.value) {
+    closeNote();
+    return;
+  }
+  openNote();
+};
 
 // Обработчик для обновления значений
 const updateValue = (event, field) => {
@@ -163,11 +228,14 @@ const updateValue = (event, field) => {
       'connecting': isConnecting,
       'editing': isEditing,
       'card--large': isLargeCard,
-      'card--gold': card.type === 'gold'
+      'card--gold': card.type === 'gold',
+      'note-active': card.note?.visible
     }"
     :style="cardStyle"
     @click="handleCardClick"
     @pointerdown="handlePointerDown"
+     ref="cardRef"
+   
   >
     <!-- Заголовок карточки -->
     <div
@@ -190,7 +258,20 @@ const updateValue = (event, field) => {
         @dblclick.stop="handleTitleDblClick"      >
         {{ card.text }}
       </div>
-      
+        <!-- Кнопка заметки -->
+      <button
+        class="card-note-btn"
+        :class="{
+          'card-note-btn--has-text': noteHasText,
+          'card-note-btn--active': isNoteVisible
+        }"
+        type="button"
+        :title="noteButtonTitle"
+        :style="noteIndicatorStyle"
+        @click="handleNoteButtonClick"
+      >
+        📝
+      </button>    
       <!-- Кнопка закрытия -->
       <button
         class="card-close-btn"
@@ -401,6 +482,57 @@ const updateValue = (event, field) => {
 
 .card-close-btn:hover {
   background: rgba(0, 0, 0, 0.4);
+  transform: scale(1.05);
+}
+.card-note-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #be123c;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+}
+
+.card-note-btn::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--note-indicator-color, transparent);
+  bottom: -2px;
+  right: -2px;
+  box-shadow: 0 0 0 2px #ffffff;
+  opacity: var(--note-indicator-opacity, 1);
+}
+
+.card-note-btn--has-text {
+  background: #fee2e2;
+  color: #9f1239;
+}
+
+.card-note-btn--has-text::after {
+  --note-indicator-opacity: 1;
+}
+
+.card-note-btn--active {
+  background: #fb7185;
+  color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.45), 0 10px 18px rgba(225, 29, 72, 0.25);
+}
+
+.card-note-btn:hover {
   transform: scale(1.05);
 }
 
