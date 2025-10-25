@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { storeToRefs } from 'pinia'
+
 import { useCardsStore } from '../../stores/cards'
 import { useCanvasStore } from '../../stores/canvas'
 import { useConnectionsStore } from '../../stores/connections'
@@ -17,6 +19,7 @@ const props = defineProps({
 const cardsStore = useCardsStore()
 const canvasStore = useCanvasStore()
 const connectionsStore = useConnectionsStore()
+const { gridStep, isGridBackgroundVisible } = storeToRefs(canvasStore)
 
 // Константы линий
 const MIN_ANIMATION_SECONDS = 2
@@ -95,7 +98,39 @@ const templateOptions = computed(() =>
       displayText: template.label
     }))
 )
-  
+
+const GRID_STEP_MIN = 5
+const GRID_STEP_MAX = 200
+const gridStepPresets = [10, 20, 30, 40, 60, 80]
+
+const gridStepModel = computed({
+  get() {
+    return gridStep.value
+  },
+  set(value) {
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) {
+      return
+    }
+
+    const clampedValue = Math.min(Math.max(Math.round(numericValue), GRID_STEP_MIN), GRID_STEP_MAX)
+    canvasStore.setGridStep(clampedValue)
+  }
+})
+
+function applyGridPreset(preset) {
+  const numericValue = Number(preset)
+  if (!Number.isFinite(numericValue)) {
+    return
+  }
+
+  const clampedValue = Math.min(Math.max(Math.round(numericValue), GRID_STEP_MIN), GRID_STEP_MAX)
+  canvasStore.setGridStep(clampedValue)
+}
+
+function toggleGridBackgroundVisibility() {
+  canvasStore.toggleGridBackground()
+}  
 // Методы для управления панелью
 function togglePanel() {
   isCollapsed.value = !isCollapsed.value
@@ -545,6 +580,46 @@ watch(isCollapsed, (collapsed) => {
             style="display: none"
             @input="handleBackgroundChange"
           >
+        </div>
+        <div class="control-section">
+          <span class="control-section__title">Сетка</span>
+          <div class="grid-settings" aria-label="Настройки сетки">
+            <label class="grid-settings__field" for="grid-step-input">
+              <span class="grid-settings__label">Шаг</span>
+              <input
+                id="grid-step-input"
+                class="grid-settings__input"
+                type="number"
+                min="5"
+                :max="GRID_STEP_MAX"
+                step="1"
+                v-model.number="gridStepModel"
+              >
+              <span class="grid-settings__unit">px</span>
+            </label>
+            <div class="grid-settings__presets">
+              <button
+                v-for="preset in gridStepPresets"
+                :key="preset"
+                class="grid-settings__preset"
+                type="button"
+                :class="{ 'grid-settings__preset--active': gridStep === preset }"
+                @click="applyGridPreset(preset)"
+              >
+                {{ preset }}
+              </button>
+            </div>
+            <button
+              class="grid-settings__toggle"
+              type="button"
+              :class="{ active: isGridBackgroundVisible }"
+              :aria-pressed="isGridBackgroundVisible"
+              title="Показать или скрыть фон сетки"
+              @click="toggleGridBackgroundVisibility"
+            >
+              ▦
+            </button>
+          </div>
         </div>
 
         <div class="control-section control-section--footer">
@@ -1009,6 +1084,92 @@ watch(isCollapsed, (collapsed) => {
 .background-row {
   display: flex;
   gap: 12px;
+}
+.grid-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--panel-surface);
+  border: 1px solid var(--panel-surface-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.grid-settings__field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--panel-muted);
+}
+
+.grid-settings__label {
+  font-weight: 600;
+  color: var(--panel-text);
+}
+
+.grid-settings__input {
+  width: 72px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-card-btn-border);
+  background: var(--panel-button-bg);
+  color: var(--panel-text);
+  font-size: 14px;
+  text-align: center;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.grid-settings__unit {
+  font-size: 12px;
+  color: var(--panel-muted);
+}
+
+.grid-settings__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.grid-settings__preset {
+  min-width: 48px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-card-btn-border);
+  background: var(--panel-button-bg);
+  color: var(--panel-text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: var(--panel-button-shadow);
+}
+
+.grid-settings__preset:hover,
+.grid-settings__preset--active {
+  transform: translateY(-1px);
+  border-color: var(--panel-contrast);
+  color: var(--panel-contrast);
+}
+
+.grid-settings__toggle {
+  align-self: flex-start;
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-card-btn-border);
+  background: var(--panel-button-bg);
+  color: var(--panel-text);
+  font-size: 16px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  box-shadow: var(--panel-button-shadow);
+}
+
+.grid-settings__toggle.active,
+.grid-settings__toggle:hover {
+  transform: translateY(-1px);
+  border-color: var(--panel-contrast);
+  color: var(--panel-contrast);
 }
 
 .background-button {
