@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": 1761395126636,
+  "timestamp": 1761395287041,
   "cards": [
     {
       "id": "1761395087996okkmanre9",
@@ -37,7 +37,7 @@
       "strokeWidth": 2,
       "headerBg": "#5D8BF4",
       "colorIndex": -1,
-      "selected": false,
+      "selected": true,
       "width": 380,
       "height": 280,
       "pv": "30/330pv",
@@ -187,17 +187,6 @@
   ],
   "connections": [
     {
-      "id": "1761395087998-wd2nl1i",
-      "from": "1761395087996okkmanre9",
-      "to": "1761395087996xorv1llhu",
-      "fromSide": "left",
-      "toSide": "top",
-      "color": "#0f62fe",
-      "thickness": 4,
-      "highlightType": null,
-      "animationDuration": 2000
-    },
-    {
       "id": "1761395087998-mzbdf2n",
       "from": "1761395087996xorv1llhu",
       "to": "1761395087996p5h2rod49",
@@ -247,6 +236,17 @@
       "to": "1761395087997whleiyd8u",
       "fromSide": "top",
       "toSide": "bottom",
+      "color": "#0f62fe",
+      "thickness": 5,
+      "highlightType": null,
+      "animationDuration": 2000
+    },
+    {
+      "id": "1761395279635-c81uo8x",
+      "from": "1761395087996okkmanre9",
+      "to": "1761395087996xorv1llhu",
+      "fromSide": "bottom",
+      "toSide": "top",
       "color": "#0f62fe",
       "thickness": 5,
       "highlightType": null,
