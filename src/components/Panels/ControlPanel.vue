@@ -1,10 +1,12 @@
 <script setup>
-import { storeToRefs } from 'pinia'  
+import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useCardsStore } from '../../stores/cards.js'
 import { useHistoryStore } from '../../stores/history.js'
 import { useCanvasStore } from '../../stores/canvas.js'
-import { useConnectionsStore } from '../../stores/connections.js'  
-
+import { useConnectionsStore } from '../../stores/connections.js'
+import { useProjectStore, formatProjectFileName } from '../../stores/project.js'
+import { useViewportStore } from '../../stores/viewport.js'
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -16,12 +18,13 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['toggle-theme', 'toggle-collapse'])
+const emit = defineEmits(['toggle-theme', 'toggle-collapse', 'fit-to-content'])
 const cardsStore = useCardsStore()
 const historyStore = useHistoryStore()
 const canvasStore = useCanvasStore()
 const connectionsStore = useConnectionsStore()
-  
+const projectStore = useProjectStore()
+const viewportStore = useViewportStore()  
 
 const {
   backgroundColor,
@@ -30,8 +33,13 @@ const {
   guidesEnabled,
   gridStep,
   isGridBackgroundVisible
-} = storeToRefs(canvasStore)// Обработчики для кнопок левой панели
-const handleUndo = () => {
+} = storeToRefs(canvasStore)
+const { normalizedProjectName } = storeToRefs(projectStore)
+const { zoomPercentage } = storeToRefs(viewportStore)
+
+const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
+
+// Обработчики для кнопок левой панелиconst handleUndo = () => {
   historyStore.undo()
 }
 
@@ -65,8 +73,8 @@ const handleSaveProject = () => {
   const url = URL.createObjectURL(dataBlob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `fohow-project-${Date.now()}.json`
-  link.click()
+  const baseFileName = formatProjectFileName(normalizedProjectName.value || projectStore.projectName)
+  link.download = `${baseFileName}.json`  link.click()
   URL.revokeObjectURL(url)
 }
 
@@ -527,7 +535,9 @@ const handleLoadProject = () => {
         }
         if (projectData.canvas && typeof canvasStore.applyState === 'function') {
           canvasStore.applyState(projectData.canvas)
-        }       
+        }
+        const baseName = file.name.replace(/\.[^/.]+$/, '')
+        projectStore.applyLoadedFileName(baseName)    
       } catch (error) {
         console.error('Ошибка при загрузке проекта:', error)
       }
@@ -535,6 +545,9 @@ const handleLoadProject = () => {
     reader.readAsText(file)
   }
   input.click()
+}
+const handleFitToContent = () => {
+  emit('fit-to-content')
 }
 
 const handleNotesList = () => {
@@ -681,6 +694,16 @@ const handleToggleGuides = () => {
         </button>
       </div>
     </template>
+     <div class="left-panel-controls__zoom">
+      <button
+        class="left-panel-controls__zoom-button"
+        type="button"
+        title="Автоподгонка масштаба"
+        @click="handleFitToContent"
+      >
+        Масштаб: <span class="left-panel-controls__zoom-value">{{ zoomDisplay }}</span>
+      </button>
+    </div>   
     <input type="file" accept=".json,application/json" style="display:none">
   </div>
 </template>
@@ -757,6 +780,39 @@ const handleToggleGuides = () => {
 .left-panel-controls__grid-item--full {
   grid-column: 1 / -1;
 }
+.left-panel-controls__zoom {
+  width: 100%;
+  margin-top: auto;
+  padding-top: calc(var(--left-panel-section-gap) * 0.4);
+}
+.left-panel-controls__zoom-button {
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: var(--left-panel-btn-radius);
+  border: 1px solid var(--left-panel-btn-border);
+  background: var(--left-panel-btn-bg);
+  color: var(--left-panel-btn-color);
+  font-size: calc(var(--left-panel-btn-font) * 0.55);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: var(--left-panel-btn-shadow);
+}
+.left-panel-controls__zoom-button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.02);
+}
+.left-panel-controls__zoom-button:active {
+  transform: translateY(1px);
+  filter: brightness(0.98);
+}
+.left-panel-controls__zoom-value {
+  font-variant-numeric: tabular-nums;
+}  
 .left-panel-controls .ui-btn {
   width: var(--left-panel-btn-size);
   height: var(--left-panel-btn-size);
