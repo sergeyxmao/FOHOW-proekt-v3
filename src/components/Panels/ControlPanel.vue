@@ -156,8 +156,35 @@ const parseTransform = (transform) => {
 
 const buildViewOnlyScript = ({ x, y, scale }) => `\n<script>\ndocument.addEventListener('DOMContentLoaded', () => {\n  const root = document.getElementById('canvas');\n  if (!root) return;\n  const content = root.querySelector('.canvas-content') || root.firstElementChild;\n  if (!content) return;\n  let tx = ${Number.isFinite(x) ? x : 0};\n  let ty = ${Number.isFinite(y) ? y : 0};\n  let s = ${Number.isFinite(scale) ? scale : 1};\n  const clamp = (value) => Math.max(0.05, Math.min(5, value));\n  const update = () => {\n    content.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')';\n  };\n  let pan = false;\n  let panId = null;\n  let lastX = 0;\n  let lastY = 0;\n  const pointers = new Map();\n  let pinch = null;\n  const tryPinch = () => {\n    if (pinch) return;\n    const touches = Array.from(pointers.entries()).filter(([, info]) => info.type === 'touch');\n    if (touches.length < 2) return;\n    const [first, second] = touches;\n    const distance = Math.hypot(second[1].x - first[1].x, second[1].y - first[1].y);\n    if (!distance) return;\n    pinch = {\n      id1: first[0],\n      id2: second[0],\n      distance,\n      scale: s,\n      midX: (first[1].x + second[1].x) / 2,\n      midY: (first[1].y + second[1].y) / 2\n    };\n    if (pan && panId != null && root.releasePointerCapture) {\n      try { root.releasePointerCapture(panId); } catch (_) {}\n    }\n    pan = false;\n    panId = null;\n  };\n  const handlePinch = () => {\n    if (!pinch) return;\n    const first = pointers.get(pinch.id1);\n    const second = pointers.get(pinch.id2);\n    if (!first || !second) return;\n    const midX = (first.x + second.x) / 2;\n    const midY = (first.y + second.y) / 2;\n    tx += midX - pinch.midX;\n    ty += midY - pinch.midY;\n    const distance = Math.hypot(second.x - first.x, second.y - first.y);\n    if (distance) {\n      const nextScale = clamp(pinch.scale * distance / pinch.distance);\n      const ratio = nextScale / s;\n      tx = midX - (midX - tx) * ratio;\n      ty = midY - (midY - ty) * ratio;\n      s = nextScale;\n    }\n    pinch.midX = midX;\n    pinch.midY = midY;\n    update();\n  };\n  const endPinch = (pointerId) => {\n    if (pinch && (pointerId === pinch.id1 || pointerId === pinch.id2)) {\n      pinch = null;\n    }\n  };\n  const stopPan = (pointerId) => {\n    if (pan && pointerId === panId) {\n      pan = false;\n      panId = null;\n      if (root.releasePointerCapture) {\n        try { root.releasePointerCapture(pointerId); } catch (_) {}\n      }\n      document.body.style.cursor = 'default';\n    }\n  };\n  root.addEventListener('pointerdown', (event) => {\n    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY, type: event.pointerType });\n    if (event.pointerType === 'touch') {\n      tryPinch();\n      if (!pinch && !pan) {\n        pan = true;\n        panId = event.pointerId;\n        lastX = event.clientX;\n        lastY = event.clientY;\n        if (root.setPointerCapture) {\n          try { root.setPointerCapture(event.pointerId); } catch (_) {}\n        }\n        document.body.style.cursor = 'move';\n      }\n      return;\n    }\n    if (event.button === 1) {\n      event.preventDefault();\n      pan = true;\n      panId = event.pointerId;\n      lastX = event.clientX;\n      lastY = event.clientY;\n      if (root.setPointerCapture) {\n        try { root.setPointerCapture(event.pointerId); } catch (_) {}\n      }\n      document.body.style.cursor = 'move';\n    }\n  });\n  root.addEventListener('pointermove', (event) => {\n    const info = pointers.get(event.pointerId);\n    if (info) {\n      info.x = event.clientX;\n      info.y = event.clientY;\n    }\n    if (pinch && (event.pointerId === pinch.id1 || event.pointerId === pinch.id2)) {\n      handlePinch();\n      return;\n    }\n    if (pan && event.pointerId === panId) {\n      event.preventDefault();\n      tx += event.clientX - lastX;\n      ty += event.clientY - lastY;\n      lastX = event.clientX;\n      lastY = event.clientY;\n      update();\n    }\n  });\n  const clearPointer = (event) => {\n    pointers.delete(event.pointerId);\n    endPinch(event.pointerId);\n    stopPan(event.pointerId);\n  };\n  root.addEventListener('pointerup', clearPointer);\n  root.addEventListener('pointercancel', clearPointer);\n  root.addEventListener('wheel', (event) => {\n    event.preventDefault();\n    const rect = root.getBoundingClientRect();\n    const mouseX = event.clientX - rect.left;\n    const mouseY = event.clientY - rect.top;\n    const nextScale = clamp(s - 0.001 * event.deltaY);\n    const ratio = nextScale / s;\n    tx = mouseX - (mouseX - tx) * ratio;\n    ty = mouseY - (mouseY - ty) * ratio;\n    s = nextScale;\n    update();\n  }, { passive: false });\n  update();\n});\n<\/script>\n`
 
-const getExportHtmlCss = () => `html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#111827;}#canvas{position:relative;width:100%;height:100%;overflow:hidden;}#canvas .canvas-container{position:absolute;inset:0;overflow:visible;touch-action:none;}#canvas .canvas-content{position:absolute;top:0;left:0;width:100%;height:100%;transform-origin:0 0;}#canvas .svg-layer{position:absolute;inset:0;pointer-events:none;overflow:visible;}#canvas .line-group{pointer-events:none;}#canvas .line{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(0,0,0,.15));}#canvas .line.line--balance-highlight{stroke-dasharray:16;animation:lineBalanceFlow 2s ease-in-out infinite;}#canvas .line.line--pv-highlight{stroke-dasharray:14;animation:linePvFlow 2s ease-in-out infinite;}@keyframes lineBalanceFlow{0%{stroke-dashoffset:-24;}50%{stroke:#d93025;}100%{stroke-dashoffset:24;}}@keyframes linePvFlow{0%{stroke-dashoffset:-18;}50%{stroke:#0f62fe;}100%{stroke-dashoffset:18;}}#canvas .cards-container{position:absolute;inset:0;pointer-events:none;}#canvas .card{position:absolute;box-sizing:border-box;border-radius:16px;box-shadow:10px 12px 24px rgba(15,35,95,.16),-6px -6px 18px rgba(255,255,255,.85);overflow:visible;background:#fff;color:#111827;transition:none;}#canvas .card-header{position:relative;height:52px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:center;padding:10px 44px;font-weight:700;font-size:20px;color:#fff;box-sizing:border-box;}#canvas .card-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;text-align:center;}#canvas .card-body{padding:16px;display:flex;flex-direction:column;gap:12px;text-align:center;}#canvas .card-row{display:flex;align-items:center;justify-content:center;gap:10px;}#canvas .label{color:#6b7280;font-weight:600;}#canvas .value{color:#111827;font-weight:700;}#canvas .coin-icon{width:28px;height:28px;}#canvas .slf-badge,#canvas .fendou-badge,#canvas .rank-badge{position:absolute;display:none;pointer-events:none;user-select:none;}#canvas .slf-badge.visible{display:block;top:15px;left:15px;font-size:24px;font-weight:900;color:#ffc700;text-shadow:1px 1px 2px rgba(0,0,0,.5);}#canvas .fendou-badge.visible{display:block;top:-28px;left:50%;transform:translateX(-50%);font-size:36px;font-weight:900;color:#ff2d55;text-shadow:0 2px 6px rgba(0,0,0,.25);}#canvas .rank-badge.visible{display:block;top:-18px;right:18px;width:80px;height:auto;transform:rotate(15deg);}#canvas .card-body-html{margin-top:8px;text-align:left;}#canvas [data-side]{display:none;}`
-
+const getExportHtmlCss = () => `
+  html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#111827;background:#f8fafc;}
+  #canvas{position:relative;width:100%;height:100%;overflow:hidden;}
+  #canvas .canvas-container{position:absolute;inset:0;overflow:visible;touch-action:none;}
+  #canvas .canvas-content{position:absolute;top:0;left:0;width:100%;height:100%;transform-origin:0 0;}
+  #canvas .svg-layer{position:absolute;inset:0;pointer-events:none;overflow:visible;}
+  #canvas .line-group{pointer-events:none;}
+  #canvas .line{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(0,0,0,.15));}
+  #canvas .line.line--balance-highlight{stroke-dasharray:16;animation:lineBalanceFlow 2s ease-in-out infinite;}
+  #canvas .line.line--pv-highlight{stroke-dasharray:14;animation:linePvFlow 2s ease-in-out infinite;}
+  @keyframes lineBalanceFlow{0%{stroke-dashoffset:-24;}50%{stroke:#d93025;}100%{stroke-dashoffset:24;}}
+  @keyframes linePvFlow{0%{stroke-dashoffset:-18;}50%{stroke:#0f62fe;}100%{stroke-dashoffset:18;}}
+  #canvas .cards-container{position:absolute;inset:0;pointer-events:none;}
+  #canvas .card{position:absolute;display:flex;flex-direction:column;align-items:stretch;box-sizing:border-box;border-radius:16px;box-shadow:10px 12px 24px rgba(15,35,95,.16),-6px -6px 18px rgba(255,255,255,.85);overflow:visible;background:var(--card-fill,#ffffff);color:#111827;transition:none;border:var(--card-border,2px solid #000);}
+  #canvas .card-header{position:relative;height:52px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 44px;font-weight:700;font-size:20px;letter-spacing:0.3px;color:#fff;box-sizing:border-box;}
+  #canvas .card-title{display:flex;align-items:center;justify-content:center;width:100%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;font-size:20px;line-height:1;letter-spacing:0.3px;}
+  #canvas .card-body{padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:12px;text-align:center;border-radius:0 0 16px 16px;background:var(--card-body-gradient,var(--surface,#ffffff));flex:1 1 auto;width:100%;}
+  #canvas .card-row{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;line-height:1.25;}
+  #canvas .label{color:#6b7280;font-weight:500;font-size:14px;}
+  #canvas .value{color:#111827;font-weight:600;font-size:15px;}
+  #canvas .pv-row .value{font-size:18px;font-weight:600;}
+  #canvas .coin-icon{width:32px;height:32px;flex-shrink:0;}
+  #canvas .slf-badge,#canvas .fendou-badge,#canvas .rank-badge{position:absolute;display:none;pointer-events:none;user-select:none;}
+  #canvas .slf-badge.visible{display:block;top:15px;left:15px;font-size:36px;font-weight:900;color:#ffc700;text-shadow:1px 1px 2px rgba(0,0,0,.5);}
+  #canvas .fendou-badge.visible{display:block;top:-25px;left:50%;transform:translateX(-50%);font-size:56px;font-weight:900;color:#ff2d55;text-shadow:0 2px 6px rgba(0,0,0,.25);}
+  #canvas .rank-badge.visible{display:block;top:-15px;right:15px;width:80px;height:auto;transform:rotate(15deg);}
+  #canvas .card-body-html{margin-top:8px;text-align:left;width:100%;}
+  #canvas [data-side]{display:none;}
+`
 const escapeHtml = (value) => String(value ?? '')
   .replace(/&/g, '&amp;')
   .replace(/</g, '&lt;')
@@ -345,6 +372,20 @@ const handleExportSVG = async () => {
     const cardHtmlList = await Promise.all(cards.map(async (card) => {
       const headerBg = card.headerBg || '#5D8BF4'
       const rankSrc = card.rankBadge ? await imageToDataUri(`/rank-${card.rankBadge}.png`) : ''
+      const strokeWidth = Number.isFinite(card.strokeWidth) ? card.strokeWidth : 2
+      const borderColor = card.stroke || '#000000'
+      const cardFill = card.fill || '#ffffff'
+      const bodyGradient = card.bodyGradient || cardFill
+
+      const cardInlineStyles = [
+        `width:${card.width}px`,
+        `height:${card.height}px`,
+        `background:${escapeHtml(cardFill)}`,
+        `border:${strokeWidth}px solid ${escapeHtml(borderColor)}`,
+        `--card-fill:${escapeHtml(cardFill)}`,
+        `--card-body-gradient:${escapeHtml(bodyGradient)}`,
+        `--card-border:${strokeWidth}px solid ${escapeHtml(borderColor)}`
+      ].join(';')      
 
       const rows = [
         { label: 'Баланс:', value: card.balance || '0 / 0' },
@@ -367,8 +408,8 @@ const handleExportSVG = async () => {
       ].join('')
 
       return `
-        <div class="card" style="width:${card.width}px;height:${card.height}px;">
-          <div class="card-header" style="background:${headerBg};">
+        <div class="card" style="${cardInlineStyles};">
+          <div class="card-header" style="background:${escapeHtml(headerBg)};">
             <div class="card-title">${escapeHtml(card.text)}</div>
           </div>
           <div class="card-body">
@@ -440,18 +481,20 @@ const handleExportSVG = async () => {
 
     const svgStyle = `
       <style>
-        .card { position: relative; display: inline-block; box-sizing: border-box; border-radius: 16px; overflow: visible; box-shadow: 10px 12px 24px rgba(15,35,95,0.16), -6px -6px 18px rgba(255,255,255,0.85); border: 2px solid #000000; }
-        .card-header { height: 52px; border-radius: 16px 16px 0 0; display: flex; align-items: center; justify-content: center; padding: 10px 44px; color: #fff; font-weight: 700; font-size: 20px; box-sizing: border-box; }
-        .card-title { width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .card-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; text-align: center; color: #111827; }
-        .card-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .label { color: #6b7280; font-weight: 600; }
-        .value { color: #111827; font-weight: 700; }
-        .coin-icon { width: 28px; height: 28px; }
+        .card { position: relative; display: flex; flex-direction: column; align-items: stretch; box-sizing: border-box; border-radius: 16px; overflow: visible; box-shadow: 10px 12px 24px rgba(15,35,95,0.16), -6px -6px 18px rgba(255,255,255,0.85); background: var(--card-fill,#ffffff); color: #111827; border: var(--card-border,2px solid #000000); }
+        .card-header { position: relative; height: 52px; border-radius: 16px 16px 0 0; display: flex; align-items: center; justify-content: center; padding: 10px 44px; color: #fff; font-weight: 700; font-size: 20px; line-height: 1; letter-spacing: 0.3px; box-sizing: border-box; text-align: center; }
+        .card-title { display: flex; align-items: center; justify-content: center; width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; font-size: 20px; line-height: 1; letter-spacing: 0.3px; }
+        .card-body { padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; text-align: center; color: #111827; border-radius: 0 0 16px 16px; background: var(--card-body-gradient,var(--surface,#ffffff)); flex: 1 1 auto; width: 100%; }
+        .card-row { display: flex; align-items: center; justify-content: center; gap: 10px; line-height: 1.25; text-align: center; }
+        .label { color: #6b7280; font-weight: 500; font-size: 14px; }
+        .value { color: #111827; font-weight: 600; font-size: 15px; }
+        .pv-row .value { font-size: 18px; font-weight: 600; }
+        .coin-icon { width: 32px; height: 32px; }
         .slf-badge, .fendou-badge, .rank-badge { position: absolute; display: none; pointer-events: none; user-select: none; }
-        .slf-badge.visible { display: block; top: 15px; left: 15px; font-size: 24px; font-weight: 900; color: #ffc700; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
-        .fendou-badge.visible { display: block; top: -28px; left: 50%; transform: translateX(-50%); font-size: 36px; font-weight: 900; color: #ff2d55; text-shadow: 0 2px 6px rgba(0,0,0,0.25); }
-        .rank-badge.visible { display: block; top: -18px; right: 18px; width: 80px; height: auto; transform: rotate(15deg); }
+        .slf-badge.visible { display: block; top: 15px; left: 15px; font-size: 36px; font-weight: 900; color: #ffc700; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        .fendou-badge.visible { display: block; top: -25px; left: 50%; transform: translateX(-50%); font-size: 56px; font-weight: 900; color: #ff2d55; text-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+        .rank-badge.visible { display: block; top: -15px; right: 15px; width: 80px; height: auto; transform: rotate(15deg); }
+        .card-body-html { margin-top: 8px; text-align: left; width: 100%; }
         .line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
         .line--balance-highlight { stroke-dasharray: 16; }
         .line--pv-highlight { stroke-dasharray: 14; }
