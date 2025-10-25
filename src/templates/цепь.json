@@ -1,21 +1,22 @@
 {
   "version": "1.0",
-  "timestamp": 1761394695814,
+  "timestamp": 1761395126636,
   "cards": [
     {
-      "id": "1761391800054i3ewyaydn",
+      "id": "1761395087996okkmanre9",
       "x": 710,
       "y": 135,
-      "text": "RUY68",
-      "width": 494,
-      "height": 364,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
       "headerBg": "#5D8BF4",
       "colorIndex": -1,
       "selected": false,
+      "width": 494,
+      "height": 364,
       "pv": "330/330pv",
+      "text": "RUY68",
+      "historyText": "Создана большая лицензия",
       "balance": "0 / 0",
       "activePv": "0 / 0",
       "cycle": "0",
@@ -28,19 +29,20 @@
       "type": "large"
     },
     {
-      "id": "1761391800055b81eulgll",
+      "id": "1761395087996xorv1llhu",
       "x": 767,
       "y": 565,
-      "text": "A",
-      "width": 380,
-      "height": 280,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
       "headerBg": "#5D8BF4",
       "colorIndex": -1,
       "selected": false,
+      "width": 380,
+      "height": 280,
       "pv": "30/330pv",
+      "text": "A",
+      "historyText": "Создана малая лицензия",
       "balance": "0 / 0",
       "activePv": "0 / 0",
       "cycle": "0",
@@ -53,7 +55,7 @@
       "type": "small"
     },
     {
-      "id": "1761394577791ibx35pehc",
+      "id": "1761395087996p5h2rod49",
       "x": 767,
       "y": 910,
       "fill": "#ffffff",
@@ -79,7 +81,7 @@
       "type": "small"
     },
     {
-      "id": "1761394592370w10s0gd60",
+      "id": "17613950879976j0avhel0",
       "x": 767,
       "y": 1260,
       "fill": "#ffffff",
@@ -105,7 +107,7 @@
       "type": "small"
     },
     {
-      "id": "1761394609416t98k5hqd4",
+      "id": "1761395087997lyunioaqf",
       "x": 767,
       "y": 1610,
       "fill": "#ffffff",
@@ -131,7 +133,7 @@
       "type": "small"
     },
     {
-      "id": "17613946240862dbq01mao",
+      "id": "1761395087997whleiyd8u",
       "x": 767,
       "y": 1960,
       "fill": "#ffffff",
@@ -157,7 +159,7 @@
       "type": "small"
     },
     {
-      "id": "17613946325589c7r6pvog",
+      "id": "1761395087997st7jfc8uj",
       "x": 767,
       "y": 2310,
       "fill": "#ffffff",
@@ -185,9 +187,9 @@
   ],
   "connections": [
     {
-      "id": "1761391800058-unapotk",
-      "from": "1761391800054i3ewyaydn",
-      "to": "1761391800055b81eulgll",
+      "id": "1761395087998-wd2nl1i",
+      "from": "1761395087996okkmanre9",
+      "to": "1761395087996xorv1llhu",
       "fromSide": "left",
       "toSide": "top",
       "color": "#0f62fe",
@@ -196,9 +198,9 @@
       "animationDuration": 2000
     },
     {
-      "id": "1761394663203-871kdcd",
-      "from": "1761391800055b81eulgll",
-      "to": "1761394577791ibx35pehc",
+      "id": "1761395087998-mzbdf2n",
+      "from": "1761395087996xorv1llhu",
+      "to": "1761395087996p5h2rod49",
       "fromSide": "bottom",
       "toSide": "top",
       "color": "#0f62fe",
@@ -207,9 +209,9 @@
       "animationDuration": 2000
     },
     {
-      "id": "1761394667913-xyr68qw",
-      "from": "1761394577791ibx35pehc",
-      "to": "1761394592370w10s0gd60",
+      "id": "1761395087998-mq2u6rg",
+      "from": "1761395087996p5h2rod49",
+      "to": "17613950879976j0avhel0",
       "fromSide": "bottom",
       "toSide": "top",
       "color": "#0f62fe",
@@ -218,9 +220,9 @@
       "animationDuration": 2000
     },
     {
-      "id": "1761394670648-fxvjsp4",
-      "from": "1761394592370w10s0gd60",
-      "to": "1761394609416t98k5hqd4",
+      "id": "1761395087998-cyg0ou5",
+      "from": "17613950879976j0avhel0",
+      "to": "1761395087997lyunioaqf",
       "fromSide": "bottom",
       "toSide": "top",
       "color": "#0f62fe",
@@ -229,11 +231,22 @@
       "animationDuration": 2000
     },
     {
-      "id": "1761394674882-lmjon62",
-      "from": "1761394609416t98k5hqd4",
-      "to": "17613946240862dbq01mao",
+      "id": "1761395087999-u0l4r8i",
+      "from": "1761395087997lyunioaqf",
+      "to": "1761395087997whleiyd8u",
       "fromSide": "bottom",
       "toSide": "top",
+      "color": "#0f62fe",
+      "thickness": 5,
+      "highlightType": null,
+      "animationDuration": 2000
+    },
+    {
+      "id": "1761395112134-par7iug",
+      "from": "1761395087997st7jfc8uj",
+      "to": "1761395087997whleiyd8u",
+      "fromSide": "top",
+      "toSide": "bottom",
       "color": "#0f62fe",
       "thickness": 5,
       "highlightType": null,
@@ -251,7 +264,7 @@
     "isSelectionMode": false,
     "isHierarchicalDragMode": false,
     "guidesEnabled": true,
-    "gridStep": 25,
+    "gridStep": 40,
     "isGridBackgroundVisible": true
   }
 }
