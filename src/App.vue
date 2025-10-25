@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import ControlPanel from './components/Panels/ControlPanel.vue'
 import RightPanel from './components/Panels/RightPanel.vue'
+import AppHeader from './components/Layout/AppHeader.vue'
 
 const isModernTheme = ref(false)
 const isLeftPanelCollapsed = ref(false)
@@ -25,6 +26,9 @@ function handleGlobalKeydown(event) {
   event.preventDefault()
   canvasRef.value?.resetView()
 }
+function handleFitToContent() {
+  canvasRef.value?.fitToContent()
+}
 
 onMounted(() => {
   window.addEventListener('keydown', handleGlobalKeydown)
@@ -38,6 +42,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div id="app">
+    <AppHeader /> 
     <!-- Левая панель -->
     <div
       :class="[
@@ -52,6 +57,7 @@ onBeforeUnmount(() => {
         :is-collapsed="isLeftPanelCollapsed"
         @toggle-theme="toggleTheme"
         @toggle-collapse="toggleLeftPanel"
+        @fit-to-content="handleFitToContent"   
       />
     </div>
 
