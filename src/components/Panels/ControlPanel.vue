@@ -701,11 +701,9 @@ const handleToggleGuides = () => {
   align-items: center;
   gap: var(--left-panel-section-gap);
   width: 100%;
-  max-height: calc(100vh - 80px);
-  overflow-y: auto;
-  padding-right: 10px;
+  max-height: none;
+  overflow: visible;
   box-sizing: border-box;
-  scrollbar-gutter: stable;
 }
 .left-panel-controls--modern {
   --left-panel-btn-bg: rgba(28, 38, 58, 0.9);
@@ -718,7 +716,6 @@ const handleToggleGuides = () => {
   --left-panel-section-gap: 14px;
   gap: var(--left-panel-section-gap);
   padding-right: 0;
-  overflow: visible;  
 }
 .left-panel-controls__collapsed {
   display: flex;
