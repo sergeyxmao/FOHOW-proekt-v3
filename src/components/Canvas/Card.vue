@@ -33,23 +33,26 @@ const isLargeCard = computed(() => {
 });
 const cardStyle = computed(() => {
   const strokeWidth = Number.isFinite(props.card.strokeWidth) ? props.card.strokeWidth : 2;
+  const baseFill = props.card.fill || '#ffffff';
+  const bodyBackground = props.card.bodyGradient || baseFill  
 
   const style = {
     position: 'absolute',
     left: `${props.card.x}px`,
     top: `${props.card.y}px`,
     width: `${props.card.width}px`,
-    height: `${props.card.height}px`,
+    background: bodyBackground,
     background: props.card.fill || '#ffffff',
     border: `${strokeWidth}px solid ${props.card.stroke || '#000000'}`
   };
 
-  if (props.card.bodyGradient) {
-    style['--card-body-gradient'] = props.card.bodyGradient;
-  }
+  style['--card-body-gradient'] = bodyBackground;
+
 
   return style;
-});const ignoreNextClick = ref(false);
+});
+
+const ignoreNextClick = ref(false);
 
 const handleCardClick = (event) => {
   event.stopPropagation();
