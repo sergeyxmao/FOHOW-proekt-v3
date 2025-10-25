@@ -57,19 +57,12 @@ const canvasContentStyle = computed(() => {
     height: `${stageConfig.value.height}px`
   };
 
-  const step = gridStepRef.value;
-
-  if (isGridBackgroundVisible.value && step > 0) {
-    const lineColor = 'rgba(79, 85, 99, 0.15)';
-    style.backgroundImage = `
-      linear-gradient(to right, ${lineColor} 1px, transparent 1px),
-      linear-gradient(to bottom, ${lineColor} 1px, transparent 1px)
-    `;
-    style.backgroundSize = `${step}px ${step}px`;
-    style.backgroundPosition = '0 0';
-  } else {
-    style.backgroundImage = 'none';
-  }
+  const step = Number.isFinite(gridStepRef.value) ? gridStepRef.value : 0;
+  const normalizedStep = Math.max(1, Math.round(step));
+  const isVisible = Boolean(isGridBackgroundVisible.value && normalizedStep > 0);
+  style['--grid-step'] = `${normalizedStep}px`;
+  style['--grid-line-color'] = 'rgba(79, 85, 99, 0.15)';
+  style['--grid-opacity'] = isVisible ? '1' : '0';
 
   return style;
 });
@@ -1334,6 +1327,23 @@ watch(guidesEnabled, (enabled) => {
   width: 100%;
   height: 100%;
   transform-origin: 0 0;
+  --grid-step: 40px;
+  --grid-line-color: rgba(79, 85, 99, 0.15);
+  --grid-opacity: 0;
+}
+
+.canvas-content::before {
+  content: '';
+  position: absolute;
+  inset: -5000px;
+  background-image:
+    linear-gradient(to right, var(--grid-line-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
+  background-size: var(--grid-step) var(--grid-step);
+  background-position: 0 0;
+  opacity: var(--grid-opacity);
+  pointer-events: none;
+  z-index: -1;  
 }
 
 .line-group {
