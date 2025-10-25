@@ -83,7 +83,36 @@ export const useHistoryStore = defineStore('history', {
       // Применяем ограничение истории
       this.optimizeHistory()
     },
-    
+  
+    saveStateSoon(snapshot) {
+      if (this.isRestoring) return
+
+      if (snapshot !== undefined) {
+        this._pendingSnapshot = snapshot
+      }
+
+      if (this._saveStateTimer != null) {
+        return
+      }
+
+      const runSave = () => {
+        this._saveStateTimer = null
+        const pending = this._pendingSnapshot
+        this._pendingSnapshot = undefined
+        this.saveState(pending)
+      }
+
+      const hasWindow = typeof window !== 'undefined'
+      if (hasWindow && typeof window.requestIdleCallback === 'function') {
+        this._saveStateTimer = window.requestIdleCallback(() => {
+          runSave()
+        })
+      } else {
+        this._saveStateTimer = setTimeout(() => {
+          runSave()
+        }, 0)
+      }
+    },  
     // Отмена последнего действия
     undo() {
       if (!this.canUndo) return false
