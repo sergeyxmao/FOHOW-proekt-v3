@@ -42,8 +42,9 @@ onBeforeUnmount(() => {
 
 <template>
   <div id="app">
-    <AppHeader /> 
-    <!-- Левая панель -->
+    <AppHeader
+      :is-modern-theme="isModernTheme"
+    />    <!-- Левая панель -->
     <div
       :class="[
         'ui-panel-left',
