@@ -28,8 +28,28 @@ const editText = ref(props.card.text);
 const textInput = ref(null);
 
 // Вычисляемое свойство для проверки, является ли карточка большой
-const isLargeCard = computed(() => props.card.width >= 494);
-const ignoreNextClick = ref(false);
+const isLargeCard = computed(() => {
+  return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 494;
+});
+const cardStyle = computed(() => {
+  const strokeWidth = Number.isFinite(props.card.strokeWidth) ? props.card.strokeWidth : 2;
+
+  const style = {
+    position: 'absolute',
+    left: `${props.card.x}px`,
+    top: `${props.card.y}px`,
+    width: `${props.card.width}px`,
+    height: `${props.card.height}px`,
+    background: props.card.fill || '#ffffff',
+    border: `${strokeWidth}px solid ${props.card.stroke || '#000000'}`
+  };
+
+  if (props.card.bodyGradient) {
+    style['--card-body-gradient'] = props.card.bodyGradient;
+  }
+
+  return style;
+});const ignoreNextClick = ref(false);
 
 const handleCardClick = (event) => {
   event.stopPropagation();
@@ -138,17 +158,10 @@ const updateValue = (event, field) => {
       'selected': isSelected,
       'connecting': isConnecting,
       'editing': isEditing,
-      'card--large': isLargeCard
+      'card--large': isLargeCard,
+      'card--gold': card.type === 'gold'
     }"
-:style="{
-      position: 'absolute',
-      left: card.x + 'px',
-      top: card.y + 'px',
-      width: card.width + 'px',
-      height: card.height + 'px',
-      backgroundColor: card.fill,
-      border: `${card.strokeWidth}px solid ${card.stroke}`,
-    }"
+    :style="cardStyle"
     @click="handleCardClick"
     @pointerdown="handlePointerDown"
   >
@@ -310,7 +323,7 @@ const updateValue = (event, field) => {
 
   
 .card-header {
-  padding: 10px 44px 10px 10px;
+  padding: 10px 44px;
   position: relative;
   height: 52px;
   border-radius: 16px 16px 0 0;
@@ -318,6 +331,8 @@ const updateValue = (event, field) => {
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
+  
 }
 
 .card-title {
@@ -325,9 +340,12 @@ const updateValue = (event, field) => {
   text-align: center;
   font-size: 20px;
   line-height: 1;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.3px;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;  
 }
 
 .card.selected .card-title {
@@ -343,8 +361,17 @@ const updateValue = (event, field) => {
   text-align: center;
   color: #333;
   font-size: 20px;
-  font-weight: 800;
+  font-weight: 700;
 }
+
+.card--large .card-title,
+.card--gold .card-title {
+  font-weight: 900;
+}
+
+.card--large .card-title-input,
+.card--gold .card-title-input {
+  font-weight: 900;}
 
 .card-close-btn {
   position: absolute;
@@ -372,12 +399,12 @@ const updateValue = (event, field) => {
 
 .card-body {
   padding: 16px;
-  background: var(--surface, #ffffff);
-  border-radius: 0 0 16px 16px;
+  background: var(--card-body-gradient, var(--surface, #ffffff));  border-radius: 0 0 16px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px}
+  gap: 12px;
+}
 
 .card-row {
   display: flex;
