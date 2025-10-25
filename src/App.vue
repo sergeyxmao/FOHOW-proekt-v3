@@ -79,6 +79,7 @@ function handleGlobalKeydown(event) {
 }
 
 onMounted(() => {
+  setPanelScale(1)  
   window.addEventListener('keydown', handleGlobalKeydown)
   window.addEventListener('wheel', handlePanelCtrlWheel, WHEEL_LISTENER_OPTIONS)
 })
