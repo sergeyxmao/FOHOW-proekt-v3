@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useCardsStore } from '../../stores/cards'
 import { useCanvasStore } from '../../stores/canvas'
 import { useConnectionsStore } from '../../stores/connections'
@@ -59,6 +59,43 @@ const hiddenLineColorPicker = ref(null)
 const hiddenHeaderColorPicker = ref(null)
 const hiddenBackgroundPicker = ref(null)
 
+// Шаблоны для вставки
+const templateMenuRef = ref(null)
+const isTemplateMenuOpen = ref(false)
+
+const TEMPLATE_CONFIG = [
+  { id: 'A', label: 'Цепочка', fileName: 'A.json' },
+  { id: 'B', label: 'Треугольник', fileName: 'B.json' },
+  { id: 'C', label: 'Клин', fileName: 'C.json' }
+]
+
+const templateModules = import.meta.glob('@/templates/*.json', {
+  eager: true,
+  import: 'default'
+})
+
+const templatesRegistry = TEMPLATE_CONFIG.reduce((map, template) => {
+  const matchedPath = Object.keys(templateModules).find(path => path.endsWith(`/${template.fileName}`))
+  if (matchedPath) {
+    map[template.id] = {
+      ...template,
+      data: templateModules[matchedPath]
+    }
+  }
+  return map
+}, {})
+
+const templateOptions = computed(() =>
+  TEMPLATE_CONFIG
+    .filter(template => Boolean(templatesRegistry[template.id]))
+    .map(template => ({
+      id: template.id,
+      label: template.label,
+      fileName: template.fileName,
+      displayText: `${template.label} — это ${template.fileName}`
+    }))
+)
+  
 // Методы для управления панелью
 function togglePanel() {
   isCollapsed.value = !isCollapsed.value
@@ -178,60 +215,92 @@ function addLargeCard() {
   });
 }
 
-function addTemplate() {
-  const baseX = 760;
-  const baseY = 160;  
-  const templateCards = [
-    { key: 'lena', x: baseX, y: baseY, text: 'Елена', pv: '330/330pv', isLarge: true, showSlfBadge: false, showFendouBadge: false, rankBadge: null },
-    { key: 'a', x: baseX - 360, y: baseY + 420, text: 'A', pv: '30/330pv' },
-    { key: 'c', x: baseX - 520, y: baseY + 720, text: 'C', pv: '30/330pv' },
-    { key: 'd', x: baseX - 160, y: baseY + 720, text: 'D', pv: '30/330pv' },
-    { key: 'b', x: baseX + 420, y: baseY + 420, text: 'B', pv: '30/330pv' },
-    { key: 'e', x: baseX + 260, y: baseY + 720, text: 'E', pv: '30/330pv' },
-    { key: 'f', x: baseX + 620, y: baseY + 720, text: 'F', pv: '30/330pv' },
-  ];
+function closeTemplateMenu() {
+  isTemplateMenuOpen.value = false
+}
 
-  const createdCardsMap = new Map();
-  const createdCardIds = [];
+function toggleTemplateMenu() {
+  isTemplateMenuOpen.value = !isTemplateMenuOpen.value
+}
 
-  templateCards.forEach(cardDef => {
+function selectTemplate(templateId) {
+  const template = templatesRegistry[templateId]
+  if (!template) {
+    return
+  }
+
+  insertTemplate(template.data)
+  closeTemplateMenu()
+}
+
+function insertTemplate(templateData) {
+  if (!templateData || !Array.isArray(templateData.cards)) {
+    return
+  }
+
+  const createdCardsMap = new Map()
+  const createdCardIds = []
+
+  templateData.cards.forEach(cardDef => {
+    if (!cardDef || !cardDef.key) {
+      return
+    }
+
+    const { key, type = 'large', ...cardPayload } = cardDef
+
     const cardData = cardsStore.addCard({
-      type: cardDef.isLarge ? 'large' : 'small',
-      ...cardDef, // Передаем все свойства из шаблона (x, y, text, pv и т.д.)
+      type,
+      ...cardPayload,
       headerBg: headerColor.value,
-      colorIndex: headerColorIndex.value,
-    });
-    createdCardsMap.set(cardDef.key, cardData);
-    createdCardIds.push(cardData.id);
-   
-  });
+      colorIndex: headerColorIndex.value
+    })
 
-  const templateLines = [
-    { startKey: 'b', startSide: 'right', endKey: 'f', endSide: 'top', thickness: 4 },
-    { startKey: 'b', startSide: 'left',  endKey: 'e', endSide: 'top', thickness: 4 },
-    { startKey: 'a', startSide: 'right', endKey: 'd', endSide: 'top', thickness: 4 },
-    { startKey: 'a', startSide: 'left',  endKey: 'c', endSide: 'top', thickness: 4 },
-    { startKey: 'lena', startSide: 'left',  endKey: 'a', endSide: 'top', thickness: 4 },
-    { startKey: 'lena', startSide: 'right', endKey: 'b', endSide: 'top', thickness: 4 },
-  ];
+    createdCardsMap.set(key, cardData)
+    createdCardIds.push(cardData.id)
+  })
+
+  const templateLines = Array.isArray(templateData.connections) ? templateData.connections : []
+
 
   templateLines.forEach(lineDef => {
-    const startCard = createdCardsMap.get(lineDef.startKey);
-    const endCard   = createdCardsMap.get(lineDef.endKey);
-    if (!startCard || !endCard) return;
+    if (!lineDef) {
+      return
+    }
+
+    const startCard = lineDef.startKey ? createdCardsMap.get(lineDef.startKey) : null
+    const endCard = lineDef.endKey ? createdCardsMap.get(lineDef.endKey) : null
+
+    if (!startCard || !endCard) {
+      return
+    }
+
+    const thicknessValue = Number.isFinite(lineDef.thickness) ? lineDef.thickness : thickness.value
+    const animationMs = Number.isFinite(lineDef.animationDurationMs)
+      ? lineDef.animationDurationMs
+      : animationDuration.value * 1000
 
     connectionsStore.addConnection(startCard.id, endCard.id, {
-      color: lineColor.value,
-      thickness: lineDef.thickness,
-      fromSide: lineDef.startSide,
-      toSide: lineDef.endSide,
-      animationDuration: animationDuration.value * 1000
-    });
-   });
+      color: lineDef.color || lineColor.value,
+      thickness: thicknessValue,
+      fromSide: lineDef.startSide || 'bottom',
+      toSide: lineDef.endSide || 'top',
+      animationDuration: animationMs
+    })
+  })
 
-  // После создания шаблона выделяем все его карточки для удобного перемещения
-  cardsStore.deselectAllCards();
-  createdCardIds.forEach(id => cardsStore.selectCard(id));
+  cardsStore.deselectAllCards()
+  createdCardIds.forEach(id => cardsStore.selectCard(id))
+}
+
+function handleDocumentClick(event) {
+  const menuEl = templateMenuRef.value
+  if (!isTemplateMenuOpen.value || !menuEl) {
+    return
+  }
+
+  if (!menuEl.contains(event.target)) {
+    closeTemplateMenu()
+  }
 }
 
 // Обработчики событий для DOM элементов
@@ -278,12 +347,24 @@ onMounted(() => {
     animationDuration.value * 1000
   )  
   console.log('RightPanel mounted successfully');
+
+  document.addEventListener('click', handleDocumentClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)  
 })
 
 // Следим за изменениями параметров линий и обновляем значения по умолчанию
 watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDuration]) => {
   connectionsStore.setDefaultConnectionParameters(newColor, newThickness, newDuration * 1000)
 })
+
+watch(isCollapsed, (collapsed) => {
+  if (collapsed) {
+    closeTemplateMenu()
+  }
+})  
 </script>
 
 <template>
@@ -464,14 +545,68 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
         <div class="control-section control-section--footer">
           <button class="add-card-btn" type="button" title="Добавить лицензию" @click="addCard">□</button>
           <button class="add-card-btn add-card-btn--large" type="button" title="Добавить большую лицензию" @click="addLargeCard">⧠</button>
-          <button class="add-card-btn" type="button" title="Добавить шаблон" @click="addTemplate">⧉</button>
+            <div ref="templateMenuRef" class="template-menu">
+            <button
+              class="add-card-btn"
+              type="button"
+              title="Добавить шаблон"
+              @click.stop="toggleTemplateMenu"
+              :disabled="!templateOptions.length"
+              aria-haspopup="true"
+              :aria-expanded="isTemplateMenuOpen"
+            >⧉</button>
+            <div
+              v-if="isTemplateMenuOpen && templateOptions.length"
+              class="template-menu__list"
+              role="menu"
+              aria-label="Выбор шаблона"
+            >
+              <button
+                v-for="option in templateOptions"
+                :key="option.id"
+                class="template-menu__item"
+                type="button"
+                role="menuitem"
+                @click.stop="selectTemplate(option.id)"
+              >
+                {{ option.displayText }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       <div v-else class="right-control-panel__collapsed-actions">
         <button class="add-card-btn" type="button" title="Добавить лицензию" @click="addCard">□</button>
         <button class="add-card-btn add-card-btn--large" type="button" title="Добавить большую лицензию" @click="addLargeCard">⧠</button>
-        <button class="add-card-btn" type="button" title="Добавить шаблон" @click="addTemplate">⧉</button>
-      </div>      
+        <div ref="templateMenuRef" class="template-menu">
+          <button
+            class="add-card-btn"
+            type="button"
+            title="Добавить шаблон"
+            @click.stop="toggleTemplateMenu"
+            :disabled="!templateOptions.length"
+            aria-haspopup="true"
+            :aria-expanded="isTemplateMenuOpen"
+          >⧉</button>
+          <div
+            v-if="isTemplateMenuOpen && templateOptions.length"
+            class="template-menu__list"
+            role="menu"
+            aria-label="Выбор шаблона"
+          >
+            <button
+              v-for="option in templateOptions"
+              :key="option.id"
+              class="template-menu__item"
+              type="button"
+              role="menuitem"
+              @click.stop="selectTemplate(option.id)"
+            >
+              {{ option.displayText }}
+            </button>
+          </div>
+        </div>
+      </div>     
     </div>
   </div>
 </template>
@@ -924,6 +1059,52 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
   border-color: var(--panel-contrast);
   color: var(--panel-contrast);
   box-shadow: var(--panel-card-btn-hover-shadow, 0 26px 40px rgba(15, 98, 254, 0.3));
+}
+.add-card-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.template-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.template-menu__list {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  min-width: 220px;
+  background: var(--panel-button-bg, rgba(255, 255, 255, 0.72));
+  border: 1px solid var(--panel-button-border, rgba(15, 98, 254, 0.18));
+  border-radius: 14px;
+  box-shadow: var(--panel-button-hover-shadow, 0 20px 36px rgba(15, 98, 254, 0.28));
+  z-index: 10;
+}
+
+.template-menu__item {
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--panel-card-btn-color);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.template-menu__item:hover {
+  background: var(--panel-highlight, rgba(15, 98, 254, 0.14));
+  color: var(--panel-contrast);
 }
 
 .right-control-panel--modern .control-section__slider {
