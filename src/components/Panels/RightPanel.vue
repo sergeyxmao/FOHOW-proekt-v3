@@ -741,10 +741,11 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .right-control-panel__collapse {
-  width: 46px;
-  height: 64px;
-  padding: 0;
-  border-radius: 20px 0 0 20px;
+  position: relative;
+  width: 52px;
+  min-height: 64px;
+  padding: 0 14px;
+  border-radius: 26px 0 0 26px;
   border: 1px solid var(--panel-border);
   border-right: none;
   background: var(--panel-bg);
@@ -767,20 +768,21 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .right-control-panel--collapsed .right-control-panel__collapse {
-  border-radius: 20px 0 0 20px;
-  border-right: none;
+  border-radius: 26px 0 0 26px;
+
 }
 
 .right-control-panel__collapsed-actions {
   display: flex;
   align-items: center;
-  gap: 10px;  padding: 2px 18px;
-  background: var(--panel-bg);
+  gap: 10px;
+  padding: 2px 18px;  background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-left: none;
-  border-radius: 0 20px 20px 0;
+  border-radius: 0 26px 26px 0;
   box-shadow: var(--panel-shadow);
   backdrop-filter: blur(22px);
+  margin-left: -1px;  
 }
 
 .right-control-panel__card {
@@ -792,6 +794,8 @@ watch(isCollapsed, (collapsed) => {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: 26px;
+  border-left: none;
+  border-radius: 0 26px 26px 0;  
   box-shadow: var(--panel-shadow);
   backdrop-filter: blur(28px);
   overflow: visible;
@@ -799,6 +803,8 @@ watch(isCollapsed, (collapsed) => {
   box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: var(--panel-button-color) rgba(15, 23, 42, 0.08);
+  margin-left: -1px;
+  
 }
 
 .right-control-panel__card::-webkit-scrollbar {
