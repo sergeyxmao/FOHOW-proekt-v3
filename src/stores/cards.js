@@ -3,6 +3,8 @@ import { useConnectionsStore } from './connections'
 import { useHistoryStore } from './history'
 import { getHeaderColorRgb } from '../utils/constants'
 
+const GOLD_BODY_GRADIENT = 'linear-gradient(135deg, #fff6d1 0%, #ffd700 45%, #fff2a8 100%)'
+
 export const useCardsStore = defineStore('cards', {
   state: () => ({
     cards: [],
@@ -42,7 +44,7 @@ export const useCardsStore = defineStore('cards', {
       return card
     },
     
-addCard(options = {}) {
+    addCard(options = {}) {
       const { type = 'large', ...cardData } = options;
 
       const generateLicenseNumber = () => {
@@ -66,6 +68,17 @@ addCard(options = {}) {
           pv: '330/330pv',
           text: 'Малая лицензия',
           historyText: 'Создана малая лицензия'
+           },
+        gold: {
+          width: 494,
+          height: 364,
+          pv: '330/330pv',
+          text: generateLicenseNumber(),
+          historyText: 'Создана золотая лицензия',
+          headerBg: '#d4af37',
+          colorIndex: -1,
+          bodyGradient: GOLD_BODY_GRADIENT,
+          fill: '#fffdf2'       
         }
       };
 
@@ -100,7 +113,8 @@ addCard(options = {}) {
         
         // Дополнительные свойства
         bodyHTML: '',
-
+        bodyGradient: preset.bodyGradient || '',
+        type,
         // Переданные вручную свойства (например, x, y) имеют наивысший приоритет
         ...cardData
       };
@@ -225,37 +239,61 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
     loadCards(cardsData) {
       this.cards = []
       this.selectedCardIds = []
-      
+ 
+      const typeDefaults = {
+        large: { width: 494, height: 364 },
+        gold: { width: 494, height: 364 },
+        small: { width: 380, height: 280 }
+      }     
       cardsData.forEach(cardData => {
         const generateLicenseNumber = () => {
-          const prefix = 'RUY';
-          const number = Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
-          return prefix + number;
-        };
+          const prefix = 'RUY'
+          const number = Math.floor(Math.random() * 10000000000).toString().padStart(10, '0')
+          return prefix + number
+        }
+
+        const detectedType = cardData.type
+          || ((cardData.width && cardData.width >= 494) || (cardData.height && cardData.height >= 364)
+            ? 'large'
+            : 'small')
+
+        const defaults = typeDefaults[detectedType] || typeDefaults.large
+
+        const width = Number.isFinite(cardData.width) ? cardData.width : defaults.width
+        const height = Number.isFinite(cardData.height) ? cardData.height : defaults.height
+
+        const headerBg = cardData.headerBg
+          || (detectedType === 'gold' ? '#d4af37' : getHeaderColorRgb(0))
+
+        const colorIndex = Number.isFinite(cardData.colorIndex)
+          ? cardData.colorIndex
+          : (detectedType === 'gold' ? -1 : 0)
+
         
         this.cards.push({
           id: cardData.id || Date.now().toString(),
-          x: cardData.x || 0,
-          y: cardData.y || 0,
+          x: Number.isFinite(cardData.x) ? cardData.x : 0,
+          y: Number.isFinite(cardData.y) ? cardData.y : 0,
           text: cardData.text || generateLicenseNumber(),
-          width: cardData.width || 380,
-          height: 280,
+          width,
+          height,
           fill: cardData.fill || '#ffffff',
           stroke: cardData.stroke || '#000000',
-          strokeWidth: cardData.strokeWidth || 2,
-          headerBg: cardData.headerBg || getHeaderColorRgb(0),
-          colorIndex: cardData.colorIndex || 0,
+          strokeWidth: Number.isFinite(cardData.strokeWidth) ? cardData.strokeWidth : 2,
+          headerBg,
+          colorIndex,
           selected: false,
           pv: cardData.pv || '330/330pv',
           balance: cardData.balance || '0 / 0',
           activePv: cardData.activePv || '0 / 0',
           cycle: cardData.cycle || '0',
           coinFill: cardData.coinFill || '#ffd700',
-          showSlfBadge: cardData.showSlfBadge || false,
-          showFendouBadge: cardData.showFendouBadge || false,
+          showSlfBadge: Boolean(cardData.showSlfBadge),
+          showFendouBadge: Boolean(cardData.showFendouBadge),
           rankBadge: cardData.rankBadge || null,
-          bodyHTML: cardData.bodyHTML || ''
-        })
+          bodyHTML: cardData.bodyHTML || '',
+          bodyGradient: cardData.bodyGradient || (detectedType === 'gold' ? GOLD_BODY_GRADIENT : ''),
+          type: detectedType        })
       })
     }
   }
