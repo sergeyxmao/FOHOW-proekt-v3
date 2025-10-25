@@ -3,7 +3,7 @@ import { useConnectionsStore } from './connections'
 import { useHistoryStore } from './history'
 import { getHeaderColorRgb } from '../utils/constants'
 
-const GOLD_BODY_GRADIENT = 'linear-gradient(135deg, #fff6d1 0%, #ffd700 45%, #fff2a8 100%)'
+const GOLD_BODY_GRADIENT = '#ffe08a'
 
 export const useCardsStore = defineStore('cards', {
   state: () => ({
