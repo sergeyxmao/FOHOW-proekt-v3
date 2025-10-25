@@ -688,8 +688,8 @@ watch(isCollapsed, (collapsed) => {
   z-index: 2000;
   display: flex;
   align-items: flex-end;
-  max-height: calc(100vh - 48px);
-  overflow: hidden; 
+  max-height: none;
+  overflow: visible;
   --panel-bg: rgba(255, 255, 255, 0.6);
   --panel-border: rgba(15, 23, 42, 0.12);
   --panel-text: #17223b;
@@ -742,8 +742,8 @@ watch(isCollapsed, (collapsed) => {
   display: flex;
   align-items: stretch;
   gap: 0;
-  max-height: inherit;
-  
+  max-height: none;
+
 }
 
 .right-control-panel__collapse {
@@ -801,11 +801,10 @@ watch(isCollapsed, (collapsed) => {
   border-radius: 26px;
   box-shadow: var(--panel-shadow);
   backdrop-filter: blur(28px);
-  max-height: calc(100vh - 48px);
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
   padding-right: 32px;
   box-sizing: border-box;
-  scrollbar-gutter: stable;  
 }
 
 .right-control-panel__top {
