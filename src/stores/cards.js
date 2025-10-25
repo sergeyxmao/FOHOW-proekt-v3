@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useConnectionsStore } from './connections'
 import { useHistoryStore } from './history'
 import { getHeaderColorRgb } from '../utils/constants'
+import { ensureNoteStructure } from '../utils/notes'
 
 const GOLD_BODY_GRADIENT = 'linear-gradient(135deg, #fff6d1 0%, #ffd700 45%, #fff2a8 100%)'
 
@@ -115,6 +116,8 @@ export const useCardsStore = defineStore('cards', {
         bodyHTML: '',
         bodyGradient: preset.bodyGradient || '',
         type,
+        note: null,
+        
         // Переданные вручную свойства (например, x, y) имеют наивысший приоритет
         ...cardData
       };
@@ -296,8 +299,38 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
           rankBadge: cardData.rankBadge || null,
           bodyHTML: cardData.bodyHTML || '',
           bodyGradient: cardData.bodyGradient || (detectedType === 'gold' ? GOLD_BODY_GRADIENT : ''),
-          type: detectedType        })
+          type: detectedType,
+          note: cardData.note ? (() => {
+            const noteData = ensureNoteStructure(cardData.note)
+            noteData.visible = false
+            if (noteData.window) delete noteData.window
+            return noteData
+          })() : null
+        })
       })
+    },
+
+    ensureCardNote(cardId, defaults = {}) {
+      const card = this.cards.find(c => c.id === cardId)
+      if (!card) return null
+      const base = card.note && typeof card.note === 'object' ? card.note : {}
+      Object.assign(base, defaults)
+      const note = ensureNoteStructure(base)
+      card.note = note
+      return note
+    },
+
+    updateCardNote(cardId, updater) {
+      const card = this.cards.find(c => c.id === cardId)
+      if (!card) return null
+      const note = ensureNoteStructure(card.note)
+      card.note = note
+      if (typeof updater === 'function') {
+        updater(note)
+      } else if (updater && typeof updater === 'object') {
+        Object.assign(note, updater)
+      }
+      return note      
     }
   }
 })
