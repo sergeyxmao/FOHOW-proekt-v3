@@ -603,7 +603,7 @@ const handleLoadProject = () => {
   input.type = 'file'
   input.accept = '.json,application/json'
   input.onchange = (e) => {
-        if (projectData.connections) {
+    const file = e.target.files?.[0]
     if (!file) return
     
     const reader = new FileReader()
@@ -613,10 +613,10 @@ const handleLoadProject = () => {
         if (projectData.cards) {
           cardsStore.loadCards(projectData.cards)
         }
-         if (projectData.connections) {
+        if (projectData.connections) {
           connectionsStore.loadConnections(projectData.connections)
         }
-          if (projectData.notes && typeof projectData.notes === 'object') {
+        if (projectData.notes && typeof projectData.notes === 'object') {
           Object.entries(projectData.notes).forEach(([cardId, noteData]) => {
             if (!noteData || typeof noteData !== 'object') return
             const normalized = ensureNoteStructure(JSON.parse(JSON.stringify(noteData)))
