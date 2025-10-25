@@ -162,13 +162,13 @@ function setColor(color) {
     mutableNote.highlightColor = color
   })
   historyStore.setActionMetadata('update', `Изменён цвет заметки карточки "${props.card.text}"`)
-  historyStore.saveState()
+  historyStore.saveStateSoon()
 }
 
 function handleTextareaBlur() {
   textareaFocused.value = false
   historyStore.setActionMetadata('update', `Обновлена заметка карточки "${props.card.text}"`)
-  historyStore.saveState()
+  historyStore.saveStateSoon()
 }
 
 function handleTextareaFocus() {
@@ -180,7 +180,7 @@ function closeNote() {
     mutableNote.visible = false
   })
   historyStore.setActionMetadata('update', `Закрыта заметка карточки "${props.card.text}"`)
-  historyStore.saveState()
+  historyStore.saveStateSoon()
 }
 
 function setupDrag() {
@@ -222,7 +222,7 @@ function setupDrag() {
       document.removeEventListener('pointerup', finish)
       document.removeEventListener('pointercancel', cancel)
       historyStore.setActionMetadata('update', `Перемещено окно заметки карточки "${props.card.text}"`)
-      historyStore.saveState()
+      historyStore.saveStateSoon()
     }
 
     const cancel = (cancelEvent) => {
@@ -285,7 +285,7 @@ function setupResize() {
       document.removeEventListener('pointerup', finish)
       document.removeEventListener('pointercancel', cancel)
       historyStore.setActionMetadata('update', `Изменён размер заметки карточки "${props.card.text}"`)
-      historyStore.saveState()
+      historyStore.saveStateSoon()
     }
 
     const cancel = (cancelEvent) => {
