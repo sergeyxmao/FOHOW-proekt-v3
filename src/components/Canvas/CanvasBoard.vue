@@ -11,6 +11,8 @@ import { batchDeleteCards } from '../../utils/historyOperations';
 import { usePanZoom } from '../../composables/usePanZoom';
 import { useHistoryStore } from '../../stores/history.js';
 import { useViewportStore } from '../../stores/viewport.js';
+import NoteWindow from './NoteWindow.vue';
+import { hasAnyEntry } from '../../utils/notes';  
 const historyStore = useHistoryStore();  
 const emit = defineEmits(['update-connection-status']);
 
@@ -96,6 +98,9 @@ let selectionBaseSelection = new Set();
 let suppressNextStageClick = false;
 
 const GUIDE_SNAP_THRESHOLD = 10;
+const cardsWithVisibleNotes = computed(() =>
+  cards.value.filter(card => card.note && card.note.visible)
+);
 
 const resetActiveGuides = () => {
   activeGuides.value = { vertical: null, horizontal: null };
@@ -1020,7 +1025,27 @@ const handleStageClick = (event) => {
     selectedCardId.value = null;
   }  
 };
-
+const handleGlobalPointerDown = (event) => {
+  const target = event.target;
+  if (!target) return;
+  if (target.closest('.note-window') || target.closest('.note-btn') || target.closest('.notes-dropdown')) {
+    return;
+  }
+  let closedAny = false;
+  cards.value.forEach((card) => {
+    const note = card.note;
+    if (!note || !note.visible) return;
+    if (hasAnyEntry(note)) return;
+    cardsStore.updateCardNote(card.id, (mutableNote) => {
+      mutableNote.visible = false;
+    });
+    closedAny = true;
+  });
+  if (closedAny) {
+    historyStore.setActionMetadata('update', 'Закрыты пустые заметки');
+    historyStore.saveState();
+  }
+};
 const addNewCard = () => {
   const colors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336'];
   const randomColor = colors[Math.floor(Math.random() * colors.length)];
@@ -1125,6 +1150,8 @@ onMounted(() => {
   resizeStage();
   window.addEventListener('resize', resizeStage);
   window.addEventListener('keydown', handleKeydown);
+  document.addEventListener('pointerdown', handleGlobalPointerDown);
+  
 });
 
 onBeforeUnmount(() => {
@@ -1140,6 +1167,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('mousemove', handleDrag);
   window.removeEventListener('mouseup', endDrag);
   removeSelectionListeners();
+  document.removeEventListener('pointerdown', handleGlobalPointerDown);
   
 });
 
@@ -1360,7 +1388,12 @@ watch(guidesEnabled, (enabled) => {
           :is-connecting="isDrawingLine && connectionStart?.cardId === card.id"
           @card-click="(event) => handleCardClick(event, card.id)"
           @start-drag="startDrag"
-          style="pointer-events: auto;"		  
+          style="pointer-events: auto;"
+        />
+        <NoteWindow
+          v-for="card in cardsWithVisibleNotes"
+          :key="`note-${card.id}`"
+          :card="card"  
         />
       </div>   
     </div>
