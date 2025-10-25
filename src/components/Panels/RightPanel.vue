@@ -66,31 +66,43 @@ const hiddenBackgroundPicker = ref(null)
 const templateMenuRef = ref(null)
 const isTemplateMenuOpen = ref(false)
 
-const TEMPLATE_CONFIG = [
-  { id: 'A', label: 'Цепочка', fileName: 'A.json' },
-  { id: 'B', label: 'Треугольник', fileName: 'B.json' },
-  { id: 'C', label: 'Клин', fileName: 'C.json' }
-]
-
 const templateModules = import.meta.glob('@/templates/*.json', {
   eager: true,
   import: 'default'
 })
 
-const templatesRegistry = TEMPLATE_CONFIG.reduce((map, template) => {
-  const matchedPath = Object.keys(templateModules).find(path => path.endsWith(`/${template.fileName}`))
-  if (matchedPath) {
-    map[template.id] = {
-      ...template,
-      data: templateModules[matchedPath]
+function buildTemplateLabel(fileName, templateData) {
+  const baseName = fileName.replace(/\.json$/i, '')
+
+  if (templateData && typeof templateData === 'object') {
+    const title = templateData.meta?.title || templateData.title || templateData.name
+    if (typeof title === 'string' && title.trim().length > 0) {
+      return title.trim()
     }
   }
+
+  return baseName
+}
+
+const templatesRegistry = Object.entries(templateModules).reduce((map, [path, templateData]) => {
+  const fileName = path.split('/').pop()
+  if (!fileName) {
+    return map
+  }
+
+  const id = fileName.replace(/\.json$/i, '')
+  map[id] = {
+    id,
+    label: buildTemplateLabel(fileName, templateData),
+    fileName,
+    data: templateData
+  }  
   return map
 }, {})
 
 const templateOptions = computed(() =>
-  TEMPLATE_CONFIG
-    .filter(template => Boolean(templatesRegistry[template.id]))
+  Object.values(templatesRegistry)
+    .sort((a, b) => a.label.localeCompare(b.label, 'ru'))
     .map(template => ({
       id: template.id,
       label: template.label,
