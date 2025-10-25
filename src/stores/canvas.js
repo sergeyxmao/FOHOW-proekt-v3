@@ -7,6 +7,8 @@ export const useCanvasStore = defineStore('canvas', () => {
   const isSelectionMode = ref(false)
   const isHierarchicalDragMode = ref(false)
   const guidesEnabled = ref(true)
+  const gridStep = ref(40)
+  const isGridBackgroundVisible = ref(false)
 
   function setBackgroundColor(color) {
     backgroundColor.value = color
@@ -54,6 +56,22 @@ export const useCanvasStore = defineStore('canvas', () => {
   function toggleGuides() {
     setGuidesEnabled(!guidesEnabled.value)
   }
+  function setGridStep(value) {
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+      return
+    }
+
+    gridStep.value = Math.max(1, Math.round(numericValue))
+  }
+
+  function setGridBackgroundVisible(value) {
+    isGridBackgroundVisible.value = Boolean(value)
+  }
+
+  function toggleGridBackground() {
+    setGridBackgroundVisible(!isGridBackgroundVisible.value)
+  }
 
   function applyState(state = {}) {
     if (!state || typeof state !== 'object') {
@@ -81,12 +99,29 @@ export const useCanvasStore = defineStore('canvas', () => {
     if (typeof state.guidesEnabled === 'boolean') {
       setGuidesEnabled(state.guidesEnabled)
     }
+ 
+    if (typeof state.gridStep === 'number') {
+      setGridStep(state.gridStep)
+    }
+
+    const backgroundFlag =
+      typeof state.isGridBackgroundVisible === 'boolean'
+        ? state.isGridBackgroundVisible
+        : typeof state.gridBackgroundEnabled === 'boolean'
+          ? state.gridBackgroundEnabled
+          : null
+
+    if (backgroundFlag !== null) {
+      setGridBackgroundVisible(backgroundFlag)
+    }   
   }
   return {
     backgroundColor,
     isSelectionMode,
     isHierarchicalDragMode,
     guidesEnabled,
+    gridStep,
+    isGridBackgroundVisible,
     setBackgroundColor,
     setBackgroundGradient,
     setSelectionMode,
@@ -94,6 +129,9 @@ export const useCanvasStore = defineStore('canvas', () => {
     setHierarchicalDragMode,
     toggleHierarchicalDragMode,
     setGuidesEnabled,
+    setGridStep,
+    setGridBackgroundVisible,
+    toggleGridBackground,
     toggleGuides,
     applyState
   }})
