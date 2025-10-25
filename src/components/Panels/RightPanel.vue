@@ -101,8 +101,6 @@ const templateOptions = computed(() =>
 
 const GRID_STEP_MIN = 5
 const GRID_STEP_MAX = 200
-const gridStepPresets = [10, 20, 30, 40, 60, 80]
-
 const gridStepModel = computed({
   get() {
     return gridStep.value
@@ -117,16 +115,6 @@ const gridStepModel = computed({
     canvasStore.setGridStep(clampedValue)
   }
 })
-
-function applyGridPreset(preset) {
-  const numericValue = Number(preset)
-  if (!Number.isFinite(numericValue)) {
-    return
-  }
-
-  const clampedValue = Math.min(Math.max(Math.round(numericValue), GRID_STEP_MIN), GRID_STEP_MAX)
-  canvasStore.setGridStep(clampedValue)
-}
 
 function toggleGridBackgroundVisibility() {
   canvasStore.toggleGridBackground()
@@ -597,18 +585,7 @@ watch(isCollapsed, (collapsed) => {
               >
               <span class="grid-settings__unit">px</span>
             </label>
-            <div class="grid-settings__presets">
-              <button
-                v-for="preset in gridStepPresets"
-                :key="preset"
-                class="grid-settings__preset"
-                type="button"
-                :class="{ 'grid-settings__preset--active': gridStep === preset }"
-                @click="applyGridPreset(preset)"
-              >
-                {{ preset }}
-              </button>
-            </div>
+
             <button
               class="grid-settings__toggle"
               type="button"
@@ -711,6 +688,8 @@ watch(isCollapsed, (collapsed) => {
   z-index: 2000;
   display: flex;
   align-items: flex-end;
+  max-height: calc(100vh - 48px);
+  overflow: hidden; 
   --panel-bg: rgba(255, 255, 255, 0.6);
   --panel-border: rgba(15, 23, 42, 0.12);
   --panel-text: #17223b;
@@ -763,6 +742,8 @@ watch(isCollapsed, (collapsed) => {
   display: flex;
   align-items: stretch;
   gap: 0;
+  max-height: inherit;
+  
 }
 
 .right-control-panel__collapse {
@@ -820,6 +801,11 @@ watch(isCollapsed, (collapsed) => {
   border-radius: 26px;
   box-shadow: var(--panel-shadow);
   backdrop-filter: blur(28px);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding-right: 32px;
+  box-sizing: border-box;
+  scrollbar-gutter: stable;  
 }
 
 .right-control-panel__top {
@@ -1126,31 +1112,6 @@ watch(isCollapsed, (collapsed) => {
   color: var(--panel-muted);
 }
 
-.grid-settings__presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.grid-settings__preset {
-  min-width: 48px;
-  padding: 6px 10px;
-  border-radius: 12px;
-  border: 1px solid var(--panel-card-btn-border);
-  background: var(--panel-button-bg);
-  color: var(--panel-text);
-  font-size: 13px;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-  box-shadow: var(--panel-button-shadow);
-}
-
-.grid-settings__preset:hover,
-.grid-settings__preset--active {
-  transform: translateY(-1px);
-  border-color: var(--panel-contrast);
-  color: var(--panel-contrast);
-}
 
 .grid-settings__toggle {
   align-self: flex-start;
