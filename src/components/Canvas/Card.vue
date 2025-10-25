@@ -355,14 +355,19 @@ const updateValue = (event, field) => {
       data-side="left"
     ></div>
     <!-- Кнопка заметки -->
-<button
-  class="card-note-btn"
-  :title="noteButtonTitle"
-  :style="noteIndicatorStyle"
-  @click.stop.prevent="handleNoteButtonClick"
->
-  📝
-</button>   
+    <button
+      class="card-note-btn"
+      :class="{
+        'card-note-btn--has-text': noteHasText,
+        'card-note-btn--active': isNoteVisible
+      }"
+      type="button"
+      :title="noteButtonTitle"
+      :style="noteIndicatorStyle"
+      @click.stop.prevent="handleNoteButtonClick"
+    >
+      📝
+    </button>    
   </div>
 </template>
 

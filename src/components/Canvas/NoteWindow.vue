@@ -149,7 +149,7 @@ watch(textareaValue, (value) => {
     })
   }, 350)
 })
-
+})
 
 function shiftMonth(delta) {
   const nextDate = new Date(viewDate.value.getFullYear(), viewDate.value.getMonth() + delta, 1)
@@ -344,7 +344,6 @@ onMounted(() => {
     }
   })
 })
-
 
 onBeforeUnmount(() => {
   if (__note_save_timer) clearTimeout(__note_save_timer)
