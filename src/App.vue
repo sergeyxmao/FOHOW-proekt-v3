@@ -159,7 +159,7 @@ html,body{
 #app {
   position: relative;
   width: 100%;
-  height: 100%;
+  min-height: 100vh;
 }
 
 /* Панели */
@@ -176,8 +176,8 @@ html,body{
   border-radius: 0 24px 24px 0;
   box-shadow: var(--shadow);
   transition: top .3s ease, transform .3s ease, padding .3s ease;
-  max-height: calc(100vh - 40px);
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
   box-sizing: border-box;
 }
 .ui-panel-left.collapsed {
