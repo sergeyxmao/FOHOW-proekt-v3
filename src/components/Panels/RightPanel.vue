@@ -214,6 +214,11 @@ function addLargeCard() {
     colorIndex: headerColorIndex.value
   });
 }
+function addGoldCard() {
+  cardsStore.addCard({
+    type: 'gold'
+  });
+}
 
 function closeTemplateMenu() {
   isTemplateMenuOpen.value = false
@@ -545,6 +550,12 @@ watch(isCollapsed, (collapsed) => {
         <div class="control-section control-section--footer">
           <button class="add-card-btn" type="button" title="Добавить лицензию" @click="addCard">□</button>
           <button class="add-card-btn add-card-btn--large" type="button" title="Добавить большую лицензию" @click="addLargeCard">⧠</button>
+           <button
+            class="add-card-btn add-card-btn--large add-card-btn--gold"
+            type="button"
+            title="Добавить Goold лицензию"
+            @click="addGoldCard"
+          >★</button>         
             <div ref="templateMenuRef" class="template-menu">
             <button
               class="add-card-btn"
@@ -578,6 +589,12 @@ watch(isCollapsed, (collapsed) => {
       <div v-else class="right-control-panel__collapsed-actions">
         <button class="add-card-btn" type="button" title="Добавить лицензию" @click="addCard">□</button>
         <button class="add-card-btn add-card-btn--large" type="button" title="Добавить большую лицензию" @click="addLargeCard">⧠</button>
+        <button
+          class="add-card-btn add-card-btn--large add-card-btn--gold"
+          type="button"
+          title="Добавить Goold лицензию"
+          @click="addGoldCard"
+        >★</button>        
         <div ref="templateMenuRef" class="template-menu">
           <button
             class="add-card-btn"
@@ -1052,6 +1069,18 @@ watch(isCollapsed, (collapsed) => {
 
 .add-card-btn--large {
   font-size: 32px;
+}
+.add-card-btn--gold {
+  background: linear-gradient(135deg, #fff6d1 0%, #ffd700 50%, #ffec8b 100%);
+  border-color: rgba(218, 165, 32, 0.6);
+  color: #8b6508;
+  box-shadow: 0 18px 32px rgba(218, 165, 32, 0.38);
+}
+
+.add-card-btn--gold:hover {
+  border-color: #c89600;
+  color: #a66b00;
+  box-shadow: 0 24px 42px rgba(198, 150, 0, 0.45);
 }
 
 .add-card-btn:hover {
