@@ -1,6 +1,7 @@
 <script setup>
-import { ref, nextTick, computed } from 'vue';
+import { ref, nextTick, computed, onMounted, onUnmounted } from 'vue';
 import { useCardsStore } from '../../stores/cards';
+import { useNotesStore } from '../../stores/notes';
 
 const props = defineProps({
   card: {
@@ -23,75 +24,37 @@ const emit = defineEmits([
 ]);
 
 const cardsStore = useCardsStore();
+const notesStore = useNotesStore();
 const isEditing = ref(false);
 const editText = ref(props.card.text);
 const textInput = ref(null);
 
 // Вычисляемое свойство для проверки, является ли карточка большой
-const isLargeCard = computed(() => {
-  return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 494;
-});
-const cardStyle = computed(() => {
-  const strokeWidth = Number.isFinite(props.card.strokeWidth) ? props.card.strokeWidth : 2;
-  const baseFill = props.card.fill || '#ffffff';
-  const bodyBackground = props.card.bodyGradient || baseFill  
+const isLargeCard = computed(() => props.card.width >= 494);
 
-  const style = {
-    position: 'absolute',
-    left: `${props.card.x}px`,
-    top: `${props.card.y}px`,
-    width: `${props.card.width}px`,
-    height: Number.isFinite(props.card.height) ? `${props.card.height}px` : 'auto',  
-    background: bodyBackground,
-    background: props.card.fill || '#ffffff',
-    border: `${strokeWidth}px solid ${props.card.stroke || '#000000'}`
-  };
-
-  style['--card-body-gradient'] = bodyBackground;
-
-
-  return style;
+// Вычисляемые свойства для заметки
+const hasNote = computed(() => {
+  const note = notesStore.getNote(props.card.id);
+  return note && (note.text || Object.keys(note.entries || {}).length > 0);
 });
 
-const ignoreNextClick = ref(false);
+const noteIndicatorColor = computed(() => {
+  const note = notesStore.getNote(props.card.id);
+  if (!note) return null;
+  return note.highlightColor || null;
+});
 
 const handleCardClick = (event) => {
   event.stopPropagation();
-
-  if (ignoreNextClick.value) {
-    ignoreNextClick.value = false;
-    return;
+  if (event.target.classList.contains('card-title') && props.isSelected) {
+    startEditing();
+  } else {
+    emit('card-click', event, props.card.id);
   }
-
-  emit('card-click', event, props.card.id);
 };
 
-const handlePointerDown = (event) => {
+const handleMouseDown = (event) => {
   if (isEditing.value) return;
-
-  // Не начинаем перетаскивание, если кликнули на точку соединения
-  if (event.target.classList.contains('connection-point')) {
-    return;
-  }
-  if (event.ctrlKey || event.metaKey) {
-    event.stopPropagation();
-    ignoreNextClick.value = true;
-
-    const clearIgnoreFlag = () => {
-      setTimeout(() => {
-        ignoreNextClick.value = false;
-      }, 0);
-      window.removeEventListener('pointerup', clearIgnoreFlag);
-      window.removeEventListener('pointercancel', clearIgnoreFlag);
-    };
-
-    window.addEventListener('pointerup', clearIgnoreFlag, { once: true });
-    window.addEventListener('pointercancel', clearIgnoreFlag, { once: true });
-
-    emit('card-click', event, props.card.id);
-    return;
-  }
-
   emit('start-drag', event, props.card.id);
 };
 
@@ -106,15 +69,6 @@ const startEditing = () => {
   });
 };
 
-const handleTitleDblClick = (event) => {
-  event.stopPropagation();
-  event.preventDefault();
-  if (!isEditing.value) {
-    startEditing();
-  }
-};
-
-  
 const finishEditing = () => {
   if (isEditing.value) {
     if (editText.value !== props.card.text) {
@@ -144,7 +98,11 @@ const handleBlur = () => {
 // Обработчик для удаления карточки
 const handleDelete = (event) => {
   event.stopPropagation();
-  cardsStore.removeCard(props.card.id);
+  if (confirm(`Удалить карточку "${props.card.text}"?`)) {
+    cardsStore.removeCard(props.card.id);
+    // Удаляем заметку при удалении карточки
+    notesStore.removeNote(props.card.id);
+  }
 };
 
 // Обработчик для обновления значений
@@ -152,22 +110,53 @@ const updateValue = (event, field) => {
   const newValue = event.target.textContent.trim();
   cardsStore.updateCard(props.card.id, { [field]: newValue });
 };
+
+// Обработчик для открытия/закрытия заметки
+const toggleNote = (event) => {
+  event.stopPropagation();
+  console.log('Toggle note for card:', props.card.id);
+  
+  // Проверяем, есть ли уже открытое окно для этой заметки
+  const note = notesStore.getNote(props.card.id);
+  
+  if (note && note.visible) {
+    // Закрываем заметку
+    notesStore.hideNote(props.card.id);
+  } else {
+    // Открываем заметку
+    const cardElement = event.target.closest('.card');
+    if (cardElement) {
+      const rect = cardElement.getBoundingClientRect();
+      notesStore.showNote(props.card.id, {
+        x: rect.right + 15,
+        y: rect.top,
+        cardTitle: props.card.text
+      });
+    }
+  }
+};
 </script>
 
 <template>
   <div
     class="card"
-    :data-card-id="card.id"    
     :class="{
       'selected': isSelected,
       'connecting': isConnecting,
       'editing': isEditing,
       'card--large': isLargeCard,
-      'card--gold': card.type === 'gold'
+      'note-active': notesStore.getNote(card.id)?.visible
     }"
-    :style="cardStyle"
+    :style="{
+      position: 'absolute',
+      left: card.x + 'px',
+      top: card.y + 'px',
+      width: card.width + 'px',
+      backgroundColor: card.fill,
+      border: `${card.strokeWidth}px solid ${card.stroke}`,
+    }"
     @click="handleCardClick"
-    @pointerdown="handlePointerDown"
+    @mousedown="handleMouseDown"
   >
     <!-- Заголовок карточки -->
     <div
@@ -186,8 +175,8 @@ const updateValue = (event, field) => {
       <div
         v-else
         class="card-title"
-        :title="isSelected ? 'Двойной клик для редактирования' : ''"
-        @dblclick.stop="handleTitleDblClick"      >
+        :title="isSelected ? 'Кликните для редактирования' : ''"
+      >
         {{ card.text }}
       </div>
       
@@ -208,116 +197,100 @@ const updateValue = (event, field) => {
         <svg class="coin-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
           <circle cx="50" cy="50" r="45" :fill="card.coinFill || '#ffd700'" stroke="#DAA520" stroke-width="5"/>
         </svg>
-        <span
-          class="value pv-value"
-          contenteditable="true"
-          @blur="updateValue($event, 'pv')"
-        >          {{ card.pv || '330/330pv' }}
+        <span class="value pv-value" contenteditable="true" @blur="updateValue($event, 'pv')">
+          {{ card.pv || '330/330pv' }}
         </span>
       </div>
       
       <!-- Баланс -->
       <div class="card-row">
         <span class="label">Баланс:</span>
-        <span
-          class="value"
-          contenteditable="true"
-          @blur="updateValue($event, 'balance')"
-        >          {{ card.balance || '0 / 0' }}
+        <span class="value" contenteditable="true" @blur="updateValue($event, 'balance')">
+          {{ card.balance || '0 / 0' }}
         </span>
       </div>
       
       <!-- Актив-заказы PV -->
       <div class="card-row">
         <span class="label">Актив-заказы PV:</span>
-        <span
-          class="value"
-          contenteditable="true"
-          @blur="updateValue($event, 'activePv')"
-        >          {{ card.activePv || '0 / 0' }}
+        <span class="value" contenteditable="true" @blur="updateValue($event, 'activePv')">
+          {{ card.activePv || '0 / 0' }}
         </span>
       </div>
       
       <!-- Цикл -->
       <div class="card-row">
         <span class="label">Цикл:</span>
-        <span
-          class="value"
-          contenteditable="true"
-          @blur="updateValue($event, 'cycle')"
-        >          {{ card.cycle || '0' }}
+        <span class="value" contenteditable="true" @blur="updateValue($event, 'cycle')">
+          {{ card.cycle || '0' }}
         </span>
       </div>
-
-      <div
-        v-if="card.bodyHTML"
-        class="card-body-html"
-        v-html="card.bodyHTML"
-      ></div>    </div>
+    </div>
     
-    <!-- Значки -->
-    <div v-if="card.showSlfBadge" class="slf-badge visible">SLF</div>
-    <div v-if="card.showFendouBadge" class="fendou-badge visible">奋斗</div>
-    <img 
-      v-if="card.rankBadge" 
-      :src="`/rank-${card.rankBadge}.png`" 
-      class="rank-badge visible"
-      alt="Ранговый значок"
-    />
-    
-    <!-- Соединительные точки -->
-    <div
-      class="connection-point top"
+    <!-- Точки соединения -->
+    <div 
+      class="connection-point top" 
       :data-card-id="card.id"
       data-side="top"
-    ></div>
-    <div
-      class="connection-point right"
+    />
+    <div 
+      class="connection-point right" 
       :data-card-id="card.id"
       data-side="right"
-    ></div>
-    <div
-      class="connection-point bottom"
+    />
+    <div 
+      class="connection-point bottom" 
       :data-card-id="card.id"
       data-side="bottom"
-    ></div>
-    <div
-      class="connection-point left"
+    />
+    <div 
+      class="connection-point left" 
       :data-card-id="card.id"
       data-side="left"
-    ></div>
+    />
+    
+    <!-- Контролы карточки (включая кнопку заметки) -->
+    <div class="card-controls">
+      <button
+        class="card-control-btn note-btn"
+        :class="{
+          'has-text': hasNote,
+          'has-color': noteIndicatorColor
+        }"
+        :style="noteIndicatorColor ? `--note-indicator-color: ${noteIndicatorColor}` : ''"
+        title="Заметка"
+        @click="toggleNote"
+      >
+        {{ hasNote ? '❗' : '📝' }}
+      </button>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .card {
-  border-radius: 16px;
-  box-shadow: 10px 12px 24px rgba(15, 35, 95, 0.16), -6px -6px 18px rgba(255, 255, 255, 0.85);
+  position: absolute;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
-  overflow: visible;
-  touch-action: none;
-  display: flex;
-  flex-direction: column;  
+  user-select: none;
 }
 
 .card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .card.selected {
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.6), 0 12px 26px rgba(0, 0, 0, 0.18);
-}
-
-.card.note-active {
-  position: relative;
+  box-shadow: 0 0 0 3px rgba(93, 139, 244, 0.5), 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .card.note-active::after {
   content: '';
   position: absolute;
-  inset: -2px;
-  border-radius: inherit;
+  inset: -6px;
+  border-radius: 18px;
   border: 2px solid rgba(225, 29, 72, 0.55);
   box-shadow: 0 0 12px rgba(225, 29, 72, 0.35);
   pointer-events: none;
@@ -327,57 +300,35 @@ const updateValue = (event, field) => {
   box-shadow: inset 0 -2px 0 rgba(225, 29, 72, 0.45);
 }
 
-  
 .card-header {
-  padding: 10px 44px;
+  padding: 10px;
+  border-radius: 12px 12px 0 0;
   position: relative;
-  height: 52px;
-  border-radius: 16px 16px 0 0;
-  cursor: grab;
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
-  flex-shrink: 0;
-  
+  cursor: grab;
+  min-height: 40px;
 }
 
 .card-title {
-  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+  color: white;
   text-align: center;
-  font-size: 20px;
-  line-height: 1;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;  
-}
-
-.card.selected .card-title {
-  cursor: pointer;
+  cursor: text;
 }
 
 .card-title-input {
+  font-weight: bold;
+  font-size: 14px;
+  color: white;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
   width: 100%;
-  background: rgba(255, 255, 255, 0.9);
-  border: none;
-  border-radius: 6px;
-  padding: 6px;
   text-align: center;
-  color: #333;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.card--large .card-title,
-.card--gold .card-title,
-
-.card--large .card-title-input,
-.card--gold .card-title-input {
-  font-weight: 900;
-  font-size: 30px;
 }
 
 .card-close-btn {
@@ -405,186 +356,195 @@ const updateValue = (event, field) => {
 }
 
 .card-body {
-  padding: 16px;
-  background: var(--card-body-gradient, var(--surface, #ffffff));
-  border-radius: 0 0 16px 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  flex: 1 1 auto;
-  width: 100%;  
+  padding: 12px;
 }
-.card--large .card-body,
-.card--gold .card-body {
-  justify-content: center;
-}
+
 .card-row {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  text-align: center;
-  
+  margin-bottom: 8px;
 }
 
 .card-row.pv-row {
-  justify-content: center;
-  gap: 10px;
-}
-
-.coin-icon {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
+  margin-bottom: 12px;
 }
 
 .label {
-  font-weight: 500;
-  color: #6b7280;
-  font-size: 14px;
-  text-align: center;
-  
+  font-size: 12px;
+  color: #666;
 }
 
 .value {
-  color: #111827;
+  font-size: 12px;
   font-weight: 600;
-  font-size: 15px;
-  outline: none;
-  padding: 3px 6px;
-  border-radius: 6px;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
+  color: #333;
   cursor: text;
-  text-align: center;
-  
+  padding: 2px 4px;
+  border-radius: 3px;
+  min-width: 50px;
+  text-align: right;
+}
+
+.value:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .value:focus {
-  background: #fff8dc;
-  box-shadow: 0 0 6px 2px rgba(255, 193, 7, 0.35);
+  outline: 2px solid rgba(93, 139, 244, 0.5);
+  background: white;
+}
+
+.coin-icon {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
 }
 
 .pv-value {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: bold;
 }
 
-/* Значки */
-.slf-badge,
-.fendou-badge,
-.rank-badge {
-  position: absolute;
-  display: none;
-  user-select: none;
-  pointer-events: none;
-}
-
-.slf-badge.visible,
-.fendou-badge.visible,
-.rank-badge.visible {
-  display: block;
-}
-
-.slf-badge {
-  top: 15px;
-  left: 15px;
-  color: #ffc700;
-  font-weight: 900;
-  font-size: 36px;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.fendou-badge {
-  top: -25px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: red;
-  font-weight: 900;
-  font-size: 56px;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-}
-
-.rank-badge {
-  top: -15px;
-  right: 15px;
-  width: 80px;
-  height: auto;
-  transform: rotate(15deg);
-}
-
-/* Соединительные точки */
+/* Точки соединения */
 .connection-point {
   position: absolute;
-  width: 16px;
-  height: 16px;
-  background: #fff;
-  border: 3px solid rgb(93, 139, 244);
+  width: 12px;
+  height: 12px;
+  background: #5d8bf4;
+  border: 2px solid white;
   border-radius: 50%;
-  cursor: pointer;
-  transform: translate(-50%, -50%);
-  display: none;
-  transition: background 0.15s ease, transform 0.15s ease;
-  z-index: 101;
+  cursor: crosshair;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 10;
 }
 
 .card:hover .connection-point {
-  display: block;
+  opacity: 1;
 }
 
 .connection-point:hover {
-  background: rgb(93, 139, 244);
-  transform: scale(1.15) translate(-50%, -50%);
+  transform: scale(1.2);
+  background: #2563eb;
 }
 
 .connection-point.top {
-  top: 0;
+  top: -6px;
   left: 50%;
+  transform: translateX(-50%);
 }
 
 .connection-point.bottom {
-  top: 100%;
+  bottom: -6px;
   left: 50%;
+  transform: translateX(-50%);
 }
 
 .connection-point.left {
+  left: -6px;
   top: 50%;
-  left: 0;
+  transform: translateY(-50%);
 }
 
 .connection-point.right {
+  right: -6px;
   top: 50%;
-  left: 100%;
+  transform: translateY(-50%);
 }
 
-.card-body-html {
-  font-size: 14px;
-  color: #111827;
-  line-height: 1.5;
+.card:hover .connection-point.top,
+.card:hover .connection-point.bottom {
+  transform: translateX(-50%) scale(1);
 }
 
-  
-/* Большая и золотая карточки */
-.card--large,
-.card--gold {
-  min-height: 280px;
+.card:hover .connection-point.left,
+.card:hover .connection-point.right {
+  transform: translateY(-50%) scale(1);
 }
 
-.card--large .label,
-.card--gold .label {
-  font-size: 20px;
-  font-weight: 700;
+.connection-point.top:hover,
+.connection-point.bottom:hover {
+  transform: translateX(-50%) scale(1.2);
 }
 
-.card--large .value,
-.card--gold .value {
-  font-size: 22px;
-  font-weight: 700;
+.connection-point.left:hover,
+.connection-point.right:hover {
+  transform: translateY(-50%) scale(1.2);
 }
 
-.card--large .pv-value,
-.card--gold .pv-value {
-  font-size: 26px;
-  font-weight: 800;
+/* Контролы карточки */
+.card-controls {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  z-index: 102;
 }
-</style>  
+
+.card-control-btn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.card-control-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Стили для кнопки заметки */
+.note-btn {
+  position: relative;
+  background: #fff;
+}
+
+.note-btn::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(17, 24, 39, 0.45);
+  bottom: 2px;
+  right: 2px;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.note-btn.has-color::after {
+  opacity: 1;
+  transform: scale(1);
+  background: var(--note-indicator-color, transparent);
+}
+
+.note-btn.has-text {
+  background: #e11d48;
+  color: #fff;
+}
+
+.note-btn.has-text.has-color::after {
+  border-color: rgba(255, 255, 255, 0.75);
+}
+
+/* Большие карточки */
+.card--large {
+  /* Дополнительные стили для больших карточек */
+}
+
+.card--large .card-body {
+  padding: 16px;
+}
+
+.card--large .card-row {
+  margin-bottom: 12px;
+}
+</style>
