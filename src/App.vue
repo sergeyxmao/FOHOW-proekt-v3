@@ -1,23 +1,12 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import ControlPanel from './components/Panels/ControlPanel.vue'
 import RightPanel from './components/Panels/RightPanel.vue'
 
 const isModernTheme = ref(false)
 const isLeftPanelCollapsed = ref(false)
-const panelScale = ref(1)
 const canvasRef = ref(null)
-
-const PANEL_SCALE_MIN = 0.4
-const PANEL_SCALE_MAX = 1.5
-const PANEL_SCALE_STEP = 0.1
-const WHEEL_LISTENER_OPTIONS = { passive: false }
-
-function setPanelScale(value) {
-  const clamped = Math.min(PANEL_SCALE_MAX, Math.max(PANEL_SCALE_MIN, value))
-  panelScale.value = Number(clamped.toFixed(2))
-}
 
 function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
@@ -26,47 +15,7 @@ function toggleTheme() {
 function toggleLeftPanel() {
   isLeftPanelCollapsed.value = !isLeftPanelCollapsed.value
 }
-
-function handlePanelCtrlClick(event) {
-  const isLeftButton = event.button === undefined || event.button === 0
-  if (!event.ctrlKey || !isLeftButton) {
-    return
-  }
-
-  event.preventDefault()
-  event.stopPropagation()
-  event.stopImmediatePropagation?.()
-
-  let nextScale = panelScale.value + PANEL_SCALE_STEP
-  if (nextScale > PANEL_SCALE_MAX) {
-    nextScale = PANEL_SCALE_MIN
-  }
-
-  setPanelScale(nextScale)
-}
-
-function handlePanelCtrlWheel(event) {
-  if (!event.ctrlKey) {
-    return
-  }
-
-  const tagName = event.target?.tagName
-  const isEditableTarget = event.target?.isContentEditable
-  if (tagName === 'INPUT' || tagName === 'TEXTAREA' || isEditableTarget) {
-    return
-  }
-
-  event.preventDefault()
-  event.stopPropagation()
-
-  const direction = event.deltaY < 0 ? 1 : event.deltaY > 0 ? -1 : 0
-  if (direction === 0) {
-    return
-  }
-
-  const nextScale = panelScale.value + direction * PANEL_SCALE_STEP
-  setPanelScale(nextScale)
-}
+  
 function handleGlobalKeydown(event) {
   const isResetCombo = event.ctrlKey && !event.shiftKey && (event.code === 'Digit0' || event.code === 'Numpad0')
   if (!isResetCombo) {
@@ -74,30 +23,16 @@ function handleGlobalKeydown(event) {
   }
 
   event.preventDefault()
-  setPanelScale(1)
   canvasRef.value?.resetView()
 }
 
 onMounted(() => {
-  setPanelScale(1)  
   window.addEventListener('keydown', handleGlobalKeydown)
-  window.addEventListener('wheel', handlePanelCtrlWheel, WHEEL_LISTENER_OPTIONS)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
-  window.removeEventListener('wheel', handlePanelCtrlWheel, WHEEL_LISTENER_OPTIONS)
 })
-
-const leftPanelStyle = computed(() => ({
-  transform: `scale(${panelScale.value})`,
-  transformOrigin: 'left top'
-}))
-
-const rightPanelStyle = computed(() => ({
-  transform: `scale(${panelScale.value})`,
-  transformOrigin: 'right top'
-}))
 
 </script>
 
@@ -111,8 +46,6 @@ const rightPanelStyle = computed(() => ({
           collapsed: isLeftPanelCollapsed
         }
       ]"
-      :style="leftPanelStyle"
-      @click.capture="handlePanelCtrlClick"
     >
       <ControlPanel
         :is-modern-theme="isModernTheme"
@@ -125,8 +58,6 @@ const rightPanelStyle = computed(() => ({
     <!-- Правая панель -->
     <RightPanel
       :is-modern-theme="isModernTheme"
-      :style="rightPanelStyle"
-      @click.capture="handlePanelCtrlClick"
     />
     <div id="canvas">
       <CanvasBoard ref="canvasRef" />
