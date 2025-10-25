@@ -39,7 +39,8 @@ const { zoomPercentage } = storeToRefs(viewportStore)
 
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
 
-// Обработчики для кнопок левой панелиconst handleUndo = () => {
+// Обработчики для кнопок левой панелиconst 
+  handleUndo = () => {
   historyStore.undo()
 }
 
