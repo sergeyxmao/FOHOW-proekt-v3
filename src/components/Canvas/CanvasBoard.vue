@@ -9,8 +9,8 @@ import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { getHeaderColorRgb } from '../../utils/constants';
 import { batchDeleteCards } from '../../utils/historyOperations';
 import { usePanZoom } from '../../composables/usePanZoom';
-import { useHistoryStore } from '../../stores/history.js';  
-
+import { useHistoryStore } from '../../stores/history.js';
+import { useViewportStore } from '../../stores/viewport.js';
 const historyStore = useHistoryStore();  
 const emit = defineEmits(['update-connection-status']);
 
@@ -49,8 +49,18 @@ const stageConfig = ref({
 const CANVAS_PADDING = 400;
 
 const canvasContainerRef = ref(null);
-const { scale: zoomScale, translateX: zoomTranslateX, translateY: zoomTranslateY } = usePanZoom(canvasContainerRef);
-
+const {
+  scale: zoomScale,
+  translateX: zoomTranslateX,
+  translateY: zoomTranslateY,
+  clampScale: clampZoomScale,
+  setTransform: setZoomTransform,
+  resetTransform: resetZoomTransform
+} = usePanZoom(canvasContainerRef);
+const viewportStore = useViewportStore();
+watch(zoomScale, (value) => {
+  viewportStore.setZoomScale(value);
+}, { immediate: true });
 const canvasContentStyle = computed(() => {
   const style = {
     width: `${stageConfig.value.width}px`,
@@ -1145,10 +1155,63 @@ watch(isSelectionMode, (active) => {
     finishSelection();
   }
 });
-const resetView = () => {};
+const resetView = () => {
+  resetZoomTransform();
+};
 
+const fitToContent = (options = {}) => {
+  if (!canvasContainerRef.value) {
+    return;
+  }
+
+  const padding = Number.isFinite(options.padding) ? Math.max(0, options.padding) : 120;
+  const cardsList = cards.value;
+
+  if (!cardsList.length) {
+    resetZoomTransform();
+    return;
+  }
+
+  const minX = Math.min(...cardsList.map(card => card.x));
+  const minY = Math.min(...cardsList.map(card => card.y));
+  const maxX = Math.max(...cardsList.map(card => card.x + card.width));
+  const maxY = Math.max(...cardsList.map(card => card.y + card.height));
+
+  const containerRect = canvasContainerRef.value.getBoundingClientRect();
+  const containerWidth = containerRect.width || canvasContainerRef.value.clientWidth || 1;
+  const containerHeight = containerRect.height || canvasContainerRef.value.clientHeight || 1;
+
+  const paddedMinX = minX - padding;
+  const paddedMinY = minY - padding;
+  const paddedMaxX = maxX + padding;
+  const paddedMaxY = maxY + padding;
+
+  const contentWidth = Math.max(1, paddedMaxX - paddedMinX);
+  const contentHeight = Math.max(1, paddedMaxY - paddedMinY);
+
+  const scaleX = containerWidth / contentWidth;
+  const scaleY = containerHeight / contentHeight;
+  let targetScale = clampZoomScale(Math.min(scaleX, scaleY));
+
+  if (!Number.isFinite(targetScale) || targetScale <= 0) {
+    targetScale = 1;
+  }
+
+  const contentCenterX = paddedMinX + contentWidth / 2;
+  const contentCenterY = paddedMinY + contentHeight / 2;
+
+  const targetTranslateX = containerWidth / 2 - contentCenterX * targetScale;
+  const targetTranslateY = containerHeight / 2 - contentCenterY * targetScale;
+
+  setZoomTransform({
+    scale: targetScale,
+    translateX: targetTranslateX,
+    translateY: targetTranslateY
+  });
+};
 defineExpose({
-  resetView
+  resetView,
+  fitToContent
 });
 
 watch(isDrawingLine, (isDrawing) => {
