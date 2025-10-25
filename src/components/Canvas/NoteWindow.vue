@@ -140,11 +140,16 @@ watch(
   }
 )
 
+let __note_save_timer = null
 watch(textareaValue, (value) => {
-  cardsStore.updateCardNote(props.card.id, (mutableNote) => {
-    setNoteEntryValue(mutableNote, mutableNote.selectedDate, value)
-  })
+  if (__note_save_timer) clearTimeout(__note_save_timer)
+  __note_save_timer = setTimeout(() => {
+    cardsStore.updateCardNote(props.card.id, (mutableNote) => {
+      setNoteEntryValue(mutableNote, mutableNote.selectedDate, value)
+    })
+  }, 350)
 })
+
 
 function shiftMonth(delta) {
   const nextDate = new Date(viewDate.value.getFullYear(), viewDate.value.getMonth() + delta, 1)
@@ -319,13 +324,14 @@ let cleanupResize = null
 
 onMounted(() => {
   const ensured = cardsStore.ensureCardNote(props.card.id)
-  ensured.visible = true
   ensureNoteStructure(ensured)
-  if (!ensured.width || ensured.width < MIN_SIZE) ensured.width = MIN_SIZE
-  if (!ensured.height || ensured.height < MIN_SIZE) ensured.height = MIN_SIZE
-  if (!ensured.selectedDate) ensured.selectedDate = formatLocalYMD(new Date())
-  cardsStore.updateCardNote(props.card.id, ensured)
-
+  // Устанавливаем минимальные размеры и дату ТОЛЬКО если отсутствуют,
+  // и делаем это через функциональный апдейтер (без замены объекта)
+  cardsStore.updateCardNote(props.card.id, (mutable) => {
+    if (!mutable.width || mutable.width < MIN_SIZE) mutable.width = MIN_SIZE
+    if (!mutable.height || mutable.height < MIN_SIZE) mutable.height = MIN_SIZE
+    if (!mutable.selectedDate) mutable.selectedDate = formatLocalYMD(new Date())
+  })
   const parsed = parseYMDToDate(ensured.selectedDate)
   if (parsed) viewDate.value = parsed
   syncTextareaFromNote()
@@ -339,7 +345,9 @@ onMounted(() => {
   })
 })
 
+
 onBeforeUnmount(() => {
+  if (__note_save_timer) clearTimeout(__note_save_timer)
   if (cleanupDrag) cleanupDrag()
   if (cleanupResize) cleanupResize()
 })
