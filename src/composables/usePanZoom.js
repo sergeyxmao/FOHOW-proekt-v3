@@ -16,11 +16,52 @@ export function usePanZoom(canvasElement) {
     if (!canvasElement.value) return
     const canvasContent = canvasElement.value.querySelector('.canvas-content')
     if (canvasContent) {
-      canvasContent.style.transform = 
+      canvasContent.style.transform =
         `translate(${translateX.value}px, ${translateY.value}px) scale(${scale.value})`
     }
   }
   
+  const clampScale = (value) => {
+    if (!Number.isFinite(value)) {
+      return scale.value
+    }
+    return Math.max(MIN_SCALE, Math.min(MAX_SCALE, value))
+  }
+
+  const setScale = (value) => {
+    scale.value = clampScale(value)
+    updateTransform()
+  }
+
+  const setTranslation = (x, y) => {
+    if (Number.isFinite(x)) {
+      translateX.value = x
+    }
+    if (Number.isFinite(y)) {
+      translateY.value = y
+    }
+    updateTransform()
+  }
+
+  const setTransform = ({ scale: nextScale, translateX: nextTranslateX, translateY: nextTranslateY } = {}) => {
+    if (Number.isFinite(nextScale)) {
+      scale.value = clampScale(nextScale)
+    }
+    if (Number.isFinite(nextTranslateX)) {
+      translateX.value = nextTranslateX
+    }
+    if (Number.isFinite(nextTranslateY)) {
+      translateY.value = nextTranslateY
+    }
+    updateTransform()
+  }
+
+  const resetTransform = () => {
+    scale.value = 1
+    translateX.value = 0
+    translateY.value = 0
+    updateTransform()
+  }
   const handleWheel = (event) => {
     if (!canvasElement.value) return
 
@@ -103,6 +144,12 @@ export function usePanZoom(canvasElement) {
   return {
     scale,
     translateX,
-    translateY
-  }
+    translateY,
+    clampScale,
+    setScale,
+    setTranslation,
+    setTransform,
+    resetTransform,
+    minScale: MIN_SCALE,
+    maxScale: MAX_SCALE  }
 }
