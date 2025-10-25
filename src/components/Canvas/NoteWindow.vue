@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { storeToRefs } from 'pinia'  
 import { useHistoryStore } from '../../stores/history'
 import { useCardsStore } from '../../stores/cards'
 import {
@@ -24,7 +25,9 @@ const props = defineProps({
 
 const cardsStore = useCardsStore()
 const historyStore = useHistoryStore()
+const { cards } = storeToRefs(cardsStore)
 
+const ensuredNote = cardsStore.ensureCardNote(props.card.id)
 const windowRef = ref(null)
 const headerRef = ref(null)
 const resizeHandleRef = ref(null)
@@ -34,7 +37,8 @@ const viewDate = ref(new Date())
 const textareaFocused = ref(false)
 
 const note = computed(() => {
-  return cardsStore.ensureCardNote(props.card.id)
+  const card = cards.value.find(cardItem => cardItem.id === props.card.id)
+  return card?.note || ensuredNote
 })
 
 const windowStyle = computed(() => {
