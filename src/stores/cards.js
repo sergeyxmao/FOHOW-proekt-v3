@@ -167,15 +167,18 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
       return card
     },
     
-    updateCardHeaderColor(cardIds, colorIndex) {
+    updateCardHeaderColor(cardIds, colorIndex, customColor) {
       const updatedCards = []
-      const headerBg = getHeaderColorRgb(colorIndex)
-      
+      const isPaletteIndex = Number.isInteger(colorIndex) && colorIndex >= 0
+      const headerBg = isPaletteIndex
+        ? getHeaderColorRgb(colorIndex)
+        : customColor || getHeaderColorRgb(0)
+      const appliedIndex = isPaletteIndex ? colorIndex : -1   
       cardIds.forEach(cardId => {
         const card = this.cards.find(c => c.id === cardId)
         if (card) {
           card.headerBg = headerBg
-          card.colorIndex = colorIndex
+          card.colorIndex = appliedIndex
           updatedCards.push(card)
         }
       })
