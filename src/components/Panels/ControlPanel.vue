@@ -75,7 +75,8 @@ const handleSaveProject = () => {
   const link = document.createElement('a')
   link.href = url
   const baseFileName = formatProjectFileName(normalizedProjectName.value || projectStore.projectName)
-  link.download = `${baseFileName}.json`  link.click()
+  link.download = `${baseFileName}.json`
+  link.click()
   URL.revokeObjectURL(url)
 }
 
