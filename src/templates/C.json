@@ -1,0 +1,107 @@
+{
+  "cards": [
+    {
+      "key": "apex",
+      "type": "large",
+      "x": 760,
+      "y": 160,
+      "text": "C1",
+      "pv": "330/330pv",
+      "showSlfBadge": false,
+      "showFendouBadge": false,
+      "rankBadge": null
+    },
+    {
+      "key": "left-1",
+      "type": "small",
+      "x": 560,
+      "y": 420,
+      "text": "L1",
+      "pv": "30/330pv"
+    },
+    {
+      "key": "left-2",
+      "type": "small",
+      "x": 360,
+      "y": 680,
+      "text": "L2",
+      "pv": "30/330pv"
+    },
+    {
+      "key": "left-3",
+      "type": "small",
+      "x": 160,
+      "y": 940,
+      "text": "L3",
+      "pv": "30/330pv"
+    },
+    {
+      "key": "right-1",
+      "type": "small",
+      "x": 960,
+      "y": 420,
+      "text": "R1",
+      "pv": "30/330pv"
+    },
+    {
+      "key": "right-2",
+      "type": "small",
+      "x": 1160,
+      "y": 680,
+      "text": "R2",
+      "pv": "30/330pv"
+    },
+    {
+      "key": "right-3",
+      "type": "small",
+      "x": 1360,
+      "y": 940,
+      "text": "R3",
+      "pv": "30/330pv"
+    }
+  ],
+  "connections": [
+    {
+      "startKey": "apex",
+      "endKey": "left-1",
+      "startSide": "left",
+      "endSide": "top",
+      "thickness": 4
+    },
+    {
+      "startKey": "left-1",
+      "endKey": "left-2",
+      "startSide": "left",
+      "endSide": "top",
+      "thickness": 4
+    },
+    {
+      "startKey": "left-2",
+      "endKey": "left-3",
+      "startSide": "left",
+      "endSide": "top",
+      "thickness": 4
+    },
+    {
+      "startKey": "apex",
+      "endKey": "right-1",
+      "startSide": "right",
+      "endSide": "top",
+      "thickness": 4
+    },
+    {
+      "startKey": "right-1",
+      "endKey": "right-2",
+      "startSide": "right",
+      "endSide": "top",
+      "thickness": 4
+    },
+    {
+      "startKey": "right-2",
+      "endKey": "right-3",
+      "startSide": "right",
+      "endSide": "top",
+      "thickness": 4
+    }
+  ]
+}
