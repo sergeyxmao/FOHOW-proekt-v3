@@ -3,12 +3,12 @@ import { ref } from 'vue'
 
 export const useCanvasStore = defineStore('canvas', () => {
   
-  const backgroundColor = ref('#ffffff')
+  const backgroundColor = ref('#b9c4da')
   const isSelectionMode = ref(false)
   const isHierarchicalDragMode = ref(false)
   const guidesEnabled = ref(true)
   const gridStep = ref(40)
-  const isGridBackgroundVisible = ref(false)
+  const isGridBackgroundVisible = ref(true)
 
   function setBackgroundColor(color) {
     backgroundColor.value = color
