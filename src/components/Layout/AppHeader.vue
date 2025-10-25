@@ -1,21 +1,28 @@
 <script setup>
 import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
 import { useProjectStore } from '../../stores/project.js'
-
+  
+const props = defineProps({
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  }
+})
+  
 const projectStore = useProjectStore()
-const { projectName, openFileName } = storeToRefs(projectStore)
+const { projectName } = storeToRefs(projectStore)
 
 const projectPlaceholder = 'Введите название проекта'
 
-const openFileLabel = computed(() => {
-  return openFileName.value || 'Файл не загружен'
-})
 </script>
 
 <template>
-  <div class="app-header">
-    <label class="app-header__project" for="project-name-input">
+  <div
+    :class="[
+      'app-header',
+      { 'app-header--modern': props.isModernTheme }
+    ]"
+  >    <label class="app-header__project" for="project-name-input">
       <span class="app-header__label">Название проекта:</span>
       <input
         id="project-name-input"
@@ -25,14 +32,21 @@ const openFileLabel = computed(() => {
         :placeholder="projectPlaceholder"
       >
     </label>
-    <div class="app-header__file" :class="{ 'app-header__file--empty': !openFileName }">
-      {{ openFileLabel }}
-    </div>
   </div>
 </template>
 
 <style scoped>
 .app-header {
+  --header-surface: rgba(255, 255, 255, 0.92);
+  --header-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  --header-text: #111827;
+  --header-label-bg: rgba(15, 23, 42, 0.06);
+  --header-input-bg: rgba(255, 255, 255, 0.98);
+  --header-input-border: rgba(15, 23, 42, 0.15);
+  --header-input-color: #111827;
+  --header-input-placeholder: rgba(17, 24, 39, 0.55);
+  --header-focus-border: #0f62fe;
+  --header-focus-shadow: rgba(15, 98, 254, 0.15);  
   position: fixed;
   top: 12px;
   left: 50%;
@@ -41,26 +55,41 @@ const openFileLabel = computed(() => {
   align-items: center;
   gap: 20px;
   padding: 12px 24px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--header-surface);
   border-radius: 20px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  box-shadow: var(--header-shadow);
   backdrop-filter: blur(6px);
   z-index: 1900;
   font-size: 16px;
   line-height: 1.3;
+  color: var(--header-text);
+}
+
+.app-header--modern {
+  --header-surface: rgba(28, 38, 58, 0.9);
+  --header-shadow: 0 18px 34px rgba(6, 11, 21, 0.45);
+  --header-text: #e5f3ff;
+  --header-label-bg: rgba(44, 58, 82, 0.72);
+  --header-input-bg: rgba(17, 24, 39, 0.92);
+  --header-input-border: rgba(96, 164, 255, 0.35);
+  --header-input-color: #e5f3ff;
+  --header-input-placeholder: rgba(229, 243, 255, 0.5);
+  --header-focus-border: rgba(89, 208, 255, 0.85);
+  --header-focus-shadow: rgba(17, 203, 255, 0.2);  
 }
 
 .app-header__project {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #111827;
+  color: var(--header-text);
   font-weight: 700;
   font-size: 18px;
   padding: 12px 20px;
   border-radius: 16px;
-  background: rgba(15, 23, 42, 0.06);}
-
+  background: var(--header-label-bg);
+  transition: background 0.2s ease, color 0.2s ease;
+}
 .app-header__label {
   white-space: nowrap;
 }
@@ -69,28 +98,22 @@ const openFileLabel = computed(() => {
   min-width: 240px;
   padding: 10px 16px;
   border-radius: 14px;
-  border: 1px solid rgba(15, 23, 42, 0.15);
+  border: 1px solid var(--header-input-border);
   font-size: 16px;
   font-weight: 600;
-  color: #111827;
-  background: rgba(255, 255, 255, 0.98);
+  color: var(--header-input-color);
+  background: var(--header-input-bg);
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.app-header__input::placeholder {
+  color: var(--header-input-placeholder);
 }
 
 .app-header__input:focus {
-  border-color: #0f62fe;
-  box-shadow: 0 0 0 3px rgba(15, 98, 254, 0.15);
-}
-
-.app-header__file {
-  font-weight: 500;
-  color: #1f2937;
-}
-
-.app-header__file--empty {
-  color: #9ca3af;
-  font-style: italic;
+  border-color: var(--header-focus-border);
+  box-shadow: 0 0 0 3px var(--header-focus-shadow);
 }
 
 @media (max-width: 900px) {
