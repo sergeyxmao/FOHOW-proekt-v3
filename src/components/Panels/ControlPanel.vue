@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCardsStore } from '../../stores/cards.js'
 import { useHistoryStore } from '../../stores/history.js'
@@ -36,43 +36,8 @@ const {
 } = storeToRefs(canvasStore)
 const { normalizedProjectName } = storeToRefs(projectStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
-const isMobileView = ref(false)
-let mediaQueryList = null
 
-const updateIsMobileView = (event) => {
-  const target = event?.matches !== undefined ? event : mediaQueryList
-  if (!target) return
-  isMobileView.value = target.matches
-}
-
-onMounted(() => {
-  if (typeof window === 'undefined' || !window.matchMedia) {
-    return
-  }
-
-  mediaQueryList = window.matchMedia('(max-width: 768px)')
-  updateIsMobileView(mediaQueryList)
-
-  if (typeof mediaQueryList.addEventListener === 'function') {
-    mediaQueryList.addEventListener('change', updateIsMobileView)
-  } else if (typeof mediaQueryList.addListener === 'function') {
-    mediaQueryList.addListener(updateIsMobileView)
-  }
-})
-
-onBeforeUnmount(() => {
-  if (!mediaQueryList) {
-    return
-  }
-
-  if (typeof mediaQueryList.removeEventListener === 'function') {
-    mediaQueryList.removeEventListener('change', updateIsMobileView)
-  } else if (typeof mediaQueryList.removeListener === 'function') {
-    mediaQueryList.removeListener(updateIsMobileView)
-  }
-})
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
-const zoomButtonLabel = computed(() => (isMobileView.value ? 'Подогнать масштаб' : `Масштаб: ${zoomDisplay.value}`))  
 
 // Обработчики для кнопок левой панели
 const handleUndo = () => {
@@ -660,12 +625,8 @@ const handleToggleGuides = () => {
       </div>
     </template>
     <template v-else>
-      <div
-        :class="[
-          'left-panel-controls__grid',
-          { 'left-panel-controls__grid--mobile': isMobileView }
-        ]"
-      >        <button
+      <div class="left-panel-controls__grid">
+        <button
           class="ui-btn theme-toggle left-panel-controls__grid-item--full"
           type="button"
           :title="props.isModernTheme ? 'Вернуть светлое меню' : 'Включить тёмное меню'"
@@ -693,33 +654,11 @@ const handleToggleGuides = () => {
         </button>
         <button class="ui-btn" title="Сохранить проект (JSON)" @click="handleSaveProject">💾</button>
         <button class="ui-btn" title="Экспорт в HTML (просмотр)" @click="handleExportHTML">📄</button>
+        <button class="ui-btn" title="Экспорт в SVG (вектор)" @click="handleExportSVG">🖋️</button>
+        <button class="ui-btn" title="Печать / Экспорт в PDF" @click="handlePrint">🖨️</button>
+        <button class="ui-btn" title="Загрузить проект из JSON" @click="handleLoadProject">📂</button>
+        <button class="ui-btn" title="Список заметок" @click="handleNotesList" disabled>🗒️</button>
         <button
-          v-if="!isMobileView"
-          class="ui-btn"
-          title="Экспорт в SVG (вектор)"
-          @click="handleExportSVG"
-        >🖋️</button>
-        <button
-          v-if="!isMobileView"
-          class="ui-btn"
-          title="Печать / Экспорт в PDF"
-          @click="handlePrint"
-        >🖨️</button>
-        <button
-          v-if="!isMobileView"
-          class="ui-btn"
-          title="Загрузить проект из JSON"
-          @click="handleLoadProject"
-        >📂</button>
-        <button
-          v-if="!isMobileView"
-          class="ui-btn"
-          title="Список заметок"
-          @click="handleNotesList"
-          disabled
-        >🗒️</button>
-        <button
-          v-if="!isMobileView"          
           class="ui-btn"
           :class="{ active: isSelectionMode }"
           :aria-pressed="isSelectionMode"
@@ -728,7 +667,6 @@ const handleToggleGuides = () => {
         >
           ⬚
         </button>
-           v-if="!isMobileView"     
         <button
           class="ui-btn"
           :class="{ active: isHierarchicalDragMode }"
@@ -761,18 +699,12 @@ const handleToggleGuides = () => {
      <div class="left-panel-controls__zoom">
       <button
         class="left-panel-controls__zoom-button"
-          :class="{ 'left-panel-controls__zoom-button--icon-only': isMobileView }"
-      
         type="button"
-        :title="zoomButtonLabel"
-        :aria-label="isMobileView ? zoomButtonLabel : null"        @click="handleFitToContent"
+        title="Автоподгонка масштаба"
+        @click="handleFitToContent"
       >
-        <template v-if="isMobileView">
-          <span aria-hidden="true">🔍</span>
-        </template>
-        <template v-else>
-          Масштаб: <span class="left-panel-controls__zoom-value">{{ zoomDisplay }}</span>
-        </template>      </button>
+        Масштаб: <span class="left-panel-controls__zoom-value">{{ zoomDisplay }}</span>
+      </button>
     </div>   
     <input type="file" accept=".json,application/json" style="display:none">
   </div>
@@ -850,15 +782,6 @@ const handleToggleGuides = () => {
 .left-panel-controls__grid-item--full {
   grid-column: 1 / -1;
 }
-.left-panel-controls__grid--mobile {
-  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
-  column-gap: 12px;
-  row-gap: 12px;
-}
-.left-panel-controls__grid--mobile .ui-btn {
-  width: 100%;
-  min-width: 0;
-}  
 .left-panel-controls__zoom {
   width: 100%;
   margin-top: auto;
@@ -891,10 +814,7 @@ const handleToggleGuides = () => {
 }
 .left-panel-controls__zoom-value {
   font-variant-numeric: tabular-nums;
-}
-.left-panel-controls__zoom-button--icon-only {
-  font-size: calc(var(--left-panel-btn-font) * 0.75);
-}
+}  
 .left-panel-controls .ui-btn {
   width: var(--left-panel-btn-size);
   height: var(--left-panel-btn-size);
@@ -1024,31 +944,4 @@ const handleToggleGuides = () => {
 .left-panel-controls--collapsed .theme-toggle {
   box-shadow: inset 0 2px 0 rgba(255,255,255,0.18), 0 18px 30px rgba(15, 23, 42, 0.18);
 }
-
-@media (max-width: 768px) {
-  .left-panel-controls {
-    --left-panel-btn-size: 56px;
-    --left-panel-btn-radius: 18px;
-    --left-panel-btn-font: 26px;
-  }
-
-  .left-panel-controls__collapsed {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .left-panel-controls__history {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .left-panel-controls__zoom-button {
-    padding: 12px 14px;
-  }
-
-  .left-panel-controls__zoom-button--icon-only {
-    font-size: 28px;
-    line-height: 1;
-  }
-}  
 </style>

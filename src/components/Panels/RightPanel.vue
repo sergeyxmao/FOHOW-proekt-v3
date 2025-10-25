@@ -65,14 +65,6 @@ const hiddenBackgroundPicker = ref(null)
 // Шаблоны для вставки
 const templateMenuRef = ref(null)
 const isTemplateMenuOpen = ref(false)
-const isMobileView = ref(false)
-let mediaQueryList = null
-
-const updateIsMobileView = (event) => {
-  const target = event?.matches !== undefined ? event : mediaQueryList
-  if (!target) return
-  isMobileView.value = target.matches
-}
 
 const TEMPLATE_CONFIG = [
   { id: 'A', label: 'Цепочка', fileName: 'A.json' },
@@ -385,31 +377,11 @@ onMounted(() => {
   console.log('RightPanel mounted successfully');
 
   document.addEventListener('click', handleDocumentClick)
-
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    mediaQueryList = window.matchMedia('(max-width: 768px)')
-    updateIsMobileView(mediaQueryList)
-
-    if (typeof mediaQueryList.addEventListener === 'function') {
-      mediaQueryList.addEventListener('change', updateIsMobileView)
-    } else if (typeof mediaQueryList.addListener === 'function') {
-      mediaQueryList.addListener(updateIsMobileView)
-    }
-  }  
 })
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', handleDocumentClick)
-
-  if (!mediaQueryList) {
-    return
-  }
-
-  if (typeof mediaQueryList.removeEventListener === 'function') {
-    mediaQueryList.removeEventListener('change', updateIsMobileView)
-  } else if (typeof mediaQueryList.removeListener === 'function') {
-    mediaQueryList.removeListener(updateIsMobileView)
-  }})
+  document.removeEventListener('click', handleDocumentClick)  
+})
 
 // Следим за изменениями параметров линий и обновляем значения по умолчанию
 watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDuration]) => {
@@ -420,13 +392,7 @@ watch(isCollapsed, (collapsed) => {
   if (collapsed) {
     closeTemplateMenu()
   }
-})
-
-watch(isMobileView, (mobile) => {
-  if (mobile) {
-    closeTemplateMenu()
-  }
-}) 
+})  
 </script>
 
 <template>
@@ -435,8 +401,8 @@ watch(isMobileView, (mobile) => {
       'right-control-panel',
       {
         'right-control-panel--collapsed': isCollapsed,
-        'right-control-panel--modern': props.isModernTheme,
-        'right-control-panel--mobile': isMobileView      }
+        'right-control-panel--modern': props.isModernTheme
+      }
     ]"
   >
     <div class="right-control-panel__shell">
@@ -451,8 +417,6 @@ watch(isMobileView, (mobile) => {
       </button>
 
       <div v-if="!isCollapsed" class="right-control-panel__card">
-      <template v-if="!isMobileView">
-        
         <div class="right-control-panel__top">
           <button
             class="line-color-button"
@@ -628,48 +592,46 @@ watch(isMobileView, (mobile) => {
             </button>
           </div>
         </div>
-         </template>
-     
 
-      <div class="control-section control-section--footer">
-        <button class="add-card-btn" type="button" title="Добавить лицензию" @click="addCard">□</button>
-        <button class="add-card-btn add-card-btn--large" type="button" title="Добавить большую лицензию" @click="addLargeCard">⧠</button>
-        <button
-          class="add-card-btn add-card-btn--large add-card-btn--gold"
-          type="button"
-          title="Добавить Goold лицензию"
-          @click="addGoldCard"
-        >★</button>
-        <div ref="templateMenuRef" class="template-menu">
-          <button
-            class="add-card-btn"
+        <div class="control-section control-section--footer">
+          <button class="add-card-btn" type="button" title="Добавить лицензию" @click="addCard">□</button>
+          <button class="add-card-btn add-card-btn--large" type="button" title="Добавить большую лицензию" @click="addLargeCard">⧠</button>
+           <button
+            class="add-card-btn add-card-btn--large add-card-btn--gold"
             type="button"
-            title="Добавить шаблон"
-            @click.stop="toggleTemplateMenu"
-            :disabled="!templateOptions.length"
-            aria-haspopup="true"
-            :aria-expanded="isTemplateMenuOpen"
-          >⧉</button>
-          <div
-            v-if="isTemplateMenuOpen && templateOptions.length"
-            class="template-menu__list template-menu__list--drop-up"
-            role="menu"
-            aria-label="Выбор шаблона"
-          >
+            title="Добавить Goold лицензию"
+            @click="addGoldCard"
+          >★</button>         
+            <div ref="templateMenuRef" class="template-menu">
             <button
-              v-for="option in templateOptions"
-              :key="option.id"
-              class="template-menu__item"              type="button"
-              role="menuitem"
-              @click.stop="selectTemplate(option.id)"
+              class="add-card-btn"
+              type="button"
+              title="Добавить шаблон"
+              @click.stop="toggleTemplateMenu"
+              :disabled="!templateOptions.length"
+              aria-haspopup="true"
+              :aria-expanded="isTemplateMenuOpen"
+            >⧉</button>
+            <div
+              v-if="isTemplateMenuOpen && templateOptions.length"
+              class="template-menu__list template-menu__list--drop-up"
+              role="menu"
+              aria-label="Выбор шаблона"
             >
-              {{ option.displayText }}
-            </button>
+              <button
+                v-for="option in templateOptions"
+                :key="option.id"
+                class="template-menu__item"
+                type="button"
+                role="menuitem"
+                @click.stop="selectTemplate(option.id)"
+              >
+                {{ option.displayText }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-       </div>
-     
       <div v-else class="right-control-panel__collapsed-actions">
         <button class="add-card-btn" type="button" title="Добавить лицензию" @click="addCard">□</button>
         <button class="add-card-btn add-card-btn--large" type="button" title="Добавить большую лицензию" @click="addLargeCard">⧠</button>
@@ -814,8 +776,8 @@ watch(isMobileView, (mobile) => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 2px 18px;
-  background: var(--panel-bg);  border: 1px solid var(--panel-border);
+  padding: 2px 18px;  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
   border-left: none;
   border-radius: 0 26px 26px 0;
   box-shadow: var(--panel-shadow);
@@ -1302,69 +1264,6 @@ watch(isMobileView, (mobile) => {
   top: auto;
   transform-origin: bottom right;
 }
-
-.right-control-panel--mobile {
-  width: 100%;
-  justify-content: center;
-}
-
-@media (max-width: 768px) {
-  .right-control-panel {
-    top: auto;
-    bottom: 16px;
-    left: 16px;
-    right: 16px;
-    justify-content: center;
-  }
-
-  .right-control-panel__shell {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .right-control-panel__collapse {
-    width: 48px;
-    min-height: 56px;
-  }
-
-  .right-control-panel__card {
-    width: 100%;
-    padding: 18px 16px 14px;
-    border-radius: 24px;
-  }
-
-  .control-section--footer {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 12px;
-  }
-
-  .control-section--footer .add-card-btn {
-    flex: 1 1 64px;
-    max-width: 72px;
-  }
-
-  .right-control-panel__collapsed-actions {
-    width: 100%;
-    justify-content: center;
-    padding: 10px 16px;
-  }
-
-  .right-control-panel__collapsed-actions .add-card-btn {
-    flex: 1 1 64px;
-    max-width: 72px;
-  }
-
-  .template-menu__list {
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
-  }
-
-  .template-menu__list--drop-up {
-    transform-origin: bottom center;
-  }
-}  
 .template-menu__list::-webkit-scrollbar {
   width: 6px;
 }

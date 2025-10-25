@@ -102,7 +102,7 @@ html,body{
 }
 
 /* Панели */
-.ui-panel-left{ 
+.ui-panel-left{
   position: fixed;
   top: 20px;
   left: 0;
@@ -125,24 +125,4 @@ html,body{
 }
 /* Canvas/SVG */
 #canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
-
-@media (max-width: 768px) {
-  .ui-panel-left {
-    top: auto;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 12px 16px;
-    width: calc(100% - 32px);
-    justify-content: center;
-  }
-
-  .ui-panel-left.collapsed {
-    bottom: 16px;
-  }
-
-  #canvas {
-    padding-bottom: 160px;
-  }
-}  
 </style>
