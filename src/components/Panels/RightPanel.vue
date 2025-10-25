@@ -547,13 +547,7 @@ watch(isCollapsed, (collapsed) => {
               title="Светлый фон"          
               @click="updateBackground('#f5f7fb')"
             ></button>
-            <button
-              class="background-button"
-              type="button"
-              :style="{ background: 'linear-gradient(135deg, #eef1f5, #dde3ea)' }"
-              title="Серый фон"
-              @click="updateBackground('linear-gradient(135deg,#eef1f5,#dde3ea)')"
-            ></button>
+
             <button
               class="background-button background-button--icon"
               type="button"
@@ -620,7 +614,7 @@ watch(isCollapsed, (collapsed) => {
             >⧉</button>
             <div
               v-if="isTemplateMenuOpen && templateOptions.length"
-              class="template-menu__list"
+              class="template-menu__list template-menu__list--drop-up"
               role="menu"
               aria-label="Выбор шаблона"
             >
@@ -800,8 +794,7 @@ watch(isCollapsed, (collapsed) => {
   border-radius: 26px;
   box-shadow: var(--panel-shadow);
   backdrop-filter: blur(28px);
-  max-height: calc(100vh - 48px);
-  overflow-y: auto;
+  overflow: visible;
   padding-right: 28px;
   box-sizing: border-box;
   scrollbar-width: thin;
@@ -1260,7 +1253,11 @@ watch(isCollapsed, (collapsed) => {
   z-index: 10;
   scrollbar-width: thin;
 }
-
+.template-menu__list--drop-up {
+  bottom: calc(100% + 10px);
+  top: auto;
+  transform-origin: bottom right;
+}
 .template-menu__list::-webkit-scrollbar {
   width: 6px;
 }
