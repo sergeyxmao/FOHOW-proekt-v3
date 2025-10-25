@@ -9,7 +9,7 @@ const isLeftPanelCollapsed = ref(false)
 const panelScale = ref(1)
 const canvasRef = ref(null)
 
-const PANEL_SCALE_MIN = 0.6
+const PANEL_SCALE_MIN = 0.4
 const PANEL_SCALE_MAX = 1.5
 const PANEL_SCALE_STEP = 0.1
 const WHEEL_LISTENER_OPTIONS = { passive: false }
@@ -148,7 +148,8 @@ const rightPanelStyle = computed(() => ({
 
 html,body{
   margin:0; padding:0; width:100%; height:100%;
-  overflow:hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--bg);
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color: var(--ink);
@@ -174,8 +175,11 @@ html,body{
   background: transparent;
   border-radius: 0 24px 24px 0;
   box-shadow: var(--shadow);
-  transition: top .3s ease, transform .3s ease, padding .3s ease;}
-
+  transition: top .3s ease, transform .3s ease, padding .3s ease;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
 .ui-panel-left.collapsed {
   top: 16px;
   padding: 16px 20px;
