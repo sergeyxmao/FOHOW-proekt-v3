@@ -365,13 +365,13 @@ const updateValue = (event, field) => {
 }
 
 .card--large .card-title,
-.card--gold .card-title {
-  font-weight: 900;
-}
+.card--gold .card-title,
 
 .card--large .card-title-input,
 .card--gold .card-title-input {
-  font-weight: 900;}
+  font-weight: 900;
+  font-size: 30px;
+}
 
 .card-close-btn {
   position: absolute;
@@ -399,13 +399,17 @@ const updateValue = (event, field) => {
 
 .card-body {
   padding: 16px;
-  background: var(--card-body-gradient, var(--surface, #ffffff));  border-radius: 0 0 16px 16px;
+  background: var(--card-body-gradient, var(--surface, #ffffff));
+  border-radius: 0 0 16px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
 }
-
+.card--large .card-body,
+.card--gold .card-body {
+  justify-content: center;
+}
 .card-row {
   display: flex;
   justify-content: center;
@@ -551,25 +555,27 @@ const updateValue = (event, field) => {
 }
 
   
-/* Большая карточка */
-.card--large {
+/* Большая и золотая карточки */
+.card--large,
+.card--gold {
   min-height: 280px;
 }
 
-.card--large .card-title,
-.card--large .card-title-input {
+.card--large .label,
+.card--gold .label {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.card--large .value,
+.card--gold .value {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.card--large .pv-value,
+.card--gold .pv-value {
   font-size: 26px;
-}
-
-.card--large .label {
-  font-size: 18.2px;
-}
-
-.card--large .value {
-  font-size: 19.5px;
-}
-
-.card--large .pv-value {
-  font-size: 23.4px;
+  font-weight: 800;
 }
 </style>  
