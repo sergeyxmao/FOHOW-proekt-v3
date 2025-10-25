@@ -9,7 +9,7 @@ const { projectName, openFileName } = storeToRefs(projectStore)
 const projectPlaceholder = 'Введите название проекта'
 
 const openFileLabel = computed(() => {
-  return openFileName.value ? `Открыт файл: ${openFileName.value}` : 'Файл не загружен'
+  return openFileName.value || 'Файл не загружен'
 })
 </script>
 
@@ -55,8 +55,11 @@ const openFileLabel = computed(() => {
   align-items: center;
   gap: 12px;
   color: #111827;
-  font-weight: 600;
-}
+  font-weight: 700;
+  font-size: 18px;
+  padding: 12px 20px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.06);}
 
 .app-header__label {
   white-space: nowrap;
@@ -64,11 +67,11 @@ const openFileLabel = computed(() => {
 
 .app-header__input {
   min-width: 240px;
-  padding: 8px 14px;
+  padding: 10px 16px;
   border-radius: 14px;
   border: 1px solid rgba(15, 23, 42, 0.15);
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
   color: #111827;
   background: rgba(255, 255, 255, 0.98);
   outline: none;
