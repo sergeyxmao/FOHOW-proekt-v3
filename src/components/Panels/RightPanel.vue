@@ -55,7 +55,7 @@ const headerColor = ref('#5D8BF4')
 const headerColorIndex = ref(0)
 
 // Управление фоном
-const backgroundGradient = ref('#f5f7fb')
+const backgroundGradient = ref('#b9c4da')
 
 // Ссылки на DOM элементы
 const hiddenLineColorPicker = ref(null)
@@ -192,7 +192,7 @@ function updateHeaderColor(color) {
   const selectedCards = cardsStore.selectedCards
   if (selectedCards.length > 0) {
     const cardIds = selectedCards.map(card => card.id)
-    cardsStore.updateCardHeaderColor(cardIds, headerColorIndex.value)
+    cardsStore.updateCardHeaderColor(cardIds, headerColorIndex.value, headerColor.value)
   }
 }
 
