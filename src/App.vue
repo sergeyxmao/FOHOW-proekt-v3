@@ -80,7 +80,7 @@ onBeforeUnmount(() => {
   --muted: #6b7280;
   --panel: #ffffff;
   --surface: #ffffff;
-  --bg: #f5f7fb;
+  --bg: #b9c4da; 
   --radius: 14px;
   --shadow: 0 8px 20px rgba(0,0,0,.12);
 }
