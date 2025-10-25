@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCardsStore } from '../../stores/cards.js'
 import { useHistoryStore } from '../../stores/history.js'
@@ -7,6 +7,16 @@ import { useCanvasStore } from '../../stores/canvas.js'
 import { useConnectionsStore } from '../../stores/connections.js'
 import { useProjectStore, formatProjectFileName } from '../../stores/project.js'
 import { useViewportStore } from '../../stores/viewport.js'
+import {
+  collectNoteItems,
+  defaultNotePositionFromRect,
+  ensureNoteStructure,
+  formatNoteDateTime,
+  hasAnyEntry,
+  normalizeYMD,
+  serializeNoteForExport,
+  NOTE_DEFAULT_SIZE
+} from '../../utils/notes'  
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -38,6 +48,36 @@ const { normalizedProjectName } = storeToRefs(projectStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
 
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
+const notesDropdownOpen = ref(false)
+const notesDropdownRef = ref(null)
+const notesButtonRef = ref(null)
+const notesDropdownPosition = ref({ left: 0, top: 0 })
+
+const notesItems = computed(() => collectNoteItems(cardsStore.cards))
+const notesButtonDisabled = computed(() => !cardsStore.cards.some(card => hasAnyEntry(card.note)))
+const notesDropdownStyle = computed(() => ({
+  left: `${notesDropdownPosition.value.left}px`,
+  top: `${notesDropdownPosition.value.top}px`
+}))
+
+const formatNoteTimestamp = (date, updatedAt) => {
+  const { datePart, timePart } = formatNoteDateTime(date, updatedAt)
+  return `${datePart} - ${timePart}`
+}
+
+const updateNotesDropdownPosition = () => {
+  if (!notesButtonRef.value) return
+  const rect = notesButtonRef.value.getBoundingClientRect()
+  notesDropdownPosition.value = {
+    left: rect.left,
+    top: rect.bottom + 6
+  }
+}
+
+const handleWindowResize = () => {
+  if (!notesDropdownOpen.value) return
+  updateNotesDropdownPosition()
+}
 
 // Обработчики для кнопок левой панели
 const handleUndo = () => {
@@ -50,10 +90,22 @@ const handleRedo = () => {
 
 const handleSaveProject = () => {
   // Сохранение проекта в JSON
+  const notesMap = {}
+  const cardsForExport = cardsStore.cards.map((card) => {
+    const plainCard = JSON.parse(JSON.stringify(card))
+    const serializedNote = serializeNoteForExport(card.note)
+    if (serializedNote) {
+      plainCard.note = serializedNote
+      notesMap[plainCard.id] = serializedNote
+    } else {
+      plainCard.note = null
+    }
+    return plainCard
+  })  
   const projectData = {
     version: '1.0',
     timestamp: Date.now(),
-    cards: JSON.parse(JSON.stringify(cardsStore.cards)),
+    cards: cardsForExport,
     connections: JSON.parse(JSON.stringify(connectionsStore.connections)),
     connectionDefaults: {
       color: connectionsStore.defaultLineColor,
@@ -67,7 +119,11 @@ const handleSaveProject = () => {
       isHierarchicalDragMode: isHierarchicalDragMode.value,
       guidesEnabled: guidesEnabled.value,
       gridStep: gridStep.value,
-      isGridBackgroundVisible: isGridBackgroundVisible.value    }
+      isGridBackgroundVisible: isGridBackgroundVisible.value
+    }
+  }
+  if (Object.keys(notesMap).length > 0) {
+    projectData.notes = notesMap
   }
   const dataStr = JSON.stringify(projectData, null, 2)
   const dataBlob = new Blob([dataStr], {type: 'application/json'})
@@ -547,7 +603,7 @@ const handleLoadProject = () => {
   input.type = 'file'
   input.accept = '.json,application/json'
   input.onchange = (e) => {
-    const file = e.target.files[0]
+        if (projectData.connections) {
     if (!file) return
     
     const reader = new FileReader()
@@ -560,6 +616,14 @@ const handleLoadProject = () => {
          if (projectData.connections) {
           connectionsStore.loadConnections(projectData.connections)
         }
+          if (projectData.notes && typeof projectData.notes === 'object') {
+          Object.entries(projectData.notes).forEach(([cardId, noteData]) => {
+            if (!noteData || typeof noteData !== 'object') return
+            const normalized = ensureNoteStructure(JSON.parse(JSON.stringify(noteData)))
+            normalized.visible = false
+            cardsStore.updateCardNote(cardId, normalized)
+          })
+        }      
         if (projectData.connectionDefaults) {
           const defaults = projectData.connectionDefaults
           const color = typeof defaults.color === 'string'
@@ -595,9 +659,67 @@ const handleFitToContent = () => {
   emit('fit-to-content')
 }
 
-const handleNotesList = () => {
-  // Список заметок
-  console.log('Открыть список заметок')
+const findCardElement = (cardId) => {
+  const escaped = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(cardId) : cardId.replace(/"/g, '\\"')
+  return document.querySelector(`.card[data-card-id="${escaped}"]`)
+}
+
+const handleNotesList = (event) => {
+  event.stopPropagation()
+  if (notesButtonDisabled.value) return
+  if (notesDropdownOpen.value) {
+    notesDropdownOpen.value = false
+    return
+  }
+  updateNotesDropdownPosition()
+  notesDropdownOpen.value = true
+  nextTick(() => {
+    updateNotesDropdownPosition()
+  })
+}
+
+const openNoteFromDropdown = (item) => {
+  const card = cardsStore.cards.find(c => c.id === item.cardId)
+  if (!card) return
+  const cardElement = findCardElement(item.cardId)
+  cardsStore.ensureCardNote(card.id)
+  cardsStore.updateCardNote(card.id, (mutableNote) => {
+    mutableNote.selectedDate = normalizeYMD(item.date) || item.date
+    if (!Number.isFinite(mutableNote.width) || mutableNote.width < NOTE_DEFAULT_SIZE.width) {
+      mutableNote.width = NOTE_DEFAULT_SIZE.width
+    }
+    if (!Number.isFinite(mutableNote.height) || mutableNote.height < NOTE_DEFAULT_SIZE.height) {
+      mutableNote.height = NOTE_DEFAULT_SIZE.height
+    }
+    if (cardElement) {
+      const rect = cardElement.getBoundingClientRect()
+      const pos = defaultNotePositionFromRect(rect)
+      mutableNote.x = pos.x
+      mutableNote.y = pos.y
+    }
+    mutableNote.visible = true
+  })
+  historyStore.setActionMetadata('update', `Открыта заметка карточки "${card.text}" через список`)
+  historyStore.saveState()
+  notesDropdownOpen.value = false
+}
+
+const deleteNoteEntry = (item) => {
+  const card = cardsStore.cards.find(c => c.id === item.cardId)
+  if (!card) return
+  let removed = false
+  cardsStore.updateCardNote(card.id, (mutableNote) => {
+    if (mutableNote.entries && Object.prototype.hasOwnProperty.call(mutableNote.entries, item.date)) {
+      delete mutableNote.entries[item.date]
+      removed = true
+    }
+    if (!hasAnyEntry(mutableNote)) {
+      mutableNote.visible = false
+    }
+  })
+  if (!removed) return
+  historyStore.setActionMetadata('update', `Удалена заметка карточки "${card.text}" за ${item.date}`)
+  historyStore.saveState()
 }
 
 const handleSelectionMode = () => {
@@ -614,6 +736,37 @@ const handleToggleGuides = () => {
   canvasStore.toggleGuides()
 
 }
+
+watch(notesItems, (items) => {
+  if (!items.length) {
+    notesDropdownOpen.value = false
+  }
+})
+
+watch(notesButtonDisabled, (disabled) => {
+  if (disabled) {
+    notesDropdownOpen.value = false
+  }
+})
+
+const handleDocumentPointerDown = (event) => {
+  if (!notesDropdownOpen.value) return
+  const target = event.target
+  if (!target) return
+  if (target === notesButtonRef.value) return
+  if (notesDropdownRef.value && notesDropdownRef.value.contains(target)) return
+  notesDropdownOpen.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', handleDocumentPointerDown)
+  window.addEventListener('resize', handleWindowResize)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', handleDocumentPointerDown)
+  window.removeEventListener('resize', handleWindowResize)
+})  
 </script>
 
 <template>
@@ -700,8 +853,15 @@ const handleToggleGuides = () => {
         <button class="ui-btn" title="Экспорт в SVG (вектор)" @click="handleExportSVG">🖋️</button>
         <button class="ui-btn" title="Печать / Экспорт в PDF" @click="handlePrint">🖨️</button>
         <button class="ui-btn" title="Загрузить проект из JSON" @click="handleLoadProject">📂</button>
-        <button class="ui-btn" title="Список заметок" @click="handleNotesList" disabled>🗒️</button>
         <button
+          class="ui-btn"
+          title="Список заметок"
+          @click="handleNotesList"
+          :disabled="notesButtonDisabled"
+          ref="notesButtonRef"
+        >
+          🗒️
+        </button>        <button
           class="ui-btn"
           :class="{ active: isSelectionMode }"
           :aria-pressed="isSelectionMode"
@@ -750,6 +910,28 @@ const handleToggleGuides = () => {
       </button>
     </div>   
     <input type="file" accept=".json,application/json" style="display:none">
+    <Teleport to="body">
+      <div
+        v-if="notesDropdownOpen"
+        ref="notesDropdownRef"
+        class="notes-dropdown"
+        :style="notesDropdownStyle"
+      >
+        <div v-if="notesItems.length === 0" class="note-item note-item--empty">Заметок нет</div>
+        <template v-else>
+          <div v-for="item in notesItems" :key="`${item.cardId}-${item.date}`" class="note-item">
+            <button class="note-item-content" type="button" @click="openNoteFromDropdown(item)">
+              <div class="note-dot" :style="{ background: item.color }"></div>
+              <div class="note-meta">
+                <div class="note-date">{{ formatNoteTimestamp(item.date, item.updatedAt) }}</div>
+                <div class="note-text-preview">{{ item.firstLine }}</div>
+              </div>
+            </button>
+            <button class="note-delete-btn" type="button" title="Удалить" @click.stop="deleteNoteEntry(item)">×</button>
+          </div>
+        </template>
+      </div>
+    </Teleport>    
   </div>
 </template>
 
@@ -987,4 +1169,99 @@ const handleToggleGuides = () => {
 .left-panel-controls--collapsed .theme-toggle {
   box-shadow: inset 0 2px 0 rgba(255,255,255,0.18), 0 18px 30px rgba(15, 23, 42, 0.18);
 }
+
+.notes-dropdown {
+  position: fixed;
+  min-width: 260px;
+  max-width: 340px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.28);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 1200;
+}
+
+.note-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(249, 250, 251, 0.7);
+}
+
+.note-item:hover {
+  background: rgba(239, 246, 255, 0.9);
+}
+
+.note-item-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: inherit;
+}
+
+.note-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(17, 24, 39, 0.75);
+  flex-shrink: 0;
+}
+
+.note-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.note-date {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.note-text-preview {
+  font-size: 13px;
+  color: rgba(75, 85, 99, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.note-delete-btn {
+  border: none;
+  background: rgba(248, 113, 113, 0.1);
+  color: #b91c1c;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.note-delete-btn:hover {
+  background: rgba(248, 113, 113, 0.25);
+  color: #7f1d1d;
+}
+
+.note-item--empty {
+  padding: 10px;
+  text-align: center;
+  opacity: 0.7;
+}  
 </style>
