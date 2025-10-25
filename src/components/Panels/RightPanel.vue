@@ -688,7 +688,7 @@ watch(isCollapsed, (collapsed) => {
   z-index: 2000;
   display: flex;
   align-items: flex-end;
-  max-height: none;
+  max-height: calc(100vh - 48px);
   overflow: visible;
   --panel-bg: rgba(255, 255, 255, 0.6);
   --panel-border: rgba(15, 23, 42, 0.12);
@@ -742,7 +742,7 @@ watch(isCollapsed, (collapsed) => {
   display: flex;
   align-items: stretch;
   gap: 0;
-  max-height: none;
+  max-height: 100%;
 
 }
 
@@ -780,8 +780,7 @@ watch(isCollapsed, (collapsed) => {
 .right-control-panel__collapsed-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 2px 18px;
+  gap: 10px;  padding: 2px 18px;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-left: none;
@@ -794,17 +793,38 @@ watch(isCollapsed, (collapsed) => {
   width: 268px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 24px 22px 20px;
+  gap: 12px;
+  padding: 22px 20px 18px;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: 26px;
   box-shadow: var(--panel-shadow);
   backdrop-filter: blur(28px);
-  max-height: none;
-  overflow: visible;
-  padding-right: 32px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding-right: 28px;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--panel-button-color) rgba(15, 23, 42, 0.08);
+}
+
+.right-control-panel__card::-webkit-scrollbar {
+  width: 8px;
+}
+
+.right-control-panel__card::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.05);
+  border-radius: 12px;
+}
+
+.right-control-panel__card::-webkit-scrollbar-thumb {
+  background: var(--panel-button-color);
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.right-control-panel__card::-webkit-scrollbar-thumb:hover {
+  background: var(--panel-contrast);  
 }
 
 .right-control-panel__top {
@@ -868,12 +888,12 @@ watch(isCollapsed, (collapsed) => {
 .control-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 14px;
   border-radius: 20px;
   background: var(--panel-surface);
   border: 1px solid var(--panel-surface-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);  
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .control-section__header {
@@ -1167,7 +1187,7 @@ watch(isCollapsed, (collapsed) => {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   padding: 0;
   background: transparent;
   border: none;
@@ -1175,21 +1195,21 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .add-card-btn {
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   border-radius: 18px;
   border: 1px solid var(--panel-card-btn-border);
   background: var(--panel-card-btn-bg);
   color: var(--panel-card-btn-color);
-  font-size: 28px;
-  font-weight: 700;  
+  font-size: 26px;
+  font-weight: 700;
   cursor: pointer;
   box-shadow: var(--panel-card-btn-shadow);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .add-card-btn--large {
-  font-size: 32px;
+  font-size: 30px;
 }
 .add-card-btn--gold {
   background: linear-gradient(135deg, #fff6d1 0%, #ffd700 50%, #ffec8b 100%);
@@ -1225,17 +1245,29 @@ watch(isCollapsed, (collapsed) => {
 .template-menu__list {
   position: absolute;
   right: 0;
-  bottom: calc(100% + 10px);
+  top: calc(100% + 10px);
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 12px;
   min-width: 220px;
+  max-height: min(240px, calc(100vh - 140px));
+  overflow-y: auto;  
   background: var(--panel-button-bg, rgba(255, 255, 255, 0.72));
   border: 1px solid var(--panel-button-border, rgba(15, 98, 254, 0.18));
   border-radius: 14px;
   box-shadow: var(--panel-button-hover-shadow, 0 20px 36px rgba(15, 98, 254, 0.28));
   z-index: 10;
+  scrollbar-width: thin;
+}
+
+.template-menu__list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.template-menu__list::-webkit-scrollbar-thumb {
+  background: var(--panel-button-color, #0f62fe);
+  border-radius: 10px;  
 }
 
 .template-menu__item {
@@ -1303,11 +1335,12 @@ watch(isCollapsed, (collapsed) => {
   .right-control-panel {
     top: 16px;
     right: 16px;
+    max-height: calc(100vh - 32px);
   }
 
   .right-control-panel__card {
     width: 252px;
-    padding: 22px 20px 18px;
-  }
+    padding: 20px 18px 16px;
+    max-height: calc(100vh - 32px);  }
 }
 </style>
