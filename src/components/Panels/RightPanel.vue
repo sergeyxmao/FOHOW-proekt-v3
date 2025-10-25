@@ -282,12 +282,16 @@ function insertTemplate(templateData) {
   const createdCardIds = []
 
   templateData.cards.forEach(cardDef => {
-    if (!cardDef || !cardDef.key) {
+    if (!cardDef) {
       return
     }
 
-    const { key, type = 'large', ...cardPayload } = cardDef
+    const templateKey = cardDef.key || cardDef.id
+    if (!templateKey) {
+      return
+    }
 
+    const { key: _legacyKey, id: _legacyId, type = 'large', ...cardPayload } = cardDef
     const cardData = cardsStore.addCard({
       type,
       ...cardPayload,
@@ -295,7 +299,7 @@ function insertTemplate(templateData) {
       colorIndex: headerColorIndex.value
     })
 
-    createdCardsMap.set(key, cardData)
+    createdCardsMap.set(templateKey, cardData)
     createdCardIds.push(cardData.id)
   })
 
@@ -307,23 +311,31 @@ function insertTemplate(templateData) {
       return
     }
 
-    const startCard = lineDef.startKey ? createdCardsMap.get(lineDef.startKey) : null
-    const endCard = lineDef.endKey ? createdCardsMap.get(lineDef.endKey) : null
+    const startKey = lineDef.startKey || lineDef.from || lineDef.sourceKey
+    const endKey = lineDef.endKey || lineDef.to || lineDef.targetKey
+
+    const startCard = startKey ? createdCardsMap.get(startKey) : null
+    const endCard = endKey ? createdCardsMap.get(endKey) : null
 
     if (!startCard || !endCard) {
       return
     }
 
-    const thicknessValue = Number.isFinite(lineDef.thickness) ? lineDef.thickness : thickness.value
-    const animationMs = Number.isFinite(lineDef.animationDurationMs)
+    const thicknessValue = Number.isFinite(lineDef.thickness)
+      ? lineDef.thickness
+      : Number.isFinite(lineDef.lineWidth)
+        ? lineDef.lineWidth
+        : thickness.value    const animationMs = Number.isFinite(lineDef.animationDurationMs)
       ? lineDef.animationDurationMs
-      : animationDuration.value * 1000
-
+      : Number.isFinite(lineDef.animationDuration)
+        ? lineDef.animationDuration
+        : animationDuration.value * 1000
+    
     connectionsStore.addConnection(startCard.id, endCard.id, {
-      color: lineDef.color || lineColor.value,
+      color: lineDef.color || lineDef.stroke || lineColor.value,
       thickness: thicknessValue,
-      fromSide: lineDef.startSide || 'bottom',
-      toSide: lineDef.endSide || 'top',
+      fromSide: lineDef.startSide || lineDef.fromSide || 'bottom',
+      toSide: lineDef.endSide || lineDef.toSide || 'top',
       animationDuration: animationMs
     })
   })
