@@ -1,0 +1,62 @@
+{
+  "cards": [
+    {
+      "key": "root",
+      "type": "large",
+      "x": 760,
+      "y": 160,
+      "text": "A1",
+      "pv": "330/330pv",
+      "showSlfBadge": false,
+      "showFendouBadge": false,
+      "rankBadge": null
+    },
+    {
+      "key": "node-2",
+      "type": "small",
+      "x": 760,
+      "y": 460,
+      "text": "A2",
+      "pv": "30/330pv"
+    },
+    {
+      "key": "node-3",
+      "type": "small",
+      "x": 760,
+      "y": 760,
+      "text": "A3",
+      "pv": "30/330pv"
+    },
+    {
+      "key": "node-4",
+      "type": "small",
+      "x": 760,
+      "y": 1060,
+      "text": "A4",
+      "pv": "30/330pv"
+    }
+  ],
+  "connections": [
+    {
+      "startKey": "root",
+      "endKey": "node-2",
+      "startSide": "bottom",
+      "endSide": "top",
+      "thickness": 4
+    },
+    {
+      "startKey": "node-2",
+      "endKey": "node-3",
+      "startSide": "bottom",
+      "endSide": "top",
+      "thickness": 4
+    },
+    {
+      "startKey": "node-3",
+      "endKey": "node-4",
+      "startSide": "bottom",
+      "endSide": "top",
+      "thickness": 4
+    }
+  ]
+}
