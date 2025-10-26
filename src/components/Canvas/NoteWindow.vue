@@ -40,8 +40,22 @@ const resizePointerId = ref(null);
 const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 });
 const cardElement = ref(null);
 const textareaValue = ref('');
-const monthState = ref(getMonthMatrix(note.value.viewDate));
 
+function resolveMonthState(viewDate) {
+  const state = getMonthMatrix(viewDate);
+  if (!state || !Array.isArray(state.days)) {
+    return {
+      days: [],
+      title: '',
+      month: 0,
+      year: 0,
+      firstDay: new Date()
+    };
+  }
+  return state;
+}
+
+const monthState = ref(resolveMonthState(note.value.viewDate));
 const selectedDate = computed(() => ensureSelectedDate(note.value, formatLocalYMD(new Date())));
 const selectedColor = computed(() => getSelectedColor(note.value));
 
@@ -58,7 +72,9 @@ const colorDots = computed(() => NOTE_COLORS.map(color => ({
   active: note.value.colors[selectedDate.value] === color
 })));
 
-const daysGrid = computed(() => monthState.value.days.map(day => {
+const monthTitle = computed(() => monthState.value.title || '');
+
+const daysGrid = computed(() => (monthState.value.days || []).map(day => {
   const entry = getNoteEntryInfo(note.value.entries[day.date]);
   const hasContent = entry.text.trim().length > 0;
   const color = note.value.colors[day.date] || note.value.highlightColor;
@@ -129,12 +145,12 @@ function handleDayClick(day) {
 
 function handlePrevMonth() {
   note.value.viewDate = adjustViewDate(note.value.viewDate, -1);
-  monthState.value = getMonthMatrix(note.value.viewDate);
+  monthState.value = resolveMonthState(note.value.viewDate);
 }
 
 function handleNextMonth() {
   note.value.viewDate = adjustViewDate(note.value.viewDate, 1);
-  monthState.value = getMonthMatrix(note.value.viewDate);
+  monthState.value = resolveMonthState(note.value.viewDate);
 }
 
 function handleColorSelect(color) {
@@ -241,7 +257,7 @@ function endResize(event) {
 }
 
 watch(() => note.value.viewDate, (value) => {
-  monthState.value = getMonthMatrix(value);
+  monthState.value = resolveMonthState(value);
 });
 
 watch(selectedDate, () => {
@@ -315,7 +331,7 @@ defineExpose({
       <div class="note-calendar">
         <div class="note-calendar__nav">
           <button type="button" class="note-calendar__nav-btn" @click="handlePrevMonth">◀</button>
-          <div class="note-calendar__title">{{ monthState.value.title }}</div>
+          <div class="note-calendar__title">{{ monthTitle }}</div>
           <button type="button" class="note-calendar__nav-btn" @click="handleNextMonth">▶</button>
         </div>
         <div class="note-calendar__grid note-calendar__grid--header">
