@@ -1103,7 +1103,8 @@ onBeforeUnmount(() => {
           @keydown="(event) => handleTextKeydown(event, entry.id)"
           @blur="() => finishText(entry.id)"
         ></textarea>
-        <div v-else class="pencil-overlay__text-label">{{ entry.content || ' ' }}</div>
+  <div v-else class="pencil-overlay__text-label">{{ entry.content || ' ' }}</div>
+</div> 
       :class="panelClasses"
       <div
         v-if="selectionStyle"
