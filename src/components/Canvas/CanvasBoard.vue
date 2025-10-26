@@ -1412,7 +1412,68 @@ const captureViewportSnapshot = async () => {
     console.error('Не удалось сделать снимок полотна', error);
     return null;
   } finally {
-    element.classList.remove(SNAPSHOT_CLASS);    
+    element.classList.remove(SNAPSHOT_CLASS);
+  }
+};
+
+const captureStageSnapshot = async () => {
+  const container = canvasContainerRef.value;
+
+  if (!container) {
+    return null;
+  }
+
+  const content = container.querySelector('.canvas-content');
+
+  if (!content) {
+    return null;
+  }
+
+  const cloneWrapper = document.createElement('div');
+  cloneWrapper.className = `${container.className} ${SNAPSHOT_CLASS}`.trim();
+  cloneWrapper.style.position = 'absolute';
+  cloneWrapper.style.top = '-100000px';
+  cloneWrapper.style.left = '-100000px';
+  const width = Math.max(1, Math.round(stageConfig.value.width));
+  const height = Math.max(1, Math.round(stageConfig.value.height));
+
+  cloneWrapper.style.pointerEvents = 'none';
+  cloneWrapper.style.background = container.style.backgroundColor || 'transparent';
+  cloneWrapper.style.width = `${width}px`;
+  cloneWrapper.style.height = `${height}px`;
+  cloneWrapper.style.overflow = 'visible';
+
+  const clonedContent = content.cloneNode(true);
+  clonedContent.style.transform = 'none';
+  clonedContent.style.transformOrigin = 'top left';
+  clonedContent.style.position = 'relative';
+
+  cloneWrapper.appendChild(clonedContent);
+  document.body.appendChild(cloneWrapper);
+  await nextTick();
+
+  try {
+    const canvas = await html2canvas(cloneWrapper, {
+      backgroundColor: null,
+      logging: false,
+      useCORS: true,
+      scale: 1,
+      width,
+      height,
+      scrollX: 0,
+      scrollY: 0
+    });
+
+    return {
+      image: canvas.toDataURL('image/png'),
+      width,
+      height
+    };
+  } catch (error) {
+    console.error('Не удалось сделать полный снимок полотна', error);
+    return null;
+  } finally {
+    document.body.removeChild(cloneWrapper);
   }
 };
 
@@ -1432,12 +1493,20 @@ const getViewportBounds = () => {
     height: rect.height
   };
 };
+
+const getCurrentViewTransform = () => ({
+  scale: Number.isFinite(zoomScale.value) ? zoomScale.value : 1,
+  translateX: Number.isFinite(zoomTranslateX.value) ? zoomTranslateX.value : 0,
+  translateY: Number.isFinite(zoomTranslateY.value) ? zoomTranslateY.value : 0
+});  
   
 defineExpose({
   resetView,
   fitToContent,
   captureViewportSnapshot,
-  getViewportBounds
+  captureStageSnapshot,
+  getViewportBounds,
+  getCurrentViewTransform
 });
 
 watch(isDrawingLine, (isDrawing) => {
