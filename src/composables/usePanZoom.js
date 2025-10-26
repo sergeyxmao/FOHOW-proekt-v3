@@ -70,8 +70,12 @@ export function usePanZoom(canvasElement) {
       return
     }
     
-    // Игнорируем если wheel над панелями
-    if (event.target.closest('.ui-panel-left') || event.target.closest('.ui-panel-right')) {
+    // Игнорируем если wheel над панелями или в области заметки
+    if (
+      event.target.closest('.ui-panel-left') ||
+      event.target.closest('.ui-panel-right') ||
+      event.target.closest('.note-window')
+    ) {
       return
     }
     
