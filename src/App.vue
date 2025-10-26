@@ -4,9 +4,13 @@ import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import ControlPanel from './components/Panels/ControlPanel.vue'
 import RightPanel from './components/Panels/RightPanel.vue'
 import AppHeader from './components/Layout/AppHeader.vue'
+import PencilOverlay from './components/Overlay/PencilOverlay.vue'  
 
 const isModernTheme = ref(false)
 const isLeftPanelCollapsed = ref(false)
+const isPencilMode = ref(false)
+const pencilSnapshot = ref(null)
+const pencilBounds = ref(null)  
 const canvasRef = ref(null)
 
 function toggleTheme() {
@@ -16,6 +20,50 @@ function toggleTheme() {
 function toggleLeftPanel() {
   isLeftPanelCollapsed.value = !isLeftPanelCollapsed.value
 }
+
+function resetPencilState() {
+  isPencilMode.value = false
+  pencilSnapshot.value = null
+  pencilBounds.value = null
+}
+
+function downloadPencilImage(image) {
+  if (!image) {
+    return
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const link = document.createElement('a')
+  link.href = image
+  link.download = `canvas-pencil-${timestamp}.png`
+  link.click()
+}
+
+async function handleActivatePencil() {
+  if (!canvasRef.value?.captureViewportSnapshot) {
+    return
+  }
+
+  const bounds = canvasRef.value.getViewportBounds?.()
+  const snapshot = await canvasRef.value.captureViewportSnapshot()
+
+  if (!bounds || !bounds.width || !bounds.height || !snapshot) {
+    console.warn('Не удалось активировать режим карандаша: отсутствуют корректные размеры или снимок полотна')
+    return
+  }
+
+  pencilBounds.value = bounds
+  pencilSnapshot.value = snapshot
+  isPencilMode.value = true
+}
+
+function handlePencilClose(payload) {
+  if (payload?.image) {
+    downloadPencilImage(payload.image)
+  }
+
+  resetPencilState()
+}  
   
 function handleGlobalKeydown(event) {
   const isResetCombo = event.ctrlKey && !event.shiftKey && (event.code === 'Digit0' || event.code === 'Numpad0')
@@ -44,8 +92,10 @@ onBeforeUnmount(() => {
   <div id="app">
     <AppHeader
       :is-modern-theme="isModernTheme"
-    />    <!-- Левая панель -->
+    />
+    <!-- Левая панель -->
     <div
+      v-show="!isPencilMode"      
       :class="[
         'ui-panel-left',
         {
@@ -53,22 +103,40 @@ onBeforeUnmount(() => {
         }
       ]"
     >
+      <button
+        class="ui-panel-left__collapse"
+        type="button"
+        :title="isLeftPanelCollapsed ? 'Развернуть панель' : 'Свернуть панель'"
+        :aria-expanded="!isLeftPanelCollapsed"
+        @pointerdown.stop
+        @click="toggleLeftPanel"
+      >
+        <span aria-hidden="true">{{ isLeftPanelCollapsed ? '❯' : '❮' }}</span>
+      </button>      
       <ControlPanel
         :is-modern-theme="isModernTheme"
         :is-collapsed="isLeftPanelCollapsed"
         @toggle-theme="toggleTheme"
         @toggle-collapse="toggleLeftPanel"
-        @fit-to-content="handleFitToContent"   
-      />
+        @activate-pencil="handleActivatePencil"
+        @fit-to-content="handleFitToContent"
+        />
     </div>
 
     <!-- Правая панель -->
     <RightPanel
+       v-show="!isPencilMode"     
       :is-modern-theme="isModernTheme"
     />
     <div id="canvas">
       <CanvasBoard ref="canvasRef" />
     </div>
+    <PencilOverlay
+      v-if="isPencilMode && pencilSnapshot && pencilBounds"
+      :snapshot="pencilSnapshot"
+      :bounds="pencilBounds"
+      @close="handlePencilClose"
+    />    
   </div>
 </template>
 
@@ -123,6 +191,44 @@ html,body{
   top: 16px;
   padding: 16px 20px;
 }
+
+.ui-panel-left__collapse {
+  position: absolute;
+  top: 50%;
+  right: -52px;
+  transform: translateY(-50%);
+  width: 52px;
+  min-height: 64px;
+  padding: 0 14px;
+  border-radius: 0 26px 26px 0;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-left: none;
+  background: rgba(255, 255, 255, 0.94);
+  color: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(22px);
+  transition: transform .2s ease, box-shadow .2s ease, color .2s ease;
+}
+
+.ui-panel-left__collapse:hover {
+  transform: translateY(-50%) translateX(2px);
+  box-shadow: 0 22px 42px rgba(15, 98, 254, 0.25);
+  color: #0f62fe;
+}
+
+.ui-panel-left__collapse span {
+  pointer-events: none;
+}
+
+.ui-panel-left.collapsed .ui-panel-left__collapse {
+  top: 50%;
+}  
 /* Canvas/SVG */
 #canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
 </style>
