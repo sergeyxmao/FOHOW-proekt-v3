@@ -31,6 +31,8 @@ const drawingCanvasRef = ref(null);
 const canvasContext = ref(null);
 const canvasWidth = ref(0);
 const canvasHeight = ref(0);
+const zoomScale = ref(1);
+const minZoomScale = ref(1)  
 const isReady = ref(false);
 const activePointerId = ref(null);
 const lastPoint = ref(null);
@@ -102,7 +104,9 @@ const boardStyle = computed(() => ({
   left: `${props.bounds.left}px`,
   width: `${canvasWidth.value}px`,
   height: `${canvasHeight.value}px`,
-  backgroundImage: `url(${props.snapshot})`
+  backgroundImage: `url(${props.snapshot})`,
+  transform: `scale(${zoomScale.value})`,
+  transformOrigin: 'top left'
 }));
 const selectionStyle = computed(() => {
   if (!selectionRect.value) {
@@ -369,9 +373,10 @@ const getCanvasPoint = (event) => {
   if (!canvas) return null;
 
   const rect = canvas.getBoundingClientRect();
+  const scale = zoomScale.value || 1;
   return {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top
+    x: (event.clientX - rect.left) / scale,
+    y: (event.clientY - rect.top) / scale
   };
 };
 
@@ -962,7 +967,8 @@ const loadBaseImage = () => {
     baseImage.value = image;
     canvasWidth.value = image.width;
     canvasHeight.value = image.height;
-
+    zoomScale.value = 1;
+    minZoomScale.value = 1;
     isReady.value = true;
 
     nextTick(() => {
@@ -1053,6 +1059,30 @@ onBeforeUnmount(() => {
   document.body.style.overflow = previousBodyOverflow;
   window.removeEventListener('keydown', handleKeydown);
 });
+
+const clampZoom = (value) => {
+  const MIN_ZOOM = minZoomScale.value || 1;
+  const MAX_ZOOM = 4;
+  return Math.min(Math.max(value, MIN_ZOOM), MAX_ZOOM);
+};
+
+const handleBoardWheel = (event) => {
+  if (!isReady.value) {
+    return;
+  }
+
+  event.preventDefault();
+
+  const direction = event.deltaY < 0 ? 1 : -1;
+  if (direction === 0) {
+    return;
+  }
+
+  const STEP = 0.1;
+  const current = zoomScale.value || 1;
+  const updated = direction > 0 ? current * (1 + STEP) : current / (1 + STEP);
+  zoomScale.value = clampZoom(Number.parseFloat(updated.toFixed(4)));
+};  
 </script>
 
 <template>
@@ -1062,6 +1092,7 @@ onBeforeUnmount(() => {
       v-if="isReady"
       :class="boardClasses"
       :style="boardStyle"
+      @wheel.prevent="handleBoardWheel"      
     >
       <canvas
         ref="drawingCanvasRef"
