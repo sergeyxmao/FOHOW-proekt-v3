@@ -32,7 +32,10 @@ const canvasContext = ref(null);
 const canvasWidth = ref(0);
 const canvasHeight = ref(0);
 const isReady = ref(false);
-const zoomScale = ref(1);  
+const zoomScale = ref(1);
+const zoomTranslateX = ref(0);
+const zoomTranslateY = ref(0);
+const zoomDisplay = computed(() => `${Math.round(zoomScale.value * 100)}%`);
 const activePointerId = ref(null);
 const lastPoint = ref(null);
 const isDrawing = ref(false);
@@ -75,8 +78,8 @@ const ERASER_MAX_SIZE = 80;
 const MAX_HISTORY_LENGTH = 50;
 const MARKER_MIN_SIZE = 30;
 const MARKER_MAX_SIZE = 100;
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 3;  
+const MIN_ZOOM = 0.01;
+const MAX_ZOOM = 5;
 
 const boardClasses = computed(() => {
   const classes = ['pencil-overlay__board'];
@@ -114,6 +117,11 @@ const clampZoom = (value) => {
   }
 
   return value;
+};
+const handleResetZoom = () => {
+  zoomScale.value = clampZoom(1);
+  zoomTranslateX.value = 0;
+  zoomTranslateY.value = 0;
 };  
 const boardStyle = computed(() => ({
   top: `${props.bounds.top}px`,
@@ -121,8 +129,8 @@ const boardStyle = computed(() => ({
   width: `${canvasWidth.value}px`,
   height: `${canvasHeight.value}px`,
   backgroundImage: `url(${props.snapshot})`,
-  transform: `scale(${zoomScale.value})`,
-  transformOrigin: 'top left'  
+  transform: `translate(${zoomTranslateX.value}px, ${zoomTranslateY.value}px) scale(${zoomScale.value})`,
+  transformOrigin: 'top left'
 }));
 const selectionStyle = computed(() => {
   if (!selectionRect.value) {
@@ -966,6 +974,15 @@ const handleKeydown = (event) => {
     return;
   }
   
+  if (
+    isModifier &&
+    !event.shiftKey &&
+    (event.code === 'Digit0' || event.code === 'Numpad0')
+  ) {
+    event.preventDefault();
+    handleResetZoom();
+    return;
+  }
   if (event.key === 'Escape') {
     if (currentTool.value === 'selection' && (activeSelection.value || isCreatingSelection.value || isMovingSelection.value)) {
       event.preventDefault();
@@ -1084,17 +1101,34 @@ const handleBoardWheel = (event) => {
   if (event.ctrlKey) {
     return;
   }
-    zoomScale.value = 1;  
 
+  const boardElement = event.currentTarget;
+  if (!boardElement) {
+    return;
+  }
   event.preventDefault();
 
-  const delta = -event.deltaY * 0.001;
+  const delta = -event.deltaY * 0.0005;
   if (!delta) {
     return;
   }
 
-  zoomScale.value = clampZoom(zoomScale.value + delta);
-};  
+  const currentScale = zoomScale.value;
+  const nextScale = clampZoom(currentScale + delta);
+  if (nextScale === currentScale) {
+    return;
+  }
+
+  const rect = boardElement.getBoundingClientRect();
+  const mouseX = event.clientX - rect.left;
+  const mouseY = event.clientY - rect.top;
+
+  const scaleRatio = nextScale / currentScale;
+
+  zoomTranslateX.value = mouseX - (mouseX - zoomTranslateX.value) * scaleRatio;
+  zoomTranslateY.value = mouseY - (mouseY - zoomTranslateY.value) * scaleRatio;
+  zoomScale.value = nextScale;
+};
 </script>
 
 <template>
@@ -1245,17 +1279,26 @@ const handleBoardWheel = (event) => {
             :disabled="!canRedo"
             @click="redo"
           >
-          Повтор ↷
-        </button>
+            Повтор ↷
+          </button>
+        </div>
       </div>
-    </div>
-      
-    <div class="pencil-overlay__tool-settings">
+      <div class="pencil-overlay__section pencil-overlay__section--zoom">
+        <button
+          type="button"
+          class="pencil-overlay__zoom-button"
+          title="Сбросить масштаб"
+          @click="handleResetZoom"
+        >
+          Масштаб:
+          <span class="pencil-overlay__zoom-value">{{ zoomDisplay }}</span>        </button>
+      </div>
+      <div class="pencil-overlay__tool-settings">
 
-      <div
-        v-if="currentTool === 'brush'"
-        class="pencil-overlay__section"
-      >
+        <div
+          v-if="currentTool === 'brush'"
+          class="pencil-overlay__section"
+        >
         <span class="pencil-overlay__section-title">Карандаш</span>
         <label class="pencil-overlay__control">
           <span>Цвет</span>
@@ -1536,7 +1579,38 @@ const handleBoardWheel = (event) => {
   display: flex;
   gap: 8px;
 }
+.pencil-overlay__section--zoom {
+  margin-top: 4px;
+}
 
+.pencil-overlay__zoom-button {
+  width: 100%;
+  border: 1px solid var(--overlay-button-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: var(--overlay-button-bg);
+  color: var(--overlay-button-color);
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.pencil-overlay__zoom-button:hover,
+.pencil-overlay__zoom-button:focus-visible {
+  background: #0f62fe;
+  color: #ffffff;
+  border-color: rgba(15, 98, 254, 0.8);
+  box-shadow: 0 12px 24px var(--overlay-button-shadow);
+}
+
+.pencil-overlay__zoom-value {
+  font-variant-numeric: tabular-nums;
+}
 .pencil-overlay__tool-button {
   flex: 1;
   border: 1px solid var(--overlay-button-border);
