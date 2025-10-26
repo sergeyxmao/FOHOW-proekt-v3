@@ -26,8 +26,13 @@ const emit = defineEmits(['close', 'sync']);
 
 const historyStore = useHistoryStore();
 
-const note = computed(() => ensureNoteStructure(props.card.note));
-const windowEl = ref(null);
+const note = computed(() => {
+  const normalized = ensureNoteStructure(props.card.note);
+  if (normalized !== props.card.note) {
+    props.card.note = normalized;
+  }
+  return normalized;
+});const windowEl = ref(null);
 const textareaRef = ref(null);
 const headerRef = ref(null);
 const resizeHandleRef = ref(null);
