@@ -81,7 +81,7 @@ export function usePanZoom(canvasElement) {
     
     event.preventDefault()
     
-    const delta = -event.deltaY * 0.001
+    const delta = -event.deltaY * 0.0005
     const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale.value + delta))
     
     // Зум относительно позиции мыши
