@@ -813,7 +813,10 @@ watch(isCollapsed, (collapsed) => {
   border-radius: 0 26px 26px 0;
   box-shadow: var(--panel-shadow);
   backdrop-filter: blur(22px);
-  margin-left: -1px;  
+  margin-left: -1px;
+  --template-menu-offset: 18px;
+
+  --template-menu-offset: 28px;  
 }
 
 .right-control-panel__card {
@@ -1274,8 +1277,9 @@ watch(isCollapsed, (collapsed) => {
 
 .template-menu__list {
   position: absolute;
-  right: 100%;
-  margin-right: 12px;  top: calc(100% + 10px);
+  right: calc(100% + var(--template-menu-offset, 0px));
+  margin-right: 0;
+  top: calc(100% + 10px);
   display: flex;
   flex-direction: column;
   gap: 6px;
