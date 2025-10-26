@@ -1396,17 +1396,33 @@ const captureViewportSnapshot = async () => {
   const height = Math.max(1, Math.round(rect.height));
 
   try {
+    const deviceScale = Math.max(1, window.devicePixelRatio || 1);
+    const captureScale = Math.min(deviceScale, 3);    
     const canvas = await html2canvas(element, {
       backgroundColor: null,
       logging: false,
       useCORS: true,
-      scale: 1,
+      scale: captureScale,
       scrollX: window.scrollX,
       scrollY: window.scrollY,
       width,
       height
     });
+    if (captureScale <= 1) {
+      return canvas.toDataURL('image/png');
+    }
 
+    const scaledCanvas = document.createElement('canvas');
+    scaledCanvas.width = width;
+    scaledCanvas.height = height;
+
+    const context = scaledCanvas.getContext('2d');
+    if (context) {
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.drawImage(canvas, 0, 0, width, height);
+      return scaledCanvas.toDataURL('image/png');
+    }
     return canvas.toDataURL('image/png');
   } catch (error) {
     console.error('Не удалось сделать снимок полотна', error);
@@ -1654,6 +1670,12 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 }
 .canvas-container--selection-mode {
   cursor: crosshair;
+}
+.canvas-container--panning,
+.canvas-container--panning .canvas-content,
+.canvas-container--panning .cards-container,
+.canvas-container--panning .svg-layer {
+  cursor: grabbing !important;
 }
 
 .canvas-container--selection-mode .cards-container,
