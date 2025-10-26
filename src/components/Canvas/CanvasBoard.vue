@@ -1597,17 +1597,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
                 selected: selectedConnectionIds.includes(path.id),
                 'line--balance-highlight': path.highlightType === 'balance',
                 'line--pv-highlight': path.highlightType === 'pv'
-              }
-            ]"           
-            <a
-      class="marketing-watermark"
-      href="https://t.me/MarketingFohow"
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label="Открыть Telegram-канал MarketingFohow"
-    >
-      @MarketingFohow
-    </a>              
+              }           
             ]"
             marker-start="url(#marker-dot)"
             marker-end="url(#marker-dot)"
@@ -1636,7 +1626,15 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           marker-end="url(#marker-dot)"
         />
       </svg>
-
+      <a
+        class="marketing-watermark"
+        href="https://t.me/MarketingFohow"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Открыть Telegram-канал MarketingFohow"
+      >
+        @MarketingFohow
+      </a>
       <div
         class="cards-container"
         :style="{
