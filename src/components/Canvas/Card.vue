@@ -56,19 +56,18 @@ const noteIndicatorColor = computed(() => {
   const color = noteState.value?.highlightColor;
   return typeof color === 'string' && color.trim() ? color : '#f97316';
 });
-  const cardStyle = computed(() => {
+const cardStyle = computed(() => {
   const strokeWidth = Number.isFinite(props.card.strokeWidth) ? props.card.strokeWidth : 2;
   const baseFill = props.card.fill || '#ffffff';
-  const bodyBackground = props.card.bodyGradient || baseFill  
+  const bodyBackground = props.card.bodyGradient || baseFill;
 
   const style = {
     position: 'absolute',
     left: `${props.card.x}px`,
     top: `${props.card.y}px`,
     width: `${props.card.width}px`,
-    height: Number.isFinite(props.card.height) ? `${props.card.height}px` : 'auto',  
+    height: Number.isFinite(props.card.height) ? `${props.card.height}px` : 'auto',
     background: bodyBackground,
-    background: props.card.fill || '#ffffff',
     border: `${strokeWidth}px solid ${props.card.stroke || '#000000'}`
   };
 
