@@ -1,17 +1,28 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useCardsStore } from '../../stores/cards';
 import { useConnectionsStore } from '../../stores/connections';
 import { useCanvasStore } from '../../stores/canvas';
 import Card from './Card.vue';
+import NoteWindow from './NoteWindow.vue';  
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { getHeaderColorRgb } from '../../utils/constants';
 import { batchDeleteCards } from '../../utils/historyOperations';
 import { usePanZoom } from '../../composables/usePanZoom';
 import { useHistoryStore } from '../../stores/history.js';
 import { useViewportStore } from '../../stores/viewport.js';
-const historyStore = useHistoryStore();  
+import { useNotesStore } from '../../stores/notes.js';
+import {
+  ensureNoteStructure,
+  applyCardRectToNote,
+  updateNoteOffsets,
+  getCardNotesSummary,
+  DEFAULT_NOTE_WIDTH,
+  DEFAULT_NOTE_HEIGHT
+} from '../../utils/noteUtils';
+const historyStore = useHistoryStore();
+const notesStore = useNotesStore();
 const emit = defineEmits(['update-connection-status']);
 
 const cardsStore = useCardsStore();
@@ -95,6 +106,10 @@ let selectionStartPoint = null;
 let selectionBaseSelection = new Set();
 let suppressNextStageClick = false;
 
+const noteWindowRefs = new Map();
+const cardsWithVisibleNotes = computed(() => cards.value.filter(card => card.note && card.note.visible));
+const notesSummary = computed(() => getCardNotesSummary(cards.value));
+  
 const GUIDE_SNAP_THRESHOLD = 10;
 
 const resetActiveGuides = () => {
@@ -420,6 +435,111 @@ const previewLinePath = computed(() => {
 
 const findCardById = (cardId) => cards.value.find(card => card.id === cardId);
 
+const getCardElementRect = (cardId) => {
+  const element = document.querySelector(`[data-card-id="${cardId}"]`);
+  return element ? element.getBoundingClientRect() : null;
+};
+
+const ensureCardNote = (card) => {
+  if (!card) {
+    return null;
+  }
+  card.note = ensureNoteStructure(card.note);
+  if (!card.note.viewDate) {
+    const selected = card.note.selectedDate || card.note.viewDate || '';
+    if (selected) {
+      card.note.viewDate = `${selected.slice(0, 7)}-01`;
+    }
+  }
+  return card.note;
+};
+
+const handleNoteWindowRegister = (cardId, instance) => {
+  if (instance) {
+    noteWindowRefs.set(cardId, instance);
+  } else {
+    noteWindowRefs.delete(cardId);
+  }
+};
+
+const syncNoteWindowWithCard = (cardId, options = { force: false }) => {
+  const card = findCardById(cardId);
+  if (!card || !card.note || !card.note.visible) {
+    return;
+  }
+  const ref = noteWindowRefs.get(cardId);
+  if (ref && typeof ref.syncWithCardPosition === 'function') {
+    ref.syncWithCardPosition(options);
+    return;
+  }
+  const rect = getCardElementRect(cardId);
+  if (rect) {
+    applyCardRectToNote(card.note, rect);
+    updateNoteOffsets(card.note, rect);
+  }
+};
+
+const openNoteForCard = (card) => {
+  const note = ensureCardNote(card);
+  if (!note) {
+    return;
+  }
+  note.width = Number.isFinite(note.width) ? note.width : DEFAULT_NOTE_WIDTH;
+  note.height = Number.isFinite(note.height) ? note.height : DEFAULT_NOTE_HEIGHT;
+  const rect = getCardElementRect(card.id);
+  if (rect) {
+    applyCardRectToNote(note, rect);
+    updateNoteOffsets(note, rect);
+  }
+  if (!note.viewDate && note.selectedDate) {
+    note.viewDate = `${note.selectedDate.slice(0, 7)}-01`;
+  }
+  note.visible = true;
+  syncNoteWindowWithCard(card.id, { force: true });
+};
+
+const closeNoteForCard = (card, options = { saveToHistory: false }) => {
+  const note = ensureCardNote(card);
+  if (!note) {
+    return;
+  }
+  note.visible = false;
+  if (options.saveToHistory) {
+    historyStore.setActionMetadata('update', `Закрыта заметка для карточки "${card.text}"`);
+    historyStore.saveState();
+  }
+};
+
+const handleNoteWindowClose = (cardId) => {
+  const card = findCardById(cardId);
+  if (!card) {
+    return;
+  }
+  closeNoteForCard(card);
+};
+
+const focusCardOnCanvas = (cardId) => {
+  const card = findCardById(cardId);
+  if (!card || !canvasContainerRef.value) {
+    return;
+  }
+  const scale = zoomScale.value || 1;
+  const containerRect = canvasContainerRef.value.getBoundingClientRect();
+  const cardCenterX = card.x + (card.width || 0) / 2;
+  const cardCenterY = card.y + (card.height || 0) / 2;
+  const targetTranslateX = containerRect.width / 2 - cardCenterX * scale;
+  const targetTranslateY = containerRect.height / 2 - cardCenterY * scale;
+
+  setZoomTransform({
+    scale,
+    translateX: targetTranslateX,
+    translateY: targetTranslateY
+  });
+
+  cardsStore.deselectAllCards();
+  cardsStore.selectCard(cardId);
+};
+  
 const getBranchDescendants = (startCardId, branchFilter) => {
   const visited = new Set([startCardId]);
   const descendants = new Set();
@@ -833,6 +953,10 @@ const handleDrag = (event) => {
       item.startY + finalDy,
       { saveToHistory: false }
     );
+    const movingCard = findCardById(item.id);
+    if (movingCard?.note?.visible) {
+      syncNoteWindowWithCard(item.id);
+    }    
   });
   updateStageSize();
 
@@ -863,6 +987,9 @@ const endDrag = (event) => {
     }
 
     historyStore.setActionMetadata('update', description);
+    movedCardIds.forEach(id => {
+      syncNoteWindowWithCard(id, { force: true });
+    });    
     historyStore.saveState();
     historyStore.saveState();
 
@@ -1001,7 +1128,16 @@ const handleCardClick = (event, cardId) => {
   selectedCardId.value = cardId;
 };
 const handleAddNoteClick = (cardId) => {
-  console.log('Открыть заметку для карточки', cardId);
+  const card = findCardById(cardId);
+  if (!card) {
+    return;
+  }
+  const note = ensureCardNote(card);
+  if (!note.visible) {
+    openNoteForCard(card);
+  } else {
+    closeNoteForCard(card, { saveToHistory: true });
+  }
 };
 
 const handleStageClick = (event) => {
@@ -1042,6 +1178,20 @@ const addNewCard = () => {
   };
   
   cardsStore.addCard(newCard);
+};
+const syncAllNoteWindows = (force = false) => {
+  cardsWithVisibleNotes.value.forEach(card => {
+    syncNoteWindowWithCard(card.id, { force });
+  });
+};
+
+const handleViewportChange = () => {
+  syncAllNoteWindows(true);
+};
+
+const handleWindowResize = () => {
+  updateStageSize();
+  handleViewportChange();
 };
 
 const deleteSelectedCards = () => {
@@ -1115,19 +1265,15 @@ const handleKeydown = (event) => {
 };
 
 onMounted(() => {
-  const resizeStage = () => {
-    updateStageSize();
-
-  };
-
   if (canvasContainerRef.value) { // Добавляем проверку
     canvasContainerRef.value.addEventListener('pointermove', handleMouseMove);
     canvasContainerRef.value.addEventListener('pointerdown', handlePointerDown);
   }
 
-  resizeStage();
-  window.addEventListener('resize', resizeStage);
+  handleWindowResize();
+  window.addEventListener('resize', handleWindowResize);
   window.addEventListener('keydown', handleKeydown);
+  window.addEventListener('scroll', handleViewportChange, true);  
 });
 
 onBeforeUnmount(() => {
@@ -1136,6 +1282,8 @@ onBeforeUnmount(() => {
     canvasContainerRef.value.removeEventListener('pointerdown', handlePointerDown);
   }
   window.removeEventListener('keydown', handleKeydown);
+  window.removeEventListener('resize', handleWindowResize);
+  window.removeEventListener('scroll', handleViewportChange, true);  
   window.removeEventListener('pointermove', handleMouseMove); // Управляем подпиской в watch
   window.removeEventListener('pointermove', handleDrag);
   window.removeEventListener('pointerup', endDrag);
@@ -1241,6 +1389,43 @@ watch(guidesEnabled, (enabled) => {
     resetActiveGuides();
   }
 });
+watch([zoomScale, zoomTranslateX, zoomTranslateY], () => {
+  syncAllNoteWindows(true);
+});
+
+watch(cardsWithVisibleNotes, () => {
+  nextTick(() => syncAllNoteWindows(true));
+});
+
+watch(notesSummary, (summary) => {
+  notesStore.setCardsWithEntries(summary);
+}, { immediate: true });
+
+watch(() => notesStore.pendingOpenCardId, (cardId) => {
+  if (!cardId) {
+    return;
+  }
+  const targetId = notesStore.consumeOpenRequest();
+  if (!targetId) {
+    return;
+  }
+  const card = findCardById(targetId);
+  if (!card) {
+    return;
+  }
+  openNoteForCard(card);
+});
+
+watch(() => notesStore.pendingFocusCardId, (cardId) => {
+  if (!cardId) {
+    return;
+  }
+  const targetId = notesStore.consumeFocusRequest();
+  if (!targetId) {
+    return;
+  }
+  focusCardOnCanvas(targetId);
+});
 
 </script>
 
@@ -1344,7 +1529,7 @@ watch(guidesEnabled, (enabled) => {
         />
       </svg>
 
-<div
+      <div
         class="cards-container"
         :style="{
           width: stageConfig.width + 'px',
@@ -1364,8 +1549,16 @@ watch(guidesEnabled, (enabled) => {
           @card-click="(event) => handleCardClick(event, card.id)"
           @start-drag="startDrag"
           @add-note="handleAddNoteClick"
-          style="pointer-events: auto;"        />
-      </div>   
+          style="pointer-events: auto;"
+          />
+      </div>
+      <NoteWindow
+        v-for="card in cardsWithVisibleNotes"
+        :key="`note-${card.id}`"
+        :card="card"
+        :ref="el => handleNoteWindowRegister(card.id, el)"
+        @close="() => handleNoteWindowClose(card.id)"
+      /> 
     </div>
   </div>
 </template>
