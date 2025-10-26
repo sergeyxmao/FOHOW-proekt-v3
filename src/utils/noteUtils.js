@@ -5,6 +5,7 @@ export const DEFAULT_NOTE_WIDTH = 260;
 export const DEFAULT_NOTE_HEIGHT = 380;
 const MIN_NOTE_WIDTH = 200;
 const MIN_NOTE_HEIGHT = 200;
+const NOTE_NORMALIZED_FLAG = '__noteNormalized__';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -183,7 +184,23 @@ function clampSize(value, minValue, fallback) {
   }
   return Math.max(minValue, value);
 }
+function markNoteAsNormalized(target) {
+  if (!target || typeof target !== 'object') {
+    return;
+  }
+  if (!Object.prototype.hasOwnProperty.call(target, NOTE_NORMALIZED_FLAG)) {
+    Object.defineProperty(target, NOTE_NORMALIZED_FLAG, {
+      value: true,
+      enumerable: false,
+      configurable: false,
+      writable: false
+    });
+  }
+}
 
+function isNoteNormalized(target) {
+  return Boolean(target && target[NOTE_NORMALIZED_FLAG]);
+}
 export function ensureNoteStructure(note) {
   const now = new Date();
   const today = formatLocalYMD(now);
@@ -201,18 +218,30 @@ export function ensureNoteStructure(note) {
   sanitizeColors(base);
 
   const selected = normalizeYMD(base.selectedDate) || today;
-  base.selectedDate = selected;
-
   const highlight = typeof base.highlightColor === 'string' && base.highlightColor.trim()
     ? base.highlightColor.trim()
     : (NOTE_COLORS.includes(base.highlightColor) ? base.highlightColor : NOTE_COLORS[0]);
-  base.highlightColor = highlight;
-
   const width = clampSize(base.width, MIN_NOTE_WIDTH, DEFAULT_NOTE_WIDTH);
   const height = clampSize(base.height, MIN_NOTE_HEIGHT, DEFAULT_NOTE_HEIGHT);
-
   const viewDate = normalizeYMD(base.viewDate)
     || `${selected.slice(0, 7)}-01`;
+  if (isNoteNormalized(base)) {
+    base.entries = { ...base.entries };
+    base.colors = { ...base.colors };
+    base.selectedDate = selected;
+    base.highlightColor = highlight;
+    base.width = width;
+    base.height = height;
+    base.visible = Boolean(base.visible);
+    base.window = null;
+    base.x = Number.isFinite(base.x) ? base.x : 0;
+    base.y = Number.isFinite(base.y) ? base.y : 0;
+    base.viewDate = viewDate;
+    base.offsetX = Number.isFinite(base.offsetX) ? base.offsetX : null;
+    base.offsetY = Number.isFinite(base.offsetY) ? base.offsetY : null;
+    markNoteAsNormalized(base);
+    return base;
+  }
 
   const normalized = reactive({
     ...base,
@@ -230,6 +259,7 @@ export function ensureNoteStructure(note) {
     offsetX: Number.isFinite(base.offsetX) ? base.offsetX : null,
     offsetY: Number.isFinite(base.offsetY) ? base.offsetY : null
   });
+  markNoteAsNormalized(normalized);
 
   return normalized;
 }
@@ -353,6 +383,11 @@ export function applyCardRectToNote(note, cardRect) {
   }
   const offsetX = Number.isFinite(note.offsetX) ? note.offsetX : 15 + (cardRect.width || 0);
   const offsetY = Number.isFinite(note.offsetY) ? note.offsetY : 0;
+  const cardHeight = Number.isFinite(cardRect.height) ? cardRect.height : null;
+
+  if (cardHeight !== null && note.offsetX === null && note.offsetY === null) {
+    note.height = clampSize(cardHeight, MIN_NOTE_HEIGHT, note.height ?? DEFAULT_NOTE_HEIGHT);
+  }  
   note.x = cardRect.left + offsetX;
   note.y = cardRect.top + offsetY;
 }
