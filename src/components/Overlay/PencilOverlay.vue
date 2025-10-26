@@ -21,8 +21,19 @@ const props = defineProps({
   },
   isModernTheme: {
     type: Boolean,
-    default: false    
-  }
+    default: false
+  },
+  initialScale: {
+    type: Number,
+    default: 1
+  },
+  initialTranslateX: {
+    type: Number,
+    default: 0
+  },
+  initialTranslateY: {
+    type: Number,
+    default: 0  }
 });
 
 const emit = defineEmits(['close']);
@@ -35,6 +46,9 @@ const isReady = ref(false);
 const zoomScale = ref(1);
 const zoomTranslateX = ref(0);
 const zoomTranslateY = ref(0);
+const initialZoomScale = ref(1);
+const initialZoomTranslateX = ref(0);
+const initialZoomTranslateY = ref(0);  
 const zoomDisplay = computed(() => `${Math.round(zoomScale.value * 100)}%`);
 const activePointerId = ref(null);
 const lastPoint = ref(null);
@@ -103,26 +117,39 @@ const boardClasses = computed(() => {
 
   return classes;
 });
-const clampZoom = (value) => {
-  if (!Number.isFinite(value)) {
-    return zoomScale.value;
+const toFiniteNumber = (value, fallback) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+};
+const clampZoomValue = (value, fallback = 1) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
   }
 
-  if (value < MIN_ZOOM) {
+  if (numeric < MIN_ZOOM) {
     return MIN_ZOOM;
   }
 
-  if (value > MAX_ZOOM) {
+  if (numeric > MAX_ZOOM) {
     return MAX_ZOOM;
   }
 
-  return value;
+  return numeric;
 };
+const clampZoom = (value) => clampZoomValue(value, zoomScale.value);
+const updateInitialTransform = () => {
+  initialZoomScale.value = clampZoomValue(props.initialScale, 1);
+  initialZoomTranslateX.value = toFiniteNumber(props.initialTranslateX, 0);
+  initialZoomTranslateY.value = toFiniteNumber(props.initialTranslateY, 0);
+};
+const applyInitialTransform = () => {
+  zoomScale.value = initialZoomScale.value;
+  zoomTranslateX.value = initialZoomTranslateX.value;
+  zoomTranslateY.value = initialZoomTranslateY.value;};
 const handleResetZoom = () => {
-  zoomScale.value = clampZoom(1);
-  zoomTranslateX.value = 0;
-  zoomTranslateY.value = 0;
-};  
+  applyInitialTransform();
+};
 const boardStyle = computed(() => ({
   top: `${props.bounds.top}px`,
   left: `${props.bounds.left}px`,
@@ -1001,6 +1028,8 @@ const loadBaseImage = () => {
     baseImage.value = image;
     canvasWidth.value = image.width;
     canvasHeight.value = image.height;
+    updateInitialTransform();
+    applyInitialTransform();
 
     isReady.value = true;
 
@@ -1028,7 +1057,16 @@ const loadBaseImage = () => {
   };
   image.src = props.snapshot;
 };
-
+watch(
+  () => [props.initialScale, props.initialTranslateX, props.initialTranslateY],
+  () => {
+    updateInitialTransform();
+    if (!isReady.value) {
+      applyInitialTransform();
+    }
+  },
+  { immediate: true }
+);
 watch(selectedTextId, (id) => {
   if (!id) {
     return;
