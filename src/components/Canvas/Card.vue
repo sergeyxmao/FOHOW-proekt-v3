@@ -462,7 +462,13 @@ const updateValue = (event, field) => {
   color: #b91c1c;
   box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.35);
 }
-
+.card--large .card-note-btn,
+.card--gold .card-note-btn {
+  width: 48px;
+  height: 48px;
+  font-size: 22px;
+  border-radius: 16px;
+}
 .card-close-btn {
   position: absolute;
   top: 8px;
