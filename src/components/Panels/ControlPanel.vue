@@ -168,6 +168,9 @@ const getExportHtmlCss = () => `
   html,body{margin:0;height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#111827;background:#f8fafc;}
   #canvas{position:relative;width:100%;height:100%;overflow:hidden;}
   #canvas .canvas-container{position:absolute;inset:0;overflow:visible;touch-action:none;}
+  #canvas .marketing-watermark{position:absolute;left:20px;bottom:20px;z-index:5000;display:inline-flex;align-items:center;justify-content:center;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,0.95);color:#0f62fe;font-weight:600;font-size:15px;line-height:1;letter-spacing:0.2px;text-decoration:none;box-shadow:0 12px 30px rgba(15,23,42,0.18);border:1px solid rgba(15,23,42,0.12);pointer-events:auto;user-select:none;transition:transform .2s ease,box-shadow .2s ease;}
+  #canvas .marketing-watermark:hover{transform:translateY(-1px);box-shadow:0 18px 36px rgba(15,23,42,0.2);}
+  #canvas .marketing-watermark:active{transform:translateY(0);box-shadow:0 8px 18px rgba(15,23,42,0.22);}  
   #canvas .canvas-content{position:absolute;top:0;left:0;width:100%;height:100%;transform-origin:0 0;}
   #canvas .svg-layer{position:absolute;inset:0;pointer-events:none;overflow:visible;}
   #canvas .line-group{pointer-events:none;}
@@ -514,9 +517,20 @@ const handleExportSVG = async () => {
     const totalHeight = contentHeight + PADDING * 2
     const viewBoxWidth = totalWidth + VIEWPORT_PADDING * 2
     const viewBoxHeight = totalHeight + VIEWPORT_PADDING * 2
+    const LABEL_MARGIN = 24
+    const LABEL_WIDTH = 220
+    const LABEL_HEIGHT = 42
+    const labelX = -VIEWPORT_PADDING + LABEL_MARGIN
+    const labelY = totalHeight + VIEWPORT_PADDING - LABEL_MARGIN - LABEL_HEIGHT
+    const marketingWatermark = `
+      <g class="marketing-watermark" transform="translate(${labelX} ${labelY})">
+        <a xlink:href="https://t.me/MarketingFohow" target="_blank" rel="noopener noreferrer" style="cursor:pointer;text-decoration:none;">
+          <rect width="${LABEL_WIDTH}" height="${LABEL_HEIGHT}" rx="21" ry="21" fill="rgba(255,255,255,0.95)" stroke="rgba(15,23,42,0.12)" stroke-width="1.2" />
+          <text x="${LABEL_WIDTH / 2}" y="${LABEL_HEIGHT / 2}" fill="#0f62fe" font-family="Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif" font-size="18" font-weight="600" dominant-baseline="middle" text-anchor="middle">@MarketingFohow</text>
+        </a>
+      </    
     const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-VIEWPORT_PADDING} ${-VIEWPORT_PADDING} ${viewBoxWidth} ${viewBoxHeight}" width="${viewBoxWidth}" height="${viewBoxHeight}" style="background:${background};">
-  <defs>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="${-VIEWPORT_PADDING} ${-VIEWPORT_PADDING} ${viewBoxWidth} ${viewBoxHeight}" width="${viewBoxWidth}" height="${viewBoxHeight}" style="background:${background};">  <defs>
     ${svgStyle}
     <marker id="marker-dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" fill="currentColor">
       <circle cx="5" cy="5" r="4" />
@@ -528,6 +542,7 @@ const handleExportSVG = async () => {
     </g>
     ${cardObjects}
   </g>
+  ${marketingWatermark}  
   ${panScript}
 </svg>`
 
