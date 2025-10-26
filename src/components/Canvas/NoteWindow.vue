@@ -140,14 +140,22 @@ watch(
   }
 )
 
-let __note_save_timer = null
-watch(textareaValue, (value) => {
-  if (__note_save_timer) clearTimeout(__note_save_timer)
-  __note_save_timer = setTimeout(() => {
-    cardsStore.updateCardNote(props.card.id, (mutableNote) => {
-      setNoteEntryValue(mutableNote, mutableNote.selectedDate, value)
-    })
-  }, 350)
+// Новый код (с исправлением)
+import { getNoteEntryInfo } from '../../utils/notes' // Убедитесь, что эта функция импортирована
+
+watch(textareaValue, (newValue) => {
+  // Получаем текущий текст из хранилища
+  const currentStoreText = getNoteEntryInfo(note.value.entries?.[note.value.selectedDate]).text
+
+  // Если новый текст не отличается от того, что уже в хранилище, ничего не делаем
+  if (newValue === currentStoreText) {
+    return
+  }
+
+  // Если текст действительно изменился (например, пользователь ввёл его), обновляем хранилище
+  cardsStore.updateCardNote(props.card.id, (mutableNote) => {
+    setNoteEntryValue(mutableNote, mutableNote.selectedDate, newValue)
+  })
 })
 
 function shiftMonth(delta) {
@@ -323,14 +331,13 @@ let cleanupResize = null
 
 onMounted(() => {
   const ensured = cardsStore.ensureCardNote(props.card.id)
+  ensured.visible = true
   ensureNoteStructure(ensured)
-  // Устанавливаем минимальные размеры и дату ТОЛЬКО если отсутствуют,
-  // и делаем это через функциональный апдейтер (без замены объекта)
-  cardsStore.updateCardNote(props.card.id, (mutable) => {
-    if (!mutable.width || mutable.width < MIN_SIZE) mutable.width = MIN_SIZE
-    if (!mutable.height || mutable.height < MIN_SIZE) mutable.height = MIN_SIZE
-    if (!mutable.selectedDate) mutable.selectedDate = formatLocalYMD(new Date())
-  })
+  if (!ensured.width || ensured.width < MIN_SIZE) ensured.width = MIN_SIZE
+  if (!ensured.height || ensured.height < MIN_SIZE) ensured.height = MIN_SIZE
+  if (!ensured.selectedDate) ensured.selectedDate = formatLocalYMD(new Date())
+  cardsStore.updateCardNote(props.card.id, ensured)
+
   const parsed = parseYMDToDate(ensured.selectedDate)
   if (parsed) viewDate.value = parsed
   syncTextareaFromNote()
@@ -345,7 +352,6 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  if (__note_save_timer) clearTimeout(__note_save_timer)
   if (cleanupDrag) cleanupDrag()
   if (cleanupResize) cleanupResize()
 })
