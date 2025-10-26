@@ -51,8 +51,12 @@ const noteButtonTitle = computed(() => {
     return 'Скрыть заметку';
   }
   return hasNotes.value ? 'Открыть заметку' : 'Добавить заметку';
-});  
-const cardStyle = computed(() => {
+});
+const noteIndicatorColor = computed(() => {
+  const color = noteState.value?.highlightColor;
+  return typeof color === 'string' && color.trim() ? color : '#f97316';
+});
+  const cardStyle = computed(() => {
   const strokeWidth = Number.isFinite(props.card.strokeWidth) ? props.card.strokeWidth : 2;
   const baseFill = props.card.fill || '#ffffff';
   const bodyBackground = props.card.bodyGradient || baseFill  
@@ -290,6 +294,12 @@ const updateValue = (event, field) => {
         @click="handleAddNoteClick"
       >
         📝
+        <span
+          v-if="hasNotes"
+          class="card-note-btn__indicator"
+          :style="{ backgroundColor: noteIndicatorColor }"
+          aria-hidden="true"
+        ></span>        
       </button>
     </div>    
     <!-- Значки -->
@@ -440,6 +450,7 @@ const updateValue = (event, field) => {
   justify-content: center;
   transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+  position: relative;  
 }
 
 .card-note-btn:hover {
@@ -462,6 +473,15 @@ const updateValue = (event, field) => {
   color: #b91c1c;
   box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.35);
 }
+.card-note-btn__indicator {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9);
+}  
 .card--large .card-note-btn,
 .card--gold .card-note-btn {
   width: 48px;
@@ -470,6 +490,11 @@ const updateValue = (event, field) => {
   border-radius: 16px;
 }
 .card-close-btn {
+.card--large .card-note-btn__indicator,
+.card--gold .card-note-btn__indicator {
+  width: 14px;
+  height: 14px;
+}  
   position: absolute;
   top: 8px;
   right: 8px;
