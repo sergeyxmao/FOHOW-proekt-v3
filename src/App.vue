@@ -10,7 +10,10 @@ const isModernTheme = ref(false)
 const isLeftPanelCollapsed = ref(false)
 const isPencilMode = ref(false)
 const pencilSnapshot = ref(null)
-const pencilBounds = ref(null)  
+const pencilBounds = ref(null)
+const pencilInitialScale = ref(1)
+const pencilInitialTranslateX = ref(0)
+const pencilInitialTranslateY = ref(0)
 const canvasRef = ref(null)
 
 function toggleTheme() {
@@ -25,6 +28,9 @@ function resetPencilState() {
   isPencilMode.value = false
   pencilSnapshot.value = null
   pencilBounds.value = null
+  pencilInitialScale.value = 1
+  pencilInitialTranslateX.value = 0
+  pencilInitialTranslateY.value = 0  
 }
 
 function downloadPencilImage(image, filename) {
@@ -39,12 +45,31 @@ function downloadPencilImage(image, filename) {
 }
 
 async function handleActivatePencil() {
-  if (!canvasRef.value?.captureViewportSnapshot) {
+  const canvasApi = canvasRef.value
+
+  if (!canvasApi?.captureViewportSnapshot) {
     return
   }
 
-  const bounds = canvasRef.value.getViewportBounds?.()
-  const snapshot = await canvasRef.value.captureViewportSnapshot()
+  const bounds = canvasApi.getViewportBounds?.()
+  const transform = canvasApi.getCurrentViewTransform?.()
+
+  let snapshotResult = null
+  if (typeof canvasApi.captureStageSnapshot === 'function') {
+    snapshotResult = await canvasApi.captureStageSnapshot()
+  }
+
+  let snapshot = snapshotResult?.image
+  if (!snapshot) {
+    snapshot = await canvasApi.captureViewportSnapshot()
+    pencilInitialScale.value = 1
+    pencilInitialTranslateX.value = 0
+    pencilInitialTranslateY.value = 0
+  } else {
+    pencilInitialScale.value = Number.isFinite(transform?.scale) ? transform.scale : 1
+    pencilInitialTranslateX.value = Number.isFinite(transform?.translateX) ? transform.translateX : 0
+    pencilInitialTranslateY.value = Number.isFinite(transform?.translateY) ? transform.translateY : 0
+  }
 
   if (!bounds || !bounds.width || !bounds.height || !snapshot) {
     console.warn('Не удалось активировать режим карандаша: отсутствуют корректные размеры или снимок полотна')
@@ -151,7 +176,10 @@ onBeforeUnmount(() => {
       v-if="isPencilMode && pencilSnapshot && pencilBounds"
       :snapshot="pencilSnapshot"
       :bounds="pencilBounds"
-      :is-modern-theme="isModernTheme"     
+      :is-modern-theme="isModernTheme"
+      :initial-scale="pencilInitialScale"
+      :initial-translate-x="pencilInitialTranslateX"
+      :initial-translate-y="pencilInitialTranslateY"
       @close="handlePencilClose"
     />    
   </div>
