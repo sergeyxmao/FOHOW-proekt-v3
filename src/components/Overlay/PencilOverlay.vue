@@ -35,7 +35,9 @@ const hasStrokeChanges = ref(false);
 const currentTool = ref('brush');
 const brushColor = ref('#ff4757');
 const brushSize = ref(4);
-const markerSize = ref(60);  
+const markerSize = ref(60);
+const markerOpacity = ref(0.35);
+const eraserSize = ref(24);
 const textColor = ref('#111827');
 const textSize = ref(24);
 const isTextBold = ref(false);
@@ -50,21 +52,46 @@ const historyIndex = ref(-1);
 const isApplyingHistory = ref(false);
 let historySaveHandle = null;
 let pendingCanvasCapture = false;
+const selectionRect = ref(null);
+const isCreatingSelection = ref(false);
+const isMovingSelection = ref(false);
+const selectionPointerId = ref(null);
+const selectionStartPoint = ref(null);
+const activeSelection = ref(null);
+const selectionMoveStartPoint = ref(null);
+const selectionInitialRect = ref(null);
+const selectionInitialTextPositions = ref([]);
+const selectionMoveState = ref(null);
+
+const ERASER_MIN_SIZE = 4;
+const ERASER_MAX_SIZE = 80;
 
 const MAX_HISTORY_LENGTH = 50;
 const MARKER_MIN_SIZE = 30;
 const MARKER_MAX_SIZE = 100;
-const MARKER_OPACITY = 0.35;  
 
-const boardClasses = computed(() => [
-  'pencil-overlay__board',
-  currentTool.value === 'text'
-    ? 'pencil-overlay__board--text'
-    : currentTool.value === 'marker'
-      ? 'pencil-overlay__board--marker'
-      : 'pencil-overlay__board--brush'
-]);
+const boardClasses = computed(() => {
+  const classes = ['pencil-overlay__board'];
 
+  switch (currentTool.value) {
+    case 'text':
+      classes.push('pencil-overlay__board--text');
+      break;
+    case 'marker':
+      classes.push('pencil-overlay__board--marker');
+      break;
+    case 'eraser':
+      classes.push('pencil-overlay__board--eraser');
+      break;
+    case 'selection':
+      classes.push('pencil-overlay__board--selection');
+      break;
+    default:
+      classes.push('pencil-overlay__board--brush');
+  }
+
+  return classes;
+});
 const boardStyle = computed(() => ({
   top: `${props.bounds.top}px`,
   left: `${props.bounds.left}px`,
@@ -72,6 +99,20 @@ const boardStyle = computed(() => ({
   height: `${canvasHeight.value}px`,
   backgroundImage: `url(${props.snapshot})`
 }));
+const selectionStyle = computed(() => {
+  if (!selectionRect.value) {
+    return null;
+  }
+
+  return {
+    top: `${selectionRect.value.y}px`,
+    left: `${selectionRect.value.x}px`,
+    width: `${selectionRect.value.width}px`,
+    height: `${selectionRect.value.height}px`
+  };
+});
+
+const markerOpacityPercent = computed(() => Math.round(markerOpacity.value * 100));
 
 const panelStyle = computed(() => {
   const offset = 16;
@@ -230,6 +271,7 @@ const applySnapshot = async (snapshot) => {
   }
 
   isApplyingHistory.value = true;
+  cancelSelection();  
   textInputRefs.clear();
   texts.value = cloneTexts(snapshot.texts || []);
   selectedTextId.value = snapshot.selectedTextId || null;
@@ -279,8 +321,8 @@ const redo = () => {
 
 const canUndo = computed(() => historyIndex.value > 0);
 const canRedo = computed(() => historyIndex.value >= 0 && historyIndex.value < historyEntries.value.length - 1);
-const isDrawingToolActive = computed(() => currentTool.value === 'brush' || currentTool.value === 'marker');
-
+const isDrawingToolActive = computed(() => ['brush', 'marker', 'eraser'].includes(currentTool.value));
+const isSelectionToolActive = computed(() => currentTool.value === 'selection');
 const registerTextInput = (id, el) => {
   if (el) {
     textInputRefs.set(id, el);
@@ -318,15 +360,21 @@ const startStroke = (point) => {
   const context = canvasContext.value;
   context.lineCap = 'round';
   context.lineJoin = 'round';
-  context.globalCompositeOperation = 'source-over';
   context.globalAlpha = 1;
 
-  if (currentTool.value === 'marker') {
-    context.strokeStyle = hexToRgba(brushColor.value, MARKER_OPACITY);
-    context.lineWidth = markerSize.value;
+  if (currentTool.value === 'eraser') {
+    context.globalCompositeOperation = 'destination-out';
+    context.strokeStyle = 'rgba(0, 0, 0, 1)';
+    context.lineWidth = eraserSize.value;
   } else {
-    context.strokeStyle = brushColor.value;
-    context.lineWidth = brushSize.value;
+    context.globalCompositeOperation = 'source-over';
+    if (currentTool.value === 'marker') {
+      context.strokeStyle = hexToRgba(brushColor.value, markerOpacity.value);
+      context.lineWidth = markerSize.value;
+    } else {
+      context.strokeStyle = brushColor.value;
+      context.lineWidth = brushSize.value;
+    }
   }
 
   context.beginPath();
@@ -349,14 +397,294 @@ const finishStroke = () => {
   if (!canvasContext.value || !isDrawing.value) return;
 
   canvasContext.value.closePath();
-  canvasContext.value.globalAlpha = 1;  
+  canvasContext.value.globalAlpha = 1;
+  canvasContext.value.globalCompositeOperation = 'source-over';
   isDrawing.value = false;
   lastPoint.value = null;
   activePointerId.value = null;
 
   if (hasStrokeChanges.value) {
     scheduleHistorySave(true);
-  }  
+  }
+};
+
+const clampValue = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const normalizeSelectionRect = (start, current) => {
+  if (!start || !current) {
+    return null;
+  }
+
+  const clampedStart = {
+    x: clampValue(start.x, 0, canvasWidth.value),
+    y: clampValue(start.y, 0, canvasHeight.value)
+  };
+
+  const clampedCurrent = {
+    x: clampValue(current.x, 0, canvasWidth.value),
+    y: clampValue(current.y, 0, canvasHeight.value)
+  };
+
+  const left = Math.min(clampedStart.x, clampedCurrent.x);
+  const top = Math.min(clampedStart.y, clampedCurrent.y);
+  const right = Math.max(clampedStart.x, clampedCurrent.x);
+  const bottom = Math.max(clampedStart.y, clampedCurrent.y);
+
+  return {
+    x: Math.round(left),
+    y: Math.round(top),
+    width: Math.round(right - left),
+    height: Math.round(bottom - top)
+  };
+};
+
+const isPointInsideRect = (point, rect) => {
+  if (!rect) {
+    return false;
+  }
+
+  const withinX = point.x >= rect.x && point.x <= rect.x + rect.width;
+  const withinY = point.y >= rect.y && point.y <= rect.y + rect.height;
+  return withinX && withinY;
+};
+
+const resetSelectionInteraction = () => {
+  isCreatingSelection.value = false;
+  isMovingSelection.value = false;
+  selectionPointerId.value = null;
+  selectionStartPoint.value = null;
+  selectionMoveStartPoint.value = null;
+  selectionInitialRect.value = null;
+  selectionInitialTextPositions.value = [];
+  selectionMoveState.value = null;
+  selectionHasChanges.value = false;
+};
+
+const selectionHasChanges = ref(false);
+
+const cancelSelection = () => {
+  if (isMovingSelection.value && activeSelection.value && selectionMoveState.value && selectionInitialRect.value) {
+    const context = canvasContext.value;
+    if (context && selectionMoveState.value.baseImageData) {
+      context.putImageData(selectionMoveState.value.baseImageData, 0, 0);
+      context.putImageData(
+        activeSelection.value.imageData,
+        selectionInitialRect.value.x,
+        selectionInitialRect.value.y
+      );
+    }
+
+    selectionInitialTextPositions.value.forEach(({ id, x, y }) => {
+      const entry = texts.value.find((item) => item.id === id);
+      if (entry) {
+        entry.x = x;
+        entry.y = y;
+      }
+    });
+
+    if (activeSelection.value) {
+      activeSelection.value.rect = { ...selectionInitialRect.value };
+    }
+  }
+
+  resetSelectionInteraction();
+  activeSelection.value = null;
+  selectionRect.value = null;
+};
+
+const captureSelectionSnapshot = (rect) => {
+  const context = canvasContext.value;
+  if (!context || !rect || rect.width <= 1 || rect.height <= 1) {
+    return null;
+  }
+
+  try {
+    const imageData = context.getImageData(rect.x, rect.y, rect.width, rect.height);
+    const selectedTextIds = texts.value
+      .filter((entry) => entry.x >= rect.x && entry.x <= rect.x + rect.width && entry.y >= rect.y && entry.y <= rect.y + rect.height)
+      .map((entry) => entry.id);
+
+    return {
+      rect: { ...rect },
+      imageData,
+      textIds: selectedTextIds
+    };
+  } catch (error) {
+    console.error('Не удалось получить данные выделенной области', error);
+    return null;
+  }
+};
+
+const beginSelectionCreation = (point, pointerId) => {
+  isCreatingSelection.value = true;
+  selectionPointerId.value = pointerId;
+  selectionStartPoint.value = point;
+  selectionRect.value = {
+    x: point.x,
+    y: point.y,
+    width: 0,
+    height: 0
+  };
+};
+
+const updateSelectionCreation = (point) => {
+  if (!isCreatingSelection.value || !selectionStartPoint.value) {
+    return;
+  }
+
+  const rect = normalizeSelectionRect(selectionStartPoint.value, point);
+  selectionRect.value = rect;
+};
+
+const finalizeSelectionCreation = () => {
+  if (!isCreatingSelection.value) {
+    return;
+  }
+
+  const rect = selectionRect.value;
+  resetSelectionInteraction();
+
+  if (!rect || rect.width < 2 || rect.height < 2) {
+    selectionRect.value = null;
+    activeSelection.value = null;
+    return;
+  }
+
+  const snapshot = captureSelectionSnapshot(rect);
+  if (!snapshot) {
+    selectionRect.value = null;
+    activeSelection.value = null;
+    return;
+  }
+
+  activeSelection.value = snapshot;
+  selectionRect.value = { ...snapshot.rect };
+};
+
+const beginSelectionMove = (point, pointerId) => {
+  if (!activeSelection.value) {
+    return;
+  }
+
+  const context = canvasContext.value;
+  if (!context) {
+    return;
+  }
+
+  isMovingSelection.value = true;
+  selectionPointerId.value = pointerId;
+  selectionMoveStartPoint.value = point;
+  selectionInitialRect.value = { ...activeSelection.value.rect };
+  selectionInitialTextPositions.value = activeSelection.value.textIds
+    .map((id) => {
+      const entry = texts.value.find((item) => item.id === id);
+      return entry ? { id, x: entry.x, y: entry.y } : null;
+    })
+    .filter(Boolean);
+
+  context.save();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.globalCompositeOperation = 'source-over';
+  context.globalAlpha = 1;
+  context.clearRect(
+    activeSelection.value.rect.x,
+    activeSelection.value.rect.y,
+    activeSelection.value.rect.width,
+    activeSelection.value.rect.height
+  );
+
+  const baseImageData = context.getImageData(0, 0, canvasWidth.value, canvasHeight.value);
+  context.putImageData(
+    activeSelection.value.imageData,
+    activeSelection.value.rect.x,
+    activeSelection.value.rect.y
+  );
+  context.restore();
+
+  selectionMoveState.value = {
+    baseImageData
+  };
+  selectionHasChanges.value = false;
+};
+
+const updateSelectionMove = (point) => {
+  if (!isMovingSelection.value || !selectionMoveStartPoint.value || !selectionInitialRect.value) {
+    return;
+  }
+
+  const dx = point.x - selectionMoveStartPoint.value.x;
+  const dy = point.y - selectionMoveStartPoint.value.y;
+
+  const maxX = Math.max(0, canvasWidth.value - selectionInitialRect.value.width);
+  const maxY = Math.max(0, canvasHeight.value - selectionInitialRect.value.height);
+
+  const targetX = clampValue(selectionInitialRect.value.x + dx, 0, maxX);
+  const targetY = clampValue(selectionInitialRect.value.y + dy, 0, maxY);
+
+  const appliedDx = Math.round(targetX - selectionInitialRect.value.x);
+  const appliedDy = Math.round(targetY - selectionInitialRect.value.y);
+
+  const rect = {
+    x: selectionInitialRect.value.x + appliedDx,
+    y: selectionInitialRect.value.y + appliedDy,
+    width: selectionInitialRect.value.width,
+    height: selectionInitialRect.value.height
+  };
+
+  selectionRect.value = rect;
+
+  const context = canvasContext.value;
+  if (context && selectionMoveState.value?.baseImageData) {
+    context.putImageData(selectionMoveState.value.baseImageData, 0, 0);
+    context.putImageData(activeSelection.value.imageData, rect.x, rect.y);
+  }
+
+  selectionInitialTextPositions.value.forEach(({ id, x, y }) => {
+    const entry = texts.value.find((item) => item.id === id);
+    if (entry) {
+      entry.x = x + appliedDx;
+      entry.y = y + appliedDy;
+    }
+  });
+
+  if (appliedDx !== 0 || appliedDy !== 0) {
+    selectionHasChanges.value = true;
+  }
+};
+
+const finishSelectionMove = () => {
+  if (!isMovingSelection.value) {
+    return;
+  }
+
+  const rect = selectionRect.value ? { ...selectionRect.value } : null;
+  const context = canvasContext.value;
+
+  if (context && rect && selectionMoveState.value?.baseImageData) {
+    context.putImageData(selectionMoveState.value.baseImageData, 0, 0);
+    context.putImageData(activeSelection.value.imageData, rect.x, rect.y);
+
+    try {
+      activeSelection.value.imageData = context.getImageData(rect.x, rect.y, rect.width, rect.height);
+    } catch (error) {
+      console.error('Не удалось обновить данные выделенной области после перемещения', error);
+    }
+  }
+
+  if (activeSelection.value && rect) {
+    activeSelection.value.rect = rect;
+  }
+
+  const hasChanges = selectionHasChanges.value;
+  resetSelectionInteraction();
+
+  if (rect) {
+    selectionRect.value = { ...rect };
+  }
+
+  if (hasChanges) {
+    scheduleHistorySave(true);
+  } 
 };
 
 const createTextEntry = (point) => {
@@ -423,42 +751,103 @@ const handleTextKeydown = (event, id) => {
 const handleCanvasPointerDown = (event) => {
   if (event.button !== 0) return;
 
-  if (isDrawingToolActive.value) {
-    const point = getCanvasPoint(event);
-    if (!point) return;
+  const point = getCanvasPoint(event);
+  if (!point) return;
 
-    const canvas = drawingCanvasRef.value;
+  const canvas = drawingCanvasRef.value;
+  if (!canvas) return;
+
+  if (isSelectionToolActive.value) {
+    canvas.setPointerCapture(event.pointerId);
+    if (activeSelection.value && isPointInsideRect(point, activeSelection.value.rect)) {
+      beginSelectionMove(point, event.pointerId);
+    } else {
+      cancelSelection();
+      beginSelectionCreation(point, event.pointerId);
+    }
+    return;
+  }
+
+  if (isDrawingToolActive.value) {
     canvas.setPointerCapture(event.pointerId);
     activePointerId.value = event.pointerId;
     startStroke(point);
   } else if (currentTool.value === 'text') {
-    const point = getCanvasPoint(event);
-    if (!point) return;
     createTextEntry(point);
   }
 };
 
 const handleCanvasPointerMove = (event) => {
-  if (!isDrawingToolActive.value) return;
-  if (!isDrawing.value || activePointerId.value !== event.pointerId) return;
 
   const point = getCanvasPoint(event);
   if (!point) return;
+  if (isSelectionToolActive.value) {
+    if (selectionPointerId.value !== event.pointerId) {
+      return;
+    }
 
+    if (isCreatingSelection.value) {
+      updateSelectionCreation(point);
+    } else if (isMovingSelection.value) {
+      updateSelectionMove(point);
+    }
+
+    return;
+  }
+
+  if (!isDrawingToolActive.value) return;
+  if (!isDrawing.value || activePointerId.value !== event.pointerId) return;
   continueStroke(point);
 };
 
 const handleCanvasPointerUp = (event) => {
+  const canvas = drawingCanvasRef.value;
+  if (!canvas) return;
+
+  if (isSelectionToolActive.value) {
+    if (selectionPointerId.value !== event.pointerId) {
+      return;
+    }
+
+    canvas.releasePointerCapture(event.pointerId);
+
+    if (isCreatingSelection.value) {
+      finalizeSelectionCreation();
+    } else if (isMovingSelection.value) {
+      finishSelectionMove();
+    }
+
+    resetSelectionInteraction();
+    return;
+  }  
   if (!isDrawingToolActive.value) return;
   if (activePointerId.value !== event.pointerId) return;
-    event.preventDefault();
+  event.preventDefault();
 
-  const canvas = drawingCanvasRef.value;
   canvas.releasePointerCapture(event.pointerId);
   finishStroke();
 };
 
 const handleCanvasPointerLeave = (event) => {
+  const canvas = drawingCanvasRef.value;
+  if (!canvas) return;
+
+  if (isSelectionToolActive.value) {
+    if (selectionPointerId.value !== event.pointerId) {
+      return;
+    }
+
+    canvas.releasePointerCapture(event.pointerId);
+
+    if (isMovingSelection.value) {
+      finishSelectionMove();
+    } else if (isCreatingSelection.value) {
+      finalizeSelectionCreation();
+    }
+
+    resetSelectionInteraction();
+    return;
+  }  
   if (!isDrawingToolActive.value) return;
   if (activePointerId.value !== event.pointerId) return;
 
@@ -523,6 +912,12 @@ const handleKeydown = (event) => {
   }
   
   if (event.key === 'Escape') {
+    if (currentTool.value === 'selection' && (activeSelection.value || isCreatingSelection.value || isMovingSelection.value)) {
+      event.preventDefault();
+      cancelSelection();
+      return;
+    }
+    
     event.preventDefault();
     handleClose();
   }
@@ -598,7 +993,13 @@ onMounted(() => {
     clearTimeout(historySaveHandle);
     historySaveHandle = null;
   }
-  pendingCanvasCapture = false;  
+  scheduleHistorySave(false);
+});
+
+watch(currentTool, (tool, previous) => {
+  if (previous === 'selection' && tool !== 'selection') {
+    cancelSelection();
+  }
   document.documentElement.style.overflow = 'hidden';
   document.body.style.overflow = 'hidden';
   window.addEventListener('keydown', handleKeydown);
@@ -657,6 +1058,11 @@ onBeforeUnmount(() => {
         ></textarea>
         <div v-else class="pencil-overlay__text-label">{{ entry.content || ' ' }}</div>
       </div>
+      <div
+        v-if="selectionStyle"
+        class="pencil-overlay__selection"
+        :style="selectionStyle"
+      ></div>      
     </div>
 
     <div
@@ -695,7 +1101,29 @@ onBeforeUnmount(() => {
             @click="currentTool = 'marker'"
           >
             🖍️
-          </button>          
+          </button>
+          <button
+            type="button"
+            :class="[
+              'pencil-overlay__tool-button',
+              { 'pencil-overlay__tool-button--active': currentTool === 'eraser' }
+            ]"
+            title="Ластик"
+            @click="currentTool = 'eraser'"
+          >
+            🧽
+          </button>
+          <button
+            type="button"
+            :class="[
+              'pencil-overlay__tool-button',
+              { 'pencil-overlay__tool-button--active': currentTool === 'selection' }
+            ]"
+            title="Выделение"
+            @click="currentTool = 'selection'"
+          >
+            🔲
+          </button>
           <button
             type="button"
             :class="[
@@ -731,7 +1159,10 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="pencil-overlay__section">
+      <div
+        v-if="currentTool === 'brush'"
+        class="pencil-overlay__section"
+      >
         <span class="pencil-overlay__section-title">Карандаш</span>
         <label class="pencil-overlay__control">
           <span>Цвет</span>
@@ -747,7 +1178,10 @@ onBeforeUnmount(() => {
           />
         </label>
       </div>
-      <div class="pencil-overlay__section">
+      <div
+        v-else-if="currentTool === 'marker'"
+        class="pencil-overlay__section"
+      >
         <span class="pencil-overlay__section-title">Маркер</span>
         <p class="pencil-overlay__helper-text">
           Цвет маркера совпадает с цветом карандаша.
@@ -761,9 +1195,45 @@ onBeforeUnmount(() => {
             :max="MARKER_MAX_SIZE"
           />
         </label>
+        <label class="pencil-overlay__control">
+          <span>Прозрачность: {{ markerOpacityPercent }}%</span>
+          <input
+            v-model.number="markerOpacity"
+            type="range"
+            min="0.05"
+            max="1"
+            step="0.05"
+          />
+        </label>        
       </div>
-
-      <div class="pencil-overlay__section">
+      <div
+        v-else-if="currentTool === 'eraser'"
+        class="pencil-overlay__section"
+      >
+        <span class="pencil-overlay__section-title">Ластик</span>
+        <label class="pencil-overlay__control">
+          <span>Диаметр: {{ eraserSize }} px</span>
+          <input
+            v-model.number="eraserSize"
+            type="range"
+            :min="ERASER_MIN_SIZE"
+            :max="ERASER_MAX_SIZE"
+          />
+        </label>
+      </div>
+      <div
+        v-else-if="currentTool === 'selection'"
+        class="pencil-overlay__section"
+      >
+        <span class="pencil-overlay__section-title">Выделение</span>
+        <p class="pencil-overlay__helper-text">
+          Выделите область, затем перемещайте содержимое левой кнопкой мыши. Для отмены выделения нажмите Esc или кликните по свободной области.
+        </p>
+      </div>
+      <div
+        v-else-if="currentTool === 'text'"
+        class="pencil-overlay__section"
+      >
         <span class="pencil-overlay__section-title">Текст</span>
         <label class="pencil-overlay__control">
           <span>Цвет</span>
@@ -823,9 +1293,22 @@ onBeforeUnmount(() => {
 .pencil-overlay__board--marker {
   cursor: crosshair;
 }
+.pencil-overlay__board--eraser {
+  cursor: crosshair;
+}
 
+.pencil-overlay__board--selection {
+  cursor: crosshair;
+}
 .pencil-overlay__board--text {
   cursor: text;
+}
+.pencil-overlay__selection {
+  position: absolute;
+  border: 2px dashed rgba(37, 99, 235, 0.85);
+  background-color: rgba(37, 99, 235, 0.12);
+  pointer-events: none;
+  box-sizing: border-box;
 }
 
 .pencil-overlay__canvas {
