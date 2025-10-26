@@ -1380,13 +1380,16 @@ const fitToContent = (options = {}) => {
     translateY: targetTranslateY
   });
 };
+const SNAPSHOT_CLASS = 'canvas-container--capturing';
+
 const captureViewportSnapshot = async () => {
   const element = canvasContainerRef.value;
 
   if (!element) {
     return null;
   }
-
+  element.classList.add(SNAPSHOT_CLASS);
+  await nextTick();
   const rect = element.getBoundingClientRect();
 
   const width = Math.max(1, Math.round(rect.width));
@@ -1408,6 +1411,8 @@ const captureViewportSnapshot = async () => {
   } catch (error) {
     console.error('Не удалось сделать снимок полотна', error);
     return null;
+  } finally {
+    element.classList.remove(SNAPSHOT_CLASS);    
   }
 };
 
@@ -1747,6 +1752,18 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   animation-iteration-count: infinite;
   filter: drop-shadow(0 0 10px var(--line-highlight-color));
 }
+.canvas-container--capturing .line,
+.canvas-container--capturing .line.selected,
+.canvas-container--capturing .line--balance-highlight,
+.canvas-container--capturing .line--pv-highlight {
+  filter: none !important;
+  animation: none !important;
+}
+
+.canvas-container--capturing .line.selected {
+  stroke: var(--line-color, #0f62fe) !important;
+  stroke-dasharray: none !important;
+}  
 .guides-overlay {
   position: absolute;
   top: 0;
