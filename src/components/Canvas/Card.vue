@@ -19,7 +19,8 @@ const props = defineProps({
 
 const emit = defineEmits([
   'card-click',
-  'start-drag'
+  'start-drag',
+  'add-note'
 ]);
 
 const cardsStore = useCardsStore();
@@ -93,6 +94,10 @@ const handlePointerDown = (event) => {
   }
 
   emit('start-drag', event, props.card.id);
+};
+const handleAddNoteClick = (event) => {
+  event.stopPropagation();
+  emit('add-note', props.card.id);
 };
 
 const startEditing = () => {
@@ -174,6 +179,14 @@ const updateValue = (event, field) => {
       class="card-header"
       :style="{ backgroundColor: card.headerBg || 'rgb(93, 139, 244)' }"
     >
+      <button
+        class="card-note-btn"
+        type="button"
+        title="Добавить заметку"
+        @click="handleAddNoteClick"
+      >
+        📝
+      </button>      
       <input
         v-if="isEditing"
         ref="textInput"
@@ -378,6 +391,33 @@ const updateValue = (event, field) => {
 .card--gold .card-title-input {
   font-weight: 900;
   font-size: 30px;
+}
+.card-note-btn {
+  position: absolute;
+  top: 8px;
+  right: 42px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.card-note-btn:hover {
+  background: rgba(0, 0, 0, 0.25);
+  transform: translateY(-1px);
+}
+
+.card-note-btn:active {
+  transform: scale(0.95);
 }
 
 .card-close-btn {
