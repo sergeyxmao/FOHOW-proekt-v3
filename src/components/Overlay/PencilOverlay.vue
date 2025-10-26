@@ -150,9 +150,14 @@ const applyInitialTransform = () => {
 const handleResetZoom = () => {
   applyInitialTransform();
 };
-const boardTransformStyle = computed(() => ({
+const boardBaseStyle = computed(() => ({
+  top: `${props.bounds.top}px`,
+  left: `${props.bounds.left}px`,
   width: `${canvasWidth.value}px`,
   height: `${canvasHeight.value}px`,
+  backgroundImage: `url(${props.snapshot})`
+}));
+const boardTransformStyle = computed(() => ({
   transform: `translate(${zoomTranslateX.value}px, ${zoomTranslateY.value}px) scale(${zoomScale.value})`,
   transformOrigin: 'top left'
 }));
@@ -1167,23 +1172,23 @@ const handleBoardWheel = (event) => {
 </script>
 
 <template>
-<!-- Новый контейнер, который занимает весь экран -->
-    <div 
-      class="pencil-overlay__viewport"
-      @wheel.prevent="handleBoardWheel"
+  <div class="pencil-overlay">
+    <div class="pencil-overlay__backdrop"></div>
+
+    <div
+      :class="['pencil-overlay__viewport', { 'pencil-overlay__viewport--modern': props.isModernTheme }]"
     >
-      <!-- Фон, который будет виден при отдалении -->
-      <div 
+      <div
         class="pencil-overlay__background"
-        :style="{ backgroundImage: `url(${snapshot})` }"
+        :style="{ backgroundImage: `url(${props.snapshot})` }"
       ></div>
 
-      <!-- Ваш старый `div`, который теперь будет только для трансформаций -->
       <div
         v-if="isReady"
         :class="boardClasses"
-        :style="boardTransformStyle" <!-- ИЗМЕНЕНО: boardStyle -> boardTransformStyle -->
-      >
+        :style="[boardBaseStyle, boardTransformStyle]"
+        @wheel.prevent="handleBoardWheel"
+        >
         <canvas
           ref="drawingCanvasRef"
           class="pencil-overlay__canvas"
@@ -1193,49 +1198,52 @@ const handleBoardWheel = (event) => {
           @pointerleave="handleCanvasPointerLeave"
           @pointercancel="handleCanvasPointerLeave"
         ></canvas>
-      <div
-        v-if="showEraserPreview && eraserPreviewStyle"
-        class="pencil-overlay__eraser-preview"
-        :style="eraserPreviewStyle"
-      ></div>      
-      <div
-        v-for="entry in texts"
-        :key="entry.id"
-        :class="[
-          'pencil-overlay__text',
-          { 'pencil-overlay__text--selected': selectedTextId === entry.id }
-        ]"
-        :style="{
-          top: `${entry.y}px`,
-          left: `${entry.x}px`,
-          color: entry.color,
-          fontSize: `${entry.size}px`,
-          fontWeight: entry.bold ? 700 : 400
-        }"
-        @pointerdown.stop="selectText(entry.id)"
-        @dblclick.stop="editText(entry.id)"
-      >
-        <textarea
-          v-if="entry.isEditing"
-          :ref="(el) => registerTextInput(entry.id, el)"
-          v-model="entry.content"
-          class="pencil-overlay__text-input"
-          spellcheck="false"
-          @keydown="(event) => handleTextKeydown(event, entry.id)"
-          @blur="() => finishText(entry.id)"
-        ></textarea>
-  <div v-else class="pencil-overlay__text-label">{{ entry.content || ' ' }}</div>
-</div> 
-      :class="panelClasses"
-      <div
-        v-if="selectionStyle"
-        class="pencil-overlay__selection"
-        :style="selectionStyle"
-      ></div>      
+
+        <div
+          v-if="showEraserPreview && eraserPreviewStyle"
+          class="pencil-overlay__eraser-preview"
+          :style="eraserPreviewStyle"
+        ></div>
+
+        <div
+          v-for="entry in texts"
+          :key="entry.id"
+          :class="[
+            'pencil-overlay__text',
+            { 'pencil-overlay__text--selected': selectedTextId === entry.id }
+          ]"
+          :style="{
+            top: `${entry.y}px`,
+            left: `${entry.x}px`,
+            color: entry.color,
+            fontSize: `${entry.size}px`,
+            fontWeight: entry.bold ? 700 : 400
+          }"
+          @pointerdown.stop="selectText(entry.id)"
+          @dblclick.stop="editText(entry.id)"
+        >
+          <textarea
+            v-if="entry.isEditing"
+            :ref="(el) => registerTextInput(entry.id, el)"
+            v-model="entry.content"
+            class="pencil-overlay__text-input"
+            spellcheck="false"
+            @keydown="(event) => handleTextKeydown(event, entry.id)"
+            @blur="() => finishText(entry.id)"
+          ></textarea>
+          <div v-else class="pencil-overlay__text-label">{{ entry.content || ' ' }}</div>
+        </div>
+
+        <div
+          v-if="selectionStyle"
+          class="pencil-overlay__selection"
+          :style="selectionStyle"
+        ></div>
+      </div> 
     </div>
 
     <div
-      class="pencil-overlay__panel"
+      :class="panelClasses"
       :style="panelStyle"
     >
       <button
@@ -1335,111 +1343,116 @@ const handleBoardWheel = (event) => {
           @click="handleResetZoom"
         >
           Масштаб:
-          <span class="pencil-overlay__zoom-value">{{ zoomDisplay }}</span>        </button>
+          <span class="pencil-overlay__zoom-value">{{ zoomDisplay }}</span>
+        </button>
       </div>
+      
       <div class="pencil-overlay__tool-settings">
-
         <div
           v-if="currentTool === 'brush'"
           class="pencil-overlay__section"
         >
-        <span class="pencil-overlay__section-title">Карандаш</span>
-        <label class="pencil-overlay__control">
-          <span>Цвет</span>
-          <input v-model="brushColor" type="color" />
-        </label>
-        <label class="pencil-overlay__control">
-          <span>Толщина: {{ brushSize }} px</span>
-          <input
-            v-model.number="brushSize"
-            type="range"
-            min="1"
-            max="24"
-          />
-        </label>
-      </div>
-      <div
-        v-else-if="currentTool === 'marker'"
-        class="pencil-overlay__section"
-      >
-        <span class="pencil-overlay__section-title">Маркер</span>
-        <label class="pencil-overlay__control">
-          <span>Цвет</span>
-          <input v-model="brushColor" type="color" />
-        </label>
-        <label class="pencil-overlay__control">
-          <span>Толщина: {{ markerSize }} px</span>
-          <input
-            v-model.number="markerSize"
-            type="range"
-            :min="MARKER_MIN_SIZE"
-            :max="MARKER_MAX_SIZE"
-          />
-        </label>
-        <label class="pencil-overlay__control">
-          <span>Прозрачность: {{ markerOpacityPercent }}%</span>
-          <input
-            v-model.number="markerOpacity"
-            type="range"
-            min="0.01"
-            max="0.1"
-            step="0.01"
-          />
-        </label>        
-      </div>
-      <div
-        v-else-if="currentTool === 'eraser'"
-        class="pencil-overlay__section"
-      >
-        <span class="pencil-overlay__section-title">Ластик</span>
-        <label class="pencil-overlay__control">
-          <span>Диаметр: {{ eraserSize }} px</span>
-          <input
-            v-model.number="eraserSize"
-            type="range"
-            :min="ERASER_MIN_SIZE"
-            :max="ERASER_MAX_SIZE"
-          />
-        </label>
-      </div>
-      <div
-        v-else-if="currentTool === 'selection'"
-        class="pencil-overlay__section"
-      >
-        <span class="pencil-overlay__section-title">Выделение</span>
-        <p class="pencil-overlay__helper-text">
-          Выделите область, затем перемещайте содержимое левой кнопкой мыши. Для отмены выделения нажмите Esc или кликните по свободной области.
-        </p>
-      </div>
-      <div
-        v-else-if="currentTool === 'text'"
-        class="pencil-overlay__section"
-      >
-        <span class="pencil-overlay__section-title">Текст</span>
-        <label class="pencil-overlay__control">
-          <span>Цвет</span>
-          <input v-model="textColor" type="color" />
-        </label>
-        <label class="pencil-overlay__control">
-          <span>Размер: {{ textSize }} px</span>
-          <input
-            v-model.number="textSize"
-            type="range"
-            min="12"
-            max="72"
-          />
-        </label>
-        <label class="pencil-overlay__control pencil-overlay__control--inline">
-          <input
-            v-model="isTextBold"
-            type="checkbox"
-          />
-          <span>Жирный шрифт</span>
-        </label>
+          <span class="pencil-overlay__section-title">Карандаш</span>
+          <label class="pencil-overlay__control">
+            <span>Цвет</span>
+            <input v-model="brushColor" type="color" />
+          </label>
+          <label class="pencil-overlay__control">
+            <span>Толщина: {{ brushSize }} px</span>
+            <input
+              v-model.number="brushSize"
+              type="range"
+              min="1"
+              max="24"
+            />
+          </label>
+        </div>
+
+        <div
+          v-else-if="currentTool === 'marker'"
+          class="pencil-overlay__section"
+        >
+          <span class="pencil-overlay__section-title">Маркер</span>
+          <label class="pencil-overlay__control">
+            <span>Цвет</span>
+            <input v-model="brushColor" type="color" />
+          </label>
+          <label class="pencil-overlay__control">
+            <span>Толщина: {{ markerSize }} px</span>
+            <input
+              v-model.number="markerSize"
+              type="range"
+              :min="MARKER_MIN_SIZE"
+              :max="MARKER_MAX_SIZE"
+            />
+          </label>
+          <label class="pencil-overlay__control">
+            <span>Прозрачность: {{ markerOpacityPercent }}%</span>
+            <input
+              v-model.number="markerOpacity"
+              type="range"
+              min="0.01"
+              max="0.1"
+              step="0.01"
+            />
+          </label>
+        </div>
+
+        <div
+          v-else-if="currentTool === 'eraser'"
+          class="pencil-overlay__section"
+        >
+          <span class="pencil-overlay__section-title">Ластик</span>
+          <label class="pencil-overlay__control">
+            <span>Диаметр: {{ eraserSize }} px</span>
+            <input
+              v-model.number="eraserSize"
+              type="range"
+              :min="ERASER_MIN_SIZE"
+              :max="ERASER_MAX_SIZE"
+            />
+          </label>
+        </div>
+
+        <div
+          v-else-if="currentTool === 'selection'"
+          class="pencil-overlay__section"
+        >
+          <span class="pencil-overlay__section-title">Выделение</span>
+          <p class="pencil-overlay__helper-text">
+            Выделите область, затем перемещайте содержимое левой кнопкой мыши. Для отмены выделения нажмите Esc или кликните по свободной области.
+          </p>
+        </div>
+
+        <div
+          v-else-if="currentTool === 'text'"
+          class="pencil-overlay__section"
+        >
+          <span class="pencil-overlay__section-title">Текст</span>
+          <label class="pencil-overlay__control">
+            <span>Цвет</span>
+            <input v-model="textColor" type="color" />
+          </label>
+          <label class="pencil-overlay__control">
+            <span>Размер: {{ textSize }} px</span>
+            <input
+              v-model.number="textSize"
+              type="range"
+              min="12"
+              max="72"
+            />
+          </label>
+          <label class="pencil-overlay__control pencil-overlay__control--inline">
+            <input
+              v-model="isTextBold"
+              type="checkbox"
+            />
+            <span>Жирный шрифт</span>
+          </label>
+        </div>
       </div>
     </div>
   </div>
-</div>  
 </template>
 
 <style scoped>
@@ -1458,15 +1471,17 @@ const handleBoardWheel = (event) => {
 }
 
 .pencil-overlay__board {
-  position: fixed;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
-  background-position: top left;
+  position: absolute;
+  top: 0;
+  left: 0;
   box-shadow: none;
   border-radius: 0;
   overflow: hidden;
   pointer-events: auto;
-  outline: none;  
+  outline: none;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-position: top left;
 }
 
 .pencil-overlay__board--brush {
@@ -1763,6 +1778,9 @@ const handleBoardWheel = (event) => {
 .pencil-overlay__viewport:active {
   cursor: grabbing;
 }
+.pencil-overlay__viewport--modern {
+  background-color: #1e293b;
+}
 
 .pencil-overlay__background {
   position: absolute;
@@ -1776,18 +1794,5 @@ const handleBoardWheel = (event) => {
   filter: grayscale(80%) brightness(1.2); /* Делаем фон менее заметным */
   opacity: 0.3;
   pointer-events: none;
-}
-
-/* Для темной темы */
-.pencil-overlay__panel--modern ~ .pencil-overlay__viewport {
-  background-color: #1e293b;
-}
-
-/* Убираем лишние стили у самого `board` */
-.pencil-overlay__board {
-  position: absolute;
-  top: 0;
-  left: 0;
-  background-image: none; /* Убираем фон, он теперь на отдельном слое */
 }
 </style>
