@@ -107,6 +107,10 @@ let selectionBaseSelection = new Set();
 let suppressNextStageClick = false;
 
 const noteWindowRefs = new Map();
+const getCurrentZoom = () => {
+  const value = Number(zoomScale.value);
+  return Number.isFinite(value) && value > 0 ? value : 1;
+};  
 const cardsWithVisibleNotes = computed(() => cards.value.filter(card => card.note && card.note.visible));
 const notesSummary = computed(() => getCardNotesSummary(cards.value));
   
@@ -462,24 +466,34 @@ const handleNoteWindowRegister = (cardId, instance) => {
   }
 };
 
-const syncNoteWindowWithCard = (cardId, options = { force: false }) => {
-  const card = findCardById(cardId);
+const syncNoteWindowWithCard = (cardId, options = {}) => {
+const card = findCardById(cardId);
   if (!card || !card.note || !card.note.visible) {
     return;
   }
+  const scale = getCurrentZoom();
+  const alignSide = options.align === 'right' ? 'right' : 'left';
+  const shouldForceAlign = Boolean(options.forceAlign)
+    || !Number.isFinite(card.note.offsetX)
+    || !Number.isFinite(card.note.offsetY);
+
   const ref = noteWindowRefs.get(cardId);
   if (ref && typeof ref.syncWithCardPosition === 'function') {
-    ref.syncWithCardPosition(options);
+    ref.syncWithCardPosition({ scale, forceAlign: shouldForceAlign });
     return;
   }
   const rect = getCardElementRect(cardId);
   if (rect) {
-    applyCardRectToNote(card.note, rect);
-    updateNoteOffsets(card.note, rect);
+    applyCardRectToNote(card.note, rect, {
+      scale,
+      align: alignSide,
+      forceAlign: shouldForceAlign
+    });
+    updateNoteOffsets(card.note, rect, { scale });
   }
 };
 
-const openNoteForCard = (card) => {
+const openNoteForCard = (card, options = {}) => {
   const note = ensureCardNote(card);
   if (!note) {
     return;
@@ -488,14 +502,19 @@ const openNoteForCard = (card) => {
   note.height = Number.isFinite(note.height) ? note.height : DEFAULT_NOTE_HEIGHT;
   const rect = getCardElementRect(card.id);
   if (rect) {
-    applyCardRectToNote(note, rect);
-    updateNoteOffsets(note, rect);
+    const scale = getCurrentZoom();
+    applyCardRectToNote(note, rect, {
+      scale,
+      align: 'left',
+      forceAlign: Boolean(options?.forceAlign)
+    });
+    updateNoteOffsets(note, rect, { scale });
   }
   if (!note.viewDate && note.selectedDate) {
     note.viewDate = `${note.selectedDate.slice(0, 7)}-01`;
   }
   note.visible = true;
-  syncNoteWindowWithCard(card.id, { force: true });
+  syncNoteWindowWithCard(card.id, { forceAlign: Boolean(options?.forceAlign), align: 'left' });
 };
 
 const closeNoteForCard = (card, options = { saveToHistory: false }) => {
@@ -988,8 +1007,8 @@ const endDrag = (event) => {
 
     historyStore.setActionMetadata('update', description);
     movedCardIds.forEach(id => {
-      syncNoteWindowWithCard(id, { force: true });
-    });    
+      syncNoteWindowWithCard(id);
+    });
     historyStore.saveState();
     historyStore.saveState();
 
@@ -1179,14 +1198,14 @@ const addNewCard = () => {
   
   cardsStore.addCard(newCard);
 };
-const syncAllNoteWindows = (force = false) => {
+const syncAllNoteWindows = () => {
   cardsWithVisibleNotes.value.forEach(card => {
-    syncNoteWindowWithCard(card.id, { force });
+    syncNoteWindowWithCard(card.id);
   });
 };
 
 const handleViewportChange = () => {
-  syncAllNoteWindows(true);
+  syncAllNoteWindows();
 };
 
 const handleWindowResize = () => {
@@ -1390,11 +1409,11 @@ watch(guidesEnabled, (enabled) => {
   }
 });
 watch([zoomScale, zoomTranslateX, zoomTranslateY], () => {
-  syncAllNoteWindows(true);
+  syncAllNoteWindows();
 });
 
 watch(cardsWithVisibleNotes, () => {
-  nextTick(() => syncAllNoteWindows(true));
+  nextTick(() => syncAllNoteWindows());
 });
 
 watch(notesSummary, (summary) => {
@@ -1409,12 +1428,19 @@ watch(() => notesStore.pendingOpenCardId, (cardId) => {
   if (!targetId) {
     return;
   }
+  const requestedDate = notesStore.consumeSelectedDate();
   const card = findCardById(targetId);
   if (!card) {
     return;
   }
-  openNoteForCard(card);
-});
+  openNoteForCard(card, { forceAlign: true });
+  if (requestedDate) {
+    const note = ensureCardNote(card);
+    if (note) {
+      note.selectedDate = requestedDate;
+      note.viewDate = `${requestedDate.slice(0, 7)}-01`;
+    }
+  }});
 
 watch(() => notesStore.pendingFocusCardId, (cardId) => {
   if (!cardId) {
