@@ -1000,6 +1000,9 @@ const handleCardClick = (event, cardId) => {
   }
   selectedCardId.value = cardId;
 };
+const handleAddNoteClick = (cardId) => {
+  console.log('Открыть заметку для карточки', cardId);
+};
 
 const handleStageClick = (event) => {
   if (suppressNextStageClick) {
@@ -1352,7 +1355,7 @@ watch(guidesEnabled, (enabled) => {
         }"
         @dragstart.prevent
       >
-        <Card
+          <Card
           v-for="card in cards"
           :key="card.id"
           :card="card"
@@ -1360,8 +1363,8 @@ watch(guidesEnabled, (enabled) => {
           :is-connecting="isDrawingLine && connectionStart?.cardId === card.id"
           @card-click="(event) => handleCardClick(event, card.id)"
           @start-drag="startDrag"
-          style="pointer-events: auto;"		  
-        />
+          @add-note="handleAddNoteClick"
+          style="pointer-events: auto;"        />
       </div>   
     </div>
   </div>
