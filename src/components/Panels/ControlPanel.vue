@@ -528,7 +528,7 @@ const handleExportSVG = async () => {
           <rect width="${LABEL_WIDTH}" height="${LABEL_HEIGHT}" rx="21" ry="21" fill="rgba(255,255,255,0.95)" stroke="rgba(15,23,42,0.12)" stroke-width="1.2" />
           <text x="${LABEL_WIDTH / 2}" y="${LABEL_HEIGHT / 2}" fill="#0f62fe" font-family="Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif" font-size="18" font-weight="600" dominant-baseline="middle" text-anchor="middle">@MarketingFohow</text>
         </a>
-      </g>  
+      </g>; 
     const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="${-VIEWPORT_PADDING} ${-VIEWPORT_PADDING} ${viewBoxWidth} ${viewBoxHeight}" width="${viewBoxWidth}" height="${viewBoxHeight}" style="background:${background};">  <defs>
     ${svgStyle}
