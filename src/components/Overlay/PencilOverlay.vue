@@ -1435,6 +1435,7 @@ onBeforeUnmount(() => {
   box-shadow: var(--overlay-panel-shadow);
   pointer-events: auto;
   min-width: 220px;
+  width: min(360px, calc(100vw - 32px));  
 }
 .pencil-overlay__panel--modern {
   --overlay-panel-bg: rgba(18, 27, 43, 0.94);
