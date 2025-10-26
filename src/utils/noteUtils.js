@@ -392,10 +392,14 @@ export function applyCardRectToNote(note, cardRect) {
   const offsetX = Number.isFinite(note.offsetX) ? note.offsetX : 15 + (cardRect.width || 0);
   const offsetY = Number.isFinite(note.offsetY) ? note.offsetY : 0;
   const cardHeight = Number.isFinite(cardRect.height) ? cardRect.height : null;
+  const fallbackHeight = clampSize(note.height, MIN_NOTE_HEIGHT, DEFAULT_NOTE_HEIGHT);
 
   if (cardHeight !== null && note.offsetX === null && note.offsetY === null) {
-    note.height = clampSize(cardHeight, MIN_NOTE_HEIGHT, note.height ?? DEFAULT_NOTE_HEIGHT);
-  }  
+    const preferredHeight = Math.max(cardHeight, DEFAULT_NOTE_HEIGHT);
+    note.height = clampSize(preferredHeight, MIN_NOTE_HEIGHT, fallbackHeight);
+  } else if (!Number.isFinite(note.height)) {
+    note.height = fallbackHeight;
+  }
   note.x = cardRect.left + offsetX;
   note.y = cardRect.top + offsetY;
 }
