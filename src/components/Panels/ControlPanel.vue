@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCardsStore } from '../../stores/cards.js'
 import { useHistoryStore } from '../../stores/history.js'
@@ -7,6 +7,8 @@ import { useCanvasStore } from '../../stores/canvas.js'
 import { useConnectionsStore } from '../../stores/connections.js'
 import { useProjectStore, formatProjectFileName } from '../../stores/project.js'
 import { useViewportStore } from '../../stores/viewport.js'
+import { useNotesStore } from '../../stores/notes.js'
+  
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -24,8 +26,9 @@ const historyStore = useHistoryStore()
 const canvasStore = useCanvasStore()
 const connectionsStore = useConnectionsStore()
 const projectStore = useProjectStore()
-const viewportStore = useViewportStore()  
-
+const viewportStore = useViewportStore()
+const notesStore = useNotesStore()
+  
 const {
   backgroundColor,
   isSelectionMode,
@@ -36,6 +39,11 @@ const {
 } = storeToRefs(canvasStore)
 const { normalizedProjectName } = storeToRefs(projectStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
+const { dropdownOpen, cardsWithEntries } = storeToRefs(notesStore)
+
+const notesButtonRef = ref(null)
+const notesDropdownRef = ref(null)
+const hasNoteEntries = computed(() => notesStore.hasEntries)  
 
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
 
@@ -53,7 +61,7 @@ const handleSaveProject = () => {
   const projectData = {
     version: '1.0',
     timestamp: Date.now(),
-    cards: JSON.parse(JSON.stringify(cardsStore.cards)),
+    cards: cardsStore.getCardsForExport(),
     connections: JSON.parse(JSON.stringify(connectionsStore.connections)),
     connectionDefaults: {
       color: connectionsStore.defaultLineColor,
@@ -594,10 +602,39 @@ const handleLoadProject = () => {
 const handleFitToContent = () => {
   emit('fit-to-content')
 }
+onMounted(() => {
+  document.addEventListener('pointerdown', handleOutsidePointer)
+  window.addEventListener('keydown', handleNotesKeydown)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', handleOutsidePointer)
+  window.removeEventListener('keydown', handleNotesKeydown)
+})
 
 const handleNotesList = () => {
-  // Список заметок
-  console.log('Открыть список заметок')
+  notesStore.toggleDropdown()
+}
+
+const handleNoteItemClick = (cardId) => {
+  notesStore.requestOpen(cardId, { focus: true })
+}
+
+const handleOutsidePointer = (event) => {
+  if (!notesStore.dropdownOpen) {
+    return
+  }
+  const target = event.target
+  if (notesButtonRef.value?.contains(target) || notesDropdownRef.value?.contains(target)) {
+    return
+  }
+  notesStore.closeDropdown()
+}
+
+const handleNotesKeydown = (event) => {
+  if (event.key === 'Escape') {
+    notesStore.closeDropdown()
+  }
 }
 
 const handleSelectionMode = () => {
@@ -656,6 +693,37 @@ const handleToggleGuides = () => {
             ↷
           </button>
         </div>
+        <div class="left-panel-controls__notes left-panel-controls__notes--collapsed">
+          <button
+            ref="notesButtonRef"
+            class="ui-btn"
+            :class="{ active: dropdownOpen }"
+            type="button"
+            title="Список заметок"
+            :disabled="!hasNoteEntries"
+            @pointerdown.stop
+            @click="handleNotesList"
+          >
+            🗒️
+          </button>
+          <transition name="notes-dropdown-fade">
+            <div
+              v-if="dropdownOpen"
+              ref="notesDropdownRef"
+              class="notes-dropdown"
+            >
+              <button
+                v-for="item in cardsWithEntries"
+                :key="item.id"
+                type="button"
+                class="notes-dropdown__item"
+                @click="handleNoteItemClick(item.id)"
+              >
+                📝 {{ item.title }}
+              </button>
+            </div>
+          </transition>
+        </div>        
         <button
           class="ui-btn left-panel-controls__collapse"
           type="button"
@@ -700,8 +768,37 @@ const handleToggleGuides = () => {
         <button class="ui-btn" title="Экспорт в SVG (вектор)" @click="handleExportSVG">🖋️</button>
         <button class="ui-btn" title="Печать / Экспорт в PDF" @click="handlePrint">🖨️</button>
         <button class="ui-btn" title="Загрузить проект из JSON" @click="handleLoadProject">📂</button>
-        <button class="ui-btn" title="Список заметок" @click="handleNotesList" disabled>🗒️</button>
-        <button
+        <div class="left-panel-controls__notes">
+          <button
+            ref="notesButtonRef"
+            class="ui-btn"
+            type="button"
+            title="Список заметок"
+            :class="{ active: dropdownOpen }"
+            :disabled="!hasNoteEntries"
+            @pointerdown.stop
+            @click="handleNotesList"
+          >
+            🗒️
+          </button>
+          <transition name="notes-dropdown-fade">
+            <div
+              v-if="dropdownOpen"
+              ref="notesDropdownRef"
+              class="notes-dropdown"
+            >
+              <button
+                v-for="item in cardsWithEntries"
+                :key="item.id"
+                type="button"
+                class="notes-dropdown__item"
+                @click="handleNoteItemClick(item.id)"
+              >
+                📝 {{ item.title }}
+              </button>
+            </div>
+          </transition>
+        </div>        <button
           class="ui-btn"
           :class="{ active: isSelectionMode }"
           :aria-pressed="isSelectionMode"
@@ -825,6 +922,67 @@ const handleToggleGuides = () => {
 .left-panel-controls__grid-item--full {
   grid-column: 1 / -1;
 }
+.left-panel-controls__notes {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--left-panel-btn-size);
+}
+
+.left-panel-controls__notes--collapsed {
+  width: var(--left-panel-btn-size);
+}
+
+.left-panel-controls__notes .ui-btn {
+  width: var(--left-panel-btn-size);
+}
+
+.notes-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: var(--left-panel-btn-bg);
+  border: 1px solid var(--left-panel-btn-border);
+  border-radius: 18px;
+  box-shadow: 0 20px 34px rgba(15, 23, 42, 0.28);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 30;
+}
+
+.notes-dropdown__item {
+  border: none;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--left-panel-btn-color);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.notes-dropdown__item:hover {
+  background: rgba(59, 130, 246, 0.18);
+  transform: translateX(4px);
+}
+
+.notes-dropdown-fade-enter-active,
+.notes-dropdown-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.notes-dropdown-fade-enter-from,
+.notes-dropdown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}  
 .left-panel-controls__zoom {
   width: 100%;
   margin-top: auto;
