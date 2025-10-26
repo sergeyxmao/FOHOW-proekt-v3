@@ -758,6 +758,7 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .right-control-panel__shell {
+  position: relative;
   display: flex;
   align-items: stretch;
   gap: 0;
@@ -766,35 +767,40 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .right-control-panel__collapse {
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: -52px;
+  transform: translateY(-50%);
   width: 52px;
   min-height: 64px;
   padding: 0 14px;
   border-radius: 26px 0 0 26px;
-  border: 1px solid var(--panel-border);
+  border: 1px solid rgba(15, 23, 42, 0.14);
   border-right: none;
-  background: var(--panel-bg);
-  color: var(--panel-button-color);
+  background: rgba(255, 255, 255, 0.94);
+  color: #111827;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: var(--panel-shadow);
+  box-shadow: var(--shadow);
   backdrop-filter: blur(22px);
   transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
 .right-control-panel__collapse:hover {
-  transform: translateX(-2px);
+  transform: translateY(-50%) translateX(-2px);
   box-shadow: 0 22px 42px rgba(15, 98, 254, 0.25);
-  color: var(--panel-contrast);
+  color: #0f62fe;
 }
 
+.right-control-panel__collapse span {
+  pointer-events: none;
+}
 .right-control-panel--collapsed .right-control-panel__collapse {
-  border-radius: 26px 0 0 26px;
-
+  top: 50%;
 }
 
 .right-control-panel__collapsed-actions {
