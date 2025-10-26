@@ -205,6 +205,8 @@ export function ensureNoteStructure(note) {
   const now = new Date();
   const today = formatLocalYMD(now);
   const base = note && typeof note === 'object' ? note : {};
+  const alreadyNormalized = isNoteNormalized(base);
+  
 
   if (!base.entries) {
     base.entries = {};
@@ -213,9 +215,11 @@ export function ensureNoteStructure(note) {
     base.colors = {};
   }
 
-  migrateLegacyText(base);
-  sanitizeEntries(base);
-  sanitizeColors(base);
+  if (!alreadyNormalized) {
+    migrateLegacyText(base);
+    sanitizeEntries(base);
+    sanitizeColors(base);
+  }
 
   const selected = normalizeYMD(base.selectedDate) || today;
   const highlight = typeof base.highlightColor === 'string' && base.highlightColor.trim()
@@ -225,7 +229,7 @@ export function ensureNoteStructure(note) {
   const height = clampSize(base.height, MIN_NOTE_HEIGHT, DEFAULT_NOTE_HEIGHT);
   const viewDate = normalizeYMD(base.viewDate)
     || `${selected.slice(0, 7)}-01`;
-  if (isNoteNormalized(base)) {
+  if (alreadyNormalized) {
     if (!base.entries || typeof base.entries !== 'object') {
       base.entries = {};
     }
