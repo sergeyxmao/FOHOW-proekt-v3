@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue';
+import html2canvas from 'html2canvas';  
 import { storeToRefs } from 'pinia';
 import { useCardsStore } from '../../stores/cards';
 import { useConnectionsStore } from '../../stores/connections';
@@ -1379,9 +1380,59 @@ const fitToContent = (options = {}) => {
     translateY: targetTranslateY
   });
 };
+const captureViewportSnapshot = async () => {
+  const element = canvasContainerRef.value;
+
+  if (!element) {
+    return null;
+  }
+
+  const rect = element.getBoundingClientRect();
+
+  const width = Math.max(1, Math.round(rect.width));
+  const height = Math.max(1, Math.round(rect.height));
+
+  try {
+    const canvas = await html2canvas(element, {
+      backgroundColor: null,
+      logging: false,
+      useCORS: true,
+      scale: 1,
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+      width,
+      height
+    });
+
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error('Не удалось сделать снимок полотна', error);
+    return null;
+  }
+};
+
+const getViewportBounds = () => {
+  const element = canvasContainerRef.value;
+
+  if (!element) {
+    return null;
+  }
+
+  const rect = element.getBoundingClientRect();
+
+  return {
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height
+  };
+};
+  
 defineExpose({
   resetView,
-  fitToContent
+  fitToContent,
+  captureViewportSnapshot,
+  getViewportBounds
 });
 
 watch(isDrawingLine, (isDrawing) => {
