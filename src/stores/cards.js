@@ -2,6 +2,12 @@ import { defineStore } from 'pinia'
 import { useConnectionsStore } from './connections'
 import { useHistoryStore } from './history'
 import { getHeaderColorRgb } from '../utils/constants'
+import {
+  createDefaultNoteState,
+  ensureNoteStructure,
+  hasAnyEntry,
+  normalizeNoteForExport
+} from '../utils/noteUtils'
 
 const GOLD_BODY_GRADIENT = 'linear-gradient(135deg, #fff6d1 0%, #ffd700 45%, #fff2a8 100%)'
 
@@ -18,6 +24,10 @@ export const useCardsStore = defineStore('cards', {
     
     hasSelectedCards: (state) => {
       return state.selectedCards.length > 0
+    },
+
+    cardsWithNotes: (state) => {
+      return state.cards.filter(card => hasAnyEntry(card.note))      
     }
   },
   
@@ -29,6 +39,11 @@ export const useCardsStore = defineStore('cards', {
       }
 
       const normalizedUpdates = { ...updates }
+      
+      if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'note')) {
+        card.note = ensureNoteStructure(normalizedUpdates.note)
+        delete normalizedUpdates.note
+      }
 
       Object.assign(card, normalizedUpdates)
 
@@ -115,6 +130,7 @@ export const useCardsStore = defineStore('cards', {
         bodyHTML: '',
         bodyGradient: preset.bodyGradient || '',
         type,
+        note: createDefaultNoteState(),        
         // Переданные вручную свойства (например, x, y) имеют наивысший приоритет
         ...cardData
       };
@@ -273,7 +289,9 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
           : (detectedType === 'gold' ? -1 : 0)
 
         
-        this.cards.push({
+        const noteState = ensureNoteStructure(cardData.note);
+
+        const normalizedCard = {
           id: cardData.id || Date.now().toString(),
           x: Number.isFinite(cardData.x) ? cardData.x : 0,
           y: Number.isFinite(cardData.y) ? cardData.y : 0,
@@ -296,7 +314,21 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
           rankBadge: cardData.rankBadge || null,
           bodyHTML: cardData.bodyHTML || '',
           bodyGradient: cardData.bodyGradient || (detectedType === 'gold' ? GOLD_BODY_GRADIENT : ''),
-          type: detectedType        })
+          type: detectedType,
+          note: noteState
+        };
+
+        this.cards.push(normalizedCard)
+      })
+    },
+
+    getCardsForExport() {
+      return this.cards.map(card => {
+        const serializedNote = normalizeNoteForExport(card.note)
+        return {
+          ...card,
+          note: serializedNote
+        }
       })
     }
   }
