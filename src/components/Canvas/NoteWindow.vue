@@ -318,6 +318,8 @@ defineExpose({
           type="button"
           title="Закрыть"
           @click="handleClose"
+          @pointerdown.stop
+          @click.stop="handleClose"          
         >
           ×
         </button>
@@ -572,6 +574,7 @@ defineExpose({
   color: #0f172a;
   background: rgba(248, 250, 252, 0.85);
   transition: border 0.2s ease, box-shadow 0.2s ease;
+  min-height: calc(1.4em * 3 + 20px);  
 }
 
 .note-textarea:focus {
