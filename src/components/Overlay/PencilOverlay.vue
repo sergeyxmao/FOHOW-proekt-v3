@@ -150,12 +150,9 @@ const applyInitialTransform = () => {
 const handleResetZoom = () => {
   applyInitialTransform();
 };
-const boardStyle = computed(() => ({
-  top: `${props.bounds.top}px`,
-  left: `${props.bounds.left}px`,
+const boardTransformStyle = computed(() => ({
   width: `${canvasWidth.value}px`,
   height: `${canvasHeight.value}px`,
-  backgroundImage: `url(${props.snapshot})`,
   transform: `translate(${zoomTranslateX.value}px, ${zoomTranslateY.value}px) scale(${zoomScale.value})`,
   transformOrigin: 'top left'
 }));
@@ -1170,23 +1167,32 @@ const handleBoardWheel = (event) => {
 </script>
 
 <template>
-  <div class="pencil-overlay">
-    <div class="pencil-overlay__backdrop"></div>
-    <div
-      v-if="isReady"
-      :class="boardClasses"
-      :style="boardStyle"
-      @wheel.prevent="handleBoardWheel"      
+<!-- Новый контейнер, который занимает весь экран -->
+    <div 
+      class="pencil-overlay__viewport"
+      @wheel.prevent="handleBoardWheel"
     >
-      <canvas
-        ref="drawingCanvasRef"
-        class="pencil-overlay__canvas"
-        @pointerdown="handleCanvasPointerDown"
-        @pointermove="handleCanvasPointerMove"
-        @pointerup="handleCanvasPointerUp"
-        @pointerleave="handleCanvasPointerLeave"
-        @pointercancel="handleCanvasPointerLeave"
-      ></canvas>
+      <!-- Фон, который будет виден при отдалении -->
+      <div 
+        class="pencil-overlay__background"
+        :style="{ backgroundImage: `url(${snapshot})` }"
+      ></div>
+
+      <!-- Ваш старый `div`, который теперь будет только для трансформаций -->
+      <div
+        v-if="isReady"
+        :class="boardClasses"
+        :style="boardTransformStyle" <!-- ИЗМЕНЕНО: boardStyle -> boardTransformStyle -->
+      >
+        <canvas
+          ref="drawingCanvasRef"
+          class="pencil-overlay__canvas"
+          @pointerdown="handleCanvasPointerDown"
+          @pointermove="handleCanvasPointerMove"
+          @pointerup="handleCanvasPointerUp"
+          @pointerleave="handleCanvasPointerLeave"
+          @pointercancel="handleCanvasPointerLeave"
+        ></canvas>
       <div
         v-if="showEraserPreview && eraserPreviewStyle"
         class="pencil-overlay__eraser-preview"
@@ -1745,4 +1751,43 @@ const handleBoardWheel = (event) => {
   pointer-events: none;
   transform: translate(-50%, -50%);
 } 
+
+.pencil-overlay__viewport {
+  position: fixed;
+  inset: 0;
+  overflow: hidden; /* Скрываем все, что выходит за пределы экрана */
+  background-color: #f0f2f5; /* Цвет фона, который будет виден при отдалении */
+  cursor: grab;
+}
+
+.pencil-overlay__viewport:active {
+  cursor: grabbing;
+}
+
+.pencil-overlay__background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: cover; /* Можно настроить на 'contain' или как вам удобнее */
+  background-position: center;
+  filter: grayscale(80%) brightness(1.2); /* Делаем фон менее заметным */
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Для темной темы */
+.pencil-overlay__panel--modern ~ .pencil-overlay__viewport {
+  background-color: #1e293b;
+}
+
+/* Убираем лишние стили у самого `board` */
+.pencil-overlay__board {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-image: none; /* Убираем фон, он теперь на отдельном слое */
+}
 </style>
