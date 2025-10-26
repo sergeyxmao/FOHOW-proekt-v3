@@ -1598,8 +1598,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
                 'line--balance-highlight': path.highlightType === 'balance',
                 'line--pv-highlight': path.highlightType === 'pv'
               }
-  ]"              
-    <a
+            ]"           
+            <a
       class="marketing-watermark"
       href="https://t.me/MarketingFohow"
       target="_blank"
