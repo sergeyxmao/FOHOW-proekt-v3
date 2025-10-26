@@ -5,7 +5,8 @@ export const useNotesStore = defineStore('notes', {
     dropdownOpen: false,
     cardsWithEntries: [],
     pendingOpenCardId: null,
-    pendingFocusCardId: null
+    pendingFocusCardId: null,
+    pendingSelectedDate: null
   }),
 
   getters: {
@@ -14,8 +15,14 @@ export const useNotesStore = defineStore('notes', {
 
   actions: {
     setCardsWithEntries(list) {
-      this.cardsWithEntries = Array.isArray(list) ? list.slice() : [];
-      if (!this.cardsWithEntries.length) {
+      if (Array.isArray(list)) {
+        this.cardsWithEntries = list.map(item => ({
+          ...item,
+          entries: Array.isArray(item?.entries) ? item.entries.slice() : []
+        }));
+      } else {
+        this.cardsWithEntries = [];
+      }      if (!this.cardsWithEntries.length) {
         this.dropdownOpen = false;
       }
     },
@@ -32,8 +39,9 @@ export const useNotesStore = defineStore('notes', {
       this.dropdownOpen = false;
     },
 
-    requestOpen(cardId, { focus = true } = {}) {
+    requestOpen(cardId, { focus = true, date = null } = {}) {
       this.pendingOpenCardId = cardId;
+      this.pendingSelectedDate = typeof date === 'string' ? date : null;      
       if (focus) {
         this.pendingFocusCardId = cardId;
       }
@@ -50,6 +58,12 @@ export const useNotesStore = defineStore('notes', {
       const id = this.pendingFocusCardId;
       this.pendingFocusCardId = null;
       return id;
+    },
+
+    consumeSelectedDate() {
+      const date = this.pendingSelectedDate;
+      this.pendingSelectedDate = null;
+      return date;      
     }
   }
 });
