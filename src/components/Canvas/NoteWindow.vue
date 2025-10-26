@@ -141,7 +141,6 @@ watch(
 )
 
 // Новый код (с исправлением)
-import { getNoteEntryInfo } from '../../utils/notes' // Убедитесь, что эта функция импортирована
 
 watch(textareaValue, (newValue) => {
   // Получаем текущий текст из хранилища
