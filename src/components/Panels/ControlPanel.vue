@@ -619,6 +619,17 @@ const handleNotesList = () => {
 const handleNoteItemClick = (cardId) => {
   notesStore.requestOpen(cardId, { focus: true })
 }
+const handleNoteEntryClick = (cardId, date) => {
+  notesStore.requestOpen(cardId, { focus: true, date })
+}
+
+const handleNoteEntryDelete = (cardId, date) => {
+  cardsStore.removeCardNoteEntry(cardId, date)
+}
+
+const handleCardNotesDelete = (cardId) => {
+  cardsStore.clearCardNotes(cardId)
+}
 
 const handleOutsidePointer = (event) => {
   if (!notesStore.dropdownOpen) {
@@ -712,15 +723,60 @@ const handleToggleGuides = () => {
               ref="notesDropdownRef"
               class="notes-dropdown"
             >
-              <button
+              <div
                 v-for="item in cardsWithEntries"
                 :key="item.id"
-                type="button"
-                class="notes-dropdown__item"
-                @click="handleNoteItemClick(item.id)"
+                class="notes-dropdown__group"
               >
-                📝 {{ item.title }}
-              </button>
+                <div class="notes-dropdown__card-row">
+                  <button
+                    type="button"
+                    class="notes-dropdown__card-button"
+                    @pointerdown.stop
+                    @click.stop="handleNoteItemClick(item.id)"
+                  >
+                    📝 {{ item.title }}
+                  </button>
+                  <button
+                    type="button"
+                    class="notes-dropdown__icon-btn notes-dropdown__icon-btn--danger"
+                    title="Удалить все заметки"
+                    @pointerdown.stop
+                    @click.stop="handleCardNotesDelete(item.id)"
+                  >
+                    🗑️
+                  </button>
+                </div>
+                <div class="notes-dropdown__entries">
+                  <div
+                    v-for="entry in item.entries"
+                    :key="entry.date"
+                    class="notes-dropdown__entry"
+                  >
+                    <button
+                      type="button"
+                      class="notes-dropdown__entry-button"
+                      @pointerdown.stop
+                      @click.stop="handleNoteEntryClick(item.id, entry.date)"
+                    >
+                      <span
+                        class="notes-dropdown__entry-color"
+                        :style="{ backgroundColor: entry.color }"
+                      ></span>
+                      <span class="notes-dropdown__entry-label">{{ entry.label }}</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="notes-dropdown__icon-btn"
+                      title="Удалить заметку"
+                      @pointerdown.stop
+                      @click.stop="handleNoteEntryDelete(item.id, entry.date)"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </transition>
         </div>        
@@ -787,18 +843,64 @@ const handleToggleGuides = () => {
               ref="notesDropdownRef"
               class="notes-dropdown"
             >
-              <button
+              <div
                 v-for="item in cardsWithEntries"
                 :key="item.id"
-                type="button"
-                class="notes-dropdown__item"
-                @click="handleNoteItemClick(item.id)"
+                class="notes-dropdown__group"
               >
-                📝 {{ item.title }}
-              </button>
+                <div class="notes-dropdown__card-row">
+                  <button
+                    type="button"
+                    class="notes-dropdown__card-button"
+                    @pointerdown.stop
+                    @click.stop="handleNoteItemClick(item.id)"
+                  >
+                    📝 {{ item.title }}
+                  </button>
+                  <button
+                    type="button"
+                    class="notes-dropdown__icon-btn notes-dropdown__icon-btn--danger"
+                    title="Удалить все заметки"
+                    @pointerdown.stop
+                    @click.stop="handleCardNotesDelete(item.id)"
+                  >
+                    🗑️
+                  </button>
+                </div>
+                <div class="notes-dropdown__entries">
+                  <div
+                    v-for="entry in item.entries"
+                    :key="entry.date"
+                    class="notes-dropdown__entry"
+                  >
+                    <button
+                      type="button"
+                      class="notes-dropdown__entry-button"
+                      @pointerdown.stop
+                      @click.stop="handleNoteEntryClick(item.id, entry.date)"
+                    >
+                      <span
+                        class="notes-dropdown__entry-color"
+                        :style="{ backgroundColor: entry.color }"
+                      ></span>
+                      <span class="notes-dropdown__entry-label">{{ entry.label }}</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="notes-dropdown__icon-btn"
+                      title="Удалить заметку"
+                      @pointerdown.stop
+                      @click.stop="handleNoteEntryDelete(item.id, entry.date)"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </transition>
-        </div>        <button
+        </div>
+        <button
           class="ui-btn"
           :class="{ active: isSelectionMode }"
           :aria-pressed="isSelectionMode"
@@ -941,7 +1043,8 @@ const handleToggleGuides = () => {
 .notes-dropdown {
   position: absolute;
   top: calc(100% + 8px);
-  right: 0;
+  left: 0;
+  right: auto;
   min-width: 220px;
   background: var(--left-panel-btn-bg);
   border: 1px solid var(--left-panel-btn-border);
@@ -950,12 +1053,29 @@ const handleToggleGuides = () => {
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   z-index: 30;
 }
+.notes-dropdown__group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}  
 
-.notes-dropdown__item {
-  border: none;
+.notes-dropdown__group + .notes-dropdown__group {
+  border-top: 1px solid rgba(15, 23, 42, 0.12);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+.notes-dropdown__card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notes-dropdown__card-button {  border: none;
   background: rgba(15, 23, 42, 0.06);
   color: var(--left-panel-btn-color);
   border-radius: 12px;
@@ -966,11 +1086,83 @@ const handleToggleGuides = () => {
   gap: 8px;
   cursor: pointer;
   transition: transform 0.18s ease, background 0.18s ease;
+  flex: 1 1 auto;  
 }
 
-.notes-dropdown__item:hover {
+.notes-dropdown__card-button:hover {
   background: rgba(59, 130, 246, 0.18);
   transform: translateX(4px);
+}
+.notes-dropdown__entries {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.notes-dropdown__entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notes-dropdown__entry-button {
+  border: none;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--left-panel-btn-color);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.notes-dropdown__entry-button:hover {
+  background: rgba(59, 130, 246, 0.18);
+  transform: translateX(4px);
+}
+
+.notes-dropdown__entry-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.2);
+}
+
+.notes-dropdown__entry-label {
+  font-weight: 600;
+  line-height: 1;
+}
+
+.notes-dropdown__icon-btn {
+  border: none;
+  background: transparent;
+  color: var(--left-panel-btn-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 8px;
+  font-size: 16px;
+  line-height: 1;
+  transition: background 0.18s ease, transform 0.18s ease, color 0.18s ease;
+}
+
+.notes-dropdown__icon-btn:hover {
+  background: rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.notes-dropdown__icon-btn--danger {
+  color: #dc2626;
+}
+
+.notes-dropdown__icon-btn--danger:hover {
+  background: rgba(248, 113, 113, 0.18);
+  color: #b91c1c;
 }
 
 .notes-dropdown-fade-enter-active,
