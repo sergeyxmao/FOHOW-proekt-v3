@@ -32,6 +32,7 @@ const canvasContext = ref(null);
 const canvasWidth = ref(0);
 const canvasHeight = ref(0);
 const isReady = ref(false);
+const zoomScale = ref(1);  
 const activePointerId = ref(null);
 const lastPoint = ref(null);
 const isDrawing = ref(false);
@@ -74,6 +75,8 @@ const ERASER_MAX_SIZE = 80;
 const MAX_HISTORY_LENGTH = 50;
 const MARKER_MIN_SIZE = 30;
 const MARKER_MAX_SIZE = 100;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 3;  
 
 const boardClasses = computed(() => {
   const classes = ['pencil-overlay__board'];
@@ -97,12 +100,30 @@ const boardClasses = computed(() => {
 
   return classes;
 });
+const clampZoom = (value) => {
+  if (!Number.isFinite(value)) {
+    return zoomScale.value;
+  }
+
+  if (value < MIN_ZOOM) {
+    return MIN_ZOOM;
+  }
+
+  if (value > MAX_ZOOM) {
+    return MAX_ZOOM;
+  }
+
+  return value;
+};  
 const boardStyle = computed(() => ({
   top: `${props.bounds.top}px`,
   left: `${props.bounds.left}px`,
   width: `${canvasWidth.value}px`,
   height: `${canvasHeight.value}px`,
   backgroundImage: `url(${props.snapshot})`
+  backgroundImage: `url(${props.snapshot})`,
+  transform: `scale(${zoomScale.value})`,
+  transformOrigin: 'top left'  
 }));
 const selectionStyle = computed(() => {
   if (!selectionRect.value) {
@@ -369,9 +390,11 @@ const getCanvasPoint = (event) => {
   if (!canvas) return null;
 
   const rect = canvas.getBoundingClientRect();
+  const scale = zoomScale.value || 1;
+  
   return {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top
+    x: (event.clientX - rect.left) / scale,
+    y: (event.clientY - rect.top) / scale
   };
 };
 
@@ -1053,6 +1076,26 @@ onBeforeUnmount(() => {
   document.body.style.overflow = previousBodyOverflow;
   window.removeEventListener('keydown', handleKeydown);
 });
+
+const handleBoardWheel = (event) => {
+  if (!isReady.value) {
+    return;
+  }
+
+  if (event.ctrlKey) {
+    return;
+  }
+    zoomScale.value = 1;  
+
+  event.preventDefault();
+
+  const delta = -event.deltaY * 0.001;
+  if (!delta) {
+    return;
+  }
+
+  zoomScale.value = clampZoom(zoomScale.value + delta);
+};  
 </script>
 
 <template>
@@ -1062,6 +1105,7 @@ onBeforeUnmount(() => {
       v-if="isReady"
       :class="boardClasses"
       :style="boardStyle"
+      @wheel.prevent="handleBoardWheel"      
     >
       <canvas
         ref="drawingCanvasRef"
