@@ -151,6 +151,7 @@ onBeforeUnmount(() => {
       v-if="isPencilMode && pencilSnapshot && pencilBounds"
       :snapshot="pencilSnapshot"
       :bounds="pencilBounds"
+      :is-modern-theme="isModernTheme"     
       @close="handlePencilClose"
     />    
   </div>
