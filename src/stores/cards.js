@@ -6,7 +6,8 @@ import {
   createDefaultNoteState,
   ensureNoteStructure,
   hasAnyEntry,
-  normalizeNoteForExport
+  normalizeNoteForExport,
+  normalizeYMD
 } from '../utils/noteUtils'
 
 const GOLD_BODY_GRADIENT = 'linear-gradient(135deg, #fff6d1 0%, #ffd700 45%, #fff2a8 100%)'
@@ -59,6 +60,64 @@ export const useCardsStore = defineStore('cards', {
       return card
     },
     
+    removeCardNoteEntry(cardId, date) {
+      const card = this.cards.find(c => c.id === cardId)
+      if (!card) {
+        return false
+      }
+
+      const note = ensureNoteStructure(card.note)
+      const normalizedDate = normalizeYMD(date)
+
+      if (!normalizedDate) {
+        return false
+      }
+
+      const hasEntry = Boolean(note.entries?.[normalizedDate]?.text?.trim())
+      const hasColor = Boolean(note.colors?.[normalizedDate])
+
+      if (!hasEntry && !hasColor) {
+        return false
+      }
+
+      if (note.entries && Object.prototype.hasOwnProperty.call(note.entries, normalizedDate)) {
+        delete note.entries[normalizedDate]
+      }
+
+      if (note.colors && Object.prototype.hasOwnProperty.call(note.colors, normalizedDate)) {
+        delete note.colors[normalizedDate]
+      }
+
+      const historyStore = useHistoryStore()
+      historyStore.setActionMetadata('update', `Удалена заметка ${normalizedDate} для карточки "${card.text}"`)
+      historyStore.saveState()
+
+      return true
+    },
+
+    clearCardNotes(cardId) {
+      const card = this.cards.find(c => c.id === cardId)
+      if (!card) {
+        return false
+      }
+
+      const note = ensureNoteStructure(card.note)
+      const hadEntries = hasAnyEntry(note)
+      const hadColors = note.colors && Object.keys(note.colors).length > 0
+
+      if (!hadEntries && !hadColors) {
+        return false
+      }
+
+      note.entries = {}
+      note.colors = {}
+
+      const historyStore = useHistoryStore()
+      historyStore.setActionMetadata('update', `Удалены все заметки для карточки "${card.text}"`)
+      historyStore.saveState()
+
+      return true
+    },
     addCard(options = {}) {
       const { type = 'large', ...cardData } = options;
 
