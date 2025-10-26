@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { storeToRefs } from 'pinia';  
 import { useHistoryStore } from '../../stores/history';
+import { useViewportStore } from '../../stores/viewport';  
 import {
   NOTE_COLORS,
   ensureNoteStructure,
@@ -25,6 +27,8 @@ const props = defineProps({
 const emit = defineEmits(['close', 'sync']);
 
 const historyStore = useHistoryStore();
+const viewportStore = useViewportStore();
+const { zoomScale } = storeToRefs(viewportStore);  
 
 const note = computed(() => {
   const normalized = ensureNoteStructure(props.card.note);
@@ -64,13 +68,23 @@ const monthState = ref(resolveMonthState(note.value.viewDate));
 const selectedDate = computed(() => ensureSelectedDate(note.value, formatLocalYMD(new Date())));
 const selectedColor = computed(() => getSelectedColor(note.value));
 
-const noteStyle = computed(() => ({
-  left: `${note.value.x}px`,
-  top: `${note.value.y}px`,
-  width: `${note.value.width}px`,
-  height: `${note.value.height}px`,
-  '--note-accent': note.value.highlightColor || NOTE_COLORS[0]
-}));
+const effectiveScale = computed(() => {
+  const value = Number(zoomScale.value);
+  return Number.isFinite(value) && value > 0 ? value : 1;
+});
+
+const noteStyle = computed(() => {
+  const scale = effectiveScale.value;
+  return {
+    left: `${note.value.x}px`,
+    top: `${note.value.y}px`,
+    width: `${note.value.width}px`,
+    height: `${note.value.height}px`,
+    '--note-accent': note.value.highlightColor || NOTE_COLORS[0],
+    transform: `scale(${scale})`,
+    transformOrigin: 'top left'
+  };
+});
 
 const colorDots = computed(() => NOTE_COLORS.map(color => ({
   color,
@@ -113,19 +127,28 @@ function ensureCardElement() {
   return cardElement.value;
 }
 
-function syncWithCardPosition(options = { force: false }) {
+function syncWithCardPosition(options = {}) {
   const element = ensureCardElement();
   if (!element) {
     return;
   }
   const rect = element.getBoundingClientRect();
-  if (options.force || note.value.offsetX === null || note.value.offsetY === null) {
-    applyCardRectToNote(note.value, rect);
+  const scale = Number.isFinite(options.scale) && options.scale > 0 ? options.scale : effectiveScale.value;
+  const shouldForce = Boolean(options.forceAlign)
+    || !Number.isFinite(note.value.offsetX)
+    || !Number.isFinite(note.value.offsetY);
+
+  if (shouldForce) {
+    applyCardRectToNote(note.value, rect, {
+      scale,
+      align: 'left',
+      forceAlign: true
+    });
   } else {
-    note.value.x = rect.left + note.value.offsetX;
-    note.value.y = rect.top + note.value.offsetY;
+    note.value.x = rect.left + note.value.offsetX * scale;
+    note.value.y = rect.top + note.value.offsetY * scale;
   }
-  updateNoteOffsets(note.value, rect);
+  updateNoteOffsets(note.value, rect, { scale });
   emit('sync', { x: note.value.x, y: note.value.y });
 }
 
@@ -213,7 +236,7 @@ function endDrag(event) {
     const element = ensureCardElement();
     if (element) {
       const rect = element.getBoundingClientRect();
-      updateNoteOffsets(note.value, rect);
+      updateNoteOffsets(note.value, rect, { scale: effectiveScale.value });
     }
   }
   isDragging.value = false;
@@ -328,11 +351,12 @@ defineExpose({
             v-for="dot in colorDots"
             :key="dot.color"
             class="clr-dot"
-            :class="{ active: dot.active }"
-            :style="{ backgroundColor: dot.color }"
-            type="button"
-            @click="handleColorSelect(dot.color)"
-          ></button>
+          :class="{ active: dot.active }"
+          :style="{ backgroundColor: dot.color }"
+          type="button"
+          @pointerdown.stop
+          @click.stop="handleColorSelect(dot.color)"
+        ></button>
         </div>
       </div>
       <div class="note-calendar">
@@ -398,6 +422,8 @@ defineExpose({
   overflow: hidden;
   z-index: 10000;
   border: 1px solid rgba(15, 23, 42, 0.12);
+  transform-origin: top left;
+  will-change: transform;  
 }
 
 .note-window::after {
