@@ -226,8 +226,12 @@ export function ensureNoteStructure(note) {
   const viewDate = normalizeYMD(base.viewDate)
     || `${selected.slice(0, 7)}-01`;
   if (isNoteNormalized(base)) {
-    base.entries = { ...base.entries };
-    base.colors = { ...base.colors };
+    if (!base.entries || typeof base.entries !== 'object') {
+      base.entries = {};
+    }
+    if (!base.colors || typeof base.colors !== 'object') {
+      base.colors = {};
+    }
     base.selectedDate = selected;
     base.highlightColor = highlight;
     base.width = width;
