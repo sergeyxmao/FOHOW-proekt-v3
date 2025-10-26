@@ -31,9 +31,11 @@ const isReady = ref(false);
 const activePointerId = ref(null);
 const lastPoint = ref(null);
 const isDrawing = ref(false);
+const hasStrokeChanges = ref(false);  
 const currentTool = ref('brush');
 const brushColor = ref('#ff4757');
 const brushSize = ref(4);
+const markerSize = ref(60);  
 const textColor = ref('#111827');
 const textSize = ref(24);
 const isTextBold = ref(false);
@@ -43,12 +45,24 @@ const baseImage = ref(null);
 const textInputRefs = new Map();
 let previousHtmlOverflow = '';
 let previousBodyOverflow = '';
+const historyEntries = ref([]);
+const historyIndex = ref(-1);
+const isApplyingHistory = ref(false);
+let historySaveHandle = null;
+let pendingCanvasCapture = false;
+
+const MAX_HISTORY_LENGTH = 50;
+const MARKER_MIN_SIZE = 30;
+const MARKER_MAX_SIZE = 100;
+const MARKER_OPACITY = 0.35;  
 
 const boardClasses = computed(() => [
   'pencil-overlay__board',
   currentTool.value === 'text'
     ? 'pencil-overlay__board--text'
-    : 'pencil-overlay__board--brush'
+    : currentTool.value === 'marker'
+      ? 'pencil-overlay__board--marker'
+      : 'pencil-overlay__board--brush'
 ]);
 
 const boardStyle = computed(() => ({
@@ -69,6 +83,203 @@ const panelStyle = computed(() => {
     left: `${left}px`
   };
 });
+const hexToRgba = (hex, alpha) => {
+  if (typeof hex !== 'string') {
+    return `rgba(0, 0, 0, ${alpha})`;
+  }
+
+  let normalized = hex.trim();
+  if (normalized[0] === '#') {
+    normalized = normalized.slice(1);
+  }
+
+  if (normalized.length === 3) {
+    normalized = normalized.split('').map((char) => char + char).join('');
+  }
+
+  const int = Number.parseInt(normalized, 16);
+  if (Number.isNaN(int)) {
+    return `rgba(0, 0, 0, ${alpha})`;
+  }
+
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const cloneTexts = (items) => items.map((item) => ({ ...item }));
+
+const captureCanvasData = () => {
+  const canvas = drawingCanvasRef.value;
+  if (!canvas) {
+    return null;
+  }
+  return canvas.toDataURL('image/png');
+};
+
+const buildSnapshot = (captureCanvasExplicitly = false) => {
+  let canvasData;
+  if (captureCanvasExplicitly) {
+    canvasData = captureCanvasData();
+  } else if (historyIndex.value >= 0 && historyIndex.value < historyEntries.value.length) {
+    canvasData = historyEntries.value[historyIndex.value].canvas;
+  } else {
+    canvasData = captureCanvasData();
+  }
+
+  return {
+    canvas: canvasData,
+    texts: cloneTexts(texts.value),
+    selectedTextId: selectedTextId.value
+  };
+};
+
+const pushHistoryEntry = (entry) => {
+  historyEntries.value = historyEntries.value.slice(0, historyIndex.value + 1);
+  historyEntries.value.push(entry);
+
+  if (historyEntries.value.length > MAX_HISTORY_LENGTH) {
+    historyEntries.value.shift();
+  }
+
+  historyIndex.value = historyEntries.value.length - 1;
+};
+
+const scheduleHistorySave = (captureCanvasExplicitly = false) => {
+  if (isApplyingHistory.value) {
+    return;
+  }
+
+  pendingCanvasCapture = pendingCanvasCapture || captureCanvasExplicitly;
+
+  if (historySaveHandle) {
+    clearTimeout(historySaveHandle);
+    historySaveHandle = null;
+  }
+
+  if (typeof window === 'undefined') {
+    const snapshot = buildSnapshot(pendingCanvasCapture);
+    pushHistoryEntry(snapshot);
+    pendingCanvasCapture = false;
+    return;
+  }
+
+  historySaveHandle = window.setTimeout(() => {
+    const snapshot = buildSnapshot(pendingCanvasCapture);
+    pushHistoryEntry(snapshot);
+    historySaveHandle = null;
+    pendingCanvasCapture = false;
+  }, 0);
+};
+
+const flushPendingHistorySave = () => {
+  if (!historySaveHandle) {
+    return;
+  }
+
+  clearTimeout(historySaveHandle);
+  historySaveHandle = null;
+
+  if (isApplyingHistory.value) {
+    return;
+  }
+
+  const snapshot = buildSnapshot(pendingCanvasCapture);
+  pushHistoryEntry(snapshot);
+  pendingCanvasCapture = false;
+};
+
+const drawCanvasFromSnapshot = (dataUrl) => new Promise((resolve) => {
+  const canvas = drawingCanvasRef.value;
+  const context = canvasContext.value;
+
+  if (!canvas || !context) {
+    resolve();
+    return;
+  }
+
+  context.save();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.globalCompositeOperation = 'source-over';
+  context.globalAlpha = 1;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!dataUrl) {
+    context.restore();
+    resolve();
+    return;
+  }
+
+  const image = new Image();
+  image.onload = () => {
+    context.drawImage(image, 0, 0);
+    context.restore();
+    resolve();
+  };
+  image.onerror = () => {
+    context.restore();
+    resolve();
+  };
+  image.src = dataUrl;
+});
+
+const applySnapshot = async (snapshot) => {
+  if (!snapshot) {
+    return;
+  }
+
+  isApplyingHistory.value = true;
+  textInputRefs.clear();
+  texts.value = cloneTexts(snapshot.texts || []);
+  selectedTextId.value = snapshot.selectedTextId || null;
+
+  await nextTick();
+  await drawCanvasFromSnapshot(snapshot.canvas);
+
+  if (selectedTextId.value) {
+    const editableEntry = texts.value.find((item) => item.id === selectedTextId.value && item.isEditing);
+    if (editableEntry) {
+      focusTextInput(editableEntry.id);
+    }
+  }
+
+  isApplyingHistory.value = false;
+};
+
+const resetHistory = () => {
+  historyEntries.value = [];
+  historyIndex.value = -1;
+  pendingCanvasCapture = false;
+  const snapshot = buildSnapshot(true);
+  pushHistoryEntry(snapshot);
+};
+
+const undo = () => {
+  flushPendingHistorySave();
+  if (historyIndex.value <= 0) {
+    return;
+  }
+
+  historyIndex.value -= 1;
+  const snapshot = historyEntries.value[historyIndex.value];
+  applySnapshot(snapshot);
+};
+
+const redo = () => {
+  flushPendingHistorySave();
+  if (historyIndex.value < 0 || historyIndex.value >= historyEntries.value.length - 1) {
+    return;
+  }
+
+  historyIndex.value += 1;
+  const snapshot = historyEntries.value[historyIndex.value];
+  applySnapshot(snapshot);
+};
+
+const canUndo = computed(() => historyIndex.value > 0);
+const canRedo = computed(() => historyIndex.value >= 0 && historyIndex.value < historyEntries.value.length - 1);
+const isDrawingToolActive = computed(() => currentTool.value === 'brush' || currentTool.value === 'marker');
 
 const registerTextInput = (id, el) => {
   if (el) {
@@ -82,7 +293,9 @@ const focusTextInput = (id) => {
   nextTick(() => {
     const element = textInputRefs.get(id);
     if (element) {
-      element.focus();
+      if (typeof element.focus === 'function') {
+        element.focus({ preventScroll: true });
+      }
       element.select();
     }
   });
@@ -102,14 +315,25 @@ const getCanvasPoint = (event) => {
 const startStroke = (point) => {
   if (!canvasContext.value) return;
 
-  canvasContext.value.lineCap = 'round';
-  canvasContext.value.lineJoin = 'round';
-  canvasContext.value.strokeStyle = brushColor.value;
-  canvasContext.value.lineWidth = brushSize.value;
-  canvasContext.value.beginPath();
-  canvasContext.value.moveTo(point.x, point.y);
+  const context = canvasContext.value;
+  context.lineCap = 'round';
+  context.lineJoin = 'round';
+  context.globalCompositeOperation = 'source-over';
+  context.globalAlpha = 1;
+
+  if (currentTool.value === 'marker') {
+    context.strokeStyle = hexToRgba(brushColor.value, MARKER_OPACITY);
+    context.lineWidth = markerSize.value;
+  } else {
+    context.strokeStyle = brushColor.value;
+    context.lineWidth = brushSize.value;
+  }
+
+  context.beginPath();
+  context.moveTo(point.x, point.y);
   lastPoint.value = point;
   isDrawing.value = true;
+  hasStrokeChanges.value = false;  
 };
 
 const continueStroke = (point) => {
@@ -118,15 +342,21 @@ const continueStroke = (point) => {
   canvasContext.value.lineTo(point.x, point.y);
   canvasContext.value.stroke();
   lastPoint.value = point;
+  hasStrokeChanges.value = true;  
 };
 
 const finishStroke = () => {
   if (!canvasContext.value || !isDrawing.value) return;
 
   canvasContext.value.closePath();
+  canvasContext.value.globalAlpha = 1;  
   isDrawing.value = false;
   lastPoint.value = null;
   activePointerId.value = null;
+
+  if (hasStrokeChanges.value) {
+    scheduleHistorySave(true);
+  }  
 };
 
 const createTextEntry = (point) => {
@@ -145,6 +375,8 @@ const createTextEntry = (point) => {
 
   selectedTextId.value = id;
   focusTextInput(id);
+  scheduleHistorySave(false);
+  
 };
 
 const selectText = (id) => {
@@ -177,6 +409,8 @@ const finishText = (id) => {
       selectedTextId.value = null;
     }
   }
+
+  scheduleHistorySave(false);  
 };
 
 const handleTextKeydown = (event, id) => {
@@ -189,7 +423,7 @@ const handleTextKeydown = (event, id) => {
 const handleCanvasPointerDown = (event) => {
   if (event.button !== 0) return;
 
-  if (currentTool.value === 'brush') {
+  if (isDrawingToolActive.value) {
     const point = getCanvasPoint(event);
     if (!point) return;
 
@@ -205,7 +439,7 @@ const handleCanvasPointerDown = (event) => {
 };
 
 const handleCanvasPointerMove = (event) => {
-  if (currentTool.value !== 'brush') return;
+  if (!isDrawingToolActive.value) return;
   if (!isDrawing.value || activePointerId.value !== event.pointerId) return;
 
   const point = getCanvasPoint(event);
@@ -215,8 +449,9 @@ const handleCanvasPointerMove = (event) => {
 };
 
 const handleCanvasPointerUp = (event) => {
-  if (currentTool.value !== 'brush') return;
+  if (!isDrawingToolActive.value) return;
   if (activePointerId.value !== event.pointerId) return;
+    event.preventDefault();
 
   const canvas = drawingCanvasRef.value;
   canvas.releasePointerCapture(event.pointerId);
@@ -224,7 +459,7 @@ const handleCanvasPointerUp = (event) => {
 };
 
 const handleCanvasPointerLeave = (event) => {
-  if (currentTool.value !== 'brush') return;
+  if (!isDrawingToolActive.value) return;
   if (activePointerId.value !== event.pointerId) return;
 
   finishStroke();
@@ -268,6 +503,25 @@ const handleClose = () => {
 };
 
 const handleKeydown = (event) => {
+  const isModifier = event.ctrlKey || event.metaKey;
+  const key = event.key.toLowerCase();
+
+  if (isModifier && key === 'z') {
+    event.preventDefault();
+    if (event.shiftKey) {
+      redo();
+    } else {
+      undo();
+    }
+    return;
+  }
+
+  if (isModifier && (key === 'y')) {
+    event.preventDefault();
+    redo();
+    return;
+  }
+  
   if (event.key === 'Escape') {
     event.preventDefault();
     handleClose();
@@ -293,7 +547,8 @@ const loadBaseImage = () => {
       canvas.width = image.width;
       canvas.height = image.height;
       canvasContext.value = canvas.getContext('2d');
-    });    
+       resetHistory();
+    });   
   };
   image.onerror = () => {
     console.error('Не удалось загрузить базовый снимок для режима карандаша');
@@ -316,6 +571,9 @@ watch(selectedTextId, (id) => {
 });
 
 watch([textColor, textSize, isTextBold], ([color, size, bold]) => {
+  if (isApplyingHistory.value) {
+    return;
+  }  
   if (!selectedTextId.value) {
     return;
   }
@@ -324,15 +582,23 @@ watch([textColor, textSize, isTextBold], ([color, size, bold]) => {
   if (!entry) {
     return;
   }
-
+  if (entry.color === color && entry.size === size && entry.bold === bold) {
+    return;
+  }
   entry.color = color;
   entry.size = size;
   entry.bold = bold;
+  scheduleHistorySave(false);  
 });
 
 onMounted(() => {
   previousHtmlOverflow = document.documentElement.style.overflow;
   previousBodyOverflow = document.body.style.overflow;
+  if (historySaveHandle) {
+    clearTimeout(historySaveHandle);
+    historySaveHandle = null;
+  }
+  pendingCanvasCapture = false;  
   document.documentElement.style.overflow = 'hidden';
   document.body.style.overflow = 'hidden';
   window.addEventListener('keydown', handleKeydown);
@@ -423,12 +689,44 @@ onBeforeUnmount(() => {
             type="button"
             :class="[
               'pencil-overlay__tool-button',
+              { 'pencil-overlay__tool-button--active': currentTool === 'marker' }
+            ]"
+            title="Маркер"
+            @click="currentTool = 'marker'"
+          >
+            🖍️
+          </button>          
+          <button
+            type="button"
+            :class="[
+              'pencil-overlay__tool-button',
               { 'pencil-overlay__tool-button--active': currentTool === 'text' }
             ]"
             title="Текст"
             @click="currentTool = 'text'"
           >
             T
+          </button>
+        </div>
+      </div>
+      <div class="pencil-overlay__section">
+        <span class="pencil-overlay__section-title">Действия</span>
+        <div class="pencil-overlay__action-buttons">
+          <button
+            type="button"
+            class="pencil-overlay__action-button"
+            :disabled="!canUndo"
+            @click="undo"
+          >
+            ↶ Отмена
+          </button>
+          <button
+            type="button"
+            class="pencil-overlay__action-button"
+            :disabled="!canRedo"
+            @click="redo"
+          >
+            Повтор ↷
           </button>
         </div>
       </div>
@@ -446,6 +744,21 @@ onBeforeUnmount(() => {
             type="range"
             min="1"
             max="24"
+          />
+        </label>
+      </div>
+      <div class="pencil-overlay__section">
+        <span class="pencil-overlay__section-title">Маркер</span>
+        <p class="pencil-overlay__helper-text">
+          Цвет маркера совпадает с цветом карандаша.
+        </p>
+        <label class="pencil-overlay__control">
+          <span>Толщина: {{ markerSize }} px</span>
+          <input
+            v-model.number="markerSize"
+            type="range"
+            :min="MARKER_MIN_SIZE"
+            :max="MARKER_MAX_SIZE"
           />
         </label>
       </div>
@@ -501,9 +814,13 @@ onBeforeUnmount(() => {
   border-radius: 0;
   overflow: hidden;
   pointer-events: auto;
+  outline: none;  
 }
 
 .pencil-overlay__board--brush {
+  cursor: crosshair;
+}
+.pencil-overlay__board--marker {
   cursor: crosshair;
 }
 
@@ -515,7 +832,8 @@ onBeforeUnmount(() => {
   display: block;
   width: 100%;
   height: 100%;
-  touch-action: none;  
+  touch-action: none;
+  outline: none;
 }
 
 .pencil-overlay__text {
@@ -601,6 +919,10 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 8px;
 }
+.pencil-overlay__action-buttons {
+  display: flex;
+  gap: 8px;
+}
 
 .pencil-overlay__tool-button {
   flex: 1;
@@ -612,12 +934,35 @@ onBeforeUnmount(() => {
   cursor: pointer;
   transition: background 0.2s ease, box-shadow 0.2s ease;
 }
+.pencil-overlay__action-button {
+  flex: 1;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: rgba(248, 250, 252, 0.85);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.pencil-overlay__action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
 
 .pencil-overlay__tool-button--active {
   background: #0f62fe;
   color: #ffffff;
   border-color: rgba(15, 98, 254, 0.8);
   box-shadow: 0 16px 30px rgba(15, 98, 254, 0.35);
+}
+.pencil-overlay__action-button:not(:disabled):hover,
+.pencil-overlay__action-button:not(:disabled):focus-visible {
+  background: #0f62fe;
+  color: #ffffff;
+  border-color: rgba(15, 98, 254, 0.8);
+  box-shadow: 0 16px 30px rgba(15, 98, 254, 0.25);
 }
 
 .pencil-overlay__control {
@@ -650,4 +995,10 @@ onBeforeUnmount(() => {
   width: 16px;
   height: 16px;
 }
+
+.pencil-overlay__helper-text {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}  
 </style>
