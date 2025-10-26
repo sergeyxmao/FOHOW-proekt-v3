@@ -140,23 +140,6 @@ watch(
   }
 )
 
-// Новый код (с исправлением)
-
-watch(textareaValue, (newValue) => {
-  // Получаем текущий текст из хранилища
-  const currentStoreText = getNoteEntryInfo(note.value.entries?.[note.value.selectedDate]).text
-
-  // Если новый текст не отличается от того, что уже в хранилище, ничего не делаем
-  if (newValue === currentStoreText) {
-    return
-  }
-
-  // Если текст действительно изменился (например, пользователь ввёл его), обновляем хранилище
-  cardsStore.updateCardNote(props.card.id, (mutableNote) => {
-    setNoteEntryValue(mutableNote, mutableNote.selectedDate, newValue)
-  })
-})
-
 function shiftMonth(delta) {
   const nextDate = new Date(viewDate.value.getFullYear(), viewDate.value.getMonth() + delta, 1)
   viewDate.value = nextDate
@@ -182,6 +165,19 @@ function setColor(color) {
 
 function handleTextareaBlur() {
   textareaFocused.value = false
+
+  // Получаем текущий текст из хранилища, чтобы избежать лишних обновлений
+  const currentStoreText = getNoteEntryInfo(note.value.entries?.[note.value.selectedDate]).text
+  if (textareaValue.value === currentStoreText) {
+    return // Если текст не изменился, ничего не делаем
+  }
+
+  // Сохраняем измененный текст в хранилище
+  cardsStore.updateCardNote(props.card.id, (mutableNote) => {
+    setNoteEntryValue(mutableNote, mutableNote.selectedDate, textareaValue.value)
+  })
+
+  // Сохраняем действие в историю
   historyStore.setActionMetadata('update', `Обновлена заметка карточки "${props.card.text}"`)
   historyStore.saveStateSoon()
 }
