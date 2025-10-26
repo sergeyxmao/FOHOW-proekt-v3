@@ -32,6 +32,26 @@ const textInput = ref(null);
 const isLargeCard = computed(() => {
   return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 494;
 });
+const noteState = computed(() => props.card.note || null);
+const hasNotes = computed(() => {
+  const entries = noteState.value?.entries;
+  if (!entries || typeof entries !== 'object') {
+    return false;
+  }
+  return Object.values(entries).some(entry => typeof entry?.text === 'string' && entry.text.trim());
+});
+const isNoteVisible = computed(() => Boolean(noteState.value?.visible));
+const noteButtonClasses = computed(() => ({
+  'card-note-btn': true,
+  'has-notes': hasNotes.value,
+  'is-active': isNoteVisible.value
+}));
+const noteButtonTitle = computed(() => {
+  if (isNoteVisible.value) {
+    return 'Скрыть заметку';
+  }
+  return hasNotes.value ? 'Открыть заметку' : 'Добавить заметку';
+});  
 const cardStyle = computed(() => {
   const strokeWidth = Number.isFinite(props.card.strokeWidth) ? props.card.strokeWidth : 2;
   const baseFill = props.card.fill || '#ffffff';
@@ -168,7 +188,8 @@ const updateValue = (event, field) => {
       'connecting': isConnecting,
       'editing': isEditing,
       'card--large': isLargeCard,
-      'card--gold': card.type === 'gold'
+      'card--gold': card.type === 'gold',
+      'note-active': isNoteVisible
     }"
     :style="cardStyle"
     @click="handleCardClick"
@@ -179,14 +200,6 @@ const updateValue = (event, field) => {
       class="card-header"
       :style="{ backgroundColor: card.headerBg || 'rgb(93, 139, 244)' }"
     >
-      <button
-        class="card-note-btn"
-        type="button"
-        title="Добавить заметку"
-        @click="handleAddNoteClick"
-      >
-        📝
-      </button>      
       <input
         v-if="isEditing"
         ref="textInput"
@@ -266,8 +279,19 @@ const updateValue = (event, field) => {
         v-if="card.bodyHTML"
         class="card-body-html"
         v-html="card.bodyHTML"
-      ></div>    </div>
-    
+      ></div>
+    </div>
+
+    <div class="card-controls">
+      <button
+        :class="noteButtonClasses"
+        type="button"
+        :title="noteButtonTitle"
+        @click="handleAddNoteClick"
+      >
+        📝
+      </button>
+    </div>    
     <!-- Значки -->
     <div v-if="card.showSlfBadge" class="slf-badge visible">SLF</div>
     <div v-if="card.showFendouBadge" class="fendou-badge visible">奋斗</div>
@@ -392,32 +416,51 @@ const updateValue = (event, field) => {
   font-weight: 900;
   font-size: 30px;
 }
+.card-controls {
+  margin-top: auto;
+  padding: 12px 18px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 .card-note-btn {
-  position: absolute;
-  top: 8px;
-  right: 42px;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.18);
-  color: #fff;
-  font-size: 16px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.12);
+  color: #111827;
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease, transform 0.15s ease;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
 }
 
 .card-note-btn:hover {
-  background: rgba(0, 0, 0, 0.25);
-  transform: translateY(-1px);
+  background: rgba(15, 23, 42, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
 }
 
 .card-note-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
+}
+
+.card-note-btn.has-notes {
+  background: rgba(59, 130, 246, 0.18);
+  color: #1d4ed8;
+}
+
+.card-note-btn.is-active {
+  background: rgba(234, 88, 12, 0.22);
+  color: #b91c1c;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.35);
 }
 
 .card-close-btn {
