@@ -1598,6 +1598,15 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
                 'line--balance-highlight': path.highlightType === 'balance',
                 'line--pv-highlight': path.highlightType === 'pv'
               }
+    <a
+      class="marketing-watermark"
+      href="https://t.me/MarketingFohow"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Открыть Telegram-канал MarketingFohow"
+    >
+      @MarketingFohow
+    </a>              
             ]"
             marker-start="url(#marker-dot)"
             marker-end="url(#marker-dot)"
@@ -1849,4 +1858,38 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     color: var(--line-color, currentColor);
   }
 }
+
+.marketing-watermark {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  z-index: 5000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f62fe;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 0.2px;
+  text-decoration: none;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  pointer-events: auto;
+  user-select: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.marketing-watermark:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.2);
+}
+
+.marketing-watermark:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+}  
 </style>
