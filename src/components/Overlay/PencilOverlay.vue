@@ -120,7 +120,6 @@ const boardStyle = computed(() => ({
   left: `${props.bounds.left}px`,
   width: `${canvasWidth.value}px`,
   height: `${canvasHeight.value}px`,
-  backgroundImage: `url(${props.snapshot})`
   backgroundImage: `url(${props.snapshot})`,
   transform: `scale(${zoomScale.value})`,
   transformOrigin: 'top left'  
