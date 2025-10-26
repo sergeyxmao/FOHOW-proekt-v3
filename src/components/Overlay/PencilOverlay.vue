@@ -281,15 +281,19 @@ const loadBaseImage = () => {
     canvasWidth.value = image.width;
     canvasHeight.value = image.height;
 
-    const canvas = drawingCanvasRef.value;
-    if (!canvas) {
-      return;
-    }
-
-    canvas.width = image.width;
-    canvas.height = image.height;
-    canvasContext.value = canvas.getContext('2d');
     isReady.value = true;
+
+    nextTick(() => {
+      const canvas = drawingCanvasRef.value;
+      if (!canvas) {
+        console.error('Не удалось получить ссылку на холст режима карандаша после инициализации');
+        return;
+      }
+
+      canvas.width = image.width;
+      canvas.height = image.height;
+      canvasContext.value = canvas.getContext('2d');
+    });    
   };
   image.onerror = () => {
     console.error('Не удалось загрузить базовый снимок для режима карандаша');
