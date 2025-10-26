@@ -377,31 +377,71 @@ export function adjustViewDate(viewDate, offset) {
   return `${next.getFullYear()}-${`${next.getMonth() + 1}`.padStart(2, '0')}-01`;
 }
 
-export function updateNoteOffsets(note, cardRect) {
+export function updateNoteOffsets(note, cardRect, options = {}) {
   if (!note || !cardRect) {
     return;
   }
-  note.offsetX = note.x - cardRect.left;
-  note.offsetY = note.y - cardRect.top;
+
+  const scale = Number.isFinite(options.scale) && options.scale > 0 ? options.scale : 1;
+
+  const nextOffsetX = (note.x - cardRect.left) / scale;
+  const nextOffsetY = (note.y - cardRect.top) / scale;
+
+  note.offsetX = Number.isFinite(nextOffsetX) ? nextOffsetX : 0;
+  note.offsetY = Number.isFinite(nextOffsetY) ? nextOffsetY : 0;
 }
 
-export function applyCardRectToNote(note, cardRect) {
+export function applyCardRectToNote(note, cardRect, options = {}) {
   if (!note || !cardRect) {
     return;
   }
-  const offsetX = Number.isFinite(note.offsetX) ? note.offsetX : 15 + (cardRect.width || 0);
-  const offsetY = Number.isFinite(note.offsetY) ? note.offsetY : 0;
+
+  const {
+    scale: rawScale = 1,
+    align = 'right',
+    gap: rawGap = 15,
+    forceAlign = false
+  } = options;
+
+  const scale = Number.isFinite(rawScale) && rawScale > 0 ? rawScale : 1;
+  const gap = Number.isFinite(rawGap) ? rawGap : 15;
   const cardHeight = Number.isFinite(cardRect.height) ? cardRect.height : null;
   const fallbackHeight = clampSize(note.height, MIN_NOTE_HEIGHT, DEFAULT_NOTE_HEIGHT);
+  const fallbackWidth = clampSize(note.width, MIN_NOTE_WIDTH, DEFAULT_NOTE_WIDTH);
 
-  if (cardHeight !== null && note.offsetX === null && note.offsetY === null) {
+  const hadInitialOffsets = Number.isFinite(note.offsetX) && Number.isFinite(note.offsetY);
+
+  if (cardHeight !== null && !hadInitialOffsets) {
     const preferredHeight = Math.max(cardHeight, DEFAULT_NOTE_HEIGHT);
     note.height = clampSize(preferredHeight, MIN_NOTE_HEIGHT, fallbackHeight);
   } else if (!Number.isFinite(note.height)) {
     note.height = fallbackHeight;
   }
-  note.x = cardRect.left + offsetX;
-  note.y = cardRect.top + offsetY;
+
+  if (!Number.isFinite(note.width)) {
+    note.width = fallbackWidth;
+  }
+
+  let baseOffsetX = Number.isFinite(note.offsetX) ? note.offsetX : null;
+  let baseOffsetY = Number.isFinite(note.offsetY) ? note.offsetY : null;
+
+  if (forceAlign || !Number.isFinite(baseOffsetX)) {
+    const cardWidth = Number.isFinite(cardRect.width) ? cardRect.width : 0;
+    if (align === 'left') {
+      baseOffsetX = -(fallbackWidth + gap);
+    } else {
+      baseOffsetX = cardWidth + gap;
+    }
+    note.offsetX = baseOffsetX;
+  }
+
+  if (forceAlign || !Number.isFinite(baseOffsetY)) {
+    baseOffsetY = 0;
+    note.offsetY = baseOffsetY;
+  }
+
+  note.x = cardRect.left + baseOffsetX * scale;
+  note.y = cardRect.top + baseOffsetY * scale;
 }
 
 export function ensureSelectedDate(note, fallbackDate) {
@@ -430,12 +470,58 @@ export function getCardNotesSummary(cards) {
   if (!Array.isArray(cards)) {
     return [];
   }
+  
   return cards
-    .filter(card => hasAnyEntry(card.note))
-    .map(card => ({
-      id: card.id,
-      title: card.text || 'Без названия'
-    }));
+    .map(card => {
+      const note = ensureNoteStructure(card.note);
+      if (!note || !note.entries || typeof note.entries !== 'object') {
+        return null;
+      }
+
+      const entries = Object.keys(note.entries)
+        .map(dateKey => {
+          const info = getNoteEntryInfo(note.entries[dateKey]);
+          if (!info.text || !info.text.trim()) {
+            return null;
+          }
+
+          const normalizedDate = normalizeYMD(dateKey);
+          if (!normalizedDate) {
+            return null;
+          }
+
+          const dayNumber = Number.parseInt(normalizedDate.slice(-2), 10);
+          const color = note.colors?.[normalizedDate] || note.highlightColor || NOTE_COLORS[0];
+
+          return {
+            date: normalizedDate,
+            day: Number.isFinite(dayNumber) ? dayNumber : normalizedDate,
+            label: Number.isFinite(dayNumber) ? `${dayNumber}` : normalizedDate,
+            color
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => {
+          const valueA = typeof a.day === 'number' ? a.day : Number.POSITIVE_INFINITY;
+          const valueB = typeof b.day === 'number' ? b.day : Number.POSITIVE_INFINITY;
+          if (valueA === valueB) {
+            return a.date.localeCompare(b.date);
+          }
+          return valueA - valueB;
+        });
+
+      if (!entries.length) {
+        return null;
+      }
+
+      return {
+        id: card.id,
+        title: card.text || 'Без названия',
+        highlightColor: note.highlightColor || NOTE_COLORS[0],
+        entries
+      };
+    })
+    .filter(Boolean);
 }
 
 export function pruneEmptyNote(note) {
