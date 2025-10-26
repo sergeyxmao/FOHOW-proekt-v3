@@ -18,6 +18,10 @@ const props = defineProps({
         typeof value.height === 'number'
       );
     }
+  },
+  isModernTheme: {
+    type: Boolean,
+    default: false    
   }
 });
 
@@ -36,7 +40,7 @@ const currentTool = ref('brush');
 const brushColor = ref('#ff4757');
 const brushSize = ref(4);
 const markerSize = ref(60);
-const markerOpacity = ref(0.35);
+const markerOpacity = ref(0.1);
 const eraserSize = ref(24);
 const textColor = ref('#111827');
 const textSize = ref(24);
@@ -62,6 +66,7 @@ const selectionMoveStartPoint = ref(null);
 const selectionInitialRect = ref(null);
 const selectionInitialTextPositions = ref([]);
 const selectionMoveState = ref(null);
+const pointerPosition = ref(null);
 
 const ERASER_MIN_SIZE = 4;
 const ERASER_MAX_SIZE = 80;
@@ -113,7 +118,19 @@ const selectionStyle = computed(() => {
 });
 
 const markerOpacityPercent = computed(() => Math.round(markerOpacity.value * 100));
+const showEraserPreview = computed(() => currentTool.value === 'eraser' && Boolean(pointerPosition.value));
+const eraserPreviewStyle = computed(() => {
+  if (!showEraserPreview.value || !pointerPosition.value) {
+    return null;
+  }
 
+  return {
+    width: `${eraserSize.value}px`,
+    height: `${eraserSize.value}px`,
+    top: `${pointerPosition.value.y}px`,
+    left: `${pointerPosition.value.x}px`
+  };
+});
 const panelStyle = computed(() => {
   const offset = 16;
   const top = Math.max(props.bounds.top - offset, offset);
@@ -124,6 +141,10 @@ const panelStyle = computed(() => {
     left: `${left}px`
   };
 });
+const panelClasses = computed(() => [
+  'pencil-overlay__panel',
+  props.isModernTheme ? 'pencil-overlay__panel--modern' : 'pencil-overlay__panel--classic'
+]);  
 const hexToRgba = (hex, alpha) => {
   if (typeof hex !== 'string') {
     return `rgba(0, 0, 0, ${alpha})`;
@@ -747,6 +768,13 @@ const handleTextKeydown = (event, id) => {
     finishText(id);
   }
 };
+const updatePointerPreview = (point) => {
+  if (currentTool.value === 'eraser') {
+    pointerPosition.value = { ...point };
+  } else {
+    pointerPosition.value = null;
+  }
+};
 
 const handleCanvasPointerDown = (event) => {
   if (event.button !== 0) return;
@@ -771,6 +799,7 @@ const handleCanvasPointerDown = (event) => {
   if (isDrawingToolActive.value) {
     canvas.setPointerCapture(event.pointerId);
     activePointerId.value = event.pointerId;
+    updatePointerPreview(point);    
     startStroke(point);
   } else if (currentTool.value === 'text') {
     createTextEntry(point);
@@ -781,6 +810,7 @@ const handleCanvasPointerMove = (event) => {
 
   const point = getCanvasPoint(event);
   if (!point) return;
+  updatePointerPreview(point);  
   if (isSelectionToolActive.value) {
     if (selectionPointerId.value !== event.pointerId) {
       return;
@@ -831,7 +861,9 @@ const handleCanvasPointerUp = (event) => {
 const handleCanvasPointerLeave = (event) => {
   const canvas = drawingCanvasRef.value;
   if (!canvas) return;
-
+  if (currentTool.value === 'eraser') {
+    pointerPosition.value = null;
+  }
   if (isSelectionToolActive.value) {
     if (selectionPointerId.value !== event.pointerId) {
       return;
@@ -852,6 +884,7 @@ const handleCanvasPointerLeave = (event) => {
   if (activePointerId.value !== event.pointerId) return;
 
   finishStroke();
+  pointerPosition.value = null;  
 };
 
 const exportFinalImage = () => {
@@ -942,8 +975,14 @@ const loadBaseImage = () => {
       canvas.width = image.width;
       canvas.height = image.height;
       canvasContext.value = canvas.getContext('2d');
-       resetHistory();
-    });   
+      if (canvasContext.value) {
+        canvasContext.value.setTransform(1, 0, 0, 1, 0, 0);
+        canvasContext.value.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      pointerPosition.value = null;
+      cancelSelection();
+      resetHistory();
+    });
   };
   image.onerror = () => {
     console.error('Не удалось загрузить базовый снимок для режима карандаша');
@@ -989,10 +1028,14 @@ watch([textColor, textSize, isTextBold], ([color, size, bold]) => {
 onMounted(() => {
   previousHtmlOverflow = document.documentElement.style.overflow;
   previousBodyOverflow = document.body.style.overflow;
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+  window.addEventListener('keydown', handleKeydown);  
   if (historySaveHandle) {
     clearTimeout(historySaveHandle);
     historySaveHandle = null;
   }
+  loadBaseImage();  
   scheduleHistorySave(false);
 });
 
@@ -1000,10 +1043,9 @@ watch(currentTool, (tool, previous) => {
   if (previous === 'selection' && tool !== 'selection') {
     cancelSelection();
   }
-  document.documentElement.style.overflow = 'hidden';
-  document.body.style.overflow = 'hidden';
-  window.addEventListener('keydown', handleKeydown);
-  loadBaseImage();
+  if (tool !== 'eraser') {
+    pointerPosition.value = null;
+  }
 });
 
 onBeforeUnmount(() => {
@@ -1031,6 +1073,11 @@ onBeforeUnmount(() => {
         @pointercancel="handleCanvasPointerLeave"
       ></canvas>
       <div
+        v-if="showEraserPreview && eraserPreviewStyle"
+        class="pencil-overlay__eraser-preview"
+        :style="eraserPreviewStyle"
+      ></div>      
+      <div
         v-for="entry in texts"
         :key="entry.id"
         :class="[
@@ -1057,7 +1104,7 @@ onBeforeUnmount(() => {
           @blur="() => finishText(entry.id)"
         ></textarea>
         <div v-else class="pencil-overlay__text-label">{{ entry.content || ' ' }}</div>
-      </div>
+      :class="panelClasses"
       <div
         v-if="selectionStyle"
         class="pencil-overlay__selection"
@@ -1154,10 +1201,12 @@ onBeforeUnmount(() => {
             :disabled="!canRedo"
             @click="redo"
           >
-            Повтор ↷
-          </button>
-        </div>
+          Повтор ↷
+        </button>
       </div>
+    </div>
+      
+    <div class="pencil-overlay__tool-settings">
 
       <div
         v-if="currentTool === 'brush'"
@@ -1183,9 +1232,10 @@ onBeforeUnmount(() => {
         class="pencil-overlay__section"
       >
         <span class="pencil-overlay__section-title">Маркер</span>
-        <p class="pencil-overlay__helper-text">
-          Цвет маркера совпадает с цветом карандаша.
-        </p>
+        <label class="pencil-overlay__control">
+          <span>Цвет</span>
+          <input v-model="brushColor" type="color" />
+        </label>
         <label class="pencil-overlay__control">
           <span>Толщина: {{ markerSize }} px</span>
           <input
@@ -1200,9 +1250,9 @@ onBeforeUnmount(() => {
           <input
             v-model.number="markerOpacity"
             type="range"
-            min="0.05"
-            max="1"
-            step="0.05"
+            min="0.01"
+            max="0.1"
+            step="0.01"
           />
         </label>        
       </div>
@@ -1258,6 +1308,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </div>
+</div>  
 </template>
 
 <style scoped>
@@ -1342,9 +1393,9 @@ onBeforeUnmount(() => {
   min-height: 48px;
   padding: 6px 8px;
   border-radius: 8px;
-  border: 1px solid rgba(148, 163, 184, 0.6);
+  border: 1px solid var(--overlay-control-border);
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.15);
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--overlay-control-bg);
   font: inherit;
   color: inherit;
   resize: none;
@@ -1358,25 +1409,59 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__panel {
+  --overlay-panel-bg: rgba(255, 255, 255, 0.94);
+  --overlay-panel-color: #111827;
+  --overlay-panel-title: #475569;
+  --overlay-button-bg: rgba(248, 250, 252, 0.85);
+  --overlay-button-border: rgba(148, 163, 184, 0.5);
+  --overlay-button-color: #111827;
+  --overlay-button-shadow: rgba(15, 98, 254, 0.25);
+  --overlay-close-color: #111827;
+  --overlay-control-border: rgba(148, 163, 184, 0.6);
+  --overlay-control-bg: rgba(255, 255, 255, 0.95);
+  --overlay-helper-color: #64748b;
+  --overlay-panel-shadow: 0 24px 50px rgba(15, 23, 42, 0.35);
+  --overlay-color-picker-border: none;
+  --overlay-color-picker-bg: transparent;  
   position: fixed;
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 18px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.35);
+  background: var(--overlay-panel-bg);
+  color: var(--overlay-panel-color);
+  box-shadow: var(--overlay-panel-shadow);
   pointer-events: auto;
   min-width: 220px;
 }
+.pencil-overlay__panel--modern {
+  --overlay-panel-bg: rgba(18, 27, 43, 0.94);
+  --overlay-panel-color: #e5f3ff;
+  --overlay-panel-title: #9cbef5;
+  --overlay-button-bg: rgba(32, 44, 68, 0.9);
+  --overlay-button-border: rgba(104, 171, 255, 0.45);
+  --overlay-button-color: #e5f3ff;
+  --overlay-button-shadow: rgba(12, 84, 196, 0.35);
+  --overlay-close-color: #e5f3ff;
+  --overlay-control-border: rgba(111, 163, 255, 0.5);
+  --overlay-control-bg: rgba(24, 36, 58, 0.9);
+  --overlay-helper-color: #afc8f8;
+  --overlay-panel-shadow: 0 26px 54px rgba(3, 8, 20, 0.6);
+  --overlay-color-picker-border: 1px solid rgba(104, 171, 255, 0.45);
+  --overlay-color-picker-bg: rgba(26, 38, 62, 0.85);
+}
 
+.pencil-overlay__panel--classic {
+  color: var(--overlay-panel-color);
+}
 .pencil-overlay__close {
   align-self: flex-end;
   border: none;
   background: transparent;
   font-size: 18px;
   cursor: pointer;
-  color: #111827;
+  color: var(--overlay-close-color);
   transition: transform 0.2s ease;
 }
 
@@ -1395,7 +1480,7 @@ onBeforeUnmount(() => {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #475569;
+  color: var(--overlay-panel-title);
 }
 
 .pencil-overlay__tool-buttons {
@@ -1409,20 +1494,22 @@ onBeforeUnmount(() => {
 
 .pencil-overlay__tool-button {
   flex: 1;
-  border: 1px solid rgba(148, 163, 184, 0.5);
+  border: 1px solid var(--overlay-button-border);
   border-radius: 12px;
   padding: 8px 12px;
-  background: rgba(248, 250, 252, 0.85);
+  background: var(--overlay-button-bg);
   font-size: 16px;
+  color: var(--overlay-button-color);  
   cursor: pointer;
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 .pencil-overlay__action-button {
   flex: 1;
-  border: 1px solid rgba(148, 163, 184, 0.5);
+  border: 1px solid var(--overlay-button-border);
   border-radius: 12px;
   padding: 8px 12px;
-  background: rgba(248, 250, 252, 0.85);
+  background: var(--overlay-button-bg);
+  color: var(--overlay-button-color);
   font-size: 14px;
   cursor: pointer;
   transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
@@ -1441,11 +1528,13 @@ onBeforeUnmount(() => {
   box-shadow: 0 16px 30px rgba(15, 98, 254, 0.35);
 }
 .pencil-overlay__action-button:not(:disabled):hover,
-.pencil-overlay__action-button:not(:disabled):focus-visible {
+.pencil-overlay__action-button:not(:disabled):focus-visible,
+.pencil-overlay__tool-button:not(:disabled):hover,
+.pencil-overlay__tool-button:not(:disabled):focus-visible {
   background: #0f62fe;
   color: #ffffff;
   border-color: rgba(15, 98, 254, 0.8);
-  box-shadow: 0 16px 30px rgba(15, 98, 254, 0.25);
+  box-shadow: 0 16px 30px var(--overlay-button-shadow);
 }
 
 .pencil-overlay__control {
@@ -1459,10 +1548,10 @@ onBeforeUnmount(() => {
 .pencil-overlay__control input[type="color"] {
   width: 36px;
   height: 36px;
-  border: none;
+  border: var(--overlay-color-picker-border);
   border-radius: 10px;
   padding: 0;
-  background: transparent;
+  background: var(--overlay-color-picker-bg);
   cursor: pointer;
 }
 
@@ -1482,6 +1571,21 @@ onBeforeUnmount(() => {
 .pencil-overlay__helper-text {
   margin: 0;
   font-size: 12px;
-  color: #64748b;
-}  
+  color: var(--overlay-helper-color);
+}
+
+.pencil-overlay__tool-settings {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.pencil-overlay__eraser-preview {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(15, 98, 254, 0.7);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.25);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+} 
 </style>
