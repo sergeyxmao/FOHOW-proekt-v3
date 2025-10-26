@@ -1274,8 +1274,8 @@ watch(isCollapsed, (collapsed) => {
 
 .template-menu__list {
   position: absolute;
-  right: 0;
-  top: calc(100% + 10px);
+  right: 100%;
+  margin-right: 12px;  top: calc(100% + 10px);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1293,7 +1293,7 @@ watch(isCollapsed, (collapsed) => {
 .template-menu__list--drop-up {
   bottom: calc(100% + 10px);
   top: auto;
-  transform-origin: bottom right;
+  transform-origin: bottom left;
 }
 .template-menu__list::-webkit-scrollbar {
   width: 6px;
