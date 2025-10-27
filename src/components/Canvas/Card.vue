@@ -156,7 +156,26 @@ const cancelEditing = () => {
   isEditing.value = false;
   editText.value = props.card.text;
 };
-
+const calculations = computed(() => {
+  const source = props.card?.calculated || {};
+  return {
+    L: Number.isFinite(source.L) ? source.L : 0,
+    R: Number.isFinite(source.R) ? source.R : 0,
+    total: Number.isFinite(source.total) ? source.total : 0,
+    cycles: Number.isFinite(source.cycles) ? source.cycles : 0,
+    stage: Number.isFinite(source.stage) ? source.stage : 0,
+    toNext: Number.isFinite(source.toNext) ? source.toNext : 0
+  };
+});
+const balanceDisplay = computed(() => `${calculations.value.L} / ${calculations.value.R}`);
+const totalDisplay = computed(() => calculations.value.total);
+const cyclesDisplay = computed(() => calculations.value.cycles);
+const stageDisplay = computed(() => calculations.value.stage);
+const toNextDisplay = computed(() => calculations.value.toNext);
+const coinFillColor = computed(() => {
+  const fill = props.card?.coinFill;
+  return typeof fill === 'string' && fill.trim() ? fill : '#3d85c6';
+});
 const handleKeyDown = (event) => {
   if (event.key === 'Enter') {
     finishEditing();
@@ -177,6 +196,10 @@ const handleDelete = (event) => {
 
 // Обработчик для обновления значений
 const updateValue = (event, field) => {
+  if (field !== 'pv') {
+    return;
+  }
+  
   const newValue = event.target.textContent.trim();
   cardsStore.updateCard(props.card.id, { [field]: newValue });
 };
@@ -235,7 +258,7 @@ const updateValue = (event, field) => {
       <!-- Иконка монетки и PV -->
       <div class="card-row pv-row">
         <svg class="coin-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="50" cy="50" r="45" :fill="card.coinFill || '#ffd700'" stroke="#DAA520" stroke-width="5"/>
+          <circle cx="50" cy="50" r="45" :fill="coinFillColor" stroke="#DAA520" stroke-width="5"/>
         </svg>
         <span
           class="value pv-value"
@@ -248,34 +271,31 @@ const updateValue = (event, field) => {
       <!-- Баланс -->
       <div class="card-row">
         <span class="label">Баланс:</span>
-        <span
-          class="value"
-          contenteditable="true"
-          @blur="updateValue($event, 'balance')"
-        >          {{ card.balance || '0 / 0' }}
-        </span>
+        <span class="value">{{ balanceDisplay }}</span>
       </div>
       
-      <!-- Актив-заказы PV -->
-      <div class="card-row">
-        <span class="label">Актив-заказы PV:</span>
-        <span
-          class="value"
-          contenteditable="true"
-          @blur="updateValue($event, 'activePv')"
-        >          {{ card.activePv || '0 / 0' }}
-        </span>
+      <!-- Всего баллов -->
+       <div class="card-row">
+        <span class="label">Всего баллов:</span>
+        <span class="value">{{ totalDisplay }}</span>
       </div>
       
-      <!-- Цикл -->
+      <!-- Циклы -->
       <div class="card-row">
-        <span class="label">Цикл:</span>
-        <span
-          class="value"
-          contenteditable="true"
-          @blur="updateValue($event, 'cycle')"
-        >          {{ card.cycle || '0' }}
-        </span>
+        <span class="label">Циклы:</span>
+        <span class="value">{{ cyclesDisplay }}</span>
+      </div>
+
+      <!-- Этап -->
+      <div class="card-row">
+        <span class="label">Этап:</span>
+        <span class="value">{{ stageDisplay }}</span>
+      </div>
+
+      <!-- До следующего -->
+      <div class="card-row">
+        <span class="label">До следующего:</span>
+        <span class="value">{{ toNextDisplay }}</span>
       </div>
 
       <div
