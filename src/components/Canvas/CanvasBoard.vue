@@ -6,7 +6,7 @@ import { useCardsStore } from '../../stores/cards';
 import { useConnectionsStore } from '../../stores/connections';
 import { useCanvasStore } from '../../stores/canvas';
 import Card from './Card.vue';
-import NoteWindow from './NoteWindow.vue';  
+import NoteWindow from './NoteWindow.vue';
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { getHeaderColorRgb } from '../../utils/constants';
 import { batchDeleteCards } from '../../utils/historyOperations';
@@ -14,6 +14,8 @@ import { usePanZoom } from '../../composables/usePanZoom';
 import { useHistoryStore } from '../../stores/history.js';
 import { useViewportStore } from '../../stores/viewport.js';
 import { useNotesStore } from '../../stores/notes.js';
+import { Engine } from '../../utils/calculationEngine';
+
 import {
   ensureNoteStructure,
   applyCardRectToNote,
@@ -119,7 +121,44 @@ const getCurrentZoom = () => {
 };  
 const cardsWithVisibleNotes = computed(() => cards.value.filter(card => card.note && card.note.visible));
 const notesSummary = computed(() => getCardNotesSummary(cards.value));
-  
+
+const engineInput = computed(() => {
+  const normalizedCards = cards.value.map(card => ({
+    id: card.id,
+    x: Number.isFinite(card.x) ? card.x : 0,
+    y: Number.isFinite(card.y) ? card.y : 0,
+    width: Number.isFinite(card.width) ? card.width : 0,
+    height: Number.isFinite(card.height) ? card.height : 0,
+    bodyHTML: typeof card.bodyHTML === 'string' ? card.bodyHTML : '',
+    pv: typeof card.pv === 'string' ? card.pv : ''
+  }));
+
+  const normalizedLines = connections.value.map(connection => ({
+    startId: connection.from,
+    endId: connection.to,
+    startSide: connection.fromSide,
+    endSide: connection.toSide
+  }));
+
+  return {
+    cards: normalizedCards,
+    lines: normalizedLines
+  };
+});
+
+watch(engineInput, (state) => {
+  if (!state.cards.length) {
+    cardsStore.resetCalculationResults();
+    return;
+  }
+
+  try {
+    const { result, meta } = Engine.recalc(state);
+    cardsStore.applyCalculationResults({ result, meta });
+  } catch (error) {
+    console.error('Engine recalculation error:', error);
+  }
+}, { immediate: true });  
 const GUIDE_SNAP_THRESHOLD = 10;
 
 const resetActiveGuides = () => {
