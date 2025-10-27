@@ -9,13 +9,138 @@ import {
   normalizeNoteForExport,
   normalizeYMD
 } from '../utils/noteUtils'
+const COIN_FULL_COLOR = '#ffd700'
+const COIN_EMPTY_COLOR = '#3d85c6'
+
+const DEFAULT_CALCULATION = Object.freeze({
+  L: 0,
+  R: 0,
+  total: 0,
+  cycles: 0,
+  stage: 0,
+  toNext: 0
+})
+
+function toFiniteNumber(value) {
+  return Number.isFinite(value) ? value : 0
+}
+
+function normalizeCalculation(source = {}) {
+  return {
+    L: toFiniteNumber(source.L),
+    R: toFiniteNumber(source.R),
+    total: toFiniteNumber(source.total),
+    cycles: toFiniteNumber(source.cycles),
+    stage: toFiniteNumber(source.stage),
+    toNext: toFiniteNumber(source.toNext)
+  }
+}
+
+function formatBalance(calculation) {
+  return `${calculation.L} / ${calculation.R}`
+}
+
+function cloneMeta(meta = {}) {
+  const childrenEntries = Object.entries(meta.children || {})
+  const normalizedChildren = childrenEntries.reduce((acc, [parentId, sides]) => {
+    acc[parentId] = {
+      left: Array.from(sides?.left ?? []),
+      right: Array.from(sides?.right ?? [])
+    }
+    return acc
+  }, {})
+
+  return {
+    parentOf: { ...(meta.parentOf || {}) },
+    children: normalizedChildren,
+    pv: { ...(meta.pv || {}) },
+    isFull: { ...(meta.isFull || {}) }
+  }
+}
+
+function createEmptyMeta() {
+  return cloneMeta({})
+}
+
+function applyCalculationDefaults(card) {
+  const calculation = normalizeCalculation(DEFAULT_CALCULATION)
+  card.calculated = calculation
+  card.balance = formatBalance(calculation)
+  card.total = calculation.total
+  card.cycle = String(calculation.cycles)
+  card.stage = calculation.stage
+  card.toNext = calculation.toNext
+  card.coinFill = typeof card.coinFill === 'string' ? card.coinFill : COIN_EMPTY_COLOR
+  card.calculatedIsFull = false
+}
+
+function updateCardCalculation(card, calculationSource, isFullFlag, options = {}) {
+  if (!card) {
+    return false
+  }
+
+  const calculation = normalizeCalculation(calculationSource)
+  const balanceText = formatBalance(calculation)
+  const cycleText = String(calculation.cycles)
+  const { preserveCoin = false } = options
+
+  const previous = card.calculated || DEFAULT_CALCULATION
+  const hasCalculationChanges = ['L', 'R', 'total', 'cycles', 'stage', 'toNext']
+    .some(key => previous[key] !== calculation[key])
+
+  if (hasCalculationChanges) {
+    card.calculated = calculation
+  } else if (!card.calculated) {
+    card.calculated = calculation
+  }
+
+  let changed = hasCalculationChanges
+
+  if (card.balance !== balanceText) {
+    card.balance = balanceText
+    changed = true
+  }
+
+  if (card.total !== calculation.total) {
+    card.total = calculation.total
+    changed = true
+  }
+
+  if (card.cycle !== cycleText) {
+    card.cycle = cycleText
+    changed = true
+  }
+
+  if (card.stage !== calculation.stage) {
+    card.stage = calculation.stage
+    changed = true
+  }
+
+  if (card.toNext !== calculation.toNext) {
+    card.toNext = calculation.toNext
+    changed = true
+  }
+
+  const desiredCoinFill = isFullFlag ? COIN_FULL_COLOR : COIN_EMPTY_COLOR
+  if (!preserveCoin || typeof card.coinFill !== 'string') {
+    if (card.coinFill !== desiredCoinFill) {
+      card.coinFill = desiredCoinFill
+      changed = true
+    }
+  }
+
+  card.calculatedIsFull = Boolean(isFullFlag)
+
+  return changed
+}
 
 const GOLD_BODY_GRADIENT = 'linear-gradient(135deg, #fff6d1 0%, #ffd700 45%, #fff2a8 100%)'
 
 export const useCardsStore = defineStore('cards', {
   state: () => ({
     cards: [],
-    selectedCardIds: []
+    selectedCardIds: [],
+    calculationMeta: createEmptyMeta()
   }),
   
   getters: {
@@ -33,6 +158,26 @@ export const useCardsStore = defineStore('cards', {
   },
   
   actions: {
+    applyCalculationResults(payload = {}) {
+      const { result = {}, meta = {} } = payload
+      const normalizedMeta = cloneMeta(meta)
+
+      this.calculationMeta = normalizedMeta
+
+      this.cards.forEach(card => {
+        const calculation = result?.[card.id] ?? DEFAULT_CALCULATION
+        const isFull = Boolean(normalizedMeta.isFull?.[card.id])
+        updateCardCalculation(card, calculation, isFull)
+      })
+    },
+
+    resetCalculationResults() {
+      this.calculationMeta = createEmptyMeta()
+      this.cards.forEach(card => {
+        updateCardCalculation(card, DEFAULT_CALCULATION, false)
+      })
+    },
+    
     updateCard(cardId, updates = {}, options = {}) {
       const card = this.cards.find(c => c.id === cardId)
       if (!card) {
@@ -178,7 +323,7 @@ export const useCardsStore = defineStore('cards', {
         balance: '0 / 0',
         activePv: '0 / 0',
         cycle: '0',
-        coinFill: '#ffd700',
+        coinFill: COIN_EMPTY_COLOR,
         
         // Значки
         showSlfBadge: false,
@@ -193,6 +338,7 @@ export const useCardsStore = defineStore('cards', {
         // Переданные вручную свойства (например, x, y) имеют наивысший приоритет
         ...cardData
       };
+      applyCalculationDefaults(newCard)
       
       this.cards.push(newCard);
       
@@ -317,7 +463,8 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
     loadCards(cardsData) {
       this.cards = []
       this.selectedCardIds = []
- 
+      this.calculationMeta = createEmptyMeta()
+
       const typeDefaults = {
         large: { width: 494, height: 364 },
         gold: { width: 494, height: 364 },
@@ -364,10 +511,13 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
           colorIndex,
           selected: false,
           pv: cardData.pv || '330/330pv',
-          balance: cardData.balance || '0 / 0',
+          balance: typeof cardData.balance === 'string' ? cardData.balance : '0 / 0',
           activePv: cardData.activePv || '0 / 0',
-          cycle: cardData.cycle || '0',
-          coinFill: cardData.coinFill || '#ffd700',
+          cycle: typeof cardData.cycle === 'string' ? cardData.cycle : '0',
+          coinFill: typeof cardData.coinFill === 'string' ? cardData.coinFill : COIN_EMPTY_COLOR,
+          total: toFiniteNumber(cardData.total),
+          stage: toFiniteNumber(cardData.stage),
+          toNext: toFiniteNumber(cardData.toNext),
           showSlfBadge: Boolean(cardData.showSlfBadge),
           showFendouBadge: Boolean(cardData.showFendouBadge),
           rankBadge: cardData.rankBadge || null,
@@ -376,6 +526,21 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
           type: detectedType,
           note: noteState
         };
+        const calculationSource = {
+          L: toFiniteNumber(cardData.calculated?.L),
+          R: toFiniteNumber(cardData.calculated?.R),
+          total: toFiniteNumber(cardData.calculated?.total ?? cardData.total),
+          cycles: toFiniteNumber(cardData.calculated?.cycles ?? (
+            typeof cardData.cycle === 'string' ? Number.parseInt(cardData.cycle, 10) : cardData.cycles
+          )),
+          stage: toFiniteNumber(cardData.calculated?.stage ?? cardData.stage),
+          toNext: toFiniteNumber(cardData.calculated?.toNext ?? cardData.toNext)
+        }
+        const initialIsFull = typeof cardData.calculated?.isFull === 'boolean'
+          ? cardData.calculated.isFull
+          : Boolean(cardData.isFull)
+
+        updateCardCalculation(normalizedCard, calculationSource, initialIsFull, { preserveCoin: true })
 
         this.cards.push(normalizedCard)
       })
