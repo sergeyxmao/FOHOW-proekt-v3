@@ -1,7 +1,9 @@
 <script setup>
 import { ref, nextTick, computed } from 'vue';
 import { useCardsStore } from '../../stores/cards';
-
+import { parseActivePV } from '../../utils/activePv';
+import { calcStagesAndCycles } from '../../utils/calculationEngine';
+  
 const props = defineProps({
   card: {
     type: Object,
@@ -167,11 +169,72 @@ const calculations = computed(() => {
     toNext: Number.isFinite(source.toNext) ? source.toNext : 0
   };
 });
-const balanceDisplay = computed(() => `${calculations.value.L} / ${calculations.value.R}`);
-const totalDisplay = computed(() => calculations.value.total);
-const cyclesDisplay = computed(() => calculations.value.cycles);
-const stageDisplay = computed(() => calculations.value.stage);
-const toNextDisplay = computed(() => calculations.value.toNext);
+
+const activePvLocal = computed(() => {
+  const source = props.card?.activePvLocal ?? props.card?.activePv;
+  return parseActivePV(source);
+});
+
+const activePvAggregated = computed(() => {
+  const source = props.card?.activePvAggregated;
+  if (source && typeof source === 'object') {
+    return parseActivePV(source);
+  }
+  return activePvLocal.value;
+});
+
+const manualAdjustments = computed(() => {
+  const source =
+    props.card?.manualAdjustments ??
+    props.card?.manualBalance ??
+    props.card?.manualPv ??
+    null;
+  return parseActivePV(source);
+});
+
+const finalCalculation = computed(() => {
+  const base = calculations.value;
+  const active = activePvAggregated.value;
+  const manual = manualAdjustments.value;
+
+  const bonusLeft = active.left + manual.left;
+  const bonusRight = active.right + manual.right;
+  const bonusTotal = bonusLeft + bonusRight;
+
+  const left = base.L + bonusLeft;
+  const right = base.R + bonusRight;
+  const total = base.total + bonusTotal;
+  const stages = calcStagesAndCycles(total);
+
+  return {
+    L: left,
+    R: right,
+    total,
+    cycles: Number.isFinite(stages.cycles) ? stages.cycles : base.cycles,
+    stage: Number.isFinite(stages.stage) ? stages.stage : base.stage,
+    toNext: Number.isFinite(stages.toNext) ? stages.toNext : base.toNext
+  };
+});
+
+const balanceDisplay = computed(() => `${finalCalculation.value.L} / ${finalCalculation.value.R}`);
+const totalDisplay = computed(() => finalCalculation.value.total);
+const cyclesDisplay = computed(() => finalCalculation.value.cycles);
+const stageDisplay = computed(() => finalCalculation.value.stage);
+const toNextDisplay = computed(() => finalCalculation.value.toNext);
+
+const pvRemainder = computed(() => {
+  const pvMap = cardsStore.calculationMeta?.pv;
+  if (!pvMap) {
+    return 0;
+  }
+  const raw = pvMap[props.card.id];
+  if (!Number.isFinite(raw)) {
+    return 0;
+  }
+  const normalized = raw % 330;
+  const remainder = (330 - (normalized || 0)) % 330;
+  return remainder;
+});
 const coinFillColor = computed(() => {
   const fill = props.card?.coinFill;
   return typeof fill === 'string' && fill.trim() ? fill : '#3d85c6';
@@ -255,6 +318,14 @@ const updateValue = (event, field) => {
     
     <!-- Содержимое карточки -->
     <div class="card-body">
+       <div
+        class="active-pv-hidden"
+        aria-hidden="true"
+        :data-btnl="String(activePvAggregated.left)"
+        :data-btnr="String(activePvAggregated.right)"
+        :data-locall="String(activePvLocal.left)"
+        :data-localr="String(activePvLocal.right)"
+      ></div>     
       <!-- Иконка монетки и PV -->
       <div class="card-row pv-row">
         <svg class="coin-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -267,7 +338,52 @@ const updateValue = (event, field) => {
         >          {{ card.pv || '330/330pv' }}
         </span>
       </div>
-      
+ 
+      <div class="card-active-pv">
+        <div class="card-active-pv__summary">
+          <span class="card-active-pv__summary-label">Остаток PV:</span>
+          <span class="card-active-pv__summary-value">{{ pvRemainder }}</span>
+        </div>
+        <div class="card-active-pv__legs">
+          <div class="card-active-pv__leg" data-side="left">
+            <div class="card-active-pv__title">Левая ветка</div>
+            <div class="card-active-pv__stat">
+              <span class="card-active-pv__stat-label">Локально:</span>
+              <span class="card-active-pv__stat-value">{{ activePvLocal.left }}</span>
+            </div>
+            <div class="card-active-pv__stat">
+              <span class="card-active-pv__stat-label">Суммарно:</span>
+              <span class="card-active-pv__stat-value">{{ activePvAggregated.left }}</span>
+            </div>
+            <div class="card-active-pv__controls" data-role="active-pv-buttons" data-side="left">
+              <button type="button" class="active-pv-btn" data-side="left" data-delta="1">+1</button>
+              <button type="button" class="active-pv-btn" data-side="left" data-delta="-1">-1</button>
+              <button type="button" class="active-pv-btn" data-side="left" data-delta="10">+10</button>
+              <button type="button" class="active-pv-btn" data-side="left" data-delta="-10">-10</button>
+              <button type="button" class="active-pv-btn active-pv-btn--clear" data-side="left" data-action="clear">Очистить</button>
+            </div>
+          </div>
+          <div class="card-active-pv__leg" data-side="right">
+            <div class="card-active-pv__title">Правая ветка</div>
+            <div class="card-active-pv__stat">
+              <span class="card-active-pv__stat-label">Локально:</span>
+              <span class="card-active-pv__stat-value">{{ activePvLocal.right }}</span>
+            </div>
+            <div class="card-active-pv__stat">
+              <span class="card-active-pv__stat-label">Суммарно:</span>
+              <span class="card-active-pv__stat-value">{{ activePvAggregated.right }}</span>
+            </div>
+            <div class="card-active-pv__controls" data-role="active-pv-buttons" data-side="right">
+              <button type="button" class="active-pv-btn" data-side="right" data-delta="1">+1</button>
+              <button type="button" class="active-pv-btn" data-side="right" data-delta="-1">-1</button>
+              <button type="button" class="active-pv-btn" data-side="right" data-delta="10">+10</button>
+              <button type="button" class="active-pv-btn" data-side="right" data-delta="-10">-10</button>
+              <button type="button" class="active-pv-btn active-pv-btn--clear" data-side="right" data-action="clear">Очистить</button>
+            </div>
+          </div>
+        </div>
+      </div>
+     
       <!-- Баланс -->
       <div class="card-row">
         <span class="label">Баланс:</span>
@@ -720,4 +836,132 @@ const updateValue = (event, field) => {
   font-size: 26px;
   font-weight: 800;
 }
+
+.active-pv-hidden {
+  display: none;
+}
+
+.card-active-pv {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(15, 98, 254, 0.08);
+  border: 1px solid rgba(15, 98, 254, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  pointer-events: auto;
+}
+
+.card-active-pv__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #274690;
+}
+
+.card-active-pv__summary-value {
+  font-weight: 700;
+  font-size: 16px;
+  color: #0f62fe;
+}
+
+.card-active-pv__legs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
+
+.card-active-pv__leg {
+  flex: 1 1 0;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px dashed rgba(15, 98, 254, 0.25);
+  backdrop-filter: blur(4px);
+}
+
+.card-active-pv__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.card-active-pv__stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #334155;
+}
+
+.card-active-pv__stat-value {
+  font-weight: 600;
+  color: #0f62fe;
+}
+
+.card-active-pv__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.active-pv-btn {
+  border: 1px solid rgba(15, 98, 254, 0.25);
+  background: #fff;
+  color: #0f62fe;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.active-pv-btn:hover {
+  background: rgba(15, 98, 254, 0.12);
+}
+
+.active-pv-btn:active {
+  transform: translateY(1px);
+}
+
+.active-pv-btn--clear {
+  background: rgba(220, 53, 69, 0.08);
+  color: #c81e1e;
+  border-color: rgba(220, 53, 69, 0.24);
+}
+
+.active-pv-btn--clear:hover {
+  background: rgba(220, 53, 69, 0.14);
+}
+
+.card.card--balance-highlight {
+  animation: cardBalanceFlash 0.6s ease;
+  box-shadow: 0 0 0 3px rgba(15, 98, 254, 0.35), 0 12px 26px rgba(0, 0, 0, 0.18);
+}
+
+@keyframes cardBalanceFlash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(15, 98, 254, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(15, 98, 254, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(15, 98, 254, 0);
+  }
+}  
 </style>  
