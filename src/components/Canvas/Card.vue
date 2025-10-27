@@ -507,14 +507,13 @@ const updateValue = (event, field) => {
   font-size: 30px;
 }
 .card-controls {
-  margin-top: auto;
-  padding: 12px 18px 18px;
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
-  width: 100%;
-  align-self: stretch;  
+  gap: 12px; 
 }
 
 .card-note-btn {
@@ -601,7 +600,7 @@ const updateValue = (event, field) => {
 }
 
 .card-body {
-  padding: 16px;
+  padding: 16px 16px 56px;
   background: var(--card-body-gradient, var(--surface, #ffffff));
   border-radius: 0 0 16px 16px;
   display: flex;
@@ -611,6 +610,7 @@ const updateValue = (event, field) => {
   flex: 1 1 auto;
   width: 100%;
   box-sizing: border-box;
+  line-height: 1.3;  
 }
 .card--large .card-body,
 .card--gold .card-body {
@@ -644,7 +644,8 @@ const updateValue = (event, field) => {
   text-align: center;
   max-width: 100%;
   word-break: break-word;
-  overflow-wrap: anywhere;  
+  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 
 .value {
@@ -659,7 +660,8 @@ const updateValue = (event, field) => {
   text-align: center;
   max-width: 100%;
   word-break: break-word;
-  overflow-wrap: anywhere;  
+  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 
 .value:focus {
