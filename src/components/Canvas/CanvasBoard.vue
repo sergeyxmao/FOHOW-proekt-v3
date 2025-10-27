@@ -74,9 +74,14 @@ watch(zoomScale, (value) => {
   viewportStore.setZoomScale(value);
 }, { immediate: true });
 const canvasContentStyle = computed(() => {
+  const translateX = Number.isFinite(zoomTranslateX.value) ? zoomTranslateX.value : 0;
+  const translateY = Number.isFinite(zoomTranslateY.value) ? zoomTranslateY.value : 0;
+  const scale = Number.isFinite(zoomScale.value) && zoomScale.value > 0 ? zoomScale.value : 1;
+  
   const style = {
     width: `${stageConfig.value.width}px`,
-    height: `${stageConfig.value.height}px`
+    height: `${stageConfig.value.height}px`,
+    transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`
   };
 
   const step = Number.isFinite(gridStepRef.value) ? gridStepRef.value : 0;
@@ -1078,6 +1083,13 @@ const startDrawingLine = (cardId, side) => {
   selectedConnectionIds.value = [];
   connectionStart.value = { cardId, side };
   isDrawingLine.value = true;
+
+  const startCard = cards.value.find(card => card.id === cardId);
+  if (startCard) {
+    const startPoint = getPointCoords(startCard, side);
+    mousePosition.value = { x: startPoint.x, y: startPoint.y };
+  }
+  
   emit('update-connection-status', 'Рисование линии: кликните на соединительную точку другой карточки');
   console.log('Начало рисования линии:', connectionStart.value);
 };
