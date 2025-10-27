@@ -314,56 +314,6 @@ const updateValue = (event, field) => {
         :data-locall="String(activePvLocal.left)"
         :data-localr="String(activePvLocal.right)"
       ></div>
-      <div class="card-row">
-        <span class="label">Баланс:</span>
-        <span class="value">{{ balanceDisplay }}</span>
-      </div>
-
-      <div class="card-row">
-        <span class="label">Актив-заказы:</span>
-        <span class="value">{{ activeOrdersDisplay }}</span>
-      </div>
-
-      <div class="card-active-controls">
-        <div class="card-active-controls__group" data-role="active-pv-buttons" data-side="left">
-          <button type="button" class="active-pv-btn" data-side="left" data-delta="1">+1</button>
-          <button type="button" class="active-pv-btn" data-side="left" data-delta="10">+10</button>
-          <button
-            type="button"
-            class="active-pv-btn active-pv-btn--clear"
-            data-side="left"
-            data-action="clear"
-            aria-label="Очистить левую ветку"
-            title="Очистить левую ветку"
-          >
-            🗑️
-          </button>
-          <button type="button" class="active-pv-btn" data-side="left" data-delta="-10">-10</button>
-          <button type="button" class="active-pv-btn" data-side="left" data-delta="-1">-1</button>
-        </div>
-        <div class="card-active-controls__divider" aria-hidden="true">/</div>
-        <div class="card-active-controls__group" data-role="active-pv-buttons" data-side="right">
-          <button type="button" class="active-pv-btn" data-side="right" data-delta="1">+1</button>
-          <button type="button" class="active-pv-btn" data-side="right" data-delta="10">+10</button>
-          <button
-            type="button"
-            class="active-pv-btn active-pv-btn--clear"
-            data-side="right"
-            data-action="clear"
-            aria-label="Очистить правую ветку"
-            title="Очистить правую ветку"
-          >
-            🗑️
-          </button>
-          <button type="button" class="active-pv-btn" data-side="right" data-delta="-10">-10</button>
-          <button type="button" class="active-pv-btn" data-side="right" data-delta="-1">-1</button>
-        </div>
-      </div>
-
-      <div class="card-row">
-        <span class="label">Этап / цикл:</span>
-        <span class="value">{{ stageDisplay }} / {{ cyclesDisplay }}</span>
-      </div>      
       <!-- Иконка монетки и PV -->
       <div class="card-row pv-row">
         <svg class="coin-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -376,6 +326,37 @@ const updateValue = (event, field) => {
         >
           {{ card.pv || '330/330pv' }}
         </span>
+      </div>
+      
+      <div class="card-row">
+        <span class="label">Баланс:</span>
+        <span class="value">{{ balanceDisplay }}</span>
+      </div>
+
+      <div class="card-row">
+        <span class="label">Актив-заказы:</span>
+        <span class="value">{{ activeOrdersDisplay }}</span>
+      </div>
+
+      <div class="card-active-controls" data-role="active-pv-buttons">
+        <button type="button" class="active-pv-btn" data-side="left" data-delta="1">+1</button>
+        <button type="button" class="active-pv-btn" data-side="left" data-delta="10">+10</button>
+        <button
+          type="button"
+          class="active-pv-btn active-pv-btn--clear"
+          data-action="clear-all"
+          aria-label="Очистить обе ветки"
+          title="Очистить обе ветки"
+        >
+          🗑️
+        </button>
+        <button type="button" class="active-pv-btn" data-side="right" data-delta="10">+10</button>
+        <button type="button" class="active-pv-btn" data-side="right" data-delta="1">+1</button>
+      </div>
+
+      <div class="card-row">
+        <span class="label">Цикл/этап:</span>
+        <span class="value">{{ cyclesDisplay }} / {{ stageDisplay }}</span>
       </div>
 
       <div
@@ -810,10 +791,10 @@ const updateValue = (event, field) => {
 .card-active-controls {
   width: 100%;
   display: flex;
-  flex-direction: column;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
   padding: 12px 14px;
   border-radius: 14px;
   background: rgba(15, 98, 254, 0.08);
@@ -821,38 +802,10 @@ const updateValue = (event, field) => {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
-.card-active-controls__group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.card-active-controls__divider {
-  font-weight: 700;
-  color: #0f62fe;
-  font-size: 18px;
-  line-height: 1;
-  padding: 0 4px;  
-}
-
-.card-active-controls__group[data-side='left'],
-.card-active-controls__group[data-side='right'] {
-  flex: 1 1 auto;
-  justify-content: center;
-}
-
 @media (min-width: 560px) {
   .card-active-controls {
-    justify-content: space-between;
-  }
+    justify-content: center;
 
-  .card-active-controls__group[data-side='left'],
-  .card-active-controls__group[data-side='right'] {
-    justify-content: flex-start;
-  }
-
-  .card-active-controls__divider {
-    padding: 0 8px;
   }
 }
 
