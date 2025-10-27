@@ -319,11 +319,29 @@ const handleActivePvButtonClick = (event) => {
   const cardId = cardElement.dataset.cardId;
   const action = button.dataset.action || 'delta';
   const direction = button.dataset.dir === 'right' ? 'right' : 'left';
-  const step = Number(button.dataset.step);
+  let step = Number(button.dataset.step);
   const card = cardsStore.cards.find(item => item.id === cardId);
 
   if (!cardId || !card) {
     return;
+  }
+  if (!Number.isFinite(step) || step === 0) {
+    return;
+  }
+
+  if (step < 0) {
+    const hiddenElement = cardElement.querySelector('.active-pv-hidden');
+    const remainderKey = direction === 'right' ? 'remainderr' : 'remainderl';
+    const parsedRemainder = Number(hiddenElement?.dataset?.[remainderKey]);
+    const remainder = Number.isFinite(parsedRemainder) ? parsedRemainder : 0;
+
+    if (-step > remainder) {
+      step = -remainder;
+    }
+
+    if (step === 0) {
+      return;
+    }
   }
 
   const meta = cardsStore.calculationMeta || {};
@@ -331,7 +349,7 @@ const handleActivePvButtonClick = (event) => {
 
   if (action === 'clear-all') {
     result = applyActivePvClear({ cards: cardsStore.cards, meta, cardId });
-  } else if (Number.isFinite(step) && step !== 0) {
+  } else {
     result = applyActivePvDelta({
       cards: cardsStore.cards,
       meta,
@@ -339,10 +357,6 @@ const handleActivePvButtonClick = (event) => {
       side: direction,
       delta: step
     });
-  } else if (Number.isFinite(step) && step === 0) {
-    return;
-  } else {
-    return;
   }
 
   const updates = result?.updates || {};
