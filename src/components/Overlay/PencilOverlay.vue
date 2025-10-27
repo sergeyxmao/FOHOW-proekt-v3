@@ -846,9 +846,12 @@ const handleCanvasPointerDown = (event) => {
   if (isDrawingToolActive.value) {
     canvas.setPointerCapture(event.pointerId);
     activePointerId.value = event.pointerId;
-    updatePointerPreview(point);    
+    updatePointerPreview(точка);
     startStroke(point);
   } else if (currentTool.value === 'text') {
+    если (typeof event.preventDefault === 'function') {
+      событие.preventDefault();
+    }    
     createTextEntry(point);
   }
 };
