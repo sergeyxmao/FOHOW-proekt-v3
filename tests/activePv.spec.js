@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import test from 'node:test';
+import assert from 'node:assert/strict';
 import { applyActivePvDelta } from '../src/utils/activePv.js';
 
 function createState(overrides = {}) {
@@ -36,85 +37,83 @@ function createCard(id, stateOverrides = {}) {
   };
 }
 
-describe('applyActivePvDelta', () => {
-  it('распространяет дельту вверх по структуре, если порог 330 не достигнут', () => {
-    const cards = [
-      createCard('child', { activePv: { left: 100, right: 0 } }),
-      createCard('parent')
-    ];
+test('applyActivePvDelta распространяет дельту вверх по структуре, если порог 330 не достигнут', () => {
+  const cards = [
+    createCard('child', { activePv: { left: 100, right: 0 } }),
+    createCard('parent')
+  ];
 
-    const meta = {
-      parentOf: {
-        child: { parentId: 'parent', side: 'left' }
-      }
-    };
+  const meta = {
+    parentOf: {
+      child: { parentId: 'parent', side: 'left' }
+    }
+  };
 
-    const { updates, changedIds } = applyActivePvDelta({
-      cards,
-      meta,
-      cardId: 'child',
-      side: 'left',
-      delta: 50
-    });
-
-    expect(changedIds).toContain('child');
-    expect(changedIds).toContain('parent');
-
-    const childUpdate = updates.child;
-    expect(childUpdate.activePvState.activePv.left).toBe(150);
-    expect(childUpdate.activePvLocalBalance.left).toBe(0);
-    expect(childUpdate.activePvBalance.left).toBe(0);
-
-    const parentUpdate = updates.parent;
-    expect(parentUpdate.activePvState.balance.left).toBe(50);
-    expect(parentUpdate.activePvLocalBalance.left).toBe(0);
+  const { updates, changedIds } = applyActivePvDelta({
+    cards,
+    meta,
+    cardId: 'child',
+    side: 'left',
+    delta: 50
   });
 
-  it('фиксирует локальный баланс при достижении 330 единиц без подъёма вверх', () => {
-    const cards = [
-      createCard('child', { activePv: { left: 325, right: 0 } }),
-      createCard('parent')
-    ];
+  assert.ok(changedIds.includes('child'));
+  assert.ok(changedIds.includes('parent'));
 
-    const meta = {
-      parentOf: {
-        child: { parentId: 'parent', side: 'left' }
-      }
-    };
+  const childUpdate = updates.child;
+  assert.strictEqual(childUpdate.activePvState.activePv.left, 150);
+  assert.strictEqual(childUpdate.activePvLocalBalance.left, 0);
+  assert.strictEqual(childUpdate.activePvBalance.left, 0);
 
-    const { updates, changedIds } = applyActivePvDelta({
-      cards,
-      meta,
-      cardId: 'child',
-      side: 'left',
-      delta: 10
-    });
+  const parentUpdate = updates.parent;
+  assert.strictEqual(parentUpdate.activePvState.balance.left, 50);
+  assert.strictEqual(parentUpdate.activePvLocalBalance.left, 0);
+});
 
-    expect(changedIds).toEqual(['child']);
+test('applyActivePvDelta фиксирует локальный баланс при достижении 330 единиц без подъёма вверх', () => {
+  const cards = [
+    createCard('child', { activePv: { left: 325, right: 0 } }),
+    createCard('parent')
+  ];
 
-    const childUpdate = updates.child;
-    expect(childUpdate.activePvState.activePv.left).toBe(5);
-    expect(childUpdate.activePvLocalBalance.left).toBe(1);
-    expect(childUpdate.activePvPacks).toBe(1);
-    expect(updates.parent).toBeUndefined();
+  const meta = {
+    parentOf: {
+      child: { parentId: 'parent', side: 'left' }
+    }
+  };
+
+  const { updates, changedIds } = applyActivePvDelta({
+    cards,
+    meta,
+    cardId: 'child',
+    side: 'left',
+    delta: 10
   });
 
-  it('обнуляет остаток при переходе через 329 и накапливает локальный баланс', () => {
-    const cards = [createCard('node', { activePv: { left: 329, right: 150 } })];
+  assert.deepStrictEqual(changedIds, ['child']);
 
-    const { updates, changedIds } = applyActivePvDelta({
-      cards,
-      cardId: 'node',
-      side: 'left',
-      delta: 1
-    });
+  const childUpdate = updates.child;
+  assert.strictEqual(childUpdate.activePvState.activePv.left, 5);
+  assert.strictEqual(childUpdate.activePvLocalBalance.left, 1);
+  assert.strictEqual(childUpdate.activePvPacks, 1);
+  assert.strictEqual(updates.parent, undefined);
+});
 
-    expect(changedIds).toEqual(['node']);
-
-    const update = updates.node;
-    expect(update.activePvState.activePv.left).toBe(0);
-    expect(update.activePvLocalBalance.left).toBe(1);
-    expect(update.activePvLocal.left).toBe(0);
-    expect(update.activePvLocal.right).toBe(150);
+test('applyActivePvDelta обнуляет остаток при переходе через 329 и накапливает локальный баланс', () => {
+  const cards = [createCard('node', { activePv: { left: 329, right: 150 } })];
+  
+  const { updates, changedIds } = applyActivePvDelta({
+    cards,
+    cardId: 'node',
+    side: 'left',
+    delta: 1
   });
+
+  assert.deepStrictEqual(changedIds, ['node']);
+
+  const update = updates.node;
+  assert.strictEqual(update.activePvState.activePv.left, 0);
+  assert.strictEqual(update.activePvLocalBalance.left, 1);
+  assert.strictEqual(update.activePvLocal.left, 0);
+  assert.strictEqual(update.activePvLocal.right, 150);  
 });
