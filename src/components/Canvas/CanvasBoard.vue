@@ -779,7 +779,7 @@ const card = findCardById(cardId);
     return;
   }
   const scale = getCurrentZoom();
-  const alignSide = options.align === 'right' ? 'right' : 'left';
+  const alignSide = options.align === 'left' ? 'left' : 'right';
   const shouldForceAlign = Boolean(options.forceAlign)
     || !Number.isFinite(card.note.offsetX)
     || !Number.isFinite(card.note.offsetY);
@@ -812,7 +812,7 @@ const openNoteForCard = (card, options = {}) => {
     const scale = getCurrentZoom();
     applyCardRectToNote(note, rect, {
       scale,
-      align: 'left',
+      align: 'right',
       forceAlign: Boolean(options?.forceAlign)
     });
     updateNoteOffsets(note, rect, { scale });
@@ -821,7 +821,7 @@ const openNoteForCard = (card, options = {}) => {
     note.viewDate = `${note.selectedDate.slice(0, 7)}-01`;
   }
   note.visible = true;
-  syncNoteWindowWithCard(card.id, { forceAlign: Boolean(options?.forceAlign), align: 'left' });
+  syncNoteWindowWithCard(card.id, { forceAlign: Boolean(options?.forceAlign), align: 'right' });
 };
 
 const closeNoteForCard = (card, options = { saveToHistory: false }) => {
