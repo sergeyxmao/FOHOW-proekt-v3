@@ -217,22 +217,12 @@ const finalCalculation = computed(() => {
 });
 
 const balanceDisplay = computed(() => `${finalCalculation.value.L} / ${finalCalculation.value.R}`);
+const activeOrdersDisplay = computed(
+  () => `${activePvAggregated.value.left} / ${activePvAggregated.value.right}`
+);  
 const cyclesDisplay = computed(() => finalCalculation.value.cycles);
 const stageDisplay = computed(() => finalCalculation.value.stage);
 
-const pvRemainder = computed(() => {
-  const pvMap = cardsStore.calculationMeta?.pv;
-  if (!pvMap) {
-    return 0;
-  }
-  const raw = pvMap[props.card.id];
-  if (!Number.isFinite(raw)) {
-    return 0;
-  }
-  const normalized = raw % 330;
-  const remainder = (330 - (normalized || 0)) % 330;
-  return remainder;
-});
 const coinFillColor = computed(() => {
   const fill = props.card?.coinFill;
   return typeof fill === 'string' && fill.trim() ? fill : '#3d85c6';
@@ -267,6 +257,7 @@ const updateValue = (event, field) => {
 </script>
 
 <template>
+  <div  
     class="card"
     :data-card-id="card.id"    
     :class="{
@@ -315,14 +306,64 @@ const updateValue = (event, field) => {
     
     <!-- Содержимое карточки -->
     <div class="card-body">
-       <div
+      <div
         class="active-pv-hidden"
         aria-hidden="true"
         :data-btnl="String(activePvAggregated.left)"
         :data-btnr="String(activePvAggregated.right)"
         :data-locall="String(activePvLocal.left)"
         :data-localr="String(activePvLocal.right)"
-      ></div>     
+      ></div>
+      <div class="card-row">
+        <span class="label">Баланс:</span>
+        <span class="value">{{ balanceDisplay }}</span>
+      </div>
+
+      <div class="card-row">
+        <span class="label">Актив-заказы:</span>
+        <span class="value">{{ activeOrdersDisplay }}</span>
+      </div>
+
+      <div class="card-active-controls">
+        <div class="card-active-controls__group" data-role="active-pv-buttons" data-side="left">
+          <button type="button" class="active-pv-btn" data-side="left" data-delta="1">+1</button>
+          <button type="button" class="active-pv-btn" data-side="left" data-delta="10">+10</button>
+          <button
+            type="button"
+            class="active-pv-btn active-pv-btn--clear"
+            data-side="left"
+            data-action="clear"
+            aria-label="Очистить левую ветку"
+            title="Очистить левую ветку"
+          >
+            🗑️
+          </button>
+          <button type="button" class="active-pv-btn" data-side="left" data-delta="-10">-10</button>
+          <button type="button" class="active-pv-btn" data-side="left" data-delta="-1">-1</button>
+        </div>
+        <div class="card-active-controls__divider" aria-hidden="true">/</div>
+        <div class="card-active-controls__group" data-role="active-pv-buttons" data-side="right">
+          <button type="button" class="active-pv-btn" data-side="right" data-delta="1">+1</button>
+          <button type="button" class="active-pv-btn" data-side="right" data-delta="10">+10</button>
+          <button
+            type="button"
+            class="active-pv-btn active-pv-btn--clear"
+            data-side="right"
+            data-action="clear"
+            aria-label="Очистить правую ветку"
+            title="Очистить правую ветку"
+          >
+            🗑️
+          </button>
+          <button type="button" class="active-pv-btn" data-side="right" data-delta="-10">-10</button>
+          <button type="button" class="active-pv-btn" data-side="right" data-delta="-1">-1</button>
+        </div>
+      </div>
+
+      <div class="card-row">
+        <span class="label">Этап / цикл:</span>
+        <span class="value">{{ stageDisplay }} / {{ cyclesDisplay }}</span>
+      </div>      
       <!-- Иконка монетки и PV -->
       <div class="card-row pv-row">
         <svg class="coin-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -332,65 +373,9 @@ const updateValue = (event, field) => {
           class="value pv-value"
           contenteditable="true"
           @blur="updateValue($event, 'pv')"
-        >          {{ card.pv || '330/330pv' }}
+        >
+          {{ card.pv || '330/330pv' }}
         </span>
-      </div>
- 
-      <div class="card-active-pv">
-        <div class="card-active-pv__summary">
-          <span class="card-active-pv__summary-label">Остаток PV:</span>
-          <span class="card-active-pv__summary-value">{{ pvRemainder }}</span>
-        </div>
-        <div class="card-active-pv__legs">
-          <div class="card-active-pv__leg" data-side="left">
-            <div class="card-active-pv__title">Левая ветка</div>
-            <div class="card-active-pv__stat">
-              <span class="card-active-pv__stat-label">Локально:</span>
-              <span class="card-active-pv__stat-value">{{ activePvLocal.left }}</span>
-            </div>
-            <div class="card-active-pv__stat">
-              <span class="card-active-pv__stat-label">Суммарно:</span>
-              <span class="card-active-pv__stat-value">{{ activePvAggregated.left }}</span>
-            </div>
-            <div class="card-active-pv__controls" data-role="active-pv-buttons" data-side="left">
-              <button type="button" class="active-pv-btn" data-side="left" data-delta="1">+1</button>
-              <button type="button" class="active-pv-btn" data-side="left" data-delta="-1">-1</button>
-              <button type="button" class="active-pv-btn" data-side="left" data-delta="10">+10</button>
-              <button type="button" class="active-pv-btn" data-side="left" data-delta="-10">-10</button>
-              <button type="button" class="active-pv-btn active-pv-btn--clear" data-side="left" data-action="clear">Очистить</button>
-            </div>
-          </div>
-          <div class="card-active-pv__leg" data-side="right">
-            <div class="card-active-pv__title">Правая ветка</div>
-            <div class="card-active-pv__stat">
-              <span class="card-active-pv__stat-label">Локально:</span>
-              <span class="card-active-pv__stat-value">{{ activePvLocal.right }}</span>
-            </div>
-            <div class="card-active-pv__stat">
-              <span class="card-active-pv__stat-label">Суммарно:</span>
-              <span class="card-active-pv__stat-value">{{ activePvAggregated.right }}</span>
-            </div>
-            <div class="card-active-pv__controls" data-role="active-pv-buttons" data-side="right">
-              <button type="button" class="active-pv-btn" data-side="right" data-delta="1">+1</button>
-              <button type="button" class="active-pv-btn" data-side="right" data-delta="-1">-1</button>
-              <button type="button" class="active-pv-btn" data-side="right" data-delta="10">+10</button>
-              <button type="button" class="active-pv-btn" data-side="right" data-delta="-10">-10</button>
-              <button type="button" class="active-pv-btn active-pv-btn--clear" data-side="right" data-action="clear">Очистить</button>
-            </div>
-          </div>
-        </div>
-      </div>
-     
-      <!-- Баланс -->
-      <div class="card-row">
-        <span class="label">Баланс:</span>
-        <span class="value">{{ balanceDisplay }}</span>
-      </div>
-
-      <!-- Этап и цикл -->
-      <div class="card-row">
-        <span class="label">Этап/Цикл:</span>
-        <span class="value">{{ stageDisplay }}/{{ cyclesDisplay }}</span
       </div>
 
       <div
@@ -822,79 +807,53 @@ const updateValue = (event, field) => {
   display: none;
 }
 
-.card-active-pv {
+.card-active-controls {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
   padding: 12px 14px;
   border-radius: 14px;
   background: rgba(15, 98, 254, 0.08);
   border: 1px solid rgba(15, 98, 254, 0.12);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  pointer-events: auto;
 }
 
-.card-active-pv__summary {
+.card-active-controls__group {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: #274690;
+  gap: 8px;
 }
 
-.card-active-pv__summary-value {
+.card-active-controls__divider {
   font-weight: 700;
-  font-size: 16px;
   color: #0f62fe;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;  
 }
 
-.card-active-pv__legs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  width: 100%;
+.card-active-controls__group[data-side='left'],
+.card-active-controls__group[data-side='right'] {
+  flex: 1 1 auto;
+  justify-content: center;
 }
 
-.card-active-pv__leg {
-  flex: 1 1 0;
-  min-width: 180px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px dashed rgba(15, 98, 254, 0.25);
-  backdrop-filter: blur(4px);
-}
+@media (min-width: 560px) {
+  .card-active-controls {
+    justify-content: space-between;
+  }
 
-.card-active-pv__title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f172a;
-}
+  .card-active-controls__group[data-side='left'],
+  .card-active-controls__group[data-side='right'] {
+    justify-content: flex-start;
+  }
 
-.card-active-pv__stat {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-  color: #334155;
-}
-
-.card-active-pv__stat-value {
-  font-weight: 600;
-  color: #0f62fe;
-}
-
-.card-active-pv__controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
+  .card-active-controls__divider {
+    padding: 0 8px;
+  }
 }
 
 .active-pv-btn {
@@ -902,13 +861,19 @@ const updateValue = (event, field) => {
   background: #fff;
   color: #0f62fe;
   border-radius: 8px;
-  padding: 4px 8px;
+  padding: 6px 10px;
+  min-width: 44px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
   pointer-events: auto;
   user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1;  
 }
 
 .active-pv-btn:hover {
@@ -923,6 +888,7 @@ const updateValue = (event, field) => {
   background: rgba(220, 53, 69, 0.08);
   color: #c81e1e;
   border-color: rgba(220, 53, 69, 0.24);
+  min-width: 40px;  
 }
 
 .active-pv-btn--clear:hover {
