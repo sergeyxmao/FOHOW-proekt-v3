@@ -275,21 +275,21 @@ export const useCardsStore = defineStore('cards', {
       // Пресеты для разных типов лицензий
       const presets = {
         large: {
-          width: 494,
+          width: 543.4,
           height: 364,
           pv: '330/330pv',
           text: generateLicenseNumber(),
           historyText: 'Создана большая лицензия'
         },
         small: {
-          width: 380,
+          width: 418,
           height: 280,
           pv: '330/330pv',
           text: 'Малая лицензия',
           historyText: 'Создана малая лицензия'
            },
         gold: {
-          width: 494,
+          width: 543.4,
           height: 364,
           pv: '330/330pv',
           text: generateLicenseNumber(),
@@ -466,9 +466,9 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
       this.calculationMeta = createEmptyMeta()
 
       const typeDefaults = {
-        large: { width: 494, height: 364 },
-        gold: { width: 494, height: 364 },
-        small: { width: 380, height: 280 }
+        large: { width: 543.4, height: 364 },
+        gold: { width: 543.4, height: 364 },
+        small: { width: 418, height: 280 }
       }     
       cardsData.forEach(cardData => {
         const generateLicenseNumber = () => {
@@ -478,7 +478,7 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
         }
 
         const detectedType = cardData.type
-          || ((cardData.width && cardData.width >= 494) || (cardData.height && cardData.height >= 364)
+          || ((cardData.width && cardData.width >= 543.4) || (cardData.height && cardData.height >= 364)
             ? 'large'
             : 'small')
 
