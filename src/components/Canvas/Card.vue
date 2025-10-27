@@ -836,10 +836,10 @@ const updateValue = (event, field) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 12px 14px;
-  border-radius: 14px;
+  gap: 8px;
+  flex-wrap: nowrap;
+  padding: 10px 12px;
+  border-radius: 12px;
   background: rgba(15, 98, 254, 0.08);
   border: 1px solid rgba(15, 98, 254, 0.12);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
@@ -847,7 +847,7 @@ const updateValue = (event, field) => {
 .active-pv-controls__group {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: nowrap;
 }
 
@@ -862,10 +862,10 @@ const updateValue = (event, field) => {
   border: 1px solid rgba(15, 98, 254, 0.25);
   background: #fff;
   color: #0f62fe;
-  border-radius: 8px;
-  padding: 6px 10px;
-  min-width: 44px;
-  font-size: 13px;
+  border-radius: 6px;
+  padding: 4px 8px;
+  min-width: 36px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
