@@ -909,7 +909,7 @@ const startDrag = (event, cardId) => {
     hasMoved: false,
     movingIds,
     primaryCardId: primaryEntry ? primaryEntry.id : null,
-    prim    primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
+    primprimaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
     axisLock: null
   };
   aryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null  };
