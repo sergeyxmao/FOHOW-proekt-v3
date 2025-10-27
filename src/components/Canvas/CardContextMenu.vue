@@ -46,7 +46,7 @@ const clearAllBadges = () => {
 
 // Обработчики для размера
 const toggleSize = () => {
-  const newWidth = props.card.width >= 494 ? 380 : 494;
+  const newWidth = props.card.width >= 543.4 ? 418 : 543.4;
   cardsStore.updateCard(props.card.id, {
     width: newWidth
   });
@@ -127,8 +127,8 @@ const handleClickOutside = () => {
           class="context-menu-item"
           @click="toggleSize"
         >
-          <span class="menu-icon">{{ card.width >= 494 ? '📐' : '📏' }}</span>
-          <span>{{ card.width >= 494 ? 'Обычный размер' : 'Большой размер' }}</span>
+          <span class="menu-icon">{{ card.width >= 543.4 ? '📐' : '📏' }}</span>
+          <span>{{ card.width >= 543.4 ? 'Обычный размер' : 'Большой размер' }}</span>
         </div>
       </div>
     </div>
