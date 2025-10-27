@@ -208,7 +208,9 @@ const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
 
     const remainderLeft = Math.max(0, Number(data?.remainder?.left ?? 0));
     const remainderRight = Math.max(0, Number(data?.remainder?.right ?? 0));
-
+    const localBalanceLeft = Math.max(0, Number(data?.localBalance?.left ?? 0));
+    const localBalanceRight = Math.max(0, Number(data?.localBalance?.right ?? 0));
+    
     const unitsLeft = Math.max(0, Number(data?.units?.left ?? 0));
     const unitsRight = Math.max(0, Number(data?.units?.right ?? 0));
     const unitsTotal = unitsLeft + unitsRight;
@@ -247,6 +249,16 @@ const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
         total: unitsTotal,
         remainderLeft,
         remainderRight
+      };
+    }
+    if (!card.activePvLocalBalance
+      || card.activePvLocalBalance.left !== localBalanceLeft
+      || card.activePvLocalBalance.right !== localBalanceRight
+      || card.activePvLocalBalance.total !== localBalanceLeft + localBalanceRight) {
+      updates.activePvLocalBalance = {
+        left: localBalanceLeft,
+        right: localBalanceRight,
+        total: localBalanceLeft + localBalanceRight
       };
     }
 
