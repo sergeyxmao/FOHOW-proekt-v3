@@ -69,14 +69,21 @@ const selectionInitialRect = ref(null);
 const selectionInitialTextPositions = ref([]);
 const selectionMoveState = ref(null);
 const pointerPosition = ref(null);
-
+const isMiddleButtonPanning = ref(false);
+const middlePointerId = ref(null);
+  
 const ERASER_MIN_SIZE = 4;
 const ERASER_MAX_SIZE = 80;
 
 const MAX_HISTORY_LENGTH = 50;
 const MARKER_MIN_SIZE = 30;
 const MARKER_MAX_SIZE = 100;
-
+  
+const isZoomedIn = computed(() => {
+  const minZoom = minZoomScale.value || 1;
+  return (zoomScale.value || 1) > minZoom + 0.0001;
+});
+  
 const boardClasses = computed(() => {
   const classes = ['pencil-overlay__board'];
 
@@ -96,7 +103,9 @@ const boardClasses = computed(() => {
     default:
       classes.push('pencil-overlay__board--brush');
   }
-
+  if (isMiddleButtonPanning.value && isZoomedIn.value) {
+    classes.push('pencil-overlay__board--grabbing');
+  }
   return classes;
 });
 const boardStyle = computed(() => ({
@@ -780,8 +789,19 @@ const updatePointerPreview = (point) => {
     pointerPosition.value = null;
   }
 };
-
+const resetMiddleButtonPan = () => {
+  isMiddleButtonPanning.value = false;
+  middlePointerId.value = null;
+};
 const handleCanvasPointerDown = (event) => {
+  if (event.button === 1) {
+    if (isZoomedIn.value) {
+      isMiddleButtonPanning.value = true;
+      middlePointerId.value = event.pointerId;
+    }
+    return;
+  }
+  
   if (event.button !== 0) return;
 
   const point = getCanvasPoint(event);
@@ -836,6 +856,10 @@ const handleCanvasPointerMove = (event) => {
 };
 
 const handleCanvasPointerUp = (event) => {
+  if (event.button === 1 && middlePointerId.value === event.pointerId) {
+    resetMiddleButtonPan();
+    return;
+  }  
   const canvas = drawingCanvasRef.value;
   if (!canvas) return;
 
@@ -864,6 +888,10 @@ const handleCanvasPointerUp = (event) => {
 };
 
 const handleCanvasPointerLeave = (event) => {
+  if (middlePointerId.value === event.pointerId) {
+    resetMiddleButtonPan();
+  }
+  
   const canvas = drawingCanvasRef.value;
   if (!canvas) return;
   if (currentTool.value === 'eraser') {
@@ -1051,6 +1079,11 @@ watch(currentTool, (tool, previous) => {
   }
   if (tool !== 'eraser') {
     pointerPosition.value = null;
+  }
+});
+watch(isZoomedIn, (zoomed) => {
+  if (!zoomed) {
+    resetMiddleButtonPan();
   }
 });
 
@@ -1371,10 +1404,10 @@ const handleBoardWheel = (event) => {
 }
 
 .pencil-overlay__board--brush {
-  cursor: crosshair;
+  cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSczMicgaGVpZ2h0PSczMicgdmlld0JveD0nMCAwIDMyIDMyJz4KICA8cGF0aCBmaWxsPScjMWYyOTM3JyBkPSdNNiAzMGg4bDItNi02LTYtNiA2eicvPgogIDxwYXRoIGZpbGw9JyMzYjgyZjYnIGQ9J00xNiAybDggOC04IDE0LTYtNnonLz4KICA8cGF0aCBmaWxsPSdub25lJyBzdHJva2U9JyMwZjE3MmEnIHN0cm9rZS13aWR0aD0nMicgc3Ryb2tlLWxpbmVqb2luPSdyb3VuZCcgZD0nTTE2IDJsOCA4LTggMTQtNi02eicvPgo8L3N2Zz4=') 4 28, crosshair;
 }
 .pencil-overlay__board--marker {
-  cursor: crosshair;
+  cursor: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSczMicgaGVpZ2h0PSczMicgdmlld0JveD0nMCAwIDMyIDMyJz4KICA8cGF0aCBmaWxsPScjMWYyOTM3JyBkPSdNNiAzMGg4bDItNi02LTYtNiA2eicvPgogIDxwYXRoIGZpbGw9JyMzYjgyZjYnIGQ9J00xNiAybDggOC04IDE0LTYtNnonLz4KICA8cGF0aCBmaWxsPSdub25lJyBzdHJva2U9JyMwZjE3MmEnIHN0cm9rZS13aWR0aD0nMicgc3Ryb2tlLWxpbmVqb2luPSdyb3VuZCcgZD0nTTE2IDJsOCA4LTggMTQtNi02eicvPgo8L3N2Zz4=') 4 28, crosshair;
 }
 .pencil-overlay__board--eraser {
   cursor: crosshair;
@@ -1386,6 +1419,9 @@ const handleBoardWheel = (event) => {
 .pencil-overlay__board--text {
   cursor: text;
 }
+.pencil-overlay__board--grabbing {
+  cursor: grabbing !important;
+}  
 .pencil-overlay__selection {
   position: absolute;
   border: 2px dashed rgba(37, 99, 235, 0.85);
