@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyActivePvDelta } from '../src/utils/activePv.js';
+import { applyActivePvDelta, applyActivePvClear } from '../src/utils/activePv.js';
 
 function createState(overrides = {}) {
   const base = {
@@ -70,7 +70,7 @@ test('applyActivePvDelta распространяет дельту вверх п
   assert.strictEqual(parentUpdate.activePvLocalBalance.left, 0);
 });
 
-test('applyActivePvDelta фиксирует локальный баланс при достижении 330 единиц без подъёма вверх', () => {
+test('applyActivePvDelta фиксирует локальный баланс при достижении 330 единиц', () => {
   const cards = [
     createCard('child', { activePv: { left: 325, right: 0 } }),
     createCard('parent')
@@ -90,13 +90,16 @@ test('applyActivePvDelta фиксирует локальный баланс пр
     delta: 10
   });
 
-  assert.deepStrictEqual(changedIds, ['child']);
+  assert.ok(changedIds.includes('child'));
 
   const childUpdate = updates.child;
   assert.strictEqual(childUpdate.activePvState.activePv.left, 5);
   assert.strictEqual(childUpdate.activePvLocalBalance.left, 1);
   assert.strictEqual(childUpdate.activePvPacks, 1);
-  assert.strictEqual(updates.parent, undefined);
+
+  const parentUpdate = updates.parent;
+  assert.ok(parentUpdate);
+  assert.strictEqual(parentUpdate.activePvState.balance.left, 10);
 });
 
 test('applyActivePvDelta обнуляет остаток при переходе через 329 и накапливает локальный баланс', () => {
@@ -115,5 +118,60 @@ test('applyActivePvDelta обнуляет остаток при переходе
   assert.strictEqual(update.activePvState.activePv.left, 0);
   assert.strictEqual(update.activePvLocalBalance.left, 1);
   assert.strictEqual(update.activePvLocal.left, 0);
-  assert.strictEqual(update.activePvLocal.right, 150);  
+  assert.strictEqual(update.activePvLocal.right, 150);
+});
+
+test('applyActivePvDelta ограничивает накопление активного баланса значением 330', () => {
+  const cards = [
+    createCard('child'),
+    createCard('parent', { balance: { left: 320 } })
+  ];
+
+  const meta = {
+    parentOf: {
+      child: { parentId: 'parent', side: 'left' }
+    }
+  };
+
+  const { updates } = applyActivePvDelta({
+    cards,
+    meta,
+    cardId: 'child',
+    side: 'left',
+    delta: 20
+  });
+
+  const parentUpdate = updates.parent;
+  assert.strictEqual(parentUpdate.activePvState.balance.left, 330);
+  assert.strictEqual(parentUpdate.activePvBalance.left, 330);
+});
+
+test('applyActivePvClear сбрасывает остаток и баланс текущей лицензии', () => {
+  const cards = [
+    createCard('node', {
+      activePv: { left: 25, right: 10 },
+      balance: { left: 70, right: 40 }
+    }),
+    createCard('parent', {
+      balance: { left: 70, right: 40 }
+    })
+  ];
+
+  const meta = {
+    parentOf: {
+      node: { parentId: 'parent', side: 'left' }
+    }
+  };
+
+  const { updates } = applyActivePvClear({ cards, meta, cardId: 'node' });
+
+  const nodeUpdate = updates.node;
+  assert.strictEqual(nodeUpdate.activePvState.activePv.left, 0);
+  assert.strictEqual(nodeUpdate.activePvState.activePv.right, 0);
+  assert.strictEqual(nodeUpdate.activePvBalance.left, 0);
+  assert.strictEqual(nodeUpdate.activePvBalance.right, 0);
+
+  const parentUpdate = updates.parent;
+  assert.strictEqual(parentUpdate.activePvState.balance.left, 0);
+  assert.strictEqual(parentUpdate.activePvState.balance.right, 40);
 });
