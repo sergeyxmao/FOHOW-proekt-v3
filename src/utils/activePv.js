@@ -379,11 +379,14 @@ function propagateActivePvUp(cards = [], meta = {}) {
     const balanceRight = state.balance.right;
     const cycles = state.cycles;
 
+    const remainderLeft = Math.max(0, manualLeft + balanceLeft);
+    const remainderRight = Math.max(0, manualRight + balanceRight);
+
     const unitsLeft = localBalanceLeft + cycles;
     const unitsRight = localBalanceRight + cycles;
 
-    const totalsLeft = manualLeft + balanceLeft + unitsLeft * ACTIVE_PV_BASE;
-    const totalsRight = manualRight + balanceRight + unitsRight * ACTIVE_PV_BASE;
+    const totalsLeft = remainderLeft + unitsLeft * ACTIVE_PV_BASE;
+    const totalsRight = remainderRight + unitsRight * ACTIVE_PV_BASE;
     result[cardId] = {
       manual: {
         left: manualLeft,
@@ -391,8 +394,8 @@ function propagateActivePvUp(cards = [], meta = {}) {
         total: manualLeft + manualRight
       },
       remainder: {
-        left: manualLeft,
-        right: manualRight
+        left: remainderLeft,
+        right: remainderRight
       },
       units: {
         left: unitsLeft,
