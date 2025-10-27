@@ -217,10 +217,8 @@ const finalCalculation = computed(() => {
 });
 
 const balanceDisplay = computed(() => `${finalCalculation.value.L} / ${finalCalculation.value.R}`);
-const totalDisplay = computed(() => finalCalculation.value.total);
 const cyclesDisplay = computed(() => finalCalculation.value.cycles);
 const stageDisplay = computed(() => finalCalculation.value.stage);
-const toNextDisplay = computed(() => finalCalculation.value.toNext);
 
 const pvRemainder = computed(() => {
   const pvMap = cardsStore.calculationMeta?.pv;
@@ -389,29 +387,11 @@ const updateValue = (event, field) => {
         <span class="label">Баланс:</span>
         <span class="value">{{ balanceDisplay }}</span>
       </div>
-      
-      <!-- Всего баллов -->
-       <div class="card-row">
-        <span class="label">Всего баллов:</span>
-        <span class="value">{{ totalDisplay }}</span>
-      </div>
-      
-      <!-- Циклы -->
-      <div class="card-row">
-        <span class="label">Циклы:</span>
-        <span class="value">{{ cyclesDisplay }}</span>
-      </div>
 
-      <!-- Этап -->
+      <!-- Этап и цикл -->
       <div class="card-row">
-        <span class="label">Этап:</span>
-        <span class="value">{{ stageDisplay }}</span>
-      </div>
-
-      <!-- До следующего -->
-      <div class="card-row">
-        <span class="label">До следующего:</span>
-        <span class="value">{{ toNextDisplay }}</span>
+        <span class="label">Этап/Цикл:</span>
+        <span class="value">{{ stageDisplay }}/{{ cyclesDisplay }}</span
       </div>
 
       <div
@@ -568,6 +548,8 @@ const updateValue = (event, field) => {
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
+  width: 100%;
+  align-self: stretch;  
 }
 
 .card-note-btn {
