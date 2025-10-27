@@ -121,8 +121,7 @@ test('applyActivePvDelta обнуляет остаток при переходе
   assert.strictEqual(update.activePvLocal.right, 150);
 });
 
-test('applyActivePvDelta ограничивает накопление активного баланса значением 330', () => {
-  const cards = [
+test('applyActivePvDelta конвертирует активный баланс в локальные единицы при превышении 330', () => {  const cards = [
     createCard('child'),
     createCard('parent', { balance: { left: 320 } })
   ];
@@ -142,8 +141,9 @@ test('applyActivePvDelta ограничивает накопление акти�
   });
 
   const parentUpdate = updates.parent;
-  assert.strictEqual(parentUpdate.activePvState.balance.left, 330);
-  assert.strictEqual(parentUpdate.activePvBalance.left, 330);
+  assert.strictEqual(parentUpdate.activePvState.balance.left, 10);
+  assert.strictEqual(parentUpdate.activePvState.localBalance.left, 1);
+  assert.strictEqual(parentUpdate.activePvBalance.left, 10);
 });
 
 test('applyActivePvClear сбрасывает остаток и баланс текущей лицензии', () => {
