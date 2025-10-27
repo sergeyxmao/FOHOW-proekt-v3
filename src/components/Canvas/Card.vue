@@ -170,17 +170,38 @@ const calculations = computed(() => {
   };
 });
 
-const activePvLocal = computed(() => {
-  const source = props.card?.activePvLocal ?? props.card?.activePv;
+const activePvManual = computed(() => {
+  const source = props.card?.activePvManual
+    ?? props.card?.activePvLocal
+    ?? props.card?.activePv;
   return parseActivePV(source);
 });
 
-const activePvAggregated = computed(() => {
+const activePvState = computed(() => {
+  const manual = activePvManual.value;
   const source = props.card?.activePvAggregated;
-  if (source && typeof source === 'object') {
-    return parseActivePV(source);
-  }
-  return activePvLocal.value;
+
+  const unitsLeft = Number.isFinite(source?.left) ? Number(source.left) : 0;
+  const unitsRight = Number.isFinite(source?.right) ? Number(source.right) : 0;
+  const remainderLeft = Number.isFinite(source?.remainderLeft)
+    ? Number(source.remainderLeft)
+    : manual.left;
+  const remainderRight = Number.isFinite(source?.remainderRight)
+    ? Number(source.remainderRight)
+    : manual.right;
+
+  return {
+    manual,
+    units: {
+      left: unitsLeft,
+      right: unitsRight,
+      total: unitsLeft + unitsRight
+    },
+    remainder: {
+      left: remainderLeft,
+      right: remainderRight
+    }
+  };
 });
 
 const manualAdjustments = computed(() => {
@@ -194,11 +215,11 @@ const manualAdjustments = computed(() => {
 
 const finalCalculation = computed(() => {
   const base = calculations.value;
-  const active = activePvAggregated.value;
+  const activeUnits = activePvState.value.units;
   const manual = manualAdjustments.value;
 
-  const bonusLeft = active.left + manual.left;
-  const bonusRight = active.right + manual.right;
+  const bonusLeft = activeUnits.left + manual.left;
+  const bonusRight = activeUnits.right + manual.right;
   const bonusTotal = bonusLeft + bonusRight;
 
   const left = base.L + bonusLeft;
@@ -218,8 +239,8 @@ const finalCalculation = computed(() => {
 
 const balanceDisplay = computed(() => `${finalCalculation.value.L} / ${finalCalculation.value.R}`);
 const activeOrdersDisplay = computed(
-  () => `${activePvAggregated.value.left} / ${activePvAggregated.value.right}`
-);  
+  () => `${activePvState.value.remainder.left} / ${activePvState.value.remainder.right}`
+);
 const cyclesDisplay = computed(() => finalCalculation.value.cycles);
 const stageDisplay = computed(() => finalCalculation.value.stage);
 
@@ -309,10 +330,12 @@ const updateValue = (event, field) => {
       <div
         class="active-pv-hidden"
         aria-hidden="true"
-        :data-btnl="String(activePvAggregated.left)"
-        :data-btnr="String(activePvAggregated.right)"
-        :data-locall="String(activePvLocal.left)"
-        :data-localr="String(activePvLocal.right)"
+        :data-btnl="String(activePvState.manual.left)"
+        :data-btnr="String(activePvState.manual.right)"
+        :data-locall="String(activePvState.units.left)"
+        :data-localr="String(activePvState.units.right)"
+        :data-remainderl="String(activePvState.remainder.left)"
+        :data-remainderr="String(activePvState.remainder.right)"
       ></div>
       <!-- Иконка монетки и PV -->
       <div class="card-row pv-row">
@@ -339,8 +362,12 @@ const updateValue = (event, field) => {
       </div>
 
       <div class="card-active-controls" data-role="active-pv-buttons">
-        <button type="button" class="active-pv-btn" data-side="left" data-delta="1">+1</button>
-        <button type="button" class="active-pv-btn" data-side="left" data-delta="10">+10</button>
+        <div class="active-pv-controls__group">
+          <button type="button" class="active-pv-btn" data-dir="left" data-step="1">+1</button>
+          <button type="button" class="active-pv-btn" data-dir="left" data-step="10">+10</button>
+          <button type="button" class="active-pv-btn" data-dir="left" data-step="-10">-10</button>
+          <button type="button" class="active-pv-btn" data-dir="left" data-step="-1">-1</button>
+        </div>
         <button
           type="button"
           class="active-pv-btn active-pv-btn--clear"
@@ -350,8 +377,12 @@ const updateValue = (event, field) => {
         >
           🗑️
         </button>
-        <button type="button" class="active-pv-btn" data-side="right" data-delta="10">+10</button>
-        <button type="button" class="active-pv-btn" data-side="right" data-delta="1">+1</button>
+        <div class="active-pv-controls__group">
+          <button type="button" class="active-pv-btn" data-dir="right" data-step="-1">-1</button>
+          <button type="button" class="active-pv-btn" data-dir="right" data-step="-10">-10</button>
+          <button type="button" class="active-pv-btn" data-dir="right" data-step="10">+10</button>
+          <button type="button" class="active-pv-btn" data-dir="right" data-step="1">+1</button>
+        </div>
       </div>
 
       <div class="card-row">
@@ -812,6 +843,12 @@ const updateValue = (event, field) => {
   background: rgba(15, 98, 254, 0.08);
   border: 1px solid rgba(15, 98, 254, 0.12);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.active-pv-controls__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 
 @media (min-width: 560px) {
