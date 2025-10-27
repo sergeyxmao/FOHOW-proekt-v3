@@ -264,21 +264,25 @@ const handleActivePvButtonClick = (event) => {
     return;
   }
 
-  const datasetKey = side === 'right' ? 'localr' : 'locall';
-  let currentValue = Number(hidden.dataset[datasetKey]) || 0;
+  if (action === 'clear-all') {
+    hidden.dataset.locall = '0';
+    hidden.dataset.localr = '0';
+  } else {
+    const datasetKey = side === 'right' ? 'localr' : 'locall';
+    let currentValue = Number(hidden.dataset[datasetKey]) || 0;
 
-  if (action === 'clear') {
-    currentValue = 0;
-  } else if (Number.isFinite(delta)) {
-    currentValue += delta;
+    if (action === 'clear') {
+      currentValue = 0;
+    } else if (Number.isFinite(delta)) {
+      currentValue += delta;
+    }
+
+    if (currentValue < 0) {
+      currentValue = 0;
+    }
+
+    hidden.dataset[datasetKey] = String(currentValue);
   }
-
-  if (currentValue < 0) {
-    currentValue = 0;
-  }
-
-  hidden.dataset[datasetKey] = String(currentValue);
-
   const localPayload = {
     left: Number(hidden.dataset.locall) || 0,
     right: Number(hidden.dataset.localr) || 0
