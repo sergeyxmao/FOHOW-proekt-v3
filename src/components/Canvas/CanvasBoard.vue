@@ -15,8 +15,11 @@ import { useHistoryStore } from '../../stores/history.js';
 import { useViewportStore } from '../../stores/viewport.js';
 import { useNotesStore } from '../../stores/notes.js';
 import { Engine } from '../../utils/calculationEngine';
-import { parseActivePV, propagateActivePvUp } from '../../utils/activePv';
-
+import {
+  propagateActivePvUp,
+  applyActivePvDelta,
+  applyActivePvClear
+} from '../../utils/activePv';
 import {
   ensureNoteStructure,
   applyCardRectToNote,
@@ -209,6 +212,10 @@ const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
     const unitsLeft = Math.max(0, Number(data?.units?.left ?? 0));
     const unitsRight = Math.max(0, Number(data?.units?.right ?? 0));
     const unitsTotal = unitsLeft + unitsRight;
+    const balanceLeft = Math.max(0, Number(data?.balance?.left ?? remainderLeft));
+    const balanceRight = Math.max(0, Number(data?.balance?.right ?? remainderRight));
+    const packs = Math.max(0, Number(data?.activePacks ?? 0));
+    const cycles = Math.max(0, Number(data?.cycles ?? 0));
 
     const formattedRemainder = `${remainderLeft} / ${remainderRight}`;
 
@@ -246,7 +253,19 @@ const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
     if (card.activePv !== formattedRemainder) {
       updates.activePv = formattedRemainder;
     }
+    if (!card.activePvBalance
+      || card.activePvBalance.left !== balanceLeft
+      || card.activePvBalance.right !== balanceRight) {
+      updates.activePvBalance = { left: balanceLeft, right: balanceRight };
+    }
 
+    if (!Number.isFinite(card.activePvPacks) || card.activePvPacks !== packs) {
+      updates.activePvPacks = packs;
+    }
+
+    if (!Number.isFinite(card.activePvCycles) || card.activePvCycles !== cycles) {
+      updates.activePvCycles = cycles;
+    }
     if (Object.keys(updates).length > 0) {
       cardsStore.updateCard(cardId, updates, { saveToHistory: false });
     }
@@ -295,39 +314,34 @@ const handleActivePvButtonClick = (event) => {
     return;
   }
 
-  const manualSource = card.activePvManual ?? card.activePvLocal ?? card.activePv;
-  const manualState = parseActivePV(manualSource);
-
-  let nextLeft = manualState.left;
-  let nextRight = manualState.right;
+  const meta = cardsStore.calculationMeta || {};
+  let result;
 
   if (action === 'clear-all') {
-    nextLeft = 0;
-    nextRight = 0;
-  } else if (Number.isFinite(step)) {
-    if (direction === 'right') {
-      nextRight = Math.max(0, nextRight + step);
-    } else {
-      nextLeft = Math.max(0, nextLeft + step);
-    }
-  }
-
-  nextLeft = Math.max(0, nextLeft);
-  nextRight = Math.max(0, nextRight);
-
-  if (nextLeft === manualState.left && nextRight === manualState.right) {
+    result = applyActivePvClear({ cards: cardsStore.cards, meta, cardId });
+  } else if (Number.isFinite(step) && step !== 0) {
+    result = applyActivePvDelta({
+      cards: cardsStore.cards,
+      meta,
+      cardId,
+      side: direction,
+      delta: step
+    });
+  } else if (Number.isFinite(step) && step === 0) {
+    return;
+  } else {
     return;
   }
-  const manualPayload = {
-    left: nextLeft,
-    right: nextRight,
-    total: nextLeft + nextRight
-  };
-  cardsStore.updateCard(cardId, {
-    activePvManual: { ...manualPayload },
-    activePvLocal: { ...manualPayload },
-    activePv: `${nextLeft} / ${nextRight}`
-  }, { saveToHistory: false });
+
+  const updates = result?.updates || {};
+  const updateEntries = Object.entries(updates);
+  if (updateEntries.length === 0) {
+    return;
+  }
+
+  updateEntries.forEach(([id, payload]) => {
+    cardsStore.updateCard(id, payload, { saveToHistory: false });
+  });
 
   const description = card?.text
     ? `Active-PV обновлены для "${card.text}"`
