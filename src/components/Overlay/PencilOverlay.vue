@@ -1003,9 +1003,9 @@ const handleBoardPointerDown = (event) => {
   if (event.pointerType !== 'mouse' || event.button !== 1) {
     return;
   }
-
+  
+  // Функция перемещения холста средней кнопкой мыши отключена в режиме рисования
   event.preventDefault();
-  beginPan(event);
 };
 
 const handleBoardPointerMove = (event) => {
