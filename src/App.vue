@@ -159,7 +159,7 @@ onBeforeUnmount(() => {
 
 <style>
 :root{
-  --card-width: 380px;
+  --card-width: 418px;
   --brand: #0f62fe;
   --ink: #111827;
   --muted: #6b7280;
