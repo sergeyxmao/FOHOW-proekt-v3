@@ -11,7 +11,83 @@ import {
 } from '../utils/noteUtils'
 const COIN_FULL_COLOR = '#ffd700'
 const COIN_EMPTY_COLOR = '#3d85c6'
+const CANVAS_SAFE_MARGIN = 32
 
+function parseCanvasTransform(transformValue) {
+  if (!transformValue || transformValue === 'none') {
+    return { scale: 1, translateX: 0, translateY: 0 }
+  }
+
+  if (typeof DOMMatrixReadOnly === 'function') {
+    try {
+      const matrix = new DOMMatrixReadOnly(transformValue)
+      const scaleX = Number.isFinite(matrix.a) ? matrix.a : 1
+      const scaleY = Number.isFinite(matrix.d) ? matrix.d : 1
+      const translateX = Number.isFinite(matrix.m41) ? matrix.m41 : 0
+      const translateY = Number.isFinite(matrix.m42) ? matrix.m42 : 0
+      const scale = scaleX || scaleY || 1
+
+      return { scale: scale || 1, translateX, translateY }
+    } catch (error) {
+      // Игнорируем и пробуем разобрать строку вручную
+    }
+  }
+
+  const matrixMatch = transformValue.match(/^matrix\(([^)]+)\)$/)
+  if (matrixMatch) {
+    const parts = matrixMatch[1].split(',').map(part => Number(part.trim()))
+    if (parts.length >= 6) {
+      const [a, , , d, e, f] = parts
+      const scale = a || d || 1
+      return {
+        scale: scale || 1,
+        translateX: Number.isFinite(e) ? e : 0,
+        translateY: Number.isFinite(f) ? f : 0
+      }
+    }
+  }
+
+  const translateMatch = transformValue.match(/translate\(\s*([-0-9.]+)px(?:,\s*([-0-9.]+)px)?\s*\)/)
+  const scaleMatch = transformValue.match(/scale\(\s*([-0-9.]+)\s*\)/)
+
+  return {
+    scale: scaleMatch ? Number(scaleMatch[1]) || 1 : 1,
+    translateX: translateMatch ? Number(translateMatch[1]) || 0 : 0,
+    translateY: translateMatch ? Number(translateMatch[2]) || 0 : 0
+  }
+}
+
+function getViewportAnchoredPosition(cardWidth = 0, cardHeight = 0) {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return null
+  }
+
+  const container = document.querySelector('.canvas-container')
+  const content = container?.querySelector('.canvas-content')
+
+  if (!container || !content) {
+    return null
+  }
+
+  const { height } = container.getBoundingClientRect()
+  const transformValue = content.style.transform || window.getComputedStyle(content).transform
+  const { scale, translateX, translateY } = parseCanvasTransform(transformValue)
+
+  const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1
+  const safeTranslateX = Number.isFinite(translateX) ? translateX : 0
+  const safeTranslateY = Number.isFinite(translateY) ? translateY : 0
+
+  const viewportX = CANVAS_SAFE_MARGIN
+  const viewportY = height - CANVAS_SAFE_MARGIN
+
+  const canvasX = (viewportX - safeTranslateX) / safeScale
+  const canvasY = (viewportY - safeTranslateY) / safeScale - cardHeight
+
+  return {
+    x: Math.max(0, Math.round(canvasX)),
+    y: Math.max(0, Math.round(canvasY))
+  }
+}
 const DEFAULT_CALCULATION = Object.freeze({
   L: 0,
   R: 0,
@@ -264,8 +340,10 @@ export const useCardsStore = defineStore('cards', {
       return true
     },
     addCard(options = {}) {
-      const { type = 'large', ...cardData } = options;
-
+      const { type = 'large', ...rawCardData } = options;
+      const hasCustomX = Object.prototype.hasOwnProperty.call(rawCardData, 'x')
+      const hasCustomY = Object.prototype.hasOwnProperty.call(rawCardData, 'y')
+      const { x: providedX, y: providedY, ...cardData } = rawCardData
       const generateLicenseNumber = () => {
         const prefix = 'RUY';
         const number = Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
@@ -302,13 +380,28 @@ export const useCardsStore = defineStore('cards', {
       };
 
       const preset = presets[type] || presets.large;
+            const widthCandidate = Number(cardData.width ?? preset.width ?? 0)
+      const heightCandidate = Number(cardData.height ?? preset.height ?? 0)
+      const fallbackWidth = Number(preset.width)
+      const fallbackHeight = Number(preset.height)
+      const widthForPlacement = Number.isFinite(widthCandidate) && widthCandidate > 0
+        ? widthCandidate
+        : (Number.isFinite(fallbackWidth) && fallbackWidth > 0 ? fallbackWidth : 0)
+      const heightForPlacement = Number.isFinite(heightCandidate) && heightCandidate > 0
+        ? heightCandidate
+        : (Number.isFinite(fallbackHeight) && fallbackHeight > 0 ? fallbackHeight : 0)
+      const viewportPosition = getViewportAnchoredPosition(widthForPlacement, heightForPlacement)
+      const defaultX = viewportPosition?.x ?? 320
+      const defaultY = viewportPosition?.y ?? 160
+      const normalizedX = hasCustomX ? providedX : defaultX
+      const normalizedY = hasCustomY ? providedY : defaultY
 
       const newCard = {
         // Базовые свойства
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        // Размещаем новую лицензию в верхнем левом секторе рядом с панелью управления
-        x: 320,
-        y: 160,
+        // Размещаем новую лицензию в левом нижнем секторе видимой области
+        x: normalizedX,
+        y: normalizedY,
         fill: '#ffffff',
         stroke: '#000000',
         strokeWidth: 2,
