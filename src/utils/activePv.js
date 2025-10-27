@@ -249,42 +249,51 @@ function applyAddition(state, side, delta) {
   if (amount <= 0) {
     return 0;
   }
-  const previous = state.activePv[side];
-  const next = previous + amount;
-  const full = Math.floor(next / ACTIVE_PV_BASE);
-  if (full > 0) {
-    state.activePacks += full;
-    state.localBalance[side] += full;    
+
+  const previousRemainder = Math.max(0, toInteger(state.activePv[side]));
+  const previousUnits = Math.max(0, toInteger(state.localBalance[side]));
+  const previousTotal = previousRemainder + previousUnits * ACTIVE_PV_BASE;
+
+  let remainderSum = previousRemainder + amount;
+  let nextUnits = previousUnits;
+
+  if (remainderSum >= ACTIVE_PV_BASE) {
+    const extraUnits = Math.floor(remainderSum / ACTIVE_PV_BASE);
+    nextUnits += extraUnits;
+    state.activePacks += extraUnits;
+    remainderSum -= extraUnits * ACTIVE_PV_BASE;  
   }
-  const remainder = next % ACTIVE_PV_BASE;
-  state.activePv[side] = remainder;
-  const propagated = remainder - previous;
-  return propagated > 0 ? propagated : 0;
+
+  state.activePv[side] = remainderSum;
+  state.localBalance[side] = nextUnits;
+
+  const totalAfter = remainderSum + nextUnits * ACTIVE_PV_BASE;
+  const applied = totalAfter - previousTotal;
+
+  return applied > 0 ? applied : 0;
 }
 function applySubtraction(state, side, delta) {
   const amount = Math.max(0, toInteger(-delta));
   if (amount <= 0) {
     return 0;
   }
-  let available = state.activePv[side];
-  if (available < amount && state.localBalance[side] > 0) {
-    const deficit = amount - available;
-    const borrowCycles = Math.min(
-      state.localBalance[side],
-      Math.ceil(deficit / ACTIVE_PV_BASE)
-    );
-    if (borrowCycles > 0) {
-      state.localBalance[side] -= borrowCycles;
-      state.activePacks = Math.max(0, state.activePacks - borrowCycles);
-      available += borrowCycles * ACTIVE_PV_BASE;
-    }
-  }
-  const take = Math.min(amount, available);
+
+  const previousRemainder = Math.max(0, toInteger(state.activePv[side]));
+  const previousUnits = Math.max(0, toInteger(state.localBalance[side]));
+  const previousTotal = previousRemainder + previousUnits * ACTIVE_PV_BASE;
+
+  const take = Math.min(amount, previousRemainder);
   if (take <= 0) {
     return 0;
   }
-  state.activePv[side] = available - take;
-  return -take;
+
+  const newRemainder = previousRemainder - take;
+  state.activePv[side] = newRemainder;
+
+  const totalAfter = newRemainder + previousUnits * ACTIVE_PV_BASE;
+  const applied = totalAfter - previousTotal;
+
+  return applied < 0 ? applied : 0;
 }
 
 function applyDeltaInternal({ stateMap, meta, cardId, side, delta, changed }) {
