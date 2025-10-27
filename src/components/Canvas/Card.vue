@@ -267,7 +267,6 @@ const updateValue = (event, field) => {
 </script>
 
 <template>
-  </div>
     class="card"
     :data-card-id="card.id"    
     :class="{
