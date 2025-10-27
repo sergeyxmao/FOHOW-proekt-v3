@@ -1663,15 +1663,6 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           marker-end="url(#marker-dot)"
         />
       </svg>
-      <a
-        class="marketing-watermark"
-        href="https://t.me/MarketingFohow"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Открыть Telegram-канал MarketingFohow"
-      >
-        @MarketingFohow
-      </a>
       <div
         class="cards-container"
         :style="{
@@ -1703,6 +1694,15 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         @close="() => handleNoteWindowClose(card.id)"
       /> 
     </div>
+    <a
+      class="marketing-watermark"
+      href="https://t.me/MarketingFohow"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Открыть Telegram-канал MarketingFohow"
+    >
+      @MarketingFohow
+    </a>  
   </div>
 </template>
 
