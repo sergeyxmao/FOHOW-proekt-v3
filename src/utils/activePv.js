@@ -48,6 +48,10 @@ function cloneState(state) {
       right: state.activePv.right
     },
     activePacks: state.activePacks,
+    localBalance: {
+      left: state.localBalance.left,
+      right: state.localBalance.right
+    },    
     balance: {
       left: state.balance.left,
       right: state.balance.right
@@ -60,6 +64,7 @@ function createEmptyState() {
   return {
     activePv: { left: 0, right: 0 },
     activePacks: 0,
+    localBalance: { left: 0, right: 0 },    
     balance: { left: 0, right: 0 },
     cycles: 0
   };
@@ -77,6 +82,10 @@ function normalizeState(rawState) {
       right: clampRemainder(activePvSource.right ?? activePvSource.R ?? activePvSource.r ?? rawState.right ?? 0)
     },
     activePacks: Math.max(0, toInteger(rawState.activePacks ?? rawState.packs ?? 0)),
+    localBalance: {
+      left: Math.max(0, toInteger(rawState.localBalance?.left ?? rawState.localBalance?.L ?? rawState.localBalance?.l ?? 0)),
+      right: Math.max(0, toInteger(rawState.localBalance?.right ?? rawState.localBalance?.R ?? rawState.localBalance?.r ?? 0))
+    },    
     balance: {
       left: Math.max(0, toInteger(balanceSource.left ?? balanceSource.L ?? balanceSource.l ?? 0)),
       right: Math.max(0, toInteger(balanceSource.right ?? balanceSource.R ?? balanceSource.r ?? 0))
@@ -100,6 +109,7 @@ function getStateFromCard(card = {}) {
       right: rightTotal % ACTIVE_PV_BASE
     },
     activePacks: packs,
+    localBalance: { left: 0, right: 0 },    
     balance: { left: 0, right: 0 },
     cycles: 0
   };
@@ -175,6 +185,7 @@ function serializeState(state) {
   return {
     activePv: { left: state.activePv.left, right: state.activePv.right },
     activePacks: state.activePacks,
+    localBalance: { left: state.localBalance.left, right: state.localBalance.right },    
     balance: { left: state.balance.left, right: state.balance.right },
     cycles: state.cycles
   };
@@ -190,6 +201,11 @@ function buildUpdatePayload(state) {
     activePvLocal: { left, right, total },
     activePv: `${left} / ${right}`,
     activePvPacks: state.activePacks,
+    activePvLocalBalance: {
+      left: state.localBalance.left,
+      right: state.localBalance.right,
+      total: state.localBalance.left + state.localBalance.right
+    },    
     activePvBalance: { left: state.balance.left, right: state.balance.right },
     activePvCycles: state.cycles
   };
@@ -238,6 +254,7 @@ function applyAddition(state, side, delta) {
   const full = Math.floor(next / ACTIVE_PV_BASE);
   if (full > 0) {
     state.activePacks += full;
+    state.localBalance[side] += full;    
   }
   const remainder = next % ACTIVE_PV_BASE;
   state.activePv[side] = remainder;
@@ -249,7 +266,19 @@ function applySubtraction(state, side, delta) {
   if (amount <= 0) {
     return 0;
   }
-  const available = state.activePv[side];
+  let available = state.activePv[side];
+  if (available < amount && state.localBalance[side] > 0) {
+    const deficit = amount - available;
+    const borrowCycles = Math.min(
+      state.localBalance[side],
+      Math.ceil(deficit / ACTIVE_PV_BASE)
+    );
+    if (borrowCycles > 0) {
+      state.localBalance[side] -= borrowCycles;
+      state.activePacks = Math.max(0, state.activePacks - borrowCycles);
+      available += borrowCycles * ACTIVE_PV_BASE;
+    }
+  }
   const take = Math.min(amount, available);
   if (take <= 0) {
     return 0;
@@ -335,12 +364,17 @@ function propagateActivePvUp(cards = [], meta = {}) {
   stateMap.forEach((state, cardId) => {
     const manualLeft = state.activePv.left;
     const manualRight = state.activePv.right;
-    const remainderLeft = state.balance.left;
-    const remainderRight = state.balance.right;
+    const localBalanceLeft = state.localBalance.left;
+    const localBalanceRight = state.localBalance.right;
+    const balanceLeft = state.balance.left;
+    const balanceRight = state.balance.right;
     const cycles = state.cycles;
 
-    const totalsLeft = remainderLeft + cycles * ACTIVE_PV_BASE;
-    const totalsRight = remainderRight + cycles * ACTIVE_PV_BASE;
+    const unitsLeft = localBalanceLeft + cycles;
+    const unitsRight = localBalanceRight + cycles;
+
+    const totalsLeft = manualLeft + balanceLeft + unitsLeft * ACTIVE_PV_BASE;
+    const totalsRight = manualRight + balanceRight + unitsRight * ACTIVE_PV_BASE;
     result[cardId] = {
       manual: {
         left: manualLeft,
@@ -348,13 +382,17 @@ function propagateActivePvUp(cards = [], meta = {}) {
         total: manualLeft + manualRight
       },
       remainder: {
-        left: remainderLeft,
-        right: remainderRight
+        left: manualLeft,
+        right: manualRight
       },
       units: {
-        left: cycles,
-        right: cycles,
-        total: cycles * 2
+        left: unitsLeft,
+        right: unitsRight,
+        total: unitsLeft + unitsRight
+      },
+      localBalance: {
+        left: localBalanceLeft,
+        right: localBalanceRight
       },
       totals: {
         left: totalsLeft,
@@ -363,8 +401,8 @@ function propagateActivePvUp(cards = [], meta = {}) {
       },
       activePacks: state.activePacks,
       balance: {
-        left: remainderLeft,
-        right: remainderRight
+        left: balanceLeft,
+        right: balanceRight
       },
       cycles
     };
