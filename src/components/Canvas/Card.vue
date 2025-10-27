@@ -32,7 +32,7 @@ const textInput = ref(null);
 
 // Вычисляемое свойство для проверки, является ли карточка большой
 const isLargeCard = computed(() => {
-  return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 494;
+  return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 543.4;
 });
 const noteState = computed(() => props.card.note || null);
 const hasNotes = computed(() => {
