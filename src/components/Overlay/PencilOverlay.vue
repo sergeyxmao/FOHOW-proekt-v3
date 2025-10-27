@@ -44,13 +44,7 @@ const brushSize = ref(4);
 const markerSize = ref(60);
 const markerOpacity = ref(0.1);
 const eraserSize = ref(24);
-const textColor = ref('#111827');
-const textSize = ref(24);
-const isTextBold = ref(false);
-const texts = ref([]);
-const selectedTextId = ref(null);
 const baseImage = ref(null);
-const textInputRefs = new Map();
 let previousHtmlOverflow = '';
 let previousBodyOverflow = '';
 const historyEntries = ref([]);
@@ -66,13 +60,9 @@ const selectionStartPoint = ref(null);
 const activeSelection = ref(null);
 const selectionMoveStartPoint = ref(null);
 const selectionInitialRect = ref(null);
-const selectionInitialTextPositions = ref([]);
 const selectionMoveState = ref(null);
 const pointerPosition = ref(null);
-const isMiddleButtonPanning = ref(false);
-const middlePointerId = ref(null);
 const panOffset = ref({ x: 0, y: 0 });
-const middleButtonPanStart = ref(null);
   
 const ERASER_MIN_SIZE = 4;
 const ERASER_MAX_SIZE = 80;
@@ -90,9 +80,6 @@ const boardClasses = computed(() => {
   const classes = ['pencil-overlay__board'];
 
   switch (currentTool.value) {
-    case 'text':
-      classes.push('pencil-overlay__board--text');
-      break;
     case 'marker':
       classes.push('pencil-overlay__board--marker');
       break;
@@ -104,9 +91,6 @@ const boardClasses = computed(() => {
       break;
     default:
       classes.push('pencil-overlay__board--brush');
-  }
-  if (isMiddleButtonPanning.value && isZoomedIn.value) {
-    classes.push('pencil-overlay__board--grabbing');
   }
   return classes;
 });
@@ -190,8 +174,6 @@ const hexToRgba = (hex, alpha) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-const cloneTexts = (items) => items.map((item) => ({ ...item }));
-
 const captureCanvasData = () => {
   const canvas = drawingCanvasRef.value;
   if (!canvas) {
@@ -211,9 +193,7 @@ const buildSnapshot = (captureCanvasExplicitly = false) => {
   }
 
   return {
-    canvas: canvasData,
-    texts: cloneTexts(texts.value),
-    selectedTextId: selectedTextId.value
+    canvas: canvasData
   };
 };
 
@@ -312,21 +292,11 @@ const applySnapshot = async (snapshot) => {
   }
 
   isApplyingHistory.value = true;
-  cancelSelection();  
-  textInputRefs.clear();
-  texts.value = cloneTexts(snapshot.texts || []);
-  selectedTextId.value = snapshot.selectedTextId || null;
+  cancelSelection();
 
   await nextTick();
   await drawCanvasFromSnapshot(snapshot.canvas);
-
-  if (selectedTextId.value) {
-    const editableEntry = texts.value.find((item) => item.id === selectedTextId.value && item.isEditing);
-    if (editableEntry) {
-      focusTextInput(editableEntry.id);
-    }
-  }
-
+  
   isApplyingHistory.value = false;
 };
 
@@ -364,26 +334,6 @@ const canUndo = computed(() => historyIndex.value > 0);
 const canRedo = computed(() => historyIndex.value >= 0 && historyIndex.value < historyEntries.value.length - 1);
 const isDrawingToolActive = computed(() => ['brush', 'marker', 'eraser'].includes(currentTool.value));
 const isSelectionToolActive = computed(() => currentTool.value === 'selection');
-const registerTextInput = (id, el) => {
-  if (el) {
-    textInputRefs.set(id, el);
-  } else {
-    textInputRefs.delete(id);
-  }
-};
-
-const focusTextInput = (id) => {
-  nextTick(() => {
-    const element = textInputRefs.get(id);
-    if (element) {
-      if (typeof element.focus === 'function') {
-        element.focus({ preventScroll: true });
-      }
-      element.select();
-    }
-  });
-};
-
 const getCanvasPoint = (event) => {
   const canvas = drawingCanvasRef.value;
   if (!canvas) return null;
@@ -497,7 +447,6 @@ const resetSelectionInteraction = () => {
   selectionStartPoint.value = null;
   selectionMoveStartPoint.value = null;
   selectionInitialRect.value = null;
-  selectionInitialTextPositions.value = [];
   selectionMoveState.value = null;
   selectionHasChanges.value = false;
 };
@@ -515,14 +464,6 @@ const cancelSelection = () => {
         selectionInitialRect.value.y
       );
     }
-
-    selectionInitialTextPositions.value.forEach(({ id, x, y }) => {
-      const entry = texts.value.find((item) => item.id === id);
-      if (entry) {
-        entry.x = x;
-        entry.y = y;
-      }
-    });
 
     if (activeSelection.value) {
       activeSelection.value.rect = { ...selectionInitialRect.value };
@@ -542,14 +483,10 @@ const captureSelectionSnapshot = (rect) => {
 
   try {
     const imageData = context.getImageData(rect.x, rect.y, rect.width, rect.height);
-    const selectedTextIds = texts.value
-      .filter((entry) => entry.x >= rect.x && entry.x <= rect.x + rect.width && entry.y >= rect.y && entry.y <= rect.y + rect.height)
-      .map((entry) => entry.id);
 
     return {
       rect: { ...rect },
-      imageData,
-      textIds: selectedTextIds
+      imageData
     };
   } catch (error) {
     console.error('Не удалось получить данные выделенной области', error);
@@ -617,12 +554,6 @@ const beginSelectionMove = (point, pointerId) => {
   selectionPointerId.value = pointerId;
   selectionMoveStartPoint.value = point;
   selectionInitialRect.value = { ...activeSelection.value.rect };
-  selectionInitialTextPositions.value = activeSelection.value.textIds
-    .map((id) => {
-      const entry = texts.value.find((item) => item.id === id);
-      return entry ? { id, x: entry.x, y: entry.y } : null;
-    })
-    .filter(Boolean);
 
   context.save();
   context.setTransform(1, 0, 0, 1, 0, 0);
@@ -681,14 +612,6 @@ const updateSelectionMove = (point) => {
     context.putImageData(activeSelection.value.imageData, rect.x, rect.y);
   }
 
-  selectionInitialTextPositions.value.forEach(({ id, x, y }) => {
-    const entry = texts.value.find((item) => item.id === id);
-    if (entry) {
-      entry.x = x + appliedDx;
-      entry.y = y + appliedDy;
-    }
-  });
-
   if (appliedDx !== 0 || appliedDy !== 0) {
     selectionHasChanges.value = true;
   }
@@ -729,66 +652,6 @@ const finishSelectionMove = () => {
   } 
 };
 
-const createTextEntry = (point) => {
-  const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-  texts.value.push({
-    id,
-    x: point.x,
-    y: point.y,
-    color: textColor.value,
-    size: textSize.value,
-    bold: isTextBold.value,
-    content: '',
-    isEditing: true
-  });
-
-  selectedTextId.value = id;
-  focusTextInput(id);
-  scheduleHistorySave(false);
-  
-};
-
-const selectText = (id) => {
-  const entry = texts.value.find((item) => item.id === id);
-  if (!entry) return;
-
-  selectedTextId.value = id;
-};
-
-const editText = (id) => {
-  const entry = texts.value.find((item) => item.id === id);
-  if (!entry) return;
-
-  entry.isEditing = true;
-  selectedTextId.value = id;
-  focusTextInput(id);
-};
-
-const finishText = (id) => {
-  const entryIndex = texts.value.findIndex((item) => item.id === id);
-  if (entryIndex === -1) return;
-
-  const entry = texts.value[entryIndex];
-  entry.content = entry.content.replace(/\s+$/u, '');
-  entry.isEditing = false;
-
-  if (!entry.content.trim()) {
-    texts.value.splice(entryIndex, 1);
-    if (selectedTextId.value === id) {
-      selectedTextId.value = null;
-    }
-  }
-
-  scheduleHistorySave(false);  
-};
-
-const handleTextKeydown = (event, id) => {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    finishText(id);
-  }
-};
 const updatePointerPreview = (point) => {
   if (currentTool.value === 'eraser') {
     pointerPosition.value = { ...point };
@@ -796,33 +659,9 @@ const updatePointerPreview = (point) => {
     pointerPosition.value = null;
   }
 };
-const resetMiddleButtonPan = () => {
-  isMiddleButtonPanning.value = false;
-  middlePointerId.value = null;
-  middleButtonPanStart.value = null;
-  
-};
-const handleCanvasPointerDown = (event) => {
-  const isMiddleButton = event.button === 1;
-  const isPrimaryButton = event.button === 0 || event.button === undefined || event.button === -1;
 
-  if (isMiddleButton) {
-    if (isZoomedIn.value) {
-      const canvas = drawingCanvasRef.value;
-      if (canvas) {
-        canvas.setPointerCapture(event.pointerId);
-      }      
-      isMiddleButtonPanning.value = true;
-      middlePointerId.value = event.pointerId;
-      middleButtonPanStart.value = {
-        clientX: event.clientX,
-        clientY: event.clientY,
-        offsetX: panOffset.value?.x || 0,
-        offsetY: panOffset.value?.y || 0
-      };      
-    }
-    return;
-  }
+const handleCanvasPointerDown = (event) => {
+  const isPrimaryButton = event.button === 0 || event.button === undefined || event.button === -1;
   
   if (!isPrimaryButton) return;
 
@@ -843,32 +682,18 @@ const handleCanvasPointerDown = (event) => {
     return;
   }
 
-  if (isDrawingToolActive.value) {
-    canvas.setPointerCapture(event.pointerId);
-    activePointerId.value = event.pointerId;
-    updatePointerPreview(point);
-    startStroke(point);
-  } else if (currentTool.value === 'text') {
-    createTextEntry(point);
-  }
+  if (!isDrawingToolActive.value) return;
+
+  canvas.setPointerCapture(event.pointerId);
+  activePointerId.value = event.pointerId;
+  updatePointerPreview(point);
+  startStroke(point);
 };
 
 const handleCanvasPointerMove = (event) => {
-  if (isMiddleButtonPanning.value && middlePointerId.value === event.pointerId && middleButtonPanStart.value) {
-    event.preventDefault();
-    const scale = zoomScale.value || 1;
-    const deltaX = (event.clientX - middleButtonPanStart.value.clientX) / scale;
-    const deltaY = (event.clientY - middleButtonPanStart.value.clientY) / scale;
-    panOffset.value = {
-      x: middleButtonPanStart.value.offsetX + deltaX,
-      y: middleButtonPanStart.value.offsetY + deltaY
-    };
-    return;
-  }  
-
   const point = getCanvasPoint(event);
   if (!point) return;
-  updatePointerPreview(point);  
+  updatePointerPreview(point);
   if (isSelectionToolActive.value) {
     if (selectionPointerId.value !== event.pointerId) {
       return;
@@ -888,15 +713,7 @@ const handleCanvasPointerMove = (event) => {
   continueStroke(point);
 };
 
-const handleCanvasPointerUp = (event) => {
-  if (event.button === 1 && middlePointerId.value === event.pointerId) {
-    const canvas = drawingCanvasRef.value;
-    if (canvas && canvas.hasPointerCapture(event.pointerId)) {
-      canvas.releasePointerCapture(event.pointerId);
-    }    
-    resetMiddleButtonPan();
-    return;
-  }  
+const handleCanvasPointerUp = (event) => { 
   const canvas = drawingCanvasRef.value;
   if (!canvas) return;
 
@@ -915,7 +732,7 @@ const handleCanvasPointerUp = (event) => {
 
     resetSelectionInteraction();
     return;
-  }  
+  }
   if (!isDrawingToolActive.value) return;
   if (activePointerId.value !== event.pointerId) return;
   event.preventDefault();
@@ -925,14 +742,6 @@ const handleCanvasPointerUp = (event) => {
 };
 
 const handleCanvasPointerLeave = (event) => {
-  if (middlePointerId.value === event.pointerId) {
-    const canvas = drawingCanvasRef.value;
-    if (canvas && canvas.hasPointerCapture(event.pointerId)) {
-      canvas.releasePointerCapture(event.pointerId);
-    }    
-    resetMiddleButtonPan();
-  }
-  
   const canvas = drawingCanvasRef.value;
   if (!canvas) return;
   if (currentTool.value === 'eraser') {
@@ -953,12 +762,12 @@ const handleCanvasPointerLeave = (event) => {
 
     resetSelectionInteraction();
     return;
-  }  
+  }
   if (!isDrawingToolActive.value) return;
   if (activePointerId.value !== event.pointerId) return;
 
   finishStroke();
-  pointerPosition.value = null;  
+  pointerPosition.value = null;
 };
 
 const exportFinalImage = () => {
@@ -973,22 +782,6 @@ const exportFinalImage = () => {
   const ctx = resultCanvas.getContext('2d');
   ctx.drawImage(baseImage.value, 0, 0);
   ctx.drawImage(drawingCanvasRef.value, 0, 0);
-
-  texts.value.forEach((entry) => {
-    if (!entry.content.trim()) {
-      return;
-    }
-
-    ctx.save();
-    ctx.fillStyle = entry.color;
-    ctx.font = `${entry.bold ? 'bold ' : ''}${entry.size}px Inter, 'Segoe UI', Roboto, sans-serif`;
-    ctx.textBaseline = 'top';
-    const lineHeight = entry.size * 1.25;
-    entry.content.split('\n').forEach((line, index) => {
-      ctx.fillText(line, entry.x, entry.y + index * lineHeight);
-    });
-    ctx.restore();
-  });
 
   return resultCanvas.toDataURL('image/png');
 };
@@ -1065,55 +858,6 @@ const loadBaseImage = () => {
   image.src = props.snapshot;
 };
 
-watch(selectedTextId, (id) => {
-  if (!id) {
-    return;
-  }
-  const entry = texts.value.find((item) => item.id === id);
-  if (!entry) {
-    return;
-  }
-
-  textColor.value = entry.color;
-  textSize.value = entry.size;
-  isTextBold.value = entry.bold;
-});
-
-watch([textColor, textSize, isTextBold], ([color, size, bold]) => {
-  if (isApplyingHistory.value) {
-    return;
-  }  
-  if (!selectedTextId.value) {
-    return;
-  }
-
-  const entry = texts.value.find((item) => item.id === selectedTextId.value);
-  if (!entry) {
-    return;
-  }
-  if (entry.color === color && entry.size === size && entry.bold === bold) {
-    return;
-  }
-  entry.color = color;
-  entry.size = size;
-  entry.bold = bold;
-  scheduleHistorySave(false);  
-});
-
-onMounted(() => {
-  previousHtmlOverflow = document.documentElement.style.overflow;
-  previousBodyOverflow = document.body.style.overflow;
-  document.documentElement.style.overflow = 'hidden';
-  document.body.style.overflow = 'hidden';
-  window.addEventListener('keydown', handleKeydown);  
-  if (historySaveHandle) {
-    clearTimeout(historySaveHandle);
-    historySaveHandle = null;
-  }
-  loadBaseImage();  
-  scheduleHistorySave(false);
-});
-
 watch(currentTool, (tool, previous) => {
   if (previous === 'selection' && tool !== 'selection') {
     cancelSelection();
@@ -1124,9 +868,7 @@ watch(currentTool, (tool, previous) => {
 });
 watch(isZoomedIn, (zoomed) => {
   if (!zoomed) {
-    resetMiddleButtonPan();
     panOffset.value = { x: 0, y: 0 };
-    
   }
 });
 
@@ -1210,34 +952,6 @@ const handleBoardWheel = (event) => {
         :style="eraserPreviewStyle"
       ></div>      
       <div
-        v-for="entry in texts"
-        :key="entry.id"
-        :class="[
-          'pencil-overlay__text',
-          { 'pencil-overlay__text--selected': selectedTextId === entry.id }
-        ]"
-        :style="{
-          top: `${entry.y}px`,
-          left: `${entry.x}px`,
-          color: entry.color,
-          fontSize: `${entry.size}px`,
-          fontWeight: entry.bold ? 700 : 400
-        }"
-        @pointerdown.stop="selectText(entry.id)"
-        @dblclick.stop="editText(entry.id)"
-      >
-        <textarea
-          v-if="entry.isEditing"
-          :ref="(el) => registerTextInput(entry.id, el)"
-          v-model="entry.content"
-          class="pencil-overlay__text-input"
-          spellcheck="false"
-          @keydown="(event) => handleTextKeydown(event, entry.id)"
-          @blur="() => finishText(entry.id)"
-        ></textarea>
-        <div v-else class="pencil-overlay__text-label">{{ entry.content || ' ' }}</div>
-      </div>
-      <div
         v-if="selectionStyle"
         class="pencil-overlay__selection"
         :style="selectionStyle"
@@ -1302,17 +1016,6 @@ const handleBoardWheel = (event) => {
             @click="currentTool = 'selection'"
           >
             🔲
-          </button>
-          <button
-            type="button"
-            :class="[
-              'pencil-overlay__tool-button',
-              { 'pencil-overlay__tool-button--active': currentTool === 'text' }
-            ]"
-            title="Текст"
-            @click="currentTool = 'text'"
-          >
-            T
           </button>
         </div>
       </div>
@@ -1412,32 +1115,6 @@ const handleBoardWheel = (event) => {
           Выделите область, затем перемещайте содержимое левой кнопкой мыши. Для отмены выделения нажмите Esc или кликните по свободной области.
         </p>
       </div>
-      <div
-        v-else-if="currentTool === 'text'"
-        class="pencil-overlay__section"
-      >
-        <span class="pencil-overlay__section-title">Текст</span>
-        <label class="pencil-overlay__control">
-          <span>Цвет</span>
-          <input v-model="textColor" type="color" />
-        </label>
-        <label class="pencil-overlay__control">
-          <span>Размер: {{ textSize }} px</span>
-          <input
-            v-model.number="textSize"
-            type="range"
-            min="12"
-            max="72"
-          />
-        </label>
-        <label class="pencil-overlay__control pencil-overlay__control--inline">
-          <input
-            v-model="isTextBold"
-            type="checkbox"
-          />
-          <span>Жирный шрифт</span>
-        </label>
-      </div>
     </div>
   </div>
 </div>  
@@ -1483,19 +1160,6 @@ const handleBoardWheel = (event) => {
 .pencil-overlay__board--selection {
   cursor: crosshair;
 }
-.pencil-overlay__board--text {
-  cursor: text;
-}
-.pencil-overlay__board--grabbing {
-  cursor: grabbing !important;
-}  
-.pencil-overlay__selection {
-  position: absolute;
-  border: 2px dashed rgba(37, 99, 235, 0.85);
-  background-color: rgba(37, 99, 235, 0.12);
-  pointer-events: none;
-  box-sizing: border-box;
-}
 
 .pencil-overlay__canvas {
   display: block;
@@ -1503,44 +1167,6 @@ const handleBoardWheel = (event) => {
   height: 100%;
   touch-action: none;
   outline: none;
-}
-
-.pencil-overlay__text {
-  position: absolute;
-  min-width: 32px;
-  min-height: 32px;
-  padding: 2px 4px;
-  white-space: pre-wrap;
-  pointer-events: auto;
-  user-select: none;
-}
-
-.pencil-overlay__text--selected::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border: 1px dashed rgba(17, 24, 39, 0.4);
-  pointer-events: none;
-}
-
-.pencil-overlay__text-input {
-  min-width: 160px;
-  min-height: 48px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  border: 1px solid var(--overlay-control-border);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.15);
-  background: var(--overlay-control-bg);
-  font: inherit;
-  color: inherit;
-  resize: none;
-  outline: none;
-  white-space: pre-wrap;
-  user-select: text;  
-}
-
-.pencil-overlay__text-label {
-  pointer-events: none;
 }
 
 .pencil-overlay__panel {
