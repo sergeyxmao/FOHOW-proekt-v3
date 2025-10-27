@@ -909,10 +909,9 @@ const startDrag = (event, cardId) => {
     hasMoved: false,
     movingIds,
     primaryCardId: primaryEntry ? primaryEntry.id : null,
-    primprimaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
+    primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
     axisLock: null
   };
-  aryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null  };
   resetActiveGuides();
 
   const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent;
