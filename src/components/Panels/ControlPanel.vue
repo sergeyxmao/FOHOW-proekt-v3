@@ -209,7 +209,7 @@ const EXTRA_PADDING_SIDE = 50
 
 const getConnectionPath = (fromCard, toCard, fromSide, toSide) => {
   const getCoords = (card, side) => {
-    const width = Number(card.width) || 380
+    const width = Number(card.width) || 418
     const height = Number(card.height) || 280
     switch (side) {
       case 'top':
@@ -359,7 +359,7 @@ const handleExportSVG = async () => {
     
     const cards = cardsStore.cards.map(card => ({
       ...card,
-      width: Number(card.width) || 380,
+      width: Number(card.width) || 418,
       height: Number(card.height) || 280,
       x: Number(card.x) || 0,
       y: Number(card.y) || 0
