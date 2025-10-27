@@ -141,7 +141,7 @@ function syncWithCardPosition(options = {}) {
   if (shouldForce) {
     applyCardRectToNote(note.value, rect, {
       scale,
-      align: 'left',
+      align: 'right',
       forceAlign: true
     });
   } else {
