@@ -849,9 +849,6 @@ const handleCanvasPointerDown = (event) => {
     updatePointerPreview(point);
     startStroke(point);
   } else if (currentTool.value === 'text') {
-    if (typeof event.preventDefault === 'function') {
-      event.preventDefault();
-    }  
     createTextEntry(point);
   }
 };
