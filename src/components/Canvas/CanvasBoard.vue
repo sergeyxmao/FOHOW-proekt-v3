@@ -15,6 +15,7 @@ import { useHistoryStore } from '../../stores/history.js';
 import { useViewportStore } from '../../stores/viewport.js';
 import { useNotesStore } from '../../stores/notes.js';
 import { Engine } from '../../utils/calculationEngine';
+import { parseActivePV, setActivePV, propagateActivePvUp } from '../../utils/activePv';
 
 import {
   ensureNoteStructure,
@@ -115,6 +116,205 @@ let selectionBaseSelection = new Set();
 let suppressNextStageClick = false;
 
 const noteWindowRefs = new Map();
+const ACTIVE_PV_FLASH_MS = 650;
+
+const getCardElement = (cardId) => {
+  if (!cardId) {
+    return null;
+  }
+  const root = canvasContainerRef.value || document;
+  return root.querySelector(`[data-card-id="${cardId}"]`);
+};
+
+const getConnectionElement = (connectionId) => {
+  if (!connectionId) {
+    return null;
+  }
+  const root = canvasContainerRef.value || document;
+  return root.querySelector(`[data-connection-id="${connectionId}"] .line`);
+};
+
+const updateActivePvDatasets = (payload = {}) => {
+  nextTick(() => {
+    Object.entries(payload).forEach(([cardId, values]) => {
+      const cardElement = getCardElement(cardId);
+      if (!cardElement) {
+        return;
+      }
+      const hidden = cardElement.querySelector('.active-pv-hidden');
+      if (!hidden) {
+        return;
+      }
+      const local = values.local || { left: 0, right: 0 };
+      const aggregated = values.aggregated || { left: 0, right: 0 };
+      hidden.dataset.locall = String(local.left ?? 0);
+      hidden.dataset.localr = String(local.right ?? 0);
+      hidden.dataset.btnl = String(aggregated.left ?? 0);
+      hidden.dataset.btnr = String(aggregated.right ?? 0);
+    });
+  });
+};
+
+const highlightActivePvChange = (cardId) => {
+  if (!cardId) {
+    return;
+  }
+  const cardElement = getCardElement(cardId);
+  if (cardElement) {
+    cardElement.classList.add('card--balance-highlight');
+    window.setTimeout(() => {
+      cardElement.classList.remove('card--balance-highlight');
+    }, ACTIVE_PV_FLASH_MS);
+  }
+
+  const relatedConnections = connections.value.filter(connection => connection.from === cardId || connection.to === cardId);
+  relatedConnections.forEach(connection => {
+    const lineElement = getConnectionElement(connection.id);
+    if (!lineElement) {
+      return;
+    }
+    lineElement.classList.add('line--balance-flash');
+    window.setTimeout(() => {
+      lineElement.classList.remove('line--balance-flash');
+    }, ACTIVE_PV_FLASH_MS);
+  });
+};
+
+const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
+  if (!Array.isArray(cardsStore.cards) || cardsStore.cards.length === 0) {
+    return;
+  }
+
+  const propagation = propagateActivePvUp(cardsStore.cards, cardsStore.calculationMeta || {});
+  const datasetPayload = {};
+
+  Object.entries(propagation).forEach(([cardId, data]) => {
+    const local = data?.local ? {
+      left: data.local.left,
+      right: data.local.right,
+      total: data.local.total
+    } : { left: 0, right: 0, total: 0 };
+
+    const aggregated = data?.aggregated ? {
+      left: data.aggregated.left,
+      right: data.aggregated.right,
+      total: data.aggregated.total
+    } : { left: 0, right: 0, total: 0 };
+
+    const card = cardsStore.cards.find(item => item.id === cardId);
+    if (!card) {
+      return;
+    }
+
+    const shouldUpdateLocal = !card.activePvLocal
+      || card.activePvLocal.left !== local.left
+      || card.activePvLocal.right !== local.right
+      || card.activePvLocal.total !== local.total;
+
+    const shouldUpdateAggregated = !card.activePvAggregated
+      || card.activePvAggregated.left !== aggregated.left
+      || card.activePvAggregated.right !== aggregated.right
+      || card.activePvAggregated.total !== aggregated.total;
+
+    if (shouldUpdateLocal || shouldUpdateAggregated) {
+      cardsStore.updateCard(cardId, {
+        ...(shouldUpdateLocal ? { activePvLocal: { ...local } } : {}),
+        ...(shouldUpdateAggregated ? { activePvAggregated: { ...aggregated } } : {})
+      }, { saveToHistory: false });
+    }
+
+    datasetPayload[cardId] = { local, aggregated };
+  });
+
+  updateActivePvDatasets(datasetPayload);
+
+  if (options.saveHistory) {
+    const actionDescription = options.historyDescription || 'Изменены бонусы Active-PV';
+    historyStore.setActionMetadata('update', actionDescription);
+    historyStore.saveState();
+  }
+
+  if (highlightCardId) {
+    highlightActivePvChange(highlightCardId);
+  }
+};
+
+const handleActivePvButtonClick = (event) => {
+  const button = event.target.closest('.active-pv-btn');
+  if (!button) {
+    return;
+  }
+
+  const cardElement = button.closest('[data-card-id]');
+  if (!cardElement) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const cardId = cardElement.dataset.cardId;
+  const side = button.dataset.side === 'right' ? 'right' : 'left';
+  const action = button.dataset.action || 'delta';
+  const delta = Number(button.dataset.delta);
+  const hidden = cardElement.querySelector('.active-pv-hidden');
+  const card = cardsStore.cards.find(item => item.id === cardId);
+
+  if (!cardId || !hidden || !card) {
+    return;
+  }
+
+  const datasetKey = side === 'right' ? 'localr' : 'locall';
+  let currentValue = Number(hidden.dataset[datasetKey]) || 0;
+
+  if (action === 'clear') {
+    currentValue = 0;
+  } else if (Number.isFinite(delta)) {
+    currentValue += delta;
+  }
+
+  if (currentValue < 0) {
+    currentValue = 0;
+  }
+
+  hidden.dataset[datasetKey] = String(currentValue);
+
+  const localPayload = {
+    left: Number(hidden.dataset.locall) || 0,
+    right: Number(hidden.dataset.localr) || 0
+  };
+
+  const normalized = setActivePV(null, localPayload);
+  const previousLocal = parseActivePV(card.activePvLocal ?? card.activePv);
+
+  if (previousLocal.left === normalized.left && previousLocal.right === normalized.right) {
+    const aggregated = card.activePvAggregated
+      ? parseActivePV(card.activePvAggregated)
+      : parseActivePV(null);
+    updateActivePvDatasets({
+      [cardId]: {
+        local: { left: normalized.left, right: normalized.right },
+        aggregated: { left: aggregated.left, right: aggregated.right }
+      }
+    });
+    return;
+  }
+
+  cardsStore.updateCard(cardId, {
+    activePv: normalized.formatted,
+    activePvLocal: {
+      left: normalized.left,
+      right: normalized.right,
+      total: normalized.total
+    }
+  }, { saveToHistory: false });
+
+  const description = card?.text
+    ? `Active-PV обновлены для "${card.text}"`
+    : 'Изменены бонусы Active-PV';
+
+  applyActivePvPropagation(cardId, { saveHistory: true, historyDescription: description });
+};  
 const getCurrentZoom = () => {
   const value = Number(zoomScale.value);
   return Number.isFinite(value) && value > 0 ? value : 1;
@@ -149,16 +349,18 @@ const engineInput = computed(() => {
 watch(engineInput, (state) => {
   if (!state.cards.length) {
     cardsStore.resetCalculationResults();
+    applyActivePvPropagation();    
     return;
   }
 
   try {
     const { result, meta } = Engine.recalc(state);
     cardsStore.applyCalculationResults({ result, meta });
+    applyActivePvPropagation();    
   } catch (error) {
     console.error('Engine recalculation error:', error);
   }
-}, { immediate: true });  
+}, { immediate: true });
 const GUIDE_SNAP_THRESHOLD = 10;
 
 const resetActiveGuides = () => {
@@ -1364,22 +1566,29 @@ onMounted(() => {
   if (canvasContainerRef.value) { // Добавляем проверку
     canvasContainerRef.value.addEventListener('pointermove', handleMouseMove);
     canvasContainerRef.value.addEventListener('pointerdown', handlePointerDown);
+    canvasContainerRef.value.addEventListener('click', handleActivePvButtonClick, true);    
   }
 
   handleWindowResize();
   window.addEventListener('resize', handleWindowResize);
   window.addEventListener('keydown', handleKeydown);
-  window.addEventListener('scroll', handleViewportChange, true);  
+  window.addEventListener('scroll', handleViewportChange, true);
+
+  nextTick(() => {
+    applyActivePvPropagation();
+  });
 });
 
 onBeforeUnmount(() => {
   if (canvasContainerRef.value) { // Добавляем проверку
     canvasContainerRef.value.removeEventListener('pointermove', handleMouseMove);
     canvasContainerRef.value.removeEventListener('pointerdown', handlePointerDown);
+    canvasContainerRef.value.removeEventListener('click', handleActivePvButtonClick, true);
+    
   }
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('resize', handleWindowResize);
-  window.removeEventListener('scroll', handleViewportChange, true);  
+  window.removeEventListener('scroll', handleViewportChange, true);
   window.removeEventListener('pointermove', handleMouseMove); // Управляем подпиской в watch
   window.removeEventListener('pointermove', handleDrag);
   window.removeEventListener('pointerup', endDrag);
@@ -1550,6 +1759,13 @@ watch(
 watch(cards, () => {
   updateStageSize();
 }, { deep: true });
+watch(() => cardsStore.calculationMeta, () => {
+  applyActivePvPropagation();
+}, { deep: true });
+
+watch(() => cards.value.length, () => {
+  applyActivePvPropagation();
+});
 
 watch(guidesEnabled, (enabled) => {
   if (!enabled) {
@@ -1652,12 +1868,13 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           </marker>
         </defs>
 
-<g
-          v-for="path in connectionPaths"
-          :key="path.id"
-          class="line-group"
-          @click.stop="(event) => handleLineClick(event, path.id)"
-        >
+      <g
+        v-for="path in connectionPaths"
+        :key="path.id"
+        class="line-group"
+        :data-connection-id="path.id"
+        @click.stop="(event) => handleLineClick(event, path.id)"
+      >
           <!-- Невидимая область для клика (hitbox) -->
           <path
             :d="path.d"
@@ -1847,7 +2064,12 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   animation-iteration-count: infinite;
   filter: drop-shadow(0 0 10px var(--line-highlight-color));
 }
-
+.line--balance-flash {
+  animation: lineBalanceFlash 0.6s ease;
+  stroke-dasharray: 16;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 10px rgba(15, 98, 254, 0.35));
+}
 .line--pv-highlight {
   --line-highlight-color: rgba(15, 98, 254, .45);
   stroke-dasharray: 14;
@@ -1858,6 +2080,21 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   animation-iteration-count: infinite;
   filter: drop-shadow(0 0 10px var(--line-highlight-color));
 }
+
+@keyframes lineBalanceFlash {
+  0% {
+    stroke-width: var(--line-width, 5px);
+    opacity: 1;
+  }
+  50% {
+    stroke-width: calc(var(--line-width, 5px) + 2px);
+    opacity: 0.75;
+  }
+  100% {
+    stroke-width: var(--line-width, 5px);
+    opacity: 1;
+  }
+}  
 .canvas-container--capturing .line,
 .canvas-container--capturing .line.selected,
 .canvas-container--capturing .line--balance-highlight,
