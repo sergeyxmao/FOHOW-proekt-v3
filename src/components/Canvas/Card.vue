@@ -68,10 +68,12 @@ const cardStyle = computed(() => {
     left: `${props.card.x}px`,
     top: `${props.card.y}px`,
     width: `${props.card.width}px`,
-    height: Number.isFinite(props.card.height) ? `${props.card.height}px` : 'auto',
     background: bodyBackground,
     border: `${strokeWidth}px solid ${props.card.stroke || '#000000'}`
   };
+  if (Number.isFinite(props.card.height)) {
+    style.minHeight = `${props.card.height}px`;
+  }
 
   style['--card-body-gradient'] = bodyBackground;
 
@@ -255,6 +257,34 @@ const activeOrdersDisplay = computed(
 );
 const cyclesDisplay = computed(() => finalCalculation.value.cycles);
 const stageDisplay = computed(() => finalCalculation.value.stage);
+const PV_RIGHT_VALUE = 330;
+const MIN_LEFT_PV = 30;
+const MAX_LEFT_PV = 330;
+
+const normalizePvValue = (rawValue, fallback) => {
+  const base = typeof rawValue === 'string' ? rawValue : '';
+  const match = base.match(/^(\s*)(\d{1,3})/);
+
+  if (!match) {
+    return fallback;
+  }
+
+  let left = Number.parseInt(match[2], 10);
+
+  if (!Number.isFinite(left)) {
+    return fallback;
+  }
+
+  left = Math.min(Math.max(left, MIN_LEFT_PV), MAX_LEFT_PV);
+
+  return `${left}/${PV_RIGHT_VALUE}pv`;
+};
+
+const displayedPvValue = computed(() => {
+  const fallback = `${PV_RIGHT_VALUE}/${PV_RIGHT_VALUE}pv`;
+  const normalized = normalizePvValue(props.card.pv, fallback);
+  return normalized || fallback;
+});
 
 const coinFillColor = computed(() => {
   const fill = props.card?.coinFill;
@@ -285,7 +315,15 @@ const updateValue = (event, field) => {
   }
   
   const newValue = event.target.textContent.trim();
-  cardsStore.updateCard(props.card.id, { [field]: newValue });
+  const normalized = normalizePvValue(newValue, displayedPvValue.value);
+
+  if (event.target.textContent !== normalized) {
+    event.target.textContent = normalized;
+  }
+
+  if (normalized !== props.card.pv) {
+    cardsStore.updateCard(props.card.id, { [field]: normalized });
+  }
 };
 </script>
 
@@ -359,7 +397,7 @@ const updateValue = (event, field) => {
           contenteditable="true"
           @blur="updateValue($event, 'pv')"
         >
-          {{ card.pv || '330/330pv' }}
+          {{ displayedPvValue }}
         </span>
       </div>
       
