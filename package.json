@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest run",    
     "deploy": "npm run build && cd dist && git init && git branch -M gh-pages && git add . && git commit -m \"Deploy to GitHub Pages\" && git remote add origin https://github.com/sergeyxmao/FOHOW-proekt-v3.git && git push -f origin gh-pages",
     "deploy:windows": "deploy.bat"
   },
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
     "vite": "^7.1.7",
-    "vite-plugin-vue-devtools": "^8.0.2"
+    "vite-plugin-vue-devtools": "^8.0.2",
+    "vitest": "^2.1.4"
   }
 }
