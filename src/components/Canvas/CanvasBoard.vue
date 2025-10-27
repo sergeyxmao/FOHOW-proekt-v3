@@ -909,7 +909,10 @@ const startDrag = (event, cardId) => {
     hasMoved: false,
     movingIds,
     primaryCardId: primaryEntry ? primaryEntry.id : null,
-    primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null  };
+    prim    primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
+    axisLock: null
+  };
+  aryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null  };
   resetActiveGuides();
 
   const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent;
@@ -945,11 +948,34 @@ const handleDrag = (event) => {
     event.preventDefault();
   } 
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
-  let dx = canvasPos.x - dragState.value.startPointer.x;
-  let dy = canvasPos.y - dragState.value.startPointer.y;
+  const rawDx = canvasPos.x - dragState.value.startPointer.x;
+  const rawDy = canvasPos.y - dragState.value.startPointer.y;
+  let dx = snapDelta(rawDx);
+  let dy = snapDelta(rawDy);
 
-  dx = snapDelta(dx);
-  dy = snapDelta(dy);
+  const shiftPressed = Boolean(event.shiftKey);
+  let axisLock = dragState.value.axisLock;
+
+  if (!shiftPressed) {
+    axisLock = null;
+  } else if (!axisLock) {
+    const absDx = Math.abs(rawDx);
+    const absDy = Math.abs(rawDy);
+
+    if (absDx > absDy) {
+      axisLock = 'horizontal';
+    } else if (absDy > absDx) {
+      axisLock = 'vertical';
+    }
+  }
+
+  if (axisLock === 'horizontal') {
+    dy = 0;
+  } else if (axisLock === 'vertical') {
+    dx = 0;
+  }
+
+  dragState.value.axisLock = axisLock;
 
   let guideAdjustX = 0;
   let guideAdjustY = 0;
@@ -960,8 +986,8 @@ const handleDrag = (event) => {
     const guideResult = computeGuideSnap(dragState.value.primaryCardId, proposedX, proposedY);
 
     if (guideResult) {
-      guideAdjustX = guideResult.adjustX;
-      guideAdjustY = guideResult.adjustY;
+      guideAdjustX = axisLock === 'vertical' ? 0 : guideResult.adjustX;
+      guideAdjustY = axisLock === 'horizontal' ? 0 : guideResult.adjustY;
       activeGuides.value = guideResult.guides;
     } else {
       resetActiveGuides();
