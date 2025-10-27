@@ -229,8 +229,9 @@ function propagateToAncestors(stateMap, meta, childId, amount, changed) {
     const parentState = stateMap.get(parentId) || createEmptyState();
 
     const nextBalance = parentState.balance[side] + amount;
-    parentState.balance[side] = nextBalance < 0 ? 0 : nextBalance;
-
+    const nonNegative = nextBalance < 0 ? 0 : nextBalance;
+    parentState.balance[side] = Math.min(nonNegative, ACTIVE_PV_BASE);
+    
     if (amount > 0) {
       while (parentState.balance.left >= ACTIVE_PV_BASE && parentState.balance.right >= ACTIVE_PV_BASE) {
         parentState.balance.left -= ACTIVE_PV_BASE;
@@ -350,12 +351,25 @@ function applyActivePvClear({ cards = [], meta = {}, cardId }) {
   const state = stateMap.get(cardId);
   const leftRemainder = state.activePv.left;
   const rightRemainder = state.activePv.right;
-
+  const leftBalance = state.balance.left;
+  const rightBalance = state.balance.right;
+  
   if (leftRemainder > 0) {
     applyDeltaInternal({ stateMap, meta, cardId, side: 'left', delta: -leftRemainder, changed });
   }
   if (rightRemainder > 0) {
     applyDeltaInternal({ stateMap, meta, cardId, side: 'right', delta: -rightRemainder, changed });
+  }
+  if (leftBalance > 0) {
+    state.balance.left = 0;
+    propagateToAncestors(stateMap, meta, cardId, -leftBalance, changed);
+    changed.add(cardId);
+  }
+
+  if (rightBalance > 0) {
+    state.balance.right = 0;
+    propagateToAncestors(stateMap, meta, cardId, -rightBalance, changed);
+    changed.add(cardId);
   }
 
   const updates = buildUpdates(stateMap, changed);
@@ -379,8 +393,8 @@ function propagateActivePvUp(cards = [], meta = {}) {
     const balanceRight = state.balance.right;
     const cycles = state.cycles;
 
-    const remainderLeft = Math.max(0, manualLeft + balanceLeft);
-    const remainderRight = Math.max(0, manualRight + balanceRight);
+    const remainderLeft = Math.min(ACTIVE_PV_BASE, Math.max(0, manualLeft + balanceLeft));
+    const remainderRight = Math.min(ACTIVE_PV_BASE, Math.max(0, manualRight + balanceRight));
 
     const unitsLeft = localBalanceLeft + cycles;
     const unitsRight = localBalanceRight + cycles;
