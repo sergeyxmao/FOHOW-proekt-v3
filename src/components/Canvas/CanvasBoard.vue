@@ -15,7 +15,7 @@ import { useHistoryStore } from '../../stores/history.js';
 import { useViewportStore } from '../../stores/viewport.js';
 import { useNotesStore } from '../../stores/notes.js';
 import { Engine } from '../../utils/calculationEngine';
-import { parseActivePV, setActivePV, propagateActivePvUp } from '../../utils/activePv';
+import { parseActivePV, propagateActivePvUp } from '../../utils/activePv';
 
 import {
   ensureNoteStructure,
@@ -145,12 +145,17 @@ const updateActivePvDatasets = (payload = {}) => {
       if (!hidden) {
         return;
       }
-      const local = values.local || { left: 0, right: 0 };
-      const aggregated = values.aggregated || { left: 0, right: 0 };
-      hidden.dataset.locall = String(local.left ?? 0);
-      hidden.dataset.localr = String(local.right ?? 0);
-      hidden.dataset.btnl = String(aggregated.left ?? 0);
-      hidden.dataset.btnr = String(aggregated.right ?? 0);
+
+      const units = values.units || { left: 0, right: 0 };
+      const manual = values.manual || { left: 0, right: 0 };
+      const remainder = values.remainder || { left: 0, right: 0 };
+
+      hidden.dataset.locall = String(units.left ?? 0);
+      hidden.dataset.localr = String(units.right ?? 0);
+      hidden.dataset.btnl = String(manual.left ?? 0);
+      hidden.dataset.btnr = String(manual.right ?? 0);
+      hidden.dataset.remainderl = String(remainder.left ?? 0);
+      hidden.dataset.remainderr = String(remainder.right ?? 0);
     });
   });
 };
@@ -189,41 +194,68 @@ const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
   const datasetPayload = {};
 
   Object.entries(propagation).forEach(([cardId, data]) => {
-    const local = data?.local ? {
-      left: data.local.left,
-      right: data.local.right,
-      total: data.local.total
-    } : { left: 0, right: 0, total: 0 };
-
-    const aggregated = data?.aggregated ? {
-      left: data.aggregated.left,
-      right: data.aggregated.right,
-      total: data.aggregated.total
-    } : { left: 0, right: 0, total: 0 };
-
     const card = cardsStore.cards.find(item => item.id === cardId);
     if (!card) {
       return;
     }
 
-    const shouldUpdateLocal = !card.activePvLocal
-      || card.activePvLocal.left !== local.left
-      || card.activePvLocal.right !== local.right
-      || card.activePvLocal.total !== local.total;
+    const manualLeft = Math.max(0, Number(data?.manual?.left ?? 0));
+    const manualRight = Math.max(0, Number(data?.manual?.right ?? 0));
+    const manualTotal = manualLeft + manualRight;
 
-    const shouldUpdateAggregated = !card.activePvAggregated
-      || card.activePvAggregated.left !== aggregated.left
-      || card.activePvAggregated.right !== aggregated.right
-      || card.activePvAggregated.total !== aggregated.total;
+    const remainderLeft = Math.max(0, Number(data?.remainder?.left ?? 0));
+    const remainderRight = Math.max(0, Number(data?.remainder?.right ?? 0));
 
-    if (shouldUpdateLocal || shouldUpdateAggregated) {
-      cardsStore.updateCard(cardId, {
-        ...(shouldUpdateLocal ? { activePvLocal: { ...local } } : {}),
-        ...(shouldUpdateAggregated ? { activePvAggregated: { ...aggregated } } : {})
-      }, { saveToHistory: false });
+    const unitsLeft = Math.max(0, Number(data?.units?.left ?? 0));
+    const unitsRight = Math.max(0, Number(data?.units?.right ?? 0));
+    const unitsTotal = unitsLeft + unitsRight;
+
+    const formattedRemainder = `${remainderLeft} / ${remainderRight}`;
+
+    const updates = {};
+
+    if (!card.activePvManual
+      || card.activePvManual.left !== manualLeft
+      || card.activePvManual.right !== manualRight
+      || card.activePvManual.total !== manualTotal) {
+      updates.activePvManual = { left: manualLeft, right: manualRight, total: manualTotal };
     }
 
-    datasetPayload[cardId] = { local, aggregated };
+    if (!card.activePvLocal
+      || card.activePvLocal.left !== manualLeft
+      || card.activePvLocal.right !== manualRight
+      || card.activePvLocal.total !== manualTotal) {
+      updates.activePvLocal = { left: manualLeft, right: manualRight, total: manualTotal };
+    }
+
+    if (!card.activePvAggregated
+      || card.activePvAggregated.left !== unitsLeft
+      || card.activePvAggregated.right !== unitsRight
+      || card.activePvAggregated.total !== unitsTotal
+      || card.activePvAggregated.remainderLeft !== remainderLeft
+      || card.activePvAggregated.remainderRight !== remainderRight) {
+      updates.activePvAggregated = {
+        left: unitsLeft,
+        right: unitsRight,
+        total: unitsTotal,
+        remainderLeft,
+        remainderRight
+      };
+    }
+
+    if (card.activePv !== formattedRemainder) {
+      updates.activePv = formattedRemainder;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      cardsStore.updateCard(cardId, updates, { saveToHistory: false });
+    }
+
+    datasetPayload[cardId] = {
+      manual: { left: manualLeft, right: manualRight },
+      units: { left: unitsLeft, right: unitsRight },
+      remainder: { left: remainderLeft, right: remainderRight }
+    };
   });
 
   updateActivePvDatasets(datasetPayload);
@@ -254,63 +286,47 @@ const handleActivePvButtonClick = (event) => {
   event.stopPropagation();
 
   const cardId = cardElement.dataset.cardId;
-  const side = button.dataset.side === 'right' ? 'right' : 'left';
   const action = button.dataset.action || 'delta';
-  const delta = Number(button.dataset.delta);
-  const hidden = cardElement.querySelector('.active-pv-hidden');
+  const direction = button.dataset.dir === 'right' ? 'right' : 'left';
+  const step = Number(button.dataset.step);
   const card = cardsStore.cards.find(item => item.id === cardId);
 
-  if (!cardId || !hidden || !card) {
+  if (!cardId || !card) {
     return;
   }
+
+  const manualSource = card.activePvManual ?? card.activePvLocal ?? card.activePv;
+  const manualState = parseActivePV(manualSource);
+
+  let nextLeft = manualState.left;
+  let nextRight = manualState.right;
 
   if (action === 'clear-all') {
-    hidden.dataset.locall = '0';
-    hidden.dataset.localr = '0';
-  } else {
-    const datasetKey = side === 'right' ? 'localr' : 'locall';
-    let currentValue = Number(hidden.dataset[datasetKey]) || 0;
-
-    if (action === 'clear') {
-      currentValue = 0;
-    } else if (Number.isFinite(delta)) {
-      currentValue += delta;
+    nextLeft = 0;
+    nextRight = 0;
+  } else if (Number.isFinite(step)) {
+    if (direction === 'right') {
+      nextRight = Math.max(0, nextRight + step);
+    } else {
+      nextLeft = Math.max(0, nextLeft + step);
     }
-
-    if (currentValue < 0) {
-      currentValue = 0;
-    }
-
-    hidden.dataset[datasetKey] = String(currentValue);
   }
-  const localPayload = {
-    left: Number(hidden.dataset.locall) || 0,
-    right: Number(hidden.dataset.localr) || 0
-  };
 
-  const normalized = setActivePV(null, localPayload);
-  const previousLocal = parseActivePV(card.activePvLocal ?? card.activePv);
+  nextLeft = Math.max(0, nextLeft);
+  nextRight = Math.max(0, nextRight);
 
-  if (previousLocal.left === normalized.left && previousLocal.right === normalized.right) {
-    const aggregated = card.activePvAggregated
-      ? parseActivePV(card.activePvAggregated)
-      : parseActivePV(null);
-    updateActivePvDatasets({
-      [cardId]: {
-        local: { left: normalized.left, right: normalized.right },
-        aggregated: { left: aggregated.left, right: aggregated.right }
-      }
-    });
+  if (nextLeft === manualState.left && nextRight === manualState.right) {
     return;
   }
-
+  const manualPayload = {
+    left: nextLeft,
+    right: nextRight,
+    total: nextLeft + nextRight
+  };
   cardsStore.updateCard(cardId, {
-    activePv: normalized.formatted,
-    activePvLocal: {
-      left: normalized.left,
-      right: normalized.right,
-      total: normalized.total
-    }
+    activePvManual: { ...manualPayload },
+    activePvLocal: { ...manualPayload },
+    activePv: `${nextLeft} / ${nextRight}`
   }, { saveToHistory: false });
 
   const description = card?.text
