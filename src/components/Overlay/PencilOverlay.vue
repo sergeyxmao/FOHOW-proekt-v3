@@ -71,6 +71,8 @@ const selectionMoveState = ref(null);
 const pointerPosition = ref(null);
 const isMiddleButtonPanning = ref(false);
 const middlePointerId = ref(null);
+const panOffset = ref({ x: 0, y: 0 });
+const middleButtonPanStart = ref(null);
   
 const ERASER_MIN_SIZE = 4;
 const ERASER_MAX_SIZE = 80;
@@ -108,15 +110,20 @@ const boardClasses = computed(() => {
   }
   return classes;
 });
-const boardStyle = computed(() => ({
-  top: `${props.bounds.top}px`,
-  left: `${props.bounds.left}px`,
-  width: `${canvasWidth.value}px`,
-  height: `${canvasHeight.value}px`,
-  backgroundImage: `url(${props.snapshot})`,
-  transform: `scale(${zoomScale.value})`,
-  transformOrigin: 'top left'
-}));
+const boardStyle = computed(() => {
+  const scale = zoomScale.value || 1;
+  const offset = panOffset.value || { x: 0, y: 0 };
+
+  return {
+    top: `${props.bounds.top}px`,
+    left: `${props.bounds.left}px`,
+    width: `${canvasWidth.value}px`,
+    height: `${canvasHeight.value}px`,
+    backgroundImage: `url(${props.snapshot})`,
+    transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+    transformOrigin: 'top left'
+  };
+});
 const selectionStyle = computed(() => {
   if (!selectionRect.value) {
     return null;
@@ -792,6 +799,8 @@ const updatePointerPreview = (point) => {
 const resetMiddleButtonPan = () => {
   isMiddleButtonPanning.value = false;
   middlePointerId.value = null;
+  middleButtonPanStart.value = null;
+  
 };
 const handleCanvasPointerDown = (event) => {
   const isMiddleButton = event.button === 1;
@@ -799,8 +808,18 @@ const handleCanvasPointerDown = (event) => {
 
   if (isMiddleButton) {
     if (isZoomedIn.value) {
+      const canvas = drawingCanvasRef.value;
+      if (canvas) {
+        canvas.setPointerCapture(event.pointerId);
+      }      
       isMiddleButtonPanning.value = true;
       middlePointerId.value = event.pointerId;
+      middleButtonPanStart.value = {
+        clientX: event.clientX,
+        clientY: event.clientY,
+        offsetX: panOffset.value?.x || 0,
+        offsetY: panOffset.value?.y || 0
+      };      
     }
     return;
   }
@@ -835,6 +854,17 @@ const handleCanvasPointerDown = (event) => {
 };
 
 const handleCanvasPointerMove = (event) => {
+  if (isMiddleButtonPanning.value && middlePointerId.value === event.pointerId && middleButtonPanStart.value) {
+    event.preventDefault();
+    const scale = zoomScale.value || 1;
+    const deltaX = (event.clientX - middleButtonPanStart.value.clientX) / scale;
+    const deltaY = (event.clientY - middleButtonPanStart.value.clientY) / scale;
+    panOffset.value = {
+      x: middleButtonPanStart.value.offsetX + deltaX,
+      y: middleButtonPanStart.value.offsetY + deltaY
+    };
+    return;
+  }  
 
   const point = getCanvasPoint(event);
   if (!point) return;
@@ -860,6 +890,10 @@ const handleCanvasPointerMove = (event) => {
 
 const handleCanvasPointerUp = (event) => {
   if (event.button === 1 && middlePointerId.value === event.pointerId) {
+    const canvas = drawingCanvasRef.value;
+    if (canvas && canvas.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }    
     resetMiddleButtonPan();
     return;
   }  
@@ -892,6 +926,10 @@ const handleCanvasPointerUp = (event) => {
 
 const handleCanvasPointerLeave = (event) => {
   if (middlePointerId.value === event.pointerId) {
+    const canvas = drawingCanvasRef.value;
+    if (canvas && canvas.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }    
     resetMiddleButtonPan();
   }
   
@@ -1087,6 +1125,8 @@ watch(currentTool, (tool, previous) => {
 watch(isZoomedIn, (zoomed) => {
   if (!zoomed) {
     resetMiddleButtonPan();
+    panOffset.value = { x: 0, y: 0 };
+    
   }
 });
 
@@ -1108,6 +1148,7 @@ const handleBoardWheel = (event) => {
   }
 
   event.preventDefault();
+  const currentScale = zoomScale.value || 1;
 
   const direction = event.deltaY < 0 ? 1 : -1;
   if (direction === 0) {
@@ -1115,10 +1156,34 @@ const handleBoardWheel = (event) => {
   }
 
   const STEP = 0.1;
-  const current = zoomScale.value || 1;
-  const updated = direction > 0 ? current * (1 + STEP) : current / (1 + STEP);
-  zoomScale.value = clampZoom(Number.parseFloat(updated.toFixed(4)));
-};  
+  let updatedScale = direction > 0 ? currentScale * (1 + STEP) : currentScale / (1 + STEP);
+  updatedScale = clampZoom(updatedScale);
+  if (Math.abs(updatedScale - currentScale) < 0.0001) {
+    return;
+  }
+
+  const boardElement = event.currentTarget;
+  if (!boardElement || typeof boardElement.getBoundingClientRect !== 'function') {
+    zoomScale.value = Number.parseFloat(updatedScale.toFixed(4));
+    return;
+  }
+
+  const rect = boardElement.getBoundingClientRect();
+  const pointerOffsetX = event.clientX - rect.left;
+  const pointerOffsetY = event.clientY - rect.top;
+
+  const localX = pointerOffsetX / currentScale;
+  const localY = pointerOffsetY / currentScale;
+  const currentPan = panOffset.value || { x: 0, y: 0 };
+  const scaleDifference = currentScale - updatedScale;
+
+  panOffset.value = {
+    x: currentPan.x + scaleDifference * localX,
+    y: currentPan.y + scaleDifference * localY
+  };
+
+  zoomScale.value = Number.parseFloat(updatedScale.toFixed(4));
+};
 </script>
 
 <template>
