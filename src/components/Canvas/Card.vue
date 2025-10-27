@@ -653,7 +653,11 @@ const updateValue = (event, field) => {
   flex: 1 1 auto;
   width: 100%;
   box-sizing: border-box;
-  line-height: 1.3;  
+  line-height: 1.3;
+}
+.card:not(.card--large):not(.card--gold) .card-body {
+  padding-bottom: 40px;
+  gap: 8px;
 }
 .card--large .card-body,
 .card--gold .card-body {
@@ -666,7 +670,10 @@ const updateValue = (event, field) => {
   gap: 10px;
   text-align: center;
   flex-wrap: wrap;
-  width: 100%;  
+  width: 100%;
+}
+.card:not(.card--large):not(.card--gold) .card-row {
+  gap: 8px;
 }
 
 .card-row.pv-row {
