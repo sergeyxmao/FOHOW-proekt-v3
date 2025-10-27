@@ -1,3 +1,5 @@
+const ACTIVE_PV_BASE = 330;
+
 function toInteger(value) {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return Math.trunc(value);
@@ -8,8 +10,15 @@ function toInteger(value) {
   }
   return 0;
 }
-const ACTIVE_PV_BASE = 330;
 
+function clampRemainder(value) {
+  const normalized = Math.max(0, toInteger(value));
+  return normalized % ACTIVE_PV_BASE;
+}
+
+function normalizeSide(side) {
+  return side === 'right' ? 'right' : 'left';
+}
 function normalizePair(left, right) {
   const normalizedLeft = Math.max(0, toInteger(left));
   const normalizedRight = Math.max(0, toInteger(right));
@@ -21,6 +30,7 @@ function normalizePair(left, right) {
     formatted: `${normalizedLeft} / ${normalizedRight}`
   };
 }
+
 function ensureManualPair(source) {
   const parsed = parseActivePV(source);
   return {
@@ -31,22 +41,71 @@ function ensureManualPair(source) {
   };
 }
 
-function toChildArray(collection) {
-  if (!collection) {
-    return [];
-  }
-  if (Array.isArray(collection)) {
-    return collection.filter(Boolean);
-  }
-  if (collection instanceof Set) {
-    return Array.from(collection).filter(Boolean);
-  }
-  if (typeof collection === 'object') {
-    return Object.values(collection).filter(Boolean);
-  }
-  return [];
+function cloneState(state) {
+  return {
+    activePv: {
+      left: state.activePv.left,
+      right: state.activePv.right
+    },
+    activePacks: state.activePacks,
+    balance: {
+      left: state.balance.left,
+      right: state.balance.right
+    },
+    cycles: state.cycles
+  };
 }
-export function parseActivePV(source) {
+
+function createEmptyState() {
+  return {
+    activePv: { left: 0, right: 0 },
+    activePacks: 0,
+    balance: { left: 0, right: 0 },
+    cycles: 0
+  };
+}
+
+function normalizeState(rawState) {
+  if (!rawState || typeof rawState !== 'object') {
+    return createEmptyState();
+  }
+  const activePvSource = rawState.activePv || {};
+  const balanceSource = rawState.balance || {};
+  const normalized = {
+    activePv: {
+      left: clampRemainder(activePvSource.left ?? activePvSource.L ?? activePvSource.l ?? rawState.left ?? 0),
+      right: clampRemainder(activePvSource.right ?? activePvSource.R ?? activePvSource.r ?? rawState.right ?? 0)
+    },
+    activePacks: Math.max(0, toInteger(rawState.activePacks ?? rawState.packs ?? 0)),
+    balance: {
+      left: Math.max(0, toInteger(balanceSource.left ?? balanceSource.L ?? balanceSource.l ?? 0)),
+      right: Math.max(0, toInteger(balanceSource.right ?? balanceSource.R ?? balanceSource.r ?? 0))
+    },
+    cycles: Math.max(0, toInteger(rawState.cycles ?? rawState.cycle ?? 0))
+  };
+  return normalized;
+}
+
+function getStateFromCard(card = {}) {
+  if (card.activePvState && typeof card.activePvState === 'object') {
+    return normalizeState(card.activePvState);
+  }
+  const manual = ensureManualPair(card.activePvManual ?? card.activePvLocal ?? card.activePv);
+  const leftTotal = Math.max(0, toInteger(manual.left));
+  const rightTotal = Math.max(0, toInteger(manual.right));
+  const packs = Math.floor(leftTotal / ACTIVE_PV_BASE) + Math.floor(rightTotal / ACTIVE_PV_BASE);
+  return {
+    activePv: {
+      left: leftTotal % ACTIVE_PV_BASE,
+      right: rightTotal % ACTIVE_PV_BASE
+    },
+    activePacks: packs,
+    balance: { left: 0, right: 0 },
+    cycles: 0
+  };
+}
+
+function parseActivePV(source) {
   if (!source) {
     return normalizePair(0, 0);
   }
@@ -80,7 +139,7 @@ export function parseActivePV(source) {
   return normalizePair(0, 0);
 }
 
-export function setActivePV(target, nextValue = {}) {
+function setActivePV(target, nextValue = {}) {
   const normalized = parseActivePV(nextValue);
 
   if (target && typeof target === 'object') {
@@ -94,160 +153,237 @@ export function setActivePV(target, nextValue = {}) {
       left: normalized.left,
       right: normalized.right,
       total: normalized.total
-    };   
+    };
   }
 
   return normalized;
 }
 
-function extractChildren(meta = {}, cardId, side) {
-  if (!cardId) {
-    return [];
-  }
-  const raw = meta.children?.[cardId];
-  if (!raw) {
-    return [];
-  }
-
-  const bucket = side === 'right' ? raw.right : raw.left;
-  return toChildArray(bucket);
-}
-
-function getManualMap(cards = []) {
-  const map = new Map();
+function prepareStateMap(cards = []) {
+  const stateMap = new Map();
   cards.forEach(card => {
     if (!card || !card.id) {
       return;
     }
-    const manualSource = card.activePvManual ?? card.activePvLocal ?? card.activePv;
-    const manual = ensureManualPair(manualSource);
-    map.set(card.id, manual);
+    stateMap.set(card.id, cloneState(getStateFromCard(card)));
+
   });
-  return map;
+  return stateMap;
 }
 
-export function propagateActivePvUp(cards = [], meta = {}) {
+function serializeState(state) {
+  return {
+    activePv: { left: state.activePv.left, right: state.activePv.right },
+    activePacks: state.activePacks,
+    balance: { left: state.balance.left, right: state.balance.right },
+    cycles: state.cycles
+  };
+}
+
+function buildUpdatePayload(state) {
+  const left = state.activePv.left;
+  const right = state.activePv.right;
+  const total = left + right;
+  return {
+    activePvState: serializeState(state),
+    activePvManual: { left, right, total },
+    activePvLocal: { left, right, total },
+    activePv: `${left} / ${right}`,
+    activePvPacks: state.activePacks,
+    activePvBalance: { left: state.balance.left, right: state.balance.right },
+    activePvCycles: state.cycles
+  };
+}
+
+function propagateToAncestors(stateMap, meta, childId, amount, changed) {
+  if (!amount) {
+    return;
+  }
+  const parentLookup = meta?.parentOf || {};
+  let currentId = childId;  
+
+  while (true) {
+    const relation = parentLookup[currentId];
+    if (!relation || !relation.parentId) {
+      break;
+    }
+
+    const parentId = relation.parentId;
+    const side = normalizeSide(relation.side);
+    const parentState = stateMap.get(parentId) || createEmptyState();
+
+    const nextBalance = parentState.balance[side] + amount;
+    parentState.balance[side] = nextBalance < 0 ? 0 : nextBalance;
+
+    if (amount > 0) {
+      while (parentState.balance.left >= ACTIVE_PV_BASE && parentState.balance.right >= ACTIVE_PV_BASE) {
+        parentState.balance.left -= ACTIVE_PV_BASE;
+        parentState.balance.right -= ACTIVE_PV_BASE;
+        parentState.cycles += 1;
+      }
+    }
+
+    stateMap.set(parentId, parentState);
+    changed.add(parentId);
+    currentId = parentId;
+  }
+}
+function applyAddition(state, side, delta) {
+  const amount = Math.max(0, toInteger(delta));
+  if (amount <= 0) {
+    return 0;
+  }
+  const previous = state.activePv[side];
+  const next = previous + amount;
+  const full = Math.floor(next / ACTIVE_PV_BASE);
+  if (full > 0) {
+    state.activePacks += full;
+  }
+  const remainder = next % ACTIVE_PV_BASE;
+  state.activePv[side] = remainder;
+  const propagated = remainder - previous;
+  return propagated > 0 ? propagated : 0;
+}
+function applySubtraction(state, side, delta) {
+  const amount = Math.max(0, toInteger(-delta));
+  if (amount <= 0) {
+    return 0;
+  }
+  const available = state.activePv[side];
+  const take = Math.min(amount, available);
+  if (take <= 0) {
+    return 0;
+  }
+  state.activePv[side] = available - take;
+  return -take;
+}
+
+function applyDeltaInternal({ stateMap, meta, cardId, side, delta, changed }) {
+  if (!cardId || !stateMap.has(cardId)) {
+    return;
+  }
+  const normalizedSide = normalizeSide(side);
+  const state = stateMap.get(cardId);
+  const propagate = delta >= 0
+    ? applyAddition(state, normalizedSide, delta)
+    : applySubtraction(state, normalizedSide, delta);
+
+  changed.add(cardId);
+
+  if (propagate !== 0) {
+    propagateToAncestors(stateMap, meta, cardId, propagate, changed);
+  }
+}
+
+function buildUpdates(stateMap, changedIds) {
+  const updates = {};
+  changedIds.forEach(cardId => {
+    const state = stateMap.get(cardId);
+    if (!state) {
+      return;
+    }
+    updates[cardId] = buildUpdatePayload(state);
+  });
+  return updates;
+}
+
+function applyActivePvDelta({ cards = [], meta = {}, cardId, side = 'left', delta = 0 }) {
+  if (!cardId || !Number.isFinite(delta) || delta === 0) {
+    return { updates: {} };
+  }
+
+  const stateMap = prepareStateMap(cards);
+  const changed = new Set();
+
+  applyDeltaInternal({ stateMap, meta, cardId, side, delta, changed });
+
+  const updates = buildUpdates(stateMap, changed);
+  return { updates, changedIds: Array.from(changed) };
+}
+function applyActivePvClear({ cards = [], meta = {}, cardId }) {
+  if (!cardId) {
+    return { updates: {} };
+  }
+  const stateMap = prepareStateMap(cards);
+  if (!stateMap.has(cardId)) {
+    return { updates: {} };
+  }
+  const changed = new Set();
+  const state = stateMap.get(cardId);
+  const leftRemainder = state.activePv.left;
+  const rightRemainder = state.activePv.right;
+
+  if (leftRemainder > 0) {
+    applyDeltaInternal({ stateMap, meta, cardId, side: 'left', delta: -leftRemainder, changed });
+  }
+  if (rightRemainder > 0) {
+    applyDeltaInternal({ stateMap, meta, cardId, side: 'right', delta: -rightRemainder, changed });
+  }
+
+  const updates = buildUpdates(stateMap, changed);
+  return { updates, changedIds: Array.from(changed) };
+}
+
+function propagateActivePvUp(cards = [], meta = {}) {
   if (!Array.isArray(cards) || cards.length === 0) {
     return {};
   }
 
-  const cardMap = new Map();
-  cards.forEach(card => {
-    if (card && card.id) {
-      cardMap.set(card.id, card);
-    }
-  });
-  if (cardMap.size === 0) {
-    return {};
-  }
+  const stateMap = prepareStateMap(cards);
+  const result = {};
 
-  const manualMap = getManualMap(cards);
-  const cache = new Map();
+  stateMap.forEach((state, cardId) => {
+    const manualLeft = state.activePv.left;
+    const manualRight = state.activePv.right;
+    const remainderLeft = state.balance.left;
+    const remainderRight = state.balance.right;
+    const cycles = state.cycles;
 
-  const computeState = (cardId) => {
-    if (!cardMap.has(cardId)) {
-      return {
-        manual: { left: 0, right: 0 },
-        remainder: { left: 0, right: 0 },
-        units: { left: 0, right: 0 },
-        totals: { left: 0, right: 0, overall: 0 }
-      };
-    }
-
-    if (cache.has(cardId)) {
-      return cache.get(cardId);
-    }
-
-    const manual = manualMap.get(cardId) || { left: 0, right: 0, total: 0 };
-
-    const children = extractChildren(meta, cardId);
-
-    let leftPv = Math.max(0, toInteger(manual.left));
-    let rightPv = Math.max(0, toInteger(manual.right));
-    leftChildren.forEach(childId => {
-      if (!cardMap.has(childId)) {
-        return;
-      }
-      const childState = computeState(childId);
-      leftPv += childState.totals.overall;
-    });
-
-    const rightChildren = extractChildren(meta, cardId, 'right');
-    rightChildren.forEach(childId => {
-      if (!cardMap.has(childId)) {
-        return;
-      }
-      const childState = computeState(childId);
-      rightPv += childState.totals.overall;
-    });
-
-    leftPv = Math.max(0, leftPv);
-    rightPv = Math.max(0, rightPv);
-
-    const unitsLeft = Math.floor(leftPv / ACTIVE_PV_BASE);
-    const unitsRight = Math.floor(rightPv / ACTIVE_PV_BASE);
-
-    const remainderLeft = leftPv - (unitsLeft * ACTIVE_PV_BASE);
-    const remainderRight = rightPv - (unitsRight * ACTIVE_PV_BASE);
-
-    const state = {
+    const totalsLeft = remainderLeft + cycles * ACTIVE_PV_BASE;
+    const totalsRight = remainderRight + cycles * ACTIVE_PV_BASE;
+    result[cardId] = {
       manual: {
-        left: Math.max(0, toInteger(manual.left)),
-        right: Math.max(0, toInteger(manual.right))
+        left: manualLeft,
+        right: manualRight,
+        total: manualLeft + manualRight
       },
       remainder: {
         left: remainderLeft,
         right: remainderRight
       },
       units: {
-        left: unitsLeft,
-        right: unitsRight
+        left: cycles,
+        right: cycles,
+        total: cycles * 2
       },
       totals: {
-        left: remainderLeft + unitsLeft * ACTIVE_PV_BASE,
-        right: remainderRight + unitsRight * ACTIVE_PV_BASE,
-        overall: (remainderLeft + unitsLeft * ACTIVE_PV_BASE) + (remainderRight + unitsRight * ACTIVE_PV_BASE)
-      }
-    };
-
-    return aggregated;
-  };
-
-  cardMap.forEach((_, cardId) => {
-    cache.set(cardId, state);
-    return state;
-  });
-
-  const result = {};
-  cache.forEach((state, cardId) => {
-    result[cardId] = {
-      manual: {
-        left: state.manual.left,
-        right: state.manual.right,
-        total: state.manual.left + state.manual.right
+        left: totalsLeft,
+        right: totalsRight,
+        overall: totalsLeft + totalsRight
       },
-      remainder: {
-        left: state.remainder.left,
-        right: state.remainder.right
+      activePacks: state.activePacks,
+      balance: {
+        left: remainderLeft,
+        right: remainderRight
       },
-      units: {
-        left: state.units.left,
-        right: state.units.right,
-        total: state.units.left + state.units.right
-      },
-      totals: {
-        left: state.totals.left,
-        right: state.totals.right,
-        overall: state.totals.overall
-      }
+      cycles
     };
   });
 
   return result;
 }
+export {
+  parseActivePV,
+  setActivePV,
+  propagateActivePvUp,
+  applyActivePvDelta,
+  applyActivePvClear
+};
 
 export default {
   parseActivePV,
   setActivePV,
-  propagateActivePvUp
+  propagateActivePvUp,
+  applyActivePvDelta,
+  applyActivePvClear
 };
