@@ -794,7 +794,10 @@ const resetMiddleButtonPan = () => {
   middlePointerId.value = null;
 };
 const handleCanvasPointerDown = (event) => {
-  if (event.button === 1) {
+  const isMiddleButton = event.button === 1;
+  const isPrimaryButton = event.button === 0 || event.button === undefined || event.button === -1;
+
+  if (isMiddleButton) {
     if (isZoomedIn.value) {
       isMiddleButtonPanning.value = true;
       middlePointerId.value = event.pointerId;
@@ -802,7 +805,7 @@ const handleCanvasPointerDown = (event) => {
     return;
   }
   
-  if (event.button !== 0) return;
+  if (!isPrimaryButton) return;
 
   const point = getCanvasPoint(event);
   if (!point) return;
@@ -1167,9 +1170,8 @@ const handleBoardWheel = (event) => {
           @keydown="(event) => handleTextKeydown(event, entry.id)"
           @blur="() => finishText(entry.id)"
         ></textarea>
-  <div v-else class="pencil-overlay__text-label">{{ entry.content || ' ' }}</div>
-</div> 
-      :class="panelClasses"
+        <div v-else class="pencil-overlay__text-label">{{ entry.content || ' ' }}</div>
+      </div>
       <div
         v-if="selectionStyle"
         class="pencil-overlay__selection"
@@ -1178,7 +1180,7 @@ const handleBoardWheel = (event) => {
     </div>
 
     <div
-      class="pencil-overlay__panel"
+      :class="panelClasses"
       :style="panelStyle"
     >
       <button
