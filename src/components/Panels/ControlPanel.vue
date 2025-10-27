@@ -397,11 +397,19 @@ const handleExportSVG = async () => {
         `--card-body-gradient:${escapeHtml(bodyGradient)}`,
         `--card-border:${strokeWidth}px solid ${escapeHtml(borderColor)}`
       ].join(';')      
+      const calc = card.calculated || {}
+      const balanceText = `${Number.isFinite(calc.L) ? calc.L : 0} / ${Number.isFinite(calc.R) ? calc.R : 0}`
+      const totalText = Number.isFinite(calc.total) ? calc.total : 0
+      const cyclesText = Number.isFinite(calc.cycles) ? calc.cycles : 0
+      const stageText = Number.isFinite(calc.stage) ? calc.stage : 0
+      const toNextText = Number.isFinite(calc.toNext) ? calc.toNext : 0
 
       const rows = [
-        { label: 'Баланс:', value: card.balance || '0 / 0' },
-        { label: 'Актив-заказы PV:', value: card.activePv || '0 / 0' },
-        { label: 'Цикл:', value: card.cycle || '0' }
+        { label: 'Баланс:', value: balanceText },
+        { label: 'Всего баллов:', value: String(totalText) },
+        { label: 'Циклы:', value: String(cyclesText) },
+        { label: 'Этап:', value: String(stageText) },
+        { label: 'До следующего:', value: String(toNextText) }
       ]
 
       const rowsHtml = rows.map(row => `
