@@ -96,7 +96,7 @@ const handlePointerDown = (event) => {
   if (isEditing.value) return;
 
   // Не начинаем перетаскивание, если кликнули на точку соединения
-  if (event.target.classList.contains('connection-point')) {
+  if (event.target.classList.contains('connection-point')) {    
     return;
   }
   if (event.ctrlKey || event.metaKey) {
@@ -180,6 +180,7 @@ const activePvManual = computed(() => {
 const activePvState = computed(() => {
   const manual = activePvManual.value;
   const source = props.card?.activePvAggregated;
+  const localBalanceSource = props.card?.activePvLocalBalance;
 
   const unitsLeft = Number.isFinite(source?.left) ? Number(source.left) : 0;
   const unitsRight = Number.isFinite(source?.right) ? Number(source.right) : 0;
@@ -189,7 +190,13 @@ const activePvState = computed(() => {
   const remainderRight = Number.isFinite(source?.remainderRight)
     ? Number(source.remainderRight)
     : manual.right;
-
+  const localBalanceLeft = Number.isFinite(localBalanceSource?.left)
+    ? Number(localBalanceSource.left)
+    : 0;
+  const localBalanceRight = Number.isFinite(localBalanceSource?.right)
+    ? Number(localBalanceSource.right)
+    : 0;
+  
   return {
     manual,
     units: {
@@ -197,6 +204,11 @@ const activePvState = computed(() => {
       right: unitsRight,
       total: unitsLeft + unitsRight
     },
+    localBalance: {
+      left: localBalanceLeft,
+      right: localBalanceRight,
+      total: localBalanceLeft + localBalanceRight
+    },    
     remainder: {
       left: remainderLeft,
       right: remainderRight
