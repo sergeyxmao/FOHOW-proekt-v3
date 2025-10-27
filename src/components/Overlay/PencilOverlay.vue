@@ -63,7 +63,10 @@ const selectionInitialRect = ref(null);
 const selectionMoveState = ref(null);
 const pointerPosition = ref(null);
 const panOffset = ref({ x: 0, y: 0 });
-  
+const isPanning = ref(false);
+const panPointerId = ref(null);
+const panStartPoint = ref(null);
+const panInitialOffset = ref({ x: 0, y: 0 });  
 const ERASER_MIN_SIZE = 4;
 const ERASER_MAX_SIZE = 80;
 
@@ -890,6 +893,10 @@ watch(currentTool, (tool, previous) => {
 watch(isZoomedIn, (zoomed) => {
   if (!zoomed) {
     panOffset.value = { x: 0, y: 0 };
+    isPanning.value = false;
+    panPointerId.value = null;
+    panStartPoint.value = null;
+    panInitialOffset.value = { x: 0, y: 0 };    
   }
 });
 
@@ -913,13 +920,10 @@ const handleBoardWheel = (event) => {
   event.preventDefault();
   const currentScale = zoomScale.value || 1;
 
-  const direction = event.deltaY < 0 ? 1 : -1;
-  if (direction <= 0) {
-    return;
-  }
-
   const STEP = 0.1;
-  const updatedScale = clampZoom(currentScale * (1 + STEP));
+  const zoomIn = event.deltaY < 0;
+  const factor = zoomIn ? 1 + STEP : 1 / (1 + STEP);
+  const updatedScale = clampZoom(currentScale * factor);
   if (Math.abs(updatedScale - currentScale) < 0.0001) {
     return;
   }
@@ -946,6 +950,88 @@ const handleBoardWheel = (event) => {
 
   zoomScale.value = Number.parseFloat(updatedScale.toFixed(4));
 };
+
+const beginPan = (event) => {
+  if (!isZoomedIn.value) {
+    return;
+  }
+
+  const boardElement = event.currentTarget;
+  if (boardElement && typeof boardElement.setPointerCapture === 'function') {
+    boardElement.setPointerCapture(event.pointerId);
+  }
+
+  isPanning.value = true;
+  panPointerId.value = event.pointerId;
+  panStartPoint.value = { x: event.clientX, y: event.clientY };
+  const currentPan = panOffset.value || { x: 0, y: 0 };
+  panInitialOffset.value = { ...currentPan };
+};
+
+const updatePan = (event) => {
+  if (!isPanning.value || panPointerId.value !== event.pointerId || !panStartPoint.value) {
+    return;
+  }
+
+  const deltaX = event.clientX - panStartPoint.value.x;
+  const deltaY = event.clientY - panStartPoint.value.y;
+  const initial = panInitialOffset.value || { x: 0, y: 0 };
+
+  panOffset.value = {
+    x: initial.x + deltaX,
+    y: initial.y + deltaY
+  };
+};
+
+const finishPan = (event) => {
+  if (panPointerId.value !== event.pointerId) {
+    return;
+  }
+
+  const boardElement = event.currentTarget;
+  if (boardElement && typeof boardElement.releasePointerCapture === 'function') {
+    boardElement.releasePointerCapture(event.pointerId);
+  }
+
+  isPanning.value = false;
+  panPointerId.value = null;
+  panStartPoint.value = null;
+  panInitialOffset.value = { x: 0, y: 0 };
+};
+
+const handleBoardPointerDown = (event) => {
+  if (event.pointerType !== 'mouse' || event.button !== 1) {
+    return;
+  }
+
+  event.preventDefault();
+  beginPan(event);
+};
+
+const handleBoardPointerMove = (event) => {
+  if (!isPanning.value || panPointerId.value !== event.pointerId) {
+    return;
+  }
+
+  event.preventDefault();
+  updatePan(event);
+};
+
+const handleBoardPointerUp = (event) => {
+  if (panPointerId.value !== event.pointerId) {
+    return;
+  }
+
+  finishPan(event);
+};
+
+const handleBoardPointerCancel = (event) => {
+  if (panPointerId.value !== event.pointerId) {
+    return;
+  }
+
+  finishPan(event);
+};  
 </script>
 
 <template>
@@ -955,8 +1041,13 @@ const handleBoardWheel = (event) => {
       v-if="isReady"
       :class="boardClasses"
       :style="boardStyle"
-      @wheel.prevent="handleBoardWheel"      
-    >
+      @wheel.prevent="handleBoardWheel"
+      @pointerdown="handleBoardPointerDown"
+      @pointermove="handleBoardPointerMove"
+      @pointerup="handleBoardPointerUp"
+      @pointerleave="handleBoardPointerCancel"
+      @pointercancel="handleBoardPointerCancel"
+      >
       <canvas
         ref="drawingCanvasRef"
         class="pencil-overlay__canvas"
@@ -1188,7 +1279,14 @@ const handleBoardWheel = (event) => {
   touch-action: none;
   outline: none;
 }
-
+.pencil-overlay__selection {
+  position: absolute;
+  border: 2px dashed rgba(15, 98, 254, 0.85);
+  background: rgba(15, 98, 254, 0.16);
+  border-radius: 6px;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.15);
+}
 .pencil-overlay__panel {
   --overlay-panel-bg: rgba(255, 255, 255, 0.94);
   --overlay-panel-color: #111827;
