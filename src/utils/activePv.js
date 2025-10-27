@@ -210,13 +210,99 @@ function buildUpdatePayload(state) {
     activePvCycles: state.cycles
   };
 }
+function distributePositiveToAncestor(state, side, amount) {
+  const positiveAmount = Math.max(0, toInteger(amount));
+  if (positiveAmount <= 0) {
+    return;
+  }
+
+  const remainderBefore = Math.max(0, toInteger(state.balance[side]));
+  const unitsBefore = Math.max(0, toInteger(state.localBalance[side]));
+
+  let remainder = remainderBefore + positiveAmount;
+  let units = unitsBefore;
+
+  if (remainder >= ACTIVE_PV_BASE) {
+    const extraUnits = Math.floor(remainder / ACTIVE_PV_BASE);
+    remainder -= extraUnits * ACTIVE_PV_BASE;
+    units += extraUnits;
+    state.activePacks += extraUnits;
+  }
+
+  state.balance[side] = remainder;
+  state.localBalance[side] = units;
+}
+
+function distributeNegativeToAncestor(state, side, amount) {
+  const negativeAmount = Math.max(0, toInteger(-amount));
+  if (negativeAmount <= 0) {
+    return;
+  }
+
+  let remainder = Math.max(0, toInteger(state.balance[side]));
+  let units = Math.max(0, toInteger(state.localBalance[side]));
+  let cycles = Math.max(0, toInteger(state.cycles));
+  let remaining = negativeAmount;
+
+  const takeFromRemainder = Math.min(remainder, remaining);
+  remainder -= takeFromRemainder;
+  remaining -= takeFromRemainder;
+
+  if (remaining > 0 && units > 0) {
+    const unitsNeeded = Math.min(units, Math.ceil(remaining / ACTIVE_PV_BASE));
+    if (unitsNeeded > 0) {
+      units -= unitsNeeded;
+      const restored = unitsNeeded * ACTIVE_PV_BASE;
+      remainder += restored;
+      const consume = Math.min(remainder, remaining);
+      remainder -= consume;
+      remaining -= consume;
+      state.activePacks = Math.max(0, state.activePacks - unitsNeeded);
+    }
+  }
+
+  if (remaining > 0 && cycles > 0) {
+    const cyclesNeeded = Math.min(cycles, Math.ceil(remaining / ACTIVE_PV_BASE));
+    if (cyclesNeeded > 0) {
+      cycles -= cyclesNeeded;
+      const restored = cyclesNeeded * ACTIVE_PV_BASE;
+      const opposite = side === 'left' ? 'right' : 'left';
+      const oppositeUnits = Math.max(0, toInteger(state.localBalance[opposite]));
+      state.localBalance[opposite] = oppositeUnits + cyclesNeeded;
+      remainder += restored;
+      const consume = Math.min(remainder, remaining);
+      remainder -= consume;
+      remaining -= consume;
+    }
+  }
+
+  if (remaining > 0) {
+    remainder = 0;
+  }
+
+  state.balance[side] = remainder;
+  state.localBalance[side] = units;
+  state.cycles = cycles;
+}
+
+function settleAncestorCycles(state) {
+  const leftUnits = Math.max(0, toInteger(state.localBalance.left));
+  const rightUnits = Math.max(0, toInteger(state.localBalance.right));
+  const matched = Math.min(leftUnits, rightUnits);
+
+  if (matched > 0) {
+    state.localBalance.left = leftUnits - matched;
+    state.localBalance.right = rightUnits - matched;
+    state.cycles += matched;
+  }
+}
 
 function propagateToAncestors(stateMap, meta, childId, amount, changed) {
   if (!amount) {
     return;
   }
   const parentLookup = meta?.parentOf || {};
-  let currentId = childId;  
+  let currentId = childId;
 
   while (true) {
     const relation = parentLookup[currentId];
@@ -228,17 +314,12 @@ function propagateToAncestors(stateMap, meta, childId, amount, changed) {
     const side = normalizeSide(relation.side);
     const parentState = stateMap.get(parentId) || createEmptyState();
 
-    const nextBalance = parentState.balance[side] + amount;
-    const nonNegative = nextBalance < 0 ? 0 : nextBalance;
-    parentState.balance[side] = Math.min(nonNegative, ACTIVE_PV_BASE);
-    
     if (amount > 0) {
-      while (parentState.balance.left >= ACTIVE_PV_BASE && parentState.balance.right >= ACTIVE_PV_BASE) {
-        parentState.balance.left -= ACTIVE_PV_BASE;
-        parentState.balance.right -= ACTIVE_PV_BASE;
-        parentState.cycles += 1;
-      }
+      distributePositiveToAncestor(parentState, side, amount);
+    } else if (amount < 0) {
+      distributeNegativeToAncestor(parentState, side, amount);
     }
+    settleAncestorCycles(parentState);
 
     stateMap.set(parentId, parentState);
     changed.add(parentId);
