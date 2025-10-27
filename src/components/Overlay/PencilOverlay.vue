@@ -32,7 +32,7 @@ const canvasContext = ref(null);
 const canvasWidth = ref(0);
 const canvasHeight = ref(0);
 const zoomScale = ref(1);
-const minZoomScale = ref(1)  
+const minZoomScale = ref(1);
 const isReady = ref(false);
 const activePointerId = ref(null);
 const lastPoint = ref(null);
@@ -824,6 +824,11 @@ const handleKeydown = (event) => {
 };
 
 const loadBaseImage = () => {
+  if (!props.snapshot) {
+    return;
+  }
+
+  isReady.value = false  
   const image = new Image();
   image.onload = () => {
     baseImage.value = image;
@@ -857,6 +862,22 @@ const loadBaseImage = () => {
   };
   image.src = props.snapshot;
 };
+onMounted(() => {
+  previousHtmlOverflow = document.documentElement.style.overflow;
+  previousBodyOverflow = document.body.style.overflow;
+
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+
+  window.addEventListener('keydown', handleKeydown);
+  loadBaseImage();
+});
+
+watch(() => props.snapshot, (value, previous) => {
+  if (value && value !== previous) {
+    loadBaseImage();
+  }
+});
 
 watch(currentTool, (tool, previous) => {
   if (previous === 'selection' && tool !== 'selection') {
@@ -893,13 +914,12 @@ const handleBoardWheel = (event) => {
   const currentScale = zoomScale.value || 1;
 
   const direction = event.deltaY < 0 ? 1 : -1;
-  if (direction === 0) {
+  if (direction <= 0) {
     return;
   }
 
   const STEP = 0.1;
-  let updatedScale = direction > 0 ? currentScale * (1 + STEP) : currentScale / (1 + STEP);
-  updatedScale = clampZoom(updatedScale);
+  const updatedScale = clampZoom(currentScale * (1 + STEP));
   if (Math.abs(updatedScale - currentScale) < 0.0001) {
     return;
   }
