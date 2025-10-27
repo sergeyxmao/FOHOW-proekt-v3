@@ -1831,7 +1831,12 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 .canvas-container--capturing .line.selected {
   stroke: var(--line-color, #0f62fe) !important;
   stroke-dasharray: none !important;
-}  
+}
+
+.canvas-container--capturing .card.selected {
+  box-shadow: 10px 12px 24px rgba(15, 35, 95, 0.16),
+    -6px -6px 18px rgba(255, 255, 255, 0.85) !important;
+}
 .guides-overlay {
   position: absolute;
   top: 0;
