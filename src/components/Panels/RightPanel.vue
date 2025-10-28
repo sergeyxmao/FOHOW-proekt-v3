@@ -730,6 +730,8 @@ watch(isCollapsed, (collapsed) => {
   --panel-card-btn-color: #1d3f8f;
   --panel-badge-bg: rgba(15, 98, 254, 0.1);
   --panel-badge-text: rgba(23, 34, 59, 0.75);
+  --panel-btn-size: 72px;
+  --panel-btn-radius: 22px;	
   color: var(--panel-text);
   --panel-collapse-bg: var(--panel-bg);
   --panel-collapse-color: var(--panel-text);
@@ -813,7 +815,7 @@ watch(isCollapsed, (collapsed) => {
 .right-control-panel__collapsed-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: calc(var(--panel-btn-size) * 0.18);
   padding: 2px 18px;
   background: transparent;
   border: 1px solid var(--panel-border);
@@ -822,9 +824,9 @@ watch(isCollapsed, (collapsed) => {
   box-shadow: var(--panel-shadow);
   backdrop-filter: none;
   margin-left: -1px;
-  --template-menu-offset: 18px;
-
-  --template-menu-offset: 28px;
+  --template-menu-offset: calc(var(--panel-btn-size) * 0.4);
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .right-control-panel__card {
@@ -880,9 +882,9 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .line-color-button {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
+  width: var(--panel-btn-size);
+  height: var(--panel-btn-size);
+  border-radius: var(--panel-btn-radius);
   border: 3px solid rgba(255, 255, 255, 0.7);
   box-shadow: inset 0 0 0 2px rgba(15, 98, 254, 0.22), 0 16px 28px rgba(15, 98, 254, 0.2);
   cursor: pointer;
@@ -895,9 +897,9 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .global-mode-button {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
+  width: var(--panel-btn-size);
+  height: var(--panel-btn-size);
+  border-radius: var(--panel-btn-radius);
   border: 1px solid var(--panel-button-border);
   background: var(--panel-button-bg);
   color: var(--panel-button-color);
@@ -911,6 +913,8 @@ watch(isCollapsed, (collapsed) => {
 
 .global-mode-button svg {
   stroke: currentColor;
+  width: calc(var(--panel-btn-size) * 0.33);
+  height: calc(var(--panel-btn-size) * 0.33);	
 }
 
 .global-mode-button:hover {
@@ -1061,15 +1065,16 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .animation-infinity-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: var(--panel-btn-size);
+  height: var(--panel-btn-size);
+  border-radius: var(--panel-btn-radius);
   border: 1px solid var(--panel-button-border);
   background: var(--panel-highlight);
   color: var(--panel-button-color);
   display: flex;
-  align-items: center;  justify-content: center;
-  font-size: 22px;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--panel-btn-size) * 0.3);
   cursor: pointer;
   box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.45);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
@@ -1089,13 +1094,16 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .header-color-button {
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
+  width: var(--panel-btn-size);
+  height: var(--panel-btn-size);
+  border-radius: var(--panel-btn-radius);
   border: 3px solid rgba(255, 255, 255, 0.7);
   cursor: pointer;
   box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.45), 0 18px 30px rgba(93, 139, 244, 0.24);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;	
 }
 
 .header-color-button:hover {
@@ -1104,13 +1112,13 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .header-cycle-button {
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
+  width: var(--panel-btn-size);
+  height: var(--panel-btn-size);
+  border-radius: var(--panel-btn-radius);
   border: 1px solid var(--panel-card-btn-border);
   background: var(--panel-card-btn-bg);
   color: var(--panel-card-btn-color);
-  font-size: 24px;
+  font-size: calc(var(--panel-btn-size) * 0.33);
   line-height: 1;
   display: flex;
   align-items: center;
@@ -1130,6 +1138,7 @@ watch(isCollapsed, (collapsed) => {
 .background-row {
   display: flex;
   gap: 12px;
+  align-items: center;	
 }
 .grid-settings {
   display: flex;
@@ -1175,12 +1184,16 @@ watch(isCollapsed, (collapsed) => {
 
 .grid-settings__toggle {
   align-self: flex-start;
-  padding: 6px 14px;
-  border-radius: 12px;
+  width: var(--panel-btn-size);
+  height: var(--panel-btn-size);
+  border-radius: var(--panel-btn-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--panel-card-btn-border);
   background: var(--panel-button-bg);
   color: var(--panel-text);
-  font-size: 16px;
+  font-size: calc(var(--panel-btn-size) * 0.33);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   box-shadow: var(--panel-button-shadow);
@@ -1194,15 +1207,18 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .background-button {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: var(--panel-btn-size);
+  height: var(--panel-btn-size);
+  border-radius: var(--panel-btn-radius);
   border: 1px solid var(--panel-card-btn-border);
   box-shadow: var(--panel-card-btn-shadow);
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   background-size: cover;
   background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;	
 }
 
 .background-button:hover {
@@ -1214,7 +1230,7 @@ watch(isCollapsed, (collapsed) => {
 .background-button--icon {
   background: var(--panel-card-btn-bg);
   color: var(--panel-card-btn-color);
-  font-size: 24px;
+  font-size: calc(var(--panel-btn-size) * 0.33);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1227,30 +1243,35 @@ watch(isCollapsed, (collapsed) => {
 .control-section--footer {
   flex-direction: row;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: calc(var(--panel-btn-size) * 0.18);
   padding: 0;
   background: transparent;
   border: none;
   box-shadow: none;
+  flex-wrap: wrap;
+  justify-content: center;	
 }
 
 .add-card-btn {
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
+  width: var(--panel-btn-size);
+  height: var(--panel-btn-size);
+  border-radius: var(--panel-btn-radius);
   border: 1px solid var(--panel-card-btn-border);
   background: var(--panel-card-btn-bg);
   color: var(--panel-card-btn-color);
   font-size: 26px;
+  font-size: calc(var(--panel-btn-size) * 0.36);
   font-weight: 700;
   cursor: pointer;
   box-shadow: var(--panel-card-btn-shadow);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;	
 }
 
 .add-card-btn--large {
-  font-size: 30px;
+  font-size: calc(var(--panel-btn-size) * 0.4);
 }
 .add-card-btn--gold {
   background: linear-gradient(135deg, #fff6d1 0%, #ffd700 50%, #ffec8b 100%);
