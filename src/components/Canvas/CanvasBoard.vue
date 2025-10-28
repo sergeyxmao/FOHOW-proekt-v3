@@ -1812,7 +1812,9 @@ watch(isDrawingLine, (isDrawing) => {
 });
 
 watch(
-  () => connections.map(connection => connection.id),
+  () => Array.isArray(connections.value)
+    ? connections.value.map(connection => connection.id)
+    : [],
   (newIds) => {
     selectedConnectionIds.value = selectedConnectionIds.value.filter(id => newIds.includes(id));
   }
