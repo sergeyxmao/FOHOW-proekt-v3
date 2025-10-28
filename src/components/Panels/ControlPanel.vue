@@ -588,25 +588,25 @@ const svgStyle = `
     .card { position: relative; display: flex; flex-direction: column; border-radius: 14px; background: var(--card-shell-background, #ffffff); border: var(--card-border, 1px solid rgba(47,128,237,0.25)); box-shadow: 0 18px 32px rgba(47,128,237,0.12); overflow: visible; }
     .card.card--gold { box-shadow: 0 18px 32px rgba(209,173,68,0.28); }
     .card { color: #111827; }       
-    .card-header { padding: 8px 16px; position: relative; border-radius: 14px 14px 0 0; display: flex; align-items: center; justify-content: center; text-align: center; min-height: 40px; color: #fff; font-size: 28px; font-weight: 900; letter-spacing: 0.3px; line-height: 1; box-shadow: inset 0 -2px 0 rgba(255,255,255,0.35); }
+    .card-header { padding: 16px 48px 14px; position: relative; border-radius: 14px 14px 0 0; display: flex; align-items: center; justify-content: center; text-align: center; min-height: 64px; color: #fff; font-size: 24px; font-weight: 700; letter-spacing: 0.3px; line-height: 1; box-shadow: inset 0 -2px 0 rgba(255,255,255,0.35); }
     .card .card-header, .card .card-header * { color: #ffffff; }
     .card-title { display: flex; align-items: center; justify-content: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
-    .card--large .card-title, .card--gold .card-title { font-size: 32px; font-weight: 900; }
-    .card-body { padding: 8px 12px; background: var(--card-body-background, var(--card-body-gradient, var(--surface, #ffffff))); border-radius: 0 0 14px 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; width: 100%; flex: 1 1 auto; line-height: 1; border-top: 1px solid var(--card-body-divider, rgba(47,128,237,0.2)); height: calc(100% - 40px); }
-    .card:not(.card--large):not(.card--gold) .card-body { padding: 8px 12px; gap: 4px; height: calc(100% - 40px); }
-    .card-row { display: flex; align-items: center; justify-content: center; gap: 6px; text-align: center; flex-wrap: nowrap; width: 100%; margin: 0; padding: 0; }
-    .card-row.pv-row { gap: 6px; margin-bottom: 2px; }
-    .label { color: #6b7280; font-weight: 600; font-size: 16px; max-width: none; word-break: keep-all; overflow-wrap: normal; line-height: 1; text-align: center; white-space: nowrap; flex-shrink: 0; }
-    .value { color: #111827; font-weight: 700; font-size: 18px; max-width: none; word-break: keep-all; overflow-wrap: normal; line-height: 1; text-align: center; white-space: nowrap; flex-shrink: 0; }
-    .pv-row .value { font-size: 22px; font-weight: 800; }
-    .card--large .pv-row .value { font-weight: 800; }       
-    .coin-icon { width: 28px; height: 28px; flex-shrink: 0; }
-    .card-body-html { font-size: 14px; color: #111827; line-height: 1.2; width: 100%; text-align: center; word-break: break-word; overflow-wrap: anywhere; margin: 0; padding: 0; }        
+    .card--large .card-title, .card--gold .card-title { font-size: 36px; font-weight: 900; }
+    .card-body { padding: 20px 20px 60px; background: var(--card-body-background, var(--card-body-gradient, var(--surface, #ffffff))); border-radius: 0 0 14px 14px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; flex: 1 1 auto; line-height: 1.3; border-top: 1px solid var(--card-body-divider, rgba(47,128,237,0.2)); }
+    .card:not(.card--large):not(.card--gold) .card-body { padding-bottom: 40px; gap: 8px; }
+    .card-row { display: flex; align-items: center; justify-content: center; gap: 10px; text-align: center; flex-wrap: wrap; width: 100%; }
+    .card-row.pv-row { gap: 10px; }
+    .label { color: #6b7280; font-weight: 500; font-size: 16px; max-width: 100%; word-break: break-word; overflow-wrap: anywhere; line-height: 1.2; text-align: center; }
+    .value { color: #111827; font-weight: 600; font-size: 18px; max-width: 100%; word-break: break-word; overflow-wrap: anywhere; line-height: 1.2; text-align: center; }
+    .pv-row .value { font-size: 22px; font-weight: 600; }
+    .card--large .pv-row .value { font-weight: 700; }       
+    .coin-icon { width: 32px; height: 32px; flex-shrink: 0; }
+    .card-body-html { font-size: 16px; color: #111827; line-height: 1.5; width: 100%; text-align: center; word-break: break-word; overflow-wrap: anywhere; }        
     .slf-badge, .fendou-badge, .rank-badge { position: absolute; display: none; pointer-events: none; user-select: none; }
     .slf-badge.visible, .fendou-badge.visible, .rank-badge.visible { display: block; }
-    .slf-badge.visible { top: 8px; left: 8px; font-size: 32px; font-weight: 900; color: #ffc700; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
-    .fendou-badge.visible { top: -20px; left: 50%; transform: translateX(-50%); font-size: 48px; font-weight: 900; color: #ff2d55; text-shadow: 0 2px 6px rgba(0,0,0,0.25); }
-    .rank-badge.visible { top: -12px; right: 12px; width: 60px; height: auto; transform: rotate(15deg); }
+    .slf-badge.visible { top: 15px; left: 15px; font-size: 42px; font-weight: 900; color: #ffc700; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+    .fendou-badge.visible { top: -25px; left: 50%; transform: translateX(-50%); font-size: 72px; font-weight: 900; color: #ff2d55; text-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+    .rank-badge.visible { top: -15px; right: 15px; width: 80px; height: auto; transform: rotate(15deg); }
     .line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
     .line--balance-highlight { stroke-dasharray: 16; }
     .line--pv-highlight { stroke-dasharray: 14; }
