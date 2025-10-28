@@ -8,6 +8,8 @@ import { useConnectionsStore } from '../../stores/connections.js'
 import { useProjectStore, formatProjectFileName } from '../../stores/project.js'
 import { useViewportStore } from '../../stores/viewport.js'
 import { useNotesStore } from '../../stores/notes.js'
+import { parseActivePV } from '../../utils/activePv'
+import { calcStagesAndCycles } from '../../utils/calculationEngine'
   
 const props = defineProps({
   isModernTheme: {
@@ -206,6 +208,81 @@ const escapeHtml = (value) => String(value ?? '')
 const MARKER_OFFSET = 12
 const EXTRA_PADDING_TOP = 60
 const EXTRA_PADDING_SIDE = 50
+const PV_RIGHT_VALUE = 330
+const MIN_LEFT_PV = 30
+const MAX_LEFT_PV = 330
+
+const toFiniteNumber = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const normalizePvValue = (rawValue, fallback) => {
+  const base = typeof rawValue === 'string' ? rawValue : ''
+  const match = base.match(/^(\s*)(\d{1,3})/)
+
+  if (!match) {
+    return fallback
+  }
+
+  let left = Number.parseInt(match[2], 10)
+
+  if (!Number.isFinite(left)) {
+    return fallback
+  }
+
+  left = Math.min(Math.max(left, MIN_LEFT_PV), MAX_LEFT_PV)
+
+  return `${left}/${PV_RIGHT_VALUE}pv`
+}
+
+const getDisplayedPvValue = (value) => {
+  const fallback = `${PV_RIGHT_VALUE}/${PV_RIGHT_VALUE}pv`
+  const normalized = normalizePvValue(value, fallback)
+  return normalized || fallback
+}
+
+const buildCardMetrics = (card = {}) => {
+  const calc = card.calculated || {}
+  const baseLeft = toFiniteNumber(calc.L)
+  const baseRight = toFiniteNumber(calc.R)
+  const baseTotal = toFiniteNumber(calc.total)
+  const baseCycles = toFiniteNumber(calc.cycles)
+  const baseStage = toFiniteNumber(calc.stage)
+
+  const manualPair = parseActivePV(card.activePvManual ?? card.activePvLocal ?? card.activePv)
+  const aggregated = card.activePvAggregated || {}
+
+  const unitsLeft = toFiniteNumber(aggregated.left)
+  const unitsRight = toFiniteNumber(aggregated.right)
+  const hasRemainderLeft = aggregated.remainderLeft !== undefined && aggregated.remainderLeft !== null
+  const hasRemainderRight = aggregated.remainderRight !== undefined && aggregated.remainderRight !== null
+  const remainderLeft = hasRemainderLeft ? toFiniteNumber(aggregated.remainderLeft) : manualPair.left
+  const remainderRight = hasRemainderRight ? toFiniteNumber(aggregated.remainderRight) : manualPair.right
+  const manualAdjustmentsSource = card.manualAdjustments ?? card.manualBalance ?? card.manualPv ?? null
+  const manualAdjustments = parseActivePV(manualAdjustmentsSource)
+
+  const bonusLeft = unitsLeft + manualAdjustments.left
+  const bonusRight = unitsRight + manualAdjustments.right
+  const bonusTotal = bonusLeft + bonusRight
+
+  const finalLeft = baseLeft + bonusLeft
+  const finalRight = baseRight + bonusRight
+  const finalTotal = baseTotal + bonusTotal
+
+  const stages = calcStagesAndCycles(finalTotal)
+  const finalCycles = Number.isFinite(stages?.cycles) ? stages.cycles : baseCycles
+  const finalStage = Number.isFinite(stages?.stage) ? stages.stage : baseStage
+  return {
+    balanceText: `${finalLeft} / ${finalRight}`,
+    activeOrdersText: `${remainderLeft} / ${remainderRight}`,
+    cycleStageText: `${finalCycles} / ${finalStage}`,
+    pvValue: getDisplayedPvValue(card.pv)
+  }
+}
 
 const getConnectionPath = (fromCard, toCard, fromSide, toSide) => {
   const getCoords = (card, side) => {
@@ -415,19 +492,12 @@ const handleExportSVG = async () => {
       if (card.type === 'gold') {
         cardClasses.push('card--gold')
       }
-      const calc = card.calculated || {}
-      const balanceText = `${Number.isFinite(calc.L) ? calc.L : 0} / ${Number.isFinite(calc.R) ? calc.R : 0}`
-      const totalText = Number.isFinite(calc.total) ? calc.total : 0
-      const cyclesText = Number.isFinite(calc.cycles) ? calc.cycles : 0
-      const stageText = Number.isFinite(calc.stage) ? calc.stage : 0
-      const toNextText = Number.isFinite(calc.toNext) ? calc.toNext : 0
+      const metrics = buildCardMetrics(card)
 
       const rows = [
-        { label: 'Баланс:', value: balanceText },
-        { label: 'Всего баллов:', value: String(totalText) },
-        { label: 'Циклы:', value: String(cyclesText) },
-        { label: 'Этап:', value: String(stageText) },
-        { label: 'До следующего:', value: String(toNextText) }
+        { label: 'Баланс:', value: metrics.balanceText },
+        { label: 'Актив-заказы:', value: metrics.activeOrdersText },
+        { label: 'Цикл/этап:', value: metrics.cycleStageText }
       ]
 
       const rowsHtml = rows.map(row => `
@@ -454,7 +524,7 @@ const handleExportSVG = async () => {
               <svg class="coin-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="50" cy="50" r="45" fill="${escapeHtml(card.coinFill || '#ffd700')}" stroke="#DAA520" stroke-width="5" />
               </svg>
-              <span class="value">${escapeHtml(card.pv || '330/330pv')}</span>
+              <span class="value">${escapeHtml(metrics.pvValue)}</span>
             </div>
             ${rowsHtml}
             ${bodyExtra}
@@ -521,7 +591,9 @@ const handleExportSVG = async () => {
         svg, foreignObject, foreignObject * { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #111827; box-sizing: border-box; }
         .card { position: relative; display: flex; flex-direction: column; border-radius: 14px; background: var(--card-shell-background, #ffffff); border: var(--card-border, 1px solid rgba(47,128,237,0.25)); box-shadow: 0 18px 32px rgba(47,128,237,0.12); overflow: visible; }
         .card.card--gold { box-shadow: 0 18px 32px rgba(209,173,68,0.28); }
+        .card { color: #111827; }       
         .card-header { padding: 16px 48px 14px; position: relative; border-radius: 14px 14px 0 0; display: flex; align-items: center; justify-content: center; text-align: center; min-height: 64px; color: #fff; font-size: 20px; font-weight: 700; letter-spacing: 0.3px; line-height: 1; box-shadow: inset 0 -2px 0 rgba(255,255,255,0.35); }
+        .card .card-header, .card .card-header * { color: #ffffff; }
         .card-title { display: flex; align-items: center; justify-content: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
         .card--large .card-title, .card--gold .card-title { font-size: 30px; font-weight: 900; }
         .card-body { padding: 20px 20px 60px; background: var(--card-body-background, var(--card-body-gradient, var(--surface, #ffffff))); border-radius: 0 0 14px 14px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; flex: 1 1 auto; line-height: 1.3; border-top: 1px solid var(--card-body-divider, rgba(47,128,237,0.2)); }
@@ -531,6 +603,7 @@ const handleExportSVG = async () => {
         .label { color: #6b7280; font-weight: 500; font-size: 14px; max-width: 100%; word-break: break-word; overflow-wrap: anywhere; line-height: 1.2; text-align: center; }
         .value { color: #111827; font-weight: 600; font-size: 15px; max-width: 100%; word-break: break-word; overflow-wrap: anywhere; line-height: 1.2; text-align: center; }
         .pv-row .value { font-size: 18px; font-weight: 600; }
+        .card--large .pv-row .value { font-weight: 700; }       
         .coin-icon { width: 32px; height: 32px; flex-shrink: 0; }
         .card-body-html { font-size: 14px; color: #111827; line-height: 1.5; width: 100%; text-align: center; word-break: break-word; overflow-wrap: anywhere; }        
         .slf-badge, .fendou-badge, .rank-badge { position: absolute; display: none; pointer-events: none; user-select: none; }
