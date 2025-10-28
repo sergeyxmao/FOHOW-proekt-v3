@@ -2,6 +2,7 @@
 import { ref, nextTick, computed } from 'vue';
 import { useCardsStore } from '../../stores/cards';
 import { parseActivePV } from '../../utils/activePv';
+import { calcStagesAndCycles } from '../../utils/calculationEngine';  
 import { buildCardCssVariables } from '../../utils/constants';
   
 const props = defineProps({
