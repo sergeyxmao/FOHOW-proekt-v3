@@ -731,6 +731,12 @@ watch(isCollapsed, (collapsed) => {
   --panel-badge-bg: rgba(15, 98, 254, 0.1);
   --panel-badge-text: rgba(23, 34, 59, 0.75);
   color: var(--panel-text);
+  --panel-collapse-bg: var(--panel-bg);
+  --panel-collapse-color: var(--panel-text);
+  --panel-collapse-border: var(--panel-border);
+  --panel-collapse-shadow: var(--panel-shadow);
+  --panel-collapse-hover-shadow: var(--panel-button-hover-shadow);
+  --panel-collapse-hover-color: var(--panel-button-color);	
 }
 
 .right-control-panel--modern {
@@ -755,6 +761,7 @@ watch(isCollapsed, (collapsed) => {
   --panel-card-btn-color: #e8f5ff;
   --panel-badge-bg: rgba(255, 215, 64, 0.25);
   --panel-badge-text: rgba(229, 243, 255, 0.92);
+  --panel-collapse-hover-color: #73c8ff;	
 }
 
 .right-control-panel__shell {
@@ -775,25 +782,25 @@ watch(isCollapsed, (collapsed) => {
   min-height: 64px;
   padding: 0 14px;
   border-radius: 26px 0 0 26px;
-  border: 1px solid rgba(15, 23, 42, 0.14);
+  border: 1px solid var(--panel-collapse-border);
   border-right: none;
-  background: rgba(255, 255, 255, 0.94);
-  color: #111827;
+  background: var(--panel-collapse-bg);
+  color: var(--panel-collapse-color);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: var(--shadow);
+  box-shadow: var(--panel-collapse-shadow);
   backdrop-filter: blur(22px);
   transition: transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
 .right-control-panel__collapse:hover {
   transform: translateY(-50%) translateX(-2px);
-  box-shadow: 0 22px 42px rgba(15, 98, 254, 0.25);
-  color: #0f62fe;
+  box-shadow: var(--panel-collapse-hover-shadow);
+  color: var(--panel-collapse-hover-color);
 }
 
 .right-control-panel__collapse span {
@@ -807,16 +814,17 @@ watch(isCollapsed, (collapsed) => {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 2px 18px;  background: var(--panel-bg);
+  padding: 2px 18px;
+  background: transparent;
   border: 1px solid var(--panel-border);
   border-left: none;
   border-radius: 0 26px 26px 0;
   box-shadow: var(--panel-shadow);
-  backdrop-filter: blur(22px);
+  backdrop-filter: none;
   margin-left: -1px;
   --template-menu-offset: 18px;
 
-  --template-menu-offset: 28px;  
+  --template-menu-offset: 28px;
 }
 
 .right-control-panel__card {
@@ -825,13 +833,13 @@ watch(isCollapsed, (collapsed) => {
   flex-direction: column;
   gap: 12px;
   padding: 22px 20px 18px;
-  background: var(--panel-bg);
+  background: transparent;
   border: 1px solid var(--panel-border);
   border-radius: 26px;
   border-left: none;
-  border-radius: 0 26px 26px 0;  
+  border-radius: 0 26px 26px 0;
   box-shadow: var(--panel-shadow);
-  backdrop-filter: blur(28px);
+  backdrop-filter: none;
   overflow: visible;
   padding-right: 28px;
   box-sizing: border-box;
