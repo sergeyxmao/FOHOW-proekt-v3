@@ -923,9 +923,9 @@ const updateValue = (event, field) => {
   flex-wrap: nowrap;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(15, 98, 254, 0.08);
-  border: 1px solid rgba(15, 98, 254, 0.12);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  background: none;
+  border: none;
+  box-shadow: none;
 }
 .active-pv-controls__group {
   display: inline-flex;
