@@ -2,7 +2,7 @@
 import { ref, nextTick, computed } from 'vue';
 import { useCardsStore } from '../../stores/cards';
 import { parseActivePV } from '../../utils/activePv';
-import { calcStagesAndCycles } from '../../utils/calculationEngine';
+import { buildCardCssVariables } from '../../utils/constants';
   
 const props = defineProps({
   card: {
@@ -60,17 +60,11 @@ const noteIndicatorColor = computed(() => {
 });
 const cardStyle = computed(() => {
   const strokeWidth = Number.isFinite(props.card.strokeWidth) ? props.card.strokeWidth : 2;
-  const baseFill = props.card.fill || '#ffffff';
-  const bodyBackground = props.card.bodyGradient || baseFill;
-  const isGoldCard = props.card?.type === 'gold';
-
-  const rawStroke = typeof props.card.stroke === 'string' ? props.card.stroke.trim() : '';
-  const hasCustomStroke = rawStroke && rawStroke.toLowerCase() !== '#000000';
-  const borderColor = hasCustomStroke
-    ? rawStroke
-    : (isGoldCard ? '#d1ad44' : '#c8d9ff');
-  const shellBackground = props.card.shellBackground
-    || (isGoldCard ? '#fff8ea' : '#f7fbff');  
+  const {
+    cssVariables,
+    shellBackground,
+    borderColor
+  } = buildCardCssVariables(props.card, strokeWidth);  
 
   const style = {
     position: 'absolute',
@@ -84,13 +78,9 @@ const cardStyle = computed(() => {
     style.minHeight = `${props.card.height}px`;
   }
 
-  style['--card-shell-background'] = shellBackground;
-  style['--card-border-color'] = borderColor;
-  style['--card-body-gradient'] = isGoldCard ? bodyBackground : 'none';
-  style['--card-body-background'] = isGoldCard ? bodyBackground : '#ffffff';
-  style['--card-body-divider'] = isGoldCard
-    ? 'rgba(209, 173, 68, 0.38)'
-    : 'rgba(47, 128, 237, 0.2)';
+  Object.entries(cssVariables).forEach(([name, value]) => {
+    style[name] = value;
+  });
 
   return style;
 });
