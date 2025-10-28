@@ -384,19 +384,37 @@ const handleExportSVG = async () => {
       const headerBg = card.headerBg || '#5D8BF4'
       const rankSrc = card.rankBadge ? await imageToDataUri(`/rank-${card.rankBadge}.png`) : ''
       const strokeWidth = Number.isFinite(card.strokeWidth) ? card.strokeWidth : 2
-      const borderColor = card.stroke || '#000000'
+      const isGoldCard = card.type === 'gold'
+      const rawStroke = typeof card.stroke === 'string' ? card.stroke.trim() : ''
+      const hasCustomStroke = rawStroke && rawStroke.toLowerCase() !== '#000000'
+      const borderColor = hasCustomStroke
+        ? rawStroke
+        : (isGoldCard ? '#d1ad44' : '#c8d9ff')
+      const shellBackground = card.shellBackground || (isGoldCard ? '#fff8ea' : '#f7fbff')
       const cardFill = card.fill || '#ffffff'
-      const bodyGradient = card.bodyGradient || cardFill
-
+      const bodyBackground = card.bodyGradient || cardFill
+      const bodyDivider = isGoldCard ? 'rgba(209, 173, 68, 0.38)' : 'rgba(47, 128, 237, 0.2)'
       const cardInlineStyles = [
         `width:${card.width}px`,
         `height:${card.height}px`,
-        `background:${escapeHtml(cardFill)}`,
+        `min-height:${card.height}px`,
+        `background:${escapeHtml(shellBackground)}`,
         `border:${strokeWidth}px solid ${escapeHtml(borderColor)}`,
+        `--card-shell-background:${escapeHtml(shellBackground)}`,
+        `--card-border:${strokeWidth}px solid ${escapeHtml(borderColor)}`,
+        `--card-border-color:${escapeHtml(borderColor)}`,        
         `--card-fill:${escapeHtml(cardFill)}`,
-        `--card-body-gradient:${escapeHtml(bodyGradient)}`,
-        `--card-border:${strokeWidth}px solid ${escapeHtml(borderColor)}`
-      ].join(';')      
+        `--card-body-gradient:${escapeHtml(isGoldCard ? bodyBackground : 'none')}`,
+        `--card-body-background:${escapeHtml(isGoldCard ? bodyBackground : '#ffffff')}`,
+        `--card-body-divider:${escapeHtml(bodyDivider)}`
+      ].join(';')
+      const cardClasses = ['card']
+      if (card.type === 'large' || card.type === 'gold') {
+        cardClasses.push('card--large')
+      }
+      if (card.type === 'gold') {
+        cardClasses.push('card--gold')
+      }
       const calc = card.calculated || {}
       const balanceText = `${Number.isFinite(calc.L) ? calc.L : 0} / ${Number.isFinite(calc.R) ? calc.R : 0}`
       const totalText = Number.isFinite(calc.total) ? calc.total : 0
@@ -427,7 +445,7 @@ const handleExportSVG = async () => {
       ].join('')
 
       return `
-        <div class="card" style="${cardInlineStyles};">
+        <div class="${cardClasses.join(' ')}" style="${cardInlineStyles};">
           <div class="card-header" style="background:${escapeHtml(headerBg)};">
             <div class="card-title">${escapeHtml(card.text)}</div>
           </div>
@@ -500,20 +518,26 @@ const handleExportSVG = async () => {
 
     const svgStyle = `
       <style>
-        .card { position: relative; display: flex; flex-direction: column; align-items: stretch; box-sizing: border-box; border-radius: 16px; overflow: visible; box-shadow: 10px 12px 24px rgba(15,35,95,0.16), -6px -6px 18px rgba(255,255,255,0.85); background: var(--card-fill,#ffffff); color: #111827; border: var(--card-border,2px solid #000000); }
-        .card-header { position: relative; height: 52px; border-radius: 16px 16px 0 0; display: flex; align-items: center; justify-content: center; padding: 10px 44px; color: #fff; font-weight: 700; font-size: 20px; line-height: 1; letter-spacing: 0.3px; box-sizing: border-box; text-align: center; }
-        .card-title { display: flex; align-items: center; justify-content: center; width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; font-size: 20px; line-height: 1; letter-spacing: 0.3px; }
-        .card-body { padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; text-align: center; color: #111827; border-radius: 0 0 16px 16px; background: var(--card-body-gradient,var(--surface,#ffffff)); flex: 1 1 auto; width: 100%; }
-        .card-row { display: flex; align-items: center; justify-content: center; gap: 10px; line-height: 1.25; text-align: center; }
-        .label { color: #6b7280; font-weight: 500; font-size: 14px; }
-        .value { color: #111827; font-weight: 600; font-size: 15px; }
+        svg, foreignObject, foreignObject * { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; color: #111827; box-sizing: border-box; }
+        .card { position: relative; display: flex; flex-direction: column; border-radius: 14px; background: var(--card-shell-background, #ffffff); border: var(--card-border, 1px solid rgba(47,128,237,0.25)); box-shadow: 0 18px 32px rgba(47,128,237,0.12); overflow: visible; }
+        .card.card--gold { box-shadow: 0 18px 32px rgba(209,173,68,0.28); }
+        .card-header { padding: 16px 48px 14px; position: relative; border-radius: 14px 14px 0 0; display: flex; align-items: center; justify-content: center; text-align: center; min-height: 64px; color: #fff; font-size: 20px; font-weight: 700; letter-spacing: 0.3px; line-height: 1; box-shadow: inset 0 -2px 0 rgba(255,255,255,0.35); }
+        .card-title { display: flex; align-items: center; justify-content: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+        .card--large .card-title, .card--gold .card-title { font-size: 30px; font-weight: 900; }
+        .card-body { padding: 20px 20px 60px; background: var(--card-body-background, var(--card-body-gradient, var(--surface, #ffffff))); border-radius: 0 0 14px 14px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; flex: 1 1 auto; line-height: 1.3; border-top: 1px solid var(--card-body-divider, rgba(47,128,237,0.2)); }
+        .card:not(.card--large):not(.card--gold) .card-body { padding-bottom: 40px; gap: 8px; }
+        .card-row { display: flex; align-items: center; justify-content: center; gap: 10px; text-align: center; flex-wrap: wrap; width: 100%; }
+        .card-row.pv-row { gap: 10px; }
+        .label { color: #6b7280; font-weight: 500; font-size: 14px; max-width: 100%; word-break: break-word; overflow-wrap: anywhere; line-height: 1.2; text-align: center; }
+        .value { color: #111827; font-weight: 600; font-size: 15px; max-width: 100%; word-break: break-word; overflow-wrap: anywhere; line-height: 1.2; text-align: center; }
         .pv-row .value { font-size: 18px; font-weight: 600; }
-        .coin-icon { width: 32px; height: 32px; }
+        .coin-icon { width: 32px; height: 32px; flex-shrink: 0; }
+        .card-body-html { font-size: 14px; color: #111827; line-height: 1.5; width: 100%; text-align: center; word-break: break-word; overflow-wrap: anywhere; }        
         .slf-badge, .fendou-badge, .rank-badge { position: absolute; display: none; pointer-events: none; user-select: none; }
-        .slf-badge.visible { display: block; top: 15px; left: 15px; font-size: 36px; font-weight: 900; color: #ffc700; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
-        .fendou-badge.visible { display: block; top: -25px; left: 50%; transform: translateX(-50%); font-size: 56px; font-weight: 900; color: #ff2d55; text-shadow: 0 2px 6px rgba(0,0,0,0.25); }
-        .rank-badge.visible { display: block; top: -15px; right: 15px; width: 80px; height: auto; transform: rotate(15deg); }
-        .card-body-html { margin-top: 8px; text-align: left; width: 100%; }
+        .slf-badge.visible, .fendou-badge.visible, .rank-badge.visible { display: block; }
+        .slf-badge.visible { top: 15px; left: 15px; font-size: 36px; font-weight: 900; color: #ffc700; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        .fendou-badge.visible { top: -25px; left: 50%; transform: translateX(-50%); font-size: 56px; font-weight: 900; color: #ff2d55; text-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+        .rank-badge.visible { top: -15px; right: 15px; width: 80px; height: auto; transform: rotate(15deg); }
         .line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
         .line--balance-highlight { stroke-dasharray: 16; }
         .line--pv-highlight { stroke-dasharray: 14; }
