@@ -108,11 +108,12 @@ onBeforeUnmount(() => {
     />
     <!-- Левая панель -->
     <div
-      v-show="!isPencilMode"      
+      v-show="!isPencilMode"
       :class="[
         'ui-panel-left',
         {
-          collapsed: isLeftPanelCollapsed
+          collapsed: isLeftPanelCollapsed,
+          'ui-panel-left--modern': isModernTheme
         }
       ]"
     >
@@ -205,12 +206,25 @@ html,body{
   max-height: none;
   overflow: visible;
   box-sizing: border-box;
+  --left-panel-collapse-bg: rgba(255, 255, 255, 0.94);
+  --left-panel-collapse-color: #111827;
+  --left-panel-collapse-border: rgba(15, 23, 42, 0.14);
+  --left-panel-collapse-shadow: var(--shadow);
+  --left-panel-collapse-hover-shadow: 0 22px 42px rgba(15, 98, 254, 0.25);
+  --left-panel-collapse-hover-color: #0f62fe;  
 }
 .ui-panel-left.collapsed {
   top: 16px;
   padding: 16px 20px;
 }
-
+.ui-panel-left--modern {
+  --left-panel-collapse-bg: rgba(28, 38, 58, 0.9);
+  --left-panel-collapse-color: #e5f3ff;
+  --left-panel-collapse-border: rgba(96, 164, 255, 0.35);
+  --left-panel-collapse-shadow: 0 18px 34px rgba(6, 11, 21, 0.45);
+  --left-panel-collapse-hover-shadow: 0 24px 40px rgba(6, 11, 21, 0.55);
+  --left-panel-collapse-hover-color: #73c8ff;
+}
 .ui-panel-left__collapse {
   position: absolute;
   top: 50%;
@@ -220,25 +234,25 @@ html,body{
   min-height: 64px;
   padding: 0 14px;
   border-radius: 0 26px 26px 0;
-  border: 1px solid rgba(15, 23, 42, 0.14);
+  border: 1px solid var(--left-panel-collapse-border);
   border-left: none;
-  background: rgba(255, 255, 255, 0.94);
-  color: #111827;
+  background: var(--left-panel-collapse-bg);
+  color: var(--left-panel-collapse-color);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: var(--shadow);
+  box-shadow: var(--left-panel-collapse-shadow);
   backdrop-filter: blur(22px);
   transition: transform .2s ease, box-shadow .2s ease, color .2s ease;
 }
 
 .ui-panel-left__collapse:hover {
   transform: translateY(-50%) translateX(2px);
-  box-shadow: 0 22px 42px rgba(15, 98, 254, 0.25);
-  color: #0f62fe;
+  box-shadow: var(--left-panel-collapse-hover-shadow);
+  color: var(--left-panel-collapse-hover-color);
 }
 
 .ui-panel-left__collapse span {
