@@ -62,21 +62,35 @@ const cardStyle = computed(() => {
   const strokeWidth = Number.isFinite(props.card.strokeWidth) ? props.card.strokeWidth : 2;
   const baseFill = props.card.fill || '#ffffff';
   const bodyBackground = props.card.bodyGradient || baseFill;
+  const isGoldCard = props.card?.type === 'gold';
+
+  const rawStroke = typeof props.card.stroke === 'string' ? props.card.stroke.trim() : '';
+  const hasCustomStroke = rawStroke && rawStroke.toLowerCase() !== '#000000';
+  const borderColor = hasCustomStroke
+    ? rawStroke
+    : (isGoldCard ? '#d1ad44' : '#c8d9ff');
+  const shellBackground = props.card.shellBackground
+    || (isGoldCard ? '#fff8ea' : '#f7fbff');  
 
   const style = {
     position: 'absolute',
     left: `${props.card.x}px`,
     top: `${props.card.y}px`,
     width: `${props.card.width}px`,
-    background: bodyBackground,
-    border: `${strokeWidth}px solid ${props.card.stroke || '#000000'}`
+    background: shellBackground,
+    border: `${strokeWidth}px solid ${borderColor}`
   };
   if (Number.isFinite(props.card.height)) {
     style.minHeight = `${props.card.height}px`;
   }
 
-  style['--card-body-gradient'] = bodyBackground;
-
+  style['--card-shell-background'] = shellBackground;
+  style['--card-border-color'] = borderColor;
+  style['--card-body-gradient'] = isGoldCard ? bodyBackground : 'none';
+  style['--card-body-background'] = isGoldCard ? bodyBackground : '#ffffff';
+  style['--card-body-divider'] = isGoldCard
+    ? 'rgba(209, 173, 68, 0.38)'
+    : 'rgba(47, 128, 237, 0.2)';
 
   return style;
 });
@@ -346,7 +360,7 @@ const updateValue = (event, field) => {
     <!-- Заголовок карточки -->
     <div
       class="card-header"
-      :style="{ backgroundColor: card.headerBg || 'rgb(93, 139, 244)' }"
+      :style="{ background: card.headerBg || 'linear-gradient(180deg, #58b1ff 0%, #2f7dfd 100%)' }"
     >
       <input
         v-if="isEditing"
@@ -499,8 +513,10 @@ const updateValue = (event, field) => {
 
 <style scoped>
 .card {
-  border-radius: 16px;
-  box-shadow: 10px 12px 24px rgba(15, 35, 95, 0.16), -6px -6px 18px rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+  background: var(--card-shell-background, #ffffff);
+  border: 1px solid var(--card-border-color, rgba(47, 128, 237, 0.25));
+  box-shadow: 0 18px 32px rgba(47, 128, 237, 0.12);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   overflow: visible;
   touch-action: none;
@@ -509,12 +525,20 @@ const updateValue = (event, field) => {
 }
 
 .card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 22px 36px rgba(47, 128, 237, 0.16);
+}
+
+.card.card--gold {
+  box-shadow: 0 18px 32px rgba(209, 173, 68, 0.28);
+}
+
+.card.card--gold:hover {
+  box-shadow: 0 24px 40px rgba(209, 173, 68, 0.32);
 }
 
 .card.selected {
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.6), 0 12px 26px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.45), 0 22px 36px rgba(47, 128, 237, 0.2);
 }
 
 .card.note-active {
@@ -537,17 +561,17 @@ const updateValue = (event, field) => {
 
   
 .card-header {
-  padding: 10px 44px;
+  padding: 16px 48px 14px;
   position: relative;
-  height: 52px;
-  border-radius: 16px 16px 0 0;
+  border-radius: 14px 14px 0 0;
   cursor: grab;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   flex-shrink: 0;
-  
+  min-height: 64px;
+  box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.35);
 }
 
 .card-title {
@@ -560,7 +584,8 @@ const updateValue = (event, field) => {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;  
+  justify-content: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 .card.selected .card-title {
@@ -569,7 +594,7 @@ const updateValue = (event, field) => {
 
 .card-title-input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   border: none;
   border-radius: 6px;
   padding: 6px;
@@ -681,9 +706,9 @@ const updateValue = (event, field) => {
 }
 
 .card-body {
-  padding: 16px 16px 56px;
-  background: var(--card-body-gradient, var(--surface, #ffffff));
-  border-radius: 0 0 16px 16px;
+  padding: 20px 20px 60px;
+  background: var(--card-body-background, var(--card-body-gradient, var(--surface, #ffffff)));
+  border-radius: 0 0 14px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -692,6 +717,7 @@ const updateValue = (event, field) => {
   width: 100%;
   box-sizing: border-box;
   line-height: 1.3;
+  border-top: 1px solid var(--card-body-divider, var(--card-border-color, rgba(47, 128, 237, 0.25)));  
 }
 .card:not(.card--large):not(.card--gold) .card-body {
   padding-bottom: 40px;
