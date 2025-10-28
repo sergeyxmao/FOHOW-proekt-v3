@@ -10,6 +10,7 @@ import { useViewportStore } from '../../stores/viewport.js'
 import { useNotesStore } from '../../stores/notes.js'
 import { parseActivePV } from '../../utils/activePv'
 import { calcStagesAndCycles } from '../../utils/calculationEngine'
+import { buildCardCssVariables } from '../../utils/constants'  
   
 const props = defineProps({
   isModernTheme: {
@@ -465,29 +466,20 @@ const handleExportSVG = async () => {
       const headerBg = card.headerBg || '#5D8BF4'
       const rankSrc = card.rankBadge ? await imageToDataUri(`/rank-${card.rankBadge}.png`) : ''
       const strokeWidth = Number.isFinite(card.strokeWidth) ? card.strokeWidth : 2
-      const isGoldCard = card.type === 'gold'
-      const rawStroke = typeof card.stroke === 'string' ? card.stroke.trim() : ''
-      const hasCustomStroke = rawStroke && rawStroke.toLowerCase() !== '#000000'
-      const borderColor = hasCustomStroke
-        ? rawStroke
-        : (isGoldCard ? '#d1ad44' : '#c8d9ff')
-      const shellBackground = card.shellBackground || (isGoldCard ? '#fff8ea' : '#f7fbff')
-      const cardFill = card.fill || '#ffffff'
-      const bodyBackground = card.bodyGradient || cardFill
-      const bodyDivider = isGoldCard ? 'rgba(209, 173, 68, 0.38)' : 'rgba(47, 128, 237, 0.2)'
+      const {
+        cssVariables,
+        shellBackground,
+        borderColor
+      } = buildCardCssVariables(card, strokeWidth)
+      const cssVariableStrings = Object.entries(cssVariables).map(([name, value]) => `${name}:${escapeHtml(value)}`)
       const cardInlineStyles = [
         `width:${card.width}px`,
         `height:${card.height}px`,
         `min-height:${card.height}px`,
         `background:${escapeHtml(shellBackground)}`,
         `border:${strokeWidth}px solid ${escapeHtml(borderColor)}`,
-        `--card-shell-background:${escapeHtml(shellBackground)}`,
-        `--card-border:${strokeWidth}px solid ${escapeHtml(borderColor)}`,
-        `--card-border-color:${escapeHtml(borderColor)}`,        
-        `--card-fill:${escapeHtml(cardFill)}`,
-        `--card-body-gradient:${escapeHtml(isGoldCard ? bodyBackground : 'none')}`,
-        `--card-body-background:${escapeHtml(isGoldCard ? bodyBackground : '#ffffff')}`,
-        `--card-body-divider:${escapeHtml(bodyDivider)}`
+        ...cssVariableStrings
+
       ].join(';')
       const cardClasses = ['card']
       if (card.type === 'large' || card.type === 'gold') {
