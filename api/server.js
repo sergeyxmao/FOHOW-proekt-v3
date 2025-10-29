@@ -11,7 +11,7 @@ await app.register(helmet);
 await app.register(cors, { origin: true, credentials: true });
 
 // === РЕГИСТРАЦИЯ ПОЛЬЗОВАТЕЛЯ ===
-app.post('/api/register', async (req, reply) => {
+app.post('/register', async (req, reply) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
