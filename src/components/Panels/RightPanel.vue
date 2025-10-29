@@ -981,7 +981,7 @@ watch(isTemplateMenuOpen, () => {
   box-shadow: var(--panel-shadow);
   backdrop-filter: none;
   height: 100%;
-  overflow-x: hidden;
+  overflow-x: visible;
   overflow-y: auto;
   padding-right: var(--panel-card-padding-right);
   box-sizing: border-box;
