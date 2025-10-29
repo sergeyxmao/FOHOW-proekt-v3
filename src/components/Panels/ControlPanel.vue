@@ -1085,11 +1085,8 @@ const handleToggleGuides = () => {
   align-items: center;
   gap: var(--left-panel-section-gap);
   width: 100%;
-  flex: 1 1 auto;
-  height: 100%;
-  max-height: 100%;
-  overflow-x: visible;
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
   box-sizing: border-box;
 }
 .left-panel-controls--modern {
@@ -1107,9 +1104,6 @@ const handleToggleGuides = () => {
 .left-panel-controls__collapsed {
   display: flex;
   align-items: center;
-  height: auto;
-  max-height: none;
-  overflow: visible;  
   justify-content: center;
   gap: calc(var(--left-panel-section-gap) * 0.85);
   width: 100%;
