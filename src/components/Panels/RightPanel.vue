@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 
 import { useCardsStore } from '../../stores/cards'
@@ -13,7 +13,14 @@ const props = defineProps({
     default: false
   }
 })
+const PANEL_SCALE_VAR_NAME = '--ui-panel-scale'
+const PANEL_SCALE_MARGIN = 12
+const MIN_PANEL_SCALE = 0.75
 
+const panelRootRef = ref(null)
+const panelCardRef = ref(null)
+let currentPanelScale = 1
+let resizeFrameId = null
   
 // Stores
 const cardsStore = useCardsStore()
@@ -110,6 +117,77 @@ const templateOptions = computed(() =>
       displayText: template.label
     }))
 )
+function setPanelScale(value) {
+  currentPanelScale = Number.isFinite(value) ? value : currentPanelScale
+
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  const root = document.documentElement
+  if (!root) {
+    return
+  }
+
+  const safeValue = Math.min(1, Math.max(currentPanelScale, MIN_PANEL_SCALE))
+  currentPanelScale = safeValue
+  root.style.setProperty(PANEL_SCALE_VAR_NAME, safeValue.toFixed(4))
+}
+
+function getPanelAvailableHeight(element) {
+  if (typeof window === 'undefined' || !element) {
+    return 0
+  }
+
+  const styles = window.getComputedStyle(element)
+  const heightValue = parseFloat(styles.height)
+
+  if (Number.isFinite(heightValue) && heightValue > 0) {
+    return heightValue
+  }
+
+  return Math.max(window.innerHeight - 48, 0)
+}
+
+function calculateTargetPanelScale() {
+  const cardEl = panelCardRef.value
+  const panelEl = panelRootRef.value
+
+  if (!cardEl || !panelEl) {
+    return currentPanelScale
+  }
+
+  const availableHeight = Math.max(getPanelAvailableHeight(panelEl) - PANEL_SCALE_MARGIN, 0)
+  const baseScale = currentPanelScale || 1
+  const rawContentHeight = cardEl.scrollHeight / baseScale
+
+  if (!Number.isFinite(rawContentHeight) || rawContentHeight <= 0 || availableHeight <= 0) {
+    return 1
+  }
+
+  const proposedScale = availableHeight / rawContentHeight
+  return Math.min(1, Math.max(proposedScale, MIN_PANEL_SCALE))
+}
+
+function updatePanelScale() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  const nextScale = calculateTargetPanelScale()
+  setPanelScale(nextScale)
+}
+
+function schedulePanelScaleUpdate() {
+  if (resizeFrameId) {
+    cancelAnimationFrame(resizeFrameId)
+  }
+
+  resizeFrameId = requestAnimationFrame(() => {
+    resizeFrameId = null
+    updatePanelScale()
+  })
+}
 
 const GRID_STEP_MIN = 5
 const GRID_STEP_MAX = 200
@@ -402,10 +480,29 @@ onMounted(() => {
   console.log('RightPanel mounted successfully');
 
   document.addEventListener('click', handleDocumentClick)
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', schedulePanelScaleUpdate, { passive: true })
+  }
+
+  nextTick(() => {
+    schedulePanelScaleUpdate()
+  })	
 })
 
 onBeforeUnmount(() => {
-  document.removeEventListener('click', handleDocumentClick)  
+  document.removeEventListener('click', handleDocumentClick)
+
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', schedulePanelScaleUpdate)
+  }
+
+  if (resizeFrameId) {
+    cancelAnimationFrame(resizeFrameId)
+    resizeFrameId = null
+  }
+
+  setPanelScale(1)
 })
 
 // Следим за изменениями параметров линий и обновляем значения по умолчанию
@@ -416,8 +513,18 @@ watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDu
 watch(isCollapsed, (collapsed) => {
   if (collapsed) {
     closeTemplateMenu()
+  } else {
+    nextTick(() => {
+      schedulePanelScaleUpdate()
+    })	  
   }
-})  
+})
+
+watch(isTemplateMenuOpen, () => {
+  nextTick(() => {
+    schedulePanelScaleUpdate()
+  })
+}) 
 </script>
 
 <template>
@@ -429,6 +536,7 @@ watch(isCollapsed, (collapsed) => {
         'right-control-panel--modern': props.isModernTheme
       }
     ]"
+    ref="panelRootRef"	  
   >
     <div class="right-control-panel__shell">
       <button
@@ -441,8 +549,12 @@ watch(isCollapsed, (collapsed) => {
         <span aria-hidden="true">{{ isCollapsed ? '❮' : '❯' }}</span>
       </button>
 
-      <div v-if="!isCollapsed" class="right-control-panel__card">
-        <div class="right-control-panel__top">
+      <div
+        v-if="!isCollapsed"
+        ref="panelCardRef"
+        class="right-control-panel__card"
+      >
+		  <div class="right-control-panel__top">
           <button
             class="line-color-button"
             type="button"
@@ -701,6 +813,7 @@ watch(isCollapsed, (collapsed) => {
 
 <style scoped>
 .right-control-panel {
+  --panel-scale: var(--ui-panel-scale, 1);	
   position: fixed;
   top: 24px;
   right: 24px;
@@ -731,8 +844,32 @@ watch(isCollapsed, (collapsed) => {
   --panel-card-btn-color: #1d3f8f;
   --panel-badge-bg: rgba(15, 98, 254, 0.1);
   --panel-badge-text: rgba(23, 34, 59, 0.75);
-  --panel-btn-size: 72px;
-  --panel-btn-radius: 22px;	
+  --panel-btn-size: calc(72px * var(--panel-scale));
+  --panel-btn-radius: calc(22px * var(--panel-scale));
+  --panel-collapse-width: calc(52px * var(--panel-scale));
+  --panel-collapse-min-height: calc(64px * var(--panel-scale));
+  --panel-collapse-padding: calc(14px * var(--panel-scale));
+  --panel-collapse-radius: calc(26px * var(--panel-scale));
+  --panel-card-width: calc(268px * var(--panel-scale));
+  --panel-card-padding-top: calc(22px * var(--panel-scale));
+  --panel-card-padding-inline: calc(20px * var(--panel-scale));
+  --panel-card-padding-bottom: calc(18px * var(--panel-scale));
+  --panel-card-gap: calc(12px * var(--panel-scale));
+  --panel-top-padding: calc(18px * var(--panel-scale));
+  --panel-gap: calc(14px * var(--panel-scale));
+  --panel-font-size: calc(20px * var(--panel-scale));
+  --panel-scrollbar-size: calc(8px * var(--panel-scale));
+  --panel-scrollbar-border: calc(2px * var(--panel-scale));
+  --panel-card-padding-right: calc(28px * var(--panel-scale));
+  --panel-inner-radius: calc(22px * var(--panel-scale));
+  --panel-inner-spacing: calc(14px * var(--panel-scale));
+  --panel-small-spacing: calc(12px * var(--panel-scale));
+  --panel-radius-small: calc(12px * var(--panel-scale));
+  --panel-radius-medium: calc(18px * var(--panel-scale));
+  --panel-padding-xs: calc(4px * var(--panel-scale));
+  --panel-padding-small: calc(12px * var(--panel-scale));
+  --panel-padding-medium: calc(14px * var(--panel-scale));
+  --panel-padding-large: calc(16px * var(--panel-scale));
   color: var(--panel-text);
   --panel-collapse-bg: var(--panel-bg);
   --panel-collapse-color: var(--panel-text);
@@ -780,12 +917,12 @@ watch(isCollapsed, (collapsed) => {
 .right-control-panel__collapse {
   position: absolute;
   top: 50%;
-  left: -52px;
+  left: calc(-1 * var(--panel-collapse-width));
   transform: translateY(-50%);
-  width: 52px;
-  min-height: 64px;
-  padding: 0 14px;
-  border-radius: 26px 0 0 26px;
+  width: var(--panel-collapse-width);
+  min-height: var(--panel-collapse-min-height);
+  padding: 0 var(--panel-collapse-padding);
+  border-radius: var(--panel-collapse-radius) 0 0 var(--panel-collapse-radius);
   border: 1px solid var(--panel-collapse-border);
   border-right: none;
   background: var(--panel-collapse-bg);
@@ -793,7 +930,7 @@ watch(isCollapsed, (collapsed) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: var(--panel-font-size);
   font-weight: 600;
   cursor: pointer;
   box-shadow: var(--panel-collapse-shadow);
@@ -818,11 +955,11 @@ watch(isCollapsed, (collapsed) => {
   display: flex;
   align-items: center;
   gap: calc(var(--panel-btn-size) * 0.18);
-  padding: 2px 18px;
+  padding: calc(2px * var(--panel-scale)) calc(18px * var(--panel-scale));
   background: transparent;
   border: 1px solid var(--panel-border);
   border-left: none;
-  border-radius: 0 26px 26px 0;
+  border-radius: 0 var(--panel-collapse-radius) var(--panel-collapse-radius) 0;
   box-shadow: var(--panel-shadow);
   backdrop-filter: none;
   margin-left: -1px;
@@ -832,22 +969,21 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .right-control-panel__card {
-  width: 268px;
+  width: var(--panel-card-width);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 22px 20px 18px;
+  gap: var(--panel-card-gap);
+  padding: var(--panel-card-padding-top) var(--panel-card-padding-inline) var(--panel-card-padding-bottom);
   background: transparent;
   border: 1px solid var(--panel-border);
-  border-radius: 26px;
   border-left: none;
-  border-radius: 0 26px 26px 0;
+  border-radius: 0 var(--panel-collapse-radius) var(--panel-collapse-radius) 0;
   box-shadow: var(--panel-shadow);
   backdrop-filter: none;
   height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  padding-right: 28px;
+  padding-right: var(--panel-card-padding-right);
   box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: var(--panel-button-color) rgba(15, 23, 42, 0.08);
@@ -865,18 +1001,18 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .right-control-panel__card::-webkit-scrollbar {
-  width: 8px;
+  width: var(--panel-scrollbar-size);
 }
 
 .right-control-panel__card::-webkit-scrollbar-track {
   background: rgba(15, 23, 42, 0.05);
-  border-radius: 12px;
+  border-radius: var(--panel-radius-small);
 }
 
 .right-control-panel__card::-webkit-scrollbar-thumb {
   background: var(--panel-button-color);
-  border-radius: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--panel-radius-small);
+  border: var(--panel-scrollbar-border) solid rgba(255, 255, 255, 0.4);
 }
 
 .right-control-panel__card::-webkit-scrollbar-thumb:hover {
@@ -885,10 +1021,10 @@ watch(isCollapsed, (collapsed) => {
 
 .right-control-panel__top {
   display: flex;
-  gap: 14px;
+  gap: var(--panel-gap);
   align-items: center;
-  padding: 18px;
-  border-radius: 22px;
+  padding: var(--panel-top-padding);
+  border-radius: var(--panel-inner-radius);
   background: var(--panel-surface);
   border: 1px solid var(--panel-surface-border);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
@@ -946,9 +1082,9 @@ watch(isCollapsed, (collapsed) => {
 .control-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 20px;
+  gap: calc(10px * var(--panel-scale));
+  padding: var(--panel-padding-medium);
+  border-radius: calc(20px * var(--panel-scale));
   background: var(--panel-surface);
   border: 1px solid var(--panel-surface-border);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -958,36 +1094,36 @@ watch(isCollapsed, (collapsed) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;  
+  gap: calc(8px * var(--panel-scale));
 }
 
 .control-section__title {
 
   font-weight: 600;
-  font-size: 14px;
+  font-size: calc(14px * var(--panel-scale));
   color: var(--panel-text);
 }
 
 .control-section__title--accent {
-  font-size: 12px;
+  font-size: calc(12px * var(--panel-scale));
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--panel-muted);
 }
 
 .control-section__value {
-  padding: 4px 12px;
-  border-radius: 12px;
+  padding: calc(4px * var(--panel-scale)) calc(12px * var(--panel-scale));
+  border-radius: var(--panel-radius-small);
   background: var(--panel-badge-bg);
   color: var(--panel-contrast);
-  font-size: 13px;
+  font-size: calc(13px * var(--panel-scale));
   font-weight: 600;
 }
 
 .control-section__slider {
 
-  padding: 12px 14px;
-  border-radius: 16px;
+  padding: var(--panel-padding-small) var(--panel-padding-medium);
+  border-radius: calc(16px * var(--panel-scale));
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(15, 98, 254, 0.12);
   box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.45);
@@ -995,7 +1131,7 @@ watch(isCollapsed, (collapsed) => {
 
 .thickness-slider {
   width: 100%;
-  height: 10px;
+  height: calc(10px * var(--panel-scale));
   border-radius: 999px;
   background: linear-gradient(to right, #0f62fe 0%, #0f62fe 20%, rgba(203, 213, 225, 0.7) 20%, rgba(203, 213, 225, 0.7) 100%);
   outline: none;
@@ -1005,11 +1141,11 @@ watch(isCollapsed, (collapsed) => {
 
 .thickness-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 22px;
-  height: 22px;
+  width: calc(22px * var(--panel-scale));
+  height: calc(22px * var(--panel-scale));
   border-radius: 50%;
   background: #fff;
-  border: 4px solid #0f62fe;  cursor: pointer;
+  border: calc(4px * var(--panel-scale)) solid #0f62fe;  cursor: pointer;
   box-shadow: 0 10px 18px rgba(15, 98, 254, 0.32);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -1019,11 +1155,11 @@ watch(isCollapsed, (collapsed) => {
   box-shadow: 0 16px 26px rgba(15, 98, 254, 0.4);}
 
 .thickness-slider::-moz-range-thumb {
-  width: 22px;
-  height: 22px;
+  width: calc(22px * var(--panel-scale));
+  height: calc(22px * var(--panel-scale));
   border-radius: 50%;
   background: #fff;
-  border: 4px solid #0f62fe;
+  border: calc(4px * var(--panel-scale)) solid #0f62fe;
   cursor: pointer;
   box-shadow: 0 10px 18px rgba(15, 98, 254, 0.32);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -1038,15 +1174,15 @@ watch(isCollapsed, (collapsed) => {
 
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--panel-small-spacing);
 }
 
 .animation-input {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-radius: 16px;
+  gap: calc(8px * var(--panel-scale));
+  padding: calc(10px * var(--panel-scale)) calc(16px * var(--panel-scale));
+  border-radius: calc(16px * var(--panel-scale));
   background: rgba(255, 200, 68, 0.2);
   border: 1px solid rgba(255, 200, 68, 0.34);
   box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.45);
@@ -1054,10 +1190,10 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .animation-duration-input {
-  width: 56px;
+  width: calc(56px * var(--panel-scale));
   border: none;
   background: transparent;
-  font-size: 16px;
+  font-size: calc(16px * var(--panel-scale));
   font-weight: 600;
   text-align: right;
   color: inherit;
@@ -1072,7 +1208,7 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .animation-unit {
-  font-size: 14px;
+  font-size: calc(14px * var(--panel-scale));
   font-weight: 600;
   text-transform: lowercase;
 }
@@ -1102,7 +1238,7 @@ watch(isCollapsed, (collapsed) => {
 .control-section__actions {
 
   display: flex;
-  gap: 12px;
+  gap: var(--panel-small-spacing);
   align-items: center;
 }
 
@@ -1150,15 +1286,15 @@ watch(isCollapsed, (collapsed) => {
 
 .background-row {
   display: flex;
-  gap: 12px;
+  gap: var(--panel-small-spacing);
   align-items: center;	
 }
 .grid-settings {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 18px;
+  gap: var(--panel-small-spacing);
+  padding: var(--panel-padding-medium);
+  border-radius: var(--panel-radius-medium);
   background: var(--panel-surface);
   border: 1px solid var(--panel-surface-border);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
@@ -1167,8 +1303,8 @@ watch(isCollapsed, (collapsed) => {
 .grid-settings__field {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
+  gap: calc(10px * var(--panel-scale));
+  font-size: calc(14px * var(--panel-scale));
   color: var(--panel-muted);
 }
 
@@ -1178,19 +1314,19 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .grid-settings__input {
-  width: 72px;
-  padding: 6px 10px;
-  border-radius: 12px;
+  width: calc(72px * var(--panel-scale));
+  padding: calc(6px * var(--panel-scale)) calc(10px * var(--panel-scale));
+  border-radius: var(--panel-radius-small);
   border: 1px solid var(--panel-card-btn-border);
   background: var(--panel-button-bg);
   color: var(--panel-text);
-  font-size: 14px;
+  font-size: calc(14px * var(--panel-scale));
   text-align: center;
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.12);
 }
 
 .grid-settings__unit {
-  font-size: 12px;
+  font-size: calc(12px * var(--panel-scale));
   color: var(--panel-muted);
 }
 
@@ -1250,7 +1386,7 @@ watch(isCollapsed, (collapsed) => {
 }
 
 .control-section--accent {
-  gap: 14px;
+  gap: var(--panel-gap);
 }
 
 .control-section--footer {
@@ -1272,7 +1408,6 @@ watch(isCollapsed, (collapsed) => {
   border: 1px solid var(--panel-card-btn-border);
   background: var(--panel-card-btn-bg);
   color: var(--panel-card-btn-color);
-  font-size: 26px;
   font-size: calc(var(--panel-btn-size) * 0.36);
   font-weight: 700;
   cursor: pointer;
@@ -1321,43 +1456,43 @@ watch(isCollapsed, (collapsed) => {
   position: absolute;
   right: calc(100% + var(--template-menu-offset, 0px));
   margin-right: 0;
-  top: calc(100% + 10px);
+  top: calc(100% + 10px * var(--panel-scale));
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px;
-  min-width: 220px;
-  max-height: min(240px, calc(100vh - 140px));
-  overflow-y: auto;  
+  gap: calc(6px * var(--panel-scale));
+  padding: var(--panel-padding-small);
+  min-width: calc(220px * var(--panel-scale));
+  max-height: min(calc(240px * var(--panel-scale)), calc(100vh - 140px));
+  overflow-y: auto;
   background: var(--panel-button-bg, rgba(255, 255, 255, 0.72));
   border: 1px solid var(--panel-button-border, rgba(15, 98, 254, 0.18));
-  border-radius: 14px;
+  border-radius: calc(14px * var(--panel-scale));
   box-shadow: var(--panel-button-hover-shadow, 0 20px 36px rgba(15, 98, 254, 0.28));
   z-index: 10;
   scrollbar-width: thin;
 }
 .template-menu__list--drop-up {
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 10px * var(--panel-scale));
   top: auto;
   transform-origin: bottom left;
 }
 .template-menu__list::-webkit-scrollbar {
-  width: 6px;
+  width: calc(6px * var(--panel-scale));
 }
 
 .template-menu__list::-webkit-scrollbar-thumb {
   background: var(--panel-button-color, #0f62fe);
-  border-radius: 10px;  
+  border-radius: calc(10px * var(--panel-scale));
 }
 
 .template-menu__item {
   width: 100%;
-  padding: 10px 12px;
+  padding: calc(10px * var(--panel-scale)) calc(12px * var(--panel-scale));
   border: none;
-  border-radius: 10px;
+  border-radius: calc(10px * var(--panel-scale));
   background: transparent;
   color: var(--panel-card-btn-color);
-  font-size: 14px;
+  font-size: calc(14px * var(--panel-scale));
   font-weight: 500;
   text-align: left;
   cursor: pointer;
@@ -1415,13 +1550,13 @@ watch(isCollapsed, (collapsed) => {
   .right-control-panel {
     top: 16px;
     right: 16px;
-    height: calc(100vh - 32px);	  
+    height: calc(100vh - 32px);
     max-height: calc(100vh - 32px);
   }
 
   .right-control-panel__card {
-    width: 252px;
-    padding: 20px 18px 16px;
+    width: calc(252px * var(--panel-scale));
+    padding: calc(20px * var(--panel-scale)) calc(18px * var(--panel-scale)) calc(16px * var(--panel-scale));
   }
 }
 </style>
