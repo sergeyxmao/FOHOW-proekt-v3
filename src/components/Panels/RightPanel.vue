@@ -706,7 +706,8 @@ watch(isCollapsed, (collapsed) => {
   right: 24px;
   z-index: 2000;
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
+  height: calc(100vh - 48px);
   max-height: calc(100vh - 48px);
   overflow: visible;
   --panel-bg: rgba(255, 255, 255, 0.6);
@@ -771,6 +772,7 @@ watch(isCollapsed, (collapsed) => {
   display: flex;
   align-items: stretch;
   gap: 0;
+  height: 100%;	
   max-height: 100%;
 
 }
@@ -842,13 +844,24 @@ watch(isCollapsed, (collapsed) => {
   border-radius: 0 26px 26px 0;
   box-shadow: var(--panel-shadow);
   backdrop-filter: none;
-  overflow: visible;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding-right: 28px;
   box-sizing: border-box;
   scrollbar-width: thin;
   scrollbar-color: var(--panel-button-color) rgba(15, 23, 42, 0.08);
   margin-left: -1px;
-  
+
+}
+
+.right-control-panel--collapsed {
+  height: auto;
+  max-height: none;
+}
+
+.right-control-panel--collapsed .right-control-panel__shell {
+  height: auto;  
 }
 
 .right-control-panel__card::-webkit-scrollbar {
@@ -1402,12 +1415,13 @@ watch(isCollapsed, (collapsed) => {
   .right-control-panel {
     top: 16px;
     right: 16px;
+    height: calc(100vh - 32px);	  
     max-height: calc(100vh - 32px);
   }
 
   .right-control-panel__card {
     width: 252px;
     padding: 20px 18px 16px;
-    max-height: calc(100vh - 32px);  }
+  }
 }
 </style>
