@@ -7,47 +7,24 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies
-node_modules/
-
-# Build artifacts
-dist/
-dist-ssr/
-coverage/
-
-# Local configs & caches
-*.local
-.eslintcache
-.babelcache
-.cache/
-.vite/
-
-# System junk
+node_modules
 .DS_Store
-Thumbs.db
+dist
+dist-ssr
+coverage
+*.local
 
-# E2E / Cypress
 /cypress/videos/
 /cypress/screenshots/
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea/
+.idea
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# TS build info (если появится)
 *.tsbuildinfo
-
-# Env files (keep example)
-.env
-.env.*
-!.env.example
-
-# Lockfiles: используем pnpm, поэтому блокируем npm/yarn
-package-lock.json
-yarn.lock
