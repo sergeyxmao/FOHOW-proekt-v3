@@ -870,6 +870,8 @@ watch(isTemplateMenuOpen, () => {
   --panel-padding-small: calc(12px * var(--panel-scale));
   --panel-padding-medium: calc(14px * var(--panel-scale));
   --panel-padding-large: calc(16px * var(--panel-scale));
+  --template-menu-gap: calc(18px * var(--panel-scale));
+  --template-menu-offset: calc(var(--panel-card-width) + var(--template-menu-gap));	
   color: var(--panel-text);
   --panel-collapse-bg: var(--panel-bg);
   --panel-collapse-color: var(--panel-text);
@@ -963,11 +965,12 @@ watch(isTemplateMenuOpen, () => {
   box-shadow: var(--panel-shadow);
   backdrop-filter: none;
   margin-left: -1px;
+  --template-menu-gap: calc(var(--panel-btn-size) * 0.25);	
   --template-menu-offset: calc(var(--panel-btn-size) * 0.4);
   flex-wrap: wrap;
   justify-content: center;
   position: relative;
-  overflow: visible;	
+  overflow: visible;
 }
 
 .right-control-panel__card {
@@ -1457,6 +1460,7 @@ watch(isTemplateMenuOpen, () => {
 .template-menu__list {
   position: absolute;
   right: calc(100% + var(--template-menu-offset, 0px));
+  left: auto;	
   margin-right: 0;
   top: calc(100% + 10px * var(--panel-scale));
   display: flex;
