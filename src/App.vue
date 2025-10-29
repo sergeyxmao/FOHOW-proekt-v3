@@ -192,19 +192,18 @@ html,body{
 /* Панели */
 .ui-panel-left{
   position: fixed;
-  top: 24px;
+  top: 20px;
   left: 0;
   z-index: 2000;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   justify-content: center;
   padding: 18px 20px;
   background: transparent;
   border-radius: 0 24px 24px 0;
   box-shadow: var(--shadow);
   transition: top .3s ease, transform .3s ease, padding .3s ease;
-  height: calc(100vh - 48px);
-  max-height: calc(100vh - 48px);
+  max-height: none;
   overflow: visible;
   box-sizing: border-box;
   --left-panel-collapse-bg: rgba(255, 255, 255, 0.94);
@@ -215,10 +214,8 @@ html,body{
   --left-panel-collapse-hover-color: #0f62fe;  
 }
 .ui-panel-left.collapsed {
-  top: 20px;
+  top: 16px;
   padding: 16px 20px;
-  height: auto;
-  max-height: none;  
 }
 .ui-panel-left--modern {
   --left-panel-collapse-bg: rgba(28, 38, 58, 0.9);
