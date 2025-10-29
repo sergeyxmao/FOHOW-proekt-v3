@@ -1071,14 +1071,15 @@ const handleToggleGuides = () => {
 
 <style scoped>
 .left-panel-controls {
-  --left-panel-btn-size: 72px;
-  --left-panel-btn-radius: 22px;
-  --left-panel-btn-font: 30px;
+  --left-panel-scale: var(--ui-panel-scale, 1);
+  --left-panel-btn-size: calc(72px * var(--left-panel-scale));
+  --left-panel-btn-radius: calc(22px * var(--left-panel-scale));
+  --left-panel-btn-font: calc(30px * var(--left-panel-scale));
   --left-panel-btn-bg: rgba(255, 255, 255, 0.92);
   --left-panel-btn-border: rgba(15, 23, 42, 0.14);
   --left-panel-btn-color: #111827;
   --left-panel-btn-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
-  --left-panel-section-gap: 18px;
+  --left-panel-section-gap: calc(18px * var(--left-panel-scale));
 
   display: flex;
   flex-direction: column;
