@@ -966,6 +966,8 @@ watch(isTemplateMenuOpen, () => {
   --template-menu-offset: calc(var(--panel-btn-size) * 0.4);
   flex-wrap: wrap;
   justify-content: center;
+  position: relative;
+  overflow: visible;	
 }
 
 .right-control-panel__card {
