@@ -1,0 +1,13 @@
+{
+  "name": "fohow-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "fastify": "^4.28.1",
+    "@fastify/helmet": "^12.2.1",
+    "@fastify/cors": "^10.0.2"
+  }
+}
