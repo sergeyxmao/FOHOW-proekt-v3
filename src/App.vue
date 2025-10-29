@@ -166,9 +166,10 @@ onBeforeUnmount(() => {
   --muted: #6b7280;
   --panel: #ffffff;
   --surface: #ffffff;
-  --bg: #b9c4da; 
+  --bg: #b9c4da;
   --radius: 14px;
   --shadow: 0 8px 20px rgba(0,0,0,.12);
+  --ui-panel-scale: 1;  
 }
 
 html,body{
@@ -191,6 +192,7 @@ html,body{
 }
 /* Панели */
 .ui-panel-left{
+  --ui-left-panel-scale: var(--ui-panel-scale, 1);  
   position: fixed;
   top: 20px;
   left: 0;
@@ -198,9 +200,9 @@ html,body{
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 18px 20px;
+  padding: calc(18px * var(--ui-left-panel-scale)) calc(20px * var(--ui-left-panel-scale));
   background: transparent;
-  border-radius: 0 24px 24px 0;
+  border-radius: 0 calc(24px * var(--ui-left-panel-scale)) calc(24px * var(--ui-left-panel-scale)) 0;
   box-shadow: var(--shadow);
   transition: top .3s ease, transform .3s ease, padding .3s ease;
   max-height: none;
@@ -214,8 +216,8 @@ html,body{
   --left-panel-collapse-hover-color: #0f62fe;  
 }
 .ui-panel-left.collapsed {
-  top: 16px;
-  padding: 16px 20px;
+  top: calc(16px * var(--ui-left-panel-scale));
+  padding: calc(16px * var(--ui-left-panel-scale)) calc(20px * var(--ui-left-panel-scale));
 }
 .ui-panel-left--modern {
   --left-panel-collapse-bg: rgba(28, 38, 58, 0.9);
@@ -228,12 +230,12 @@ html,body{
 .ui-panel-left__collapse {
   position: absolute;
   top: 50%;
-  right: -52px;
+  right: calc(-52px * var(--ui-left-panel-scale));
   transform: translateY(-50%);
-  width: 52px;
-  min-height: 64px;
-  padding: 0 14px;
-  border-radius: 0 26px 26px 0;
+  width: calc(52px * var(--ui-left-panel-scale));
+  min-height: calc(64px * var(--ui-left-panel-scale));
+  padding: 0 calc(14px * var(--ui-left-panel-scale));
+  border-radius: 0 calc(26px * var(--ui-left-panel-scale)) calc(26px * var(--ui-left-panel-scale)) 0;
   border: 1px solid var(--left-panel-collapse-border);
   border-left: none;
   background: var(--left-panel-collapse-bg);
@@ -241,7 +243,7 @@ html,body{
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: calc(20px * var(--ui-left-panel-scale));
   font-weight: 600;
   cursor: pointer;
   box-shadow: var(--left-panel-collapse-shadow);
