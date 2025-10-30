@@ -347,7 +347,29 @@ function closeTemplateMenu() {
 }
 
 function toggleTemplateMenu() {
-  isTemplateMenuOpen.value = !isTemplateMenuOpen.value
+  const nextState = !isTemplateMenuOpen.value
+
+  if (nextState) {
+    isTemplateMenuOpen.value = true
+    nextTick(() => {
+      updateTemplateMenuPlacement()
+    })
+  } else {
+    closeTemplateMenu()
+  }
+}
+
+function handleTemplateButtonClick(event) {
+  if (event) {
+    event.preventDefault?.()
+    event.stopPropagation?.()
+  }
+
+  if (!templateOptions.value.length) {
+    return
+  }
+
+  toggleTemplateMenu()
 }
 function resetTemplateMenuPlacement() {
   templateMenuPlacement.value = {
@@ -793,33 +815,33 @@ watch(panelCardRef, (current, previous) => {
         <div class="control-section control-section--footer">
           <button class="add-card-btn" type="button" title="Добавить лицензию" @click="addCard">□</button>
           <button class="add-card-btn add-card-btn--large" type="button" title="Добавить большую лицензию" @click="addLargeCard">⧠</button>
-           <button
+          <button
             class="add-card-btn add-card-btn--large add-card-btn--gold"
             type="button"
             title="Добавить Goold лицензию"
             @click="addGoldCard"
-          >★</button>         
-            <div ref="templateMenuRef" class="template-menu">
+          >★</button>
+          <div ref="templateMenuRef" class="template-menu">
             <button
               class="add-card-btn"
               type="button"
               title="Добавить шаблон"
-              @click.stop="toggleTemplateMenu"
+              @click="handleTemplateButtonClick"
               :disabled="!templateOptions.length"
               aria-haspopup="true"
               :aria-expanded="isTemplateMenuOpen"
             >⧉</button>
-          <div
-            v-if="isTemplateMenuOpen && templateOptions.length"
-            ref="templateMenuListRef"
-            :class="[
-              'template-menu__list',
-              { 'template-menu__list--drop-up': templateMenuPlacement.dropUp }
-            ]"
-            :style="{ maxHeight: templateMenuPlacement.maxHeight || undefined }"
-            role="menu"
-            aria-label="Выбор шаблона"
-          >
+            <div
+              v-if="isTemplateMenuOpen && templateOptions.length"
+              ref="templateMenuListRef"
+              :class="[
+                'template-menu__list',
+                { 'template-menu__list--drop-up': templateMenuPlacement.dropUp }
+              ]"
+              :style="{ maxHeight: templateMenuPlacement.maxHeight || undefined }"
+              role="menu"
+              aria-label="Выбор шаблона"
+            >
               <button
                 v-for="option in templateOptions"
                 :key="option.id"
@@ -848,7 +870,7 @@ watch(panelCardRef, (current, previous) => {
             class="add-card-btn"
             type="button"
             title="Добавить шаблон"
-            @click.stop="toggleTemplateMenu"
+            @click="handleTemplateButtonClick"
             :disabled="!templateOptions.length"
             aria-haspopup="true"
             :aria-expanded="isTemplateMenuOpen"
@@ -861,7 +883,7 @@ watch(panelCardRef, (current, previous) => {
               { 'template-menu__list--drop-up': templateMenuPlacement.dropUp }
             ]"
             :style="{ maxHeight: templateMenuPlacement.maxHeight || undefined }"
-			role="menu"
+            role="menu"
             aria-label="Выбор шаблона"
           >
             <button
