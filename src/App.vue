@@ -4,7 +4,8 @@ import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import ControlPanel from './components/Panels/ControlPanel.vue'
 import RightPanel from './components/Panels/RightPanel.vue'
 import AppHeader from './components/Layout/AppHeader.vue'
-import PencilOverlay from './components/Overlay/PencilOverlay.vue'  
+import PencilOverlay from './components/Overlay/PencilOverlay.vue'
+import ResetPasswordForm from './components/ResetPasswordForm.vue'
 
 const isModernTheme = ref(false)
 const isLeftPanelCollapsed = ref(false)
@@ -12,6 +13,10 @@ const isPencilMode = ref(false)
 const pencilSnapshot = ref(null)
 const pencilBounds = ref(null)  
 const canvasRef = ref(null)
+
+// Состояние для сброса пароля
+const showResetPassword = ref(false)
+const resetToken = ref('')
 
 function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
@@ -86,29 +91,45 @@ function handleGlobalKeydown(event) {
   event.preventDefault()
   canvasRef.value?.resetView()
 }
+
 function handleFitToContent() {
   canvasRef.value?.fitToContent()
 }
 
+function handleResetPasswordSuccess() {
+  showResetPassword.value = false
+  // Можно открыть форму входа через AppHeader
+}
+
 onMounted(() => {
+  // Проверяем URL на токен сброса пароля
+  const urlParams = new URLSearchParams(window.location.search)
+  const token = urlParams.get('token')
+  if (token) {
+    resetToken.value = token
+    showResetPassword.value = true
+    // Очищаем URL от токена
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }
+  
   window.addEventListener('keydown', handleGlobalKeydown)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
 })
-
 </script>
 
 <template>
   <div id="app">
     <AppHeader
-      v-show="!isPencilMode"
+      v-show="!isPencilMode && !showResetPassword"
       :is-modern-theme="isModernTheme"
     />
+    
     <!-- Левая панель -->
     <div
-      v-show="!isPencilMode"
+      v-show="!isPencilMode && !showResetPassword"
       :class="[
         'ui-panel-left',
         {
@@ -134,27 +155,39 @@ onBeforeUnmount(() => {
         @toggle-collapse="toggleLeftPanel"
         @activate-pencil="handleActivatePencil"
         @fit-to-content="handleFitToContent"
-        />
+      />
     </div>
 
     <!-- Правая панель -->
     <RightPanel
-       v-show="!isPencilMode"     
+      v-show="!isPencilMode && !showResetPassword"     
       :is-modern-theme="isModernTheme"
     />
+    
     <div
       id="canvas"
-      :class="{ 'canvas--inactive': isPencilMode }"
+      :class="{ 'canvas--inactive': isPencilMode || showResetPassword }"
     >
       <CanvasBoard ref="canvasRef" />
     </div>
+    
     <PencilOverlay
       v-if="isPencilMode && pencilSnapshot && pencilBounds"
       :snapshot="pencilSnapshot"
       :bounds="pencilBounds"
       :is-modern-theme="isModernTheme"     
       @close="handlePencilClose"
-    />    
+    />
+    
+    <!-- Модальное окно сброса пароля -->
+    <div v-if="showResetPassword" class="reset-password-overlay">
+      <div class="reset-password-modal">
+        <ResetPasswordForm
+          :token="resetToken"
+          @success="handleResetPasswordSuccess"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -187,9 +220,35 @@ html,body{
   width: 100%;
   min-height: 100vh;
 }
+
 .canvas--inactive {
   pointer-events: none;
+  filter: blur(5px);
 }
+
+/* Модальное окно сброса пароля */
+.reset-password-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.reset-password-modal {
+  background: white;
+  border-radius: 10px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
 /* Панели */
 .ui-panel-left{
   --ui-left-panel-scale: var(--ui-panel-scale, 1);  
@@ -215,10 +274,12 @@ html,body{
   --left-panel-collapse-hover-shadow: 0 22px 42px rgba(15, 98, 254, 0.25);
   --left-panel-collapse-hover-color: #0f62fe;  
 }
+
 .ui-panel-left.collapsed {
   top: calc(16px * var(--ui-left-panel-scale));
   padding: calc(16px * var(--ui-left-panel-scale)) calc(20px * var(--ui-left-panel-scale));
 }
+
 .ui-panel-left--modern {
   --left-panel-collapse-bg: rgba(28, 38, 58, 0.9);
   --left-panel-collapse-color: #e5f3ff;
@@ -227,6 +288,7 @@ html,body{
   --left-panel-collapse-hover-shadow: 0 24px 40px rgba(6, 11, 21, 0.55);
   --left-panel-collapse-hover-color: #73c8ff;
 }
+
 .ui-panel-left__collapse {
   position: absolute;
   top: 50%;
@@ -264,6 +326,7 @@ html,body{
 .ui-panel-left.collapsed .ui-panel-left__collapse {
   top: 50%;
 }  
+
 /* Canvas/SVG */
 #canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
 </style>
