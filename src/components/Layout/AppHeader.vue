@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useProjectStore } from '../../stores/project.js'
 import { useAuthStore } from '../../stores/auth.js'
 import AuthModal from '../AuthModal.vue'
+import UserProfile from '../UserProfile.vue'
   
 const props = defineProps({
   isModernTheme: {
@@ -20,6 +21,7 @@ const projectPlaceholder = 'Введите название проекта'
 
 const showAuthModal = ref(false)
 const authModalView = ref('login')
+const showProfile = ref(false)
 
 function openLogin() {
   authModalView.value = 'login'
@@ -60,6 +62,9 @@ function handleLogout() {
     <div class="app-header__auth">
       <template v-if="isAuthenticated">
         <span class="app-header__user">👤 {{ user?.email }}</span>
+        <button class="app-header__btn app-header__btn--profile" @click="showProfile = true">
+          Профиль
+        </button>
         <button class="app-header__btn app-header__btn--logout" @click="handleLogout">
           Выйти
         </button>
@@ -82,6 +87,11 @@ function handleLogout() {
       @close="showAuthModal = false"
       @success="showAuthModal = false"
     />
+
+    <!-- Модальное окно профиля -->
+    <div v-if="showProfile" class="profile-modal-overlay" @click.self="showProfile = false">
+      <UserProfile @close="showProfile = false" />
+    </div>
   </div>
 </template>
 
@@ -212,6 +222,16 @@ function handleLogout() {
   transform: translateY(-1px);
 }
 
+.app-header__btn--profile {
+  background: #2196F3;
+  color: white;
+}
+
+.app-header__btn--profile:hover {
+  background: #1976D2;
+  transform: translateY(-1px);
+}
+
 .app-header__btn--logout {
   background: #f44336;
   color: white;
@@ -220,6 +240,19 @@ function handleLogout() {
 .app-header__btn--logout:hover {
   background: #da190b;
   transform: translateY(-1px);
+}
+
+.profile-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
 }
 
 @media (max-width: 900px) {
