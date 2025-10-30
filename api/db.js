@@ -4,7 +4,7 @@ const { Pool } = pkg;
 export const pool = new Pool({
   user: 'fohow_user',
   host: 'localhost',
-  database: 'fohow_db',
+  database: 'fohow',
   password: 'lenaXMAO80_sql',
   port: 5432,
 });
