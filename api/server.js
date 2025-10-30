@@ -423,6 +423,210 @@ app.delete('/api/profile/avatar', async (req, reply) => {
   }
 });
 
+// ============================================
+// ДОСКИ (BOARDS)
+// ============================================
+
+// Получить все доски пользователя
+app.get('/api/boards', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const result = await pool.query(
+      `SELECT id, name, description, thumbnail_url, is_public, 
+              created_at, updated_at, object_count
+       FROM boards 
+       WHERE owner_id = $1 
+       ORDER BY updated_at DESC`,
+      [decoded.userId]
+    );
+
+    return reply.send({ boards: result.rows });
+  } catch (err) {
+    console.error('❌ Ошибка получения досок:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// Получить одну доску
+app.get('/api/boards/:id', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `SELECT * FROM boards 
+       WHERE id = $1 AND owner_id = $2`,
+      [id, decoded.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return reply.code(404).send({ error: 'Доска не найдена' });
+    }
+
+    return reply.send({ board: result.rows[0] });
+  } catch (err) {
+    console.error('❌ Ошибка получения доски:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// Создать новую доску
+app.post('/api/boards', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { name, description, content } = req.body;
+
+    const result = await pool.query(
+      `INSERT INTO boards (owner_id, name, description, content)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [
+        decoded.userId,
+        name || 'Без названия',
+        description || null,
+        content ? JSON.stringify(content) : null
+      ]
+    );
+
+    return reply.send({ board: result.rows[0] });
+  } catch (err) {
+    console.error('❌ Ошибка создания доски:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// Обновить доску (автосохранение)
+app.put('/api/boards/:id', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { id } = req.params;
+    const { name, description, content } = req.body;
+
+    // Подсчитываем количество объектов
+    let objectCount = 0;
+    if (content && content.objects) {
+      objectCount = content.objects.length;
+    }
+
+    const result = await pool.query(
+      `UPDATE boards 
+       SET name = COALESCE($1, name),
+           description = COALESCE($2, description),
+           content = COALESCE($3, content),
+           object_count = $4,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5 AND owner_id = $6
+       RETURNING *`,
+      [
+        name || null,
+        description || null,
+        content ? JSON.stringify(content) : null,
+        objectCount,
+        id,
+        decoded.userId
+      ]
+    );
+
+    if (result.rows.length === 0) {
+      return reply.code(404).send({ error: 'Доска не найдена' });
+    }
+
+    return reply.send({ board: result.rows[0] });
+  } catch (err) {
+    console.error('❌ Ошибка обновления доски:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// Удалить доску
+app.delete('/api/boards/:id', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { id } = req.params;
+
+    const result = await pool.query(
+      'DELETE FROM boards WHERE id = $1 AND owner_id = $2 RETURNING id',
+      [id, decoded.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return reply.code(404).send({ error: 'Доска не найдена' });
+    }
+
+    return reply.send({ success: true });
+  } catch (err) {
+    console.error('❌ Ошибка удаления доски:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// Дублировать доску
+app.post('/api/boards/:id/duplicate', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { id } = req.params;
+
+    const original = await pool.query(
+      'SELECT * FROM boards WHERE id = $1 AND owner_id = $2',
+      [id, decoded.userId]
+    );
+
+    if (original.rows.length === 0) {
+      return reply.code(404).send({ error: 'Доска не найдена' });
+    }
+
+    const board = original.rows[0];
+    const result = await pool.query(
+      `INSERT INTO boards (owner_id, name, description, content, object_count)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [
+        decoded.userId,
+        `${board.name} (копия)`,
+        board.description,
+        board.content,
+        board.object_count
+      ]
+    );
+
+    return reply.send({ board: result.rows[0] });
+  } catch (err) {
+    console.error('❌ Ошибка дублирования доски:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
 // Проверка живости API
 app.get('/api/health', async () => ({ ok: true }));
 
