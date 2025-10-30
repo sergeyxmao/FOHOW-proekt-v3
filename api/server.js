@@ -13,6 +13,7 @@ import { randomBytes } from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import fastifyStatic from '@fastify/static';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -29,8 +30,12 @@ await app.register(multipart, {
     fileSize: 5 * 1024 * 1024 // 5MB максимум
   }
 });
+await app.register(fastifyStatic, {
+  root: path.join(__dirname, 'uploads'),
+  prefix: '/uploads/'
+});
 
-// === РЕГИСТРАЦИЯ ===
+// === РЕГИСТРАЦІЯ ===
 app.post('/api/register', async (req, reply) => {
   const { email, password } = req.body;
   
@@ -54,7 +59,7 @@ app.post('/api/register', async (req, reply) => {
   }
 });
 
-// === АВТОРИЗАЦИЯ ===
+// === АВТОРИЗАЦІЯ ===
 app.post('/api/login', async (req, reply) => {
   const { email, password } = req.body;
   
@@ -83,8 +88,8 @@ app.post('/api/login', async (req, reply) => {
       { expiresIn: '7d' }
     );
     
-    return reply.send({ 
-      success: true, 
+    return reply.send({
+      success: true,
       token,
       user: { id: user.id, email: user.email }
     });
@@ -418,14 +423,6 @@ app.delete('/api/profile/avatar', async (req, reply) => {
   }
 });
 
-// === ОТДАЧА СТАТИЧЕСКИХ ФАЙЛОВ (аватары) ===
-app.get('/uploads/avatars/:filename', async (req, reply) => {
-  const { filename } = req.params;
-  const filepath = path.join(__dirname, 'uploads', 'avatars', filename);
-  
-  return reply.sendFile(filepath);
-});
-
 // Проверка живости API
 app.get('/api/health', async () => ({ ok: true }));
 
@@ -438,4 +435,4 @@ try {
 } catch (err) {
   app.log.error(err);
   process.exit(1);
-}
+}```
