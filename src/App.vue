@@ -8,6 +8,8 @@ import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
 import { useAuthStore } from './stores/auth'
 
+const authStore = useAuthStore()
+
 const isModernTheme = ref(false)
 const isLeftPanelCollapsed = ref(false)
 const isPencilMode = ref(false)
@@ -99,19 +101,13 @@ function handleFitToContent() {
 
 function handleResetPasswordSuccess() {
   showResetPassword.value = false
-  // Можно открыть форму входа через AppHeader
 }
-
-onMounted(() => {
-  // Проверяем URL на токен сброса пароля
-const authStore = useAuthStore()
 
 onMounted(async () => {
   // Инициализируем authStore - загружаем данные пользователя
   await authStore.init()
   
   // Проверяем URL на токен сброса пароля
-  const urlParams = new URLSearchParams(window.location.search)
   const urlParams = new URLSearchParams(window.location.search)
   const token = urlParams.get('token')
   if (token) {
