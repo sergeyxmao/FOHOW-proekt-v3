@@ -94,8 +94,13 @@ async function handleRegister() {
 
 <style scoped>
 .register-form {
+  width: 100%;
   max-width: 400px;
-  margin: 50px auto;
+  margin: 0;
+  padding: 0;
+}
+
+.register-form form {
   padding: 30px;
   background: white;
   border-radius: 10px;
