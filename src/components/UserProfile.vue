@@ -31,7 +31,7 @@
         </div>
 
         <div class="profile-actions">
-          <button class="btn-primary" @click="editMode = true">
+          <button class="btn-primary" @click="startEdit">
             Редактировать профиль
           </button>
           <button class="btn-danger" @click="showDeleteConfirm = true">
@@ -334,7 +334,7 @@ async function handleUpdate() {
     }
 
     user.value = data.user
-    authStore.user = data.user
+    localStorage.setItem('user', JSON.stringify(data.user))
     success.value = 'Профиль успешно обновлён!'
     
     setTimeout(() => {
@@ -364,7 +364,20 @@ function cancelEdit() {
   success.value = ''
   passwordVisibility.current = false
   passwordVisibility.new = false
-  passwordVisibility.confirm = false  
+    editForm.value.confirmPassword = ''
+    authStore.user = data.user
+    localStorage.setItem('user', JSON.stringify(data.user))
+}
+function startEdit() {
+  editMode.value = true
+  editForm.value.currentPassword = ''
+  editForm.value.newPassword = ''
+  editForm.value.confirmPassword = ''
+  passwordVisibility.current = false
+  passwordVisibility.new = false
+  passwordVisibility.confirm = false
+  error.value = ''
+  success.value = ''
 }
 
 async function handleDelete() {
