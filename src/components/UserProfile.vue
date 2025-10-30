@@ -1,5 +1,10 @@
 <template>
-  <div class="user-profile">
+  <div
+    :class="[
+      'user-profile',
+      { 'user-profile--modern': props.isModernTheme }
+    ]"
+  >
     <div class="profile-header">
       <h2>Мой профиль</h2>
       <button class="close-btn" @click="$emit('close')">×</button>
@@ -184,6 +189,12 @@
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+const props = defineProps({
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  }
+})
 
 const emit = defineEmits(['close'])
 
@@ -404,16 +415,71 @@ onMounted(() => {
 
 <style scoped>
 .user-profile {
-  position: relative;  
+  position: relative;
   max-width: 600px;
   width: min(600px, calc(100vw - 48px));
   max-height: min(92vh, 720px);
-  overflow-y: auto;  
-  background: white;
+  overflow-y: auto;
   border-radius: 24px;
   padding: 40px 40px 32px;
-  box-shadow: 0 32px 64px rgba(15, 23, 42, 0.18);
   box-sizing: border-box;
+  background: var(--profile-bg);
+  color: var(--profile-text);
+  box-shadow: var(--profile-shadow);
+  transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+  --profile-bg: #ffffff;
+  --profile-shadow: 0 32px 64px rgba(15, 23, 42, 0.18);
+  --profile-text: #111827;
+  --profile-muted: #666666;
+  --profile-border: #d1d5db;
+  --profile-input-bg: #ffffff;
+  --profile-input-border: #d1d5db;
+  --profile-input-placeholder: #94a3b8;
+  --profile-control-bg: #f1f5f9;
+  --profile-control-bg-hover: #e2e8f0;
+  --profile-control-text: #2563eb;
+  --profile-control-text-hover: #1d4ed8;
+  --profile-divider: #e5e7eb;
+  --profile-overlay: rgba(0, 0, 0, 0.5);
+  --profile-modal-bg: #ffffff;
+  --profile-modal-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
+  --profile-error-text: #f44336;
+  --profile-error-bg: #ffebee;
+  --profile-success-text: #4caf50;
+  --profile-success-bg: #e8f5e9;
+  --profile-secondary-bg: #f5f5f5;
+  --profile-secondary-bg-hover: #e0e0e0;
+  --profile-secondary-text: #333333;
+  --profile-close-color: #999999;
+  --profile-close-color-hover: #333333;
+}
+
+.user-profile--modern {
+  --profile-bg: rgba(17, 24, 39, 0.95);
+  --profile-shadow: 0 40px 70px rgba(2, 6, 23, 0.65);
+  --profile-text: #e2e8f0;
+  --profile-muted: rgba(148, 163, 184, 0.9);
+  --profile-border: rgba(148, 163, 184, 0.35);
+  --profile-input-bg: rgba(15, 23, 42, 0.9);
+  --profile-input-border: rgba(148, 163, 184, 0.4);
+  --profile-input-placeholder: rgba(148, 163, 184, 0.7);
+  --profile-control-bg: rgba(30, 41, 59, 0.85);
+  --profile-control-bg-hover: rgba(51, 65, 85, 0.95);
+  --profile-control-text: #38bdf8;
+  --profile-control-text-hover: #0ea5e9;
+  --profile-divider: rgba(148, 163, 184, 0.24);
+  --profile-overlay: rgba(4, 10, 24, 0.72);
+  --profile-modal-bg: rgba(17, 24, 39, 0.96);
+  --profile-modal-shadow: 0 30px 60px rgba(2, 6, 23, 0.6);
+  --profile-error-text: #fca5a5;
+  --profile-error-bg: rgba(239, 68, 68, 0.18);
+  --profile-success-text: #86efac;
+  --profile-success-bg: rgba(34, 197, 94, 0.18);
+  --profile-secondary-bg: rgba(148, 163, 184, 0.16);
+  --profile-secondary-bg-hover: rgba(148, 163, 184, 0.24);
+  --profile-secondary-text: #e2e8f0;
+  --profile-close-color: rgba(226, 232, 240, 0.6);
+  --profile-close-color-hover: #e2e8f0;  
 }
 
 .profile-header {
@@ -425,7 +491,7 @@ onMounted(() => {
 
 .profile-header h2 {
   margin: 0;
-  font-size: 24px;
+  color: var(--profile-text);
 }
 
 .close-btn,
@@ -434,19 +500,19 @@ onMounted(() => {
   border: none;
   font-size: 30px;
   cursor: pointer;
-  color: #999;
-  transition: color 0.2s ease;  
+  color: var(--profile-close-color);
+  transition: color 0.2s ease;
 }
 
 .close-btn:hover,
 .delete-confirm__close:hover {
-  color: #333;
+  color: var(--profile-close-color-hover);
 }
 
 .loading {
   text-align: center;
   padding: 40px;
-  color: #666;
+  color: var(--profile-muted);
 }
 
 .profile-view {
@@ -463,13 +529,13 @@ onMounted(() => {
 
 .profile-field label {
   font-weight: 600;
-  color: #666;
+  color: var(--profile-muted);
   font-size: 14px;
 }
 
 .profile-field span {
   font-size: 16px;
-  color: #111;
+  color: var(--profile-text);
 }
 
 .profile-actions {
@@ -493,13 +559,21 @@ onMounted(() => {
 .form-group label {
   font-weight: 600;
   font-size: 14px;
+  color: var(--profile-muted);  
 }
 
 .form-group input {
   padding: 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--profile-input-border);
   border-radius: 5px;
   font-size: 14px;
+  background: var(--profile-input-bg);
+  color: var(--profile-text);
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.form-group input::placeholder {
+  color: var(--profile-input-placeholder);  
 }
 .password-input {
   display: flex;
@@ -513,8 +587,8 @@ onMounted(() => {
 
 .password-toggle {
   border: none;
-  background: #f1f5f9;
-  color: #2563eb;
+  background: var(--profile-control-bg);
+  color: var(--profile-control-text);
   padding: 8px 12px;
   border-radius: 5px;
   cursor: pointer;
@@ -523,15 +597,15 @@ onMounted(() => {
 }
 
 .password-toggle:hover {
-  background: #e2e8f0;
-  color: #1d4ed8;
+  background: var(--profile-control-bg-hover);
+  color: var(--profile-control-text-hover);
 }
 
 .form-divider {
   margin: 10px 0;
   padding: 10px 0;
-  border-top: 1px solid #eee;
-  color: #666;
+  border-top: 1px solid var(--profile-divider);
+  color: var(--profile-muted);
   font-size: 14px;
   font-weight: 600;
 }
@@ -542,18 +616,20 @@ onMounted(() => {
   margin-top: 10px;
 }
 
-.btn-primary, .btn-secondary, .btn-danger {
+.btn-primary,
+.btn-secondary,
+.btn-danger {
   padding: 12px 20px;
   border: none;
   border-radius: 5px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .btn-primary {
-  background: #4CAF50;
+  background: #4caf50;
   color: white;
 }
 
@@ -567,12 +643,12 @@ onMounted(() => {
 }
 
 .btn-secondary {
-  background: #f5f5f5;
-  color: #333;
+  background: var(--profile-secondary-bg);
+  color: var(--profile-secondary-text);
 }
 
 .btn-secondary:hover {
-  background: #e0e0e0;
+  background: var(--profile-secondary-bg-hover);
 }
 
 .btn-danger {
@@ -588,15 +664,15 @@ onMounted(() => {
   color: #f44336;
   font-size: 14px;
   padding: 10px;
-  background: #ffebee;
+  background: var(--profile-error-bg);
   border-radius: 5px;
 }
 
 .success-message {
-  color: #4CAF50;
+  color: var(--profile-success-text);
   font-size: 14px;
   padding: 10px;
-  background: #e8f5e9;
+  background: var(--profile-success-bg);
   border-radius: 5px;
 }
 
@@ -606,21 +682,23 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--profile-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10001;
+  padding: 24px;  
 }
 
 .delete-confirm {
-  position: relative; 
-  background: white;
+  position: relative;
+  background: var(--profile-modal-bg);
   padding: 36px 30px 30px;
   border-radius: 18px;
   max-width: 400px;
   width: min(400px, calc(100vw - 48px));
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
+  box-shadow: var(--profile-modal-shadow);
+  color: var(--profile-text);
 }
 
 .delete-confirm__close {
@@ -637,6 +715,6 @@ onMounted(() => {
 
 .delete-confirm p {
   margin: 0 0 20px 0;
-  color: #666;
+  color: var(--profile-muted);
 }
 </style>
