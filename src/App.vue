@@ -7,19 +7,24 @@ import AppHeader from './components/Layout/AppHeader.vue'
 import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
 import { useAuthStore } from './stores/auth'
+import BoardsModal from './components/Board/BoardsModal.vue'
+import { useCanvasStore } from './stores/canvas' // Предполагаемый импорт
 
 const authStore = useAuthStore()
+const canvasStore = useCanvasStore() // Предполагаемая инициализация
 
 const isModernTheme = ref(false)
 const isLeftPanelCollapsed = ref(false)
 const isPencilMode = ref(false)
 const pencilSnapshot = ref(null)
-const pencilBounds = ref(null)  
+const pencilBounds = ref(null)
 const canvasRef = ref(null)
 
 // Состояние для сброса пароля
 const showResetPassword = ref(false)
 const resetToken = ref('')
+const showBoardsModal = ref(false)
+const currentBoardId = ref(null)
 
 function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
@@ -83,8 +88,8 @@ function handlePencilClose(payload) {
   }
 
   resetPencilState()
-}  
-  
+}
+
 function handleGlobalKeydown(event) {
   const isResetCombo = event.ctrlKey && !event.shiftKey && (event.code === 'Digit0' || event.code === 'Numpad0')
   if (!isResetCombo) {
@@ -103,10 +108,52 @@ function handleResetPasswordSuccess() {
   showResetPassword.value = false
 }
 
+function openBoards() {
+  showBoardsModal.value = true
+}
+
+function closeBoards() {
+  showBoardsModal.value = false
+}
+
+async function openBoard(boardId) {
+  currentBoardId.value = boardId
+  // Загружаем доску
+  await loadBoard(boardId)
+}
+
+async function loadBoard(boardId) {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'}/boards/${boardId}`, {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Ошибка загрузки доски')
+    }
+
+    const data = await response.json()
+
+    // Очищаем canvas
+    canvasStore.clearCanvas()
+
+    // Загружаем содержимое доски
+    if (data.board.content && data.board.content.objects) {
+      // TODO: Восстановить объекты на canvas
+      console.log('Загружена доска:', data.board.name, 'Объектов:', data.board.content.objects.length)
+    }
+  } catch (err) {
+    console.error('Ошибка загрузки доски:', err)
+    alert('Не удалось загрузить доску')
+  }
+}
+
 onMounted(async () => {
   // Инициализируем authStore - загружаем данные пользователя
   await authStore.init()
-  
+
   // Проверяем URL на токен сброса пароля
   const urlParams = new URLSearchParams(window.location.search)
   const token = urlParams.get('token')
@@ -116,7 +163,7 @@ onMounted(async () => {
     // Очищаем URL от токена
     window.history.replaceState({}, document.title, window.location.pathname)
   }
-  
+
   window.addEventListener('keydown', handleGlobalKeydown)
 })
 
@@ -130,8 +177,9 @@ onBeforeUnmount(() => {
     <AppHeader
       v-show="!isPencilMode && !showResetPassword"
       :is-modern-theme="isModernTheme"
+      @open-boards="openBoards"
     />
-    
+
     <!-- Левая панель -->
     <div
       v-show="!isPencilMode && !showResetPassword"
@@ -152,7 +200,7 @@ onBeforeUnmount(() => {
         @click="toggleLeftPanel"
       >
         <span aria-hidden="true">{{ isLeftPanelCollapsed ? '❯' : '❮' }}</span>
-      </button>      
+      </button>
       <ControlPanel
         :is-modern-theme="isModernTheme"
         :is-collapsed="isLeftPanelCollapsed"
@@ -165,25 +213,25 @@ onBeforeUnmount(() => {
 
     <!-- Правая панель -->
     <RightPanel
-      v-show="!isPencilMode && !showResetPassword"     
+      v-show="!isPencilMode && !showResetPassword"
       :is-modern-theme="isModernTheme"
     />
-    
+
     <div
       id="canvas"
       :class="{ 'canvas--inactive': isPencilMode || showResetPassword }"
     >
       <CanvasBoard ref="canvasRef" />
     </div>
-    
+
     <PencilOverlay
       v-if="isPencilMode && pencilSnapshot && pencilBounds"
       :snapshot="pencilSnapshot"
       :bounds="pencilBounds"
-      :is-modern-theme="isModernTheme"     
+      :is-modern-theme="isModernTheme"
       @close="handlePencilClose"
     />
-    
+
     <!-- Модальное окно сброса пароля -->
     <div v-if="showResetPassword" class="reset-password-overlay">
       <div class="reset-password-modal">
@@ -193,6 +241,11 @@ onBeforeUnmount(() => {
         />
       </div>
     </div>
+    <BoardsModal
+      :is-open="showBoardsModal"
+      @close="closeBoards"
+      @open-board="openBoard"
+    />
   </div>
 </template>
 
@@ -207,7 +260,7 @@ onBeforeUnmount(() => {
   --bg: #b9c4da;
   --radius: 14px;
   --shadow: 0 8px 20px rgba(0,0,0,.12);
-  --ui-panel-scale: 1;  
+  --ui-panel-scale: 1;
 }
 
 html,body{
@@ -256,7 +309,7 @@ html,body{
 
 /* Панели */
 .ui-panel-left{
-  --ui-left-panel-scale: var(--ui-panel-scale, 1);  
+  --ui-left-panel-scale: var(--ui-panel-scale, 1);
   position: fixed;
   top: 20px;
   left: 0;
@@ -277,7 +330,7 @@ html,body{
   --left-panel-collapse-border: rgba(15, 23, 42, 0.14);
   --left-panel-collapse-shadow: var(--shadow);
   --left-panel-collapse-hover-shadow: 0 22px 42px rgba(15, 98, 254, 0.25);
-  --left-panel-collapse-hover-color: #0f62fe;  
+  --left-panel-collapse-hover-color: #0f62fe;
 }
 
 .ui-panel-left.collapsed {
@@ -330,7 +383,7 @@ html,body{
 
 .ui-panel-left.collapsed .ui-panel-left__collapse {
   top: 50%;
-}  
+}
 
 /* Canvas/SVG */
 #canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
