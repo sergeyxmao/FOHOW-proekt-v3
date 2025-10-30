@@ -8,7 +8,7 @@ import { useConnectionsStore } from '../../stores/connections.js'
 import { useProjectStore, formatProjectFileName } from '../../stores/project.js'
 import { useViewportStore } from '../../stores/viewport.js'
 import { useNotesStore } from '../../stores/notes.js'
-import { useBoardCommentsStore } from '../../stores/boardComments.js'
+import { useBoardCommentsStore } from './boardComments.js'
 import BoardComments from './BoardComments.vue'  
 import { parseActivePV } from '../../utils/activePv'
 import { calcStagesAndCycles } from '../../utils/calculationEngine'
@@ -934,8 +934,7 @@ const handleToggleGuides = () => {
               </div>
             </div>
           </transition>
-        </div> 
-         </div>
+        </div>
         <div class="left-panel-controls__comments left-panel-controls__comments--collapsed">
           <button
             ref="commentsButtonRef"
