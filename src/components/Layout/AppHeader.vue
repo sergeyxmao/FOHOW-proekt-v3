@@ -1,6 +1,9 @@
 <script setup>
+import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectStore } from '../../stores/project.js'
+import { useAuthStore } from '../../stores/auth.js'
+import AuthModal from '../AuthModal.vue'
   
 const props = defineProps({
   isModernTheme: {
@@ -10,10 +13,29 @@ const props = defineProps({
 })
   
 const projectStore = useProjectStore()
+const authStore = useAuthStore()
 const { projectName } = storeToRefs(projectStore)
-
+const { isAuthenticated, user } = storeToRefs(authStore)
 const projectPlaceholder = 'Введите название проекта'
 
+const showAuthModal = ref(false)
+const authModalView = ref('login')
+
+function openLogin() {
+  authModalView.value = 'login'
+  showAuthModal.value = true
+}
+
+function openRegister() {
+  authModalView.value = 'register'
+  showAuthModal.value = true
+}
+
+function handleLogout() {
+  if (confirm('Вы уверены, что хотите выйти?')) {
+    authStore.logout()
+  }
+}
 </script>
 
 <template>
@@ -22,7 +44,8 @@ const projectPlaceholder = 'Введите название проекта'
       'app-header',
       { 'app-header--modern': props.isModernTheme }
     ]"
-  >    <label class="app-header__project" for="project-name-input">
+  >
+    <label class="app-header__project" for="project-name-input">
       <span class="app-header__label">Название проекта:</span>
       <input
         id="project-name-input"
@@ -32,6 +55,32 @@ const projectPlaceholder = 'Введите название проекта'
         :placeholder="projectPlaceholder"
       >
     </label>
+
+    <!-- Блок авторизации -->
+    <div class="app-header__auth">
+      <template v-if="isAuthenticated">
+        <span class="app-header__user">👤 {{ user?.email }}</span>
+        <button class="app-header__btn app-header__btn--logout" @click="handleLogout">
+          Выйти
+        </button>
+      </template>
+      <template v-else>
+        <button class="app-header__btn app-header__btn--login" @click="openLogin">
+          Войти
+        </button>
+        <button class="app-header__btn app-header__btn--register" @click="openRegister">
+          Регистрация
+        </button>
+      </template>
+    </div>
+
+    <!-- Модальное окно авторизации -->
+    <AuthModal
+      :is-open="showAuthModal"
+      :initial-view="authModalView"
+      @close="showAuthModal = false"
+      @success="showAuthModal = false"
+    />
   </div>
 </template>
 
@@ -90,6 +139,7 @@ const projectPlaceholder = 'Введите название проекта'
   background: var(--header-label-bg);
   transition: background 0.2s ease, color 0.2s ease;
 }
+
 .app-header__label {
   white-space: nowrap;
 }
@@ -116,22 +166,82 @@ const projectPlaceholder = 'Введите название проекта'
   box-shadow: 0 0 0 3px var(--header-focus-shadow);
 }
 
+/* Блок авторизации */
+.app-header__auth {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-header__user {
+  padding: 8px 16px;
+  background: var(--header-label-bg);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.app-header__btn {
+  padding: 8px 20px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.app-header__btn--login {
+  background: #4CAF50;
+  color: white;
+}
+
+.app-header__btn--login:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+}
+
+.app-header__btn--register {
+  background: #2196F3;
+  color: white;
+}
+
+.app-header__btn--register:hover {
+  background: #0b7dda;
+  transform: translateY(-1px);
+}
+
+.app-header__btn--logout {
+  background: #f44336;
+  color: white;
+}
+
+.app-header__btn--logout:hover {
+  background: #da190b;
+  transform: translateY(-1px);
+}
+
 @media (max-width: 900px) {
   .app-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
-
+  
   .app-header__project {
     width: 100%;
     flex-direction: column;
     align-items: stretch;
   }
-
+  
   .app-header__input {
     width: 100%;
     min-width: 0;
+  }
+  
+  .app-header__auth {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>
