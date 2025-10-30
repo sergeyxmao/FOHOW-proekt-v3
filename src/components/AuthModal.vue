@@ -1,25 +1,27 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click.self="close">
-    <div
-      class="modal-content"
-      :class="props.isModernTheme ? 'modal-content--modern' : 'modal-content--classic'"
-    >
-      <button class="close-btn" @click="close">×</button>
-      
-      <LoginForm
-        v-if="currentView === 'login'"
-        :is-modern-theme="props.isModernTheme"        
-        @login-success="handleSuccess"
-        @switch-to-register="currentView = 'register'"
-      />
-      
-      <RegisterForm
-        v-else
-        :is-modern-theme="props.isModernTheme"        
-        @register-success="handleSuccess"
-        @switch-to-login="currentView = 'login'"
-      />
-    </div>
+  <Teleport to="body">
+    <div v-if="isOpen" class="modal-overlay" @click.self="close">
+      <div
+        class="modal-content"
+        :class="props.isModernTheme ? 'modal-content--modern' : 'modal-content--classic'"
+      >
+        <button class="close-btn" @click="close">×</button>
+
+        <LoginForm
+          v-if="currentView === 'login'"
+          :is-modern-theme="props.isModernTheme"
+          @login-success="handleSuccess"
+          @switch-to-register="currentView = 'register'"
+        />
+
+        <RegisterForm
+          v-else
+          :is-modern-theme="props.isModernTheme"
+          @register-success="handleSuccess"
+          @switch-to-login="currentView = 'login'"
+        />
+      </div>
+  </Teleport>
   </div>
 </template>
 
