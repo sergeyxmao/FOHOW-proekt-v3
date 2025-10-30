@@ -90,8 +90,18 @@ function handleLogout() {
 
     <!-- Модальное окно профиля -->
     <Teleport to="body">
-      <div v-if="showProfile" class="profile-modal-overlay" @click.self="showProfile = false">
-        <UserProfile @close="showProfile = false" />
+      <div
+        v-if="showProfile"
+        :class="[
+          'profile-modal-overlay',
+          { 'profile-modal-overlay--modern': props.isModernTheme }
+        ]"
+        @click.self="showProfile = false"
+      >
+        <UserProfile
+          :is-modern-theme="props.isModernTheme"
+          @close="showProfile = false"
+        />
       </div>
     </Teleport>
   </div>
@@ -254,8 +264,11 @@ function handleLogout() {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;  
+  padding: 24px;
   z-index: 10000;
+}
+.profile-modal-overlay--modern {
+  background: rgba(5, 12, 24, 0.8);
 }
 
 @media (max-width: 900px) {
