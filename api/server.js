@@ -239,34 +239,43 @@ app.put('/api/profile', async (req, reply) => {
       }
     }
 
-    // Если меняем пароль, проверяем текущий
+    // Определяем, нужно ли менять пароль
     let passwordHash = user.password
-    if (newPassword) {
-      if (!currentPassword) {
-        return reply.code(400).send({ error: 'Укажите текущий пароль' })
+    const shouldChangePassword = newPassword && newPassword.trim().length > 0
+
+    if (shouldChangePassword) {
+      // Проверяем, указан ли текущий пароль
+      if (!currentPassword || currentPassword.trim().length === 0) {
+        return reply.code(400).send({ error: 'Укажите текущий пароль для смены пароля' })
       }
 
+      // Проверяем правильность текущего пароля
       const validPassword = await bcrypt.compare(currentPassword, user.password)
       if (!validPassword) {
         return reply.code(400).send({ error: 'Неверный текущий пароль' })
       }
 
+      // Проверяем длину нового пароля
       if (newPassword.length < 6) {
         return reply.code(400).send({ error: 'Новый пароль должен быть минимум 6 символов' })
       }
 
+      // Хешируем новый пароль
       passwordHash = await bcrypt.hash(newPassword, 10)
     }
 
     // Обновляем профиль
     const updateResult = await pool.query(
       `UPDATE users 
-       SET username = $1, email = $2, password = $3, updated_at = CURRENT_TIMESTAMP
+       SET username = COALESCE($1, username), 
+           email = COALESCE($2, email), 
+           password = $3, 
+           updated_at = CURRENT_TIMESTAMP
        WHERE id = $4
        RETURNING id, username, email, created_at, updated_at`,
       [
-        username || user.username,
-        email || user.email,
+        username || null,
+        email || null,
         passwordHash,
         decoded.userId
       ]
@@ -278,7 +287,7 @@ app.put('/api/profile', async (req, reply) => {
     })
   } catch (err) {
     console.error('❌ Ошибка update-profile:', err)
-    return reply.code(500).send({ error: 'Ошибка сервера' })
+    return reply.code(500).send({ error: 'Ошибка сервера', details: err.message })
   }
 })
 
