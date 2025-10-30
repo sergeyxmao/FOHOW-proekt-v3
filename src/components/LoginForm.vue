@@ -66,8 +66,13 @@ async function handleLogin() {
 
 <style scoped>
 .login-form {
+  width: 100%;
   max-width: 400px;
-  margin: 50px auto;
+  margin: 0;
+  padding: 0;
+}
+
+.login-form form {
   padding: 30px;
   background: white;
   border-radius: 10px;
