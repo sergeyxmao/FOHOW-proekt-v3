@@ -30,10 +30,13 @@
         {{ loading ? 'Вход...' : 'Войти' }}
       </button>
 
-      <p class="auth-card__switch">
-        Нет аккаунта?
-        <a class="auth-card__link" @click="$emit('switch-to-register')">Зарегистрироваться</a>
-      </p>
+<p class="forgot-password-link">
+  <a @click="$emit('switch-to-forgot')">Забыли пароль?</a>
+</p>
+
+<p class="switch-form">
+  Нет аккаунта? <a @click="$emit('switch-to-register')">Зарегистрироваться</a>
+</p>
     </form>
   </div>
 </template>
@@ -42,7 +45,7 @@
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
-const emit = defineEmits(['login-success', 'switch-to-register'])
+const emit = defineEmits(['login-success', 'switch-to-register', 'switch-to-forgot'])
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -190,5 +193,20 @@ input:focus {
 .auth-card__link:hover {
   color: var(--auth-link-hover);
   text-decoration: underline;
+}
+.forgot-password-link {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.forgot-password-link a {
+  color: #666;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.forgot-password-link a:hover {
+  color: #4CAF50;
 }
 </style>
