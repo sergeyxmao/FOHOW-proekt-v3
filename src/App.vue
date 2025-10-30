@@ -9,10 +9,15 @@ import ResetPasswordForm from './components/ResetPasswordForm.vue'
 import { useAuthStore } from './stores/auth'
 import { useCanvasStore } from './stores/canvas' // Предполагаемый импорт
 import { useBoardStore } from './stores/board'
+import { useCardsStore } from './stores/cards' // Assuming this store exists
+import { useConnectionsStore } from './stores/connections' // Assuming this store exists
+import { zoomScale } from './stores/zoom' // Assuming this store exists
 
 const authStore = useAuthStore()
 const canvasStore = useCanvasStore() // Предполагаемая инициализация
 const boardStore = useBoardStore()
+const cardsStore = useCardsStore() // Assuming initialization
+const connectionsStore = useConnectionsStore() // Assuming initialization
 
 const isModernTheme = ref(false)
 const isLeftPanelCollapsed = ref(false)
@@ -135,15 +140,39 @@ async function loadBoard(boardId) {
     // Устанавливаем текущую доску
     boardStore.setCurrentBoard(data.board.id, data.board.name)
 
-    // Очищаем canvas
-    if (canvasRef.value?.clearCanvas) {
-      canvasRef.value.clearCanvas()
-    }
+    // Очищаем текущее состояние
+    cardsStore.cards = []
+    connectionsStore.connections = []
 
     // Загружаем содержимое доски
-    if (data.board.content && data.board.content.objects) {
-      // TODO: Восстановить объекты на canvas через Fabric.js
-      console.log('✅ Загружена доска:', data.board.name, 'Объектов:', data.board.content.objects.length)
+    if (data.board.content) {
+      const content = data.board.content
+
+      // Восстанавливаем фон
+      if (content.background) {
+        canvasStore.backgroundColor = content.background
+      }
+
+      // Восстанавливаем карточки
+      if (content.objects && Array.isArray(content.objects)) {
+        content.objects.forEach(cardData => {
+          cardsStore.addCard(cardData, { saveToHistory: false })
+        })
+      }
+
+      // Восстанавливаем соединения
+      if (content.connections && Array.isArray(content.connections)) {
+        content.connections.forEach(connData => {
+          connectionsStore.addConnection(connData.from, connData.to, {
+            ...connData,
+            saveToHistory: false
+          })
+        })
+      }
+
+      console.log('✅ Загружена доска:', data.board.name)
+      console.log('  Карточек:', content.objects?.length || 0)
+      console.log('  Соединений:', content.connections?.length || 0)
     }
     
     boardStore.isSaving = false
@@ -192,13 +221,42 @@ async function saveCurrentBoard() {
 }
 
 function getCanvasState() {
-  // TODO: Получить реальное состояние canvas через Fabric.js
-  // Пока возвращаем базовую структуру
+  // Получаем все карточки и соединения из stores
+  const cardsData = cardsStore.cards.map(card => ({
+    id: card.id,
+    x: card.x,
+    y: card.y,
+    width: card.width,
+    height: card.height,
+    text: card.text,
+    fill: card.fill,
+    stroke: card.stroke,
+    strokeWidth: card.strokeWidth,
+    headerBg: card.headerBg,
+    colorIndex: card.colorIndex,
+    bodyHTML: card.bodyHTML,
+    pv: card.pv,
+    note: card.note // сохраняем заметки тоже
+  }))
+
+  const connectionsData = connectionsStore.connections.map(conn => ({
+    id: conn.id,
+    from: conn.from,
+    to: conn.to,
+    fromSide: conn.fromSide,
+    toSide: conn.toSide,
+    color: conn.color,
+    thickness: conn.thickness,
+    highlightType: conn.highlightType,
+    animationDuration: conn.animationDuration
+  }))
+
   return {
-    objects: [],
-    background: '#ffffff',
-    zoom: 1,
-    version: 1
+    version: 1,
+    background: canvasStore.backgroundColor,
+    zoom: zoomScale.value,
+    objects: cardsData,
+    connections: connectionsData
   }
 }
 
