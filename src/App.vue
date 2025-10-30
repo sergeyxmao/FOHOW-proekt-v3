@@ -8,9 +8,11 @@ import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
 import { useAuthStore } from './stores/auth'
 import { useCanvasStore } from './stores/canvas' // Предполагаемый импорт
+import { useBoardStore } from './stores/board'
 
 const authStore = useAuthStore()
 const canvasStore = useCanvasStore() // Предполагаемая инициализация
+const boardStore = useBoardStore()
 
 const isModernTheme = ref(false)
 const isLeftPanelCollapsed = ref(false)
@@ -22,6 +24,10 @@ const canvasRef = ref(null)
 // Состояние для сброса пароля
 const showResetPassword = ref(false)
 const resetToken = ref('')
+
+// Автосохранение
+let autoSaveInterval = null
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
 function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
@@ -112,7 +118,9 @@ async function openBoard(boardId) {
 
 async function loadBoard(boardId) {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'}/boards/${boardId}`, {
+    boardStore.isSaving = true
+    
+    const response = await fetch(`${API_URL}/boards/${boardId}`, {
       headers: {
         'Authorization': `Bearer ${authStore.token}`
       }
@@ -123,18 +131,96 @@ async function loadBoard(boardId) {
     }
 
     const data = await response.json()
+    
+    // Устанавливаем текущую доску
+    boardStore.setCurrentBoard(data.board.id, data.board.name)
 
     // Очищаем canvas
-    canvasStore.clearCanvas()
+    if (canvasRef.value?.clearCanvas) {
+      canvasRef.value.clearCanvas()
+    }
 
     // Загружаем содержимое доски
     if (data.board.content && data.board.content.objects) {
-      // TODO: Восстановить объекты на canvas
-      console.log('Загружена доска:', data.board.name, 'Объектов:', data.board.content.objects.length)
+      // TODO: Восстановить объекты на canvas через Fabric.js
+      console.log('✅ Загружена доска:', data.board.name, 'Объектов:', data.board.content.objects.length)
     }
+    
+    boardStore.isSaving = false
+    
+    // Запускаем автосохранение
+    startAutoSave()
   } catch (err) {
-    console.error('Ошибка загрузки доски:', err)
+    console.error('❌ Ошибка загрузки доски:', err)
     alert('Не удалось загрузить доску')
+    boardStore.isSaving = false
+  }
+}
+
+async function saveCurrentBoard() {
+  if (!boardStore.currentBoardId || !authStore.isAuthenticated) {
+    return
+  }
+
+  try {
+    boardStore.isSaving = true
+
+    // Получаем состояние canvas
+    const canvasState = getCanvasState()
+
+    const response = await fetch(`${API_URL}/boards/${boardStore.currentBoardId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        content: canvasState
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('Ошибка сохранения')
+    }
+
+    boardStore.markAsSaved()
+    console.log('💾 Доска автоматически сохранена:', new Date().toLocaleTimeString())
+  } catch (err) {
+    console.error('❌ Ошибка автосохранения:', err)
+    boardStore.isSaving = false
+  }
+}
+
+function getCanvasState() {
+  // TODO: Получить реальное состояние canvas через Fabric.js
+  // Пока возвращаем базовую структуру
+  return {
+    objects: [],
+    background: '#ffffff',
+    zoom: 1,
+    version: 1
+  }
+}
+
+function startAutoSave() {
+  // Останавливаем предыдущий интервал, если был
+  stopAutoSave()
+  
+  // Автосохранение каждые 30 секунд
+  autoSaveInterval = setInterval(() => {
+    if (boardStore.currentBoardId && authStore.isAuthenticated) {
+      saveCurrentBoard()
+    }
+  }, 30000) // 30 секунд
+  
+  console.log('🔄 Автосохранение запущено (каждые 30 сек)')
+}
+
+function stopAutoSave() {
+  if (autoSaveInterval) {
+    clearInterval(autoSaveInterval)
+    autoSaveInterval = null
+    console.log('⏹️ Автосохранение остановлено')
   }
 }
 
@@ -157,6 +243,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
+  stopAutoSave()
 })
 </script>
 
