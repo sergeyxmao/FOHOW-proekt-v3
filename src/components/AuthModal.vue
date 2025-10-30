@@ -20,6 +20,12 @@
           @register-success="handleSuccess"
           @switch-to-login="currentView = 'login'"
         />
+
+<ForgotPasswordForm
+  v-else-if="currentView === 'forgot'"
+  :is-modern-theme="props.isModernTheme"
+  @back-to-login="currentView = 'login'"
+/>        
       </div>
   </Teleport>
   </div>
@@ -29,6 +35,7 @@
 import { ref, watch } from 'vue'
 import LoginForm from './LoginForm.vue'
 import RegisterForm from './RegisterForm.vue'
+import ForgotPasswordForm from './ForgotPasswordForm.vue'  
 
 const props = defineProps({
   isOpen: {
