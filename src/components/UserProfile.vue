@@ -95,6 +95,7 @@
     <!-- Подтверждение удаления -->
     <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="showDeleteConfirm = false">
       <div class="delete-confirm">
+        <button class="delete-confirm__close" @click="showDeleteConfirm = false">×</button>        
         <h3>⚠️ Удаление аккаунта</h3>
         <p>Вы уверены? Это действие необратимо!</p>
         
@@ -286,10 +287,16 @@ onMounted(() => {
 
 <style scoped>
 .user-profile {
+  position: relative;  
   max-width: 600px;
+  width: min(600px, calc(100vw - 48px));
+  max-height: min(92vh, 720px);
+  overflow-y: auto;  
   background: white;
-  border-radius: 10px;
-  padding: 30px;
+  border-radius: 24px;
+  padding: 40px 40px 32px;
+  box-shadow: 0 32px 64px rgba(15, 23, 42, 0.18);
+  box-sizing: border-box;
 }
 
 .profile-header {
@@ -304,15 +311,18 @@ onMounted(() => {
   font-size: 24px;
 }
 
-.close-btn {
+.close-btn,
+.delete-confirm__close {
   background: none;
   border: none;
   font-size: 30px;
   cursor: pointer;
   color: #999;
+  transition: color 0.2s ease;  
 }
 
-.close-btn:hover {
+.close-btn:hover,
+.delete-confirm__close:hover {
   color: #333;
 }
 
@@ -462,11 +472,20 @@ onMounted(() => {
 }
 
 .delete-confirm {
+  position: relative; 
   background: white;
-  padding: 30px;
-  border-radius: 10px;
+  padding: 36px 30px 30px;
+  border-radius: 18px;
   max-width: 400px;
-  width: 90%;
+  width: min(400px, calc(100vw - 48px));
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.16);
+}
+
+.delete-confirm__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  line-height: 1;
 }
 
 .delete-confirm h3 {
