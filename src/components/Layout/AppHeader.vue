@@ -22,6 +22,7 @@ const projectPlaceholder = 'Введите название проекта'
 const showAuthModal = ref(false)
 const authModalView = ref('login')
 const showProfile = ref(false)
+const showBoards = ref(false) // For boards modal
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
@@ -48,6 +49,10 @@ function openLogin() {
 function openRegister() {
   authModalView.value = 'register'
   showAuthModal.value = true
+}
+
+function openBoards() {
+  showBoards.value = true
 }
 
 function handleLogout() {
@@ -90,6 +95,9 @@ function handleLogout() {
           </span>
           <span class="user-name">{{ user?.username || user?.email }}</span>
         </div>
+        <button class="app-header__btn app-header__btn--boards" @click="openBoards">
+          📋 Мои доски
+        </button>
         <button class="app-header__btn app-header__btn--profile" @click="showProfile = true">
           Профиль
         </button>
@@ -130,6 +138,20 @@ function handleLogout() {
           :is-modern-theme="props.isModernTheme"
           @close="showProfile = false"
         />
+      </div>
+    </Teleport>
+    
+    <!-- Placeholder for Boards Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showBoards"
+        :class="[
+          'profile-modal-overlay',
+          { 'profile-modal-overlay--modern': props.isModernTheme }
+        ]"
+        @click.self="showBoards = false"
+      >
+        <!-- Boards Component will go here -->
       </div>
     </Teleport>
   </div>
@@ -254,11 +276,13 @@ function handleLogout() {
   transform: translateY(-1px);
 }
 
+.app-header__btn--boards,
 .app-header__btn--profile {
   background: #2196F3;
   color: white;
 }
 
+.app-header__btn--boards:hover,
 .app-header__btn--profile:hover {
   background: #1976D2;
   transform: translateY(-1px);
