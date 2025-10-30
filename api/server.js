@@ -431,7 +431,7 @@ const HOST = '127.0.0.1';
 
 try {
   await app.listen({ port: PORT, host: HOST });
-  app.log.info(`API listening on http://${HOST}:${PORT}`);
+app.log.info(`API listening on http://${HOST}:${PORT}`);
 } catch (err) {
   app.log.error(err);
   process.exit(1);
