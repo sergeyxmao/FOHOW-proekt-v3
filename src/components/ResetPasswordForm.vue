@@ -37,16 +37,22 @@
       <div class="success-icon">✓</div>
       <h3>Пароль успешно изменен!</h3>
       <p>Теперь вы можете войти с новым паролем.</p>
-      <button @click="$emit('go-to-login')">Перейти к входу</button>
+      <button @click="$emit('success')">Готово</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref } from 'vue'
 
-const emit = defineEmits(['go-to-login'])
+const props = defineProps({
+  token: {
+    type: String,
+    required: true
+  }
+})
+
+const emit = defineEmits(['success'])
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
@@ -55,23 +61,17 @@ const confirmPassword = ref('')
 const error = ref('')
 const success = ref(false)
 const loading = ref(false)
-const token = ref('')
-
-onMounted(() => {
-  // Получаем токен из URL
-  const urlParams = new URLSearchParams(window.location.search)
-  token.value = urlParams.get('token') || ''
-  
-  if (!token.value) {
-    error.value = 'Токен не найден в ссылке'
-  }
-})
 
 async function handleSubmit() {
   error.value = ''
   
   if (password.value !== confirmPassword.value) {
     error.value = 'Пароли не совпадают'
+    return
+  }
+  
+  if (!props.token) {
+    error.value = 'Токен не найден'
     return
   }
   
@@ -82,7 +82,7 @@ async function handleSubmit() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
-        token: token.value,
+        token: props.token,
         newPassword: password.value 
       })
     })
@@ -104,16 +104,11 @@ async function handleSubmit() {
 
 <style scoped>
 .reset-password-form {
-  max-width: 400px;
-  margin: 50px auto;
   padding: 30px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 h2 {
-  margin-bottom: 20px;
+  margin: 0 0 20px 0;
   text-align: center;
 }
 
@@ -133,6 +128,7 @@ input {
   border: 1px solid #ddd;
   border-radius: 5px;
   font-size: 14px;
+  box-sizing: border-box;
 }
 
 button {
