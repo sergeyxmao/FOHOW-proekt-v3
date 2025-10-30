@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { pool } from './db.js';
+import { authenticateToken } from './middleware/auth.js';
 
 dotenv.config();
 
@@ -74,6 +75,27 @@ app.post('/api/login', async (req, reply) => {
     });
   } catch (err) {
     console.error('❌ Ошибка авторизации:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// === ЗАЩИЩЕННЫЙ МАРШРУТ - ПРОФИЛЬ ===
+app.get('/api/profile', {
+  preHandler: authenticateToken
+}, async (req, reply) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, email, created_at FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    
+    if (result.rows.length === 0) {
+      return reply.code(404).send({ error: 'Пользователь не найден' });
+    }
+    
+    return reply.send({ user: result.rows[0] });
+  } catch (err) {
+    console.error('❌ Ошибка получения профиля:', err);
     return reply.code(500).send({ error: 'Ошибка сервера' });
   }
 });
