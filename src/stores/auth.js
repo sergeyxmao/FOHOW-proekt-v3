@@ -105,6 +105,15 @@ async login(email, password) {
   
   this.isAuthenticated = true
   localStorage.setItem('user', JSON.stringify(this.user))
-}
+},
+
+    logout() {
+      this.user = null
+      this.token = null
+      this.isAuthenticated = false
+
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+    }
   }
 })
