@@ -78,6 +78,7 @@ function handleLogout() {
     <AuthModal
       :is-open="showAuthModal"
       :initial-view="authModalView"
+      :is-modern-theme="props.isModernTheme"      
       @close="showAuthModal = false"
       @success="showAuthModal = false"
     />
