@@ -8,6 +8,8 @@ import { useConnectionsStore } from '../../stores/connections.js'
 import { useProjectStore, formatProjectFileName } from '../../stores/project.js'
 import { useViewportStore } from '../../stores/viewport.js'
 import { useNotesStore } from '../../stores/notes.js'
+import { useBoardCommentsStore } from '../../stores/boardComments.js'
+import BoardComments from './BoardComments.vue'  
 import { parseActivePV } from '../../utils/activePv'
 import { calcStagesAndCycles } from '../../utils/calculationEngine'
 import { buildCardCssVariables } from '../../utils/constants'  
@@ -31,6 +33,7 @@ const connectionsStore = useConnectionsStore()
 const projectStore = useProjectStore()
 const viewportStore = useViewportStore()
 const notesStore = useNotesStore()
+const boardCommentsStore = useBoardCommentsStore()
   
 const {
   backgroundColor,
@@ -43,11 +46,30 @@ const {
 const { normalizedProjectName } = storeToRefs(projectStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
 const { dropdownOpen, cardsWithEntries } = storeToRefs(notesStore)
+const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
 
 const notesButtonRef = ref(null)
 const notesDropdownRef = ref(null)
-const hasNoteEntries = computed(() => notesStore.hasEntries)  
+const hasNoteEntries = computed(() => notesStore.hasEntries)
+const commentsButtonRef = ref(null)
+const commentsPanelRef = ref(null)
+const isCommentsOpen = ref(false)
+const commentsButtonClasses = computed(() => ({
+  active: isCommentsOpen.value,
+  'has-comments': hasBoardComments.value
+}))
 
+const openCommentsPanel = () => {
+  isCommentsOpen.value = true
+}
+
+const closeCommentsPanel = () => {
+  isCommentsOpen.value = false
+}
+
+const toggleCommentsPanel = () => {
+  isCommentsOpen.value = !isCommentsOpen.value
+}
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
 
 // Обработчики для кнопок левой панели
@@ -730,9 +752,18 @@ onBeforeUnmount(() => {
 })
 
 const handleNotesList = () => {
+  closeCommentsPanel()
+  
   notesStore.toggleDropdown()
 }
-
+const handleCommentsToggle = () => {
+  if (isCommentsOpen.value) {
+    closeCommentsPanel()
+  } else {
+    notesStore.closeDropdown()
+    openCommentsPanel()
+  }
+}
 const handleNoteItemClick = (cardId) => {
   notesStore.requestOpen(cardId, { focus: true })
 }
@@ -749,20 +780,27 @@ const handleCardNotesDelete = (cardId) => {
 }
 
 const handleOutsidePointer = (event) => {
-  if (!notesStore.dropdownOpen) {
-    return
-  }
   const target = event.target
-  if (notesButtonRef.value?.contains(target) || notesDropdownRef.value?.contains(target)) {
-    return
+  const isNotesTarget = notesButtonRef.value?.contains(target) || notesDropdownRef.value?.contains(target)
+  const isCommentsTarget = commentsButtonRef.value?.contains(target) || commentsPanelRef.value?.contains(target)
+
+  if (!isNotesTarget && notesStore.dropdownOpen) {
+    notesStore.closeDropdown()
   }
-  notesStore.closeDropdown()
+
+  if (!isCommentsTarget && isCommentsOpen.value) {
+    closeCommentsPanel()
+  }
 }
 
 const handleNotesKeydown = (event) => {
   if (event.key === 'Escape') {
-    notesStore.closeDropdown()
-  }
+    if (notesStore.dropdownOpen) {
+      notesStore.closeDropdown()
+    }
+    if (isCommentsOpen.value) {
+      closeCommentsPanel()
+    }  }
 }
 
 const handleSelectionMode = () => {
@@ -896,7 +934,31 @@ const handleToggleGuides = () => {
               </div>
             </div>
           </transition>
-        </div>        
+        </div> 
+         </div>
+        <div class="left-panel-controls__comments left-panel-controls__comments--collapsed">
+          <button
+            ref="commentsButtonRef"
+            class="ui-btn"
+            :class="commentsButtonClasses"
+            type="button"
+            title="Комментарии доски"
+            @pointerdown.stop
+            @click="handleCommentsToggle"
+          >
+            💬
+          </button>
+          <transition name="comments-dropdown-fade">
+            <div
+              v-if="isCommentsOpen"
+              ref="commentsPanelRef"
+              class="comments-dropdown"
+              @pointerdown.stop
+            >
+              <BoardComments />
+            </div>
+          </transition>
+        </div>       
         <button
           class="ui-btn left-panel-controls__pencil"
           type="button"
@@ -1017,6 +1079,29 @@ const handleToggleGuides = () => {
             </div>
           </transition>
         </div>
+        <div class="left-panel-controls__comments">
+          <button
+            ref="commentsButtonRef"
+            class="ui-btn"
+            :class="commentsButtonClasses"
+            type="button"
+            title="Комментарии доски"
+            @pointerdown.stop
+            @click="handleCommentsToggle"
+          >
+            💬
+          </button>
+          <transition name="comments-dropdown-fade">
+            <div
+              v-if="isCommentsOpen"
+              ref="commentsPanelRef"
+              class="comments-dropdown"
+              @pointerdown.stop
+            >
+              <BoardComments />
+            </div>
+          </transition>
+        </div>        
         <button
           class="ui-btn"
           :class="{ active: isSelectionMode }"
@@ -1157,7 +1242,34 @@ const handleToggleGuides = () => {
 .left-panel-controls__notes .ui-btn {
   width: var(--left-panel-btn-size);
 }
+.left-panel-controls__comments {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--left-panel-btn-size);
+}
 
+.left-panel-controls__comments--collapsed {
+  width: var(--left-panel-btn-size);
+}
+
+.left-panel-controls__comments .ui-btn {
+  width: var(--left-panel-btn-size);
+  position: relative;
+}
+
+.left-panel-controls__comments .ui-btn.has-comments::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #5d8bf4;
+  box-shadow: 0 0 0 2px rgba(93, 139, 244, 0.35);
+}
 .notes-dropdown {
   position: absolute;
   top: calc(100% + 8px);
@@ -1174,6 +1286,21 @@ const handleToggleGuides = () => {
   gap: 12px;
   z-index: 30;
 }
+
+.comments-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: auto;
+  min-width: 280px;
+  max-width: 360px;
+  background: var(--left-panel-btn-bg);
+  border: 1px solid var(--left-panel-btn-border);
+  border-radius: 18px;
+  box-shadow: 0 20px 34px rgba(15, 23, 42, 0.28);
+  padding: 14px;
+  z-index: 30;
+}  
 .notes-dropdown__group {
   display: flex;
   flex-direction: column;
@@ -1281,6 +1408,16 @@ const handleToggleGuides = () => {
 .notes-dropdown__icon-btn--danger:hover {
   background: rgba(248, 113, 113, 0.18);
   color: #b91c1c;
+}
+.comments-dropdown-fade-enter-active,
+.comments-dropdown-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.comments-dropdown-fade-enter-from,
+.comments-dropdown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .notes-dropdown-fade-enter-active,
