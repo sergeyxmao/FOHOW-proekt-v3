@@ -209,4 +209,21 @@ input:focus {
 .forgot-password-link a:hover {
   color: #4CAF50;
 }
+.switch-form {
+  text-align: center;
+  margin-top: 5px;
+  font-size: 14px;
+  color: var(--auth-muted, #666);
+}
+
+.switch-form a {
+  color: var(--auth-link, #2196F3);
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.switch-form a:hover {
+  color: var(--auth-link-hover, #0b7dda);
+}  
 </style>
