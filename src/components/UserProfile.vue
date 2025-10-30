@@ -61,21 +61,67 @@
 
         <div class="form-group">
           <label>Текущий пароль:</label>
-          <input
-            v-model="editForm.currentPassword"
-            type="password"
-            placeholder="Введите текущий пароль"
-          />
+          <div class="password-input">
+            <input
+              v-model="editForm.currentPassword"
+              :type="passwordVisibility.current ? 'text' : 'password'"
+              placeholder="Введите текущий пароль"
+              autocomplete="current-password"
+              @paste.prevent
+              @drop.prevent
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              @click="togglePasswordVisibility('current')"
+            >
+              {{ passwordVisibility.current ? 'Скрыть' : 'Показать' }}
+            </button>
+          </div>
         </div>
 
         <div class="form-group">
           <label>Новый пароль:</label>
-          <input
-            v-model="editForm.newPassword"
-            type="password"
-            placeholder="Минимум 6 символов"
-            minlength="6"
-          />
+          <div class="password-input">
+            <input
+              v-model="editForm.newPassword"
+              :type="passwordVisibility.new ? 'text' : 'password'"
+              placeholder="Минимум 6 символов"
+              minlength="6"
+              autocomplete="new-password"
+              @paste.prevent
+              @drop.prevent
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              @click="togglePasswordVisibility('new')"
+            >
+              {{ passwordVisibility.new ? 'Скрыть' : 'Показать' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Повторите новый пароль:</label>
+          <div class="password-input">
+            <input
+              v-model="editForm.confirmPassword"
+              :type="passwordVisibility.confirm ? 'text' : 'password'"
+              placeholder="Повторите новый пароль"
+              minlength="6"
+              autocomplete="new-password"
+              @paste.prevent
+              @drop.prevent
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              @click="togglePasswordVisibility('confirm')"
+            >
+              {{ passwordVisibility.confirm ? 'Скрыть' : 'Показать' }}
+            </button>
+          </div>
         </div>
 
         <div v-if="error" class="error-message">{{ error }}</div>
@@ -101,11 +147,23 @@
         
         <div class="form-group">
           <label>Введите пароль для подтверждения:</label>
-          <input
-            v-model="deletePassword"
-            type="password"
-            placeholder="Ваш пароль"
-          />
+          <div class="password-input">
+            <input
+              v-model="deletePassword"
+              :type="passwordVisibility.delete ? 'text' : 'password'"
+              placeholder="Ваш пароль"
+              autocomplete="current-password"
+              @paste.prevent
+              @drop.prevent
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              @click="togglePasswordVisibility('delete')"
+            >
+              {{ passwordVisibility.delete ? 'Скрыть' : 'Показать' }}
+            </button>
+          </div>
         </div>
 
         <div v-if="deleteError" class="error-message">{{ deleteError }}</div>
@@ -124,7 +182,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
 const emit = defineEmits(['close'])
@@ -139,7 +197,8 @@ const editForm = ref({
   username: '',
   email: '',
   currentPassword: '',
-  newPassword: ''
+  newPassword: '',
+  confirmPassword: ''
 })
 
 const error = ref('')
@@ -150,6 +209,24 @@ const showDeleteConfirm = ref(false)
 const deletePassword = ref('')
 const deleteError = ref('')
 const deleting = ref(false)
+const passwordVisibility = reactive({
+  current: false,
+  new: false,
+  confirm: false,
+  delete: false
+})
+
+function togglePasswordVisibility(field) {
+  passwordVisibility[field] = !passwordVisibility[field]
+}
+
+watch(showDeleteConfirm, (visible) => {
+  if (!visible) {
+    deletePassword.value = ''
+    deleteError.value = ''
+    passwordVisibility.delete = false
+  }
+})
 
 async function loadProfile() {
   loading.value = true
@@ -169,6 +246,9 @@ async function loadProfile() {
     user.value = data.user
     editForm.value.username = data.user.username || ''
     editForm.value.email = data.user.email
+    editForm.value.currentPassword = ''
+    editForm.value.newPassword = ''
+    editForm.value.confirmPassword = ''    
   } catch (err) {
     console.error('Ошибка загрузки профиля:', err)
   } finally {
@@ -182,11 +262,40 @@ async function handleUpdate() {
   updating.value = true
 
   try {
-    const body = {
-      username: editForm.value.username,
-      email: editForm.value.email
+    const trimmedUsername = editForm.value.username?.trim() || ''
+    const trimmedEmail = editForm.value.email?.trim() || ''
+
+    if (!trimmedEmail) {
+      throw new Error('Укажите корректный email')
     }
 
+    if (editForm.value.newPassword || editForm.value.confirmPassword || editForm.value.currentPassword) {
+      if (!editForm.value.newPassword) {
+        throw new Error('Введите новый пароль')
+      }
+
+      if (!editForm.value.confirmPassword) {
+        throw new Error('Повторите новый пароль')
+      }
+
+      if (editForm.value.newPassword !== editForm.value.confirmPassword) {
+        throw new Error('Новые пароли не совпадают')
+      }
+
+      if (!editForm.value.currentPassword) {
+        throw new Error('Введите текущий пароль')
+      }
+    }
+    
+    const body = {
+      email: trimmedEmail
+    }
+    if (trimmedUsername) {
+      body.username = trimmedUsername
+    }
+
+    editForm.value.username = trimmedUsername
+    editForm.value.email = trimmedEmail
     // Добавляем пароли только если они указаны
     if (editForm.value.newPassword) {
       body.currentPassword = editForm.value.currentPassword
@@ -216,6 +325,10 @@ async function handleUpdate() {
       editMode.value = false
       editForm.value.currentPassword = ''
       editForm.value.newPassword = ''
+      editForm.value.confirmPassword = ''
+      passwordVisibility.current = false
+      passwordVisibility.new = false
+      passwordVisibility.confirm = false      
     }, 1500)
   } catch (err) {
     error.value = err.message
@@ -230,8 +343,12 @@ function cancelEdit() {
   editForm.value.email = user.value.email
   editForm.value.currentPassword = ''
   editForm.value.newPassword = ''
+  editForm.value.confirmPassword = ''  
   error.value = ''
   success.value = ''
+  passwordVisibility.current = false
+  passwordVisibility.new = false
+  passwordVisibility.confirm = false  
 }
 
 async function handleDelete() {
@@ -259,7 +376,7 @@ async function handleDelete() {
     if (!response.ok) {
       throw new Error(data.error || 'Ошибка удаления аккаунта')
     }
-
+    showDeleteConfirm.value = false
     alert('Аккаунт успешно удалён')
     authStore.logout()
     emit('close')
@@ -383,6 +500,31 @@ onMounted(() => {
   border: 1px solid #ddd;
   border-radius: 5px;
   font-size: 14px;
+}
+.password-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.password-input input {
+  flex: 1;
+}
+
+.password-toggle {
+  border: none;
+  background: #f1f5f9;
+  color: #2563eb;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.password-toggle:hover {
+  background: #e2e8f0;
+  color: #1d4ed8;
 }
 
 .form-divider {
