@@ -85,7 +85,7 @@ app.get('/api/profile', {
 }, async (req, reply) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, created_at FROM users WHERE id = $1',
+      'SELECT id, email, username, created_at, updated_at FROM users WHERE id = $1',
       [req.user.id]
     );
     
@@ -343,4 +343,3 @@ try {
   app.log.error(err);
   process.exit(1);
 } // Тест автообновления
-
