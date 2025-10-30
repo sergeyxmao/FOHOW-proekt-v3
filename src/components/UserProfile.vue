@@ -343,7 +343,9 @@ async function handleUpdate() {
     // КРИТИЧНО: Обновляем пользователя в authStore и localStorage
     user.value = data.user
     authStore.user = data.user
-    
+ 
+    editForm.value.username = data.user.username || ''
+    editForm.value.email = data.user.email || ''   
     // Сохраняем в localStorage
     localStorage.setItem('user', JSON.stringify(data.user))
     
@@ -371,17 +373,17 @@ function cancelEdit() {
   editForm.value.email = user.value.email
   editForm.value.currentPassword = ''
   editForm.value.newPassword = ''
-  editForm.value.confirmPassword = ''  
+  editForm.value.confirmPassword = ''
   error.value = ''
   success.value = ''
   passwordVisibility.current = false
   passwordVisibility.new = false
-    editForm.value.confirmPassword = ''
-    authStore.user = data.user
-    localStorage.setItem('user', JSON.stringify(data.user))
+  passwordVisibility.confirm = false
 }
 function startEdit() {
   editMode.value = true
+  editForm.value.username = user.value.username || ''
+  editForm.value.email = user.value.email  
   editForm.value.currentPassword = ''
   editForm.value.newPassword = ''
   editForm.value.confirmPassword = ''
