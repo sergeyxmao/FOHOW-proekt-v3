@@ -61,7 +61,7 @@ function handleLogout() {
     <!-- Блок авторизации -->
     <div class="app-header__auth">
       <template v-if="isAuthenticated">
-        <span class="app-header__user">👤 {{ user?.email }}</span>
+        <span class="app-header__user">👤 {{ user?.username || user?.email }}</span>
         <button class="app-header__btn app-header__btn--profile" @click="showProfile = true">
           Профиль
         </button>
