@@ -250,10 +250,15 @@ function getCanvasState() {
     animationDuration: conn.animationDuration
   }))
 
+  console.log('📤 Сохраняем состояние:', {
+    cardsCount: cardsData.length,
+    connectionsCount: connectionsData.length
+  })
+
   return {
     version: 1,
     background: canvasStore.backgroundColor,
-    zoom: zoomScale.value,
+    zoom: 1, // пока фиксированное значение
     objects: cardsData,
     connections: connectionsData
   }
