@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import LoginForm from './LoginForm.vue'
 import RegisterForm from './RegisterForm.vue'
 
@@ -37,7 +37,21 @@ const props = defineProps({
 const emit = defineEmits(['close', 'success'])
 
 const currentView = ref(props.initialView)
+watch(
+  () => props.initialView,
+  (value) => {
+    currentView.value = value
+  }
+)
 
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (isOpen) {
+      currentView.value = props.initialView
+    }
+  }
+)
 function close() {
   emit('close')
 }
@@ -67,9 +81,14 @@ function handleSuccess() {
   background: white;
   border-radius: 10px;
   max-width: 500px;
-  width: 90%;
+  width: min(500px, calc(100vw - 32px));
   max-height: 90vh;
   overflow-y: auto;
+  padding: 32px 28px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;  
 }
 
 .close-btn {
