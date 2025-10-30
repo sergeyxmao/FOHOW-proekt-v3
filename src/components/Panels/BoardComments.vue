@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useBoardCommentsStore } from '../../stores/boardComments'
+import { useBoardCommentsStore } from './boardComments.js'
 
 const commentsStore = useBoardCommentsStore()
 const { orderedComments, hasComments } = storeToRefs(commentsStore)
