@@ -6,6 +6,7 @@ import RightPanel from './components/Panels/RightPanel.vue'
 import AppHeader from './components/Layout/AppHeader.vue'
 import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
+import { useAuthStore } from './stores/auth'
 
 const isModernTheme = ref(false)
 const isLeftPanelCollapsed = ref(false)
@@ -103,8 +104,6 @@ function handleResetPasswordSuccess() {
 
 onMounted(() => {
   // Проверяем URL на токен сброса пароля
-  import { useAuthStore } from './stores/auth'
-
 const authStore = useAuthStore()
 
 onMounted(async () => {
