@@ -64,70 +64,75 @@
           <span>Изменить пароль (необязательно)</span>
         </div>
 
-        <div class="form-group">
-          <label>Текущий пароль:</label>
-          <div class="password-input">
-            <input
-              v-model="editForm.currentPassword"
-              :type="passwordVisibility.current ? 'text' : 'password'"
-              placeholder="Введите текущий пароль"
-              autocomplete="current-password"
-              @paste.prevent
-              @drop.prevent
-            />
-            <button
-              type="button"
-              class="password-toggle"
-              @click="togglePasswordVisibility('current')"
-            >
-              {{ passwordVisibility.current ? 'Скрыть' : 'Показать' }}
-            </button>
-          </div>
-        </div>
+<div class="form-group">
+  <label>Текущий пароль:</label>
+  <div class="password-input">
+    <input
+      v-model="editForm.currentPassword"
+      :type="passwordVisibility.current ? 'text' : 'password'"
+      placeholder="Оставьте пустым, если не меняете пароль"
+      autocomplete="off"
+      @paste.prevent
+      @drop.prevent
+    />
+    <button
+      v-if="editForm.currentPassword"
+      type="button"
+      class="password-toggle"
+      @click="togglePasswordVisibility('current')"
+    >
+      {{ passwordVisibility.current ? 'Скрыть' : 'Показать' }}
+    </button>
+  </div>
+  <small class="field-hint">Требуется только если меняете пароль</small>
+</div>
 
-        <div class="form-group">
-          <label>Новый пароль:</label>
-          <div class="password-input">
-            <input
-              v-model="editForm.newPassword"
-              :type="passwordVisibility.new ? 'text' : 'password'"
-              placeholder="Минимум 6 символов"
-              minlength="6"
-              autocomplete="new-password"
-              @paste.prevent
-              @drop.prevent
-            />
-            <button
-              type="button"
-              class="password-toggle"
-              @click="togglePasswordVisibility('new')"
-            >
-              {{ passwordVisibility.new ? 'Скрыть' : 'Показать' }}
-            </button>
-          </div>
-        </div>
+<div class="form-group">
+  <label>Новый пароль:</label>
+  <div class="password-input">
+    <input
+      v-model="editForm.newPassword"
+      :type="passwordVisibility.new ? 'text' : 'password'"
+      placeholder="Оставьте пустым, если не меняете"
+      minlength="6"
+      autocomplete="off"
+      @paste.prevent
+      @drop.prevent
+    />
+    <button
+      v-if="editForm.newPassword"
+      type="button"
+      class="password-toggle"
+      @click="togglePasswordVisibility('new')"
+    >
+      {{ passwordVisibility.new ? 'Скрыть' : 'Показать' }}
+    </button>
+  </div>
+  <small class="field-hint">Минимум 6 символов</small>
+</div>
 
-        <div class="form-group">
-          <label>Повторите новый пароль:</label>
-          <div class="password-input">
-            <input
-              v-model="editForm.confirmPassword"
-              :type="passwordVisibility.confirm ? 'text' : 'password'"
-              placeholder="Повторите новый пароль"
-              minlength="6"
-              autocomplete="new-password"
-              @paste.prevent
-              @drop.prevent
-            />
-            <button
-              type="button"
-              class="password-toggle"
-              @click="togglePasswordVisibility('confirm')"
-            >
-              {{ passwordVisibility.confirm ? 'Скрыть' : 'Показать' }}
-            </button>
-          </div>
-        </div>
+<div class="form-group">
+  <label>Повторите новый пароль:</label>
+  <div class="password-input">
+    <input
+      v-model="editForm.confirmPassword"
+      :type="passwordVisibility.confirm ? 'text' : 'password'"
+      placeholder="Повторите новый пароль"
+      minlength="6"
+      autocomplete="off"
+      @paste.prevent
+      @drop.prevent
+    />
+    <button
+      v-if="editForm.confirmPassword"
+      type="button"
+      class="password-toggle"
+      @click="togglePasswordVisibility('confirm')"
+    >
+      {{ passwordVisibility.confirm ? 'Скрыть' : 'Показать' }}
+    </button>
+  </div>
+</div>
 
         <div v-if="error" class="error-message">{{ error }}</div>
         <div v-if="success" class="success-message">{{ success }}</div>
@@ -716,5 +721,11 @@ onMounted(() => {
 .delete-confirm p {
   margin: 0 0 20px 0;
   color: var(--profile-muted);
+}
+.field-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--profile-muted);
+  margin-top: 3px;
 }
 </style>
