@@ -12,24 +12,25 @@
           :is-modern-theme="props.isModernTheme"
           @login-success="handleSuccess"
           @switch-to-register="currentView = 'register'"
+          @switch-to-forgot="currentView = 'forgot'"
         />
 
         <RegisterForm
-          v-else
+          v-else-if="currentView === 'register'"
           :is-modern-theme="props.isModernTheme"
           @register-success="handleSuccess"
           @switch-to-login="currentView = 'login'"
         />
 
-<ForgotPasswordForm
-  v-else-if="currentView === 'forgot'"
-  :is-modern-theme="props.isModernTheme"
-  @back-to-login="currentView = 'login'"
-/>        
+        <ForgotPasswordForm
+          v-else-if="currentView === 'forgot'"
+          :is-modern-theme="props.isModernTheme"
+          @back-to-login="currentView = 'login'"
+        />
       </div>
+    </div>
   </Teleport>
-  </div>
-</template>
+</template>>
 
 <script setup>
 import { ref, watch } from 'vue'
