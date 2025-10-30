@@ -15,16 +15,48 @@
     <div v-else class="profile-content">
       <!-- Информация о профиле -->
       <div v-if="!editMode" class="profile-view">
+        <!-- Аватар -->
+        <div class="profile-avatar-section">
+          <div class="avatar-wrapper">
+            <img
+              v-if="user.avatar_url"
+              :src="getAvatarUrl(user.avatar_url)"
+              alt="Аватар"
+              class="profile-avatar"
+            >
+            <div v-else class="profile-avatar-placeholder">
+              {{ getInitials(user.username || user.email) }}
+            </div>
+          </div>
+          <div class="avatar-actions">
+            <label class="btn-upload">
+              <input
+                type="file"
+                accept="image/*"
+                @change="handleAvatarUpload"
+                style="display: none"
+              >
+              📷 Загрузить фото
+            </label>
+            <button
+              v-if="user.avatar_url"
+              class="btn-remove"
+              @click="handleAvatarDelete"
+            >
+              🗑️ Удалить
+            </button>
+          </div>
+        </div>
         <div class="profile-field">
           <label>Email:</label>
           <span>{{ user.email }}</span>
         </div>
-        
+
         <div class="profile-field">
           <label>Имя пользователя:</label>
           <span>{{ user.username || 'Не указано' }}</span>
         </div>
-        
+
         <div class="profile-field">
           <label>Дата регистрации:</label>
           <span>{{ formatDate(user.created_at) }}</span>
@@ -64,82 +96,81 @@
           <span>Изменить пароль (необязательно)</span>
         </div>
 
-<div class="form-group">
-  <label>Текущий пароль:</label>
-  <div class="password-input">
-    <input
-      v-model="editForm.currentPassword"
-      :type="passwordVisibility.current ? 'text' : 'password'"
-      placeholder="Оставьте пустым, если не меняете пароль"
-      autocomplete="new-password"
-      readonly
-      @focus="$event.target.removeAttribute('readonly')"
-      @paste.prevent
-      @drop.prevent
-    />
-    <button
-      v-if="editForm.currentPassword"
-      type="button"
-      class="password-toggle"
-      @click="togglePasswordVisibility('current')"
-    >
-      {{ passwordVisibility.current ? 'Скрыть' : 'Показать' }}
-    </button>
-  </div>
-  <small class="field-hint">Требуется только если меняете пароль</small>
-</div>
+        <div class="form-group">
+          <label>Текущий пароль:</label>
+          <div class="password-input">
+            <input
+              v-model="editForm.currentPassword"
+              :type="passwordVisibility.current ? 'text' : 'password'"
+              placeholder="Оставьте пустым, если не меняете пароль"
+              autocomplete="new-password"
+              readonly
+              @focus="$event.target.removeAttribute('readonly')"
+              @paste.prevent
+              @drop.prevent
+            />
+            <button
+              v-if="editForm.currentPassword"
+              type="button"
+              class="password-toggle"
+              @click="togglePasswordVisibility('current')"
+            >
+              {{ passwordVisibility.current ? 'Скрыть' : 'Показать' }}
+            </button>
+          </div>
+          <small class="field-hint">Требуется только если меняете пароль</small>
+        </div>
 
+        <div class="form-group">
+          <label>Новый пароль:</label>
+          <div class="password-input">
+            <input
+              v-model="editForm.newPassword"
+              :type="passwordVisibility.new ? 'text' : 'password'"
+              placeholder="Оставьте пустым, если не меняете"
+              minlength="6"
+              autocomplete="new-password"
+              readonly
+              @focus="$event.target.removeAttribute('readonly')"
+              @paste.prevent
+              @drop.prevent
+            />
+            <button
+              v-if="editForm.newPassword"
+              type="button"
+              class="password-toggle"
+              @click="togglePasswordVisibility('new')"
+            >
+              {{ passwordVisibility.new ? 'Скрыть' : 'Показать' }}
+            </button>
+          </div>
+          <small class="field-hint">Минимум 6 символов</small>
+        </div>
 
-<div class="form-group">
-  <label>Новый пароль:</label>
-  <div class="password-input">
-    <input
-      v-model="editForm.newPassword"
-      :type="passwordVisibility.new ? 'text' : 'password'"
-      placeholder="Оставьте пустым, если не меняете"
-      minlength="6"
-      autocomplete="new-password"
-      readonly
-      @focus="$event.target.removeAttribute('readonly')"
-      @paste.prevent
-      @drop.prevent
-    />
-    <button
-      v-if="editForm.newPassword"
-      type="button"
-      class="password-toggle"
-      @click="togglePasswordVisibility('new')"
-    >
-      {{ passwordVisibility.new ? 'Скрыть' : 'Показать' }}
-    </button>
-  </div>
-  <small class="field-hint">Минимум 6 символов</small>
-</div>
-
-<div class="form-group">
-  <label>Повторите новый пароль:</label>
-  <div class="password-input">
-    <input
-      v-model="editForm.confirmPassword"
-      :type="passwordVisibility.confirm ? 'text' : 'password'"
-      placeholder="Повторите новый пароль"
-      minlength="6"
-      autocomplete="new-password"
-      readonly
-      @focus="$event.target.removeAttribute('readonly')"
-      @paste.prevent
-      @drop.prevent
-    />
-    <button
-      v-if="editForm.confirmPassword"
-      type="button"
-      class="password-toggle"
-      @click="togglePasswordVisibility('confirm')"
-    >
-      {{ passwordVisibility.confirm ? 'Скрыть' : 'Показать' }}
-    </button>
-  </div>
-</div>
+        <div class="form-group">
+          <label>Повторите новый пароль:</label>
+          <div class="password-input">
+            <input
+              v-model="editForm.confirmPassword"
+              :type="passwordVisibility.confirm ? 'text' : 'password'"
+              placeholder="Повторите новый пароль"
+              minlength="6"
+              autocomplete="new-password"
+              readonly
+              @focus="$event.target.removeAttribute('readonly')"
+              @paste.prevent
+              @drop.prevent
+            />
+            <button
+              v-if="editForm.confirmPassword"
+              type="button"
+              class="password-toggle"
+              @click="togglePasswordVisibility('confirm')"
+            >
+              {{ passwordVisibility.confirm ? 'Скрыть' : 'Показать' }}
+            </button>
+          </div>
+        </div>
 
         <div v-if="error" class="error-message">{{ error }}</div>
         <div v-if="success" class="success-message">{{ success }}</div>
@@ -158,10 +189,10 @@
     <!-- Подтверждение удаления -->
     <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="showDeleteConfirm = false">
       <div class="delete-confirm">
-        <button class="delete-confirm__close" @click="showDeleteConfirm = false">×</button>        
+        <button class="delete-confirm__close" @click="showDeleteConfirm = false">×</button>
         <h3>⚠️ Удаление аккаунта</h3>
         <p>Вы уверены? Это действие необратимо!</p>
-        
+
         <div class="form-group">
           <label>Введите пароль для подтверждения:</label>
           <div class="password-input">
@@ -232,6 +263,7 @@ const showDeleteConfirm = ref(false)
 const deletePassword = ref('')
 const deleteError = ref('')
 const deleting = ref(false)
+const uploadingAvatar = ref(false)
 const passwordVisibility = reactive({
   current: false,
   new: false,
@@ -271,7 +303,7 @@ async function loadProfile() {
     editForm.value.email = data.user.email
     editForm.value.currentPassword = ''
     editForm.value.newPassword = ''
-    editForm.value.confirmPassword = ''    
+    editForm.value.confirmPassword = ''
   } catch (err) {
     console.error('Ошибка загрузки профиля:', err)
   } finally {
@@ -310,11 +342,11 @@ async function handleUpdate() {
         throw new Error('Новые пароли не совпадают')
       }
     }
-    
+
     const body = {
       email: trimmedEmail
     }
-    
+
     if (trimmedUsername) {
       body.username = trimmedUsername
     }
@@ -343,14 +375,14 @@ async function handleUpdate() {
     // КРИТИЧНО: Обновляем пользователя в authStore и localStorage
     user.value = data.user
     authStore.user = data.user
- 
+
     editForm.value.username = data.user.username || ''
-    editForm.value.email = data.user.email || ''   
+    editForm.value.email = data.user.email || ''
     // Сохраняем в localStorage
     localStorage.setItem('user', JSON.stringify(data.user))
-    
+
     success.value = 'Профиль успешно обновлён!'
-    
+
     setTimeout(() => {
       editMode.value = false
       editForm.value.currentPassword = ''
@@ -358,7 +390,7 @@ async function handleUpdate() {
       editForm.value.confirmPassword = ''
       passwordVisibility.current = false
       passwordVisibility.new = false
-      passwordVisibility.confirm = false      
+      passwordVisibility.confirm = false
     }, 1500)
   } catch (err) {
     error.value = err.message
@@ -383,7 +415,7 @@ function cancelEdit() {
 function startEdit() {
   editMode.value = true
   editForm.value.username = user.value.username || ''
-  editForm.value.email = user.value.email  
+  editForm.value.email = user.value.email
   editForm.value.currentPassword = ''
   editForm.value.newPassword = ''
   editForm.value.confirmPassword = ''
@@ -396,7 +428,7 @@ function startEdit() {
 
 async function handleDelete() {
   deleteError.value = ''
-  
+
   if (!deletePassword.value) {
     deleteError.value = 'Введите пароль'
     return
@@ -438,6 +470,101 @@ function formatDate(dateString) {
     month: 'long',
     day: 'numeric'
   })
+}
+
+function getAvatarUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return `${API_URL.replace('/api', '')}${url}`
+}
+
+function getInitials(name) {
+  if (!name) return '?'
+  const parts = name.split(' ')
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
+  return name.substring(0, 2).toUpperCase()
+}
+
+async function handleAvatarUpload(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  // Проверка размера (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    error.value = 'Файл слишком большой. Максимум 5MB'
+    return
+  }
+
+  // Проверка типа
+  if (!file.type.startsWith('image/')) {
+    error.value = 'Можно загружать только изображения'
+    return
+  }
+
+  uploadingAvatar.value = true
+  error.value = ''
+
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch(`${API_URL}/profile/avatar`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: formData
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Ошибка загрузки аватара')
+    }
+
+    // Обновляем аватар
+    user.value.avatar_url = data.avatarUrl
+    authStore.user.avatar_url = data.avatarUrl
+    localStorage.setItem('user', JSON.stringify(authStore.user))
+
+    success.value = 'Аватар успешно загружен!'
+    setTimeout(() => success.value = '', 3000)
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    uploadingAvatar.value = false
+  }
+}
+
+async function handleAvatarDelete() {
+  if (!confirm('Удалить аватар?')) return
+
+  try {
+    const response = await fetch(`${API_URL}/profile/avatar`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Ошибка удаления аватара')
+    }
+
+    // Удаляем аватар
+    user.value.avatar_url = null
+    authStore.user.avatar_url = null
+    localStorage.setItem('user', JSON.stringify(authStore.user))
+
+    success.value = 'Аватар удалён'
+    setTimeout(() => success.value = '', 3000)
+  } catch (err) {
+    error.value = err.message
+  }
 }
 
 onMounted(() => {
@@ -511,7 +638,7 @@ onMounted(() => {
   --profile-secondary-bg-hover: rgba(148, 163, 184, 0.24);
   --profile-secondary-text: #e2e8f0;
   --profile-close-color: rgba(226, 232, 240, 0.6);
-  --profile-close-color-hover: #e2e8f0;  
+  --profile-close-color-hover: #e2e8f0;
 }
 
 .profile-header {
@@ -591,7 +718,7 @@ onMounted(() => {
 .form-group label {
   font-weight: 600;
   font-size: 14px;
-  color: var(--profile-muted);  
+  color: var(--profile-muted);
 }
 
 .form-group input {
@@ -605,7 +732,7 @@ onMounted(() => {
 }
 
 .form-group input::placeholder {
-  color: var(--profile-input-placeholder);  
+  color: var(--profile-input-placeholder);
 }
 .password-input {
   display: flex;
@@ -719,7 +846,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 10001;
-  padding: 24px;  
+  padding: 24px;
 }
 
 .delete-confirm {
@@ -754,5 +881,76 @@ onMounted(() => {
   font-size: 12px;
   color: var(--profile-muted);
   margin-top: 3px;
+}
+
+.profile-avatar-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: var(--profile-control-bg);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.avatar-wrapper {
+  flex-shrink: 0;
+}
+
+.profile-avatar,
+.profile-avatar-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--profile-border);
+}
+
+.profile-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.avatar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn-upload,
+.btn-remove {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  text-align: center;
+}
+
+.btn-upload {
+  background: #2196F3;
+  color: white;
+  display: inline-block;
+}
+
+.btn-upload:hover {
+  background: #1976D2;
+}
+
+.btn-remove {
+  background: var(--profile-secondary-bg);
+  color: var(--profile-secondary-text);
+}
+
+.btn-remove:hover {
+  background: #f44336;
+  color: white;
 }
 </style>
