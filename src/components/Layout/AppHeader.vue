@@ -5,14 +5,14 @@ import { useProjectStore } from '../../stores/project.js'
 import { useAuthStore } from '../../stores/auth.js'
 import AuthModal from '../AuthModal.vue'
 import UserProfile from '../UserProfile.vue'
-  
+
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
     default: false
   }
 })
-  
+
 const projectStore = useProjectStore()
 const authStore = useAuthStore()
 const { projectName } = storeToRefs(projectStore)
@@ -22,6 +22,23 @@ const projectPlaceholder = 'Введите название проекта'
 const showAuthModal = ref(false)
 const authModalView = ref('login')
 const showProfile = ref(false)
+
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+
+function getAvatarUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return `${API_URL.replace('/api', '')}${url}`
+}
+
+function getInitials(name) {
+  if (!name) return '?'
+  const parts = name.split(' ')
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
+  return name.substring(0, 2).toUpperCase()
+}
 
 function openLogin() {
   authModalView.value = 'login'
@@ -61,7 +78,18 @@ function handleLogout() {
     <!-- Блок авторизации -->
     <div class="app-header__auth">
       <template v-if="isAuthenticated">
-        <span class="app-header__user">👤 {{ user?.username || user?.email }}</span>
+        <div class="app-header__user">
+          <img
+            v-if="user?.avatar_url"
+            :src="getAvatarUrl(user.avatar_url)"
+            alt="Аватар"
+            class="user-avatar"
+          >
+          <span v-else class="user-avatar-placeholder">
+            {{ getInitials(user?.username || user?.email) }}
+          </span>
+          <span class="user-name">{{ user?.username || user?.email }}</span>
+        </div>
         <button class="app-header__btn app-header__btn--profile" @click="showProfile = true">
           Профиль
         </button>
@@ -83,7 +111,7 @@ function handleLogout() {
     <AuthModal
       :is-open="showAuthModal"
       :initial-view="authModalView"
-      :is-modern-theme="props.isModernTheme"      
+      :is-modern-theme="props.isModernTheme"
       @close="showAuthModal = false"
       @success="showAuthModal = false"
     />
@@ -118,7 +146,7 @@ function handleLogout() {
   --header-input-color: #111827;
   --header-input-placeholder: rgba(17, 24, 39, 0.55);
   --header-focus-border: #0f62fe;
-  --header-focus-shadow: rgba(15, 98, 254, 0.15);  
+  --header-focus-shadow: rgba(15, 98, 254, 0.15);
   position: fixed;
   top: 12px;
   left: 50%;
@@ -147,7 +175,7 @@ function handleLogout() {
   --header-input-color: #e5f3ff;
   --header-input-placeholder: rgba(229, 243, 255, 0.5);
   --header-focus-border: rgba(89, 208, 255, 0.85);
-  --header-focus-shadow: rgba(17, 203, 255, 0.2);  
+  --header-focus-shadow: rgba(17, 203, 255, 0.2);
 }
 
 .app-header__project {
@@ -194,14 +222,6 @@ function handleLogout() {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-.app-header__user {
-  padding: 8px 16px;
-  background: var(--header-label-bg);
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
 }
 
 .app-header__btn {
@@ -277,21 +297,59 @@ function handleLogout() {
     align-items: flex-start;
     gap: 12px;
   }
-  
+
   .app-header__project {
     width: 100%;
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .app-header__input {
     width: 100%;
     min-width: 0;
   }
-  
+
   .app-header__auth {
     width: 100%;
     justify-content: center;
   }
+}
+
+.app-header__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 6px;
+  background: var(--header-label-bg);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.user-avatar,
+.user-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--header-input-border);
+  flex-shrink: 0;
+}
+
+.user-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.user-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
 }
 </style>
