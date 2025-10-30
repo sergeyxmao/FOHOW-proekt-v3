@@ -5,6 +5,7 @@ import { useProjectStore } from '../../stores/project.js'
 import { useAuthStore } from '../../stores/auth.js'
 import AuthModal from '../AuthModal.vue'
 import UserProfile from '../UserProfile.vue'
+import BoardsModal from '../Board/BoardsModal.vue'
 
 const props = defineProps({
   isModernTheme: {
@@ -25,6 +26,8 @@ const showProfile = ref(false)
 const showBoards = ref(false) // For boards modal
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+
+const emit = defineEmits(['open-board'])
 
 function getAvatarUrl(url) {
   if (!url) return ''
@@ -53,6 +56,11 @@ function openRegister() {
 
 function openBoards() {
   showBoards.value = true
+}
+
+function handleOpenBoard(boardId) {
+  showBoards.value = false
+  emit('open-board', boardId)
 }
 
 function handleLogout() {
@@ -141,19 +149,12 @@ function handleLogout() {
       </div>
     </Teleport>
     
-    <!-- Placeholder for Boards Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showBoards"
-        :class="[
-          'profile-modal-overlay',
-          { 'profile-modal-overlay--modern': props.isModernTheme }
-        ]"
-        @click.self="showBoards = false"
-      >
-        <!-- Boards Component will go here -->
-      </div>
-    </Teleport>
+    <!-- Boards Modal -->
+    <BoardsModal 
+      :is-open="showBoards" 
+      @close="showBoards = false"
+      @open-board="handleOpenBoard"
+    />
   </div>
 </template>
 
