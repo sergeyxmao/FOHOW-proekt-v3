@@ -280,35 +280,35 @@ async function handleUpdate() {
       throw new Error('Укажите корректный email')
     }
 
-    if (editForm.value.newPassword || editForm.value.confirmPassword || editForm.value.currentPassword) {
+    // Проверяем, нужно ли менять пароль
+    const isChangingPassword = editForm.value.newPassword || editForm.value.confirmPassword || editForm.value.currentPassword
+
+    if (isChangingPassword) {
+      // Если хотя бы одно поле пароля заполнено - требуем все
+      if (!editForm.value.currentPassword) {
+        throw new Error('Введите текущий пароль')
+      }
       if (!editForm.value.newPassword) {
         throw new Error('Введите новый пароль')
       }
-
       if (!editForm.value.confirmPassword) {
         throw new Error('Повторите новый пароль')
       }
-
       if (editForm.value.newPassword !== editForm.value.confirmPassword) {
         throw new Error('Новые пароли не совпадают')
-      }
-
-      if (!editForm.value.currentPassword) {
-        throw new Error('Введите текущий пароль')
       }
     }
     
     const body = {
       email: trimmedEmail
     }
+    
     if (trimmedUsername) {
       body.username = trimmedUsername
     }
 
-    editForm.value.username = trimmedUsername
-    editForm.value.email = trimmedEmail
-    // Добавляем пароли только если они указаны
-    if (editForm.value.newPassword) {
+    // Добавляем пароли ТОЛЬКО если реально меняем пароль
+    if (isChangingPassword && editForm.value.newPassword && editForm.value.currentPassword) {
       body.currentPassword = editForm.value.currentPassword
       body.newPassword = editForm.value.newPassword
     }
