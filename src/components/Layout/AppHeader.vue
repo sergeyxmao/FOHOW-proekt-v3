@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useProjectStore } from '../../stores/project.js'
 import { useAuthStore } from '../../stores/auth.js'
+import { useBoardStore } from '../../stores/board.js'
 import AuthModal from '../AuthModal.vue'
 import UserProfile from '../UserProfile.vue'
 import BoardsModal from '../Board/BoardsModal.vue'
@@ -16,8 +17,10 @@ const props = defineProps({
 
 const projectStore = useProjectStore()
 const authStore = useAuthStore()
+const boardStore = useBoardStore()
 const { projectName } = storeToRefs(projectStore)
 const { isAuthenticated, user } = storeToRefs(authStore)
+const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
 const projectPlaceholder = 'Введите название проекта'
 
 const showAuthModal = ref(false)
@@ -77,16 +80,20 @@ function handleLogout() {
       { 'app-header--modern': props.isModernTheme }
     ]"
   >
-    <label class="app-header__project" for="project-name-input">
-      <span class="app-header__label">Название проекта:</span>
-      <input
-        id="project-name-input"
-        v-model="projectName"
-        class="app-header__input"
-        type="text"
-        :placeholder="projectPlaceholder"
-      >
-    </label>
+    <div class="app-header__board-info">
+      <div class="board-name">
+        <span class="board-icon">📋</span>
+        <span class="board-title">{{ currentBoardName }}</span>
+      </div>
+      <div v-if="isSaving" class="board-status board-status--saving">
+        <span class="status-spinner">⏳</span>
+        <span>Сохранение...</span>
+      </div>
+      <div v-else-if="lastSaved" class="board-status board-status--saved">
+        <span class="status-icon">✓</span>
+        <span>Сохранено</span>
+      </div>
+    </div>
 
     <!-- Блок авторизации -->
     <div class="app-header__auth">
@@ -201,43 +208,63 @@ function handleLogout() {
   --header-focus-shadow: rgba(17, 203, 255, 0.2);
 }
 
-.app-header__project {
+.app-header__board-info {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--header-text);
-  font-weight: 700;
-  font-size: 18px;
+  flex-direction: column;
+  gap: 6px;
   padding: 12px 20px;
   border-radius: 16px;
   background: var(--header-label-bg);
-  transition: background 0.2s ease, color 0.2s ease;
+  min-width: 200px;
 }
 
-.app-header__label {
-  white-space: nowrap;
-}
-
-.app-header__input {
-  min-width: 240px;
-  padding: 10px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--header-input-border);
+.board-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
   font-size: 16px;
-  font-weight: 600;
-  color: var(--header-input-color);
-  background: var(--header-input-bg);
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+  color: var(--header-text);
 }
 
-.app-header__input::placeholder {
-  color: var(--header-input-placeholder);
+.board-icon {
+  font-size: 18px;
 }
 
-.app-header__input:focus {
-  border-color: var(--header-focus-border);
-  box-shadow: 0 0 0 3px var(--header-focus-shadow);
+.board-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px;
+}
+
+.board-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.board-status--saving {
+  color: #ff9800;
+}
+
+.board-status--saved {
+  color: #4caf50;
+}
+
+.status-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.status-icon {
+  font-weight: 700;
 }
 
 /* Блок авторизации */
@@ -323,15 +350,8 @@ function handleLogout() {
     gap: 12px;
   }
 
-  .app-header__project {
+  .app-header__board-info {
     width: 100%;
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .app-header__input {
-    width: 100%;
-    min-width: 0;
   }
 
   .app-header__auth {
@@ -377,4 +397,4 @@ function handleLogout() {
   text-overflow: ellipsis;
   max-width: 150px;
 }
-</style>
+</style>```
