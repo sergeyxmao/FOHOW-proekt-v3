@@ -71,7 +71,9 @@
       v-model="editForm.currentPassword"
       :type="passwordVisibility.current ? 'text' : 'password'"
       placeholder="Оставьте пустым, если не меняете пароль"
-      autocomplete="off"
+      autocomplete="new-password"
+      readonly
+      @focus="$event.target.removeAttribute('readonly')"
       @paste.prevent
       @drop.prevent
     />
@@ -87,6 +89,7 @@
   <small class="field-hint">Требуется только если меняете пароль</small>
 </div>
 
+
 <div class="form-group">
   <label>Новый пароль:</label>
   <div class="password-input">
@@ -95,7 +98,9 @@
       :type="passwordVisibility.new ? 'text' : 'password'"
       placeholder="Оставьте пустым, если не меняете"
       minlength="6"
-      autocomplete="off"
+      autocomplete="new-password"
+      readonly
+      @focus="$event.target.removeAttribute('readonly')"
       @paste.prevent
       @drop.prevent
     />
@@ -119,7 +124,9 @@
       :type="passwordVisibility.confirm ? 'text' : 'password'"
       placeholder="Повторите новый пароль"
       minlength="6"
-      autocomplete="off"
+      autocomplete="new-password"
+      readonly
+      @focus="$event.target.removeAttribute('readonly')"
       @paste.prevent
       @drop.prevent
     />
@@ -333,8 +340,13 @@ async function handleUpdate() {
       throw new Error(data.error || 'Ошибка обновления профиля')
     }
 
+    // КРИТИЧНО: Обновляем пользователя в authStore и localStorage
     user.value = data.user
+    authStore.user = data.user
+    
+    // Сохраняем в localStorage
     localStorage.setItem('user', JSON.stringify(data.user))
+    
     success.value = 'Профиль успешно обновлён!'
     
     setTimeout(() => {
