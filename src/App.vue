@@ -7,7 +7,6 @@ import AppHeader from './components/Layout/AppHeader.vue'
 import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
 import { useAuthStore } from './stores/auth'
-import BoardsModal from './components/Board/BoardsModal.vue'
 import { useCanvasStore } from './stores/canvas' // Предполагаемый импорт
 
 const authStore = useAuthStore()
@@ -23,8 +22,6 @@ const canvasRef = ref(null)
 // Состояние для сброса пароля
 const showResetPassword = ref(false)
 const resetToken = ref('')
-const showBoardsModal = ref(false)
-const currentBoardId = ref(null)
 
 function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
@@ -108,16 +105,7 @@ function handleResetPasswordSuccess() {
   showResetPassword.value = false
 }
 
-function openBoards() {
-  showBoardsModal.value = true
-}
-
-function closeBoards() {
-  showBoardsModal.value = false
-}
-
 async function openBoard(boardId) {
-  currentBoardId.value = boardId
   // Загружаем доску
   await loadBoard(boardId)
 }
@@ -177,7 +165,7 @@ onBeforeUnmount(() => {
     <AppHeader
       v-show="!isPencilMode && !showResetPassword"
       :is-modern-theme="isModernTheme"
-      @open-boards="openBoards"
+      @open-board="openBoard"
     />
 
     <!-- Левая панель -->
@@ -241,11 +229,6 @@ onBeforeUnmount(() => {
         />
       </div>
     </div>
-    <BoardsModal
-      :is-open="showBoardsModal"
-      @close="closeBoards"
-      @open-board="openBoard"
-    />
   </div>
 </template>
 
