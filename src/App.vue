@@ -103,6 +103,16 @@ function handleResetPasswordSuccess() {
 
 onMounted(() => {
   // Проверяем URL на токен сброса пароля
+  import { useAuthStore } from './stores/auth'
+
+const authStore = useAuthStore()
+
+onMounted(async () => {
+  // Инициализируем authStore - загружаем данные пользователя
+  await authStore.init()
+  
+  // Проверяем URL на токен сброса пароля
+  const urlParams = new URLSearchParams(window.location.search)
   const urlParams = new URLSearchParams(window.location.search)
   const token = urlParams.get('token')
   if (token) {
