@@ -65,34 +65,46 @@ export const useAuthStore = defineStore('auth', {
       await this.login(email, password)
     },
 
-    async login(email, password) {
-      const response = await fetch(`${API_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      })
+async login(email, password) {
+  const response = await fetch(`${API_URL}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  })
 
-      const data = await response.json()
+  const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Ошибка входа')
+  if (!response.ok) {
+    throw new Error(data.error || 'Ошибка входа')
+  }
+
+  this.token = data.token
+  
+  // Сохраняем токен в localStorage
+  localStorage.setItem('token', data.token)
+  
+  // Загружаем полный профиль с сервера (включая username)
+  try {
+    const profileResponse = await fetch(`${API_URL}/profile`, {
+      headers: {
+        'Authorization': `Bearer ${data.token}`
       }
-
-      this.token = data.token
+    })
+    
+    if (profileResponse.ok) {
+      const profileData = await profileResponse.json()
+      this.user = profileData.user
+    } else {
+      // Если профиль не загрузился, используем данные из login
       this.user = data.user
-      this.isAuthenticated = true
-
-      localStorage.setItem('token', data.token)
-      localStorage.setItem('user', JSON.stringify(data.user))
-    },
-
-    logout() {
-      this.user = null
-      this.token = null
-      this.isAuthenticated = false
-
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
     }
+  } catch (err) {
+    console.error('Ошибка загрузки профиля после логина:', err)
+    this.user = data.user
+  }
+  
+  this.isAuthenticated = true
+  localStorage.setItem('user', JSON.stringify(this.user))
+}
   }
 })
