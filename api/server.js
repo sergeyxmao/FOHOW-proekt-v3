@@ -62,11 +62,11 @@ app.post('/api/login', async (req, reply) => {
     }
     
     // Создаем JWT токен
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+const token = jwt.sign(
+  { userId: user.id, email: user.email },
+  process.env.JWT_SECRET,
+  { expiresIn: '7d' }
+);
     
     return reply.send({ 
       success: true, 
@@ -193,6 +193,134 @@ app.post('/api/reset-password', async (req, reply) => {
     return reply.code(500).send({ error: 'Ошибка сервера' });
   }
 });
+
+// === ОБНОВЛЕНИЕ ПРОФИЛЯ ===
+app.put('/api/profile', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '')
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' })
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const { username, email, currentPassword, newPassword } = req.body
+
+    // Проверяем текущего пользователя
+    const userResult = await pool.query(
+      'SELECT * FROM users WHERE id = $1',
+      [decoded.userId]
+    )
+
+    if (userResult.rows.length === 0) {
+      return reply.code(404).send({ error: 'Пользователь не найден' })
+    }
+
+    const user = userResult.rows[0]
+
+    // Если меняем email, проверяем уникальность
+    if (email && email !== user.email) {
+      const emailCheck = await pool.query(
+        'SELECT id FROM users WHERE email = $1 AND id != $2',
+        [email, decoded.userId]
+      )
+      if (emailCheck.rows.length > 0) {
+        return reply.code(400).send({ error: 'Email уже используется' })
+      }
+    }
+
+    // Если меняем username, проверяем уникальность
+    if (username && username !== user.username) {
+      const usernameCheck = await pool.query(
+        'SELECT id FROM users WHERE username = $1 AND id != $2',
+        [username, decoded.userId]
+      )
+      if (usernameCheck.rows.length > 0) {
+        return reply.code(400).send({ error: 'Имя пользователя занято' })
+      }
+    }
+
+    // Если меняем пароль, проверяем текущий
+    let passwordHash = user.password
+    if (newPassword) {
+      if (!currentPassword) {
+        return reply.code(400).send({ error: 'Укажите текущий пароль' })
+      }
+
+      const validPassword = await bcrypt.compare(currentPassword, user.password)
+      if (!validPassword) {
+        return reply.code(400).send({ error: 'Неверный текущий пароль' })
+      }
+
+      if (newPassword.length < 6) {
+        return reply.code(400).send({ error: 'Новый пароль должен быть минимум 6 символов' })
+      }
+
+      passwordHash = await bcrypt.hash(newPassword, 10)
+    }
+
+    // Обновляем профиль
+    const updateResult = await pool.query(
+      `UPDATE users 
+       SET username = $1, email = $2, password = $3, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4
+       RETURNING id, username, email, created_at, updated_at`,
+      [
+        username || user.username,
+        email || user.email,
+        passwordHash,
+        decoded.userId
+      ]
+    )
+
+    return reply.send({
+      success: true,
+      user: updateResult.rows[0]
+    })
+  } catch (err) {
+    console.error('❌ Ошибка update-profile:', err)
+    return reply.code(500).send({ error: 'Ошибка сервера' })
+  }
+})
+
+// === УДАЛЕНИЕ АККАУНТА ===
+app.delete('/api/profile', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '')
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' })
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const { password } = req.body
+
+    if (!password) {
+      return reply.code(400).send({ error: 'Введите пароль для подтверждения' })
+    }
+
+    // Проверяем пароль
+    const userResult = await pool.query(
+      'SELECT password FROM users WHERE id = $1',
+      [decoded.userId]
+    )
+
+    if (userResult.rows.length === 0) {
+      return reply.code(404).send({ error: 'Пользователь не найден' })
+    }
+
+    const validPassword = await bcrypt.compare(password, userResult.rows[0].password)
+    if (!validPassword) {
+      return reply.code(400).send({ error: 'Неверный пароль' })
+    }
+
+    // Удаляем пользователя (CASCADE удалит связанные записи)
+    await pool.query('DELETE FROM users WHERE id = $1', [decoded.userId])
+
+    return reply.send({ success: true, message: 'Аккаунт удалён' })
+  } catch (err) {
+    console.error('❌ Ошибка delete-profile:', err)
+    return reply.code(500).send({ error: 'Ошибка сервера' })
+  }
+})
 // Проверка живости API
 app.get('/api/health', async () => ({ ok: true }));
 
