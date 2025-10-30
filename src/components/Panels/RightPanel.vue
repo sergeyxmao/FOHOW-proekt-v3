@@ -71,6 +71,12 @@ const hiddenBackgroundPicker = ref(null)
 
 // Шаблоны для вставки
 const templateMenuRef = ref(null)
+const templateMenuListRef = ref(null)	
+const templateMenuPlacement = ref({
+  dropUp: false,
+  maxHeight: ''
+})
+const TEMPLATE_MENU_MARGIN = 16	
 const isTemplateMenuOpen = ref(false)
 
 const templateModules = import.meta.glob('@/templates/*.json', {
@@ -186,6 +192,9 @@ function schedulePanelScaleUpdate() {
   resizeFrameId = requestAnimationFrame(() => {
     resizeFrameId = null
     updatePanelScale()
+    if (isTemplateMenuOpen.value) {
+      updateTemplateMenuPlacement()
+    }	  
   })
 }
 
@@ -340,6 +349,12 @@ function closeTemplateMenu() {
 function toggleTemplateMenu() {
   isTemplateMenuOpen.value = !isTemplateMenuOpen.value
 }
+function resetTemplateMenuPlacement() {
+  templateMenuPlacement.value = {
+    dropUp: false,
+    maxHeight: ''
+  }
+}
 
 function selectTemplate(templateId) {
   const template = templatesRegistry[templateId]
@@ -422,7 +437,41 @@ function insertTemplate(templateData) {
   cardsStore.deselectAllCards()
   createdCardIds.forEach(id => cardsStore.selectCard(id))
 }
+function updateTemplateMenuPlacement() {
+  if (!isTemplateMenuOpen.value || typeof window === 'undefined') {
+    return
+  }
 
+  const listEl = templateMenuListRef.value
+  const anchorEl = templateMenuRef.value
+
+  if (!listEl || !anchorEl) {
+    return
+  }
+
+  const anchorRect = anchorEl.getBoundingClientRect()
+  const listRect = listEl.getBoundingClientRect()
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0
+
+  const availableBelow = Math.max(viewportHeight - anchorRect.bottom - TEMPLATE_MENU_MARGIN, 0)
+  const availableAbove = Math.max(anchorRect.top - TEMPLATE_MENU_MARGIN, 0)
+
+  const shouldDropUp = availableBelow < listRect.height && availableAbove > availableBelow
+  const maxAvailableSpace = shouldDropUp ? availableAbove : availableBelow
+
+  templateMenuPlacement.value = {
+    dropUp: shouldDropUp,
+    maxHeight: maxAvailableSpace > 0 ? `${Math.floor(maxAvailableSpace)}px` : ''
+  }
+}
+
+function handlePanelScroll() {
+  if (!isTemplateMenuOpen.value) {
+    return
+  }
+
+  updateTemplateMenuPlacement()
+}
 function handleDocumentClick(event) {
   const menuEl = templateMenuRef.value
   if (!isTemplateMenuOpen.value || !menuEl) {
@@ -501,6 +550,7 @@ onBeforeUnmount(() => {
     cancelAnimationFrame(resizeFrameId)
     resizeFrameId = null
   }
+  panelCardRef.value?.removeEventListener('scroll', handlePanelScroll)
 
   setPanelScale(1)
 })
@@ -520,11 +570,21 @@ watch(isCollapsed, (collapsed) => {
   }
 })
 
-watch(isTemplateMenuOpen, () => {
-  nextTick(() => {
-    schedulePanelScaleUpdate()
-  })
-}) 
+watch(isTemplateMenuOpen, (isOpen) => {
+  if (isOpen) {
+    nextTick(() => {
+      updateTemplateMenuPlacement()
+      schedulePanelScaleUpdate()
+    })
+  } else {
+    resetTemplateMenuPlacement()
+  }
+})
+
+watch(panelCardRef, (current, previous) => {
+  previous?.removeEventListener('scroll', handlePanelScroll)
+  current?.addEventListener('scroll', handlePanelScroll, { passive: true })
+})
 </script>
 
 <template>
@@ -749,12 +809,17 @@ watch(isTemplateMenuOpen, () => {
               aria-haspopup="true"
               :aria-expanded="isTemplateMenuOpen"
             >⧉</button>
-            <div
-              v-if="isTemplateMenuOpen && templateOptions.length"
-              class="template-menu__list template-menu__list--drop-up"
-              role="menu"
-              aria-label="Выбор шаблона"
-            >
+          <div
+            v-if="isTemplateMenuOpen && templateOptions.length"
+            ref="templateMenuListRef"
+            :class="[
+              'template-menu__list',
+              { 'template-menu__list--drop-up': templateMenuPlacement.dropUp }
+            ]"
+            :style="{ maxHeight: templateMenuPlacement.maxHeight || undefined }"
+            role="menu"
+            aria-label="Выбор шаблона"
+          >
               <button
                 v-for="option in templateOptions"
                 :key="option.id"
@@ -790,8 +855,13 @@ watch(isTemplateMenuOpen, () => {
           >⧉</button>
           <div
             v-if="isTemplateMenuOpen && templateOptions.length"
-            class="template-menu__list"
-            role="menu"
+            ref="templateMenuListRef"
+            :class="[
+              'template-menu__list',
+              { 'template-menu__list--drop-up': templateMenuPlacement.dropUp }
+            ]"
+            :style="{ maxHeight: templateMenuPlacement.maxHeight || undefined }"
+			role="menu"
             aria-label="Выбор шаблона"
           >
             <button
