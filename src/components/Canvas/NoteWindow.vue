@@ -72,6 +72,30 @@ const effectiveScale = computed(() => {
   const value = Number(zoomScale.value);
   return Number.isFinite(value) && value > 0 ? value : 1;
 });
+const VIEWPORT_MARGIN = 16;
+
+function clampNotePosition(noteData, options = {}) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const scale = Number.isFinite(options.scale) && options.scale > 0 ? options.scale : effectiveScale.value;
+  const width = Math.max(0, (options.width ?? noteData.width) * scale);
+  const height = Math.max(0, (options.height ?? noteData.height) * scale);
+
+  const maxLeft = Math.max(VIEWPORT_MARGIN, window.innerWidth - width - VIEWPORT_MARGIN);
+  const maxTop = Math.max(VIEWPORT_MARGIN, window.innerHeight - height - VIEWPORT_MARGIN);
+
+  const nextX = Math.min(Math.max(noteData.x, VIEWPORT_MARGIN), maxLeft);
+  const nextY = Math.min(Math.max(noteData.y, VIEWPORT_MARGIN), maxTop);
+
+  if (noteData.x !== nextX) {
+    noteData.x = nextX;
+  }
+  if (noteData.y !== nextY) {
+    noteData.y = nextY;
+  }
+}
 
 const noteStyle = computed(() => {
   const scale = effectiveScale.value;
@@ -148,6 +172,7 @@ function syncWithCardPosition(options = {}) {
     note.value.x = rect.left + note.value.offsetX * scale;
     note.value.y = rect.top + note.value.offsetY * scale;
   }
+  clampNotePosition(note.value, { scale });  
   updateNoteOffsets(note.value, rect, { scale });
   emit('sync', { x: note.value.x, y: note.value.y });
 }
@@ -222,7 +247,7 @@ function onDragMove(event) {
   const dx = event.clientX - dragStart.value.x;
   const dy = event.clientY - dragStart.value.y;
   note.value.x = initialPosition.value.x + dx;
-  note.value.y = initialPosition.value.y + dy;
+  clampNotePosition(note.value);
 }
 
 function endDrag(event) {
@@ -269,7 +294,7 @@ function onResizeMove(event) {
   const nextWidth = Math.max(200, resizeStart.value.width + dx);
   const nextHeight = Math.max(200, resizeStart.value.height + dy);
   note.value.width = nextWidth;
-  note.value.height = nextHeight;
+  clampNotePosition(note.value, { width: nextWidth, height: nextHeight });
 }
 
 function endResize(event) {
@@ -287,6 +312,13 @@ function endResize(event) {
 watch(() => note.value.viewDate, (value) => {
   monthState.value = resolveMonthState(value);
 });
+watch(
+  () => [note.value.x, note.value.y, note.value.width, note.value.height, effectiveScale.value],
+  () => {
+    clampNotePosition(note.value);
+  },
+  { immediate: true }
+);
 
 watch(selectedDate, () => {
   updateTextareaFromEntry();
