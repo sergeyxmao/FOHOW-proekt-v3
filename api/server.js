@@ -1,11 +1,21 @@
 import Fastify from 'fastify';
 import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
+import multipart from '@fastify/multipart';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { pool } from './db.js';
 import { authenticateToken } from './middleware/auth.js';
+import { createWriteStream } from 'fs';
+import { pipeline } from 'stream/promises';
+import { randomBytes } from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 
@@ -14,6 +24,11 @@ const app = Fastify({ logger: true });
 // Плагины безопасности
 await app.register(helmet);
 await app.register(cors, { origin: true, credentials: true });
+await app.register(multipart, {
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB максимум
+  }
+});
 
 // === РЕГИСТРАЦИЯ ===
 app.post('/api/register', async (req, reply) => {
@@ -62,11 +77,11 @@ app.post('/api/login', async (req, reply) => {
     }
     
     // Создаем JWT токен
-const token = jwt.sign(
-  { userId: user.id, email: user.email },
-  process.env.JWT_SECRET,
-  { expiresIn: '7d' }
-);
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
     
     return reply.send({ 
       success: true, 
@@ -85,7 +100,7 @@ app.get('/api/profile', {
 }, async (req, reply) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, username, created_at, updated_at FROM users WHERE id = $1',
+      'SELECT id, email, username, avatar_url, created_at, updated_at FROM users WHERE id = $1',
       [req.user.id]
     );
     
@@ -99,6 +114,7 @@ app.get('/api/profile', {
     return reply.code(500).send({ error: 'Ошибка сервера' });
   }
 });
+
 // === ЗАБЫЛИ ПАРОЛЬ ===
 app.post('/api/forgot-password', async (req, reply) => {
   const { email } = req.body;
@@ -272,7 +288,7 @@ app.put('/api/profile', async (req, reply) => {
            password = $3, 
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $4
-       RETURNING id, username, email, created_at, updated_at`,
+       RETURNING id, username, email, avatar_url, created_at, updated_at`,
       [
         username || null,
         email || null,
@@ -330,6 +346,86 @@ app.delete('/api/profile', async (req, reply) => {
     return reply.code(500).send({ error: 'Ошибка сервера' })
   }
 })
+
+// === ЗАГРУЗКА АВАТАРА ===
+app.post('/api/profile/avatar', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Получаем файл из multipart
+    const data = await req.file();
+    
+    if (!data) {
+      return reply.code(400).send({ error: 'Файл не предоставлен' });
+    }
+
+    // Проверяем тип файла
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedMimes.includes(data.mimetype)) {
+      return reply.code(400).send({ error: 'Разрешены только изображения (JPEG, PNG, GIF, WEBP)' });
+    }
+
+    // Генерируем уникальное имя файла
+    const ext = path.extname(data.filename);
+    const filename = `${decoded.userId}-${randomBytes(8).toString('hex')}${ext}`;
+    const filepath = path.join(__dirname, 'uploads', 'avatars', filename);
+
+    // Сохраняем файл
+    await pipeline(data.file, createWriteStream(filepath));
+
+    // Обновляем URL аватара в БД
+    const avatarUrl = `/uploads/avatars/${filename}`;
+    await pool.query(
+      'UPDATE users SET avatar_url = $1 WHERE id = $2',
+      [avatarUrl, decoded.userId]
+    );
+    
+    return reply.send({
+      success: true,
+      avatarUrl
+    });
+  } catch (err) {
+    console.error('❌ Ошибка загрузки аватара:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// === УДАЛЕНИЕ АВАТАРА ===
+app.delete('/api/profile/avatar', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Удаляем URL аватара из БД
+    await pool.query(
+      'UPDATE users SET avatar_url = NULL WHERE id = $1',
+      [decoded.userId]
+    );
+
+    return reply.send({ success: true });
+  } catch (err) {
+    console.error('❌ Ошибка удаления аватара:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// === ОТДАЧА СТАТИЧЕСКИХ ФАЙЛОВ (аватары) ===
+app.get('/uploads/avatars/:filename', async (req, reply) => {
+  const { filename } = req.params;
+  const filepath = path.join(__dirname, 'uploads', 'avatars', filename);
+  
+  return reply.sendFile(filepath);
+});
+
 // Проверка живости API
 app.get('/api/health', async () => ({ ok: true }));
 
@@ -342,4 +438,4 @@ try {
 } catch (err) {
   app.log.error(err);
   process.exit(1);
-} // Тест автообновления
+}
