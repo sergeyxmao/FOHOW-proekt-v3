@@ -89,9 +89,11 @@ function handleLogout() {
     />
 
     <!-- Модальное окно профиля -->
-    <div v-if="showProfile" class="profile-modal-overlay" @click.self="showProfile = false">
-      <UserProfile @close="showProfile = false" />
-    </div>
+    <Teleport to="body">
+      <div v-if="showProfile" class="profile-modal-overlay" @click.self="showProfile = false">
+        <UserProfile @close="showProfile = false" />
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -252,6 +254,7 @@ function handleLogout() {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;  
   z-index: 10000;
 }
 
