@@ -11,7 +11,6 @@ import { useCanvasStore } from './stores/canvas' // Предполагаемый
 import { useBoardStore } from './stores/board'
 import { useCardsStore } from './stores/cards' // Assuming this store exists
 import { useConnectionsStore } from './stores/connections' // Assuming this store exists
-import { zoomScale } from './stores/zoom' // Assuming this store exists
 
 const authStore = useAuthStore()
 const canvasStore = useCanvasStore() // Предполагаемая инициализация
