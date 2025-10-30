@@ -1289,8 +1289,8 @@ const handleToggleGuides = () => {
 .comments-dropdown {
   position: absolute;
   top: calc(100% + 8px);
-  right: 0;
-  left: auto;
+  left: 0;
+  right: auto;
   min-width: 280px;
   max-width: 360px;
   background: var(--left-panel-btn-bg);
@@ -1299,7 +1299,7 @@ const handleToggleGuides = () => {
   box-shadow: 0 20px 34px rgba(15, 23, 42, 0.28);
   padding: 14px;
   z-index: 30;
-}  
+}
 .notes-dropdown__group {
   display: flex;
   flex-direction: column;
