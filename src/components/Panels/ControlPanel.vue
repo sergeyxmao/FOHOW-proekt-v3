@@ -797,12 +797,7 @@ const handleToggleGuides = () => {
           :disabled="!historyStore.canRedo"
         >
           ↷
-        </button>
-        <button class="ui-btn" title="Сохранить проект (JSON)" @click="handleSaveProject">💾</button>
-        <button class="ui-btn" title="Экспорт в HTML (просмотр)" @click="handleExportHTML">📄</button>
-        <button class="ui-btn" title="Экспорт в SVG (вектор)" @click="handleExportSVG">🖋️</button>
-        <button class="ui-btn" title="Печать / Экспорт в PDF" @click="handlePrint">🖨️</button>
-        <button class="ui-btn" title="Загрузить проект из JSON" @click="handleLoadProject">📂</button>      
+        </button>   
         <button
           class="ui-btn"
           :class="{ active: guidesEnabled }"
@@ -814,7 +809,7 @@ const handleToggleGuides = () => {
         </button>
       </div>
     </template>
-     <div class="left-panel-controls__zoom">
+    <div class="left-panel-controls__zoom">
       <button
         class="left-panel-controls__zoom-button"
         type="button"
