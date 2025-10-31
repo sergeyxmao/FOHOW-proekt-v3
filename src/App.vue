@@ -1,10 +1,8 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
-import ControlPanel from './components/Panels/ControlPanel.vue'
-import RightPanel from './components/Panels/RightPanel.vue'
 import AppHeader from './components/Layout/AppHeader.vue'
-import TopMenuButtons from './components/Layout/TopMenuButtons.vue'  
+import TopMenuButtons from './components/Layout/TopMenuButtons.vue'
 import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
 import { useAuthStore } from './stores/auth'
@@ -12,15 +10,20 @@ import { useCanvasStore } from './stores/canvas' // Предполагаемый
 import { useBoardStore } from './stores/board'
 import { useCardsStore } from './stores/cards' // Assuming this store exists
 import { useConnectionsStore } from './stores/connections' // Assuming this store exists
-
+import { useViewportStore } from './stores/viewport'
+import { storeToRefs } from 'pinia'
+  
 const authStore = useAuthStore()
 const canvasStore = useCanvasStore() // Предполагаемая инициализация
 const boardStore = useBoardStore()
 const cardsStore = useCardsStore() // Assuming initialization
 const connectionsStore = useConnectionsStore() // Assuming initialization
+const viewportStore = useViewportStore()
+
+const { zoomPercentage } = storeToRefs(viewportStore)
+const zoomDisplay = computed(() => `${zoomPercentage.value}%`)  
 
 const isModernTheme = ref(false)
-const isLeftPanelCollapsed = ref(false)
 const isPencilMode = ref(false)
 const pencilSnapshot = ref(null)
 const pencilBounds = ref(null)
@@ -36,10 +39,6 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 
 function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
-}
-
-function toggleLeftPanel() {
-  isLeftPanelCollapsed.value = !isLeftPanelCollapsed.value
 }
 
 function resetPencilState() {
@@ -320,44 +319,8 @@ onBeforeUnmount(() => {
       v-show="!isPencilMode && !showResetPassword"
       :is-modern-theme="isModernTheme"
       @open-board="openBoard"
-      @save-board="saveCurrentBoard"    
-    />
-
-    <!-- Левая панель -->
-    <div
-      v-show="!isPencilMode && !showResetPassword"
-      :class="[
-        'ui-panel-left',
-        {
-          collapsed: isLeftPanelCollapsed,
-          'ui-panel-left--modern': isModernTheme
-        }
-      ]"
-    >
-      <button
-        class="ui-panel-left__collapse"
-        type="button"
-        :title="isLeftPanelCollapsed ? 'Развернуть панель' : 'Свернуть панель'"
-        :aria-expanded="!isLeftPanelCollapsed"
-        @pointerdown.stop
-        @click="toggleLeftPanel"
-      >
-        <span aria-hidden="true">{{ isLeftPanelCollapsed ? '❯' : '❮' }}</span>
-      </button>
-      <ControlPanel
-        :is-modern-theme="isModernTheme"
-        :is-collapsed="isLeftPanelCollapsed"
-        @toggle-theme="toggleTheme"
-        @toggle-collapse="toggleLeftPanel"
-        @activate-pencil="handleActivatePencil"
-        @fit-to-content="handleFitToContent"
-      />
-    </div>
-
-    <!-- Правая панель -->
-    <RightPanel
-      v-show="!isPencilMode && !showResetPassword"
-      :is-modern-theme="isModernTheme"
+      @save-board="saveCurrentBoard"
+      @toggle-theme="toggleTheme"
     />
 
     <div
@@ -366,6 +329,15 @@ onBeforeUnmount(() => {
     >
       <CanvasBoard ref="canvasRef" />
     </div>
+    <button
+      v-show="!isPencilMode && !showResetPassword"
+      class="zoom-indicator"
+      type="button"
+      title="Автоподгонка масштаба"
+      @click="handleFitToContent"
+    >
+      Масштаб: <span class="zoom-indicator__value">{{ zoomDisplay }}</span>
+    </button>
 
     <PencilOverlay
       v-if="isPencilMode && pencilSnapshot && pencilBounds"
@@ -445,83 +417,32 @@ html,body{
   overflow-y: auto;
 }
 
-/* Панели */
-.ui-panel-left{
-  --ui-left-panel-scale: var(--ui-panel-scale, 1);
+.zoom-indicator {
   position: fixed;
-  top: 20px;
-  left: 0;
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: calc(18px * var(--ui-left-panel-scale)) calc(20px * var(--ui-left-panel-scale));
-  background: transparent;
-  border-radius: 0 calc(24px * var(--ui-left-panel-scale)) calc(24px * var(--ui-left-panel-scale)) 0;
-  box-shadow: var(--shadow);
-  transition: top .3s ease, transform .3s ease, padding .3s ease;
-  max-height: none;
-  overflow: visible;
-  box-sizing: border-box;
-  --left-panel-collapse-bg: rgba(255, 255, 255, 0.94);
-  --left-panel-collapse-color: #111827;
-  --left-panel-collapse-border: rgba(15, 23, 42, 0.14);
-  --left-panel-collapse-shadow: var(--shadow);
-  --left-panel-collapse-hover-shadow: 0 22px 42px rgba(15, 98, 254, 0.25);
-  --left-panel-collapse-hover-color: #0f62fe;
-}
-
-.ui-panel-left.collapsed {
-  top: calc(16px * var(--ui-left-panel-scale));
-  padding: calc(16px * var(--ui-left-panel-scale)) calc(20px * var(--ui-left-panel-scale));
-}
-
-.ui-panel-left--modern {
-  --left-panel-collapse-bg: rgba(28, 38, 58, 0.9);
-  --left-panel-collapse-color: #e5f3ff;
-  --left-panel-collapse-border: rgba(96, 164, 255, 0.35);
-  --left-panel-collapse-shadow: 0 18px 34px rgba(6, 11, 21, 0.45);
-  --left-panel-collapse-hover-shadow: 0 24px 40px rgba(6, 11, 21, 0.55);
-  --left-panel-collapse-hover-color: #73c8ff;
-}
-
-.ui-panel-left__collapse {
-  position: absolute;
-  top: 50%;
-  right: calc(-52px * var(--ui-left-panel-scale));
-  transform: translateY(-50%);
-  width: calc(52px * var(--ui-left-panel-scale));
-  min-height: calc(64px * var(--ui-left-panel-scale));
-  padding: 0 calc(14px * var(--ui-left-panel-scale));
-  border-radius: 0 calc(26px * var(--ui-left-panel-scale)) calc(26px * var(--ui-left-panel-scale)) 0;
-  border: 1px solid var(--left-panel-collapse-border);
-  border-left: none;
-  background: var(--left-panel-collapse-bg);
-  color: var(--left-panel-collapse-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(20px * var(--ui-left-panel-scale));
+  right: 24px;
+  bottom: 24px;
+  z-index: 1800;
+  padding: 12px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(6px);
+  color: #0f172a;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: var(--left-panel-collapse-shadow);
-  backdrop-filter: blur(22px);
-  transition: transform .2s ease, box-shadow .2s ease, color .2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.ui-panel-left__collapse:hover {
-  transform: translateY(-50%) translateX(2px);
-  box-shadow: var(--left-panel-collapse-hover-shadow);
-  color: var(--left-panel-collapse-hover-color);
+.zoom-indicator:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.2);
 }
 
-.ui-panel-left__collapse span {
-  pointer-events: none;
-}
-
-.ui-panel-left.collapsed .ui-panel-left__collapse {
-  top: 50%;
-}
+.zoom-indicator__value {
+  margin-left: 6px;
+  font-weight: 700;
 
 /* Canvas/SVG */
 #canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
