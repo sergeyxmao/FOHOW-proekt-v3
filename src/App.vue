@@ -312,7 +312,10 @@ onBeforeUnmount(() => {
 
 <template>
   <div id="app">
-    <TopMenuButtons v-show="!isPencilMode && !showResetPassword" />    
+    <TopMenuButtons
+      v-show="!isPencilMode && !showResetPassword"
+      @activate-pencil="handleActivatePencil"
+    />
     <AppHeader
       v-show="!isPencilMode && !showResetPassword"
       :is-modern-theme="isModernTheme"
