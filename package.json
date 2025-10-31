@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@vueuse/core": "^13.9.0",
+    "cropperjs": "^1.6.2",    
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.3",
     "pinia": "^3.0.3",
