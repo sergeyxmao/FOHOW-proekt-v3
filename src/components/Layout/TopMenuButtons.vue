@@ -90,11 +90,15 @@ onBeforeUnmount(() => {
 .top-menu {
   position: fixed;
   top: 16px;
-  left: 16px;
+  left: 50%;
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;  
   gap: 12px;
   z-index: 1950;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);  
 }
 
 .top-menu__item {
