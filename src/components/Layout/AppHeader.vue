@@ -57,7 +57,7 @@ function openRegister() {
 
 function openBoards() {
   showBoards.value = true
-  closeUserMenu() 
+  closeUserMenu()
 }
 
 function handleOpenBoard(boardId) {
@@ -66,7 +66,7 @@ function handleOpenBoard(boardId) {
 }
 
 function handleLogout() {
-  closeUserMenu()  
+  closeUserMenu()
   if (confirm('Вы уверены, что хотите выйти?')) {
     authStore.logout()
   }
@@ -106,7 +106,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
-})  
+})
 </script>
 
 <template>
@@ -194,7 +194,7 @@ onBeforeUnmount(() => {
               </button>
             </div>
           </div>
-        </transition>        
+        </transition>
       </template>
       <template v-else>
         <button class="app-header__btn app-header__btn--login" @click="openLogin">
@@ -344,7 +344,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  z-index: 2500;  
+  z-index: 2500;
 }
 
 .user-menu__section {
@@ -512,6 +512,8 @@ onBeforeUnmount(() => {
   background: rgba(5, 12, 24, 0.8);
 }
 
+@media (max-width: 640px) {
+  .app-header {
     width: calc(100% - 24px);
     justify-content: center;
   }
@@ -519,10 +521,6 @@ onBeforeUnmount(() => {
   .app-header__auth {
     width: 100%;
     justify-content: center;
-  }
-  .user-menu {
-    right: 50%;
-    transform: translateX(50%);
   }
 
   .user-menu {
