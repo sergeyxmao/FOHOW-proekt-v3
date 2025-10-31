@@ -4,7 +4,12 @@ import { storeToRefs } from 'pinia'
 
 import { useCanvasStore } from '../../stores/canvas.js'
 import { useViewSettingsStore } from '../../stores/viewSettings.js'
-
+const props = defineProps({
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  }
+})
 const canvasStore = useCanvasStore()
 const viewSettingsStore = useViewSettingsStore()
 
@@ -101,7 +106,12 @@ function selectPresetBackground(color) {
 </script>
 
 <template>
-  <div class="view-menu" role="menu" aria-label="Настройки вида">
+  <div
+    class="view-menu"
+    :class="{ 'view-menu--modern': props.isModernTheme }"
+    role="menu"
+    aria-label="Настройки вида"
+  >
     <h3 class="view-menu__title">Вид</h3>
     <div class="view-menu__list">
       <div class="view-menu__item">
@@ -512,4 +522,97 @@ function selectPresetBackground(color) {
 .view-menu__item--open > .view-menu__main {
   box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
 }
+
+.view-menu--modern .view-menu__title {
+  color: #e5f3ff;
+}
+
+.view-menu--modern .view-menu__main {
+  border-color: rgba(96, 164, 255, 0.35);
+  background: rgba(24, 34, 58, 0.94);
+  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.6);
+}
+
+.view-menu--modern .view-menu__main:hover {
+  box-shadow: 0 24px 40px rgba(6, 11, 21, 0.72);
+}
+
+.view-menu--modern .view-menu__icon {
+  background: rgba(114, 182, 255, 0.16);
+  color: #e5f3ff;
+}
+
+.view-menu--modern .view-menu__icon--swatch {
+  border-color: rgba(96, 164, 255, 0.35);
+  box-shadow: inset 0 0 0 2px rgba(6, 11, 21, 0.35);
+}
+
+.view-menu--modern .view-menu__label {
+  color: #e5f3ff;
+}
+
+.view-menu--modern .view-menu__caret {
+  color: rgba(196, 215, 255, 0.6);
+}
+
+.view-menu--modern .view-menu__submenu {
+  background: rgba(18, 28, 48, 0.95);
+  border-color: rgba(96, 164, 255, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(96, 164, 255, 0.12);
+}
+
+.view-menu--modern .view-menu__control {
+  border-color: rgba(114, 182, 255, 0.35);
+  background: rgba(24, 34, 58, 0.92);
+  color: #9cd0ff;
+  box-shadow: 0 16px 30px rgba(6, 11, 21, 0.55);
+}
+
+.view-menu--modern .view-menu__control:hover {
+  box-shadow: 0 22px 38px rgba(6, 11, 21, 0.68);
+}
+
+.view-menu--modern .view-menu__control--active {
+  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
+  color: #051125;
+  box-shadow: 0 24px 44px rgba(6, 11, 21, 0.78);
+}
+
+.view-menu--modern .view-menu__field {
+  color: #d7e4ff;
+}
+
+.view-menu--modern .view-menu__number,
+.view-menu--modern .view-menu__slider {
+  background: rgba(12, 18, 34, 0.85);
+  color: #e5f3ff;
+  border-color: rgba(96, 164, 255, 0.3);
+}
+
+.view-menu--modern .view-menu__field-suffix,
+.view-menu--modern .view-menu__note {
+  color: rgba(215, 228, 255, 0.7);
+}
+
+.view-menu--modern .view-menu__action {
+  border-color: rgba(96, 164, 255, 0.35);
+  background: rgba(24, 34, 58, 0.94);
+  color: #e5f3ff;
+  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.6);
+}
+
+.view-menu--modern .view-menu__action:hover {
+  box-shadow: 0 24px 40px rgba(6, 11, 21, 0.72);
+}
+
+.view-menu--modern .view-menu__action--active {
+  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
+  color: #051125;
+  box-shadow: 0 24px 44px rgba(6, 11, 21, 0.78);
+}
+
+.view-menu--modern .view-menu__swatch {
+  border-color: rgba(96, 164, 255, 0.35);
+  box-shadow: 0 12px 22px rgba(6, 11, 21, 0.65);
+}  
 </style>
