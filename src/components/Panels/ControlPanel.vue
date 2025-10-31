@@ -721,11 +721,6 @@ const handleHierarchicalDragMode = () => {
   canvasStore.toggleHierarchicalDragMode()
 
 }
-
-const handleToggleGuides = () => {
-  canvasStore.toggleGuides()
-
-}
 </script>
 
 <template>
@@ -798,15 +793,6 @@ const handleToggleGuides = () => {
         >
           ↷
         </button>   
-        <button
-          class="ui-btn"
-          :class="{ active: guidesEnabled }"
-          :aria-pressed="guidesEnabled"
-          title="Показать/скрыть направляющие"
-          @click="handleToggleGuides"
-        >
-          📐
-        </button>
       </div>
     </template>
     <div class="left-panel-controls__zoom">
