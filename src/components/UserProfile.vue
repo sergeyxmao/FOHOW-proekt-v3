@@ -570,35 +570,54 @@ function cancelCrop() {
 }
 
 async function confirmCrop() {
-  // ... (логика обрезки и загрузки)
-}
+  if (!cropper) return
 
-async function handleAvatarDelete() {
-  if (!confirm('Удалить аватар?')) return
+  uploadingAvatar.value = true
 
   try {
-    const response = await fetch(`${API_URL}/profile/avatar`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
+    // Получаем обрезанное изображение как Blob
+    const canvas = cropper.getCroppedCanvas({
+      width: 400,
+      height: 400,
+      imageSmoothingQuality: 'high'
     })
 
-    const data = await response.json()
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        throw new Error('Ошибка создания изображения')
+      }
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Ошибка удаления аватара')
-    }
+      const formData = new FormData()
+      formData.append('avatar', blob, 'avatar.jpg')
 
-    // Удаляем аватар
-    user.value.avatar_url = null
-    authStore.user.avatar_url = null
-    localStorage.setItem('user', JSON.stringify(authStore.user))
+      const response = await fetch(`${API_URL}/profile/avatar`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`
+        },
+        body: formData
+      })
 
-    success.value = 'Аватар удалён'
-    setTimeout(() => success.value = '', 3000)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка загрузки')
+      }
+
+      // Обновляем аватар
+      user.value.avatar_url = data.avatar_url
+      authStore.user.avatar_url = data.avatar_url
+      localStorage.setItem('user', JSON.stringify(authStore.user))
+
+      success.value = 'Аватар обновлён!'
+      setTimeout(() => success.value = '', 3000)
+
+      cancelCrop()
+    }, 'image/jpeg', 0.95)
   } catch (err) {
     error.value = err.message
+  } finally {
+    uploadingAvatar.value = false
   }
 }
 
