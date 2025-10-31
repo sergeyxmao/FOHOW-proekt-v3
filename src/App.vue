@@ -443,7 +443,7 @@ html,body{
 .zoom-indicator__value {
   margin-left: 6px;
   font-weight: 700;
-
+}
 /* Canvas/SVG */
 #canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
 </style>
