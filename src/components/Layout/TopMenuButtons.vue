@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import DiscussionMenu from './DiscussionMenu.vue'
 import ToolsMenu from './ToolsMenu.vue'
 import ViewMenu from './ViewMenu.vue'  
@@ -11,7 +11,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['activate-pencil'])
+const emit = defineEmits(['activate-pencil', 'toggle-theme'])
   
 const menuItems = [
   { id: 'project', label: 'Проект' },
@@ -23,12 +23,14 @@ const menuItems = [
 const openMenuId = ref(null)
 const menuWrapperRef = ref(null)
 const menuComponents = {
-  project: ProjectMenu,  
+  project: ProjectMenu,
   discussion: DiscussionMenu,
   tools: ToolsMenu,
   view: ViewMenu
 }
-
+const themeTitle = computed(() =>
+  props.isModernTheme ? 'Вернуть светлое меню' : 'Включить тёмное меню'
+)
 function getMenuComponent(id) {
   return menuComponents[id] || null
 }
@@ -44,7 +46,10 @@ function handleActivatePencil() {
   emit('activate-pencil')
   closeMenu()
 }
-
+function handleToggleTheme() {
+  emit('toggle-theme')
+  closeMenu()
+}
 function handleClickOutside(event) {
   if (!menuWrapperRef.value) return
   if (!menuWrapperRef.value.contains(event.target)) {
@@ -68,6 +73,14 @@ onBeforeUnmount(() => {
     :class="{ 'top-menu--modern': props.isModernTheme }"
     role="menubar"
   >
+    <button
+      class="top-menu__theme-button"
+      type="button"
+      :title="themeTitle"
+      @click.stop="handleToggleTheme"
+    >
+      {{ themeTitle }}
+    </button>    
     <div v-for="item in menuItems" :key="item.id" class="top-menu__item">
       <button
         type="button"
@@ -114,6 +127,37 @@ onBeforeUnmount(() => {
 
 .top-menu__item {
   position: relative;
+}
+.top-menu__theme-button {
+  padding: 10px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.16), rgba(59, 130, 246, 0));
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.16);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+  backdrop-filter: blur(6px);
+}
+
+.top-menu__theme-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.2);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.26), rgba(59, 130, 246, 0.08));
+}
+
+.top-menu--modern .top-menu__theme-button {
+  border-color: rgba(96, 164, 255, 0.38);
+  background: linear-gradient(145deg, rgba(114, 182, 255, 0.32), rgba(114, 182, 255, 0));
+  color: #e5f3ff;
+  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.55);
+}
+
+.top-menu--modern .top-menu__theme-button:hover {
+  box-shadow: 0 24px 42px rgba(6, 11, 21, 0.65);
+  background: linear-gradient(145deg, rgba(114, 182, 255, 0.46), rgba(114, 182, 255, 0.16));
 }
 
 .top-menu__button {
