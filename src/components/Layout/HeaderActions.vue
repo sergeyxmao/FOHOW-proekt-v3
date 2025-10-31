@@ -329,18 +329,18 @@ function handleToggleTheme() {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 6px 8px;
+  padding: 0;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
-  backdrop-filter: blur(6px);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .header-actions--modern {
-  background: rgba(28, 38, 58, 0.9);
-  border-color: rgba(96, 164, 255, 0.35);
-  box-shadow: 0 18px 32px rgba(6, 11, 21, 0.45);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .header-actions__licenses {
