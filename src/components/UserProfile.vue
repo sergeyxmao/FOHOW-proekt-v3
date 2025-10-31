@@ -227,10 +227,48 @@
       </div>
     </div>
   </div>
+
+  <transition name="fade">
+    <div
+      v-if="showAvatarCropper"
+      class="cropper-overlay"
+    >
+      <div class="cropper-modal">
+        <div class="cropper-header">
+          <h3>Обрезка аватара</h3>
+          <button type="button" class="cropper-close" @click="cancelAvatarCropper">×</button>
+        </div>
+        <div class="cropper-body">
+          <img
+            v-if="cropperImageUrl"
+            :src="cropperImageUrl"
+            ref="cropperImage"
+            alt="Предпросмотр аватара"
+            class="cropper-image"
+          >
+        </div>
+        <div class="cropper-footer">
+          <button type="button" class="btn-secondary" @click="cancelAvatarCropper">
+            Отмена
+          </button>
+          <button
+            type="button"
+            class="btn-primary"
+            :disabled="uploadingAvatar"
+            @click="confirmAvatarCropper"
+          >
+            {{ uploadingAvatar ? 'Загрузка...' : 'Сохранить' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </transition>  
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
+import Cropper from 'cropperjs'
+import 'cropperjs/dist/cropper.css'
 import { useAuthStore } from '@/stores/auth'
 const props = defineProps({
   isModernTheme: {
@@ -264,6 +302,12 @@ const deletePassword = ref('')
 const deleteError = ref('')
 const deleting = ref(false)
 const uploadingAvatar = ref(false)
+const showAvatarCropper = ref(false)
+const cropperImage = ref(null)
+const cropperInstance = ref(null)
+const cropperImageUrl = ref('')
+const originalAvatarType = ref('')
+const originalAvatarName = ref('')  
 const passwordVisibility = reactive({
   current: false,
   new: false,
@@ -486,9 +530,24 @@ function getInitials(name) {
   }
   return name.substring(0, 2).toUpperCase()
 }
+function resetAvatarCropper() {
+  if (cropperInstance.value) {
+    cropperInstance.value.destroy()
+    cropperInstance.value = null
+  }
+  if (cropperImageUrl.value) {
+    URL.revokeObjectURL(cropperImageUrl.value)
+    cropperImageUrl.value = ''
+  }
+  originalAvatarType.value = ''
+  originalAvatarName.value = ''
+}
 
 async function handleAvatarUpload(event) {
   const file = event.target.files?.[0]
+  if (event.target) {
+    event.target.value = ''
+  }  
   if (!file) return
 
   // Проверка размера (5MB)
@@ -503,9 +562,81 @@ async function handleAvatarUpload(event) {
     return
   }
 
-  uploadingAvatar.value = true
   error.value = ''
+  resetAvatarCropper() 
+  cropperImageUrl.value = URL.createObjectURL(file)
+  originalAvatarType.value = file.type
+  originalAvatarName.value = file.name || 'avatar.jpg'
+  showAvatarCropper.value = true
 
+  await nextTick()
+
+  if (cropperInstance.value) {
+    cropperInstance.value.destroy()
+  }
+
+  if (cropperImage.value) {
+    cropperInstance.value = new Cropper(cropperImage.value, {
+      aspectRatio: 1,
+      viewMode: 1,
+      dragMode: 'move',
+      autoCropArea: 1,
+      responsive: true,
+      background: false
+    })
+  }
+}
+
+async function getCroppedAvatarBlob() {
+  if (!cropperInstance.value) {
+    throw new Error('Не удалось инициализировать обрезку изображения')
+  }
+
+  const canvas = cropperInstance.value.getCroppedCanvas({
+    width: 512,
+    height: 512,
+    imageSmoothingEnabled: true,
+    imageSmoothingQuality: 'high'
+  })
+
+  if (!canvas) {
+    throw new Error('Не удалось обработать изображение')
+  }
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error('Не удалось получить изображение'))
+      } else {
+        resolve(blob)
+      }
+    }, originalAvatarType.value || 'image/jpeg')
+  })
+}
+
+async function confirmAvatarCropper() {
+  try {
+    uploadingAvatar.value = true
+    const blob = await getCroppedAvatarBlob()
+    const croppedFile = new File([blob], originalAvatarName.value, {
+      type: blob.type || originalAvatarType.value || 'image/jpeg'
+    })
+    await uploadAvatarFile(croppedFile)
+    showAvatarCropper.value = false
+    resetAvatarCropper()
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    uploadingAvatar.value = false
+  }
+}
+
+function cancelAvatarCropper() {
+  showAvatarCropper.value = false
+  resetAvatarCropper()
+}
+
+async function uploadAvatarFile(file) {
   try {
     const formData = new FormData()
     formData.append('file', file)
@@ -532,9 +663,7 @@ async function handleAvatarUpload(event) {
     success.value = 'Аватар успешно загружен!'
     setTimeout(() => success.value = '', 3000)
   } catch (err) {
-    error.value = err.message
-  } finally {
-    uploadingAvatar.value = false
+    throw err
   }
 }
 
@@ -570,6 +699,10 @@ async function handleAvatarDelete() {
 onMounted(() => {
   loadProfile()
 })
+
+onBeforeUnmount(() => {
+  resetAvatarCropper()
+})  
 </script>
 
 <style scoped>
@@ -639,6 +772,102 @@ onMounted(() => {
   --profile-secondary-text: #e2e8f0;
   --profile-close-color: rgba(226, 232, 240, 0.6);
   --profile-close-color-hover: #e2e8f0;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.cropper-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--profile-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.cropper-modal {
+  background: var(--profile-modal-bg);
+  color: var(--profile-text);
+  padding: 24px;
+  border-radius: 20px;
+  width: min(520px, 100%);
+  box-shadow: var(--profile-modal-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cropper-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cropper-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.cropper-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--profile-close-color);
+  transition: color 0.2s ease;
+}
+
+.cropper-close:hover {
+  color: var(--profile-close-color-hover);
+}
+
+.cropper-body {
+  position: relative;
+  width: 100%;
+  max-height: 420px;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--profile-control-bg);
+}
+
+.cropper-image {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+}
+
+.cropper-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .cropper-modal {
+    padding: 20px;
+    gap: 12px;
+  }
+
+  .cropper-header h3 {
+    font-size: 18px;
+  }
+
+  .cropper-body {
+    max-height: 320px;
+  }
 }
 
 .profile-header {
