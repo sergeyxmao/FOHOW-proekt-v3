@@ -34,6 +34,9 @@ const emit = defineEmits(['open-board', 'save-board', 'toggle-theme'])
 const themeTitle = computed(() =>
   props.isModernTheme ? 'Вернуть светлое меню' : 'Включить тёмное меню'
 )
+
+function getAvatarUrl(url) {
+  if (!url) return ''  
   return `${API_URL.replace('/api', '')}${url}`
 }
 
@@ -43,7 +46,7 @@ function getInitials(name) {
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase()
   }
-} 
+  
   return name.substring(0, 2).toUpperCase()
 }
 
