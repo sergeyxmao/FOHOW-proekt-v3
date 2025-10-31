@@ -267,15 +267,15 @@ function getCanvasState() {
 function startAutoSave() {
   // Останавливаем предыдущий интервал, если был
   stopAutoSave()
-  
-  // Автосохранение каждые 30 секунд
+
+  // Автосохранение каждые 10 мину
   autoSaveInterval = setInterval(() => {
     if (boardStore.currentBoardId && authStore.isAuthenticated) {
       saveCurrentBoard()
     }
-  }, 30000) // 30 секунд
-  
-  console.log('🔄 Автосохранение запущено (каждые 30 сек)')
+  }, 600000) // 10 минут
+
+  console.log('🔄 Автосохранение запущено (каждые 10 минут)')
 }
 
 function stopAutoSave() {
@@ -315,6 +315,7 @@ onBeforeUnmount(() => {
       v-show="!isPencilMode && !showResetPassword"
       :is-modern-theme="isModernTheme"
       @open-board="openBoard"
+      @save-board="saveCurrentBoard"    
     />
 
     <!-- Левая панель -->
