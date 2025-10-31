@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import DiscussionMenu from './DiscussionMenu.vue'
 import ToolsMenu from './ToolsMenu.vue'
+import ProjectMenu from './ProjectMenu.vue'
 
 const emit = defineEmits(['activate-pencil'])
   
@@ -15,6 +16,7 @@ const menuItems = [
 const openMenuId = ref(null)
 const menuWrapperRef = ref(null)
 const menuComponents = {
+  project: ProjectMenu,  
   discussion: DiscussionMenu,
   tools: ToolsMenu
 }
