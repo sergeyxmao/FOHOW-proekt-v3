@@ -255,6 +255,7 @@ onBeforeUnmount(() => {
   --header-input-border: rgba(15, 23, 42, 0.15);
   position: fixed;
   top: 12px;
+  left: 50%;  
   display: flex;
   align-items: center;
   padding: 12px 18px;
@@ -266,6 +267,8 @@ onBeforeUnmount(() => {
   font-size: 16px;
   line-height: 1.3;
   color: var(--header-text);
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);  
 }
 
 .app-header--modern {
