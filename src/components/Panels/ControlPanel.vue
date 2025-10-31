@@ -768,15 +768,6 @@ const handleToggleGuides = () => {
             ↷
           </button>
         </div>     
-        <button
-          class="ui-btn left-panel-controls__pencil"
-          type="button"
-          title="Режим карандаша"
-          @pointerdown.stop
-          @click.stop="emit('activate-pencil')"
-        >
-          <span aria-hidden="true">✏️</span>
-        </button>
       </div>
     </template>
     <template v-else>
@@ -814,39 +805,12 @@ const handleToggleGuides = () => {
         <button class="ui-btn" title="Загрузить проект из JSON" @click="handleLoadProject">📂</button>      
         <button
           class="ui-btn"
-          :class="{ active: isSelectionMode }"
-          :aria-pressed="isSelectionMode"
-          title="Режим выделения (Esc)"
-          @click="handleSelectionMode"
-        >
-          ⬚
-        </button>
-        <button
-          class="ui-btn"
-          :class="{ active: isHierarchicalDragMode }"
-          :aria-pressed="isHierarchicalDragMode"
-          title="Режим иерархии"
-          @click="handleHierarchicalDragMode"
-        >
-          🌳
-        </button>
-        <button
-          class="ui-btn"
           :class="{ active: guidesEnabled }"
           :aria-pressed="guidesEnabled"
           title="Показать/скрыть направляющие"
           @click="handleToggleGuides"
         >
           📐
-        </button>
-        <button
-          class="ui-btn left-panel-controls__pencil"
-          type="button"
-          title="Режим карандаша"
-          @pointerdown.stop
-          @click.stop="emit('activate-pencil')"
-        >
-          <span aria-hidden="true">✏️</span>
         </button>
       </div>
     </template>
@@ -1038,61 +1002,6 @@ const handleToggleGuides = () => {
   box-shadow: 0 30px 48px rgba(17, 203, 255, 0.32);
 }
   
-.left-panel-controls__pencil {
-  position: relative;
-  overflow: hidden;
-  width: var(--left-panel-btn-size);
-  font-size: calc(var(--left-panel-btn-font) * 0.75);
-  border: none;
-  box-shadow: none;
-  background: transparent;
-  transform: none;
-}
-
-.left-panel-controls__pencil span {
-  position: relative;
-  z-index: 1;
-}
-
-.left-panel-controls__pencil:hover {
-  transform: none;
-}
-
-.left-panel-controls__pencil::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--left-panel-btn-radius);
-  background: var(--left-panel-btn-bg);
-  border: 1px solid var(--left-panel-btn-border);
-  box-shadow: var(--left-panel-btn-shadow);
-  pointer-events: none;
-  transition: transform .2s ease, box-shadow .2s ease;
-}
-
-.left-panel-controls__pencil:hover::before {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.22);
-}
-
-.left-panel-controls--modern .left-panel-controls__pencil::before {
-  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.45);
-}
-
-.left-panel-controls--modern .left-panel-controls__pencil:hover::before {
-  box-shadow: 0 32px 52px rgba(8, 12, 22, 0.58);  
-}
-.left-panel-controls--collapsed .left-panel-controls__pencil {
-  width: var(--left-panel-btn-size);
-}
-
-.left-panel-controls--modern .left-panel-controls__pencil {
-  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.52);
-}
-.left-panel-controls--modern.left-panel-controls--collapsed .left-panel-controls__pencil {
-  width: calc(var(--left-panel-btn-size) * 0.6);
-}
-
 .left-panel-controls--collapsed .ui-btn {
   box-shadow: 0 10px 18px rgba(15, 23, 42, 0.18);
 }
