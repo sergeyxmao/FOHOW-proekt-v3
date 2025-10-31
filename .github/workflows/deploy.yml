@@ -29,17 +29,15 @@ jobs:
           version: 8
           
       - name: Install dependencies
-        working-directory: ./web
         run: pnpm install
         
       - name: Build
-        working-directory: ./web
         run: pnpm run build
         
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./web/dist
+          path: dist
           
   deploy:
     needs: build
