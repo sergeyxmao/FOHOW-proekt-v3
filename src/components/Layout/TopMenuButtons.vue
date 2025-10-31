@@ -1,5 +1,6 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import DiscussionMenu from './DiscussionMenu.vue'
 
 const menuItems = [
   { id: 'project', label: 'Проект' },
@@ -10,6 +11,13 @@ const menuItems = [
 
 const openMenuId = ref(null)
 const menuWrapperRef = ref(null)
+const menuComponents = {
+  discussion: DiscussionMenu
+}
+
+function getMenuComponent(id) {
+  return menuComponents[id] || null
+}
 
 function toggleMenu(id) {
   openMenuId.value = openMenuId.value === id ? null : id
@@ -53,7 +61,13 @@ onBeforeUnmount(() => {
           class="top-menu__dropdown"
           role="menu"
           aria-hidden="false"
-        />
+        >
+          <component
+            :is="getMenuComponent(item.id)"
+            v-if="getMenuComponent(item.id)"
+            @request-close="closeMenu"
+          />
+        </div>
       </transition>
     </div>
   </div>
