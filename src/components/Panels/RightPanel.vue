@@ -3,9 +3,8 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 
 import { useCardsStore } from '../../stores/cards'
-import { useCanvasStore } from '../../stores/canvas'
 import { useConnectionsStore } from '../../stores/connections'
-import { HEADER_COLORS, getHeaderColorRgb } from '../../utils/constants'
+import { useViewSettingsStore } from '../../stores/viewSettings'
 
 const props = defineProps({
   isModernTheme: {
@@ -24,50 +23,18 @@ let resizeFrameId = null
   
 // Stores
 const cardsStore = useCardsStore()
-const canvasStore = useCanvasStore()
 const connectionsStore = useConnectionsStore()
-const { gridStep, isGridBackgroundVisible } = storeToRefs(canvasStore)
-
-// Константы линий
-const MIN_ANIMATION_SECONDS = 2
-const MAX_ANIMATION_SECONDS = 999
-
-const defaultLineColor = connectionsStore.defaultLineColor || '#0f62fe'
-const defaultLineThickness = connectionsStore.defaultLineThickness || 5
-const defaultAnimationSeconds = Math.min(
-  Math.max(Math.round((connectionsStore.defaultAnimationDuration || (MIN_ANIMATION_SECONDS * 1000)) / 1000), MIN_ANIMATION_SECONDS),
-  MAX_ANIMATION_SECONDS
-)
-
-function clampAnimationSeconds(value) {
-  if (Number.isNaN(value)) {
-    return MIN_ANIMATION_SECONDS
-  }
-
-  return Math.min(Math.max(value, MIN_ANIMATION_SECONDS), MAX_ANIMATION_SECONDS)
-}
+const viewSettingsStore = useViewSettingsStore()
+const {
+  lineColor,
+  lineThickness,
+  animationSeconds,
+  headerColor,
+  headerColorIndex,
+  backgroundGradient
+} = storeToRefs(viewSettingsStore)
 // Базовая реактивность
 const isCollapsed = ref(false)
-
-// Управление линиями
-const lineColor = ref(defaultLineColor)
-const thickness = ref(defaultLineThickness)
-const isGlobalLineMode = ref(false) // применить ко всем линиям
-
-// Управление анимацией
-const animationDuration = ref(defaultAnimationSeconds) // в секундах
-
-// Управление цветом заголовка
-const headerColor = ref('#5D8BF4')
-const headerColorIndex = ref(0)
-
-// Управление фоном
-const backgroundGradient = ref('#b9c4da')
-
-// Ссылки на DOM элементы
-const hiddenLineColorPicker = ref(null)
-const hiddenHeaderColorPicker = ref(null)
-const hiddenBackgroundPicker = ref(null)
 
 // Шаблоны для вставки
 const templateMenuRef = ref(null)
@@ -197,127 +164,11 @@ function schedulePanelScaleUpdate() {
     }	  
   })
 }
-
-const GRID_STEP_MIN = 5
-const GRID_STEP_MAX = 200
-const gridStepModel = computed({
-  get() {
-    return gridStep.value
-  },
-  set(value) {
-    const numericValue = Number(value)
-    if (!Number.isFinite(numericValue)) {
-      return
-    }
-
-    const clampedValue = Math.min(Math.max(Math.round(numericValue), GRID_STEP_MIN), GRID_STEP_MAX)
-    canvasStore.setGridStep(clampedValue)
-  }
-})
-
-function toggleGridBackgroundVisibility() {
-  canvasStore.toggleGridBackground()
-}  
+ 
 // Методы для управления панелью
 function togglePanel() {
   isCollapsed.value = !isCollapsed.value
 }
-
-// Управление линиями
-function updateLineColor(color) {
-  lineColor.value = color
-  
-  if (isGlobalLineMode.value) {
-    // Применяем ко всем линиям
-    connectionsStore.updateAllConnectionsColor(color)
-  } else {
-    // Применяем только к выделенным линиям (если есть)
-    // TODO: Добавить логику для выделенных линий
-  }
-}
-
-function updateThickness(value) {
-  const numericValue = Math.min(Math.max(Number(value), 1), 20)
-  thickness.value = numericValue
-  
-  if (isGlobalLineMode.value) {
-    // Применяем ко всем линиям
-    connectionsStore.updateAllConnectionsThickness(thickness.value)
-  } else {
-    // Применяем только к выделенным линиям (если есть)
-    // TODO: Добавить логику для выделенных линий
-  }
-}
-
-function toggleGlobalLineMode() {
-  isGlobalLineMode.value = !isGlobalLineMode.value
-}
-
-function updateSliderTrack(val) {
-  const min = 1
-  const max = 20
-  const clampedValue = Math.min(Math.max(val, min), max)
-  const percent = ((clampedValue - min) / (max - min)) * 100
-  return `linear-gradient(to right, ${lineColor.value} 0%, ${lineColor.value} ${percent}%, #e5e7eb ${percent}%, #e5e7eb 100%)`
-}
-
-// Управление анимацией
-function updateAnimationDuration(value) {
-  const seconds = clampAnimationSeconds(Number(value))
-  const durationMs = seconds * 1000
-
-  animationDuration.value = seconds
-
-  if (isGlobalLineMode.value) {
-    connectionsStore.updateAllConnections({ animationDuration: durationMs })
-  }
-  
-    connectionsStore.setDefaultConnectionParameters(lineColor.value, thickness.value, durationMs)
-}
-
-// Управление цветом заголовка
-function updateHeaderColor(color) {
-  headerColor.value = color
-  
-  // Находим индекс цвета в палитре
-  const colorIndex = HEADER_COLORS.findIndex(c => c.rgb === color)
-  if (colorIndex !== -1) {
-    headerColorIndex.value = colorIndex
-  } else {
-    headerColorIndex.value = -1 // Пользовательский цвет
-  }
-  
-  // Применяем к выделенным карточкам
-  const selectedCards = cardsStore.selectedCards
-  if (selectedCards.length > 0) {
-    const cardIds = selectedCards.map(card => card.id)
-    cardsStore.updateCardHeaderColor(cardIds, headerColorIndex.value, headerColor.value)
-  }
-}
-
-function cycleHeaderColor() {
-  // Вычисляем следующий индекс цвета
-  const nextIndex = headerColorIndex.value >= 0 
-    ? (headerColorIndex.value + 1) % HEADER_COLORS.length 
-    : 0
-  
-  headerColorIndex.value = nextIndex
-  headerColor.value = getHeaderColorRgb(nextIndex)
-  
-  // Применяем к выделенным карточкам
-  const selectedCards = cardsStore.selectedCards
-  if (selectedCards.length > 0) {
-    const cardIds = selectedCards.map(card => card.id)
-    cardsStore.updateCardHeaderColor(cardIds, nextIndex)
-  }
-}
-
-// Управление фоном
-function updateBackground(gradient) {
-  backgroundGradient.value = gradient
-  canvasStore.setBackgroundGradient(gradient)
-}
-
 // Добавление карточек
 function addCard() {
   // Эта функция вызывается кнопкой "Добавить лицензию" (маленькую)
@@ -440,12 +291,12 @@ function insertTemplate(templateData) {
       ? lineDef.thickness
       : Number.isFinite(lineDef.lineWidth)
         ? lineDef.lineWidth
-        : thickness.value
+        : lineThickness.value
 		const animationMs = Number.isFinite(lineDef.animationDurationMs)
       ? lineDef.animationDurationMs
       : Number.isFinite(lineDef.animationDuration)
         ? lineDef.animationDuration
-        : animationDuration.value * 1000
+        : animationSeconds.value * 1000
     
     connectionsStore.addConnection(startCard.id, endCard.id, {
       color: lineDef.color || lineDef.stroke || lineColor.value,
@@ -505,49 +356,16 @@ function handleDocumentClick(event) {
   }
 }
 
-// Обработчики событий для DOM элементов
-function handleLineColorChange(e) {
-  updateLineColor(e.target.value)
-}
-
-function handleHeaderColorChange(e) {
-  updateHeaderColor(e.target.value)
-}
-
-function handleBackgroundChange(e) {
-  updateBackground(e.target.value)
-}
-
-function openLineColorPicker() {
-  hiddenLineColorPicker.value?.click()
-}
-
-function openHeaderColorPicker() {
-  hiddenHeaderColorPicker.value?.click()
-}
-
-function openBackgroundPicker() {
-  hiddenBackgroundPicker.value?.click()
-}
-
-// Вычисляемые свойства
-const sliderTrackStyle = computed(() => {
-  return updateSliderTrack(thickness.value)
-})
-
 // Инициализация
 onMounted(() => {
-  // Устанавливаем начальные значения
-  updateLineColor(lineColor.value)
-  updateHeaderColor(headerColor.value)
-  updateBackground(backgroundGradient.value)
+  viewSettingsStore.setBackground(backgroundGradient.value)
   
   // Устанавливаем параметры по умолчанию для новых соединений
   connectionsStore.setDefaultConnectionParameters(
     lineColor.value,
-    thickness.value,
-    animationDuration.value * 1000
-  )  
+    lineThickness.value,
+    animationSeconds.value * 1000
+  )
   console.log('RightPanel mounted successfully');
 
   document.addEventListener('click', handleDocumentClick)
@@ -578,7 +396,7 @@ onBeforeUnmount(() => {
 })
 
 // Следим за изменениями параметров линий и обновляем значения по умолчанию
-watch([lineColor, thickness, animationDuration], ([newColor, newThickness, newDuration]) => {
+watch([lineColor, lineThickness, animationSeconds], ([newColor, newThickness, newDuration]) => {
   connectionsStore.setDefaultConnectionParameters(newColor, newThickness, newDuration * 1000)
 })
 
@@ -636,182 +454,6 @@ watch(panelCardRef, (current, previous) => {
         ref="panelCardRef"
         class="right-control-panel__card"
       >
-		  <div class="right-control-panel__top">
-          <button
-            class="line-color-button"
-            type="button"
-            :style="{ backgroundColor: lineColor }"
-            title="Выбрать цвет линии"
-            @click="openLineColorPicker"
-          ></button>
-          <button
-            class="global-mode-button"
-            type="button"
-            :class="{ active: isGlobalLineMode }"
-            title="Применить ко всем линиям"
-            @click="toggleGlobalLineMode"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-            </svg>
-          </button>
-        </div>
-
-        <input
-          ref="hiddenLineColorPicker"
-          type="color"
-          :value="lineColor"
-          style="display: none"
-          @input="handleLineColorChange"
-        >
-
-        <div class="control-section">
-          <div class="control-section__header">
-            <span class="control-section__title" id="thickness-slider-label">Толщина линии</span>
-            <span class="control-section__value">{{ thickness }}px</span>
-          </div>
-          <div class="control-section__slider">
-            <input
-              id="thickness-slider"
-              class="thickness-slider"
-              type="range"
-              min="1"
-              max="20"
-              step="1"
-              :value="thickness"
-              :style="{ background: sliderTrackStyle }"
-              aria-labelledby="thickness-slider-label"
-              @input="updateThickness($event.target.value)"
-            />
-          </div>
-        </div>
-
-        <div class="control-section">
-          <span class="control-section__title">Анимация</span>
-          <div class="animation-row" aria-label="Настройки анимации">
-            <label class="animation-input" for="animation-duration-input">
-              <input
-                id="animation-duration-input"
-                class="animation-duration-input"
-                type="number"
-                min="2"
-                max="999"
-                step="1"
-                :value="animationDuration"
-                title="Продолжительность анимации в секундах"
-                inputmode="numeric"
-                maxlength="3"
-                @input="updateAnimationDuration($event.target.value)"
-              />
-              <span class="animation-unit">сек</span>
-            </label>
-            <button
-              class="animation-infinity-btn"
-              type="button"
-              title="Бесконечная анимация"
-              aria-label="Бесконечная анимация"
-            >
-              ∞
-            </button>
-          </div>
-        </div>
-
-        <div class="control-section control-section--accent">
-          <span class="control-section__title control-section__title--accent">Заголовок</span>
-          <div class="control-section__actions">
-            <button
-              class="header-color-button"
-              type="button"
-              :style="{ backgroundColor: headerColor }"
-               title="Выбрать цвет заголовка"
-             
-              @click="openHeaderColorPicker"
-            ></button>
-            <button
-              class="header-cycle-button"
-              type="button"
-              title="Сменить цвет заголовка"
-              @click="cycleHeaderColor"
-            >
-              ⟳
-            </button>
-          </div>
-          <input
-            ref="hiddenHeaderColorPicker"
-            type="color"
-            :value="headerColor"
-            style="display: none"
-            @input="handleHeaderColorChange"
-          >
-        </div>
-
-        <div class="control-section control-section--accent">
-          <span class="control-section__title control-section__title--accent">Фон</span>
-          <div class="background-row">
-            <button
-              class="background-button"
-              type="button"
-              :style="{ backgroundColor: '#f5f7fb' }"
-              title="Светлый фон"          
-              @click="updateBackground('#f5f7fb')"
-            ></button>
-
-            <button
-              class="background-button background-button--icon"
-              type="button"
-              title="Выбрать цвет"
-              @click="openBackgroundPicker"
-            >🎨</button>
-          </div>
-          <input 
-            ref="hiddenBackgroundPicker"
-            type="color"
-            :value="backgroundGradient"
-            style="display: none"
-            @input="handleBackgroundChange"
-          >
-        </div>
-        <div class="control-section">
-          <span class="control-section__title">Сетка</span>
-          <div class="grid-settings" aria-label="Настройки сетки">
-            <label class="grid-settings__field" for="grid-step-input">
-              <span class="grid-settings__label">Шаг</span>
-              <input
-                id="grid-step-input"
-                class="grid-settings__input"
-                type="number"
-                min="5"
-                :max="GRID_STEP_MAX"
-                step="1"
-                v-model.number="gridStepModel"
-              >
-              <span class="grid-settings__unit">px</span>
-            </label>
-
-            <button
-              class="grid-settings__toggle"
-              type="button"
-              :class="{ active: isGridBackgroundVisible }"
-              :aria-pressed="isGridBackgroundVisible"
-              title="Показать или скрыть фон сетки"
-              @click="toggleGridBackgroundVisibility"
-            >
-              ▦
-            </button>
-          </div>
-        </div>
-
         <div class="control-section control-section--footer">
           <button class="add-card-btn" type="button" title="Добавить лицензию" @click="addCard">□</button>
           <button class="add-card-btn add-card-btn--large" type="button" title="Добавить большую лицензию" @click="addLargeCard">⧠</button>
