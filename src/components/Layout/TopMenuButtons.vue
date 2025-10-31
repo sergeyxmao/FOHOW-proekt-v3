@@ -4,6 +4,12 @@ import DiscussionMenu from './DiscussionMenu.vue'
 import ToolsMenu from './ToolsMenu.vue'
 import ViewMenu from './ViewMenu.vue'  
 import ProjectMenu from './ProjectMenu.vue'
+const props = defineProps({
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  }
+})
 
 const emit = defineEmits(['activate-pencil'])
   
@@ -56,7 +62,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="menuWrapperRef" class="top-menu" role="menubar">
+  <div
+    ref="menuWrapperRef"
+    class="top-menu"
+    :class="{ 'top-menu--modern': props.isModernTheme }"
+    role="menubar"
+  >
     <div v-for="item in menuItems" :key="item.id" class="top-menu__item">
       <button
         type="button"
@@ -77,8 +88,9 @@ onBeforeUnmount(() => {
           <component
             :is="getMenuComponent(item.id)"
             v-if="getMenuComponent(item.id)"
+            :is-modern-theme="props.isModernTheme"            
             @request-close="closeMenu"
-            @activate-pencil="handleActivatePencil"            
+            @activate-pencil="handleActivatePencil"
           />
         </div>
       </transition>
@@ -90,15 +102,14 @@ onBeforeUnmount(() => {
 .top-menu {
   position: fixed;
   top: 16px;
-  left: 50%;
+  left: 24px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;  
+  justify-content: flex-start;
+  flex-wrap: wrap;
   gap: 12px;
   z-index: 1950;
-  transform: translateX(-50%);
-  max-width: calc(100% - 32px);  
+  max-width: calc(100% - 48px);
 }
 
 .top-menu__item {
@@ -130,7 +141,23 @@ onBeforeUnmount(() => {
   color: #ffffff;
   box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
 }
+.top-menu--modern .top-menu__button {
+  border-color: rgba(96, 164, 255, 0.32);
+  background: rgba(28, 38, 62, 0.88);
+  color: #e5f3ff;
+  box-shadow: 0 12px 28px rgba(6, 11, 21, 0.45);
+}
 
+.top-menu--modern .top-menu__button:hover {
+  background: rgba(48, 68, 102, 0.92);
+  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.55);
+}
+
+.top-menu--modern .top-menu__button--active {
+  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
+  color: #0b1324;
+  box-shadow: 0 16px 36px rgba(16, 68, 140, 0.5);
+}
 .top-menu__dropdown {
   position: absolute;
   top: calc(100% + 10px);
@@ -142,6 +169,11 @@ onBeforeUnmount(() => {
   box-shadow: 0 18px 32px rgba(15, 23, 42, 0.16);
   border: 1px solid rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(6px);
+}
+.top-menu--modern .top-menu__dropdown {
+  background: rgba(20, 30, 52, 0.96);
+  border-color: rgba(96, 164, 255, 0.35);
+  box-shadow: 0 22px 38px rgba(6, 11, 21, 0.6);
 }
 
 .top-menu-fade-enter-active,
