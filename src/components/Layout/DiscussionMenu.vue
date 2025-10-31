@@ -5,7 +5,12 @@ import { useNotesStore } from '../../stores/notes.js'
 import { useCardsStore } from '../../stores/cards.js'
 import { useBoardCommentsStore } from '../Panels/boardComments.js'
 import BoardComments from '../Panels/BoardComments.vue'
-
+const props = defineProps({
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  }
+})
 const emit = defineEmits(['request-close'])
 
 const notesStore = useNotesStore()
@@ -79,7 +84,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="discussion-menu">
+  <div
+    class="discussion-menu"
+    :class="{ 'discussion-menu--modern': props.isModernTheme }"
+  >
     <div class="discussion-menu__title">Обсуждение</div>
 
     <div class="discussion-menu__item">
@@ -383,6 +391,80 @@ onBeforeUnmount(() => {
 .discussion-menu__icon-button--danger:hover {
   background: rgba(248, 113, 113, 0.16);
   color: #b91c1c;
+}
+.discussion-menu--modern .discussion-menu__title {
+  color: #e5f3ff;
+}
+
+.discussion-menu--modern .discussion-menu__icon {
+  background: rgba(114, 182, 255, 0.18);
+  color: #e5f3ff;
+}
+
+.discussion-menu--modern .discussion-menu__action {
+  border-color: rgba(96, 164, 255, 0.35);
+  background: rgba(24, 34, 58, 0.94);
+  color: #e5f3ff;
+  box-shadow: 0 18px 32px rgba(6, 11, 21, 0.58);
+}
+
+.discussion-menu--modern .discussion-menu__action:not(:disabled):hover {
+  background: rgba(96, 164, 255, 0.22);
+  color: #0b1324;
+  box-shadow: 0 24px 40px rgba(6, 11, 21, 0.7);
+}
+
+.discussion-menu--modern .discussion-menu__action--active {
+  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
+  color: #051125;
+  box-shadow: 0 26px 44px rgba(6, 11, 21, 0.78);
+}
+
+.discussion-menu--modern .discussion-menu__badge {
+  background: #73c8ff;
+  box-shadow: 0 0 0 3px rgba(114, 182, 255, 0.3);
+}
+
+.discussion-menu--modern .discussion-menu__panel {
+  border-color: rgba(96, 164, 255, 0.35);
+  background: rgba(18, 28, 48, 0.94);
+  box-shadow: 0 24px 42px rgba(6, 11, 21, 0.72);
+}
+
+.discussion-menu--modern .discussion-menu__group + .discussion-menu__group {
+  border-color: rgba(96, 164, 255, 0.28);
+}
+
+.discussion-menu--modern .discussion-menu__card-button,
+.discussion-menu--modern .discussion-menu__entry-button {
+  border-color: rgba(96, 164, 255, 0.35);
+  background: rgba(24, 34, 58, 0.92);
+  color: #e5f3ff;
+  box-shadow: 0 16px 30px rgba(6, 11, 21, 0.6);
+}
+
+.discussion-menu--modern .discussion-menu__card-button:hover,
+.discussion-menu--modern .discussion-menu__entry-button:hover {
+  background: rgba(96, 164, 255, 0.22);
+  color: #0b1324;
+  box-shadow: 0 24px 40px rgba(6, 11, 21, 0.72);
+}
+
+.discussion-menu--modern .discussion-menu__entry-color {
+  box-shadow: inset 0 1px 1px rgba(6, 11, 21, 0.4);
+}
+
+.discussion-menu--modern .discussion-menu__icon-button {
+  border-color: rgba(96, 164, 255, 0.35);
+  background: rgba(24, 34, 58, 0.92);
+  color: #e5f3ff;
+  box-shadow: 0 16px 30px rgba(6, 11, 21, 0.6);
+}
+
+.discussion-menu--modern .discussion-menu__icon-button:hover {
+  background: rgba(96, 164, 255, 0.24);
+  color: #0b1324;
+  box-shadow: 0 24px 40px rgba(6, 11, 21, 0.74);
 }
 
 .discussion-menu-panel-enter-active,
