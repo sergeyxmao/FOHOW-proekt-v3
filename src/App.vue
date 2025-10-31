@@ -19,7 +19,9 @@ const boardStore = useBoardStore()
 const cardsStore = useCardsStore() // Assuming initialization
 const connectionsStore = useConnectionsStore() // Assuming initialization
 const viewportStore = useViewportStore()
-
+const { isAuthenticated } = storeToRefs(authStore)
+const { isSaving } = storeToRefs(boardStore)
+  
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)  
 
@@ -313,31 +315,35 @@ onBeforeUnmount(() => {
   <div id="app">
     <TopMenuButtons
       v-show="!isPencilMode && !showResetPassword"
-      :is-modern-theme="isModernTheme"      
+      :is-modern-theme="isModernTheme"
+      @toggle-theme="toggleTheme"
       @activate-pencil="handleActivatePencil"
     />
     <AppHeader
       v-show="!isPencilMode && !showResetPassword"
       :is-modern-theme="isModernTheme"
+      :zoom-display="zoomDisplay"      
       @open-board="openBoard"
       @save-board="saveCurrentBoard"
       @toggle-theme="toggleTheme"
+      @fit-to-content="handleFitToContent"     
     />
 
     <div
       id="canvas"
       :class="{ 'canvas--inactive': isPencilMode || showResetPassword }"
     >
-      <CanvasBoard ref="canvasRef" />
+      <CanvasBoard ref="canvasRef" :is-modern-theme="isModernTheme" />
     </div>
-    <button
+      v-if="isAuthenticated"
       v-show="!isPencilMode && !showResetPassword"
-      class="zoom-indicator"
+      class="save-floating-button"
+      :class="{ 'save-floating-button--modern': isModernTheme }"
       type="button"
-      title="Автоподгонка масштаба"
-      @click="handleFitToContent"
+      :disabled="isSaving"
+      @click="saveCurrentBoard"
     >
-      Масштаб: <span class="zoom-indicator__value">{{ zoomDisplay }}</span>
+      💾 Сохранить
     </button>
 
     <PencilOverlay
@@ -418,32 +424,46 @@ html,body{
   overflow-y: auto;
 }
 
-.zoom-indicator {
+.save-floating-button {
   position: fixed;
   right: 24px;
   bottom: 24px;
   z-index: 1800;
-  padding: 12px 18px;
+  padding: 12px 22px;
   border-radius: 18px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
-  backdrop-filter: blur(6px);
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.16), rgba(33, 150, 243, 0));
   color: #0f172a;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.zoom-indicator:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.2);
-}
-
-.zoom-indicator__value {
-  margin-left: 6px;
+  font-size: 15px;
   font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+  backdrop-filter: blur(6px);
+}
+
+.save-floating-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 36px rgba(15, 23, 42, 0.24);
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.28), rgba(33, 150, 243, 0.08));
+}
+
+.save-floating-button:disabled {
+  cursor: default;
+  opacity: 0.7;
+  box-shadow: none;
+}
+
+.save-floating-button--modern {
+  border-color: rgba(96, 164, 255, 0.38);
+  background: linear-gradient(145deg, rgba(72, 126, 255, 0.28), rgba(72, 126, 255, 0));
+  color: #e5f3ff;
+  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.55);
+}
+
+.save-floating-button--modern:hover:not(:disabled) {
+  box-shadow: 0 24px 42px rgba(6, 11, 21, 0.65);
+  background: linear-gradient(145deg, rgba(114, 182, 255, 0.42), rgba(72, 126, 255, 0.18));
 }
 /* Canvas/SVG */
 #canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
