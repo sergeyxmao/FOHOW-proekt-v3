@@ -122,6 +122,16 @@ onBeforeUnmount(() => {
     ]"
   >
     <div class="app-header__inner">
+      <div v-if="isAuthenticated" class="app-header__save-block">
+        <button
+          class="app-header__save-button"
+          type="button"
+          :disabled="isSaving"
+          @click="handleSaveClick"
+        >
+          💾 Сохранить
+        </button>
+      </div>      
       <div class="app-header__user-block">
         <div class="app-header__auth">
           <template v-if="isAuthenticated">
@@ -152,17 +162,7 @@ onBeforeUnmount(() => {
                 class="user-menu"
               >
               <div class="user-menu__section user-menu__section--project">
-                <div class="user-menu__project-row">
-                  <span class="user-menu__project-name">{{ currentBoardName }}</span>
-                  <button
-                    class="user-menu__save"
-                    type="button"
-                    :disabled="isSaving"
-                    @click="handleSaveClick"
-                  >
-                    💾 Сохранить
-                  </button>
-                </div>
+                <span class="user-menu__project-name">{{ currentBoardName }}</span>
                 <div class="user-menu__status">
                   <template v-if="isSaving">
                     <span class="status-spinner">⏳</span>
@@ -187,7 +187,14 @@ onBeforeUnmount(() => {
                 </div>
               </div>
               <div class="user-menu__divider" />
+              <HeaderActions
+                class="user-menu__actions"
+                variant="menu"
+                :is-modern-theme="props.isModernTheme"
+                @toggle-theme="emit('toggle-theme')"
+              />
 
+              <div class="user-menu__divider" />
               <div class="user-menu__section">
                 <div class="user-menu__item user-menu__item--static">
                   🔐 Номер личного кабинета: RUY68241101111
@@ -211,24 +218,6 @@ onBeforeUnmount(() => {
           </button>
         </template>
       </div>
-      </div>
-      <div class="app-header__licenses">        
-        <HeaderActions
-          class="app-header__actions"
-          :is-modern-theme="props.isModernTheme"
-          :hide-theme-toggle="true"
-          @toggle-theme="emit('toggle-theme')"
-        />
-      </div>
-      <div class="app-header__theme-block">
-        <button
-          class="app-header__theme-toggle"
-          type="button"
-          :title="themeTitle"
-          @click="emit('toggle-theme')"
-        >
-          <span class="app-header__theme-icon" aria-hidden="true"></span>
-        </button>
       </div>
     </div>
 
@@ -295,32 +284,24 @@ onBeforeUnmount(() => {
 }
 
 .app-header__user-block,
-.app-header__licenses,
-.app-header__theme-block {
+.app-header__save-block {
   position: fixed;
-  top: 16px;  
+  top: 16px;
   display: flex;
   align-items: center;
   min-width: 0;
-  pointer-events: auto;  
+  pointer-events: auto;
 }
 
 .app-header__user-block {
+  right: 24px;
+  justify-content: flex-end;
+}
+
+.app-header__save-block {
   left: 50%;
   transform: translateX(-50%);
   justify-content: center;
-}
-
-.app-header__licenses {
-  left: 50%;
-  transform: translateX(-50%);
-  margin-left: 96px;
-  justify-content: flex-start
-}
-
-.app-header__theme-block {
-  right: 24px;  
-  justify-content: flex-end;
 }
 .app-header__auth {
   position: relative;
@@ -328,88 +309,11 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
 }
-.app-header__actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
 
-@media (max-width: 1024px) {
-  .app-header__licenses {
-    margin-left: 72px;
-  }
-}
-
-@media (max-width: 768px) {
-  .app-header__licenses {
-    top: 76px;
-    margin-left: 0;
-  }
-}  
-  gap: 12px;
-}
-.app-header__theme-toggle {
-  width: 52px;
-  height: 52px;
-  border-radius: 20px;
-  border: none;
-  background: transparent;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: none;
-  transition: transform 0.2s ease;
-}
-
-.app-header__theme-toggle:hover {
-  transform: scale(1.05);
-}
-
-.app-header__theme-icon {
-  position: relative;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%);
-  box-shadow: inset -4px -4px 10px rgba(255, 255, 255, 0.22), 0 6px 12px rgba(15, 23, 42, 0.18);
-}
-
-.app-header__theme-icon::before,
-.app-header__theme-icon::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  transition: opacity 0.2s ease;
-}
-
-.app-header__theme-icon::before {
-  inset: 4px;
-  opacity: 0.4;
-}
-
-.app-header__theme-icon::after {
-  inset: 7px;
-  opacity: 0.2;
-}
-
-.app-header--modern .app-header__theme-toggle {
-  border: none;
-  background: transparent;
-}
-
-.app-header--modern .app-header__theme-toggle:hover {
-  transform: scale(1.05);
-}
-
-.app-header--modern .app-header__theme-icon {
-  background: linear-gradient(135deg, #e5f3ff 0%, #73c8ff 100%);
-  box-shadow: inset -4px -4px 10px rgba(6, 11, 21, 0.35), 0 6px 12px rgba(6, 11, 21, 0.3);
-}
 .user-avatar,
 .user-avatar-placeholder {
-  width: 32px;
-  height: 32px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--header-input-border);
@@ -422,7 +326,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  font-size: 14px;
+  font-size: 28px;
   font-weight: 700;
 }
 
@@ -458,8 +362,8 @@ onBeforeUnmount(() => {
 
 .user-menu {
   position: absolute;
-  top: calc(100% + 12px);
-  left: 50%;
+  top: 0;
+  right: calc(100% + 16px);
   min-width: 320px;
   background: var(--header-surface);
   color: var(--header-text);
@@ -470,7 +374,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 16px;
   z-index: 2500;
-  transform: translateX(-50%);  
+  transform: none;
 }
 
 .user-menu__section {
@@ -479,14 +383,13 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
-.user-menu__section--project {
-  gap: 12px;
+.user-menu__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.user-menu__project-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.user-menu__section--project {
   gap: 12px;
 }
 
@@ -497,27 +400,6 @@ onBeforeUnmount(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.user-menu__save {
-  padding: 6px 14px;
-  border-radius: 12px;
-  border: none;
-  background: #2196f3;
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
-}
-
-.user-menu__save:hover:not(:disabled) {
-  background: #1976d2;
-  transform: translateY(-1px);
-}
-
-.user-menu__save:disabled {
-  background: #90caf9;
-  cursor: default;
 }
 
 .user-menu__status {
@@ -585,7 +467,29 @@ onBeforeUnmount(() => {
 .app-header--modern .user-menu__divider {
   background: rgba(229, 243, 255, 0.18);
 }
+.app-header__save-button {
+  padding: 10px 28px;
+  border-radius: 16px;
+  border: none;
+  background: #2196f3;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.22);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
 
+.app-header__save-button:hover:not(:disabled) {
+  background: #1976d2;
+  transform: translateY(-2px);
+}
+
+.app-header__save-button:disabled {
+  background: #90caf9;
+  cursor: default;
+  box-shadow: none;
+}
 .app-header__btn {
   padding: 8px 20px;
   border-radius: 12px;
@@ -653,10 +557,14 @@ onBeforeUnmount(() => {
     gap: 12px;
   }
 
-  .app-header__user-block,
-  .app-header__licenses,
-  .app-header__theme-block {
-    justify-content: center;
+  .app-header__save-block {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .app-header__user-block {
+    right: 50%;
+    transform: translateX(50%);
   }
 
   .app-header__auth {
