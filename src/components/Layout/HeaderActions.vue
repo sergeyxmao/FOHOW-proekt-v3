@@ -265,10 +265,12 @@ function handleToggleTheme() {
         v-if="!props.hideThemeToggle"
         class="header-actions__menu-button header-actions__menu-button--icon"
         type="button"
-        :title="themeTitle"       
+        :title="themeTitle"
         @click="handleToggleTheme"
       >
-        <span class="header-actions__theme-icon" aria-hidden="true"></span>
+        <span class="header-actions__menu-icon" aria-hidden="true">
+          <span class="header-actions__theme-icon"></span>
+        </span>
         <span class="visually-hidden">{{ themeTitle }}</span>
       </button>
       <button
@@ -277,25 +279,25 @@ function handleToggleTheme() {
         title="Добавить лицензию"
         @click="addCard"
       >
-        <span aria-hidden="true">□</span>
+        <span class="header-actions__menu-icon" aria-hidden="true">□</span>
         <span class="visually-hidden">Добавить лицензию</span>
       </button>
       <button
         class="header-actions__menu-button header-actions__menu-button--icon"
         type="button"
-        title="Добавить большую лицензию"     
+        title="Добавить большую лицензию"
         @click="addLargeCard"
       >
-        <span aria-hidden="true">⧠</span>
+        <span class="header-actions__menu-icon" aria-hidden="true">⧠</span>
         <span class="visually-hidden">Добавить большую лицензию</span>
       </button>
       <button
         class="header-actions__menu-button header-actions__menu-button--icon"
         type="button"
-        title="Добавить Gold лицензию"        
+        title="Добавить Gold лицензию"
         @click="addGoldCard"
       >
-        <span aria-hidden="true">★</span>
+        <span class="header-actions__menu-icon" aria-hidden="true">★</span>
         <span class="visually-hidden">Добавить Gold лицензию</span>
       </button>
       <div ref="templateAnchorRef" class="header-actions__menu-group">
@@ -305,10 +307,10 @@ function handleToggleTheme() {
           :disabled="!templateOptions.length"
           aria-haspopup="true"
           :aria-expanded="isTemplateMenuOpen"
-          title="Добавить шаблон"     
+          title="Добавить шаблон"
           @click="handleTemplateButtonClick"
         >
-          <span aria-hidden="true">⧉</span>
+          <span class="header-actions__menu-icon" aria-hidden="true">⧉</span>
           <span class="visually-hidden">Добавить шаблон</span>
         </button>
         <transition name="header-actions-menu">
@@ -350,7 +352,8 @@ function handleToggleTheme() {
           title="Добавить лицензию"
           @click="addCard"
         >
-          □
+          <span class="header-actions__icon" aria-hidden="true">□</span>
+          <span class="visually-hidden">Добавить лицензию</span>
         </button>
         <button
           class="header-actions__button header-actions__button--large"
@@ -358,7 +361,8 @@ function handleToggleTheme() {
           title="Добавить большую лицензию"
           @click="addLargeCard"
         >
-          ⧠
+          <span class="header-actions__icon" aria-hidden="true">⧠</span>
+          <span class="visually-hidden">Добавить большую лицензию</span>
         </button>
         <button
           class="header-actions__button header-actions__button--gold"
@@ -366,7 +370,8 @@ function handleToggleTheme() {
           title="Добавить Gold лицензию"
           @click="addGoldCard"
         >
-          ★
+          <span class="header-actions__icon" aria-hidden="true">★</span>
+          <span class="visually-hidden">Добавить Gold лицензию</span>
         </button>
         <div ref="templateAnchorRef" class="header-actions__templates">
           <button
@@ -378,7 +383,8 @@ function handleToggleTheme() {
             :aria-expanded="isTemplateMenuOpen"
             @click="handleTemplateButtonClick"
           >
-            ⧉
+            <span class="header-actions__icon" aria-hidden="true">⧉</span>
+            <span class="visually-hidden">Добавить шаблон</span>
           </button>
           <transition name="header-actions-menu">
             <div
@@ -427,6 +433,11 @@ function handleToggleTheme() {
   border: none;
   box-shadow: none;
   backdrop-filter: none;
+  --header-button-bg: rgba(248, 250, 252, 0.9);
+  --header-button-border: rgba(148, 163, 184, 0.45);
+  --header-button-color: #0f172a;
+  --header-button-shadow: rgba(15, 23, 42, 0.18);
+  --header-button-hover-shadow: rgba(15, 98, 254, 0.32);  
 }
 .header-actions--menu {
   flex-direction: column;
@@ -438,19 +449,25 @@ function handleToggleTheme() {
   background: transparent;
   border: none;
   box-shadow: none;
+  --header-button-bg: rgba(32, 44, 68, 0.9);
+  --header-button-border: rgba(104, 171, 255, 0.45);
+  --header-button-color: #e5f3ff;
+  --header-button-shadow: rgba(6, 11, 21, 0.5);
+  --header-button-hover-shadow: rgba(12, 84, 196, 0.45);  
 }
 .header-actions__menu-button {
   width: 100%;
   padding: 12px 16px;
   border-radius: 12px;
-  border: none;
-  background: rgba(15, 23, 42, 0.08);
-  color: #0f172a;
+  border: 1px solid var(--header-button-border);
+  background: var(--header-button-bg);
+  color: var(--header-button-color);
   font-size: 14px;
   font-weight: 600;
   text-align: center;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 14px 28px var(--header-button-shadow);
+  transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -459,11 +476,15 @@ function handleToggleTheme() {
 
 .header-actions__menu-button--icon {
   font-size: 20px;
-  font-weight: 600;  
+  font-weight: 600;
 }
 
-.header-actions__menu-button:hover:not(:disabled) {
-  background: rgba(15, 23, 42, 0.14);
+.header-actions__menu-button:hover:not(:disabled),
+.header-actions__menu-button:focus-visible:not(:disabled) {
+  background: #0f62fe;
+  color: #ffffff;
+  border-color: rgba(15, 98, 254, 0.8);
+  box-shadow: 0 18px 34px var(--header-button-hover-shadow);
   transform: translateY(-1px);
 }
 
@@ -471,15 +492,7 @@ function handleToggleTheme() {
   opacity: 0.6;
   cursor: default;
   transform: none;
-}
-
-.header-actions--modern .header-actions__menu-button {
-  background: rgba(229, 243, 255, 0.08);
-  color: #e5f3ff;  
-}
-
-.header-actions--modern .header-actions__menu-button:hover:not(:disabled) {
-  background: rgba(229, 243, 255, 0.16);
+  box-shadow: none;
 }
 
 .header-actions__menu-group {
@@ -502,33 +515,32 @@ function handleToggleTheme() {
   width: 44px;
   height: 44px;
   border-radius: 16px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.92);
-  color: #1d3f8f;
+  border: 1px solid var(--header-button-border);
+  background: var(--header-button-bg);
+  color: var(--header-button-color);
   font-size: 20px;
   font-weight: 600;
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 14px 28px var(--header-button-shadow);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-.header-actions__button:hover:enabled {
+.header-actions__button:hover:enabled,
+.header-actions__button:focus-visible:enabled {
   transform: translateY(-2px);
-  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.24);
-  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 20px 34px var(--header-button-hover-shadow);
+  background: #0f62fe;
+  color: #ffffff;
+  border-color: rgba(15, 98, 254, 0.8);
 }
 
 .header-actions__button:disabled {
   opacity: 0.5;
   cursor: default;
   box-shadow: none;
-}
-
-.header-actions__button--large {
-  font-size: 22px;
 }
 
 .header-actions__button--gold {
@@ -594,18 +606,6 @@ function handleToggleTheme() {
   border: 0;
 }
 
-.header-actions--modern .header-actions__button {
-  border-color: rgba(136, 188, 255, 0.4);
-  background: rgba(44, 58, 88, 0.78);
-  color: #e8f5ff;
-  box-shadow: 0 16px 30px rgba(5, 10, 20, 0.55);
-}
-
-.header-actions--modern .header-actions__button:hover:enabled {
-  background: rgba(60, 84, 120, 0.88);
-  box-shadow: 0 22px 38px rgba(5, 10, 20, 0.65);
-}
-
 .header-actions--modern .header-actions__menu-item {
   background: rgba(28, 38, 62, 0.78);
   color: #e5f3ff;
@@ -629,7 +629,32 @@ function handleToggleTheme() {
   box-shadow: 0 14px 26px rgba(37, 99, 235, 0.24);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
 }
+.header-actions__menu-icon,
+.header-actions__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: inherit;
+  color: currentColor;
+  transition: color 0.2s ease;
+}
 
+.header-actions__menu-button--icon .header-actions__menu-icon {
+  font-size: 20px;
+}
+
+.header-actions__icon {
+  font-size: 20px;
+}
+
+.header-actions__button--large .header-actions__icon {
+  font-size: 22px;
+}
+
+.header-actions--modern .header-actions__button--gold {
+  color: #f5b74c;
+}
 .header-actions__theme-toggle:hover {
   transform: translateY(-2px);
   box-shadow: 0 20px 34px rgba(37, 99, 235, 0.32);
