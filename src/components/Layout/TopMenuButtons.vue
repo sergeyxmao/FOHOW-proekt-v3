@@ -1,7 +1,10 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import DiscussionMenu from './DiscussionMenu.vue'
+import ToolsMenu from './ToolsMenu.vue'
 
+const emit = defineEmits(['activate-pencil'])
+  
 const menuItems = [
   { id: 'project', label: 'Проект' },
   { id: 'tools', label: 'Инструменты' },
@@ -12,7 +15,8 @@ const menuItems = [
 const openMenuId = ref(null)
 const menuWrapperRef = ref(null)
 const menuComponents = {
-  discussion: DiscussionMenu
+  discussion: DiscussionMenu,
+  tools: ToolsMenu
 }
 
 function getMenuComponent(id) {
@@ -25,6 +29,10 @@ function toggleMenu(id) {
 
 function closeMenu() {
   openMenuId.value = null
+}
+function handleActivatePencil() {
+  emit('activate-pencil')
+  closeMenu()
 }
 
 function handleClickOutside(event) {
@@ -66,6 +74,7 @@ onBeforeUnmount(() => {
             :is="getMenuComponent(item.id)"
             v-if="getMenuComponent(item.id)"
             @request-close="closeMenu"
+            @activate-pencil="handleActivatePencil"            
           />
         </div>
       </transition>
