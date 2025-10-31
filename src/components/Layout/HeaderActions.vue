@@ -10,6 +10,10 @@ const props = defineProps({
   isModernTheme: {
     type: Boolean,
     default: false
+  },
+  hideThemeToggle: {
+    type: Boolean,
+    default: false    
   }
 })
 
@@ -309,6 +313,7 @@ function handleToggleTheme() {
     </div>
 
     <button
+      v-if="!props.hideThemeToggle"      
       class="header-actions__theme-toggle"
       type="button"
       :title="themeTitle"
