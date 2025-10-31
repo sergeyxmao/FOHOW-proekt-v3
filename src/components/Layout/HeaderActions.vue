@@ -322,10 +322,8 @@ function handleToggleTheme() {
           </div>
         </transition>
       </div>
-    </div>
-
     <button
-      v-if="!props.hideThemeToggle"      
+      v-if="!props.hideThemeToggle"
       class="header-actions__theme-toggle"
       type="button"
       :title="themeTitle"
