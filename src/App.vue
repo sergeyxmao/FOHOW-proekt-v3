@@ -4,6 +4,7 @@ import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import ControlPanel from './components/Panels/ControlPanel.vue'
 import RightPanel from './components/Panels/RightPanel.vue'
 import AppHeader from './components/Layout/AppHeader.vue'
+import TopMenuButtons from './components/Layout/TopMenuButtons.vue'  
 import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
 import { useAuthStore } from './stores/auth'
@@ -311,6 +312,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div id="app">
+    <TopMenuButtons v-show="!isPencilMode && !showResetPassword" />    
     <AppHeader
       v-show="!isPencilMode && !showResetPassword"
       :is-modern-theme="isModernTheme"
