@@ -48,10 +48,15 @@
             placeholder="Введите код"
           />
           <div class="auth-card__verification-code" @click="regenerateVerificationCode">
-            {{ verificationCode }}
+            {{ verificationLoading ? '••••' : verificationCode }}
           </div>
         </div>
-        <button type="button" class="auth-card__verification-refresh" @click="regenerateVerificationCode">
+        <button
+          type="button"
+          class="auth-card__verification-refresh"
+          @click="regenerateVerificationCode"
+          :disabled="verificationLoading"
+        >
           Обновить код
         </button>
       </div>
@@ -82,6 +87,7 @@ const props = defineProps({
     default: false
   }
 })
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
 const authStore = useAuthStore()
 const email = ref('')
@@ -91,18 +97,44 @@ const error = ref('')
 const success = ref('')
 const loading = ref(false)
 const verificationCode = ref('')
+const verificationToken = ref('')  
 const verificationInput = ref('')
+const verificationLoading = ref(false)
 
-function generateVerificationCode() {
-  verificationCode.value = Math.floor(1000 + Math.random() * 9000).toString()
+async function fetchVerificationCode(showError = true) {
+  try {
+    verificationLoading.value = true
+
+    const response = await fetch(`${API_URL}/verification-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ previousToken: verificationToken.value || undefined })
+    })
+
+    if (!response.ok) {
+      throw new Error('Не удалось получить проверочный код')
+    }
+
+    const data = await response.json()
+    verificationCode.value = data.code
+    verificationToken.value = data.token
+    verificationInput.value = ''
+  } catch (err) {
+    if (showError) {
+      error.value = err.message || 'Не удалось получить проверочный код'
+    }
+  } finally {
+    verificationLoading.value = false
+  }
 }
 
 function regenerateVerificationCode() {
-  generateVerificationCode()
-  verificationInput.value = ''
+  fetchVerificationCode()
 }
 
-onMounted(generateVerificationCode)
+onMounted(() => {
+  fetchVerificationCode()
+})
 async function handleRegister() {
   error.value = ''
   success.value = ''
@@ -111,26 +143,31 @@ async function handleRegister() {
     error.value = 'Пароли не совпадают'
     return
   }
- 
-  if (verificationInput.value !== verificationCode.value) {
-    error.value = 'Неверный проверочный код'
-    regenerateVerificationCode()
-    return
-  } 
+
   loading.value = true
   
   try {
-    await authStore.register(email.value, password.value)
-    success.value = 'Регистрация успешна! Сейчас выполним вход...'
+    if (!verificationToken.value) {
+      await fetchVerificationCode(false)
+      throw new Error('Проверочный код недоступен. Попробуйте обновить код и повторить попытку.')
+    }
+
+    await authStore.register(
+      email.value,
+      password.value,
+      verificationInput.value,
+      verificationToken.value
+    )
+      success.value = 'Регистрация успешна! Сейчас выполним вход...'
     
     // Автоматический вход после регистрации
-    setTimeout(async () => {
-      await authStore.login(email.value, password.value)
+    setTimeout(() => {
+
       emit('register-success')
     }, 1500)
   } catch (err) {
     error.value = err.message
-    regenerateVerificationCode()
+    await fetchVerificationCode(false)
   } finally {
     loading.value = false
   }
@@ -296,9 +333,15 @@ input:focus {
   font-weight: 600;
   cursor: pointer;
   padding: 0;
+  transition: color 0.2s ease, opacity 0.2s ease;  
 }
 
-.auth-card__verification-refresh:hover {
+.auth-card__verification-refresh:hover:not(:disabled) {
   text-decoration: underline;
+}
+
+.auth-card__verification-refresh:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }  
 </style>
