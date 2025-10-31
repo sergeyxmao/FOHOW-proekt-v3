@@ -21,7 +21,126 @@ const __dirname = dirname(__filename);
 dotenv.config();
 
 const app = Fastify({ logger: true });
+const VERIFICATION_CODE_TTL = 5 * 60 * 1000; // 5 минут
+const VERIFICATION_MAX_ATTEMPTS = 5;
+const VERIFICATION_LOCK_DURATION = 5 * 60 * 1000; // 5 минут
 
+const verificationSessions = new Map();
+
+function createVerificationSession(previousToken) {
+  if (previousToken) {
+    verificationSessions.delete(previousToken);
+  }
+
+  const now = Date.now();
+
+  for (const [storedToken, session] of verificationSessions.entries()) {
+    if (session.expiresAt <= now) {
+      verificationSessions.delete(storedToken);
+    }
+  }
+
+  const token = randomBytes(16).toString('hex');
+  const code = Math.floor(1000 + Math.random() * 9000).toString();
+
+  verificationSessions.set(token, {
+    code,
+    attempts: 0,
+    lockedUntil: null,
+    expiresAt: now + VERIFICATION_CODE_TTL
+  });
+
+  return { token, code };
+}
+
+function getVerificationSession(token) {
+  if (!token) {
+    return null;
+  }
+
+  const session = verificationSessions.get(token);
+
+  if (!session) {
+    return null;
+  }
+
+  const now = Date.now();
+
+  if (session.expiresAt <= now) {
+    verificationSessions.delete(token);
+    return null;
+  }
+
+  if (session.lockedUntil && now >= session.lockedUntil) {
+    session.lockedUntil = null;
+    session.attempts = 0;
+  }
+
+  return session;
+}
+
+function validateVerificationCode(verificationToken, verificationCode) {
+  const sanitizedCode = typeof verificationCode === 'string'
+    ? verificationCode.trim()
+    : String(verificationCode || '').trim();
+
+  if (!verificationToken || sanitizedCode.length === 0) {
+    return {
+      ok: false,
+      status: 400,
+      message: 'Проверочный код обязателен'
+    };
+  }
+
+  const session = getVerificationSession(verificationToken);
+
+  if (!session) {
+    return {
+      ok: false,
+      status: 400,
+      message: 'Проверочный код недействителен или истек. Обновите код.'
+    };
+  }
+
+  const now = Date.now();
+
+  if (session.lockedUntil && now < session.lockedUntil) {
+    const retrySeconds = Math.ceil((session.lockedUntil - now) / 1000);
+
+    return {
+      ok: false,
+      status: 429,
+      message: `Превышено количество попыток. Попробуйте снова через ${retrySeconds} секунд.`
+    };
+  }
+
+  if (session.code !== sanitizedCode) {
+    session.attempts += 1;
+
+    if (session.attempts >= VERIFICATION_MAX_ATTEMPTS) {
+      session.lockedUntil = now + VERIFICATION_LOCK_DURATION;
+
+      return {
+        ok: false,
+        status: 429,
+        message: 'Превышено количество попыток. Форма заблокирована на 5 минут.'
+      };
+    }
+
+    return {
+      ok: false,
+      status: 400,
+      message: 'Неверный проверочный код'
+    };
+  }
+
+  verificationSessions.delete(verificationToken);
+
+  return {
+    ok: true,
+    status: 200
+  };
+}
 // Плагины безопасности
 await app.register(helmet);
 await app.register(cors, { origin: true, credentials: true });
@@ -34,15 +153,30 @@ await app.register(fastifyStatic, {
   root: path.join(__dirname, 'uploads'),
   prefix: '/uploads/'
 });
+app.post('/api/verification-code', async (req, reply) => {
+  try {
+    const body = req.body || {};
+    const { token, code } = createVerificationSession(body.previousToken);
 
+    return reply.send({ token, code });
+  } catch (err) {
+    req.log.error('❌ Ошибка генерации проверочного кода:', err);
+    return reply.code(500).send({ error: 'Не удалось создать проверочный код' });
+  }
+});
 // === РЕГИСТРАЦІЯ ===
 app.post('/api/register', async (req, reply) => {
-  const { email, password } = req.body;
+   const { email, password, verificationToken, verificationCode } = req.body;
   
   if (!email || !password) {
     return reply.code(400).send({ error: 'Email и пароль обязательны' });
   }
   
+  const verificationResult = validateVerificationCode(verificationToken, verificationCode);
+
+  if (!verificationResult.ok) {
+    return reply.code(verificationResult.status).send({ error: verificationResult.message });
+  }
   try {
     const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
     if (existing.rows.length > 0) {
@@ -50,9 +184,24 @@ app.post('/api/register', async (req, reply) => {
     }
     
     const hash = await bcrypt.hash(password, 10);
-    await pool.query('INSERT INTO users (email, password) VALUES ($1, $2)', [email, hash]);
-    
-    return reply.send({ success: true });
+    const insertResult = await pool.query(
+      'INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id, email',
+      [email, hash]
+    );
+
+    const newUser = insertResult.rows[0];
+
+    const token = jwt.sign(
+      { userId: newUser.id, email: newUser.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return reply.send({
+      success: true,
+      token,
+      user: { id: newUser.id, email: newUser.email }
+    });
   } catch (err) {
     console.error('❌ Ошибка регистрации:', err);
     return reply.code(500).send({ error: 'Ошибка сервера' });
@@ -61,12 +210,18 @@ app.post('/api/register', async (req, reply) => {
 
 // === АВТОРИЗАЦІЯ ===
 app.post('/api/login', async (req, reply) => {
-  const { email, password } = req.body;
+  const { email, password, verificationToken, verificationCode } = req.body;
   
   if (!email || !password) {
     return reply.code(400).send({ error: 'Email и пароль обязательны' });
   }
   
+  const verificationResult = validateVerificationCode(verificationToken, verificationCode);
+
+  if (!verificationResult.ok) {
+    return reply.code(verificationResult.status).send({ error: verificationResult.message });
+  }
+
   try {
     const result = await pool.query('SELECT id, email, password FROM users WHERE email = $1', [email]);
     
