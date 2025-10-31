@@ -31,7 +31,12 @@ import {
 const historyStore = useHistoryStore();
 const notesStore = useNotesStore();
 const emit = defineEmits(['update-connection-status']);
-
+const props = defineProps({
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  }
+});
 const cardsStore = useCardsStore();
 const connectionsStore = useConnectionsStore();
 const canvasStore = useCanvasStore();
@@ -1886,7 +1891,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 <template>
 <div
   ref="canvasContainerRef"
-  :class="['canvas-container', canvasContainerClasses]"
+  :class="['canvas-container', canvasContainerClasses, { 'canvas-container--modern': props.isModernTheme }]"
   :style="{ backgroundColor: backgroundColor }"
 >
     <div
@@ -2016,6 +2021,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     </div>
     <a
       class="marketing-watermark"
+      :class="{ 'marketing-watermark--modern': props.isModernTheme }"      
       href="https://t.me/MarketingFohow"
       target="_blank"
       rel="noopener noreferrer"
@@ -2263,10 +2269,18 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   user-select: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-
+.marketing-watermark--modern {
+  border-color: rgba(96, 164, 255, 0.35);
+  background: rgba(32, 45, 72, 0.92);
+  color: #e5f3ff;
+  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.55);
+}
 .marketing-watermark:hover {
   transform: translateY(-1px);
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.2);
+}
+.marketing-watermark--modern:hover {
+  box-shadow: 0 24px 44px rgba(6, 11, 21, 0.65);
 }
 
 .marketing-watermark:active {
