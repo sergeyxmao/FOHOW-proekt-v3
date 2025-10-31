@@ -263,43 +263,53 @@ function handleToggleTheme() {
     <template v-if="isMenuVariant">
       <button
         v-if="!props.hideThemeToggle"
-        class="header-actions__menu-button"
+        class="header-actions__menu-button header-actions__menu-button--icon"
         type="button"
+        :title="themeTitle"       
         @click="handleToggleTheme"
       >
-        {{ themeTitle }}
+        <span class="header-actions__theme-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">{{ themeTitle }}</span>
       </button>
       <button
-        class="header-actions__menu-button"
+        class="header-actions__menu-button header-actions__menu-button--icon"
         type="button"
+        title="Добавить лицензию"
         @click="addCard"
       >
-        Добавить лицензию
+        <span aria-hidden="true">□</span>
+        <span class="visually-hidden">Добавить лицензию</span>
       </button>
       <button
-        class="header-actions__menu-button"
+        class="header-actions__menu-button header-actions__menu-button--icon"
         type="button"
+        title="Добавить большую лицензию"     
         @click="addLargeCard"
       >
-        Добавить большую лицензию
+        <span aria-hidden="true">⧠</span>
+        <span class="visually-hidden">Добавить большую лицензию</span>
       </button>
       <button
-        class="header-actions__menu-button"
+        class="header-actions__menu-button header-actions__menu-button--icon"
         type="button"
+        title="Добавить Gold лицензию"        
         @click="addGoldCard"
       >
-        Добавить Gold лицензию
+        <span aria-hidden="true">★</span>
+        <span class="visually-hidden">Добавить Gold лицензию</span>
       </button>
       <div ref="templateAnchorRef" class="header-actions__menu-group">
         <button
-          class="header-actions__menu-button"
+          class="header-actions__menu-button header-actions__menu-button--icon"
           type="button"
           :disabled="!templateOptions.length"
           aria-haspopup="true"
           :aria-expanded="isTemplateMenuOpen"
+          title="Добавить шаблон"     
           @click="handleTemplateButtonClick"
         >
-          Добавить шаблон
+          <span aria-hidden="true">⧉</span>
+          <span class="visually-hidden">Добавить шаблон</span>
         </button>
         <transition name="header-actions-menu">
           <div
@@ -435,12 +445,21 @@ function handleToggleTheme() {
   border-radius: 12px;
   border: none;
   background: rgba(15, 23, 42, 0.08);
-  color: inherit;
+  color: #0f172a;
   font-size: 14px;
   font-weight: 600;
   text-align: center;
   cursor: pointer;
   transition: background 0.2s ease, transform 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.header-actions__menu-button--icon {
+  font-size: 20px;
+  font-weight: 600;  
 }
 
 .header-actions__menu-button:hover:not(:disabled) {
@@ -456,6 +475,7 @@ function handleToggleTheme() {
 
 .header-actions--modern .header-actions__menu-button {
   background: rgba(229, 243, 255, 0.08);
+  color: #e5f3ff;  
 }
 
 .header-actions--modern .header-actions__menu-button:hover:not(:disabled) {
@@ -561,6 +581,17 @@ function handleToggleTheme() {
 .header-actions__menu-item:hover {
   background: rgba(59, 130, 246, 0.2);
   color: #1d4ed8;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .header-actions--modern .header-actions__button {
