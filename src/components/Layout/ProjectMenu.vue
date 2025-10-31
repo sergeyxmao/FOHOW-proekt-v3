@@ -1,6 +1,12 @@
 <script setup>
 import { computed } from 'vue'
 import { useProjectActions } from '../../composables/useProjectActions.js'
+const props = defineProps({
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  }
+})
 
 const emit = defineEmits(['request-close'])
 
@@ -62,7 +68,11 @@ const handleItemClick = async (item) => {
 </script>
 
 <template>
-  <div class="project-menu" role="menu">
+  <div
+    class="project-menu"
+    :class="{ 'project-menu--modern': props.isModernTheme }"
+    role="menu"
+  >
     <button
       v-for="item in items"
       :key="item.id"
@@ -111,6 +121,22 @@ const handleItemClick = async (item) => {
   transform: translateX(1px);
   background: rgba(37, 99, 235, 0.16);
   color: #1e3a8a;
+}
+  border-color: rgba(96, 164, 255, 0.32);
+  background: rgba(24, 34, 58, 0.92);
+  color: #e5f3ff;
+  box-shadow: 0 16px 32px rgba(6, 11, 21, 0.55);
+}
+
+.project-menu--modern .project-menu__item:hover {
+  background: rgba(96, 164, 255, 0.28);
+  color: #0b1324;
+  box-shadow: 0 22px 40px rgba(6, 11, 21, 0.65);
+}
+
+.project-menu--modern .project-menu__item:active {
+  background: rgba(114, 182, 255, 0.35);
+  color: #051125;
 }
 
 .project-menu__icon {
