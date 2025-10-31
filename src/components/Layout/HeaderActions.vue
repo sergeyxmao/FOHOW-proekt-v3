@@ -261,88 +261,79 @@ function handleToggleTheme() {
     ]"
   >
     <template v-if="isMenuVariant">
+      <div class="header-actions__grid" role="group" aria-label="Быстрое добавление карт">
+
+        <button
+          class="header-actions__grid-button"
+          type="button"
+          title="Добавить лицензию"
+          @click="addCard"
+        >
+          <span class="header-actions__icon" aria-hidden="true">□</span>
+          <span class="visually-hidden">Добавить лицензию</span>
+        </button>
+        <button
+          class="header-actions__grid-button header-actions__grid-button--large"
+          type="button"
+          title="Добавить большую лицензию"
+          @click="addLargeCard"
+        >
+          <span class="header-actions__icon" aria-hidden="true">⧠</span>
+          <span class="visually-hidden">Добавить большую лицензию</span>
+        </button>
+        <button
+          class="header-actions__grid-button header-actions__grid-button--gold"
+          type="button"
+          title="Добавить Gold лицензию"
+          @click="addGoldCard"
+        >
+          <span class="header-actions__icon" aria-hidden="true">★</span>
+          <span class="visually-hidden">Добавить Gold лицензию</span>
+        </button>
+        <div ref="templateAnchorRef" class="header-actions__grid-item header-actions__grid-item--template">
+          <button
+            class="header-actions__grid-button"
+            type="button"
+            title="Добавить шаблон"
+            :disabled="!templateOptions.length"
+            aria-haspopup="true"
+            :aria-expanded="isTemplateMenuOpen"
+            @click="handleTemplateButtonClick"
+          >
+            <span class="header-actions__icon" aria-hidden="true">⧉</span>
+            <span class="visually-hidden">Добавить шаблон</span>
+          </button>
+          <transition name="header-actions-menu">
+            <div
+              v-if="isTemplateMenuOpen && templateOptions.length"
+              ref="templateMenuRef"
+              class="header-actions__menu"
+              role="menu"
+              aria-label="Выбор шаблона"
+            >
+              <button
+                v-for="option in templateOptions"
+                :key="option.id"
+                class="header-actions__menu-item"
+                type="button"
+                role="menuitem"
+                @click.stop="selectTemplate(option.id)"
+              >
+                {{ option.displayText }}
+              </button>
+            </div>
+          </transition>
+        </div>
+      </div>
       <button
         v-if="!props.hideThemeToggle"
-        class="header-actions__menu-button header-actions__menu-button--icon"
+        class="header-actions__theme-toggle"
         type="button"
         :title="themeTitle"
         @click="handleToggleTheme"
       >
-        <span class="header-actions__menu-icon" aria-hidden="true">
-          <span class="header-actions__theme-icon"></span>
-        </span>
-        <span class="visually-hidden">{{ themeTitle }}</span>
+        <span class="header-actions__theme-icon" aria-hidden="true"></span>
       </button>
-      <button
-        class="header-actions__menu-button header-actions__menu-button--icon"
-        type="button"
-        title="Добавить лицензию"
-        @click="addCard"
-      >
-        <span class="header-actions__menu-icon" aria-hidden="true">□</span>
-        <span class="visually-hidden">Добавить лицензию</span>
-      </button>
-      <button
-        class="header-actions__menu-button header-actions__menu-button--icon"
-        type="button"
-        title="Добавить большую лицензию"
-        @click="addLargeCard"
-      >
-        <span class="header-actions__menu-icon" aria-hidden="true">⧠</span>
-        <span class="visually-hidden">Добавить большую лицензию</span>
-      </button>
-      <button
-        class="header-actions__menu-button header-actions__menu-button--icon"
-        type="button"
-        title="Добавить Gold лицензию"
-        @click="addGoldCard"
-      >
-        <span class="header-actions__menu-icon" aria-hidden="true">★</span>
-        <span class="visually-hidden">Добавить Gold лицензию</span>
-      </button>
-      <div ref="templateAnchorRef" class="header-actions__menu-group">
-        <button
-          class="header-actions__menu-button header-actions__menu-button--icon"
-          type="button"
-          :disabled="!templateOptions.length"
-          aria-haspopup="true"
-          :aria-expanded="isTemplateMenuOpen"
-          title="Добавить шаблон"
-          @click="handleTemplateButtonClick"
-        >
-          <span class="header-actions__menu-icon" aria-hidden="true">⧉</span>
-          <span class="visually-hidden">Добавить шаблон</span>
-        </button>
-        <transition name="header-actions-menu">
-          <div
-            v-if="isTemplateMenuOpen && templateOptions.length"
-            ref="templateMenuRef"
-            class="header-actions__menu-dropdown"
-            role="menu"
-            aria-label="Выбор шаблона"
-          >
-            <button
-              v-for="option in templateOptions"
-              :key="option.id"
-              class="header-actions__menu-item"
-              type="button"
-              role="menuitem"
-              @click.stop="selectTemplate(option.id)"
-            >
-              {{ option.displayText }}
-            </button>
-          </div>
-        </transition>
-      </div>
-    <button
-      v-if="!props.hideThemeToggle"
-      class="header-actions__theme-toggle"
-      type="button"
-      :title="themeTitle"
-      @click="handleToggleTheme"
-    >
-      <span class="header-actions__theme-icon" aria-hidden="true"></span>
-    </button>
     </template>
     <template v-else>
       <div class="header-actions__licenses">
@@ -426,7 +417,7 @@ function handleToggleTheme() {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   padding: 0;
   border-radius: 18px;
   background: transparent;
@@ -437,12 +428,12 @@ function handleToggleTheme() {
   --header-button-border: rgba(148, 163, 184, 0.45);
   --header-button-color: #0f172a;
   --header-button-shadow: rgba(15, 23, 42, 0.18);
-  --header-button-hover-shadow: rgba(15, 98, 254, 0.32);  
+  --header-button-hover-shadow: rgba(15, 98, 254, 0.32);
 }
 .header-actions--menu {
   flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
+  align-items: center;
+  gap: 18px;
 }
 
 .header-actions--modern {
@@ -453,57 +444,85 @@ function handleToggleTheme() {
   --header-button-border: rgba(104, 171, 255, 0.45);
   --header-button-color: #e5f3ff;
   --header-button-shadow: rgba(6, 11, 21, 0.5);
-  --header-button-hover-shadow: rgba(12, 84, 196, 0.45);  
+  --header-button-hover-shadow: rgba(12, 84, 196, 0.45);
 }
-.header-actions__menu-button {
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 12px;
+
+.header-actions__grid {
+  --header-grid-size: 60px;
+  display: grid;
+  grid-template-columns: repeat(2, var(--header-grid-size));
+  gap: 14px;
+}
+
+.header-actions__grid-item {
+  position: relative;
+  display: flex;
+}
+
+.header-actions__grid-button {
+  width: var(--header-grid-size);
+  height: var(--header-grid-size);
+  border-radius: 20px;
   border: 1px solid var(--header-button-border);
   background: var(--header-button-bg);
   color: var(--header-button-color);
-  font-size: 14px;
+  font-size: 20px;
   font-weight: 600;
-  text-align: center;
-  cursor: pointer;
-  box-shadow: 0 14px 28px var(--header-button-shadow);
-  transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 16px 30px var(--header-button-shadow);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  backdrop-filter: blur(10px);
 }
 
-.header-actions__menu-button--icon {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.header-actions__menu-button:hover:not(:disabled),
-.header-actions__menu-button:focus-visible:not(:disabled) {
+.header-actions__grid-button:hover:not(:disabled),
+.header-actions__grid-button:focus-visible:not(:disabled) {
+  transform: translateY(-2px);
   background: #0f62fe;
   color: #ffffff;
-  border-color: rgba(15, 98, 254, 0.8);
-  box-shadow: 0 18px 34px var(--header-button-hover-shadow);
-  transform: translateY(-1px);
+  border-color: rgba(15, 98, 254, 0.82);
+  box-shadow: 0 22px 38px var(--header-button-hover-shadow);
 }
 
-.header-actions__menu-button:disabled {
-  opacity: 0.6;
+.header-actions__grid-button:disabled {
+  opacity: 0.55;
   cursor: default;
   transform: none;
   box-shadow: none;
 }
 
-.header-actions__menu-group {
-  position: relative;
-  width: 100%;
+.header-actions__grid-button--large .header-actions__icon {
+  font-size: 22px;
 }
 
-.header-actions--menu .header-actions__menu-dropdown {
-  left: 0;
-  right: auto;
-  width: 100%;
+.header-actions__grid-button--gold {
+  background: linear-gradient(135deg, #ffe272 0%, #f5b300 100%);
+  border: none;
+  color: #7a4a00;
+  box-shadow: 0 20px 36px rgba(245, 179, 0, 0.45);
+}
+
+.header-actions__grid-button--gold:hover:not(:disabled),
+.header-actions__grid-button--gold:focus-visible:not(:disabled) {
+  background: linear-gradient(135deg, #ffec8f 0%, #ffbc1f 100%);
+  color: #5b3600;
+  border: none;
+  box-shadow: 0 24px 42px rgba(245, 179, 0, 0.5);
+}
+
+.header-actions--modern .header-actions__grid-button {
+  border-color: rgba(104, 171, 255, 0.55);
+}
+
+.header-actions--modern .header-actions__grid-button--gold {
+  color: #5a3a00;
+  box-shadow: 0 18px 36px rgba(255, 206, 84, 0.55);
+}
+
+.header-actions--menu .header-actions__grid {
+  grid-template-columns: repeat(2, var(--header-grid-size));
 }
 .header-actions__licenses {
   display: flex;
@@ -575,6 +594,11 @@ function handleToggleTheme() {
   background: rgba(40, 56, 90, 0.92);
   border-color: rgba(96, 164, 255, 0.35);
   box-shadow: 0 22px 38px rgba(6, 11, 21, 0.55);
+}
+.header-actions--menu .header-actions__menu {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
 }
 
 .header-actions__menu-item {
