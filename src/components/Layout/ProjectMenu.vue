@@ -122,6 +122,7 @@ const handleItemClick = async (item) => {
   background: rgba(37, 99, 235, 0.16);
   color: #1e3a8a;
 }
+.project-menu--modern .project-menu__item {  
   border-color: rgba(96, 164, 255, 0.32);
   background: rgba(24, 34, 58, 0.92);
   color: #e5f3ff;
