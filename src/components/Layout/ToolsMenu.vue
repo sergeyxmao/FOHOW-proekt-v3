@@ -2,6 +2,12 @@
 import { storeToRefs } from 'pinia'
 import { useCanvasStore } from '../../stores/canvas.js'
 import { useHistoryStore } from '../../stores/history.js'  
+const props = defineProps({
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  }
+})
 
 const emit = defineEmits(['request-close', 'activate-pencil'])
 
@@ -45,7 +51,11 @@ const handleRedo = () => {
 </script>
 
 <template>
-  <div class="tools-menu" role="menu">
+  <div
+    class="tools-menu"
+    :class="{ 'tools-menu--modern': props.isModernTheme }"
+    role="menu"
+  >
     <h3 class="tools-menu__title">Инструменты</h3>
     <div class="tools-menu__list">
       <div class="tools-menu__icon-row">
@@ -203,4 +213,47 @@ const handleRedo = () => {
   color: #ffffff;
   box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
 }
+.tools-menu--modern .tools-menu__title {
+  color: #e5f3ff;
+}
+
+.tools-menu--modern .tools-menu__icon-row {
+  border-color: rgba(96, 164, 255, 0.32);
+}
+
+.tools-menu--modern .tools-menu__icon-button {
+  border-color: rgba(96, 164, 255, 0.32);
+  background: rgba(24, 34, 58, 0.92);
+  color: #bcdcff;
+  box-shadow: 0 18px 32px rgba(6, 11, 21, 0.6);
+}
+
+.tools-menu--modern .tools-menu__icon-button:hover:enabled {
+  background: rgba(60, 88, 132, 0.92);
+  box-shadow: 0 24px 38px rgba(6, 11, 21, 0.7);
+}
+
+.tools-menu--modern .tools-menu__icon {
+  background: rgba(96, 164, 255, 0.18);
+  color: #e5f3ff;
+}
+
+.tools-menu--modern .tools-menu__action {
+  border-color: rgba(96, 164, 255, 0.32);
+  background: rgba(24, 34, 58, 0.92);
+  color: #e5f3ff;
+  box-shadow: 0 18px 32px rgba(6, 11, 21, 0.6);
+}
+
+.tools-menu--modern .tools-menu__action:hover {
+  background: rgba(96, 164, 255, 0.22);
+  color: #0b1324;
+  box-shadow: 0 24px 40px rgba(6, 11, 21, 0.72);
+}
+
+.tools-menu--modern .tools-menu__action--active {
+  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
+  color: #051125;
+  box-shadow: 0 20px 40px rgba(6, 11, 21, 0.75);
+}  
 </style>
