@@ -122,7 +122,7 @@ onBeforeUnmount(() => {
     ]"
   >
     <div class="app-header__inner">
-      <div class="app-header__center">
+      <div class="app-header__user-block">
         <div class="app-header__auth">
           <template v-if="isAuthenticated">
             <button
@@ -211,6 +211,8 @@ onBeforeUnmount(() => {
           </button>
         </template>
       </div>
+      </div>
+      <div class="app-header__licenses">        
         <HeaderActions
           class="app-header__actions"
           :is-modern-theme="props.isModernTheme"
@@ -218,14 +220,16 @@ onBeforeUnmount(() => {
           @toggle-theme="emit('toggle-theme')"
         />
       </div>
-      <button
-        class="app-header__theme-toggle"
-        type="button"
-        :title="themeTitle"
-        @click="emit('toggle-theme')"
-      >
-        <span class="app-header__theme-icon" aria-hidden="true"></span>
-      </button>
+      <div class="app-header__theme-block">
+        <button
+          class="app-header__theme-toggle"
+          type="button"
+          :title="themeTitle"
+          @click="emit('toggle-theme')"
+        >
+          <span class="app-header__theme-icon" aria-hidden="true"></span>
+        </button>
+      </div>
     </div>
 
     <AuthModal
@@ -291,7 +295,7 @@ onBeforeUnmount(() => {
 .app-header__inner {
   pointer-events: auto;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 18px;
   padding: 12px 18px;
@@ -302,11 +306,24 @@ onBeforeUnmount(() => {
   width: min(720px, 100%);
 }
 
-.app-header__center {
-  justify-self: center;
+.app-header__user-block,
+.app-header__licenses,
+.app-header__theme-block {
   display: flex;
   align-items: center;
-  gap: 18px;
+  min-width: 0;
+}
+
+.app-header__user-block {
+  justify-content: flex-start;
+}
+
+.app-header__licenses {
+  justify-content: center;
+}
+
+.app-header__theme-block {
+  justify-content: flex-end;
 }
 .app-header__auth {
   position: relative;
@@ -317,6 +334,8 @@ onBeforeUnmount(() => {
 .app-header__actions {
   display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 12px;  
 }
 .app-header__theme-toggle {
   width: 52px;
@@ -623,6 +642,16 @@ onBeforeUnmount(() => {
 @media (max-width: 640px) {
   .app-header {
     width: calc(100% - 24px);
+    justify-content: center;
+  }
+  .app-header__inner {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .app-header__user-block,
+  .app-header__licenses,
+  .app-header__theme-block {
     justify-content: center;
   }
 
