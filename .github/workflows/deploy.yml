@@ -28,11 +28,18 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+- name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
 
-      - name: Build project
-        run: npm run build
+    - name: Install dependencies
+      working-directory: ./web
+      run: pnpm install
+
+    - name: Build
+      working-directory: ./web
+      run: pnpm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
