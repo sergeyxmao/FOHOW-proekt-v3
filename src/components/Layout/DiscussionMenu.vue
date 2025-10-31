@@ -93,7 +93,6 @@ index 0000000000000000000000000000000000000000..22b7c165a9f27fd7e8991fd1f5c58281
 +      <span class="discussion-menu__icon" aria-hidden="true">🗒️</span>
 +      <button
 +        type="button"
-+        class="discussion-menu__action"
 +        :class="{ 'discussion-menu__action--active': dropdownOpen }"
 +        :disabled="!hasNoteEntries"
 +        @click="handleNotesToggle"
