@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../../stores/auth.js'
 import { useBoardStore } from '../../stores/board.js'
@@ -31,9 +31,9 @@ import HeaderActions from './HeaderActions.vue'
 
 const emit = defineEmits(['open-board', 'save-board', 'toggle-theme'])
 
-function getAvatarUrl(url) {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
+const themeTitle = computed(() =>
+  props.isModernTheme ? 'Вернуть светлое меню' : 'Включить тёмное меню'
+)
   return `${API_URL.replace('/api', '')}${url}`
 }
 
@@ -117,101 +117,111 @@ onBeforeUnmount(() => {
       { 'app-header--modern': props.isModernTheme }
     ]"
   >
-    <div class="app-header__content">
-      <div class="app-header__auth">
-        <template v-if="isAuthenticated">
-          <button
-            ref="userTriggerRef"
-            type="button"
-            class="app-header__user-trigger"
-            @click.stop="toggleUserMenu"
-          >
-            <span class="user-avatar-wrapper">
-              <img
-                v-if="user?.avatar_url"
-                :src="getAvatarUrl(user.avatar_url)"
-                alt="Аватар"
-                class="user-avatar"
-              >
-              <span v-else class="user-avatar-placeholder">
-                {{ getInitials(user?.username || user?.email) }}
-              </span>
-            </span>
-            <span class="user-name">{{ user?.username || user?.email }}</span>
-          </button>
-
-          <transition name="fade">
-            <div
-              v-if="showUserMenu"
-              ref="userMenuRef"
-              class="user-menu"
-            >            
-            <div class="user-menu__section user-menu__section--project">
-              <div class="user-menu__project-row">
-                <span class="user-menu__project-name">{{ currentBoardName }}</span>
-                <button
-                  class="user-menu__save"
-                  type="button"
-                  :disabled="isSaving"
-                  @click="handleSaveClick"
+    <div class="app-header__inner">
+      <div class="app-header__center">
+        <div class="app-header__auth">
+          <template v-if="isAuthenticated">
+            <button
+              ref="userTriggerRef"
+              type="button"
+              class="app-header__user-trigger"
+              @click.stop="toggleUserMenu"
+            >
+              <span class="user-avatar-wrapper">
+                <img
+                  v-if="user?.avatar_url"
+                  :src="getAvatarUrl(user.avatar_url)"
+                  alt="Аватар"
+                  class="user-avatar"
                 >
-                  💾 Сохранить
+                <span v-else class="user-avatar-placeholder">
+                  {{ getInitials(user?.username || user?.email) }}
+                </span>
+              </span>
+              <span class="user-name">{{ user?.username || user?.email }}</span>
+            </button>
+
+            <transition name="fade">
+              <div
+                v-if="showUserMenu"
+                ref="userMenuRef"
+                class="user-menu"
+              >
+              <div class="user-menu__section user-menu__section--project">
+                <div class="user-menu__project-row">
+                  <span class="user-menu__project-name">{{ currentBoardName }}</span>
+                  <button
+                    class="user-menu__save"
+                    type="button"
+                    :disabled="isSaving"
+                    @click="handleSaveClick"
+                  >
+                    💾 Сохранить
+                  </button>
+                </div>
+                <div class="user-menu__status">
+                  <template v-if="isSaving">
+                    <span class="status-spinner">⏳</span>
+                    <span>Сохранение...</span>
+                  </template>
+                  <template v-else-if="lastSaved">
+                    <span class="status-icon">✓</span>
+                    <span>Сохранено</span>
+                  </template>
+                  <template v-else>
+                    <span>Нет сохранений</span>
+                  </template>
+                </div>
+              </div>
+
+              <div class="user-menu__section">
+                <button class="user-menu__item" type="button" @click="openBoards">
+                  📁 Мои проекты
+                </button>
+                <div class="user-menu__item user-menu__item--static">
+                  🤝 Совместные проекты
+                </div>
+              </div>
+              <div class="user-menu__divider" />
+
+              <div class="user-menu__section">
+                <div class="user-menu__item user-menu__item--static">
+                  🔐 Номер личного кабинета: RUY68241101111
+                </div>
+                <button class="user-menu__item" type="button" @click="handleProfileClick">
+                  👤 Профиль
+                </button>
+                <button class="user-menu__item user-menu__item--danger" type="button" @click="handleLogout">
+                  🚪 Выйти
                 </button>
               </div>
-              <div class="user-menu__status">
-                <template v-if="isSaving">
-                  <span class="status-spinner">⏳</span>
-                  <span>Сохранение...</span>
-                </template>
-                <template v-else-if="lastSaved">
-                  <span class="status-icon">✓</span>
-                  <span>Сохранено</span>
-                </template>
-                <template v-else>
-                  <span>Нет сохранений</span>
-                </template>
-              </div>
             </div>
-
-            <div class="user-menu__section">
-              <button class="user-menu__item" type="button" @click="openBoards">
-                📁 Мои проекты
-              </button>
-              <div class="user-menu__item user-menu__item--static">
-                🤝 Совместные проекты
-              </div>
-            </div>
-
-            <div class="user-menu__divider" />
-
-            <div class="user-menu__section">
-              <div class="user-menu__item user-menu__item--static">
-                🔐 Номер личного кабинета: RUY68241101111
-              </div>
-              <button class="user-menu__item" type="button" @click="handleProfileClick">
-                👤 Профиль
-              </button>
-              <button class="user-menu__item user-menu__item--danger" type="button" @click="handleLogout">
-                🚪 Выйти
-              </button>
-            </div>
-          </div>
-        </transition>
-      </template>
-      <template v-else>
-        <button class="app-header__btn app-header__btn--login" @click="openLogin">
-          Войти
-        </button>
-        <button class="app-header__btn app-header__btn--register" @click="openRegister">
-          Регистрация
-        </button>
-      </template>
-    </div>
-      <HeaderActions
-        class="app-header__actions"
-        :is-modern-theme="props.isModernTheme"
-        @toggle-theme="emit('toggle-theme')"
-      />
+          </transition>
+        </template>
+        <template v-else>
+          <button class="app-header__btn app-header__btn--login" @click="openLogin">
+            Войти
+          </button>
+          <button class="app-header__btn app-header__btn--register" @click="openRegister">
+            Регистрация
+          </button>
+        </template>
+      </div>
+        <HeaderActions
+          class="app-header__actions"
+          :is-modern-theme="props.isModernTheme"
+          :hide-theme-toggle="true"
+          @toggle-theme="emit('toggle-theme')"
+        />
+      </div>
+      <button
+        class="app-header__theme-toggle"
+        type="button"
+        :title="themeTitle"
+        @click="emit('toggle-theme')"
+      >
+        <span class="app-header__theme-icon" aria-hidden="true"></span>
+      </button>
     </div>
 
     <AuthModal
@@ -255,20 +265,16 @@ onBeforeUnmount(() => {
   --header-input-border: rgba(15, 23, 42, 0.15);
   position: fixed;
   top: 12px;
-  left: 50%;  
+  left: 0;
+  right: 0;
   display: flex;
-  align-items: center;
-  padding: 12px 18px;
-  background: var(--header-surface);
-  border-radius: 20px;
-  box-shadow: var(--header-shadow);
-  backdrop-filter: blur(6px);
+  justify-content: center;
+  padding: 0 24px;
   z-index: 1900;
   font-size: 16px;
   line-height: 1.3;
   color: var(--header-text);
-  transform: translateX(-50%);
-  max-width: calc(100% - 32px);  
+  pointer-events: none; 
 }
 
 .app-header--modern {
@@ -278,7 +284,22 @@ onBeforeUnmount(() => {
   --header-label-bg: rgba(44, 58, 82, 0.72);
   --header-input-border: rgba(96, 164, 255, 0.35);
 }
-.app-header__content {
+.app-header__inner {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 18px;
+  background: var(--header-surface);
+  border-radius: 20px;
+  box-shadow: var(--header-shadow);
+  backdrop-filter: blur(6px);
+  width: min(720px, 100%);
+}
+
+.app-header__center {
+  justify-self: center;
   display: flex;
   align-items: center;
   gap: 18px;
@@ -293,7 +314,68 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
 }
+.app-header__theme-toggle {
+  width: 52px;
+  height: 52px;
+  border-radius: 20px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.14), rgba(59, 130, 246, 0));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 16px 30px rgba(37, 99, 235, 0.26);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
+}
 
+.app-header__theme-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 38px rgba(37, 99, 235, 0.34);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.app-header__theme-icon {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%);
+  box-shadow: inset -4px -4px 10px rgba(255, 255, 255, 0.22), 0 6px 12px rgba(15, 23, 42, 0.18);
+}
+
+.app-header__theme-icon::before,
+.app-header__theme-icon::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  transition: opacity 0.2s ease;
+}
+
+.app-header__theme-icon::before {
+  inset: 4px;
+  opacity: 0.4;
+}
+
+.app-header__theme-icon::after {
+  inset: 7px;
+  opacity: 0.2;
+}
+
+.app-header--modern .app-header__theme-toggle {
+  border-color: rgba(96, 164, 255, 0.42);
+  background: linear-gradient(145deg, rgba(114, 182, 255, 0.28), rgba(114, 182, 255, 0));
+  box-shadow: 0 20px 40px rgba(6, 11, 21, 0.58);
+}
+
+.app-header--modern .app-header__theme-toggle:hover {
+  box-shadow: 0 26px 46px rgba(6, 11, 21, 0.72);
+}
+
+.app-header--modern .app-header__theme-icon {
+  background: linear-gradient(135deg, #e5f3ff 0%, #73c8ff 100%);
+  box-shadow: inset -4px -4px 10px rgba(6, 11, 21, 0.35), 0 6px 12px rgba(6, 11, 21, 0.3);
+}
 .user-avatar,
 .user-avatar-placeholder {
   width: 32px;
@@ -350,7 +432,7 @@ onBeforeUnmount(() => {
 .user-menu {
   position: absolute;
   top: calc(100% + 12px);
-  right: 0;
+  left: 50%;
   min-width: 320px;
   background: var(--header-surface);
   color: var(--header-text);
@@ -361,6 +443,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 16px;
   z-index: 2500;
+  transform: translateX(-50%);  
 }
 
 .user-menu__section {
@@ -452,7 +535,9 @@ onBeforeUnmount(() => {
   background: rgba(15, 23, 42, 0.08);
   transform: translateY(-1px);
 }
-
+.app-header--modern .user-menu__item:hover {
+  background: rgba(229, 243, 255, 0.08);
+}
 .user-menu__item--static {
   cursor: default;
 }
@@ -469,6 +554,9 @@ onBeforeUnmount(() => {
 .user-menu__divider {
   height: 1px;
   background: rgba(15, 23, 42, 0.12);
+}
+.app-header--modern .user-menu__divider {
+  background: rgba(229, 243, 255, 0.18);
 }
 
 .app-header__btn {
