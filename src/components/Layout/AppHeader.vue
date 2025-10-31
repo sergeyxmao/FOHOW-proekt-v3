@@ -11,6 +11,10 @@ const props = defineProps({
   isModernTheme: {
     type: Boolean,
     default: false
+  },
+  zoomDisplay: {
+    type: String,
+    default: ''    
   }
 })
 
@@ -29,7 +33,7 @@ const userTriggerRef = ref(null)
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 import HeaderActions from './HeaderActions.vue'  
 
-const emit = defineEmits(['open-board', 'save-board', 'toggle-theme'])
+const emit = defineEmits(['open-board', 'save-board', 'toggle-theme', 'fit-to-content'])
 
 const themeTitle = computed(() =>
   props.isModernTheme ? 'Вернуть светлое меню' : 'Включить тёмное меню'
@@ -86,9 +90,8 @@ function closeUserMenu() {
   showUserMenu.value = false
 }
 
-function handleSaveClick() {
-  emit('save-board')
-  closeUserMenu()
+function handleZoomClick() {
+  emit('fit-to-content')
 }
 
 function handleProfileClick() {
@@ -122,38 +125,47 @@ onBeforeUnmount(() => {
     ]"
   >
     <div class="app-header__inner">
-      <div v-if="isAuthenticated" class="app-header__save-block">
+      <div v-if="isAuthenticated" class="app-header__zoom-block">
         <button
-          class="app-header__save-button"
+          class="app-header__zoom-button"
           type="button"
-          :disabled="isSaving"
-          @click="handleSaveClick"
+          title="Автоподгонка масштаба"
+          @click="handleZoomClick"
         >
-          💾 Сохранить
+          Масштаб: <span class="app-header__zoom-value">{{ props.zoomDisplay }}</span>
         </button>
-      </div>      
+      </div>
       <div class="app-header__user-block">
         <div class="app-header__auth">
           <template v-if="isAuthenticated">
-            <button
-              ref="userTriggerRef"
-              type="button"
-              class="app-header__user-trigger"
-              @click.stop="toggleUserMenu"
-            >
-              <span class="user-avatar-wrapper">
-                <img
-                  v-if="user?.avatar_url"
-                  :src="getAvatarUrl(user.avatar_url)"
-                  alt="Аватар"
-                  class="user-avatar"
-                >
-                <span v-else class="user-avatar-placeholder">
-                  {{ getInitials(user?.username || user?.email) }}
+            <div class="app-header__user-column">
+              <button
+                ref="userTriggerRef"
+                type="button"
+                class="app-header__user-trigger"
+                @click.stop="toggleUserMenu"
+              >
+                <span class="user-avatar-wrapper">
+                  <img
+                    v-if="user?.avatar_url"
+                    :src="getAvatarUrl(user.avatar_url)"
+                    alt="Аватар"
+                    class="user-avatar"
+                  >
+                  <span v-else class="user-avatar-placeholder">
+                    {{ getInitials(user?.username || user?.email) }}
+                  </span>
                 </span>
-              </span>
-              <span class="user-name">{{ user?.username || user?.email }}</span>
-            </button>
+                <span class="user-name">{{ user?.username || user?.email }}</span>
+              </button>
+              <HeaderActions
+                class="app-header__quick-actions"
+                variant="menu"
+                hide-theme-toggle
+                :is-modern-theme="props.isModernTheme"
+                @toggle-theme="emit('toggle-theme')"
+              />
+            </div>
 
             <transition name="fade">
               <div
@@ -186,14 +198,6 @@ onBeforeUnmount(() => {
                   🤝 Совместные проекты
                 </div>
               </div>
-              <div class="user-menu__divider" />
-              <HeaderActions
-                class="user-menu__actions"
-                variant="menu"
-                :is-modern-theme="props.isModernTheme"
-                @toggle-theme="emit('toggle-theme')"
-              />
-
               <div class="user-menu__divider" />
               <div class="user-menu__section">
                 <div class="user-menu__item user-menu__item--static">
@@ -284,7 +288,7 @@ onBeforeUnmount(() => {
 }
 
 .app-header__user-block,
-.app-header__save-block {
+.app-header__zoom-block {
   position: fixed;
   top: 16px;
   display: flex;
@@ -298,7 +302,7 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
 }
 
-.app-header__save-block {
+.app-header__zoom-block {
   left: 50%;
   transform: translateX(-50%);
   justify-content: center;
@@ -309,7 +313,37 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
 }
+.app-header__user-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
 
+.app-header__quick-actions {
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.app-header__quick-actions :deep(.header-actions__menu-button) {
+  background: rgba(15, 23, 42, 0.08);
+  color: inherit;
+}
+
+.app-header__quick-actions :deep(.header-actions__menu-button:hover:not(:disabled)) {
+  background: rgba(15, 23, 42, 0.14);
+}
+
+.app-header--modern .app-header__quick-actions :deep(.header-actions__menu-button) {
+  background: rgba(229, 243, 255, 0.08);
+  color: #e5f3ff;
+}
+
+.app-header--modern .app-header__quick-actions :deep(.header-actions__menu-button:hover:not(:disabled)) {
+  background: rgba(229, 243, 255, 0.16);
+}
 .user-avatar,
 .user-avatar-placeholder {
   width: 96px;
@@ -467,29 +501,42 @@ onBeforeUnmount(() => {
 .app-header--modern .user-menu__divider {
   background: rgba(229, 243, 255, 0.18);
 }
-.app-header__save-button {
-  padding: 10px 28px;
-  border-radius: 16px;
-  border: none;
-  background: #2196f3;
-  color: #fff;
-  font-size: 16px;
+.app-header__zoom-button {
+  padding: 10px 24px;
+  border-radius: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.22);
-  transition: background 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.16);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  backdrop-filter: blur(6px);
 }
 
-.app-header__save-button:hover:not(:disabled) {
-  background: #1976d2;
+.app-header__zoom-button:hover {
   transform: translateY(-2px);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.2);
+  background: rgba(255, 255, 255, 0.98);  
 }
 
-.app-header__save-button:disabled {
-  background: #90caf9;
-  cursor: default;
-  box-shadow: none;
+.app-header__zoom-value {
+  margin-left: 6px;
+  font-weight: 800;
 }
+
+.app-header--modern .app-header__zoom-button {
+  border-color: rgba(96, 164, 255, 0.38);
+  background: rgba(32, 45, 72, 0.9);
+  color: #e5f3ff;
+  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.55);
+}
+
+.app-header--modern .app-header__zoom-button:hover {
+  background: rgba(52, 72, 108, 0.96);
+  box-shadow: 0 24px 42px rgba(6, 11, 21, 0.65);
+  }
 .app-header__btn {
   padding: 8px 20px;
   border-radius: 12px;
@@ -557,7 +604,7 @@ onBeforeUnmount(() => {
     gap: 12px;
   }
 
-  .app-header__save-block {
+  .app-header__zoom-block {
     left: 50%;
     transform: translateX(-50%);
   }
