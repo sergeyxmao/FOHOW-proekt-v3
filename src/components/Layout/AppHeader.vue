@@ -327,22 +327,24 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.app-header__quick-actions :deep(.header-actions) {
+  --header-button-bg: rgba(248, 250, 252, 0.92);
+  --header-button-border: rgba(148, 163, 184, 0.45);
+  --header-button-color: #0f172a;
+  --header-button-shadow: rgba(15, 23, 42, 0.18);
+  --header-button-hover-shadow: rgba(15, 98, 254, 0.32);
+}
+
 .app-header__quick-actions :deep(.header-actions__menu-button) {
-  background: rgba(15, 23, 42, 0.08);
-  color: inherit;
+  width: 100%;
 }
 
-.app-header__quick-actions :deep(.header-actions__menu-button:hover:not(:disabled)) {
-  background: rgba(15, 23, 42, 0.14);
-}
-
-.app-header--modern .app-header__quick-actions :deep(.header-actions__menu-button) {
-  background: rgba(229, 243, 255, 0.08);
-  color: #e5f3ff;
-}
-
-.app-header--modern .app-header__quick-actions :deep(.header-actions__menu-button:hover:not(:disabled)) {
-  background: rgba(229, 243, 255, 0.16);
+.app-header--modern .app-header__quick-actions :deep(.header-actions) {
+  --header-button-bg: rgba(32, 44, 68, 0.92);
+  --header-button-border: rgba(104, 171, 255, 0.45);
+  --header-button-color: #e5f3ff;
+  --header-button-shadow: rgba(6, 11, 21, 0.55);
+  --header-button-hover-shadow: rgba(12, 84, 196, 0.45);
 }
 .user-avatar,
 .user-avatar-placeholder {
