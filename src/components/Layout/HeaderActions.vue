@@ -13,7 +13,11 @@ const props = defineProps({
   },
   hideThemeToggle: {
     type: Boolean,
-    default: false    
+    default: false
+  },
+  variant: {
+    type: String,
+    default: 'default'
   }
 })
 
@@ -83,6 +87,7 @@ const templateOptions = computed(() =>
 const themeTitle = computed(() =>
   props.isModernTheme ? 'Вернуть светлое меню' : 'Включить тёмное меню'
 )
+const isMenuVariant = computed(() => props.variant === 'menu')
 
 function addCard() {
   cardsStore.addCard({
@@ -249,51 +254,58 @@ function handleToggleTheme() {
   <div
     :class="[
       'header-actions',
-      { 'header-actions--modern': props.isModernTheme }
+      {
+        'header-actions--modern': props.isModernTheme,
+        'header-actions--menu': isMenuVariant
+      }
     ]"
   >
-    <div class="header-actions__licenses">
+    <template v-if="isMenuVariant">
       <button
-        class="header-actions__button"
+        v-if="!props.hideThemeToggle"
+        class="header-actions__menu-button"
         type="button"
-        title="Добавить лицензию"
+        @click="handleToggleTheme"
+      >
+        {{ themeTitle }}
+      </button>
+      <button
+        class="header-actions__menu-button"
+        type="button"
         @click="addCard"
       >
-        □
+        Добавить лицензию
       </button>
       <button
-        class="header-actions__button header-actions__button--large"
+        class="header-actions__menu-button"
         type="button"
-        title="Добавить большую лицензию"
         @click="addLargeCard"
       >
-        ⧠
+        Добавить большую лицензию
       </button>
       <button
-        class="header-actions__button header-actions__button--gold"
+        class="header-actions__menu-button"
         type="button"
-        title="Добавить Gold лицензию"
         @click="addGoldCard"
       >
-        ★
+        Добавить Gold лицензию
       </button>
-      <div ref="templateAnchorRef" class="header-actions__templates">
+      <div ref="templateAnchorRef" class="header-actions__menu-group">
         <button
-          class="header-actions__button"
+          class="header-actions__menu-button"
           type="button"
-          title="Добавить шаблон"
           :disabled="!templateOptions.length"
           aria-haspopup="true"
           :aria-expanded="isTemplateMenuOpen"
           @click="handleTemplateButtonClick"
         >
-          ⧉
+          Добавить шаблон
         </button>
         <transition name="header-actions-menu">
           <div
             v-if="isTemplateMenuOpen && templateOptions.length"
             ref="templateMenuRef"
-            class="header-actions__menu"
+            class="header-actions__menu-dropdown"
             role="menu"
             aria-label="Выбор шаблона"
           >
@@ -321,6 +333,78 @@ function handleToggleTheme() {
     >
       <span class="header-actions__theme-icon" aria-hidden="true"></span>
     </button>
+    </template>
+    <template v-else>
+      <div class="header-actions__licenses">
+        <button
+          class="header-actions__button"
+          type="button"
+          title="Добавить лицензию"
+          @click="addCard"
+        >
+          □
+        </button>
+        <button
+          class="header-actions__button header-actions__button--large"
+          type="button"
+          title="Добавить большую лицензию"
+          @click="addLargeCard"
+        >
+          ⧠
+        </button>
+        <button
+          class="header-actions__button header-actions__button--gold"
+          type="button"
+          title="Добавить Gold лицензию"
+          @click="addGoldCard"
+        >
+          ★
+        </button>
+        <div ref="templateAnchorRef" class="header-actions__templates">
+          <button
+            class="header-actions__button"
+            type="button"
+            title="Добавить шаблон"
+            :disabled="!templateOptions.length"
+            aria-haspopup="true"
+            :aria-expanded="isTemplateMenuOpen"
+            @click="handleTemplateButtonClick"
+          >
+            ⧉
+          </button>
+          <transition name="header-actions-menu">
+            <div
+              v-if="isTemplateMenuOpen && templateOptions.length"
+              ref="templateMenuRef"
+              class="header-actions__menu"
+              role="menu"
+              aria-label="Выбор шаблона"
+            >
+              <button
+                v-for="option in templateOptions"
+                :key="option.id"
+                class="header-actions__menu-item"
+                type="button"
+                role="menuitem"
+                @click.stop="selectTemplate(option.id)"
+              >
+                {{ option.displayText }}
+              </button>
+            </div>
+          </transition>
+        </div>
+      </div>
+
+      <button
+        v-if="!props.hideThemeToggle"
+        class="header-actions__theme-toggle"
+        type="button"
+        :title="themeTitle"
+        @click="handleToggleTheme"
+      >
+        <span class="header-actions__theme-icon" aria-hidden="true"></span>
+      </button>
+    </template>    
   </div>
 </template>
 
@@ -336,13 +420,60 @@ function handleToggleTheme() {
   box-shadow: none;
   backdrop-filter: none;
 }
+.header-actions--menu {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
 
 .header-actions--modern {
   background: transparent;
   border: none;
   box-shadow: none;
 }
+.header-actions__menu-button {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(15, 23, 42, 0.08);
+  color: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
 
+.header-actions__menu-button:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.14);
+  transform: translateY(-1px);
+}
+
+.header-actions__menu-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+  transform: none;
+}
+
+.header-actions--modern .header-actions__menu-button {
+  background: rgba(229, 243, 255, 0.08);
+}
+
+.header-actions--modern .header-actions__menu-button:hover:not(:disabled) {
+  background: rgba(229, 243, 255, 0.16);
+}
+
+.header-actions__menu-group {
+  position: relative;
+  width: 100%;
+}
+
+.header-actions--menu .header-actions__menu-dropdown {
+  left: 0;
+  right: auto;
+  width: 100%;
+}
 .header-actions__licenses {
   display: flex;
   align-items: center;
@@ -390,7 +521,8 @@ function handleToggleTheme() {
   position: relative;
 }
 
-.header-actions__menu {
+.header-actions__menu,
+.header-actions__menu-dropdown {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
@@ -408,8 +540,8 @@ function handleToggleTheme() {
   gap: 6px;
   z-index: 2100;
 }
-
-.header-actions--modern .header-actions__menu {
+.header-actions--modern .header-actions__menu,
+.header-actions--modern .header-actions__menu-dropdown {
   background: rgba(40, 56, 90, 0.92);
   border-color: rgba(96, 164, 255, 0.35);
   box-shadow: 0 22px 38px rgba(6, 11, 21, 0.55);
