@@ -27,8 +27,9 @@ const showUserMenu = ref(false)
 const userMenuRef = ref(null)
 const userTriggerRef = ref(null)
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+import HeaderActions from './HeaderActions.vue'  
 
-const emit = defineEmits(['open-board', 'save-board'])
+const emit = defineEmits(['open-board', 'save-board', 'toggle-theme'])
 
 function getAvatarUrl(url) {
   if (!url) return ''
@@ -116,34 +117,35 @@ onBeforeUnmount(() => {
       { 'app-header--modern': props.isModernTheme }
     ]"
   >
-    <div class="app-header__auth">
-      <template v-if="isAuthenticated">
-        <button
-          ref="userTriggerRef"
-          type="button"
-          class="app-header__user-trigger"
-          @click.stop="toggleUserMenu"
-        >
-          <span class="user-avatar-wrapper">
-            <img
-              v-if="user?.avatar_url"
-              :src="getAvatarUrl(user.avatar_url)"
-              alt="Аватар"
-              class="user-avatar"
-            >
-            <span v-else class="user-avatar-placeholder">
-              {{ getInitials(user?.username || user?.email) }}
-            </span>
-          </span>
-          <span class="user-name">{{ user?.username || user?.email }}</span>
-        </button>
-
-        <transition name="fade">
-          <div
-            v-if="showUserMenu"
-            ref="userMenuRef"
-            class="user-menu"
+    <div class="app-header__content">
+      <div class="app-header__auth">
+        <template v-if="isAuthenticated">
+          <button
+            ref="userTriggerRef"
+            type="button"
+            class="app-header__user-trigger"
+            @click.stop="toggleUserMenu"
           >
+            <span class="user-avatar-wrapper">
+              <img
+                v-if="user?.avatar_url"
+                :src="getAvatarUrl(user.avatar_url)"
+                alt="Аватар"
+                class="user-avatar"
+              >
+              <span v-else class="user-avatar-placeholder">
+                {{ getInitials(user?.username || user?.email) }}
+              </span>
+            </span>
+            <span class="user-name">{{ user?.username || user?.email }}</span>
+          </button>
+
+          <transition name="fade">
+            <div
+              v-if="showUserMenu"
+              ref="userMenuRef"
+              class="user-menu"
+            >            
             <div class="user-menu__section user-menu__section--project">
               <div class="user-menu__project-row">
                 <span class="user-menu__project-name">{{ currentBoardName }}</span>
@@ -205,6 +207,12 @@ onBeforeUnmount(() => {
         </button>
       </template>
     </div>
+      <HeaderActions
+        class="app-header__actions"
+        :is-modern-theme="props.isModernTheme"
+        @toggle-theme="emit('toggle-theme')"
+      />
+    </div>
 
     <AuthModal
       :is-open="showAuthModal"
@@ -247,10 +255,7 @@ onBeforeUnmount(() => {
   --header-input-border: rgba(15, 23, 42, 0.15);
   position: fixed;
   top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
-  justify-content: flex-end;
   align-items: center;
   padding: 12px 18px;
   background: var(--header-surface);
@@ -270,12 +275,20 @@ onBeforeUnmount(() => {
   --header-label-bg: rgba(44, 58, 82, 0.72);
   --header-input-border: rgba(96, 164, 255, 0.35);
 }
-
+.app-header__content {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
 .app-header__auth {
   position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.app-header__actions {
+  display: flex;
+  align-items: center;
 }
 
 .user-avatar,
