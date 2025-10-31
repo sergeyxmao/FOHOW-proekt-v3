@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCardsStore } from '../../stores/cards.js'
 import { useHistoryStore } from '../../stores/history.js'
@@ -7,9 +7,6 @@ import { useCanvasStore } from '../../stores/canvas.js'
 import { useConnectionsStore } from '../../stores/connections.js'
 import { useProjectStore, formatProjectFileName } from '../../stores/project.js'
 import { useViewportStore } from '../../stores/viewport.js'
-import { useNotesStore } from '../../stores/notes.js'
-import { useBoardCommentsStore } from './boardComments.js'
-import BoardComments from './BoardComments.vue'  
 import { parseActivePV } from '../../utils/activePv'
 import { calcStagesAndCycles } from '../../utils/calculationEngine'
 import { buildCardCssVariables } from '../../utils/constants'  
@@ -32,8 +29,6 @@ const canvasStore = useCanvasStore()
 const connectionsStore = useConnectionsStore()
 const projectStore = useProjectStore()
 const viewportStore = useViewportStore()
-const notesStore = useNotesStore()
-const boardCommentsStore = useBoardCommentsStore()
   
 const {
   backgroundColor,
@@ -45,31 +40,6 @@ const {
 } = storeToRefs(canvasStore)
 const { normalizedProjectName } = storeToRefs(projectStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
-const { dropdownOpen, cardsWithEntries } = storeToRefs(notesStore)
-const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
-
-const notesButtonRef = ref(null)
-const notesDropdownRef = ref(null)
-const hasNoteEntries = computed(() => notesStore.hasEntries)
-const commentsButtonRef = ref(null)
-const commentsPanelRef = ref(null)
-const isCommentsOpen = ref(false)
-const commentsButtonClasses = computed(() => ({
-  active: isCommentsOpen.value,
-  'has-comments': hasBoardComments.value
-}))
-
-const openCommentsPanel = () => {
-  isCommentsOpen.value = true
-}
-
-const closeCommentsPanel = () => {
-  isCommentsOpen.value = false
-}
-
-const toggleCommentsPanel = () => {
-  isCommentsOpen.value = !isCommentsOpen.value
-}
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
 
 // Обработчики для кнопок левой панели
@@ -741,67 +711,6 @@ const handleLoadProject = () => {
 const handleFitToContent = () => {
   emit('fit-to-content')
 }
-onMounted(() => {
-  document.addEventListener('pointerdown', handleOutsidePointer)
-  window.addEventListener('keydown', handleNotesKeydown)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('pointerdown', handleOutsidePointer)
-  window.removeEventListener('keydown', handleNotesKeydown)
-})
-
-const handleNotesList = () => {
-  closeCommentsPanel()
-  
-  notesStore.toggleDropdown()
-}
-const handleCommentsToggle = () => {
-  if (isCommentsOpen.value) {
-    closeCommentsPanel()
-  } else {
-    notesStore.closeDropdown()
-    openCommentsPanel()
-  }
-}
-const handleNoteItemClick = (cardId) => {
-  notesStore.requestOpen(cardId, { focus: true })
-}
-const handleNoteEntryClick = (cardId, date) => {
-  notesStore.requestOpen(cardId, { focus: true, date })
-}
-
-const handleNoteEntryDelete = (cardId, date) => {
-  cardsStore.removeCardNoteEntry(cardId, date)
-}
-
-const handleCardNotesDelete = (cardId) => {
-  cardsStore.clearCardNotes(cardId)
-}
-
-const handleOutsidePointer = (event) => {
-  const target = event.target
-  const isNotesTarget = notesButtonRef.value?.contains(target) || notesDropdownRef.value?.contains(target)
-  const isCommentsTarget = commentsButtonRef.value?.contains(target) || commentsPanelRef.value?.contains(target)
-
-  if (!isNotesTarget && notesStore.dropdownOpen) {
-    notesStore.closeDropdown()
-  }
-
-  if (!isCommentsTarget && isCommentsOpen.value) {
-    closeCommentsPanel()
-  }
-}
-
-const handleNotesKeydown = (event) => {
-  if (event.key === 'Escape') {
-    if (notesStore.dropdownOpen) {
-      notesStore.closeDropdown()
-    }
-    if (isCommentsOpen.value) {
-      closeCommentsPanel()
-    }  }
-}
 
 const handleSelectionMode = () => {
   canvasStore.toggleSelectionMode()
@@ -858,106 +767,7 @@ const handleToggleGuides = () => {
           >
             ↷
           </button>
-        </div>
-        <div class="left-panel-controls__notes left-panel-controls__notes--collapsed">
-          <button
-            ref="notesButtonRef"
-            class="ui-btn"
-            :class="{ active: dropdownOpen }"
-            type="button"
-            title="Список заметок"
-            :disabled="!hasNoteEntries"
-            @pointerdown.stop
-            @click="handleNotesList"
-          >
-            🗒️
-          </button>
-          <transition name="notes-dropdown-fade">
-            <div
-              v-if="dropdownOpen"
-              ref="notesDropdownRef"
-              class="notes-dropdown"
-            >
-              <div
-                v-for="item in cardsWithEntries"
-                :key="item.id"
-                class="notes-dropdown__group"
-              >
-                <div class="notes-dropdown__card-row">
-                  <button
-                    type="button"
-                    class="notes-dropdown__card-button"
-                    @pointerdown.stop
-                    @click.stop="handleNoteItemClick(item.id)"
-                  >
-                    📝 {{ item.title }}
-                  </button>
-                  <button
-                    type="button"
-                    class="notes-dropdown__icon-btn notes-dropdown__icon-btn--danger"
-                    title="Удалить все заметки"
-                    @pointerdown.stop
-                    @click.stop="handleCardNotesDelete(item.id)"
-                  >
-                    🗑️
-                  </button>
-                </div>
-                <div class="notes-dropdown__entries">
-                  <div
-                    v-for="entry in item.entries"
-                    :key="entry.date"
-                    class="notes-dropdown__entry"
-                  >
-                    <button
-                      type="button"
-                      class="notes-dropdown__entry-button"
-                      @pointerdown.stop
-                      @click.stop="handleNoteEntryClick(item.id, entry.date)"
-                    >
-                      <span
-                        class="notes-dropdown__entry-color"
-                        :style="{ backgroundColor: entry.color }"
-                      ></span>
-                      <span class="notes-dropdown__entry-label">{{ entry.label }}</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="notes-dropdown__icon-btn"
-                      title="Удалить заметку"
-                      @pointerdown.stop
-                      @click.stop="handleNoteEntryDelete(item.id, entry.date)"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </transition>
-        </div>
-        <div class="left-panel-controls__comments left-panel-controls__comments--collapsed">
-          <button
-            ref="commentsButtonRef"
-            class="ui-btn"
-            :class="commentsButtonClasses"
-            type="button"
-            title="Комментарии доски"
-            @pointerdown.stop
-            @click="handleCommentsToggle"
-          >
-            💬
-          </button>
-          <transition name="comments-dropdown-fade">
-            <div
-              v-if="isCommentsOpen"
-              ref="commentsPanelRef"
-              class="comments-dropdown"
-              @pointerdown.stop
-            >
-              <BoardComments />
-            </div>
-          </transition>
-        </div>       
+        </div>     
         <button
           class="ui-btn left-panel-controls__pencil"
           type="button"
@@ -1001,106 +811,7 @@ const handleToggleGuides = () => {
         <button class="ui-btn" title="Экспорт в HTML (просмотр)" @click="handleExportHTML">📄</button>
         <button class="ui-btn" title="Экспорт в SVG (вектор)" @click="handleExportSVG">🖋️</button>
         <button class="ui-btn" title="Печать / Экспорт в PDF" @click="handlePrint">🖨️</button>
-        <button class="ui-btn" title="Загрузить проект из JSON" @click="handleLoadProject">📂</button>
-        <div class="left-panel-controls__notes">
-          <button
-            ref="notesButtonRef"
-            class="ui-btn"
-            type="button"
-            title="Список заметок"
-            :class="{ active: dropdownOpen }"
-            :disabled="!hasNoteEntries"
-            @pointerdown.stop
-            @click="handleNotesList"
-          >
-            🗒️
-          </button>
-          <transition name="notes-dropdown-fade">
-            <div
-              v-if="dropdownOpen"
-              ref="notesDropdownRef"
-              class="notes-dropdown"
-            >
-              <div
-                v-for="item in cardsWithEntries"
-                :key="item.id"
-                class="notes-dropdown__group"
-              >
-                <div class="notes-dropdown__card-row">
-                  <button
-                    type="button"
-                    class="notes-dropdown__card-button"
-                    @pointerdown.stop
-                    @click.stop="handleNoteItemClick(item.id)"
-                  >
-                    📝 {{ item.title }}
-                  </button>
-                  <button
-                    type="button"
-                    class="notes-dropdown__icon-btn notes-dropdown__icon-btn--danger"
-                    title="Удалить все заметки"
-                    @pointerdown.stop
-                    @click.stop="handleCardNotesDelete(item.id)"
-                  >
-                    🗑️
-                  </button>
-                </div>
-                <div class="notes-dropdown__entries">
-                  <div
-                    v-for="entry in item.entries"
-                    :key="entry.date"
-                    class="notes-dropdown__entry"
-                  >
-                    <button
-                      type="button"
-                      class="notes-dropdown__entry-button"
-                      @pointerdown.stop
-                      @click.stop="handleNoteEntryClick(item.id, entry.date)"
-                    >
-                      <span
-                        class="notes-dropdown__entry-color"
-                        :style="{ backgroundColor: entry.color }"
-                      ></span>
-                      <span class="notes-dropdown__entry-label">{{ entry.label }}</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="notes-dropdown__icon-btn"
-                      title="Удалить заметку"
-                      @pointerdown.stop
-                      @click.stop="handleNoteEntryDelete(item.id, entry.date)"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </transition>
-        </div>
-        <div class="left-panel-controls__comments">
-          <button
-            ref="commentsButtonRef"
-            class="ui-btn"
-            :class="commentsButtonClasses"
-            type="button"
-            title="Комментарии доски"
-            @pointerdown.stop
-            @click="handleCommentsToggle"
-          >
-            💬
-          </button>
-          <transition name="comments-dropdown-fade">
-            <div
-              v-if="isCommentsOpen"
-              ref="commentsPanelRef"
-              class="comments-dropdown"
-              @pointerdown.stop
-            >
-              <BoardComments />
-            </div>
-          </transition>
-        </div>        
+        <button class="ui-btn" title="Загрузить проект из JSON" @click="handleLoadProject">📂</button>      
         <button
           class="ui-btn"
           :class="{ active: isSelectionMode }"
@@ -1226,209 +937,7 @@ const handleToggleGuides = () => {
 .left-panel-controls__grid-item--full {
   grid-column: 1 / -1;
 }
-.left-panel-controls__notes {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--left-panel-btn-size);
-}
 
-.left-panel-controls__notes--collapsed {
-  width: var(--left-panel-btn-size);
-}
-
-.left-panel-controls__notes .ui-btn {
-  width: var(--left-panel-btn-size);
-}
-.left-panel-controls__comments {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--left-panel-btn-size);
-}
-
-.left-panel-controls__comments--collapsed {
-  width: var(--left-panel-btn-size);
-}
-
-.left-panel-controls__comments .ui-btn {
-  width: var(--left-panel-btn-size);
-  position: relative;
-}
-
-.left-panel-controls__comments .ui-btn.has-comments::after {
-  content: '';
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #5d8bf4;
-  box-shadow: 0 0 0 2px rgba(93, 139, 244, 0.35);
-}
-.notes-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: auto;
-  min-width: 220px;
-  background: var(--left-panel-btn-bg);
-  border: 1px solid var(--left-panel-btn-border);
-  border-radius: 18px;
-  box-shadow: 0 20px 34px rgba(15, 23, 42, 0.28);
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  z-index: 30;
-}
-
-.comments-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: auto;
-  min-width: 280px;
-  max-width: 360px;
-  background: var(--left-panel-btn-bg);
-  border: 1px solid var(--left-panel-btn-border);
-  border-radius: 18px;
-  box-shadow: 0 20px 34px rgba(15, 23, 42, 0.28);
-  padding: 14px;
-  z-index: 30;
-}
-.notes-dropdown__group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}  
-
-.notes-dropdown__group + .notes-dropdown__group {
-  border-top: 1px solid rgba(15, 23, 42, 0.12);
-  padding-top: 12px;
-  margin-top: 4px;
-}
-
-.notes-dropdown__card-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.notes-dropdown__card-button {  border: none;
-  background: rgba(15, 23, 42, 0.06);
-  color: var(--left-panel-btn-color);
-  border-radius: 12px;
-  padding: 10px 12px;
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: transform 0.18s ease, background 0.18s ease;
-  flex: 1 1 auto;  
-}
-
-.notes-dropdown__card-button:hover {
-  background: rgba(59, 130, 246, 0.18);
-  transform: translateX(4px);
-}
-.notes-dropdown__entries {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.notes-dropdown__entry {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.notes-dropdown__entry-button {
-  border: none;
-  background: rgba(15, 23, 42, 0.06);
-  color: var(--left-panel-btn-color);
-  border-radius: 10px;
-  padding: 6px 10px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: transform 0.18s ease, background 0.18s ease;
-}
-
-.notes-dropdown__entry-button:hover {
-  background: rgba(59, 130, 246, 0.18);
-  transform: translateX(4px);
-}
-
-.notes-dropdown__entry-color {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.2);
-}
-
-.notes-dropdown__entry-label {
-  font-weight: 600;
-  line-height: 1;
-}
-
-.notes-dropdown__icon-btn {
-  border: none;
-  background: transparent;
-  color: var(--left-panel-btn-color);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  border-radius: 8px;
-  font-size: 16px;
-  line-height: 1;
-  transition: background 0.18s ease, transform 0.18s ease, color 0.18s ease;
-}
-
-.notes-dropdown__icon-btn:hover {
-  background: rgba(15, 23, 42, 0.12);
-  transform: translateY(-1px);
-}
-
-.notes-dropdown__icon-btn--danger {
-  color: #dc2626;
-}
-
-.notes-dropdown__icon-btn--danger:hover {
-  background: rgba(248, 113, 113, 0.18);
-  color: #b91c1c;
-}
-.comments-dropdown-fade-enter-active,
-.comments-dropdown-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.comments-dropdown-fade-enter-from,
-.comments-dropdown-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
-}
-
-.notes-dropdown-fade-enter-active,
-.notes-dropdown-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.notes-dropdown-fade-enter-from,
-.notes-dropdown-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
-}  
 .left-panel-controls__zoom {
   width: 100%;
   margin-top: auto;
