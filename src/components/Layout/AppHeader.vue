@@ -158,13 +158,6 @@ onBeforeUnmount(() => {
                 </span>
                 <span class="user-name">{{ user?.username || user?.email }}</span>
               </button>
-              <HeaderActions
-                class="app-header__quick-actions"
-                variant="menu"
-                hide-theme-toggle
-                :is-modern-theme="props.isModernTheme"
-                @toggle-theme="emit('toggle-theme')"
-              />
             </div>
 
             <transition name="fade">
@@ -248,6 +241,14 @@ onBeforeUnmount(() => {
         />
       </div>
     </Teleport>
+    <HeaderActions
+      v-if="isAuthenticated"
+      class="app-header__side-actions"
+      variant="menu"
+      hide-theme-toggle
+      :is-modern-theme="props.isModernTheme"
+      @toggle-theme="emit('toggle-theme')"
+    />
 
     <BoardsModal
       :is-open="showBoards"
@@ -315,19 +316,31 @@ onBeforeUnmount(() => {
 }
 .app-header__user-column {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  gap: 18px;
 }
 
-.app-header__quick-actions {
+.app-header__side-actions {
+  position: fixed;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
+  flex-direction: column;  
   align-items: center;
-  justify-content: center;
-  padding: 4px;
+  gap: 12px;
+  padding: 6px;
+  pointer-events: auto;
+  z-index: 1850;
 }
 
-.app-header__quick-actions :deep(.header-actions) {
+.app-header__side-actions :deep(.header-actions) {
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
   --header-button-bg: rgba(248, 250, 252, 0.92);
   --header-button-border: rgba(148, 163, 184, 0.45);
   --header-button-color: #0f172a;
@@ -335,18 +348,30 @@ onBeforeUnmount(() => {
   --header-button-hover-shadow: rgba(15, 98, 254, 0.32);
 }
 
-.app-header__quick-actions :deep(.header-actions__grid) {
+.app-header__side-actions :deep(.header-actions__grid) {
   --header-grid-size: 58px;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.app-header--modern .app-header__quick-actions :deep(.header-actions) {
+.app-header__side-actions :deep(.header-actions__grid-button) {
+  box-shadow: 0 16px 30px var(--header-button-shadow);
+}
+
+.app-header--modern .app-header__side-actions :deep(.header-actions) {
   --header-button-bg: rgba(32, 44, 68, 0.92);
   --header-button-border: rgba(104, 171, 255, 0.45);
   --header-button-color: #e5f3ff;
   --header-button-shadow: rgba(6, 11, 21, 0.55);
   --header-button-hover-shadow: rgba(12, 84, 196, 0.45);
 }
+
+.app-header__side-actions :deep(.header-actions__grid-item) {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}  
 .user-avatar,
 .user-avatar-placeholder {
   width: 96px;
