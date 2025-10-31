@@ -315,16 +315,16 @@ onBeforeUnmount(() => {
 }
 .app-header__user-column {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 12px;
+  gap: 18px;
 }
 
 .app-header__quick-actions {
-  width: 220px;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
 }
 
 .app-header__quick-actions :deep(.header-actions) {
@@ -335,8 +335,9 @@ onBeforeUnmount(() => {
   --header-button-hover-shadow: rgba(15, 98, 254, 0.32);
 }
 
-.app-header__quick-actions :deep(.header-actions__menu-button) {
-  width: 100%;
+.app-header__quick-actions :deep(.header-actions__grid) {
+  --header-grid-size: 58px;
+  gap: 12px;
 }
 
 .app-header--modern .app-header__quick-actions :deep(.header-actions) {
@@ -619,6 +620,10 @@ onBeforeUnmount(() => {
   .app-header__auth {
     width: 100%;
     justify-content: center;
+  }
+  .app-header__user-column {
+    flex-direction: column;
+    gap: 12px;
   }
 
   .user-menu {
