@@ -48,11 +48,11 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async register(email, password) {
+    async register(email, password, verificationCode, verificationToken) {
       const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, verificationCode, verificationToken })
       })
 
       const data = await response.json()
@@ -61,51 +61,51 @@ export const useAuthStore = defineStore('auth', {
         throw new Error(data.error || 'Ошибка регистрации')
       }
 
-      // После регистрации автоматически логинимся
-      await this.login(email, password)
+      await this.finalizeAuthentication(data.token, data.user)
+
     },
 
-async login(email, password) {
-  const response = await fetch(`${API_URL}/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
-  })
+    async login(email, password, verificationCode, verificationToken) {
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, verificationCode, verificationToken })
+      })
 
-  const data = await response.json()
+      const data = await response.json()
 
-  if (!response.ok) {
-    throw new Error(data.error || 'Ошибка входа')
-  }
-
-  this.token = data.token
-  
-  // Сохраняем токен в localStorage
-  localStorage.setItem('token', data.token)
-  
-  // Загружаем полный профиль с сервера (включая username)
-  try {
-    const profileResponse = await fetch(`${API_URL}/profile`, {
-      headers: {
-        'Authorization': `Bearer ${data.token}`
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка входа')
       }
-    })
-    
-    if (profileResponse.ok) {
-      const profileData = await profileResponse.json()
-      this.user = profileData.user
-    } else {
-      // Если профиль не загрузился, используем данные из login
-      this.user = data.user
-    }
-  } catch (err) {
-    console.error('Ошибка загрузки профиля после логина:', err)
-    this.user = data.user
-  }
-  
-  this.isAuthenticated = true
-  localStorage.setItem('user', JSON.stringify(this.user))
-},
+
+      await this.finalizeAuthentication(data.token, data.user)
+    },
+
+    async finalizeAuthentication(token, fallbackUser) {
+      this.token = token
+      localStorage.setItem('token', token)
+
+      try {
+        const profileResponse = await fetch(`${API_URL}/profile`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json()
+          this.user = profileData.user
+        } else {
+          this.user = fallbackUser
+        }
+      } catch (err) {
+        console.error('Ошибка загрузки профиля после входа:', err)
+        this.user = fallbackUser
+      }
+
+      this.isAuthenticated = true
+      localStorage.setItem('user', JSON.stringify(this.user))
+    },
 
     logout() {
       this.user = null
