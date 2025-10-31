@@ -335,6 +335,7 @@ onBeforeUnmount(() => {
     >
       <CanvasBoard ref="canvasRef" :is-modern-theme="isModernTheme" />
     </div>
+     <button
       v-if="isAuthenticated"
       v-show="!isPencilMode && !showResetPassword"
       class="save-floating-button"
