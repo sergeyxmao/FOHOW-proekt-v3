@@ -23,7 +23,26 @@
           placeholder="••••••••"
         />
       </div>
-
+      <div class="auth-card__group">
+        <label for="verification">Проверочный код:</label>
+        <div class="auth-card__verification-row">
+          <input
+            id="verification"
+            v-model="verificationInput"
+            type="text"
+            inputmode="numeric"
+            maxlength="4"
+            required
+            placeholder="Введите код"
+          />
+          <div class="auth-card__verification-code" @click="regenerateVerificationCode">
+            {{ verificationCode }}
+          </div>
+        </div>
+        <button type="button" class="auth-card__verification-refresh" @click="regenerateVerificationCode">
+          Обновить код
+        </button>
+      </div>
       <div v-if="error" class="auth-card__message auth-card__message--error">{{ error }}</div>
 
       <button class="auth-card__submit" type="submit" :disabled="loading">
@@ -42,7 +61,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
 const emit = defineEmits(['login-success', 'switch-to-register', 'switch-to-forgot'])
@@ -56,18 +75,35 @@ const props = defineProps({
 const authStore = useAuthStore()
 const email = ref('')
 const password = ref('')
+const verificationCode = ref('')
+const verificationInput = ref('')  
 const error = ref('')
 const loading = ref(false)
+function generateVerificationCode() {
+  verificationCode.value = Math.floor(1000 + Math.random() * 9000).toString()
+}
+
+function regenerateVerificationCode() {
+  generateVerificationCode()
+  verificationInput.value = ''
+}
+
+onMounted(generateVerificationCode)
 
 async function handleLogin() {
   error.value = ''
   loading.value = true
   
   try {
+      if (verificationInput.value !== verificationCode.value) {
+      throw new Error('Неверный проверочный код')
+    }
+  
     await authStore.login(email.value, password.value)
     emit('login-success')
   } catch (err) {
     error.value = err.message
+    regenerateVerificationCode()   
   } finally {
     loading.value = false
   }
@@ -194,6 +230,44 @@ input:focus {
   color: var(--auth-link-hover);
   text-decoration: underline;
 }
+
+.auth-card__verification-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.auth-card__verification-code {
+  min-width: 96px;
+  padding: 12px 16px;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  background: var(--auth-input-bg);
+  border: 1px solid var(--auth-input-border);
+  border-radius: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-card__verification-code:hover {
+  border-color: var(--auth-input-focus-border);
+}
+
+.auth-card__verification-refresh {
+  margin-top: 8px;
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--auth-link);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.auth-card__verification-refresh:hover {
+  text-decoration: underline;
+}  
 .forgot-password-link {
   text-align: center;
   margin-top: 10px;
