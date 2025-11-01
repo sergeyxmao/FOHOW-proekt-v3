@@ -256,8 +256,27 @@ const finalCalculation = computed(() => {
   };
 });
 
-const balanceDisplay = computed(() => `${finalCalculation.value.L} / ${finalCalculation.value.R}`);
-const activeOrdersDisplay = computed(
+const calculatedBalanceDisplay = computed(() => `${finalCalculation.value.L} / ${finalCalculation.value.R}`);
+const manualBalanceOverride = computed(() => {
+  const source = props.card?.balanceManualOverride;
+  if (!source) {
+    return null;
+  }
+
+  const parsed = parseActivePV(source);
+  if (!parsed) {
+    return null;
+  }
+
+  const formatted = parsed.formatted;
+  if (!/\d/.test(formatted)) {
+    return null;
+  }
+
+  return formatted;
+});
+const balanceDisplay = computed(() => manualBalanceOverride.value ?? calculatedBalanceDisplay.value);
+  const activeOrdersDisplay = computed(
   () => `${activePvState.value.remainder.left} / ${activePvState.value.remainder.right}`
 );
 const cyclesDisplay = computed(() => finalCalculation.value.cycles);
@@ -315,19 +334,54 @@ const handleDelete = (event) => {
 
 // Обработчик для обновления значений
 const updateValue = (event, field) => {
-  if (field !== 'pv') {
+  if (field === 'pv') {
+    const newValue = event.target.textContent.trim();
+    const normalized = normalizePvValue(newValue, displayedPvValue.value);
+
+    if (event.target.textContent !== normalized) {
+      event.target.textContent = normalized;
+    }
+
+    if (normalized !== props.card.pv) {
+      cardsStore.updateCard(props.card.id, { [field]: normalized });
+    }
     return;
   }
-  
-  const newValue = event.target.textContent.trim();
-  const normalized = normalizePvValue(newValue, displayedPvValue.value);
 
-  if (event.target.textContent !== normalized) {
-    event.target.textContent = normalized;
-  }
+  if (field === 'manual-balance') {
+    const rawText = event.target.textContent || '';
+    const hasDigits = /\d/.test(rawText);
 
-  if (normalized !== props.card.pv) {
-    cardsStore.updateCard(props.card.id, { [field]: normalized });
+    if (!hasDigits) {
+      if (event.target.textContent !== calculatedBalanceDisplay.value) {
+        event.target.textContent = calculatedBalanceDisplay.value;
+      }
+      if (props.card.balanceManualOverride) {
+        cardsStore.updateCard(
+          props.card.id,
+          { balanceManualOverride: null },
+          { saveToHistory: true, description: `Сброшен ручной баланс для "${props.card.text}"` }
+        );
+      }
+      return;
+    }
+
+    const parsed = parseActivePV(rawText);
+    const nextValue = { left: parsed.left, right: parsed.right };
+    const formatted = `${nextValue.left} / ${nextValue.right}`;
+
+    if (event.target.textContent !== formatted) {
+      event.target.textContent = formatted;
+    }
+
+    const current = props.card.balanceManualOverride || {};
+    if (current.left !== nextValue.left || current.right !== nextValue.right) {
+      cardsStore.updateCard(
+        props.card.id,
+        { balanceManualOverride: nextValue },
+        { saveToHistory: true, description: `Установлен ручной баланс для "${props.card.text}"` }
+      );
+    }
   }
 };
 </script>
@@ -408,7 +462,13 @@ const updateValue = (event, field) => {
       
       <div class="card-row">
         <span class="label">Баланс:</span>
-        <span class="value">{{ balanceDisplay }}</span>
+        <span
+          class="value"
+          contenteditable="true"
+          @blur="updateValue($event, 'manual-balance')"
+        >
+          {{ balanceDisplay }}
+        </span>
       </div>
 
       <div class="card-row">
