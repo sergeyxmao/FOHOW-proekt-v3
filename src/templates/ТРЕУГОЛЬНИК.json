@@ -1,23 +1,23 @@
 {
   "version": "1.0",
-  "timestamp": 1761392973259,
+  "timestamp": 1762017582905,
   "cards": [
     {
-      "id": "1761391800054i3ewyaydn",
-      "x": 710,
-      "y": 135,
+      "id": "1762017315636fa1e9j9tx",
+      "x": 801,
+      "y": 63,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
       "headerBg": "#5D8BF4",
-      "colorIndex": -1,
+      "colorIndex": 0,
       "selected": false,
       "width": 543.4,
       "height": 364,
       "pv": "330/330pv",
-      "text": "RUY68",
+      "text": "RUY9987738276",
       "historyText": "Создана большая лицензия",
-      "balance": "0 / 0",
+      "balance": "3 / 3",
       "activePv": "0 / 0",
       "cycle": "0",
       "coinFill": "#ffd700",
@@ -26,22 +26,78 @@
       "rankBadge": null,
       "bodyHTML": "",
       "bodyGradient": "",
-      "type": "large"
+      "type": "large",
+      "note": {
+        "text": "",
+        "entries": {},
+        "colors": {},
+        "selectedDate": "2025-11-01",
+        "highlightColor": "#f44336",
+        "width": 260,
+        "height": 380,
+        "visible": false,
+        "window": null,
+        "x": 0,
+        "y": 0,
+        "viewDate": "2025-11-01",
+        "offsetX": null,
+        "offsetY": null
+      },
+      "calculated": {
+        "L": 3,
+        "R": 3,
+        "total": 6,
+        "cycles": 0,
+        "stage": 1,
+        "toNext": 12
+      },
+      "total": 6,
+      "stage": 1,
+      "toNext": 12,
+      "calculatedIsFull": true,
+      "activePvManual": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvLocal": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvAggregated": {
+        "left": 0,
+        "right": 0,
+        "total": 0,
+        "remainderLeft": 0,
+        "remainderRight": 0
+      },
+      "activePvLocalBalance": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvBalance": {
+        "left": 0,
+        "right": 0
+      },
+      "activePvPacks": 0,
+      "activePvCycles": 0
     },
     {
-      "id": "1761391800055b81eulgll",
-      "x": 300,
-      "y": 540,
+      "id": "17620173216584ytd99ana",
+      "x": 1640,
+      "y": 768,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
       "headerBg": "#5D8BF4",
-      "colorIndex": -1,
+      "colorIndex": 0,
       "selected": false,
       "width": 418,
       "height": 280,
-      "pv": "30/330pv",
-      "text": "A",
+      "pv": "330/330pv",
+      "text": "Малая лицензия",
       "historyText": "Создана малая лицензия",
       "balance": "0 / 0",
       "activePv": "0 / 0",
@@ -52,22 +108,78 @@
       "rankBadge": null,
       "bodyHTML": "",
       "bodyGradient": "",
-      "type": "small"
+      "type": "small",
+      "note": {
+        "text": "",
+        "entries": {},
+        "colors": {},
+        "selectedDate": "2025-11-01",
+        "highlightColor": "#f44336",
+        "width": 260,
+        "height": 380,
+        "visible": false,
+        "window": null,
+        "x": 0,
+        "y": 0,
+        "viewDate": "2025-11-01",
+        "offsetX": null,
+        "offsetY": null
+      },
+      "calculated": {
+        "L": 0,
+        "R": 0,
+        "total": 0,
+        "cycles": 0,
+        "stage": 0,
+        "toNext": 6
+      },
+      "total": 0,
+      "stage": 0,
+      "toNext": 6,
+      "calculatedIsFull": true,
+      "activePvManual": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvLocal": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvAggregated": {
+        "left": 0,
+        "right": 0,
+        "total": 0,
+        "remainderLeft": 0,
+        "remainderRight": 0
+      },
+      "activePvLocalBalance": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvBalance": {
+        "left": 0,
+        "right": 0
+      },
+      "activePvPacks": 0,
+      "activePvCycles": 0
     },
     {
-      "id": "1761391800055ia89pxptt",
-      "x": 85,
-      "y": 880,
+      "id": "1762017322098974umtvna",
+      "x": 1080,
+      "y": 768,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
       "headerBg": "#5D8BF4",
-      "colorIndex": -1,
+      "colorIndex": 0,
       "selected": false,
       "width": 418,
       "height": 280,
-      "pv": "30/330pv",
-      "text": "C",
+      "pv": "330/330pv",
+      "text": "Малая лицензия",
       "historyText": "Создана малая лицензия",
       "balance": "0 / 0",
       "activePv": "0 / 0",
@@ -78,22 +190,78 @@
       "rankBadge": null,
       "bodyHTML": "",
       "bodyGradient": "",
-      "type": "small"
+      "type": "small",
+      "note": {
+        "text": "",
+        "entries": {},
+        "colors": {},
+        "selectedDate": "2025-11-01",
+        "highlightColor": "#f44336",
+        "width": 260,
+        "height": 380,
+        "visible": false,
+        "window": null,
+        "x": 0,
+        "y": 0,
+        "viewDate": "2025-11-01",
+        "offsetX": null,
+        "offsetY": null
+      },
+      "calculated": {
+        "L": 0,
+        "R": 0,
+        "total": 0,
+        "cycles": 0,
+        "stage": 0,
+        "toNext": 6
+      },
+      "total": 0,
+      "stage": 0,
+      "toNext": 6,
+      "calculatedIsFull": true,
+      "activePvManual": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvLocal": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvAggregated": {
+        "left": 0,
+        "right": 0,
+        "total": 0,
+        "remainderLeft": 0,
+        "remainderRight": 0
+      },
+      "activePvLocalBalance": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvBalance": {
+        "left": 0,
+        "right": 0
+      },
+      "activePvPacks": 0,
+      "activePvCycles": 0
     },
     {
-      "id": "1761391800056v1o4mjc1z",
-      "x": 520,
-      "y": 880,
+      "id": "1762017322529amic3evsa",
+      "x": 80,
+      "y": 768,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
       "headerBg": "#5D8BF4",
-      "colorIndex": -1,
+      "colorIndex": 0,
       "selected": false,
       "width": 418,
       "height": 280,
-      "pv": "30/330pv",
-      "text": "D",
+      "pv": "330/330pv",
+      "text": "Малая лицензия",
       "historyText": "Создана малая лицензия",
       "balance": "0 / 0",
       "activePv": "0 / 0",
@@ -104,22 +272,78 @@
       "rankBadge": null,
       "bodyHTML": "",
       "bodyGradient": "",
-      "type": "small"
+      "type": "small",
+      "note": {
+        "text": "",
+        "entries": {},
+        "colors": {},
+        "selectedDate": "2025-11-01",
+        "highlightColor": "#f44336",
+        "width": 260,
+        "height": 380,
+        "visible": false,
+        "window": null,
+        "x": 0,
+        "y": 0,
+        "viewDate": "2025-11-01",
+        "offsetX": null,
+        "offsetY": null
+      },
+      "calculated": {
+        "L": 0,
+        "R": 0,
+        "total": 0,
+        "cycles": 0,
+        "stage": 0,
+        "toNext": 6
+      },
+      "total": 0,
+      "stage": 0,
+      "toNext": 6,
+      "calculatedIsFull": true,
+      "activePvManual": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvLocal": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvAggregated": {
+        "left": 0,
+        "right": 0,
+        "total": 0,
+        "remainderLeft": 0,
+        "remainderRight": 0
+      },
+      "activePvLocalBalance": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvBalance": {
+        "left": 0,
+        "right": 0
+      },
+      "activePvPacks": 0,
+      "activePvCycles": 0
     },
     {
-      "id": "1761391800056o05i13eqh",
-      "x": 1230,
-      "y": 540,
+      "id": "1762017322873otwqe598n",
+      "x": 632,
+      "y": 768,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
       "headerBg": "#5D8BF4",
-      "colorIndex": -1,
+      "colorIndex": 0,
       "selected": false,
       "width": 418,
       "height": 280,
-      "pv": "30/330pv",
-      "text": "B",
+      "pv": "330/330pv",
+      "text": "Малая лицензия",
       "historyText": "Создана малая лицензия",
       "balance": "0 / 0",
       "activePv": "0 / 0",
@@ -130,24 +354,80 @@
       "rankBadge": null,
       "bodyHTML": "",
       "bodyGradient": "",
-      "type": "small"
+      "type": "small",
+      "note": {
+        "text": "",
+        "entries": {},
+        "colors": {},
+        "selectedDate": "2025-11-01",
+        "highlightColor": "#f44336",
+        "width": 260,
+        "height": 380,
+        "visible": false,
+        "window": null,
+        "x": 0,
+        "y": 0,
+        "viewDate": "2025-11-01",
+        "offsetX": null,
+        "offsetY": null
+      },
+      "calculated": {
+        "L": 0,
+        "R": 0,
+        "total": 0,
+        "cycles": 0,
+        "stage": 0,
+        "toNext": 6
+      },
+      "total": 0,
+      "stage": 0,
+      "toNext": 6,
+      "calculatedIsFull": true,
+      "activePvManual": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvLocal": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvAggregated": {
+        "left": 0,
+        "right": 0,
+        "total": 0,
+        "remainderLeft": 0,
+        "remainderRight": 0
+      },
+      "activePvLocalBalance": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvBalance": {
+        "left": 0,
+        "right": 0
+      },
+      "activePvPacks": 0,
+      "activePvCycles": 0
     },
     {
-      "id": "1761391800056i8d37943m",
-      "x": 1014,
-      "y": 880,
+      "id": "1762017323290lludc47qd",
+      "x": 360,
+      "y": 448,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
       "headerBg": "#5D8BF4",
-      "colorIndex": -1,
+      "colorIndex": 0,
       "selected": false,
       "width": 418,
       "height": 280,
-      "pv": "30/330pv",
-      "text": "E",
+      "pv": "330/330pv",
+      "text": "Малая лицензия",
       "historyText": "Создана малая лицензия",
-      "balance": "0 / 0",
+      "balance": "1 / 1",
       "activePv": "0 / 0",
       "cycle": "0",
       "coinFill": "#ffd700",
@@ -156,24 +436,80 @@
       "rankBadge": null,
       "bodyHTML": "",
       "bodyGradient": "",
-      "type": "small"
+      "type": "small",
+      "note": {
+        "text": "",
+        "entries": {},
+        "colors": {},
+        "selectedDate": "2025-11-01",
+        "highlightColor": "#f44336",
+        "width": 260,
+        "height": 380,
+        "visible": false,
+        "window": null,
+        "x": 0,
+        "y": 0,
+        "viewDate": "2025-11-01",
+        "offsetX": null,
+        "offsetY": null
+      },
+      "calculated": {
+        "L": 1,
+        "R": 1,
+        "total": 2,
+        "cycles": 0,
+        "stage": 0,
+        "toNext": 4
+      },
+      "total": 2,
+      "stage": 0,
+      "toNext": 4,
+      "calculatedIsFull": true,
+      "activePvManual": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvLocal": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvAggregated": {
+        "left": 0,
+        "right": 0,
+        "total": 0,
+        "remainderLeft": 0,
+        "remainderRight": 0
+      },
+      "activePvLocalBalance": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvBalance": {
+        "left": 0,
+        "right": 0
+      },
+      "activePvPacks": 0,
+      "activePvCycles": 0
     },
     {
-      "id": "1761391800056vzgsvdue6",
-      "x": 1445,
-      "y": 880,
+      "id": "1762017323602qa5yjivg9",
+      "x": 1360,
+      "y": 448,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
       "headerBg": "#5D8BF4",
-      "colorIndex": -1,
+      "colorIndex": 0,
       "selected": false,
       "width": 418,
       "height": 280,
-      "pv": "30/330pv",
-      "text": "F",
+      "pv": "330/330pv",
+      "text": "Малая лицензия",
       "historyText": "Создана малая лицензия",
-      "balance": "0 / 0",
+      "balance": "1 / 1",
       "activePv": "0 / 0",
       "cycle": "0",
       "coinFill": "#ffd700",
@@ -182,73 +518,129 @@
       "rankBadge": null,
       "bodyHTML": "",
       "bodyGradient": "",
-      "type": "small"
+      "type": "small",
+      "note": {
+        "text": "",
+        "entries": {},
+        "colors": {},
+        "selectedDate": "2025-11-01",
+        "highlightColor": "#f44336",
+        "width": 260,
+        "height": 380,
+        "visible": false,
+        "window": null,
+        "x": 0,
+        "y": 0,
+        "viewDate": "2025-11-01",
+        "offsetX": null,
+        "offsetY": null
+      },
+      "calculated": {
+        "L": 1,
+        "R": 1,
+        "total": 2,
+        "cycles": 0,
+        "stage": 0,
+        "toNext": 4
+      },
+      "total": 2,
+      "stage": 0,
+      "toNext": 4,
+      "calculatedIsFull": true,
+      "activePvManual": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvLocal": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvAggregated": {
+        "left": 0,
+        "right": 0,
+        "total": 0,
+        "remainderLeft": 0,
+        "remainderRight": 0
+      },
+      "activePvLocalBalance": {
+        "left": 0,
+        "right": 0,
+        "total": 0
+      },
+      "activePvBalance": {
+        "left": 0,
+        "right": 0
+      },
+      "activePvPacks": 0,
+      "activePvCycles": 0
     }
   ],
   "connections": [
     {
-      "id": "1761391800057-acb7m0e",
-      "from": "1761391800056o05i13eqh",
-      "to": "1761391800056vzgsvdue6",
-      "fromSide": "right",
-      "toSide": "top",
-      "color": "#0f62fe",
-      "thickness": 4,
-      "highlightType": null,
-      "animationDuration": 2000
-    },
-    {
-      "id": "1761391800057-dtk1ne1",
-      "from": "1761391800056o05i13eqh",
-      "to": "1761391800056i8d37943m",
+      "id": "1762017419745-lqfr8s6",
+      "from": "1762017315636fa1e9j9tx",
+      "to": "1762017323290lludc47qd",
       "fromSide": "left",
       "toSide": "top",
       "color": "#0f62fe",
-      "thickness": 4,
+      "thickness": 5,
       "highlightType": null,
       "animationDuration": 2000
     },
     {
-      "id": "1761391800057-a62c5y7",
-      "from": "1761391800055b81eulgll",
-      "to": "1761391800056v1o4mjc1z",
+      "id": "1762017432690-37lk0lr",
+      "from": "1762017315636fa1e9j9tx",
+      "to": "1762017323602qa5yjivg9",
       "fromSide": "right",
       "toSide": "top",
       "color": "#0f62fe",
-      "thickness": 4,
+      "thickness": 5,
       "highlightType": null,
       "animationDuration": 2000
     },
     {
-      "id": "1761391800058-9y4yl2b",
-      "from": "1761391800055b81eulgll",
-      "to": "1761391800055ia89pxptt",
+      "id": "1762017444629-womx79a",
+      "from": "1762017323602qa5yjivg9",
+      "to": "1762017322098974umtvna",
       "fromSide": "left",
       "toSide": "top",
       "color": "#0f62fe",
-      "thickness": 4,
+      "thickness": 5,
       "highlightType": null,
       "animationDuration": 2000
     },
     {
-      "id": "1761391800058-unapotk",
-      "from": "1761391800054i3ewyaydn",
-      "to": "1761391800055b81eulgll",
-      "fromSide": "left",
-      "toSide": "top",
-      "color": "#0f62fe",
-      "thickness": 4,
-      "highlightType": null,
-      "animationDuration": 2000
-    },
-    {
-      "id": "1761391800058-w0yntdn",
-      "from": "1761391800054i3ewyaydn",
-      "to": "1761391800056o05i13eqh",
+      "id": "1762017451120-bsvj6sf",
+      "from": "1762017323602qa5yjivg9",
+      "to": "17620173216584ytd99ana",
       "fromSide": "right",
       "toSide": "top",
       "color": "#0f62fe",
-      "thickness": 4,
+      "thickness": 5,
+      "highlightType": null,
+      "animationDuration": 2000
+    },
+    {
+      "id": "1762017455264-qm2jn76",
+      "from": "1762017323290lludc47qd",
+      "to": "1762017322873otwqe598n",
+      "fromSide": "right",
+      "toSide": "top",
+      "color": "#0f62fe",
+      "thickness": 5,
+      "highlightType": null,
+      "animationDuration": 2000
+    },
+    {
+      "id": "1762017463115-ovxwp3o",
+      "from": "1762017323290lludc47qd",
+      "to": "1762017322529amic3evsa",
+      "fromSide": "left",
+      "toSide": "top",
+      "color": "#0f62fe",
+      "thickness": 5,
       "highlightType": null,
       "animationDuration": 2000
     }
@@ -264,7 +656,7 @@
     "isSelectionMode": false,
     "isHierarchicalDragMode": false,
     "guidesEnabled": true,
-    "gridStep": 25,
+    "gridStep": 40,
     "isGridBackgroundVisible": true
   }
 }
