@@ -257,7 +257,7 @@ const finalCalculation = computed(() => {
 });
 
 const calculatedBalanceDisplay = computed(() => `${finalCalculation.value.L} / ${finalCalculation.value.R}`);
-const manualBalanceOverride = computed(() => {
+const manualBalanceOverrideValue = computed(() => {
   const source = props.card?.balanceManualOverride;
   if (!source) {
     return null;
@@ -273,9 +273,11 @@ const manualBalanceOverride = computed(() => {
     return null;
   }
 
-  return formatted;
+  return parsed;
 });
+const manualBalanceOverride = computed(() => manualBalanceOverrideValue.value?.formatted ?? null);  
 const balanceDisplay = computed(() => manualBalanceOverride.value ?? calculatedBalanceDisplay.value);
+const manualBalanceOffset = ref(null);  
   const activeOrdersDisplay = computed(
   () => `${activePvState.value.remainder.left} / ${activePvState.value.remainder.right}`
 );
@@ -363,13 +365,15 @@ const updateValue = (event, field) => {
           { saveToHistory: true, description: `Сброшен ручной баланс для "${props.card.text}"` }
         );
       }
+      manualBalanceOffset.value = null;      
       return;
     }
 
     const parsed = parseActivePV(rawText);
+    const autoBalance = finalCalculation.value;
     const nextValue = {
-      left: parsed.left,
-      right: parsed.right
+      left: Math.max(parsed.left, autoBalance.L),
+      right: Math.max(parsed.right, autoBalance.R)
     };
     const formatted = `${nextValue.left} / ${nextValue.right}`;
 
@@ -378,6 +382,10 @@ const updateValue = (event, field) => {
     }
 
     const current = props.card.balanceManualOverride || {};
+    manualBalanceOffset.value = {
+      left: Math.max(0, nextValue.left - autoBalance.L),
+      right: Math.max(0, nextValue.right - autoBalance.R)
+    };    
     if (current.left !== nextValue.left || current.right !== nextValue.right) {
       cardsStore.updateCard(
         props.card.id,
@@ -388,27 +396,52 @@ const updateValue = (event, field) => {
   }
 };
 
+
 watch(
-  () => calculatedBalanceDisplay.value,
-  (newValue, oldValue) => {
-    if (oldValue === undefined || newValue === oldValue) {
+  () => manualBalanceOverrideValue.value,
+  (manual) => {
+    if (!manual) {
+      manualBalanceOffset.value = null;
       return;
     }
 
-    if (!props.card.balanceManualOverride) {
+    const autoBalance = finalCalculation.value;
+    manualBalanceOffset.value = {
+      left: Math.max(0, manual.left - autoBalance.L),
+      right: Math.max(0, manual.right - autoBalance.R)
+    };
+  },
+  { immediate: true }
+);
+
+watch(
+  () => [finalCalculation.value.L, finalCalculation.value.R],
+  ([nextLeft, nextRight]) => {
+    const current = manualBalanceOverrideValue.value;
+    if (!current || !manualBalanceOffset.value) {
+      return;
+    }
+
+    const offset = manualBalanceOffset.value;
+    const desired = {
+      left: nextLeft + Math.max(0, offset.left ?? 0),
+      right: nextRight + Math.max(0, offset.right ?? 0)
+    };
+
+    if (current.left === desired.left && current.right === desired.right) {
       return;
     }
 
     cardsStore.updateCard(
       props.card.id,
-      { balanceManualOverride: null },
+      { balanceManualOverride: desired },
       {
         saveToHistory: true,
-        description: `Сброшен ручной баланс для "${props.card.text}" из-за обновления расчётов`
+        description: `Обновлён ручной баланс для "${props.card.text}" вслед за автоматическими расчётами`
       }
     );
   }
-);  
+);
 </script>
 
 <template>
