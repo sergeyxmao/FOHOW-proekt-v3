@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick, computed } from 'vue';
+import { ref, nextTick, computed, watch } from 'vue';
 import { useCardsStore } from '../../stores/cards';
 import { parseActivePV } from '../../utils/activePv';
 import { calcStagesAndCycles } from '../../utils/calculationEngine';  
@@ -387,6 +387,28 @@ const updateValue = (event, field) => {
     }
   }
 };
+
+watch(
+  () => calculatedBalanceDisplay.value,
+  (newValue, oldValue) => {
+    if (oldValue === undefined || newValue === oldValue) {
+      return;
+    }
+
+    if (!props.card.balanceManualOverride) {
+      return;
+    }
+
+    cardsStore.updateCard(
+      props.card.id,
+      { balanceManualOverride: null },
+      {
+        saveToHistory: true,
+        description: `Сброшен ручной баланс для "${props.card.text}" из-за обновления расчётов`
+      }
+    );
+  }
+);  
 </script>
 
 <template>
