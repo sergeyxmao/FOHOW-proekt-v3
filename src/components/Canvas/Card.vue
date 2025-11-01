@@ -367,7 +367,12 @@ const updateValue = (event, field) => {
     }
 
     const parsed = parseActivePV(rawText);
-    const nextValue = { left: parsed.left, right: parsed.right };
+    const minLeft = Math.max(0, Number.isFinite(finalCalculation.value?.L) ? finalCalculation.value.L : 0);
+    const minRight = Math.max(0, Number.isFinite(finalCalculation.value?.R) ? finalCalculation.value.R : 0);
+    const nextValue = {
+      left: Math.max(parsed.left, minLeft),
+      right: Math.max(parsed.right, minRight)
+    };
     const formatted = `${nextValue.left} / ${nextValue.right}`;
 
     if (event.target.textContent !== formatted) {
