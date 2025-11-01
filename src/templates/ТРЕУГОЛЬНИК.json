@@ -1,9 +1,9 @@
 {
   "version": "1.0",
-  "timestamp": 1762017582905,
+  "timestamp": 1762017836247,
   "cards": [
     {
-      "id": "1762017315636fa1e9j9tx",
+      "id": "1762017803427gqge5oln7",
       "x": 801,
       "y": 63,
       "fill": "#ffffff",
@@ -17,7 +17,7 @@
       "pv": "330/330pv",
       "text": "RUY9987738276",
       "historyText": "Создана большая лицензия",
-      "balance": "3 / 3",
+      "balance": "0 / 0",
       "activePv": "0 / 0",
       "cycle": "0",
       "coinFill": "#ffd700",
@@ -44,16 +44,16 @@
         "offsetY": null
       },
       "calculated": {
-        "L": 3,
-        "R": 3,
-        "total": 6,
+        "L": 0,
+        "R": 0,
+        "total": 0,
         "cycles": 0,
-        "stage": 1,
-        "toNext": 12
+        "stage": 0,
+        "toNext": 6
       },
-      "total": 6,
-      "stage": 1,
-      "toNext": 12,
+      "total": 0,
+      "stage": 0,
+      "toNext": 6,
       "calculatedIsFull": true,
       "activePvManual": {
         "left": 0,
@@ -85,7 +85,7 @@
       "activePvCycles": 0
     },
     {
-      "id": "17620173216584ytd99ana",
+      "id": "1762017803428nh98t944x",
       "x": 1640,
       "y": 768,
       "fill": "#ffffff",
@@ -96,13 +96,13 @@
       "selected": false,
       "width": 418,
       "height": 280,
-      "pv": "330/330pv",
+      "pv": "30/330pv",
       "text": "Малая лицензия",
       "historyText": "Создана малая лицензия",
       "balance": "0 / 0",
       "activePv": "0 / 0",
       "cycle": "0",
-      "coinFill": "#ffd700",
+      "coinFill": "#3d85c6",
       "showSlfBadge": false,
       "showFendouBadge": false,
       "rankBadge": null,
@@ -136,7 +136,7 @@
       "total": 0,
       "stage": 0,
       "toNext": 6,
-      "calculatedIsFull": true,
+      "calculatedIsFull": false,
       "activePvManual": {
         "left": 0,
         "right": 0,
@@ -167,7 +167,7 @@
       "activePvCycles": 0
     },
     {
-      "id": "1762017322098974umtvna",
+      "id": "1762017803429zfemd505s",
       "x": 1080,
       "y": 768,
       "fill": "#ffffff",
@@ -178,13 +178,13 @@
       "selected": false,
       "width": 418,
       "height": 280,
-      "pv": "330/330pv",
+      "pv": "30/330pv",
       "text": "Малая лицензия",
       "historyText": "Создана малая лицензия",
       "balance": "0 / 0",
       "activePv": "0 / 0",
       "cycle": "0",
-      "coinFill": "#ffd700",
+      "coinFill": "#3d85c6",
       "showSlfBadge": false,
       "showFendouBadge": false,
       "rankBadge": null,
@@ -218,7 +218,7 @@
       "total": 0,
       "stage": 0,
       "toNext": 6,
-      "calculatedIsFull": true,
+      "calculatedIsFull": false,
       "activePvManual": {
         "left": 0,
         "right": 0,
@@ -249,7 +249,7 @@
       "activePvCycles": 0
     },
     {
-      "id": "1762017322529amic3evsa",
+      "id": "17620178034294lw1p59aa",
       "x": 80,
       "y": 768,
       "fill": "#ffffff",
@@ -260,13 +260,13 @@
       "selected": false,
       "width": 418,
       "height": 280,
-      "pv": "330/330pv",
+      "pv": "30/330pv",
       "text": "Малая лицензия",
       "historyText": "Создана малая лицензия",
       "balance": "0 / 0",
       "activePv": "0 / 0",
       "cycle": "0",
-      "coinFill": "#ffd700",
+      "coinFill": "#3d85c6",
       "showSlfBadge": false,
       "showFendouBadge": false,
       "rankBadge": null,
@@ -300,7 +300,7 @@
       "total": 0,
       "stage": 0,
       "toNext": 6,
-      "calculatedIsFull": true,
+      "calculatedIsFull": false,
       "activePvManual": {
         "left": 0,
         "right": 0,
@@ -331,7 +331,7 @@
       "activePvCycles": 0
     },
     {
-      "id": "1762017322873otwqe598n",
+      "id": "1762017803430nj2s0tux9",
       "x": 632,
       "y": 768,
       "fill": "#ffffff",
@@ -342,13 +342,13 @@
       "selected": false,
       "width": 418,
       "height": 280,
-      "pv": "330/330pv",
+      "pv": "30/330pv",
       "text": "Малая лицензия",
       "historyText": "Создана малая лицензия",
       "balance": "0 / 0",
       "activePv": "0 / 0",
       "cycle": "0",
-      "coinFill": "#ffd700",
+      "coinFill": "#3d85c6",
       "showSlfBadge": false,
       "showFendouBadge": false,
       "rankBadge": null,
@@ -382,7 +382,7 @@
       "total": 0,
       "stage": 0,
       "toNext": 6,
-      "calculatedIsFull": true,
+      "calculatedIsFull": false,
       "activePvManual": {
         "left": 0,
         "right": 0,
@@ -413,7 +413,7 @@
       "activePvCycles": 0
     },
     {
-      "id": "1762017323290lludc47qd",
+      "id": "1762017803430jvh1444t3",
       "x": 360,
       "y": 448,
       "fill": "#ffffff",
@@ -424,13 +424,13 @@
       "selected": false,
       "width": 418,
       "height": 280,
-      "pv": "330/330pv",
+      "pv": "30/330pv",
       "text": "Малая лицензия",
       "historyText": "Создана малая лицензия",
-      "balance": "1 / 1",
+      "balance": "0 / 0",
       "activePv": "0 / 0",
       "cycle": "0",
-      "coinFill": "#ffd700",
+      "coinFill": "#3d85c6",
       "showSlfBadge": false,
       "showFendouBadge": false,
       "rankBadge": null,
@@ -454,17 +454,17 @@
         "offsetY": null
       },
       "calculated": {
-        "L": 1,
-        "R": 1,
-        "total": 2,
+        "L": 0,
+        "R": 0,
+        "total": 0,
         "cycles": 0,
         "stage": 0,
-        "toNext": 4
+        "toNext": 6
       },
-      "total": 2,
+      "total": 0,
       "stage": 0,
-      "toNext": 4,
-      "calculatedIsFull": true,
+      "toNext": 6,
+      "calculatedIsFull": false,
       "activePvManual": {
         "left": 0,
         "right": 0,
@@ -495,7 +495,7 @@
       "activePvCycles": 0
     },
     {
-      "id": "1762017323602qa5yjivg9",
+      "id": "1762017803431ncgerrekw",
       "x": 1360,
       "y": 448,
       "fill": "#ffffff",
@@ -506,13 +506,13 @@
       "selected": false,
       "width": 418,
       "height": 280,
-      "pv": "330/330pv",
+      "pv": "30/330pv",
       "text": "Малая лицензия",
       "historyText": "Создана малая лицензия",
-      "balance": "1 / 1",
+      "balance": "0 / 0",
       "activePv": "0 / 0",
       "cycle": "0",
-      "coinFill": "#ffd700",
+      "coinFill": "#3d85c6",
       "showSlfBadge": false,
       "showFendouBadge": false,
       "rankBadge": null,
@@ -536,17 +536,17 @@
         "offsetY": null
       },
       "calculated": {
-        "L": 1,
-        "R": 1,
-        "total": 2,
+        "L": 0,
+        "R": 0,
+        "total": 0,
         "cycles": 0,
         "stage": 0,
-        "toNext": 4
+        "toNext": 6
       },
-      "total": 2,
+      "total": 0,
       "stage": 0,
-      "toNext": 4,
-      "calculatedIsFull": true,
+      "toNext": 6,
+      "calculatedIsFull": false,
       "activePvManual": {
         "left": 0,
         "right": 0,
@@ -579,9 +579,9 @@
   ],
   "connections": [
     {
-      "id": "1762017419745-lqfr8s6",
-      "from": "1762017315636fa1e9j9tx",
-      "to": "1762017323290lludc47qd",
+      "id": "1762017803432-lr757oz",
+      "from": "1762017803427gqge5oln7",
+      "to": "1762017803430jvh1444t3",
       "fromSide": "left",
       "toSide": "top",
       "color": "#0f62fe",
@@ -590,9 +590,9 @@
       "animationDuration": 2000
     },
     {
-      "id": "1762017432690-37lk0lr",
-      "from": "1762017315636fa1e9j9tx",
-      "to": "1762017323602qa5yjivg9",
+      "id": "1762017803433-14oipeu",
+      "from": "1762017803427gqge5oln7",
+      "to": "1762017803431ncgerrekw",
       "fromSide": "right",
       "toSide": "top",
       "color": "#0f62fe",
@@ -601,9 +601,9 @@
       "animationDuration": 2000
     },
     {
-      "id": "1762017444629-womx79a",
-      "from": "1762017323602qa5yjivg9",
-      "to": "1762017322098974umtvna",
+      "id": "1762017803434-2xmsiff",
+      "from": "1762017803431ncgerrekw",
+      "to": "1762017803429zfemd505s",
       "fromSide": "left",
       "toSide": "top",
       "color": "#0f62fe",
@@ -612,9 +612,9 @@
       "animationDuration": 2000
     },
     {
-      "id": "1762017451120-bsvj6sf",
-      "from": "1762017323602qa5yjivg9",
-      "to": "17620173216584ytd99ana",
+      "id": "1762017803434-rrrr5w3",
+      "from": "1762017803431ncgerrekw",
+      "to": "1762017803428nh98t944x",
       "fromSide": "right",
       "toSide": "top",
       "color": "#0f62fe",
@@ -623,9 +623,9 @@
       "animationDuration": 2000
     },
     {
-      "id": "1762017455264-qm2jn76",
-      "from": "1762017323290lludc47qd",
-      "to": "1762017322873otwqe598n",
+      "id": "1762017803435-l5mxrgk",
+      "from": "1762017803430jvh1444t3",
+      "to": "1762017803430nj2s0tux9",
       "fromSide": "right",
       "toSide": "top",
       "color": "#0f62fe",
@@ -634,9 +634,9 @@
       "animationDuration": 2000
     },
     {
-      "id": "1762017463115-ovxwp3o",
-      "from": "1762017323290lludc47qd",
-      "to": "1762017322529amic3evsa",
+      "id": "1762017803436-o8buwov",
+      "from": "1762017803430jvh1444t3",
+      "to": "17620178034294lw1p59aa",
       "fromSide": "left",
       "toSide": "top",
       "color": "#0f62fe",
