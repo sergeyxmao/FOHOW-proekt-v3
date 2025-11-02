@@ -305,6 +305,13 @@ export function usePanZoom(canvasElement) {
         }
         return
       }
+      if (activeTouchPointers.size >= 3) {
+        if (isPanning && panPointerType === 'touch') {
+          stopPanning()
+        }
+        pinchState = null
+        return
+      }
 
       if (isPanning && panPointerType === 'touch') {
         stopPanning()
@@ -330,6 +337,13 @@ export function usePanZoom(canvasElement) {
         return
       }
       activeTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+       if (activeTouchPointers.size >= 3) {
+        if (isPanning && panPointerType === 'touch' && panPointerId === event.pointerId) {
+          stopPanning()
+        }
+        pinchState = null
+        return
+      }     
       if (activeTouchPointers.size >= 2) {
         event.preventDefault()
         if (!pinchState) {
