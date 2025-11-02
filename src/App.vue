@@ -52,7 +52,9 @@ const showMobileAuthPrompt = ref(false)
 const mobileAuthModalView = ref('login')
 const isMobileAuthModalOpen = ref(false)
 const isBoardsModalOpen = ref(false)
-
+const menuTouchPointers = new Set()
+let menuPointerListenersAttached = false
+ 
 // Состояние для сброса пароля
 const showResetPassword = ref(false)
 const resetToken = ref('')
@@ -409,7 +411,61 @@ function handleMobileBoardsClose() {
 function handleMobileBoardSelect(boardId) {
   isBoardsModalOpen.value = false
   openBoard(boardId)
-} 
+}
+
+const updateMenuScaleState = () => {
+  if (!isMobileMode.value) {
+    menuTouchPointers.clear()
+  }
+
+  mobileStore.setMenuScaled(menuTouchPointers.size >= 3 && isMobileMode.value)
+}
+
+const handleMenuPointerDown = (event) => {
+  if (!isMobileMode.value || event.pointerType !== 'touch') {
+    return
+  }
+
+  menuTouchPointers.add(event.pointerId)
+  updateMenuScaleState()
+}
+
+const handleMenuPointerUp = (event) => {
+  if (event.pointerType !== 'touch') {
+    return
+  }
+
+  menuTouchPointers.delete(event.pointerId)
+  updateMenuScaleState()
+}
+
+const attachMenuPointerListeners = () => {
+  if (menuPointerListenersAttached) {
+    return
+  }
+
+  window.addEventListener('pointerdown', handleMenuPointerDown)
+  window.addEventListener('pointerup', handleMenuPointerUp)
+  window.addEventListener('pointercancel', handleMenuPointerUp)
+  window.addEventListener('pointerleave', handleMenuPointerUp)
+  window.addEventListener('pointerout', handleMenuPointerUp)
+  menuPointerListenersAttached = true
+}
+
+const detachMenuPointerListeners = () => {
+  if (!menuPointerListenersAttached) {
+    return
+  }
+
+  window.removeEventListener('pointerdown', handleMenuPointerDown)
+  window.removeEventListener('pointerup', handleMenuPointerUp)
+  window.removeEventListener('pointercancel', handleMenuPointerUp)
+  window.removeEventListener('pointerleave', handleMenuPointerUp)
+  window.removeEventListener('pointerout', handleMenuPointerUp)
+  menuPointerListenersAttached = false
+  menuTouchPointers.clear()
+  mobileStore.setMenuScaled(false)
+}
 watch(isAuthenticated, (value) => {
   if (value) {
     showMobileAuthPrompt.value = false
@@ -419,6 +475,9 @@ watch(isAuthenticated, (value) => {
 watch(isMobileMode, (value) => {
   if (!value) {
     isBoardsModalOpen.value = false
+    detachMenuPointerListeners()
+  } else {
+    attachMenuPointerListeners()   
   }
 })
 
@@ -428,6 +487,9 @@ onMounted(async () => {
 
   // Определяем тип устройства
   mobileStore.detectDevice()
+  if (isMobileMode.value) {
+    attachMenuPointerListeners()
+  }
 
   // Проверяем URL на токен сброса пароля
   const urlParams = new URLSearchParams(window.location.search)
@@ -445,6 +507,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
   stopAutoSave()
+  detachMenuPointerListeners() 
 })
 </script>
 
