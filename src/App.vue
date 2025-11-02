@@ -354,6 +354,12 @@ function handleOpenProfile() {
   showProfile.value = true
 }
 
+function handleLogout() {
+  if (confirm('Вы уверены, что хотите выйти?')) {
+    authStore.logout()
+  }
+}
+
 onMounted(async () => {
   // Инициализируем authStore - загружаем данные пользователя
   await authStore.init()
@@ -421,12 +427,15 @@ onBeforeUnmount(() => {
         @open-profile="handleOpenProfile"
         @export-html="handleMobileExportHTML"
         @load-json="handleMobileLoadJSON"
+        @open-board="openBoard"
+        @logout="handleLogout"
       />
       <MobileToolbar
         v-show="!isPencilMode && !showResetPassword"
         :is-modern-theme="isModernTheme"
         @save="saveCurrentBoard"
         @toggle-theme="toggleTheme"
+        @fit-to-content="handleFitToContent"
       />
       <MobileSidebar
         v-show="!isPencilMode && !showResetPassword"
