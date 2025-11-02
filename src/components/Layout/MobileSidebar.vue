@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useCardsStore } from '@/stores/cards'
 import { useConnectionsStore } from '@/stores/connections'
 import { useViewSettingsStore } from '@/stores/viewSettings'
+import { useMobileStore } from '@/stores/mobile'
  
 const props = defineProps({
   isModernTheme: {
@@ -22,8 +23,10 @@ const emit = defineEmits([
 const cardsStore = useCardsStore()
 const connectionsStore = useConnectionsStore()
 const viewSettingsStore = useViewSettingsStore()
+const mobileStore = useMobileStore()
 
 const { headerColor, headerColorIndex, lineColor, lineThickness, animationSeconds } = storeToRefs(viewSettingsStore)
+const { isMenuScaled } = storeToRefs(mobileStore)
 
 const templateAnchorRef = ref(null)
 const templateMenuRef = ref(null)
@@ -181,8 +184,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="mobile-sidebar" :class="{ 'mobile-sidebar--dark': isModernTheme }">
-    <!-- Добавить лицензию -->
+  <div
+    class="mobile-sidebar"
+    :class="{ 'mobile-sidebar--dark': isModernTheme, 'mobile-sidebar--scaled': isMenuScaled }"
+  >
+   <!-- Добавить лицензию -->
     <button
       class="mobile-sidebar-button"
       type="button"
@@ -262,6 +268,7 @@ onBeforeUnmount(() => {
 }
 
 .mobile-sidebar-button {
+  --sidebar-button-scale: 1;
   width: 52px;
   height: 52px;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -277,6 +284,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   user-select: none;
   font-size: 24px;
+  transform: scale(var(--sidebar-button-scale)); 
 }
 
 .mobile-sidebar--dark .mobile-sidebar-button {
@@ -284,9 +292,15 @@ onBeforeUnmount(() => {
   color: #e5f3ff;
   border-color: rgba(255, 255, 255, 0.1);
 }
+.mobile-sidebar--scaled {
+  gap: 16px;
+}
 
+.mobile-sidebar--scaled .mobile-sidebar-button {
+  --sidebar-button-scale: 1.12;
+}
 .mobile-sidebar-button:active:not(:disabled) {
-  transform: scale(0.95);
+  transform: scale(calc(var(--sidebar-button-scale) * 0.95));
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
