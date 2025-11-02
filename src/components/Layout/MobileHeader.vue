@@ -99,7 +99,7 @@ function getAvatarUrl(url) {
         @click="toggleHierarchyMode"
         title="Режим иерархии"
       >
-        <span class="button-icon">🔗</span>
+        <span class="button-icon">🌳</span>
       </button>
 
       <!-- Загрузить JSON -->
