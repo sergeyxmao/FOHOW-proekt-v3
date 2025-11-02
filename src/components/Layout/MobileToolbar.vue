@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardStore } from '@/stores/board'
-import { useCardsStore } from '@/stores/cards'
+import { useMobileStore } from '@/stores/mobile'
 
 const props = defineProps({
   isModernTheme: {
@@ -11,38 +11,29 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits([
-  'save',
-  'add-license',
-  'add-lower',
-  'add-gold',
-  'add-template'
-])
+const emit = defineEmits(['save', 'toggle-theme'])
 
 const authStore = useAuthStore()
 const boardStore = useBoardStore()
-const cardsStore = useCardsStore()
+const mobileStore = useMobileStore()
 
 const isSaving = computed(() => boardStore.isSaving)
+const isMobileMode = computed(() => mobileStore.isMobileMode)
 
 const handleSave = () => {
   emit('save')
 }
 
-const handleAddLicense = () => {
-  emit('add-license')
+const handleToggleTheme = () => {
+  emit('toggle-theme')
 }
 
-const handleAddLower = () => {
-  emit('add-lower')
-}
-
-const handleAddGold = () => {
-  emit('add-gold')
-}
-
-const handleAddTemplate = () => {
-  emit('add-template')
+const handleToggleVersion = () => {
+  if (isMobileMode.value) {
+    mobileStore.switchToDesktop()
+  } else {
+    mobileStore.switchToMobile()
+  }
 }
 
 const openMarketingLink = () => {
@@ -52,68 +43,52 @@ const openMarketingLink = () => {
 
 <template>
   <div class="mobile-toolbar" :class="{ 'mobile-toolbar--dark': isModernTheme }">
-    <!-- Левый нижний угол: @marketingFohow -->
-    <a
-      href="https://t.me/marketingFohow"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="mobile-toolbar-button marketing-button"
-      @click.prevent="openMarketingLink"
-    >
-      <span class="marketing-icon">✈️</span>
-      <span class="marketing-text">@marketingFohow</span>
-    </a>
-
-    <!-- Центральные кнопки: добавление карточек -->
-    <div class="mobile-toolbar-center">
-      <button
-        class="mobile-toolbar-button add-button"
-        type="button"
-        @click="handleAddLicense"
-        title="Добавить лицензию"
+    <!-- Кнопки слева направо -->
+    <div class="mobile-toolbar-buttons">
+      <!-- @marketingFohow -->
+      <a
+        href="https://t.me/marketingFohow"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="mobile-toolbar-button marketing-button"
+        @click.prevent="openMarketingLink"
+        title="@marketingFohow"
       >
-        <span class="add-icon">📜</span>
+        <span class="button-icon">✈️</span>
+      </a>
+
+      <!-- Переключатель темы -->
+      <button
+        class="mobile-toolbar-button theme-button"
+        type="button"
+        @click="handleToggleTheme"
+        :title="isModernTheme ? 'Светлая тема' : 'Темная тема'"
+      >
+        <span class="theme-icon"></span>
       </button>
 
+      <!-- Переключатель версии -->
       <button
-        class="mobile-toolbar-button add-button"
+        class="mobile-toolbar-button version-button"
         type="button"
-        @click="handleAddLower"
-        title="Добавить более низкую"
+        @click="handleToggleVersion"
+        :title="isMobileMode ? 'Версия для ПК' : 'Мобильная версия'"
       >
-        <span class="add-icon">📊</span>
+        <span class="button-icon">{{ isMobileMode ? '💻' : '📱' }}</span>
       </button>
 
+      <!-- Кнопка сохранения -->
       <button
-        class="mobile-toolbar-button add-button"
+        v-if="authStore.isAuthenticated"
+        class="mobile-toolbar-button save-button"
         type="button"
-        @click="handleAddGold"
-        title="Добавить Gold"
+        :disabled="isSaving"
+        @click="handleSave"
+        title="Сохранить"
       >
-        <span class="add-icon">⭐</span>
-      </button>
-
-      <button
-        class="mobile-toolbar-button add-button"
-        type="button"
-        @click="handleAddTemplate"
-        title="Добавить шаблон"
-      >
-        <span class="add-icon">📋</span>
+        <span class="button-icon">💾</span>
       </button>
     </div>
-
-    <!-- Правый нижний угол: кнопка сохранения (только иконка) -->
-    <button
-      v-if="authStore.isAuthenticated"
-      class="mobile-toolbar-button save-button"
-      type="button"
-      :disabled="isSaving"
-      @click="handleSave"
-      title="Сохранить"
-    >
-      <span class="save-icon">💾</span>
-    </button>
   </div>
 </template>
 
@@ -123,45 +98,50 @@ const openMarketingLink = () => {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 68px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  height: 56px;
+  background: transparent;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 8px;
   z-index: 1000;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.mobile-toolbar--dark {
-  background: rgba(28, 38, 58, 0.95);
-  border-top-color: rgba(255, 255, 255, 0.1);
-  color: #e5f3ff;
+.mobile-toolbar-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
 .mobile-toolbar-button {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
+  min-width: 44px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   color: #111827;
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .mobile-toolbar--dark .mobile-toolbar-button {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(28, 38, 58, 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
   color: #e5f3ff;
 }
 
 .mobile-toolbar-button:active:not(:disabled) {
   transform: scale(0.95);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .mobile-toolbar-button:disabled {
@@ -169,66 +149,78 @@ const openMarketingLink = () => {
   cursor: not-allowed;
 }
 
-/* Кнопка маркетинга */
-.marketing-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, #0088cc 0%, #0066a1 100%);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 136, 204, 0.3);
-}
-
-.marketing-icon {
-  font-size: 18px;
-}
-
-.marketing-text {
-  white-space: nowrap;
-}
-
-/* Центральная группа кнопок */
-.mobile-toolbar-center {
-  flex: 1;
+.button-icon {
+  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 0 8px;
 }
 
-.add-button {
-  width: 48px;
-  height: 48px;
+/* Кнопка маркетинга */
+.marketing-button {
+  background: linear-gradient(135deg, #0088cc 0%, #0066a1 100%);
+  color: #ffffff;
+  border-color: rgba(0, 136, 204, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 136, 204, 0.3);
+}
+
+/* Переключатель темы */
+.theme-button {
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.18), rgba(59, 130, 246, 0));
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+.mobile-toolbar--dark .theme-button {
+  background: linear-gradient(145deg, rgba(114, 182, 255, 0.32), rgba(114, 182, 255, 0));
+  border-color: rgba(96, 164, 255, 0.42);
+}
+
+.theme-icon {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%);
+  box-shadow: inset -4px -4px 10px rgba(255, 255, 255, 0.22), 0 6px 12px rgba(15, 23, 42, 0.18);
+}
+
+.mobile-toolbar--dark .theme-icon {
+  background: linear-gradient(135deg, #e5f3ff 0%, #73c8ff 100%);
+  box-shadow: inset -4px -4px 10px rgba(6, 11, 21, 0.35), 0 6px 12px rgba(6, 11, 21, 0.3);
+}
+
+.theme-icon::before,
+.theme-icon::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.theme-icon::before {
+  inset: 4px;
+  opacity: 0.4;
+}
+
+.theme-icon::after {
+  inset: 7px;
+  opacity: 0.2;
+}
+
+/* Переключатель версии */
+.version-button {
   background: rgba(15, 98, 254, 0.1);
 }
 
-.mobile-toolbar--dark .add-button {
+.mobile-toolbar--dark .version-button {
   background: rgba(59, 130, 246, 0.2);
-}
-
-.add-button:active {
-  background: rgba(15, 98, 254, 0.2);
-}
-
-.mobile-toolbar--dark .add-button:active {
-  background: rgba(59, 130, 246, 0.3);
-}
-
-.add-icon {
-  font-size: 24px;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 /* Кнопка сохранения */
 .save-button {
-  width: 52px;
-  height: 52px;
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #ffffff;
+  border-color: rgba(16, 185, 129, 0.5);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
@@ -239,91 +231,34 @@ const openMarketingLink = () => {
 
 .save-button:disabled {
   background: #9ca3af;
+  border-color: rgba(156, 163, 175, 0.5);
   box-shadow: none;
-}
-
-.save-icon {
-  font-size: 26px;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 /* Адаптация для маленьких экранов */
 @media (max-width: 480px) {
   .mobile-toolbar {
-    height: 64px;
-    padding: 0 8px;
-  }
-
-  .marketing-button {
-    padding: 8px 12px;
-    font-size: 12px;
-  }
-
-  .marketing-icon {
-    font-size: 16px;
-  }
-
-  .add-button {
-    width: 44px;
-    height: 44px;
-  }
-
-  .add-icon {
-    font-size: 22px;
-  }
-
-  .save-button {
-    width: 48px;
-    height: 48px;
-  }
-
-  .save-icon {
-    font-size: 24px;
-  }
-
-  .mobile-toolbar-center {
-    gap: 6px;
+    height: 52px;
     padding: 0 6px;
   }
-}
 
-/* Адаптация для очень маленьких экранов */
-@media (max-width: 360px) {
-  .marketing-text {
-    display: none;
+  .mobile-toolbar-buttons {
+    gap: 6px;
   }
 
-  .marketing-button {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-  }
-
-  .marketing-icon {
-    font-size: 20px;
-  }
-
-  .mobile-toolbar-center {
-    gap: 4px;
-    padding: 0 4px;
-  }
-
-  .add-button {
+  .mobile-toolbar-button {
+    min-width: 40px;
     width: 40px;
     height: 40px;
   }
 
-  .add-icon {
-    font-size: 20px;
+  .button-icon {
+    font-size: 18px;
   }
 
-  .save-button {
-    width: 44px;
-    height: 44px;
-  }
-
-  .save-icon {
-    font-size: 22px;
+  .theme-icon {
+    width: 18px;
+    height: 18px;
   }
 }
 </style>

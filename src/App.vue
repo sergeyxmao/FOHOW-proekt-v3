@@ -326,13 +326,20 @@ function handleAddGold() {
   })
 }
 
-function handleAddTemplate() {
-  // For now, just add a default card - can be enhanced to show template picker
-  cardsStore.addCard({
-    type: 'large',
-    headerBg: headerColor.value,
-    colorIndex: headerColorIndex.value
-  })
+function handleAddTemplate(templateId) {
+  if (!templateId) {
+    // If no template ID is provided, just add a default card
+    cardsStore.addCard({
+      type: 'large',
+      headerBg: headerColor.value,
+      colorIndex: headerColorIndex.value
+    })
+    return
+  }
+
+  // Load and insert the template
+  // This will be handled by the template insertion logic in MobileSidebar
+  console.log('Template selected:', templateId)
 }
 
 function handleMobileExportHTML() {
@@ -412,21 +419,22 @@ onBeforeUnmount(() => {
         :is-modern-theme="isModernTheme"
         @toggle-theme="toggleTheme"
         @open-profile="handleOpenProfile"
+        @export-html="handleMobileExportHTML"
+        @load-json="handleMobileLoadJSON"
       />
       <MobileToolbar
         v-show="!isPencilMode && !showResetPassword"
         :is-modern-theme="isModernTheme"
         @save="saveCurrentBoard"
-        @add-license="handleAddLicense"
-        @add-lower="handleAddLower"
-        @add-gold="handleAddGold"
-        @add-template="handleAddTemplate"
+        @toggle-theme="toggleTheme"
       />
       <MobileSidebar
         v-show="!isPencilMode && !showResetPassword"
         :is-modern-theme="isModernTheme"
-        @export-html="handleMobileExportHTML"
-        @load-json="handleMobileLoadJSON"
+        @add-license="handleAddLicense"
+        @add-lower="handleAddLower"
+        @add-gold="handleAddGold"
+        @add-template="handleAddTemplate"
       />
       <MobileVersionDialog />
     </template>
@@ -461,8 +469,9 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- Version Switcher (always visible) -->
+    <!-- Version Switcher (только для десктопа) -->
     <VersionSwitcher
+      v-if="!isMobileMode"
       v-show="!isPencilMode && !showResetPassword"
       :is-modern-theme="isModernTheme"
     />
