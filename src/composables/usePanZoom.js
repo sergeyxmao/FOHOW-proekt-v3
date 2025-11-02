@@ -16,6 +16,19 @@ export function usePanZoom(canvasElement) {
   let previousCursor = ''
   const activeTouchPointers = new Map()
   let pinchState = null
+    let transformFrame = null
+
+  const applyTransformStyles = () => {
+    if (!canvasElement.value) {
+      return
+    }
+
+    const canvasContent = canvasElement.value.querySelector('.canvas-content')
+    if (canvasContent) {
+      canvasContent.style.transform = `translate(${translateX.value}px, ${translateY.value}px) scale(${scale.value})`
+    }
+  }
+
   const setBodyCursor = (value) => {
     if (!document?.body) {
       return
@@ -34,12 +47,14 @@ export function usePanZoom(canvasElement) {
   }
   
   const updateTransform = () => {
-    if (!canvasElement.value) return
-    const canvasContent = canvasElement.value.querySelector('.canvas-content')
-    if (canvasContent) {
-      canvasContent.style.transform =
-        `translate(${translateX.value}px, ${translateY.value}px) scale(${scale.value})`
+    if (transformFrame !== null) {
+      return
     }
+
+    transformFrame = requestAnimationFrame(() => {
+      transformFrame = null
+      applyTransformStyles()
+    })    
   }
   
   const clampScale = (value) => {
@@ -174,7 +189,6 @@ export function usePanZoom(canvasElement) {
 
     const distanceRatio = distance / pinchState.initialDistance
     const nextScale = clampScale(pinchState.initialScale * distanceRatio)
-    const scaleRatio = nextScale / pinchState.initialScale
 
     const rect = canvasElement.value.getBoundingClientRect()
     const centerClientX = (first.x + second.x) / 2
@@ -182,13 +196,24 @@ export function usePanZoom(canvasElement) {
     const centerX = centerClientX - rect.left
     const centerY = centerClientY - rect.top
 
-    const centerShiftX = centerX - pinchState.centerStartX
-    const centerShiftY = centerY - pinchState.centerStartY
+    const nextTranslateX = centerX - pinchState.contentCenterX * nextScale
+    const nextTranslateY = centerY - pinchState.contentCenterY * nextScale
 
     scale.value = nextScale
-    translateX.value = pinchState.initialTranslateX - pinchState.contentCenterX * (scaleRatio - 1) + centerShiftX
-    translateY.value = pinchState.initialTranslateY - pinchState.contentCenterY * (scaleRatio - 1) + centerShiftY
+    translateX.value = nextTranslateX
+    translateY.value = nextTranslateY
 
+    pinchState = {
+      ...pinchState,
+      initialDistance: distance,
+      initialScale: nextScale,
+      initialTranslateX: nextTranslateX,
+      initialTranslateY: nextTranslateY,
+      centerStartX: centerX,
+      centerStartY: centerY,
+      contentCenterX: (centerX - nextTranslateX) / nextScale,
+      contentCenterY: (centerY - nextTranslateY) / nextScale
+    }
     updateTransform()
   }  
   const handlePointerDown = (event) => {
@@ -252,7 +277,10 @@ export function usePanZoom(canvasElement) {
       } else {
         updatePinchState()
       }
-    }    if (isPanning) {
+      return
+    }
+
+    if (isPanning) {
       isPanning = false
       if (canvasElement.value) {
         canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
@@ -282,7 +310,11 @@ export function usePanZoom(canvasElement) {
     setBodyCursor()
     if (canvasElement.value) {
       canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
-    } 
+    }
+    if (transformFrame !== null) {
+      cancelAnimationFrame(transformFrame)
+      transformFrame = null
+    }
   })
   
   return {
