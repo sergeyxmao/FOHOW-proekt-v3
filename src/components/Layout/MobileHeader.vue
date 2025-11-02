@@ -67,86 +67,91 @@ function getAvatarUrl(url) {
 
 <template>
   <div class="mobile-header" :class="{ 'mobile-header--dark': isModernTheme }">
-    <!-- Кнопки слева направо -->
-    <div class="mobile-header-buttons">
-      <!-- Отмена -->
-      <button
-        class="mobile-header-button"
-        type="button"
-        :disabled="!historyStore.canUndo"
-        @click="handleUndo"
-        title="Отменить"
-      >
-        <span class="button-icon">↶</span>
-      </button>
-
-      <!-- Повтор -->
-      <button
-        class="mobile-header-button"
-        type="button"
-        :disabled="!historyStore.canRedo"
-        @click="handleRedo"
-        title="Повторить"
-      >
-        <span class="button-icon">↷</span>
-      </button>
-
-      <!-- Режим иерархии -->
-      <button
-        class="mobile-header-button"
-        :class="{ 'mobile-header-button--active': isHierarchyMode }"
-        type="button"
-        @click="toggleHierarchyMode"
-        title="Режим иерархии"
-      >
-        <span class="button-icon">🌳</span>
-      </button>
-
-      <!-- Загрузить JSON -->
-      <button
-        class="mobile-header-button"
-        type="button"
-        @click="handleLoadJSON"
-        title="Загрузить JSON"
-      >
-        <span class="button-icon">📂</span>
-      </button>
-
-      <!-- Экспортировать HTML -->
-      <button
-        class="mobile-header-button"
-        type="button"
-        @click="handleExportHTML"
-        title="Экспортировать HTML"
-      >
-        <span class="button-icon">📄</span>
-      </button>
-
-      <!-- Аватар -->
-      <button
-        v-if="authStore.isAuthenticated"
-        class="mobile-header-avatar"
-        type="button"
-        @click="handleProfileClick"
-        :title="authStore.user?.name || 'Профиль'"
-      >
-        <img
-          v-if="authStore.user?.avatar_url"
-          :src="getAvatarUrl(authStore.user.avatar_url)"
-          alt="Аватар"
-          class="avatar-image"
+    <div class="mobile-header-layout">
+      <div class="mobile-header-section mobile-header-section--left">
+        <!-- Отмена -->
+        <button
+          class="mobile-header-button"
+          type="button"
+          :disabled="!historyStore.canUndo"
+          @click="handleUndo"
+          title="Отменить"
         >
-        <span v-else class="avatar-initials">{{ userInitials }}</span>
-      </button>
-      <button
-        v-else
-        class="mobile-header-button"
-        type="button"
-        @click="handleProfileClick"
-        title="Войти"
-      >
-        <span class="button-icon">👤</span>
-      </button>
+          <span class="button-icon">↶</span>
+        </button>
+
+        <!-- Повтор -->
+        <button
+          class="mobile-header-button"
+          type="button"
+          :disabled="!historyStore.canRedo"
+          @click="handleRedo"
+          title="Повторить"
+        >
+          <span class="button-icon">↷</span>
+        </button>
+      </div>
+
+      <div class="mobile-header-section mobile-header-section--center">
+        <!-- Режим иерархии -->
+        <button
+          class="mobile-header-button"
+          :class="{ 'mobile-header-button--active': isHierarchyMode }"
+          type="button"
+          @click="toggleHierarchyMode"
+          title="Режим иерархии"
+        >
+          <span class="button-icon">🌳</span>
+        </button>
+
+        <!-- Загрузить JSON -->
+        <button
+          class="mobile-header-button"
+          type="button"
+          @click="handleLoadJSON"
+          title="Загрузить JSON"
+        >
+          <span class="button-icon">📂</span>
+        </button>
+
+        <!-- Экспортировать HTML -->
+        <button
+          class="mobile-header-button"
+          type="button"
+          @click="handleExportHTML"
+          title="Экспортировать HTML"
+        >
+          <span class="button-icon">📄</span>
+        </button>
+      </div>
+
+      <div class="mobile-header-section mobile-header-section--right">
+        <!-- Аватар -->
+        <button
+          v-if="authStore.isAuthenticated"
+          class="mobile-header-avatar"
+          type="button"
+          @click="handleProfileClick"
+          :title="authStore.user?.name || 'Профиль'"
+        >
+          <img
+            v-if="authStore.user?.avatar_url"
+            :src="getAvatarUrl(authStore.user.avatar_url)"
+            alt="Аватар"
+            class="avatar-image"
+          >
+          <span v-else class="avatar-initials">{{ userInitials }}</span>
+        </button>
+        <button
+          v-else
+          class="mobile-header-button"
+          type="button"
+          @click="handleProfileClick"
+          title="Войти"
+        >
+          <span class="button-icon">👤</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -165,18 +170,31 @@ function getAvatarUrl(url) {
   z-index: 1000;
 }
 
-.mobile-header-buttons {
+.mobile-header-layout {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 8px;
+}
+
+.mobile-header-section {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  scrollbar-width: none;
 }
 
-.mobile-header-buttons::-webkit-scrollbar {
-  display: none;
+.mobile-header-section--left,
+.mobile-header-section--right {
+  flex: 0 0 auto;
+}
+
+.mobile-header-section--center {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.mobile-header-section--right {
+  margin-left: auto;
 }
 
 .mobile-header-button {
@@ -206,7 +224,6 @@ function getAvatarUrl(url) {
 }
 
 .mobile-header-button:active:not(:disabled) {
-  transform: scale(0.95);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -255,7 +272,7 @@ function getAvatarUrl(url) {
 }
 
 .mobile-header-avatar:active {
-  transform: scale(0.95);
+  transform: none;
 }
 
 .avatar-image {
@@ -276,8 +293,9 @@ function getAvatarUrl(url) {
     padding: 0 6px;
   }
 
-  .mobile-header-buttons {
-    gap: 6px;
+  .mobile-header-layout,
+  .mobile-header-section {
+   gap: 6px;
   }
 
   .mobile-header-button {
