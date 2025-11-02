@@ -14,7 +14,8 @@ export function usePanZoom(canvasElement) {
   let startX = 0
   let startY = 0
   let previousCursor = ''
-
+  const activeTouchPointers = new Map()
+  let pinchState = null
   const setBodyCursor = (value) => {
     if (!document?.body) {
       return
@@ -117,9 +118,93 @@ export function usePanZoom(canvasElement) {
     
     updateTransform()
   }
-  
+  const updatePinchState = () => {
+    if (!canvasElement.value || activeTouchPointers.size !== 2) {
+      pinchState = null
+      return
+    }
+
+    const pointers = Array.from(activeTouchPointers.values())
+    const [first, second] = pointers
+    const dx = first.x - second.x
+    const dy = first.y - second.y
+    const distance = Math.hypot(dx, dy)
+
+    if (distance === 0) {
+      pinchState = null
+      return
+    }
+
+    const rect = canvasElement.value.getBoundingClientRect()
+    const centerClientX = (first.x + second.x) / 2
+    const centerClientY = (first.y + second.y) / 2
+    const centerX = centerClientX - rect.left
+    const centerY = centerClientY - rect.top
+
+    const currentScale = scale.value
+    const contentCenterX = (centerX - translateX.value) / currentScale
+    const contentCenterY = (centerY - translateY.value) / currentScale
+
+    pinchState = {
+      initialDistance: distance,
+      initialScale: currentScale,
+      initialTranslateX: translateX.value,
+      initialTranslateY: translateY.value,
+      contentCenterX,
+      contentCenterY,
+      centerStartX: centerX,
+      centerStartY: centerY
+    }
+  }
+
+  const applyPinchTransform = () => {
+    if (!canvasElement.value || !pinchState || activeTouchPointers.size !== 2) {
+      return
+    }
+
+    const pointers = Array.from(activeTouchPointers.values())
+    const [first, second] = pointers
+    const dx = first.x - second.x
+    const dy = first.y - second.y
+    const distance = Math.hypot(dx, dy)
+
+    if (distance === 0 || !Number.isFinite(distance)) {
+      return
+    }
+
+    const distanceRatio = distance / pinchState.initialDistance
+    const nextScale = clampScale(pinchState.initialScale * distanceRatio)
+    const scaleRatio = nextScale / pinchState.initialScale
+
+    const rect = canvasElement.value.getBoundingClientRect()
+    const centerClientX = (first.x + second.x) / 2
+    const centerClientY = (first.y + second.y) / 2
+    const centerX = centerClientX - rect.left
+    const centerY = centerClientY - rect.top
+
+    const centerShiftX = centerX - pinchState.centerStartX
+    const centerShiftY = centerY - pinchState.centerStartY
+
+    scale.value = nextScale
+    translateX.value = pinchState.initialTranslateX - pinchState.contentCenterX * (scaleRatio - 1) + centerShiftX
+    translateY.value = pinchState.initialTranslateY - pinchState.contentCenterY * (scaleRatio - 1) + centerShiftY
+
+    updateTransform()
+  }  
   const handlePointerDown = (event) => {
-    if (!canvasElement.value) return    
+    if (!canvasElement.value) return
+
+    if (event.pointerType === 'touch') {
+      if (!canvasElement.value.contains(event.target)) {
+        return
+      }
+      activeTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+      updatePinchState()
+      if (activeTouchPointers.size >= 2) {
+        event.preventDefault()
+      }
+      return
+    }
     // Панорамирование по средней кнопке мыши
     if (event.button === 1) {
       if (!canvasElement.value.contains(event.target)) {
@@ -136,6 +221,21 @@ export function usePanZoom(canvasElement) {
   }
   
   const handlePointerMove = (event) => {
+    if (event.pointerType === 'touch') {
+      if (!activeTouchPointers.has(event.pointerId)) {
+        return
+      }
+      activeTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+      if (activeTouchPointers.size >= 2) {
+        event.preventDefault()
+        if (!pinchState) {
+          updatePinchState()
+        }
+        applyPinchTransform()
+      }
+      return
+    }
+    
     if (!isPanning) return
     
     event.preventDefault()
@@ -144,13 +244,21 @@ export function usePanZoom(canvasElement) {
     updateTransform()
   }
   
-  const handlePointerUp = () => {
-    if (isPanning) {
+  const handlePointerUp = (event) => {
+    if (event.pointerType === 'touch') {
+      activeTouchPointers.delete(event.pointerId)
+      if (activeTouchPointers.size < 2) {
+        pinchState = null
+      } else {
+        updatePinchState()
+      }
+    }    if (isPanning) {
       isPanning = false
       if (canvasElement.value) {
         canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
       }
-      setBodyCursor()    }
+      setBodyCursor()
+    }
   }
   
   onMounted(() => {
@@ -174,7 +282,7 @@ export function usePanZoom(canvasElement) {
     setBodyCursor()
     if (canvasElement.value) {
       canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
-    }    
+    } 
   })
   
   return {
@@ -187,5 +295,6 @@ export function usePanZoom(canvasElement) {
     setTransform,
     resetTransform,
     minScale: MIN_SCALE,
-    maxScale: MAX_SCALE  }
+    maxScale: MAX_SCALE
+  }
 }
