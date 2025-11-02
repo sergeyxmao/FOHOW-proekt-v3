@@ -3,6 +3,11 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import AppHeader from './components/Layout/AppHeader.vue'
 import TopMenuButtons from './components/Layout/TopMenuButtons.vue'
+import MobileHeader from './components/Layout/MobileHeader.vue'
+import MobileToolbar from './components/Layout/MobileToolbar.vue'
+import MobileSidebar from './components/Layout/MobileSidebar.vue'
+import MobileVersionDialog from './components/Layout/MobileVersionDialog.vue'
+import VersionSwitcher from './components/Layout/VersionSwitcher.vue'
 import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
 import { useAuthStore } from './stores/auth'
@@ -11,25 +16,35 @@ import { useBoardStore } from './stores/board'
 import { useCardsStore } from './stores/cards' // Assuming this store exists
 import { useConnectionsStore } from './stores/connections' // Assuming this store exists
 import { useViewportStore } from './stores/viewport'
+import { useMobileStore } from './stores/mobile'
+import { useViewSettingsStore } from './stores/viewSettings'
+import { useProjectActions } from './composables/useProjectActions'
 import { storeToRefs } from 'pinia'
-  
+
 const authStore = useAuthStore()
 const canvasStore = useCanvasStore() // Предполагаемая инициализация
 const boardStore = useBoardStore()
 const cardsStore = useCardsStore() // Assuming initialization
 const connectionsStore = useConnectionsStore() // Assuming initialization
 const viewportStore = useViewportStore()
+const mobileStore = useMobileStore()
+const viewSettingsStore = useViewSettingsStore()
 const { isAuthenticated } = storeToRefs(authStore)
 const { isSaving } = storeToRefs(boardStore)
-  
+const { isMobileMode } = storeToRefs(mobileStore)
+const { headerColor, headerColorIndex } = storeToRefs(viewSettingsStore)
+
 const { zoomPercentage } = storeToRefs(viewportStore)
-const zoomDisplay = computed(() => `${zoomPercentage.value}%`)  
+const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
+
+const { handleExportHTML, handleLoadProject } = useProjectActions()
 
 const isModernTheme = ref(false)
 const isPencilMode = ref(false)
 const pencilSnapshot = ref(null)
 const pencilBounds = ref(null)
 const canvasRef = ref(null)
+const showProfile = ref(false)
 
 // Состояние для сброса пароля
 const showResetPassword = ref(false)
@@ -288,9 +303,56 @@ function stopAutoSave() {
   }
 }
 
+// Mobile-specific functions
+function handleAddLicense() {
+  cardsStore.addCard({
+    type: 'small',
+    headerBg: headerColor.value,
+    colorIndex: headerColorIndex.value
+  })
+}
+
+function handleAddLower() {
+  cardsStore.addCard({
+    type: 'large',
+    headerBg: headerColor.value,
+    colorIndex: headerColorIndex.value
+  })
+}
+
+function handleAddGold() {
+  cardsStore.addCard({
+    type: 'gold'
+  })
+}
+
+function handleAddTemplate() {
+  // For now, just add a default card - can be enhanced to show template picker
+  cardsStore.addCard({
+    type: 'large',
+    headerBg: headerColor.value,
+    colorIndex: headerColorIndex.value
+  })
+}
+
+function handleMobileExportHTML() {
+  handleExportHTML()
+}
+
+function handleMobileLoadJSON() {
+  handleLoadProject()
+}
+
+function handleOpenProfile() {
+  showProfile.value = true
+}
+
 onMounted(async () => {
   // Инициализируем authStore - загружаем данные пользователя
   await authStore.init()
+
+  // Определяем тип устройства
+  mobileStore.detectDevice()
 
   // Проверяем URL на токен сброса пароля
   const urlParams = new URLSearchParams(window.location.search)
@@ -312,41 +374,75 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div id="app">
-    <TopMenuButtons
-      v-show="!isPencilMode && !showResetPassword"
-      :is-modern-theme="isModernTheme"
-      @toggle-theme="toggleTheme"
-      @activate-pencil="handleActivatePencil"
-    />
-    <AppHeader
-      v-show="!isPencilMode && !showResetPassword"
-      :is-modern-theme="isModernTheme"
-      :zoom-display="zoomDisplay"      
-      @open-board="openBoard"
-      @save-board="saveCurrentBoard"
-      @toggle-theme="toggleTheme"
-      @fit-to-content="handleFitToContent"     
-    />
+  <div id="app" :class="{ 'app--mobile': isMobileMode }">
+    <!-- Desktop UI -->
+    <template v-if="!isMobileMode">
+      <TopMenuButtons
+        v-show="!isPencilMode && !showResetPassword"
+        :is-modern-theme="isModernTheme"
+        @toggle-theme="toggleTheme"
+        @activate-pencil="handleActivatePencil"
+      />
+      <AppHeader
+        v-show="!isPencilMode && !showResetPassword"
+        :is-modern-theme="isModernTheme"
+        :zoom-display="zoomDisplay"
+        @open-board="openBoard"
+        @save-board="saveCurrentBoard"
+        @toggle-theme="toggleTheme"
+        @fit-to-content="handleFitToContent"
+      />
+      <button
+        v-if="isAuthenticated"
+        v-show="!isPencilMode && !showResetPassword"
+        class="save-floating-button"
+        :class="{ 'save-floating-button--modern': isModernTheme }"
+        type="button"
+        :disabled="isSaving"
+        @click="saveCurrentBoard"
+      >
+        💾 Сохранить
+      </button>
+    </template>
 
+    <!-- Mobile UI -->
+    <template v-else>
+      <MobileHeader
+        v-show="!isPencilMode && !showResetPassword"
+        :is-modern-theme="isModernTheme"
+        @toggle-theme="toggleTheme"
+        @open-profile="handleOpenProfile"
+      />
+      <MobileToolbar
+        v-show="!isPencilMode && !showResetPassword"
+        :is-modern-theme="isModernTheme"
+        @save="saveCurrentBoard"
+        @add-license="handleAddLicense"
+        @add-lower="handleAddLower"
+        @add-gold="handleAddGold"
+        @add-template="handleAddTemplate"
+      />
+      <MobileSidebar
+        v-show="!isPencilMode && !showResetPassword"
+        :is-modern-theme="isModernTheme"
+        @export-html="handleMobileExportHTML"
+        @load-json="handleMobileLoadJSON"
+      />
+      <MobileVersionDialog />
+    </template>
+
+    <!-- Canvas (shared between mobile and desktop) -->
     <div
       id="canvas"
-      :class="{ 'canvas--inactive': isPencilMode || showResetPassword }"
+      :class="{
+        'canvas--inactive': isPencilMode || showResetPassword,
+        'canvas--mobile': isMobileMode
+      }"
     >
       <CanvasBoard ref="canvasRef" :is-modern-theme="isModernTheme" />
     </div>
-     <button
-      v-if="isAuthenticated"
-      v-show="!isPencilMode && !showResetPassword"
-      class="save-floating-button"
-      :class="{ 'save-floating-button--modern': isModernTheme }"
-      type="button"
-      :disabled="isSaving"
-      @click="saveCurrentBoard"
-    >
-      💾 Сохранить
-    </button>
 
+    <!-- Pencil Overlay (shared) -->
     <PencilOverlay
       v-if="isPencilMode && pencilSnapshot && pencilBounds"
       :snapshot="pencilSnapshot"
@@ -364,6 +460,12 @@ onBeforeUnmount(() => {
         />
       </div>
     </div>
+
+    <!-- Version Switcher (always visible) -->
+    <VersionSwitcher
+      v-show="!isPencilMode && !showResetPassword"
+      :is-modern-theme="isModernTheme"
+    />
   </div>
 </template>
 
@@ -470,6 +572,55 @@ html,body{
   color: #ffffff;
   border-color: rgba(15, 98, 254, 0.85);
 }
+
 /* Canvas/SVG */
-#canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
+#canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 0;
+  cursor: default;
+}
+
+/* Mobile adjustments */
+.app--mobile #canvas {
+  padding-top: 56px;
+  padding-bottom: 68px;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.canvas--mobile {
+  overflow: hidden;
+}
+
+/* Hide desktop-only elements in mobile mode */
+.app--mobile .save-floating-button {
+  display: none;
+}
+
+/* Responsive optimizations for mobile */
+@media (max-width: 768px) {
+  .app--mobile {
+    overflow: hidden;
+  }
+
+  .app--mobile #canvas {
+    touch-action: pan-x pan-y pinch-zoom;
+  }
+}
+
+@media (max-width: 480px) {
+  .app--mobile #canvas {
+    padding-top: 52px;
+    padding-bottom: 64px;
+  }
+}
+
+@media (max-width: 360px) {
+  .app--mobile #canvas {
+    padding-top: 52px;
+    padding-bottom: 64px;
+  }
+}
 </style>
