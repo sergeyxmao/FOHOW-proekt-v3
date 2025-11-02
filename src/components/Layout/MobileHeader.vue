@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useHistoryStore } from '@/stores/history'
 import { useCanvasStore } from '@/stores/canvas'
-
+ 
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
