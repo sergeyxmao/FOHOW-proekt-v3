@@ -1,8 +1,10 @@
 <script setup>
 import { computed } from 'vue'
+import { storeToRefs } from 'pinia'  
 import { useAuthStore } from '@/stores/auth'
 import { useBoardStore } from '@/stores/board'
 import { useMobileStore } from '@/stores/mobile'
+import { useViewportStore } from '@/stores/viewport'
 
 const props = defineProps({
   isModernTheme: {
@@ -11,15 +13,17 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['save', 'toggle-theme'])
+const emit = defineEmits(['save', 'toggle-theme', 'fit-to-content'])
 
 const authStore = useAuthStore()
 const boardStore = useBoardStore()
 const mobileStore = useMobileStore()
+const viewportStore = useViewportStore()
 
 const isSaving = computed(() => boardStore.isSaving)
 const isMobileMode = computed(() => mobileStore.isMobileMode)
-
+const { zoomPercentage } = storeToRefs(viewportStore)
+const zoomDisplay = computed(() => String(zoomPercentage.value ?? 0))
 const handleSave = () => {
   emit('save')
 }
@@ -39,6 +43,10 @@ const handleToggleVersion = () => {
 const openMarketingLink = () => {
   window.open('https://t.me/marketingFohow', '_blank')
 }
+
+const handleFitToContent = () => {
+  emit('fit-to-content')
+}  
 </script>
 
 <template>
@@ -73,7 +81,16 @@ const openMarketingLink = () => {
         >
           <span class="theme-icon"></span>
         </button>
-
+        <!-- Текущий масштаб -->
+        <button
+          class="mobile-toolbar-button zoom-button"
+          type="button"
+          @click="handleFitToContent"
+          :title="`Текущий масштаб: ${zoomDisplay}%`"
+          aria-label="Автоподгонка масштаба"
+        >
+          <span class="button-icon zoom-button__value">{{ zoomDisplay }}</span>
+        </button>
         <!-- Переключатель версии -->
         <button
           class="mobile-toolbar-button version-button"
@@ -206,7 +223,21 @@ const openMarketingLink = () => {
   background: linear-gradient(145deg, rgba(59, 130, 246, 0.18), rgba(59, 130, 246, 0));
   border-color: rgba(15, 23, 42, 0.12);
 }
+/* Кнопка масштаба */
+.zoom-button {
+  min-width: 52px;
+  padding: 0 6px;
+  font-variant-numeric: tabular-nums;
+}
 
+.zoom-button__value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.mobile-toolbar--dark .zoom-button {
+  border-color: rgba(96, 164, 255, 0.32);
+}
 .mobile-toolbar--dark .theme-button {
   background: linear-gradient(145deg, rgba(114, 182, 255, 0.32), rgba(114, 182, 255, 0));
   border-color: rgba(96, 164, 255, 0.42);
