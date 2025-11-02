@@ -1,10 +1,12 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import AppHeader from './components/Layout/AppHeader.vue'
 import TopMenuButtons from './components/Layout/TopMenuButtons.vue'
 import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
+import MobileToolbar from './components/Layout/MobileToolbar.vue'
+import MobileVersionDialog from './components/Layout/MobileVersionDialog.vue'  
 import { useAuthStore } from './stores/auth'
 import { useCanvasStore } from './stores/canvas' // Предполагаемый импорт
 import { useBoardStore } from './stores/board'
@@ -30,6 +32,22 @@ const isPencilMode = ref(false)
 const pencilSnapshot = ref(null)
 const pencilBounds = ref(null)
 const canvasRef = ref(null)
+const MOBILE_BREAKPOINT = 900
+const MOBILE_PREFERENCE_STORAGE_KEY = 'fohow-mobile-mode'
+
+const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : MOBILE_BREAKPOINT)
+const mobilePreference = ref('auto')
+const showMobileNotice = ref(false)
+
+const isMobile = computed(() => {
+  if (mobilePreference.value === 'desktop') {
+    return false
+  }
+  if (mobilePreference.value === 'mobile') {
+    return true
+  }
+  return viewportWidth.value <= MOBILE_BREAKPOINT
+})
 
 // Состояние для сброса пароля
 const showResetPassword = ref(false)
@@ -41,6 +59,39 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 
 function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
+}
+function updateViewportWidth() {
+  if (typeof window === 'undefined') {
+    return
+  }
+  viewportWidth.value = window.innerWidth
+}
+
+function persistMobilePreference() {
+  if (typeof window === 'undefined') {
+    return
+  }
+  try {
+    window.localStorage.setItem(MOBILE_PREFERENCE_STORAGE_KEY, mobilePreference.value)
+  } catch (error) {
+    console.warn('Не удалось сохранить предпочтение режима отображения:', error)
+  }
+}
+
+function handleStayInMobileMode() {
+  mobilePreference.value = 'mobile'
+  showMobileNotice.value = false
+  persistMobilePreference()
+}
+
+function handleSwitchToDesktopMode() {
+  mobilePreference.value = 'desktop'
+  showMobileNotice.value = false
+  persistMobilePreference()
+}
+
+function handleCloseMobileNotice() {
+  showMobileNotice.value = false
 }
 
 function resetPencilState() {
@@ -301,14 +352,48 @@ onMounted(async () => {
     // Очищаем URL от токена
     window.history.replaceState({}, document.title, window.location.pathname)
   }
+  try {
+    const storedPreference = window.localStorage.getItem(MOBILE_PREFERENCE_STORAGE_KEY)
+    if (storedPreference === 'mobile' || storedPreference === 'desktop' || storedPreference === 'auto') {
+      mobilePreference.value = storedPreference
+    }
+  } catch (error) {
+    console.warn('Не удалось прочитать предпочтение режима отображения:', error)
+  }
 
+  viewportWidth.value = window.innerWidth
+  window.addEventListener('resize', updateViewportWidth)
   window.addEventListener('keydown', handleGlobalKeydown)
+
+  if (isMobile.value) {
+    showMobileNotice.value = true
+  }  
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
+  window.removeEventListener('resize', updateViewportWidth)  
   stopAutoSave()
 })
+
+watch(isMobile, (value, oldValue) => {
+  if (typeof document !== 'undefined') {
+    document.body.classList.toggle('app-mobile-mode', value)
+  }
+
+  if (value && !oldValue) {
+    showMobileNotice.value = true
+  }
+
+  if (!value && mobilePreference.value === 'mobile' && viewportWidth.value > MOBILE_BREAKPOINT) {
+    mobilePreference.value = 'auto'
+    persistMobilePreference()
+  }
+})
+
+watch(mobilePreference, () => {
+  persistMobilePreference()
+})  
 </script>
 
 <template>
@@ -320,14 +405,23 @@ onBeforeUnmount(() => {
       @activate-pencil="handleActivatePencil"
     />
     <AppHeader
+      v-if="!isMobile"      
       v-show="!isPencilMode && !showResetPassword"
       :is-modern-theme="isModernTheme"
-      :zoom-display="zoomDisplay"      
+      :zoom-display="zoomDisplay"
       @open-board="openBoard"
       @save-board="saveCurrentBoard"
       @toggle-theme="toggleTheme"
-      @fit-to-content="handleFitToContent"     
+      @fit-to-content="handleFitToContent"
     />
+    <MobileToolbar
+      v-else
+      v-show="!isPencilMode && !showResetPassword"
+      :is-modern-theme="isModernTheme"
+      :is-saving="isSaving"
+      @toggle-theme="toggleTheme"
+      @open-board="openBoard"
+      />
 
     <div
       id="canvas"
@@ -335,17 +429,22 @@ onBeforeUnmount(() => {
     >
       <CanvasBoard ref="canvasRef" :is-modern-theme="isModernTheme" />
     </div>
-     <button
+    <button
       v-if="isAuthenticated"
       v-show="!isPencilMode && !showResetPassword"
       class="save-floating-button"
-      :class="{ 'save-floating-button--modern': isModernTheme }"
-      type="button"
+      :class="{
+        'save-floating-button--modern': isModernTheme,
+        'save-floating-button--mobile': isMobile
+      }"
+       type="button"
       :disabled="isSaving"
       @click="saveCurrentBoard"
     >
-      💾 Сохранить
-    </button>
+      <span aria-hidden="true">💾</span>
+      <span v-if="!isMobile"> Сохранить</span>
+      <span v-if="isMobile" class="visually-hidden">Сохранить</span>
+     </button>
 
     <PencilOverlay
       v-if="isPencilMode && pencilSnapshot && pencilBounds"
@@ -364,6 +463,15 @@ onBeforeUnmount(() => {
         />
       </div>
     </div>
+
+    <MobileVersionDialog
+      v-if="showMobileNotice"
+      :is-modern-theme="isModernTheme"
+      :is-desktop="mobilePreference === 'desktop'"
+      @stay-mobile="handleStayInMobileMode"
+      @switch-desktop="handleSwitchToDesktopMode"
+      @close="handleCloseMobileNotice"
+    />    
   </div>
 </template>
 
@@ -441,6 +549,9 @@ html,body{
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.2);
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   backdrop-filter: blur(6px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;  
 }
 
 .save-floating-button:hover:not(:disabled) {
@@ -470,6 +581,27 @@ html,body{
   color: #ffffff;
   border-color: rgba(15, 98, 254, 0.85);
 }
+
+.save-floating-button--mobile {
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border-radius: 22px;
+  font-size: 28px;
+  justify-content: center;
+  gap: 0;
+}
+
+.save-floating-button--mobile .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}  
 /* Canvas/SVG */
 #canvas{ position:relative; width:100%; height:100%; transform-origin:0 0; cursor:default; }
 </style>
