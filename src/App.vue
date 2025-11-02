@@ -12,6 +12,7 @@ import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
 import AuthModal from './components/AuthModal.vue'
 import UserProfile from './components/UserProfile.vue'
+import BoardsModal from './components/Board/BoardsModal.vue' 
 import { useAuthStore } from './stores/auth'
 import { useCanvasStore } from './stores/canvas' // Предполагаемый импорт
 import { useBoardStore } from './stores/board'
@@ -50,6 +51,7 @@ const showProfile = ref(false)
 const showMobileAuthPrompt = ref(false)
 const mobileAuthModalView = ref('login')
 const isMobileAuthModalOpen = ref(false)
+const isBoardsModalOpen = ref(false)
 
 // Состояние для сброса пароля
 const showResetPassword = ref(false)
@@ -390,10 +392,33 @@ function handleOpenProfile() {
 
   openMobileAuthPrompt()
 }
+
+function handleOpenMobileBoards() {
+  if (!isAuthenticated.value) {
+    openMobileAuthPrompt()
+    return
+  }
+
+  isBoardsModalOpen.value = true
+}
+
+function handleMobileBoardsClose() {
+  isBoardsModalOpen.value = false
+}
+
+function handleMobileBoardSelect(boardId) {
+  isBoardsModalOpen.value = false
+  openBoard(boardId)
+} 
 watch(isAuthenticated, (value) => {
   if (value) {
     showMobileAuthPrompt.value = false
     isMobileAuthModalOpen.value = false
+  }
+})
+watch(isMobileMode, (value) => {
+  if (!value) {
+    isBoardsModalOpen.value = false
   }
 })
 
@@ -462,7 +487,8 @@ onBeforeUnmount(() => {
         :is-modern-theme="isModernTheme"
         @toggle-theme="toggleTheme"
         @open-profile="handleOpenProfile"
-        @request-auth="openMobileAuthPrompt"     
+        @open-boards="handleOpenMobileBoards"
+        @request-auth="openMobileAuthPrompt"
         @export-html="handleMobileExportHTML"
         @load-json="handleMobileLoadJSON"
       />
@@ -570,6 +596,11 @@ onBeforeUnmount(() => {
       @close="handleMobileAuthClose"
       @success="handleMobileAuthSuccess"
     />
+    <BoardsModal
+      :is-open="isBoardsModalOpen"
+      @close="handleMobileBoardsClose"
+      @open-board="handleMobileBoardSelect"
+    />   
     <Teleport to="body">
       <div
         v-if="showProfile"
