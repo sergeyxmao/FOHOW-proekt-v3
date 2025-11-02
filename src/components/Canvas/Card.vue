@@ -165,6 +165,8 @@ const cancelEditing = () => {
   isEditing.value = false;
   editText.value = props.card.text;
 };
+
+// ИСПРАВЛЕННАЯ ЛОГИКА РАСЧЁТА БАЛАНСА
 const calculations = computed(() => {
   const source = props.card?.calculated || {};
   return {
@@ -232,31 +234,47 @@ const manualAdjustments = computed(() => {
   return parseActivePV(source);
 });
 
-const finalCalculation = computed(() => {
+// Автоматический баланс - это баланс, который поднимается вверх по структуре
+const automaticBalance = computed(() => {
   const base = calculations.value;
   const activeUnits = activePvState.value.units;
+  
+  // Автоматический баланс = базовый расчёт + активные единицы
+  const left = base.L + activeUnits.left;
+  const right = base.R + activeUnits.right;
+  const total = base.total + activeUnits.total;
+  
+  return {
+    L: left,
+    R: right,
+    total
+  };
+});
+
+// Финальный расчёт включает ручные корректировки, которые НЕ поднимаются вверх
+const finalCalculation = computed(() => {
+  const auto = automaticBalance.value;
   const manual = manualAdjustments.value;
-
-  const bonusLeft = activeUnits.left + manual.left;
-  const bonusRight = activeUnits.right + manual.right;
-  const bonusTotal = bonusLeft + bonusRight;
-
-  const left = base.L + bonusLeft;
-  const right = base.R + bonusRight;
-  const total = base.total + bonusTotal;
+  
+  // Финальный баланс = автоматический + ручные корректировки
+  const left = auto.L + manual.left;
+  const right = auto.R + manual.right;
+  const total = auto.total + manual.left + manual.right;
   const stages = calcStagesAndCycles(total);
 
   return {
     L: left,
     R: right,
     total,
-    cycles: Number.isFinite(stages.cycles) ? stages.cycles : base.cycles,
-    stage: Number.isFinite(stages.stage) ? stages.stage : base.stage,
-    toNext: Number.isFinite(stages.toNext) ? stages.toNext : base.toNext
+    cycles: Number.isFinite(stages.cycles) ? stages.cycles : calculations.value.cycles,
+    stage: Number.isFinite(stages.stage) ? stages.stage : calculations.value.stage,
+    toNext: Number.isFinite(stages.toNext) ? stages.toNext : calculations.value.toNext
   };
 });
 
 const calculatedBalanceDisplay = computed(() => `${finalCalculation.value.L} / ${finalCalculation.value.R}`);
+
+// Ручное переопределение баланса с учётом минимальных значений
 const manualBalanceOverrideValue = computed(() => {
   const source = props.card?.balanceManualOverride;
   if (!source) {
@@ -275,10 +293,12 @@ const manualBalanceOverrideValue = computed(() => {
 
   return parsed;
 });
+
 const manualBalanceOverride = computed(() => manualBalanceOverrideValue.value?.formatted ?? null);  
 const balanceDisplay = computed(() => manualBalanceOverride.value ?? calculatedBalanceDisplay.value);
 const manualBalanceOffset = ref(null);  
-  const activeOrdersDisplay = computed(
+
+const activeOrdersDisplay = computed(
   () => `${activePvState.value.remainder.left} / ${activePvState.value.remainder.right}`
 );
 const cyclesDisplay = computed(() => finalCalculation.value.cycles);
@@ -334,7 +354,7 @@ const handleDelete = (event) => {
   cardsStore.removeCard(props.card.id);
 };
 
-// Обработчик для обновления значений
+// ИСПРАВЛЕННЫЙ ОБРАБОТЧИК для обновления значений
 const updateValue = (event, field) => {
   if (field === 'pv') {
     const newValue = event.target.textContent.trim();
@@ -355,6 +375,7 @@ const updateValue = (event, field) => {
     const hasDigits = /\d/.test(rawText);
 
     if (!hasDigits) {
+      // Если нет цифр - сбрасываем на автоматический баланс
       if (event.target.textContent !== calculatedBalanceDisplay.value) {
         event.target.textContent = calculatedBalanceDisplay.value;
       }
@@ -370,7 +391,9 @@ const updateValue = (event, field) => {
     }
 
     const parsed = parseActivePV(rawText);
-    const autoBalance = finalCalculation.value;
+    const autoBalance = automaticBalance.value; // Используем автоматический баланс как минимум
+    
+    // ВАЖНО: Не позволяем установить значения меньше автоматического баланса
     const nextValue = {
       left: Math.max(parsed.left, autoBalance.L),
       right: Math.max(parsed.right, autoBalance.R)
@@ -382,21 +405,37 @@ const updateValue = (event, field) => {
     }
 
     const current = props.card.balanceManualOverride || {};
+    
+    // Сохраняем разницу между ручным и автоматическим балансом
     manualBalanceOffset.value = {
       left: Math.max(0, nextValue.left - autoBalance.L),
       right: Math.max(0, nextValue.right - autoBalance.R)
-    };    
+    };
+    
     if (current.left !== nextValue.left || current.right !== nextValue.right) {
+      // Сохраняем полные значения ручного баланса
       cardsStore.updateCard(
         props.card.id,
         { balanceManualOverride: nextValue },
         { saveToHistory: true, description: `Установлен ручной баланс для "${props.card.text}"` }
       );
+      
+      // Также сохраняем ручные корректировки (разницу) для правильного расчёта
+      const manualAdditions = {
+        left: manualBalanceOffset.value.left,
+        right: manualBalanceOffset.value.right
+      };
+      
+      cardsStore.updateCard(
+        props.card.id,
+        { manualAdjustments: manualAdditions },
+        { saveToHistory: false }
+      );
     }
   }
 };
 
-
+// Следим за изменением ручного переопределения баланса
 watch(
   () => manualBalanceOverrideValue.value,
   (manual) => {
@@ -405,7 +444,7 @@ watch(
       return;
     }
 
-    const autoBalance = finalCalculation.value;
+    const autoBalance = automaticBalance.value;
     manualBalanceOffset.value = {
       left: Math.max(0, manual.left - autoBalance.L),
       right: Math.max(0, manual.right - autoBalance.R)
@@ -414,8 +453,9 @@ watch(
   { immediate: true }
 );
 
+// Следим за изменением автоматического баланса и корректируем ручной
 watch(
-  () => [finalCalculation.value.L, finalCalculation.value.R],
+  () => [automaticBalance.value.L, automaticBalance.value.R],
   ([nextLeft, nextRight]) => {
     const current = manualBalanceOverrideValue.value;
     if (!current || !manualBalanceOffset.value) {
@@ -432,6 +472,7 @@ watch(
       return;
     }
 
+    // Обновляем ручной баланс с сохранением смещения
     cardsStore.updateCard(
       props.card.id,
       { balanceManualOverride: desired },
@@ -503,6 +544,8 @@ watch(
         :data-localr="String(activePvState.units.right)"
         :data-remainderl="String(activePvState.remainder.left)"
         :data-remainderr="String(activePvState.remainder.right)"
+        :data-auto-balance-l="String(automaticBalance.L)"
+        :data-auto-balance-r="String(automaticBalance.R)"
       ></div>
       <!-- Иконка монетки и PV -->
       <div class="card-row pv-row">
@@ -523,6 +566,7 @@ watch(
         <span
           class="value"
           contenteditable="true"
+          :title="`Автоматический баланс: ${automaticBalance.L} / ${automaticBalance.R}`"
           @blur="updateValue($event, 'manual-balance')"
         >
           {{ balanceDisplay }}
@@ -1105,4 +1149,4 @@ watch(
     box-shadow: 0 0 0 0 rgba(15, 98, 254, 0);
   }
 }  
-</style>  
+</style>
