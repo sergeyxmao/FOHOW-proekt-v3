@@ -10,8 +10,8 @@ export const useMobileStore = defineStore('mobile', () => {
 
   // Пользователь принудительно включил десктопную версию
   const forceDesktopMode = ref(false)
-  // Активен ли режим увеличенных кнопок в мобильном меню
-  const isMenuScaled = ref(false)
+  // Текущее масштабирование элементов мобильного меню
+  const menuScale = ref(1)
 
   // Показывать ли диалог о мобильной версии
   const showMobileDialog = ref(false)
@@ -63,9 +63,21 @@ export const useMobileStore = defineStore('mobile', () => {
   const closeMobileDialog = () => {
     showMobileDialog.value = false
   }
-  const setMenuScaled = (value) => {
-    isMenuScaled.value = Boolean(value)
+  const setMenuScale = (value) => {
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) {
+      menuScale.value = 1
+      return
+    }
+
+    const clamped = Math.min(Math.max(numericValue, 1), 1.6)
+    menuScale.value = clamped
   }
+  const resetMenuScale = () => {
+    menuScale.value = 1
+  }
+
+  const isMenuScaled = computed(() => menuScale.value > 1.01)
 
   return {
     isMobileDevice,
@@ -73,11 +85,13 @@ export const useMobileStore = defineStore('mobile', () => {
     forceDesktopMode,
     isMobileMode,
     showMobileDialog,
-    isMenuScaled,   
+    isMenuScaled,
+    menuScale,
     detectDevice,
     switchToMobile,
     switchToDesktop,
     closeMobileDialog,
-    setMenuScaled    
+    setMenuScale,
+    resetMenuScale
   }
 })
