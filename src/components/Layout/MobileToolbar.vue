@@ -43,51 +43,63 @@ const openMarketingLink = () => {
 
 <template>
   <div class="mobile-toolbar" :class="{ 'mobile-toolbar--dark': isModernTheme }">
-    <!-- Кнопки слева направо -->
-    <div class="mobile-toolbar-buttons">
-      <!-- @marketingFohow -->
-      <a
-        href="https://t.me/marketingFohow"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="mobile-toolbar-button marketing-button"
-        @click.prevent="openMarketingLink"
-        title="@marketingFohow"
-      >
-        @marketingFohow
-      </a>
+    <div class="mobile-toolbar-layout">
+      <div class="mobile-toolbar-section mobile-toolbar-section--left">
+        <!-- @marketingFohow -->
+        <button
+          class="mobile-toolbar-button marketing-button"
+          type="button"
+          @click="openMarketingLink"
+          title="@marketingFohow"
+          aria-label="Открыть Telegram @marketingFohow"
+        >
+          <svg class="marketing-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M21.543 2.47a1.25 1.25 0 0 0-1.303-.193L3.154 9.53c-.5.214-.82.7-.798 1.23.022.53.38.99.897 1.16l4.72 1.566 1.837 5.52c.18.54.68.905 1.25.923h.04c.56 0 1.06-.34 1.26-.86l1.68-4.32 4.66 3.54c.22.17.49.26.76.26.17 0 .34-.03.5-.1.39-.16.68-.5.78-.91l3.18-13.42c.13-.54-.12-1.1-.6-1.36Z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+      </div>
 
-      <!-- Переключатель темы -->
-      <button
-        class="mobile-toolbar-button theme-button"
-        type="button"
-        @click="handleToggleTheme"
-        :title="isModernTheme ? 'Светлая тема' : 'Темная тема'"
-      >
-        <span class="theme-icon"></span>
-      </button>
+      <div class="mobile-toolbar-section mobile-toolbar-section--center">
+        <!-- Переключатель темы -->
+        <button
+          class="mobile-toolbar-button theme-button"
+          type="button"
+          @click="handleToggleTheme"
+          :title="isModernTheme ? 'Светлая тема' : 'Темная тема'"
+          aria-label="Переключить тему"
+        >
+          <span class="theme-icon"></span>
+        </button>
 
-      <!-- Переключатель версии -->
-      <button
-        class="mobile-toolbar-button version-button"
-        type="button"
-        @click="handleToggleVersion"
-        :title="isMobileMode ? 'Версия для ПК' : 'Мобильная версия'"
-      >
-        <span class="button-icon">{{ isMobileMode ? '💻' : '📱' }}</span>
-      </button>
+        <!-- Переключатель версии -->
+        <button
+          class="mobile-toolbar-button version-button"
+          type="button"
+          @click="handleToggleVersion"
+          :title="isMobileMode ? 'Версия для ПК' : 'Мобильная версия'"
+          aria-label="Переключить версию"
+        >
+          <span class="button-icon">{{ isMobileMode ? '💻' : '📱' }}</span>
+        </button>
+      </div>
 
-      <!-- Кнопка сохранения -->
-      <button
-        v-if="authStore.isAuthenticated"
-        class="mobile-toolbar-button save-button"
-        type="button"
-        :disabled="isSaving"
-        @click="handleSave"
-        title="Сохранить"
-      >
-        <span class="button-icon">💾</span>
-      </button>
+      <div class="mobile-toolbar-section mobile-toolbar-section--right">
+        <!-- Кнопка сохранения -->
+        <button
+          v-if="authStore.isAuthenticated"
+          class="mobile-toolbar-button save-button"
+          type="button"
+          :disabled="isSaving"
+          @click="handleSave"
+          title="Сохранить"
+          aria-label="Сохранить"
+        >
+          <span class="button-icon">💾</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -106,11 +118,32 @@ const openMarketingLink = () => {
   z-index: 1000;
 }
 
-.mobile-toolbar-buttons {
+.mobile-toolbar-layout {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
+  gap: 8px;
+}
+
+.mobile-toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-toolbar-section--left,
+.mobile-toolbar-section--right {
+  flex: 0 0 auto;
+}
+
+.mobile-toolbar-section--center {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.mobile-toolbar-section--right {
+  margin-left: auto;  
 }
 
 .mobile-toolbar-button {
@@ -118,6 +151,7 @@ const openMarketingLink = () => {
   align-items: center;
   justify-content: center;
   min-width: 44px;
+  width: 44px;  
   height: 44px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
@@ -131,9 +165,7 @@ const openMarketingLink = () => {
   text-decoration: none;
   flex-shrink: 0;
 }
-.mobile-toolbar-button:not(.marketing-button) {
-  width: 44px;
-}
+
 .mobile-toolbar--dark .mobile-toolbar-button {
   background: rgba(28, 38, 58, 0.95);
   border-color: rgba(255, 255, 255, 0.1);
@@ -141,7 +173,6 @@ const openMarketingLink = () => {
 }
 
 .mobile-toolbar-button:active:not(:disabled) {
-  transform: scale(0.95);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -163,11 +194,11 @@ const openMarketingLink = () => {
   color: #ffffff;
   border-color: rgba(0, 136, 204, 0.5);
   box-shadow: 0 2px 8px rgba(0, 136, 204, 0.3);
-  padding: 0 16px;
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.2px;
-  width: auto;  
+}
+
+.marketing-icon {
+  width: 20px;
+  height: 20px;
 }
 
 /* Переключатель темы */
@@ -231,7 +262,6 @@ const openMarketingLink = () => {
 }
 
 .save-button:active:not(:disabled) {
-  transform: scale(0.95);
   box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
 }
 
@@ -247,8 +277,8 @@ const openMarketingLink = () => {
     height: 52px;
     padding: 0 6px;
   }
- 
-  .mobile-toolbar-buttons {
+  .mobile-toolbar-layout,
+  .mobile-toolbar-section {
     gap: 6px;
   }
 
