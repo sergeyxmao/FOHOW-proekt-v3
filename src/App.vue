@@ -427,6 +427,7 @@ onBeforeUnmount(() => {
         :is-modern-theme="isModernTheme"
         @save="saveCurrentBoard"
         @toggle-theme="toggleTheme"
+         @fit-to-content="handleFitToContent"      
       />
       <MobileSidebar
         v-show="!isPencilMode && !showResetPassword"
