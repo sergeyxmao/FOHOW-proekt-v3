@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import AppHeader from './components/Layout/AppHeader.vue'
 import TopMenuButtons from './components/Layout/TopMenuButtons.vue'
@@ -10,6 +10,7 @@ import MobileVersionDialog from './components/Layout/MobileVersionDialog.vue'
 import VersionSwitcher from './components/Layout/VersionSwitcher.vue'
 import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
+import AuthModal from './components/AuthModal.vue' 
 import { useAuthStore } from './stores/auth'
 import { useCanvasStore } from './stores/canvas' // Предполагаемый импорт
 import { useBoardStore } from './stores/board'
@@ -45,6 +46,9 @@ const pencilSnapshot = ref(null)
 const pencilBounds = ref(null)
 const canvasRef = ref(null)
 const showProfile = ref(false)
+const showMobileAuthPrompt = ref(false)
+const mobileAuthModalView = ref('login')
+const isMobileAuthModalOpen = ref(false)
 
 // Состояние для сброса пароля
 const showResetPassword = ref(false)
@@ -349,10 +353,48 @@ function handleMobileExportHTML() {
 function handleMobileLoadJSON() {
   handleLoadProject()
 }
+function openMobileAuthPrompt() {
+  showMobileAuthPrompt.value = true
+}
+
+function closeMobileAuthPrompt() {
+  showMobileAuthPrompt.value = false
+}
+
+function handleMobileAuthLogin() {
+  mobileAuthModalView.value = 'login'
+  isMobileAuthModalOpen.value = true
+  closeMobileAuthPrompt()
+}
+
+function handleMobileAuthRegister() {
+  mobileAuthModalView.value = 'register'
+  isMobileAuthModalOpen.value = true
+  closeMobileAuthPrompt()
+}
+
+function handleMobileAuthClose() {
+  isMobileAuthModalOpen.value = false
+}
+
+function handleMobileAuthSuccess() {
+  isMobileAuthModalOpen.value = false
+}
 
 function handleOpenProfile() {
-  showProfile.value = true
+  if (isAuthenticated.value) {
+    showProfile.value = true
+    return
+  }
+
+  openMobileAuthPrompt()
 }
+watch(isAuthenticated, (value) => {
+  if (value) {
+    showMobileAuthPrompt.value = false
+    isMobileAuthModalOpen.value = false
+  }
+})
 
 onMounted(async () => {
   // Инициализируем authStore - загружаем данные пользователя
@@ -419,6 +461,7 @@ onBeforeUnmount(() => {
         :is-modern-theme="isModernTheme"
         @toggle-theme="toggleTheme"
         @open-profile="handleOpenProfile"
+        @request-auth="openMobileAuthPrompt"     
         @export-html="handleMobileExportHTML"
         @load-json="handleMobileLoadJSON"
       />
@@ -427,8 +470,10 @@ onBeforeUnmount(() => {
         :is-modern-theme="isModernTheme"
         @save="saveCurrentBoard"
         @toggle-theme="toggleTheme"
-         @fit-to-content="handleFitToContent"      
-      />
+        @fit-to-content="handleFitToContent"
+        @open-profile="handleOpenProfile"
+        @request-auth="openMobileAuthPrompt"
+       />
       <MobileSidebar
         v-show="!isPencilMode && !showResetPassword"
         :is-modern-theme="isModernTheme"
@@ -439,6 +484,45 @@ onBeforeUnmount(() => {
       />
       <MobileVersionDialog />
     </template>
+    <transition name="fade">
+      <div
+        v-if="showMobileAuthPrompt && isMobileMode"
+        class="mobile-auth-overlay"
+        @click.self="closeMobileAuthPrompt"
+      >
+        <div
+          :class="['mobile-auth-dialog', { 'mobile-auth-dialog--modern': isModernTheme }]"
+          role="dialog"
+          aria-modal="true"
+        >
+          <h2 class="mobile-auth-dialog__title">Добро пожаловать</h2>
+          <p class="mobile-auth-dialog__subtitle">Выберите действие для продолжения</p>
+          <div class="mobile-auth-dialog__actions">
+            <button
+              type="button"
+              class="mobile-auth-dialog__button mobile-auth-dialog__button--primary"
+              @click="handleMobileAuthLogin"
+            >
+              Войти
+            </button>
+            <button
+              type="button"
+              class="mobile-auth-dialog__button mobile-auth-dialog__button--secondary"
+              @click="handleMobileAuthRegister"
+            >
+              Регистрация
+            </button>
+          </div>
+          <button
+            type="button"
+            class="mobile-auth-dialog__close"
+            @click="closeMobileAuthPrompt"
+          >
+            Отмена
+          </button>
+        </div>
+      </div>
+    </transition>
 
     <!-- Canvas (shared between mobile and desktop) -->
     <div
@@ -476,6 +560,15 @@ onBeforeUnmount(() => {
       v-show="!isPencilMode && !showResetPassword"
       :is-modern-theme="isModernTheme"
     />
+
+    <AuthModal
+      v-if="isMobileAuthModalOpen"
+      :is-open="isMobileAuthModalOpen"
+      :initial-view="mobileAuthModalView"
+      :is-modern-theme="isModernTheme"
+      @close="handleMobileAuthClose"
+      @success="handleMobileAuthSuccess"
+    />   
   </div>
 </template>
 
@@ -535,6 +628,135 @@ html,body{
   width: 90%;
   max-height: 90vh;
   overflow-y: auto;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.mobile-auth-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(10, 18, 36, 0.45);
+  z-index: 1100;
+}
+
+.mobile-auth-dialog {
+  width: 100%;
+  max-width: 360px;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 18px;
+  box-shadow: 0 20px 45px rgba(15, 24, 44, 0.28);
+  padding: 24px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+  backdrop-filter: blur(12px);
+}
+
+.mobile-auth-dialog--modern {
+  background: rgba(24, 33, 54, 0.96);
+  color: #e5f3ff;
+  box-shadow: 0 24px 60px rgba(12, 20, 38, 0.45);
+  border: 1px solid rgba(87, 148, 255, 0.28);
+}
+
+.mobile-auth-dialog__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.mobile-auth-dialog--modern .mobile-auth-dialog__title {
+  color: #f8fbff;
+}
+
+.mobile-auth-dialog__subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.mobile-auth-dialog--modern .mobile-auth-dialog__subtitle {
+  color: rgba(229, 243, 255, 0.72);
+}
+
+.mobile-auth-dialog__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-auth-dialog__button {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mobile-auth-dialog__button--primary {
+  background: linear-gradient(135deg, #0f62fe 0%, #0353e9 100%);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(15, 98, 254, 0.35);
+}
+
+.mobile-auth-dialog__button--secondary {
+  background: rgba(15, 98, 254, 0.08);
+  color: #0f62fe;
+  border: 1px solid rgba(15, 98, 254, 0.4);
+}
+
+.mobile-auth-dialog--modern .mobile-auth-dialog__button--secondary {
+  background: rgba(37, 99, 235, 0.18);
+  color: #e5f3ff;
+  border-color: rgba(118, 169, 255, 0.45);
+}
+
+.mobile-auth-dialog__button:active {
+  transform: scale(0.98);
+}
+
+.mobile-auth-dialog__close {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mobile-auth-dialog--modern .mobile-auth-dialog__close {
+  color: rgba(229, 243, 255, 0.7);
+}
+
+@media (max-width: 420px) {
+  .mobile-auth-dialog {
+    max-width: 320px;
+    padding: 20px 16px 16px;
+  }
+
+  .mobile-auth-dialog__title {
+    font-size: 18px;
+  }
+
+  .mobile-auth-dialog__button {
+    font-size: 15px;
+  }
 }
 
 .save-floating-button {
