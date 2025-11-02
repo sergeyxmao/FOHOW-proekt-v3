@@ -9,15 +9,88 @@ export function usePanZoom(canvasElement) {
   const MAX_SCALE = 5     // Максимальное увеличение - 500%
 
   const PAN_CURSOR_CLASS = 'canvas-container--panning'
-  
+    const PAN_EXCLUDE_SELECTOR = [
+    '.card',
+    '.note-window',
+    '.card-controls',
+    '.card-header',
+    '.card-body',
+    '.line-group',
+    '.line',
+    '.line-hitbox',
+    '.ui-panel-left',
+    '.ui-panel-right',
+    '.mobile-toolbar',
+    '.mobile-header',
+    '[data-prevent-pan]'
+  ].join(', ')
+
   let isPanning = false
   let startX = 0
   let startY = 0
   let previousCursor = ''
   const activeTouchPointers = new Map()
   let pinchState = null
-    let transformFrame = null
+  let panPointerId = null
+  let panPointerType = null 
+  let transformFrame = null
+  const canStartTouchPan = (event) => {
+    if (!canvasElement.value) {
+      return false
+    }
 
+    const target = event?.target
+    if (!target || typeof target.closest !== 'function') {
+      return false
+    }
+
+    if (!canvasElement.value.contains(target)) {
+      return false
+    }
+
+    if (PAN_EXCLUDE_SELECTOR && target.closest(PAN_EXCLUDE_SELECTOR)) {
+      return false
+    }
+
+    return true
+  }
+
+  const startPan = (event) => {
+    if (!canvasElement.value) {
+      return
+    }
+
+    isPanning = true
+    panPointerId = event.pointerId
+    panPointerType = event.pointerType
+    startX = event.clientX - translateX.value
+    startY = event.clientY - translateY.value
+
+    canvasElement.value.classList.add(PAN_CURSOR_CLASS)
+    if (event.pointerType !== 'touch') {
+      setBodyCursor('grabbing')
+    }
+  }
+
+  const stopPanning = () => {
+    if (!isPanning) {
+      return
+    }
+
+    const wasTouch = panPointerType === 'touch'
+
+    isPanning = false
+    panPointerId = null
+    panPointerType = null
+
+    if (canvasElement.value) {
+      canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
+    }
+
+    if (!wasTouch) {
+      setBodyCursor()
+    }
+  }
   const applyTransformStyles = () => {
     if (!canvasElement.value) {
       return
@@ -224,10 +297,21 @@ export function usePanZoom(canvasElement) {
         return
       }
       activeTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
-      updatePinchState()
-      if (activeTouchPointers.size >= 2) {
-        event.preventDefault()
+
+      if (activeTouchPointers.size === 1) {
+        if (canStartTouchPan(event)) {
+          event.preventDefault()
+          startPan(event)
+        }
+        return
       }
+
+      if (isPanning && panPointerType === 'touch') {
+        stopPanning()
+      }
+  
+      updatePinchState()
+      event.preventDefault()    
       return
     }
     // Панорамирование по средней кнопке мыши
@@ -236,12 +320,7 @@ export function usePanZoom(canvasElement) {
         return
       }      
       event.preventDefault()
-      isPanning = true
-      startX = event.clientX - translateX.value
-      startY = event.clientY - translateY.value
-
-      canvasElement.value.classList.add(PAN_CURSOR_CLASS)
-      setBodyCursor('grabbing')
+      startPan(event)
     }
   }
   
@@ -257,12 +336,19 @@ export function usePanZoom(canvasElement) {
           updatePinchState()
         }
         applyPinchTransform()
+        return
+      }
+
+      if (isPanning && panPointerType === 'touch' && panPointerId === event.pointerId) {
+        event.preventDefault()
+        translateX.value = event.clientX - startX
+        translateY.value = event.clientY - startY
+        updateTransform()        
       }
       return
     }
-    
-    if (!isPanning) return
-    
+    if (!isPanning || panPointerId !== event.pointerId) return
+
     event.preventDefault()
     translateX.value = event.clientX - startX
     translateY.value = event.clientY - startY
@@ -272,6 +358,9 @@ export function usePanZoom(canvasElement) {
   const handlePointerUp = (event) => {
     if (event.pointerType === 'touch') {
       activeTouchPointers.delete(event.pointerId)
+      if (isPanning && panPointerType === 'touch' && panPointerId === event.pointerId) {
+        stopPanning()
+      }      
       if (activeTouchPointers.size < 2) {
         pinchState = null
       } else {
@@ -280,12 +369,8 @@ export function usePanZoom(canvasElement) {
       return
     }
 
-    if (isPanning) {
-      isPanning = false
-      if (canvasElement.value) {
-        canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
-      }
-      setBodyCursor()
+    if (isPanning && panPointerId === event.pointerId) {
+      stopPanning()
     }
   }
   
