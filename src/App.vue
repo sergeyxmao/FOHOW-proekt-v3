@@ -20,7 +20,7 @@ import { useMobileStore } from './stores/mobile'
 import { useViewSettingsStore } from './stores/viewSettings'
 import { useProjectActions } from './composables/useProjectActions'
 import { storeToRefs } from 'pinia'
-
+ 
 const authStore = useAuthStore()
 const canvasStore = useCanvasStore() // Предполагаемая инициализация
 const boardStore = useBoardStore()
