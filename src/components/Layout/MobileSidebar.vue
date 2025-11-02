@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useCardsStore } from '@/stores/cards'
 import { useConnectionsStore } from '@/stores/connections'
 import { useViewSettingsStore } from '@/stores/viewSettings'
-
+ 
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
