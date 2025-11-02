@@ -30,7 +30,7 @@ const boardStore = useBoardStore()
 const mobileStore = useMobileStore()
 
 const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
-const { isMenuScaled } = storeToRefs(mobileStore)
+const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
  
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
@@ -137,7 +137,8 @@ watch(
   <div
     class="mobile-header"
     :class="{ 'mobile-header--dark': isModernTheme, 'mobile-header--scaled': isMenuScaled }"
-  >
+    :style="{ '--menu-scale': menuScale }"  
+   >
    <div class="mobile-header-layout">
       <div class="mobile-header-section mobile-header-section--left">
         <!-- Отмена -->
@@ -349,10 +350,12 @@ watch(
   user-select: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   flex-shrink: 0;
+  transform: scale(var(--menu-scale, 1));
+  transform-origin: center; 
 }
 .mobile-header--scaled .mobile-header-button,
 .mobile-header--scaled .mobile-header-avatar {
-  transform: scale(1.12);
+  transform: scale(var(--menu-scale, 1));
 }
 
 .mobile-header--scaled .mobile-header-avatar {
@@ -414,10 +417,12 @@ watch(
   user-select: none;
   flex-shrink: 0;
   overflow: hidden;
+  transform: scale(var(--menu-scale, 1));
+  transform-origin: center; 
 }
 
 .mobile-header-avatar:active {
-  transform: none;
+  transform: scale(var(--menu-scale, 1));
 }
 
 .avatar-image {
