@@ -782,6 +782,7 @@ html,body{
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+} 
 .profile-modal-overlay {
   position: fixed;
   inset: 0;
@@ -795,7 +796,6 @@ html,body{
 
 .profile-modal-overlay--modern {
   background: rgba(5, 12, 24, 0.8);
-} 
 }
 
 .mobile-auth-dialog--modern .mobile-auth-dialog__close {
