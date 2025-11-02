@@ -1,8 +1,10 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useHistoryStore } from '@/stores/history'
 import { useCanvasStore } from '@/stores/canvas'
+import { useBoardStore } from '@/stores/board'
+import { storeToRefs } from 'pinia'
  
 const props = defineProps({
   isModernTheme: {
@@ -14,7 +16,8 @@ const props = defineProps({
 const emit = defineEmits([
   'toggle-theme',
   'open-profile',
-  'request-auth', 
+  'request-auth',
+  'open-boards',
   'export-html',
   'load-json'
 ])
@@ -22,7 +25,9 @@ const emit = defineEmits([
 const authStore = useAuthStore()
 const historyStore = useHistoryStore()
 const canvasStore = useCanvasStore()
+const boardStore = useBoardStore()
 
+const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
 const userInitials = computed(() => {
@@ -35,6 +40,9 @@ const userInitials = computed(() => {
 })
 
 const isHierarchyMode = computed(() => canvasStore.isHierarchicalDragMode)
+const showUserMenu = ref(false)
+const userMenuRef = ref(null)
+const userMenuTriggerRef = ref(null)
 
 const handleUndo = () => {
   historyStore.undo()
@@ -44,13 +52,40 @@ const handleRedo = () => {
   historyStore.redo()
 }
 
-const handleProfileClick = () => {
-  if (authStore.isAuthenticated) {
-    emit('open-profile')
+const closeUserMenu = () => {
+  showUserMenu.value = false
+}
+
+const toggleUserMenu = () => {
+  showUserMenu.value = !showUserMenu.value
+}
+
+const handleAvatarClick = () => {
+  if (!authStore.isAuthenticated) {
+    emit('request-auth')   
     return
   }
+  toggleUserMenu()
+}
 
+const handleAuthButtonClick = () => {
   emit('request-auth')
+}
+const handleMenuProjects = () => {
+  closeUserMenu()
+  emit('open-boards')
+}
+
+const handleMenuProfile = () => {
+  closeUserMenu()
+  emit('open-profile')
+}
+
+const handleMenuLogout = () => {
+  closeUserMenu()
+  if (confirm('Вы уверены, что хотите выйти?')) {
+    authStore.logout()
+  }
 }
 
 const toggleHierarchyMode = () => {
@@ -69,6 +104,29 @@ function getAvatarUrl(url) {
   if (!url) return ''
   return `${API_URL.replace('/api', '')}${url}`
 }
+
+const handleEscapeKey = (event) => {
+  if (event.key === 'Escape') {
+    closeUserMenu()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleEscapeKey)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleEscapeKey)
+})
+
+watch(
+  () => authStore.isAuthenticated,
+  (value) => {
+    if (!value) {
+      closeUserMenu()
+    }
+  }
+) 
 </script>
 
 <template>
@@ -136,8 +194,9 @@ function getAvatarUrl(url) {
         <button
           v-if="authStore.isAuthenticated"
           class="mobile-header-avatar"
+          ref="userMenuTriggerRef"         
           type="button"
-          @click="handleProfileClick"
+          @click="handleAvatarClick"
           :title="authStore.user?.name || 'Профиль'"
         >
           <img
@@ -152,13 +211,75 @@ function getAvatarUrl(url) {
           v-else
           class="mobile-header-button"
           type="button"
-          @click="handleProfileClick"
+          @click="handleAuthButtonClick"
           title="Войти"
         >
           <span class="button-icon">👤</span>
         </button>
       </div>
     </div>
+
+    <Teleport to="body">
+      <transition name="fade">
+        <div
+          v-if="showUserMenu"
+          class="mobile-user-menu-overlay"
+          :class="{ 'mobile-user-menu-overlay--dark': isModernTheme }"
+          @click.self="closeUserMenu"
+        >
+          <div
+            ref="userMenuRef"
+            :class="['mobile-user-menu', { 'mobile-user-menu--dark': isModernTheme }]"
+          >
+            <button class="mobile-user-menu__close" type="button" @click="closeUserMenu">✕</button>
+
+            <div class="mobile-user-menu__section mobile-user-menu__section--project">
+              <span class="mobile-user-menu__project-name">{{ currentBoardName }}</span>
+              <div class="mobile-user-menu__status">
+                <template v-if="isSaving">
+                  <span class="status-spinner">⏳</span>
+                  <span>Сохранение...</span>
+                </template>
+                <template v-else-if="lastSaved">
+                  <span class="status-icon">✓</span>
+                  <span>Сохранено</span>
+                </template>
+                <template v-else>
+                  <span>Нет сохранений</span>
+                </template>
+              </div>
+            </div>
+
+            <div class="mobile-user-menu__section">
+              <button class="mobile-user-menu__item" type="button" @click="handleMenuProjects">
+                📁 Мои проекты
+              </button>
+              <div class="mobile-user-menu__item mobile-user-menu__item--static">
+                🤝 Совместные проекты
+              </div>
+            </div>
+
+            <div class="mobile-user-menu__divider" />
+
+            <div class="mobile-user-menu__section">
+              <div class="mobile-user-menu__item mobile-user-menu__item--static">
+                🔐 Номер личного кабинета: RUY68241101111
+              </div>
+              <button class="mobile-user-menu__item" type="button" @click="handleMenuProfile">
+                👤 Профиль
+              </button>
+              <button
+                class="mobile-user-menu__item mobile-user-menu__item--danger"
+                type="button"
+                @click="handleMenuLogout"
+              >
+                🚪 Выйти
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </Teleport>   
   </div>
 </template>
 
@@ -285,11 +406,178 @@ function getAvatarUrl(url) {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%;
+  display: block; 
 }
 
 .avatar-initials {
   font-size: 16px;
   font-weight: 700;
+}
+.mobile-user-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 2500;
+  backdrop-filter: blur(6px);
+}
+
+.mobile-user-menu-overlay--dark {
+  background: rgba(11, 16, 28, 0.6);
+}
+
+.mobile-user-menu {
+  position: relative;
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.98);
+  color: #0f172a;
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.mobile-user-menu--dark {
+  background: rgba(28, 38, 58, 0.96);
+  color: #e5f3ff;
+  box-shadow: 0 24px 48px rgba(5, 10, 18, 0.45);
+  border: 1px solid rgba(229, 243, 255, 0.1);
+}
+
+.mobile-user-menu__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(15, 23, 42, 0.08);
+  color: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mobile-user-menu--dark .mobile-user-menu__close {
+  background: rgba(229, 243, 255, 0.12);
+}
+
+.mobile-user-menu__close:hover {
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.mobile-user-menu--dark .mobile-user-menu__close:hover {
+  background: rgba(229, 243, 255, 0.2);
+}
+
+.mobile-user-menu__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-user-menu__section--project {
+  padding-right: 26px;
+  gap: 10px;
+}
+
+.mobile-user-menu__project-name {
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-user-menu__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.status-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.status-icon {
+  font-weight: 700;
+}
+
+.mobile-user-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: none;
+  background: rgba(15, 23, 42, 0.04);
+  color: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.mobile-user-menu__item:hover {
+  background: rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.mobile-user-menu--dark .mobile-user-menu__item {
+  background: rgba(229, 243, 255, 0.05);
+}
+
+.mobile-user-menu--dark .mobile-user-menu__item:hover {
+  background: rgba(229, 243, 255, 0.12);
+}
+
+.mobile-user-menu__item--static {
+  cursor: default;
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.mobile-user-menu__item--static:hover {
+  background: transparent;
+  transform: none;
+}
+
+.mobile-user-menu__item--danger {
+  background: rgba(244, 67, 54, 0.08);
+}
+
+.mobile-user-menu__item--danger:hover {
+  background: rgba(244, 67, 54, 0.15);
+}
+
+.mobile-user-menu__divider {
+  height: 1px;
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.mobile-user-menu--dark .mobile-user-menu__divider {
+  background: rgba(229, 243, 255, 0.18);
 }
 
 /* Адаптация для очень маленьких экранов */
@@ -320,5 +608,16 @@ function getAvatarUrl(url) {
   .avatar-initials {
     font-size: 14px;
   }
+
+  .mobile-user-menu {
+    width: min(320px, calc(100vw - 24px));
+    padding: 20px;
+    gap: 16px;
+  }
+
+  .mobile-user-menu__item {
+    font-size: 14px;
+    padding: 10px 12px;
+  } 
 }
 </style>
