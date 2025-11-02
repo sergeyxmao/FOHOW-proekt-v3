@@ -54,7 +54,7 @@ const openMarketingLink = () => {
         @click.prevent="openMarketingLink"
         title="@marketingFohow"
       >
-        <span class="button-icon">✈️</span>
+        @marketingFohow
       </a>
 
       <!-- Переключатель темы -->
@@ -118,7 +118,6 @@ const openMarketingLink = () => {
   align-items: center;
   justify-content: center;
   min-width: 44px;
-  width: 44px;
   height: 44px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
@@ -132,7 +131,9 @@ const openMarketingLink = () => {
   text-decoration: none;
   flex-shrink: 0;
 }
-
+.mobile-toolbar-button:not(.marketing-button) {
+  width: 44px;
+}
 .mobile-toolbar--dark .mobile-toolbar-button {
   background: rgba(28, 38, 58, 0.95);
   border-color: rgba(255, 255, 255, 0.1);
@@ -162,6 +163,11 @@ const openMarketingLink = () => {
   color: #ffffff;
   border-color: rgba(0, 136, 204, 0.5);
   box-shadow: 0 2px 8px rgba(0, 136, 204, 0.3);
+  padding: 0 16px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+  width: auto;  
 }
 
 /* Переключатель темы */
