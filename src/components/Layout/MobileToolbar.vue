@@ -22,7 +22,7 @@ const viewportStore = useViewportStore()
 
 const isSaving = computed(() => boardStore.isSaving)
 const isMobileMode = computed(() => mobileStore.isMobileMode)
-const { isMenuScaled } = storeToRefs(mobileStore)
+const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => String(zoomPercentage.value ?? 0))
 
@@ -64,7 +64,8 @@ const handleProfileClick = () => {
   <div
     class="mobile-toolbar"
     :class="{ 'mobile-toolbar--dark': isModernTheme, 'mobile-toolbar--scaled': isMenuScaled }"
-  >
+    :style="{ '--menu-scale': menuScale }"  
+    >
     <div class="mobile-toolbar-layout">
       <div class="mobile-toolbar-section mobile-toolbar-section--left">
         <!-- @marketingFohow -->
@@ -193,7 +194,7 @@ const handleProfileClick = () => {
   align-items: center;
   justify-content: center;
   min-width: 44px;
-  width: 44px;  
+  width: 44px;
   height: 44px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
@@ -206,9 +207,10 @@ const handleProfileClick = () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   text-decoration: none;
   flex-shrink: 0;
+  transform: scale(var(--menu-scale, 1));  
 }
 .mobile-toolbar--scaled .mobile-toolbar-button {
-  transform: scale(1.12);
+  transform: scale(var(--menu-scale, 1));
 }
 
 .mobile-toolbar--scaled .mobile-toolbar-section {
@@ -223,6 +225,7 @@ const handleProfileClick = () => {
 
 .mobile-toolbar-button:active:not(:disabled) {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  transform: scale(calc(var(--menu-scale, 1) * 0.95));  
 }
 
 .mobile-toolbar-button:disabled {
