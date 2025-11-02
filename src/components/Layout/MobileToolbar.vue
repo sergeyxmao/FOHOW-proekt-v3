@@ -241,7 +241,7 @@ const openMarketingLink = () => {
     height: 52px;
     padding: 0 6px;
   }
-
+ 
   .mobile-toolbar-buttons {
     gap: 6px;
   }
