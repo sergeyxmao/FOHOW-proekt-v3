@@ -52,9 +52,45 @@ const showMobileAuthPrompt = ref(false)
 const mobileAuthModalView = ref('login')
 const isMobileAuthModalOpen = ref(false)
 const isBoardsModalOpen = ref(false)
-const menuTouchPointers = new Set()
+const menuTouchPointers = new Map()
 let menuPointerListenersAttached = false
- 
+let initialMenuPinchDistance = null
+
+const MENU_SCALE_MIN = 1
+const MENU_SCALE_MAX = 1.6
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
+
+const calculateAverageDistance = () => {
+  const pointers = Array.from(menuTouchPointers.values())
+  if (pointers.length < 2) {
+    return 0
+  }
+
+  const activePointers = pointers.slice(0, 3)
+  let totalDistance = 0
+  let pairs = 0
+
+  for (let i = 0; i < activePointers.length; i += 1) {
+    for (let j = i + 1; j < activePointers.length; j += 1) {
+      const dx = activePointers[i].x - activePointers[j].x
+      const dy = activePointers[i].y - activePointers[j].y
+      totalDistance += Math.hypot(dx, dy)
+      pairs += 1
+    }
+  }
+
+  if (pairs === 0) {
+    return 0
+  }
+
+  return totalDistance / pairs
+}
+
+const resetMenuPinchState = () => {
+  initialMenuPinchDistance = null
+  mobileStore.resetMenuScale()
+} 
 // Состояние для сброса пароля
 const showResetPassword = ref(false)
 const resetToken = ref('')
@@ -416,9 +452,32 @@ function handleMobileBoardSelect(boardId) {
 const updateMenuScaleState = () => {
   if (!isMobileMode.value) {
     menuTouchPointers.clear()
+    resetMenuPinchState()
+    return   
   }
 
-  mobileStore.setMenuScaled(menuTouchPointers.size >= 3 && isMobileMode.value)
+  if (menuTouchPointers.size < 3) {
+    resetMenuPinchState()
+    return
+  }
+
+  const distance = calculateAverageDistance()
+  if (!distance) {
+    return
+  }
+
+  if (initialMenuPinchDistance === null) {
+    initialMenuPinchDistance = distance
+    mobileStore.resetMenuScale()
+    return
+  }
+
+  if (initialMenuPinchDistance === 0) {
+    return
+  }
+
+  const scaleRatio = clamp(distance / initialMenuPinchDistance, MENU_SCALE_MIN, MENU_SCALE_MAX)
+  mobileStore.setMenuScale(scaleRatio)
 }
 
 const handleMenuPointerDown = (event) => {
@@ -426,8 +485,24 @@ const handleMenuPointerDown = (event) => {
     return
   }
 
-  menuTouchPointers.add(event.pointerId)
+  menuTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+  if (menuTouchPointers.size >= 3) {
+    initialMenuPinchDistance = null
+  }
   updateMenuScaleState()
+}
+
+const handleMenuPointerMove = (event) => {
+  if (!isMobileMode.value || event.pointerType !== 'touch') {
+    return
+  }
+
+  if (!menuTouchPointers.has(event.pointerId)) {
+    return
+  }
+
+  menuTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+   updateMenuScaleState()
 }
 
 const handleMenuPointerUp = (event) => {
@@ -435,8 +510,11 @@ const handleMenuPointerUp = (event) => {
     return
   }
 
-  menuTouchPointers.delete(event.pointerId)
-  updateMenuScaleState()
+  const wasPresent = menuTouchPointers.delete(event.pointerId)
+  if (wasPresent && menuTouchPointers.size < 3) {
+    initialMenuPinchDistance = null
+  }
+ updateMenuScaleState()
 }
 
 const attachMenuPointerListeners = () => {
@@ -445,6 +523,7 @@ const attachMenuPointerListeners = () => {
   }
 
   window.addEventListener('pointerdown', handleMenuPointerDown)
+  window.addEventListener('pointermove', handleMenuPointerMove) 
   window.addEventListener('pointerup', handleMenuPointerUp)
   window.addEventListener('pointercancel', handleMenuPointerUp)
   window.addEventListener('pointerleave', handleMenuPointerUp)
@@ -458,13 +537,14 @@ const detachMenuPointerListeners = () => {
   }
 
   window.removeEventListener('pointerdown', handleMenuPointerDown)
+  window.removeEventListener('pointermove', handleMenuPointerMove) 
   window.removeEventListener('pointerup', handleMenuPointerUp)
   window.removeEventListener('pointercancel', handleMenuPointerUp)
   window.removeEventListener('pointerleave', handleMenuPointerUp)
   window.removeEventListener('pointerout', handleMenuPointerUp)
   menuPointerListenersAttached = false
   menuTouchPointers.clear()
-  mobileStore.setMenuScaled(false)
+  resetMenuPinchState()
 }
 watch(isAuthenticated, (value) => {
   if (value) {
