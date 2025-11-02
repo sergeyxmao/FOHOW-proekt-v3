@@ -457,15 +457,27 @@ export function useProjectActions() {
                   <span class="label">Циклов</span>
                   <span class="value">${escapeHtml(metrics.cycles)}</span>
                 </div>
+                ${card.bodyHTML ? `<div class="card-body-html">${card.bodyHTML}</div>` : ''}
               </div>
             </div>
           </div>
         `
       }))
 
+      // Создаем карты карточек с учетом смещения для SVG экспорта
       const cardsById = new Map(cards.map(card => [card.id, card]))
+      const adjustedCardsById = new Map(cards.map(card => [card.id, {
+        ...card,
+        x: card.x - minX + PADDING,
+        y: card.y - minY + PADDING,
+        anchorTop: card.anchorTop ? { x: card.anchorTop.x - minX + PADDING, y: card.anchorTop.y - minY + PADDING } : null,
+        anchorBottom: card.anchorBottom ? { x: card.anchorBottom.x - minX + PADDING, y: card.anchorBottom.y - minY + PADDING } : null,
+        anchorLeft: card.anchorLeft ? { x: card.anchorLeft.x - minX + PADDING, y: card.anchorLeft.y - minY + PADDING } : null,
+        anchorRight: card.anchorRight ? { x: card.anchorRight.x - minX + PADDING, y: card.anchorRight.y - minY + PADDING } : null
+      }]))
+
       const connectionPaths = connectionsStore.connections.map((connection) => ({
-        path: getConnectionPath(connection, cardsById),
+        path: getConnectionPath(connection, adjustedCardsById),
         color: connection.color || connectionsStore.defaultLineColor,
         thickness: connection.thickness || connectionsStore.defaultLineThickness
       }))
@@ -491,6 +503,7 @@ export function useProjectActions() {
         .label{color:#6b7280;font-weight:500;font-size:14px;text-align:center;max-width:100%;word-break:break-word;overflow-wrap:anywhere;}
         .value{color:#111827;font-weight:600;font-size:15px;outline:none;padding:3px 6px;border-radius:6px;line-height:1.5;}
         .pv-row .value{font-size:18px;font-weight:600;}
+        .card-body-html{margin-top:8px;text-align:left;width:100%;font-size:14px;line-height:1.45;color:#111827;}
         .svg-layer{position:absolute;inset:0;pointer-events:none;overflow:visible;}
       `
 
@@ -516,8 +529,6 @@ export function useProjectActions() {
               }
             }
           }
-
-          updateTransform();
 
           var isDragging = false;
           var startX = 0;
@@ -550,12 +561,12 @@ export function useProjectActions() {
             var delta = -event.deltaY * 0.0005;
             var newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, currentScale + delta));
 
-            var rect = canvas.getBoundingClientRect();
-            var mouseX = event.clientX - rect.left;
-            var mouseY = event.clientY - rect.top;
+            // Получаем координаты мыши относительно окна viewport
+            var mouseX = event.clientX;
+            var mouseY = event.clientY;
 
+            // Вычисляем новую позицию так, чтобы точка под мышью оставалась на месте
             var scaleRatio = newScale / currentScale;
-
             currentX = mouseX - (mouseX - currentX) * scaleRatio;
             currentY = mouseY - (mouseY - currentY) * scaleRatio;
             currentScale = newScale;
@@ -601,6 +612,9 @@ export function useProjectActions() {
           if (zoomBtn) {
             zoomBtn.addEventListener('click', fitToContent);
           }
+
+          // Автоматически подгоняем масштаб при загрузке
+          fitToContent();
         });
       `
 
