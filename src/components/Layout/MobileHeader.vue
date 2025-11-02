@@ -14,6 +14,7 @@ const props = defineProps({
 const emit = defineEmits([
   'toggle-theme',
   'open-profile',
+  'request-auth', 
   'export-html',
   'load-json'
 ])
@@ -44,7 +45,12 @@ const handleRedo = () => {
 }
 
 const handleProfileClick = () => {
-  emit('open-profile')
+  if (authStore.isAuthenticated) {
+    emit('open-profile')
+    return
+  }
+
+  emit('request-auth')
 }
 
 const toggleHierarchyMode = () => {
