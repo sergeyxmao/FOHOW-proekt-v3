@@ -14,6 +14,7 @@ import { usePanZoom } from '../../composables/usePanZoom';
 import { useHistoryStore } from '../../stores/history.js';
 import { useViewportStore } from '../../stores/viewport.js';
 import { useNotesStore } from '../../stores/notes.js';
+import { useMobileStore } from '../../stores/mobile.js';  
 import { Engine } from '../../utils/calculationEngine';
 import {
   propagateActivePvUp,
@@ -30,6 +31,7 @@ import {
 } from '../../utils/noteUtils';
 const historyStore = useHistoryStore();
 const notesStore = useNotesStore();
+const mobileStore = useMobileStore();  
 const emit = defineEmits(['update-connection-status']);
 const props = defineProps({
   isModernTheme: {
@@ -50,8 +52,9 @@ const {
   guidesEnabled,
   gridStep: gridStepRef,
   isGridBackgroundVisible
-} = storeToRefs(canvasStore);  
-watch(() => cardsStore.cards, (newCards, oldCards) => {
+} = storeToRefs(canvasStore);
+const { isMobileMode } = storeToRefs(mobileStore);
+  watch(() => cardsStore.cards, (newCards, oldCards) => {
   console.log('=== Cards array updated ===');
   console.log('Previous cards count:', oldCards.length);
   console.log('New cards count:', newCards.length);
@@ -2020,15 +2023,16 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       /> 
     </div>
     <a
+      v-if="!isMobileMode"      
       class="marketing-watermark"
-      :class="{ 'marketing-watermark--modern': props.isModernTheme }"      
+      :class="{ 'marketing-watermark--modern': props.isModernTheme }"
       href="https://t.me/MarketingFohow"
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Открыть Telegram-канал MarketingFohow"
     >
       @MarketingFohow
-    </a>  
+    </a>
   </div>
 </template>
 
@@ -2038,6 +2042,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   height: 100%;
   overflow: hidden;
   position: relative;
+  touch-action: none;  
 }
 .canvas-container--selection-mode {
   cursor: crosshair;
