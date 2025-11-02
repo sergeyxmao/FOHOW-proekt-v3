@@ -25,30 +25,6 @@ const isMobileMode = computed(() => mobileStore.isMobileMode)
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => String(zoomPercentage.value ?? 0))
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
-
-const userInitials = computed(() => {
-  const fullName = authStore.user?.name || authStore.user?.username || authStore.user?.email
-  if (!fullName) {
-    return '?'
-  }
-
-  const segments = String(fullName).trim().split(/\s+/)
-  if (segments.length === 1) {
-    return segments[0].charAt(0).toUpperCase()
-  }
-
-  const first = segments[0]?.charAt(0) ?? ''
-  const last = segments[segments.length - 1]?.charAt(0) ?? ''
-  return `${first}${last}`.toUpperCase()
-})
-
-const getAvatarUrl = (url) => {
-  if (!url) {
-    return ''
-  }
-  return `${API_URL.replace('/api', '')}${url}`
-}  
 const handleSave = () => {
   emit('save')
 }
@@ -138,25 +114,8 @@ const handleProfileClick = () => {
       </div>
 
       <div class="mobile-toolbar-section mobile-toolbar-section--right">
-        <!-- Дублированная кнопка профиля -->
         <button
-          v-if="authStore.isAuthenticated"
-          class="mobile-toolbar-avatar"
-          type="button"
-          @click="handleProfileClick"
-          :title="authStore.user?.name || 'Профиль'"
-          aria-label="Открыть профиль"
-        >
-          <img
-            v-if="authStore.user?.avatar_url"
-            :src="getAvatarUrl(authStore.user.avatar_url)"
-            alt="Аватар"
-            class="avatar-image"
-          >
-          <span v-else class="avatar-initials">{{ userInitials }}</span>
-        </button>
-        <button
-          v-else
+          v-if="!authStore.isAuthenticated"
           class="mobile-toolbar-button auth-button"
           type="button"
           @click="handleProfileClick"
@@ -243,47 +202,6 @@ const handleProfileClick = () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   text-decoration: none;
   flex-shrink: 0;
-}
-.mobile-toolbar-avatar {
-  min-width: 44px;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0f62fe 0%, #0353e9 100%);
-  color: #ffffff;
-  font-size: 18px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(15, 98, 254, 0.5);
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(15, 98, 254, 0.3);
-  transition: all 0.2s ease;
-  user-select: none;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.mobile-toolbar-avatar:active {
-  transform: none;
-}
-
-.mobile-toolbar--dark .mobile-toolbar-avatar {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border-color: rgba(59, 130, 246, 0.6);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatar-initials {
-  font-size: 16px;
-  font-weight: 700;
 }
 
 .mobile-toolbar--dark .mobile-toolbar-button {
