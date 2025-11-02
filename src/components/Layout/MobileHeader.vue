@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useHistoryStore } from '@/stores/history'
 import { useCanvasStore } from '@/stores/canvas'
 import { useBoardStore } from '@/stores/board'
+import { useMobileStore } from '@/stores/mobile' 
 import { storeToRefs } from 'pinia'
  
 const props = defineProps({
@@ -26,8 +27,11 @@ const authStore = useAuthStore()
 const historyStore = useHistoryStore()
 const canvasStore = useCanvasStore()
 const boardStore = useBoardStore()
+const mobileStore = useMobileStore()
 
 const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
+const { isMenuScaled } = storeToRefs(mobileStore)
+ 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
 const userInitials = computed(() => {
@@ -130,8 +134,11 @@ watch(
 </script>
 
 <template>
-  <div class="mobile-header" :class="{ 'mobile-header--dark': isModernTheme }">
-    <div class="mobile-header-layout">
+  <div
+    class="mobile-header"
+    :class="{ 'mobile-header--dark': isModernTheme, 'mobile-header--scaled': isMenuScaled }"
+  >
+   <div class="mobile-header-layout">
       <div class="mobile-header-section mobile-header-section--left">
         <!-- Отмена -->
         <button
@@ -343,7 +350,18 @@ watch(
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   flex-shrink: 0;
 }
+.mobile-header--scaled .mobile-header-button,
+.mobile-header--scaled .mobile-header-avatar {
+  transform: scale(1.12);
+}
 
+.mobile-header--scaled .mobile-header-avatar {
+  transform-origin: center;
+}
+
+.mobile-header--scaled .mobile-header-section {
+  gap: 12px;
+}
 .mobile-header--dark .mobile-header-button {
   background: rgba(28, 38, 58, 0.95);
   border-color: rgba(255, 255, 255, 0.1);
