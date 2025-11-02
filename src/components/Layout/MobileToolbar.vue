@@ -22,6 +22,7 @@ const viewportStore = useViewportStore()
 
 const isSaving = computed(() => boardStore.isSaving)
 const isMobileMode = computed(() => mobileStore.isMobileMode)
+const { isMenuScaled } = storeToRefs(mobileStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => String(zoomPercentage.value ?? 0))
 
@@ -60,7 +61,10 @@ const handleProfileClick = () => {
 </script>
 
 <template>
-  <div class="mobile-toolbar" :class="{ 'mobile-toolbar--dark': isModernTheme }">
+  <div
+    class="mobile-toolbar"
+    :class="{ 'mobile-toolbar--dark': isModernTheme, 'mobile-toolbar--scaled': isMenuScaled }"
+  >
     <div class="mobile-toolbar-layout">
       <div class="mobile-toolbar-section mobile-toolbar-section--left">
         <!-- @marketingFohow -->
@@ -202,6 +206,13 @@ const handleProfileClick = () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   text-decoration: none;
   flex-shrink: 0;
+}
+.mobile-toolbar--scaled .mobile-toolbar-button {
+  transform: scale(1.12);
+}
+
+.mobile-toolbar--scaled .mobile-toolbar-section {
+  gap: 12px;
 }
 
 .mobile-toolbar--dark .mobile-toolbar-button {
