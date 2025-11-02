@@ -26,7 +26,7 @@ const viewSettingsStore = useViewSettingsStore()
 const mobileStore = useMobileStore()
 
 const { headerColor, headerColorIndex, lineColor, lineThickness, animationSeconds } = storeToRefs(viewSettingsStore)
-const { isMenuScaled } = storeToRefs(mobileStore)
+const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
 
 const templateAnchorRef = ref(null)
 const templateMenuRef = ref(null)
@@ -187,7 +187,8 @@ onBeforeUnmount(() => {
   <div
     class="mobile-sidebar"
     :class="{ 'mobile-sidebar--dark': isModernTheme, 'mobile-sidebar--scaled': isMenuScaled }"
-  >
+    :style="{ '--menu-scale': menuScale }" 
+   >
    <!-- Добавить лицензию -->
     <button
       class="mobile-sidebar-button"
@@ -268,7 +269,6 @@ onBeforeUnmount(() => {
 }
 
 .mobile-sidebar-button {
-  --sidebar-button-scale: 1;
   width: 52px;
   height: 52px;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -284,7 +284,7 @@ onBeforeUnmount(() => {
   justify-content: center;
   user-select: none;
   font-size: 24px;
-  transform: scale(var(--sidebar-button-scale)); 
+  transform: scale(var(--menu-scale, 1));
 }
 
 .mobile-sidebar--dark .mobile-sidebar-button {
@@ -297,10 +297,10 @@ onBeforeUnmount(() => {
 }
 
 .mobile-sidebar--scaled .mobile-sidebar-button {
-  --sidebar-button-scale: 1.12;
+  transform: scale(var(--menu-scale, 1));
 }
 .mobile-sidebar-button:active:not(:disabled) {
-  transform: scale(calc(var(--sidebar-button-scale) * 0.95));
+  transform: scale(calc(var(--menu-scale, 1) * 0.95));
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
