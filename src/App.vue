@@ -10,7 +10,8 @@ import MobileVersionDialog from './components/Layout/MobileVersionDialog.vue'
 import VersionSwitcher from './components/Layout/VersionSwitcher.vue'
 import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
-import AuthModal from './components/AuthModal.vue' 
+import AuthModal from './components/AuthModal.vue'
+import UserProfile from './components/UserProfile.vue'
 import { useAuthStore } from './stores/auth'
 import { useCanvasStore } from './stores/canvas' // Предполагаемый импорт
 import { useBoardStore } from './stores/board'
@@ -568,7 +569,19 @@ onBeforeUnmount(() => {
       :is-modern-theme="isModernTheme"
       @close="handleMobileAuthClose"
       @success="handleMobileAuthSuccess"
-    />   
+    />
+    <Teleport to="body">
+      <div
+        v-if="showProfile"
+        :class="['profile-modal-overlay', { 'profile-modal-overlay--modern': isModernTheme }]"
+        @click.self="showProfile = false"
+      >
+        <UserProfile
+          :is-modern-theme="isModernTheme"
+          @close="showProfile = false"
+        />
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -738,6 +751,20 @@ html,body{
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+.profile-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 10000;
+}
+
+.profile-modal-overlay--modern {
+  background: rgba(5, 12, 24, 0.8);
+} 
 }
 
 .mobile-auth-dialog--modern .mobile-auth-dialog__close {
