@@ -470,15 +470,16 @@ export function useProjectActions() {
       const width = contentWidth + PADDING * 2
       const height = contentHeight + PADDING * 2
 
-      const svgCssStyles = `
-        noteClone.style.position = 'absolute'
-        noteClone.style.left = `${boardLeft + offsetX}px`
-        noteClone.style.top = `${boardTop + offsetY}px`
-        noteClone.style.transform = 'scale(1)'
-        noteClone.style.transformOrigin = 'top left'
-        noteClone.style.pointerEvents = 'none'
-        return noteClone
-      })
+const createNoteClone = () => {
+  const noteClone = noteElement.cloneNode(true)
+  noteClone.style.position = 'absolute'
+  noteClone.style.left = `${boardLeft + offsetX}px`
+  noteClone.style.top = `${boardTop + offsetY}px`
+  noteClone.style.transform = 'scale(1)'
+  noteClone.style.transformOrigin = 'top left'
+  noteClone.style.pointerEvents = 'none'
+  return noteClone
+}
 
       noteClones.forEach((noteClone) => {
         containerClone.appendChild(noteClone)
