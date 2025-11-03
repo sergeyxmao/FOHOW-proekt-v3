@@ -326,7 +326,9 @@ function getCanvasState() {
     strokeWidth: card.strokeWidth,
     headerBg: card.headerBg,
     colorIndex: card.colorIndex,
+    type: card.type,   
     bodyHTML: card.bodyHTML,
+    bodyGradient: card.bodyGradient,  
     pv: card.pv,
     note: card.note // сохраняем заметки тоже
   }))
