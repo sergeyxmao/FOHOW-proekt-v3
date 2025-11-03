@@ -26,12 +26,7 @@ const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => String(zoomPercentage.value ?? 0))
 const isSaveAvailable = computed(() => {
-  const boardId = currentBoardId.value
   const boardName = (currentBoardName.value ?? '').trim()
-
-  if (!boardId) {
-    return false
-  }
 
   return boardName.length > 0
 })
