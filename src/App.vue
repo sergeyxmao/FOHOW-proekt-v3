@@ -23,6 +23,7 @@ import { useMobileStore } from './stores/mobile'
 import { useViewSettingsStore } from './stores/viewSettings'
 import { useProjectActions } from './composables/useProjectActions'
 import { storeToRefs } from 'pinia'
+import { makeBoardThumbnail } from './utils/boardThumbnail'
  
 const authStore = useAuthStore()
 const canvasStore = useCanvasStore() // Предполагаемая инициализация
@@ -305,10 +306,60 @@ async function saveCurrentBoard() {
     }
 
     boardStore.markAsSaved()
+    await uploadBoardThumbnail(boardId)
+   
     console.log('💾 Доска автоматически сохранена:', new Date().toLocaleTimeString())
   } catch (err) {
     console.error('❌ Ошибка автосохранения:', err)
     boardStore.isSaving = false
+  }
+}
+async function uploadBoardThumbnail(boardId) {
+  if (!boardId || !authStore.token) {
+    return
+  }
+
+  const canvasElement = canvasRef.value?.$el instanceof HTMLElement
+    ? canvasRef.value.$el
+    : null
+
+  const dataUrl = await makeBoardThumbnail(canvasElement)
+
+  if (!dataUrl) {
+    return
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/boards/${boardId}/thumbnail`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ image: dataUrl })
+    })
+
+    if (!response.ok) {
+      throw new Error('Ошибка загрузки миниатюры')
+    }
+
+    let payload = null
+
+    try {
+      payload = await response.json()
+    } catch (parseError) {
+      payload = null
+    }
+
+    const thumbnailUrl = payload?.board?.thumbnail_url ?? payload?.thumbnail_url ?? null
+
+    window.dispatchEvent(
+      new CustomEvent('boards:refresh', {
+        detail: { boardId, thumbnailUrl }
+      })
+    )
+  } catch (error) {
+    console.error('❌ Не удалось обновить миниатюру доски:', error)
   }
 }
 
