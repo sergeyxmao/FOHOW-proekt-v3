@@ -20,13 +20,33 @@ const boardStore = useBoardStore()
 const mobileStore = useMobileStore()
 const viewportStore = useViewportStore()
 
-const isSaving = computed(() => boardStore.isSaving)
+const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const isMobileMode = computed(() => mobileStore.isMobileMode)
 const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => String(zoomPercentage.value ?? 0))
+const isSaveAvailable = computed(() => {
+  const boardId = currentBoardId.value
+  const boardName = (currentBoardName.value ?? '').trim()
+
+  if (!boardId) {
+    return false
+  }
+
+  return boardName.length > 0
+})
+
+const saveTooltip = computed(() =>
+  isSaveAvailable.value
+    ? 'Сохранить'
+    : 'Задайте название проекта, чтобы сохранить'
+)
 
 const handleSave = () => {
+  if (!isSaveAvailable.value) {
+    return
+  }
+  
   emit('save')
 }
 
@@ -135,10 +155,10 @@ const handleProfileClick = () => {
           v-if="authStore.isAuthenticated"
           class="mobile-toolbar-button save-button"
           type="button"
-          :disabled="isSaving"
+          :disabled="isSaving || !isSaveAvailable"
           @click="handleSave"
-          title="Сохранить"
-          aria-label="Сохранить"
+          :title="saveTooltip"
+          :aria-label="saveTooltip"
         >
           <span class="button-icon">💾</span>
         </button>
