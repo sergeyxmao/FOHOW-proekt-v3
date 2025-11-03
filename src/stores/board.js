@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import { useAuthStore } from './auth.js'
 
 export const useBoardStore = defineStore('board', () => {
   const currentBoardId = ref(null)
@@ -9,6 +10,7 @@ export const useBoardStore = defineStore('board', () => {
   const hasUnsavedChanges = ref(false)
 
   const isCurrentBoard = computed(() => currentBoardId.value !== null)
+  const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
   function setCurrentBoard(id, name) {
     currentBoardId.value = id
@@ -33,7 +35,56 @@ export const useBoardStore = defineStore('board', () => {
     lastSaved.value = new Date()
     isSaving.value = false
   }
+  async function updateCurrentBoardName(newName) {
+    const trimmedName = typeof newName === 'string' ? newName.trim() : ''
 
+    if (!trimmedName) {
+      return { success: false, reason: 'empty' }
+    }
+
+    if (trimmedName === currentBoardName.value) {
+      return { success: false, reason: 'unchanged' }
+    }
+
+    const previousName = currentBoardName.value
+    currentBoardName.value = trimmedName
+
+    if (!currentBoardId.value) {
+      return { success: true, synced: false }
+    }
+
+    const authStore = useAuthStore()
+
+    if (!authStore.isAuthenticated || !authStore.token) {
+      return { success: true, synced: false }
+    }
+
+    try {
+      isSaving.value = true
+
+      const response = await fetch(`${API_URL}/boards/${currentBoardId.value}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name: trimmedName })
+      })
+
+      if (!response.ok) {
+        throw new Error('Ошибка переименования доски')
+      }
+
+      lastSaved.value = new Date()
+
+      return { success: true, synced: true }
+    } catch (error) {
+      currentBoardName.value = previousName
+      throw error
+    } finally {
+      isSaving.value = false
+    }
+  }
   return {
     currentBoardId,
     currentBoardName,
@@ -44,6 +95,7 @@ export const useBoardStore = defineStore('board', () => {
     setCurrentBoard,
     clearCurrentBoard,
     markAsChanged,
-    markAsSaved
+    markAsSaved,
+    updateCurrentBoardName
   }
 })
