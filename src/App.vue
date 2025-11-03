@@ -65,7 +65,7 @@ const isMobileAuthModalOpen = ref(false)
 const isBoardsModalOpen = ref(false)
 const menuTouchPointers = new Map()
 let menuPointerListenersAttached = false
-let initialMenuPinchDistance = null
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 
 const MENU_SCALE_MIN = 1
 const MENU_SCALE_MAX = 1.6
@@ -224,14 +224,25 @@ async function loadBoard(boardId) {
       if (content.background) {
         canvasStore.backgroundColor = content.background
       }
+const handleDocumentClick = () => {
+  activeMenu.value = null
+}
+
+function handleBoardsRefresh() {
+  loadBoards()
+}
 
       // Восстанавливаем карточки
       if (content.objects && Array.isArray(content.objects)) {
         content.objects.forEach(cardData => {
           cardsStore.addCard(cardData, { saveToHistory: false })
-        })
-      }
+  document.addEventListener('click', handleDocumentClick)
+  window.addEventListener('boards:refresh', handleBoardsRefresh)
+})
 
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)
+  window.removeEventListener('boards:refresh', handleBoardsRefresh)
       // Восстанавливаем соединения
       if (content.connections && Array.isArray(content.connections)) {
         content.connections.forEach(connData => {
