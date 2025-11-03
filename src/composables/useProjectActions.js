@@ -388,7 +388,6 @@ export function useProjectActions() {
 
     try {
       const PADDING = 100
-      const VIEWPORT_PADDING = 400
 
       const cards = cardsStore.cards.map(card => ({
         ...card,
@@ -507,11 +506,7 @@ export function useProjectActions() {
       const svgCssStyles = `
         html,body{margin:0;height:100%;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#111827;background:#f3f4f6;}
         #canvas{position:relative;width:100%;height:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;}
-        .zoom-button{position:absolute;left:20px;top:20px;z-index:5000;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:14px 18px;border-radius:22px;background:rgba(255,255,255,0.92);color:#111827;font-weight:700;font-size:16px;line-height:1;letter-spacing:0.2px;text-decoration:none;box-shadow:0 12px 28px rgba(15,23,42,0.16);border:1px solid rgba(15,23,42,0.14);pointer-events:auto;user-select:none;transition:transform .2s ease,box-shadow .2s ease,filter .2s ease;cursor:pointer;}
-        .zoom-button:hover{transform:translateY(-2px);filter:brightness(1.02);box-shadow:0 18px 32px rgba(15,23,42,0.22);}
-        .zoom-button:active{transform:translateY(1px);filter:brightness(0.98);box-shadow:0 8px 18px rgba(15,23,42,0.22);}
-        .zoom-button .zoom-value{font-variant-numeric:tabular-nums;}
-        .canvas-content{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:0 0;cursor:grab;}
+        .canvas-content{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:0 0;}
         .card{position:absolute;display:flex;flex-direction:column;align-items:stretch;box-sizing:border-box;pointer-events:auto;}
         .card-shell{border-radius:26px;overflow:hidden;box-shadow:0 18px 48px rgba(15,23,42,0.18);display:flex;flex-direction:column;height:100%;}
         .card-header{display:flex;align-items:center;justify-content:center;padding:18px 12px;position:relative;}
@@ -528,132 +523,18 @@ export function useProjectActions() {
         .line--balance-highlight{stroke-dasharray:16;animation:lineBalanceFlow var(--line-animation-duration,2s) ease-in-out infinite;}
         .line--pv-highlight{stroke-dasharray:14;animation:linePvFlow var(--line-animation-duration,2s) ease-in-out infinite;}
         @keyframes lineBalanceFlow{0%{stroke-dashoffset:-24;}50%{stroke:#d93025;}100%{stroke-dashoffset:24;}}
-        @keyframes linePvFlow{0%{stroke-dashoffset:-18;}50%{stroke:#0f62fe;}100%{stroke-dashoffset:18;}}        
-      `
-
-      const svgInteractiveScript = `
-        document.addEventListener('DOMContentLoaded', function() {
-          var canvas = document.querySelector('.canvas-content');
-          if (!canvas) return;
-
-          var currentX = 0;
-          var currentY = 0;
-          var currentScale = 1;
-
-          var MIN_SCALE = 0.01;
-          var MAX_SCALE = 5;
-
-          function updateTransform() {
-            canvas.style.transform = 'matrix(' + currentScale + ', 0, 0, ' + currentScale + ', ' + currentX + ', ' + currentY + ')';
-            var zoomBtn = document.getElementById('zoom-btn');
-            if (zoomBtn) {
-              var zoomValue = zoomBtn.querySelector('.zoom-value');
-              if (zoomValue) {
-                zoomValue.textContent = Math.round(currentScale * 100) + '%';
-              }
-            }
-          }
-
-          var isDragging = false;
-          var startX = 0;
-          var startY = 0;
-
-          canvas.addEventListener('mousedown', function(event) {
-            if (event.button !== 0) return;
-            isDragging = true;
-            startX = event.clientX - currentX;
-            startY = event.clientY - currentY;
-            canvas.style.cursor = 'grabbing';
-          });
-
-          window.addEventListener('mousemove', function(event) {
-            if (!isDragging) return;
-            currentX = event.clientX - startX;
-            currentY = event.clientY - startY;
-            updateTransform();
-          });
-
-          window.addEventListener('mouseup', function() {
-            if (!isDragging) return;
-            isDragging = false;
-            canvas.style.cursor = 'grab';
-          });
-
-          window.addEventListener('wheel', function(event) {
-            event.preventDefault();
-
-            var delta = -event.deltaY * 0.0005;
-            var newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, currentScale + delta));
-
-            // Получаем координаты мыши относительно окна viewport
-            var mouseX = event.clientX;
-            var mouseY = event.clientY;
-
-            // Вычисляем новую позицию так, чтобы точка под мышью оставалась на месте
-            var scaleRatio = newScale / currentScale;
-            currentX = mouseX - (mouseX - currentX) * scaleRatio;
-            currentY = mouseY - (mouseY - currentY) * scaleRatio;
-            currentScale = newScale;
-
-            updateTransform();
-          }, { passive: false });
-
-          function fitToContent() {
-            var cards = canvas.querySelectorAll('.card');
-            if (!cards || cards.length === 0) return;
-
-            var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            cards.forEach(function(card) {
-              var style = card.style;
-              var left = parseFloat(style.left) || 0;
-              var top = parseFloat(style.top) || 0;
-              var width = parseFloat(style.width) || card.offsetWidth;
-              var height = parseFloat(style.height) || card.offsetHeight;
-              minX = Math.min(minX, left);
-              minY = Math.min(minY, top);
-              maxX = Math.max(maxX, left + width);
-              maxY = Math.max(maxY, top + height);
-            });
-
-            var contentWidth = maxX - minX;
-            var contentHeight = maxY - minY;
-            var rootRect = document.getElementById('canvas').getBoundingClientRect();
-            var padding = 100;
-            var scaleX = (rootRect.width - padding * 2) / contentWidth;
-            var scaleY = (rootRect.height - padding * 2) / contentHeight;
-            var newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.min(scaleX, scaleY)));
-
-            var centerX = (minX + maxX) / 2;
-            var centerY = (minY + maxY) / 2;
-
-            currentX = rootRect.width / 2 - centerX * newScale;
-            currentY = rootRect.height / 2 - centerY * newScale;
-            currentScale = newScale;
-            updateTransform();
-          }
-
-          var zoomBtn = document.getElementById('zoom-btn');
-          if (zoomBtn) {
-            zoomBtn.addEventListener('click', fitToContent);
-          }
-
-          // Автоматически подгоняем масштаб при загрузке
-          fitToContent();
-        });
+        @keyframes linePvFlow{0%{stroke-dashoffset:-18;}50%{stroke:#0f62fe;}100%{stroke-dashoffset:18;}}
       `
 
       const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 ${width} ${height}" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <foreignObject x="0" y="0" width="100%" height="100%">
-    <body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;height:100vh;overflow:hidden;background:${backgroundColor.value || '#f3f4f6'};">
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <foreignObject x="0" y="0" width="${width}" height="${height}">
+    <body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;height:100%;overflow:hidden;background:${backgroundColor.value || '#f3f4f6'};">
       <style>
         ${svgCssStyles}
       </style>
-      <div id="canvas" style="position:relative;width:100vw;height:100vh;overflow:hidden;background:${backgroundColor.value || '#ffffff'};">
-        <button id="zoom-btn" class="zoom-button" title="Автоподгонка масштаба">
-          Масштаб: <span class="zoom-value">100%</span>
-        </button>
-        <div class="canvas-content">
+      <div id="canvas" style="position:relative;width:${width}px;height:${height}px;overflow:hidden;background:${backgroundColor.value || '#ffffff'};">
+        <div class="canvas-content" style="transform:matrix(1,0,0,1,0,0);">
           ${cardHtmlList.join('')}
           <svg class="svg-layer" xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
             <defs>
@@ -684,9 +565,6 @@ export function useProjectActions() {
           </svg>
         </div>
       </div>
-      <script>
-        ${svgInteractiveScript}
-      </script>
     </body>
   </foreignObject>
 </svg>`
