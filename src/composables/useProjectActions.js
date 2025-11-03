@@ -184,8 +184,11 @@ const buildCardMetrics = (card) => {
 }
 
 const getConnectionPath = (connection, cardsById) => {
-  const startCard = cardsById.get(connection.startCardId)
-  const endCard = cardsById.get(connection.endCardId)
+  const startCardId = connection.startCardId ?? connection.from
+  const endCardId = connection.endCardId ?? connection.to
+
+  const startCard = cardsById.get(startCardId)
+  const endCard = cardsById.get(endCardId)
 
   if (!startCard || !endCard) {
     return ''
@@ -196,8 +199,8 @@ const getConnectionPath = (connection, cardsById) => {
     return card?.[anchorKey] || null
   }
 
-  const startSide = connection.startSide || 'right'
-  const endSide = connection.endSide || 'left'
+  const startSide = connection.startSide || connection.fromSide || 'right'
+  const endSide = connection.endSide || connection.toSide || 'left'
 
   const startAnchor = getAnchorPoint(startCard, startSide)
   const endAnchor = getAnchorPoint(endCard, endSide)
