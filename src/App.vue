@@ -65,7 +65,6 @@ const isMobileAuthModalOpen = ref(false)
 const isBoardsModalOpen = ref(false)
 const menuTouchPointers = new Map()
 let menuPointerListenersAttached = false
-import { ref, onMounted } from 'vue'
 
 const MENU_SCALE_MIN = 1
 const MENU_SCALE_MAX = 1.6
