@@ -10,8 +10,15 @@ export async function makeBoardThumbnail(canvasElement) {
   if (!element) {
     return null
   }
+  const container = element.closest('.canvas-container') || element
 
   try {
+    if (container instanceof HTMLElement) {
+      // Временно скрываем служебные элементы, чтобы получить чистое превью доски
+      container.classList.add('canvas-container--capturing')
+      await new Promise(resolve => requestAnimationFrame(() => resolve()))
+    }
+    
     const deviceScale = Math.max(1, window.devicePixelRatio || 1)
     const captureScale = Math.min(deviceScale, 2)
 
@@ -26,6 +33,10 @@ export async function makeBoardThumbnail(canvasElement) {
   } catch (error) {
     console.error('Не удалось создать миниатюру доски:', error)
     return null
+  } finally {
+    if (container instanceof HTMLElement) {
+      container.classList.remove('canvas-container--capturing')
+    }    
   }
 }
 
