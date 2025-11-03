@@ -68,7 +68,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 
 const props = defineProps({
@@ -93,7 +93,17 @@ watch(() => props.isOpen, (newVal) => {
     loadBoards()
   }
 })
+function handleBoardsRefresh() {
+  loadBoards()
+}
 
+onMounted(() => {
+  window.addEventListener('boards:refresh', handleBoardsRefresh)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('boards:refresh', handleBoardsRefresh)
+})
 async function loadBoards() {
   loading.value = true
   error.value = ''
