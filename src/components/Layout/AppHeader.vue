@@ -98,7 +98,28 @@ function handleProfileClick() {
   showProfile.value = true
   closeUserMenu()
 }
+async function handleRenameCurrentBoard() {
+  const newName = prompt('Введите новое название проекта', currentBoardName.value)
 
+  if (newName === null) {
+    return
+  }
+
+  try {
+    const result = await boardStore.updateCurrentBoardName(newName)
+
+    if (!result.success) {
+      if (result.reason === 'empty') {
+        alert('Название проекта не может быть пустым.')
+      }
+
+      return
+    }
+  } catch (error) {
+    console.error('Ошибка переименования проекта:', error)
+    alert('Не удалось переименовать проект. Попробуйте позже.')
+  }
+}
 function handleClickOutside(event) {
   const menuEl = userMenuRef.value
   const triggerEl = userTriggerRef.value
@@ -167,7 +188,15 @@ onBeforeUnmount(() => {
                 class="user-menu"
               >
               <div class="user-menu__section user-menu__section--project">
-                <span class="user-menu__project-name">{{ currentBoardName }}</span>
+                <button
+                  class="user-menu__project-name-button"
+                  type="button"
+                  title="Переименовать проект"
+                  @click="handleRenameCurrentBoard"
+                >
+                  <span class="user-menu__project-name">{{ currentBoardName }}</span>
+                  <span class="user-menu__project-name-edit" aria-hidden="true">✏️</span>
+                </button>
                 <div class="user-menu__status">
                   <template v-if="isSaving">
                     <span class="status-spinner">⏳</span>
@@ -454,14 +483,52 @@ onBeforeUnmount(() => {
 .user-menu__section--project {
   gap: 12px;
 }
+.user-menu__project-name-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: rgba(15, 23, 42, 0.06);
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  max-width: 100%;
+}
+
+.app-header--modern .user-menu__project-name-button {
+  background: rgba(229, 243, 255, 0.06);
+  border-color: rgba(229, 243, 255, 0.12);
+}
+
+.user-menu__project-name-button:hover {
+  background: rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+
+.app-header--modern .user-menu__project-name-button:hover {
+  background: rgba(229, 243, 255, 0.14);
+}
+
+.user-menu__project-name-button:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.8);
+  outline-offset: 2px;
+}
 
 .user-menu__project-name {
   font-weight: 700;
   font-size: 16px;
-  flex: 1 1 auto;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.user-menu__project-name-edit {
+  font-size: 16px;
+  flex-shrink: 0;
+  opacity: 0.7;  
 }
 
 .user-menu__status {
