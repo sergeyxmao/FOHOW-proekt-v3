@@ -22,7 +22,12 @@ const authStore = useAuthStore()
 const boardStore = useBoardStore()
 const { isAuthenticated, user } = storeToRefs(authStore)
 const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
-
+  
+const lastSavedFormatter = new Intl.DateTimeFormat('ru-RU', {
+  hour: '2-digit',
+  minute: '2-digit'
+})
+  
 const showAuthModal = ref(false)
 const authModalView = ref('login')
 const showProfile = ref(false)
@@ -38,6 +43,19 @@ const emit = defineEmits(['open-board', 'save-board', 'toggle-theme', 'fit-to-co
 const themeTitle = computed(() =>
   props.isModernTheme ? 'Вернуть светлое меню' : 'Включить тёмное меню'
 )
+const formattedLastSaved = computed(() => {
+  if (!lastSaved.value) return ''
+
+  const date = lastSaved.value instanceof Date
+    ? lastSaved.value
+    : new Date(lastSaved.value)
+
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  return lastSavedFormatter.format(date)
+})
 
 function getAvatarUrl(url) {
   if (!url) return ''  
@@ -202,9 +220,9 @@ onBeforeUnmount(() => {
                     <span class="status-spinner">⏳</span>
                     <span>Сохранение...</span>
                   </template>
-                  <template v-else-if="lastSaved">
+                  <template v-else-if="formattedLastSaved">
                     <span class="status-icon">✓</span>
-                    <span>Сохранено</span>
+                    <span>Сохранено в {{ formattedLastSaved }}</span>
                   </template>
                   <template v-else>
                     <span>Нет сохранений</span>
