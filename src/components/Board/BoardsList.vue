@@ -65,7 +65,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -224,14 +224,25 @@ function formatDate(dateString) {
     year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
   })
 }
+const handleDocumentClick = () => {
+  activeMenu.value = null
+}
+
+function handleBoardsRefresh() {
+  loadBoards()
+}
 
 onMounted(() => {
   loadBoards()
   
   // Закрываем меню при клике вне его
-  document.addEventListener('click', () => {
-    activeMenu.value = null
-  })
+  document.addEventListener('click', handleDocumentClick)
+  window.addEventListener('boards:refresh', handleBoardsRefresh)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)
+  window.removeEventListener('boards:refresh', handleBoardsRefresh)
 })
 </script>
 
