@@ -33,12 +33,28 @@ const viewportStore = useViewportStore()
 const mobileStore = useMobileStore()
 const viewSettingsStore = useViewSettingsStore()
 const { isAuthenticated } = storeToRefs(authStore)
-const { isSaving } = storeToRefs(boardStore)
+const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMobileMode } = storeToRefs(mobileStore)
 const { headerColor, headerColorIndex } = storeToRefs(viewSettingsStore)
 
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
+const isSaveAvailable = computed(() => {
+  const boardId = currentBoardId.value
+  const boardName = (currentBoardName.value ?? '').trim()
+
+  if (!boardId) {
+    return false
+  }
+
+  return boardName.length > 0
+})
+
+const saveTooltip = computed(() =>
+  isSaveAvailable.value
+    ? 'Сохранить проект'
+    : 'Задайте название проекта, чтобы сохранить'
+)
 
 const { handleExportHTML, handleLoadProject } = useProjectActions()
 
@@ -238,8 +254,8 @@ async function loadBoard(boardId) {
     
     boardStore.isSaving = false
     
-    // Запускаем автосохранение
-    startAutoSave()
+    // Запускаем автосохранение происходит через наблюдатель isSaveAvailable
+
   } catch (err) {
     console.error('❌ Ошибка загрузки доски:', err)
     alert('Не удалось загрузить доску')
@@ -248,7 +264,7 @@ async function loadBoard(boardId) {
 }
 
 async function saveCurrentBoard() {
-  if (!boardStore.currentBoardId || !authStore.isAuthenticated) {
+  if (!isSaveAvailable.value || !authStore.isAuthenticated) {
     return
   }
 
@@ -258,7 +274,7 @@ async function saveCurrentBoard() {
     // Получаем состояние canvas
     const canvasState = getCanvasState()
 
-    const response = await fetch(`${API_URL}/boards/${boardStore.currentBoardId}`, {
+    const response = await fetch(`${API_URL}/boards/${currentBoardId.value}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${authStore.token}`,
@@ -327,12 +343,16 @@ function getCanvasState() {
 }
 
 function startAutoSave() {
+  if (!isSaveAvailable.value || !authStore.isAuthenticated) {
+    return
+  }
+ 
   // Останавливаем предыдущий интервал, если был
   stopAutoSave()
 
   // Автосохранение каждые 10 мину
   autoSaveInterval = setInterval(() => {
-    if (boardStore.currentBoardId && authStore.isAuthenticated) {
+    if (isSaveAvailable.value && authStore.isAuthenticated) {
       saveCurrentBoard()
     }
   }, 600000) // 10 минут
@@ -552,6 +572,13 @@ watch(isAuthenticated, (value) => {
     isMobileAuthModalOpen.value = false
   }
 })
+watch(isSaveAvailable, (canSave) => {
+  if (canSave) {
+    startAutoSave()
+  } else {
+    stopAutoSave()
+  }
+}) 
 watch(isMobileMode, (value) => {
   if (!value) {
     isBoardsModalOpen.value = false
@@ -616,8 +643,8 @@ onBeforeUnmount(() => {
         class="save-floating-button"
         :class="{ 'save-floating-button--modern': isModernTheme }"
         type="button"
-        :disabled="isSaving"
-        @click="saveCurrentBoard"
+        :disabled="isSaving || !isSaveAvailable"
+        :title="saveTooltip"        @click="saveCurrentBoard"
       >
         💾 Сохранить
       </button>
