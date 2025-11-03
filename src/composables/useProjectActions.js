@@ -387,268 +387,251 @@ export function useProjectActions() {
     }
 
     try {
-      const PADDING = 100
-      const VIEWPORT_PADDING = 400
+      const PADDING = 24
 
-      const cards = cardsStore.cards.map(card => ({
-        ...card,
-        width: Number(card.width) || 418,
-        height: Number(card.height) || 280,
-        x: Number(card.x) || 0,
-        y: Number(card.y) || 0
-      }))
+      // Шаг 1: Находим корневой контейнер
+      const canvasContainer = document.querySelector('.canvas-container')
+      if (!canvasContainer) {
+        alert('Не удалось найти контейнер холста для экспорта.')
+        return
+      }
 
+      const rootRect = canvasContainer.getBoundingClientRect()
+
+      // Шаг 2: Собираем границы контента
       let minX = Infinity
       let minY = Infinity
       let maxX = -Infinity
       let maxY = -Infinity
 
-      cards.forEach((card) => {
-        minX = Math.min(minX, card.x)
-        minY = Math.min(minY, card.y)
-        maxX = Math.max(maxX, card.x + card.width)
-        maxY = Math.max(maxY, card.y + card.height)
+      // 2.1 Собираем границы HTML-карточек
+      const cardElements = canvasContainer.querySelectorAll('.card')
+      cardElements.forEach((cardEl) => {
+        const cardRect = cardEl.getBoundingClientRect()
+        const relativeLeft = cardRect.left - rootRect.left
+        const relativeTop = cardRect.top - rootRect.top
+        const relativeRight = relativeLeft + cardRect.width
+        const relativeBottom = relativeTop + cardRect.height
+
+        minX = Math.min(minX, relativeLeft)
+        minY = Math.min(minY, relativeTop)
+        maxX = Math.max(maxX, relativeRight)
+        maxY = Math.max(maxY, relativeBottom)
       })
 
-      const contentWidth = maxX - minX
-      const contentHeight = maxY - minY
+      // 2.2 Собираем границы SVG-элементов
+      const svgLayer = canvasContainer.querySelector('.svg-layer')
+      if (svgLayer) {
+        const svgRect = svgLayer.getBoundingClientRect()
+        const svgElements = svgLayer.querySelectorAll('path, line, polyline, rect, circle')
+        svgElements.forEach((el) => {
+          try {
+            const bbox = el.getBBox()
+            const relativeLeft = bbox.x + (svgRect.left - rootRect.left)
+            const relativeTop = bbox.y + (svgRect.top - rootRect.top)
+            const relativeRight = relativeLeft + bbox.width
+            const relativeBottom = relativeTop + bbox.height
 
-      const cardHtmlList = await Promise.all(cards.map(async (card) => {
-        const headerBg = card.headerBg || '#5D8BF4'
-        const rankSrc = card.rankBadge ? await imageToDataUri(`/rank-${card.rankBadge}.png`) : ''
-        const strokeWidth = Number.isFinite(card.strokeWidth) ? card.strokeWidth : 2
-        const metrics = buildCardMetrics(card)
-        const cssVariables = buildCardCssVariables(card)
+            minX = Math.min(minX, relativeLeft)
+            minY = Math.min(minY, relativeTop)
+            maxX = Math.max(maxX, relativeRight)
+            maxY = Math.max(maxY, relativeBottom)
+          } catch (e) {
+            // getBBox может выбросить ошибку для некоторых элементов
+            console.warn('Не удалось получить bbox для элемента', el, e)
+          }
+        })
+      }
 
-        const cardStyles = [
-          `left:${card.x - minX + PADDING}px`,
-          `top:${card.y - minY + PADDING}px`,
-          `width:${card.width}px`,
-          `height:${card.height}px`
-        ]
+      // Проверяем, что границы корректны
+      if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+        alert('Не удалось вычислить границы контента.')
+        return
+      }
 
-        const cssVariableStrings = Object.entries(cssVariables).map(([name, value]) => `${name}:${escapeHtml(value)}`)
+      // Добавляем padding
+      const W = (maxX - minX) + 2 * PADDING
+      const H = (maxY - minY) + 2 * PADDING
 
-        const shellBackground = card.shellBg || 'rgba(255,255,255,0.92)'
-        const borderColor = card.borderColor || 'rgba(15,23,42,0.08)'
+      // Шаг 3: Клонируем контейнер
+      const clone = canvasContainer.cloneNode(true)
 
-        return `
-          <div class="card" style="${cardStyles.join(';')};${cssVariableStrings.join(';')}">
-            <div class="card-shell" style="background:${escapeHtml(shellBackground)};border:${strokeWidth}px solid ${escapeHtml(borderColor)};">
-              <div class="card-header" style="background:${escapeHtml(headerBg)};">
-                <div class="card-title">${escapeHtml(card.text)}</div>
-                ${rankSrc ? `<img class="rank-badge visible" src="${rankSrc}" alt="" />` : ''}
-              </div>
-              <div class="card-body">
-                <div class="card-row">
-                  <span class="label">Личные PV</span>
-                  <span class="value">${escapeHtml(metrics.pvValue)}</span>
-                </div>
-                <div class="card-row pv-row">
-                  <span class="label">Баланс слева</span>
-                  <span class="value">${escapeHtml(metrics.balanceLeft)}</span>
-                </div>
-                <div class="card-row pv-row">
-                  <span class="label">Баланс справа</span>
-                  <span class="value">${escapeHtml(metrics.balanceRight)}</span>
-                </div>
-                <div class="card-row">
-                  <span class="label">Стадий</span>
-                  <span class="value">${escapeHtml(metrics.stages)}</span>
-                </div>
-                <div class="card-row">
-                  <span class="label">Циклов</span>
-                  <span class="value">${escapeHtml(metrics.cycles)}</span>
-                </div>
-                ${card.bodyHTML ? `<div class="card-body-html">${card.bodyHTML}</div>` : ''}
-              </div>
-            </div>
-          </div>
-        `
-      }))
+      // Шаг 4: Удаляем служебные элементы из клона
+      const selectorsToRemove = [
+        '.selection-box',
+        '.selection-rect',
+        '.marquee',
+        '.transform-handle',
+        '.hover-outline',
+        '.drag-ghost',
+        '.zoom-badge',
+        '.card-close-btn',
+        '.connection-point',
+        '.line-hitbox',
+        '.card-active-controls',
+        '.card-controls',
+        '.active-pv-btn',
+        '.card-note-btn',
+        '[data-role="active-pv-buttons"]',
+        '.guides-overlay',
+        '.guide-line',
+        '.line--preview',
+        '.note-window',
+        '.marketing-watermark'
+      ]
 
-      // Создаем карты карточек с учетом смещения для SVG экспорта
-      const cardsById = new Map(cards.map(card => [card.id, card]))
-      const adjustedCardsById = new Map(cards.map(card => [card.id, {
-        ...card,
-        x: card.x - minX + PADDING,
-        y: card.y - minY + PADDING,
-        anchorTop: card.anchorTop ? { x: card.anchorTop.x - minX + PADDING, y: card.anchorTop.y - minY + PADDING } : null,
-        anchorBottom: card.anchorBottom ? { x: card.anchorBottom.x - minX + PADDING, y: card.anchorBottom.y - minY + PADDING } : null,
-        anchorLeft: card.anchorLeft ? { x: card.anchorLeft.x - minX + PADDING, y: card.anchorLeft.y - minY + PADDING } : null,
-        anchorRight: card.anchorRight ? { x: card.anchorRight.x - minX + PADDING, y: card.anchorRight.y - minY + PADDING } : null
-      }]))
+      clone.querySelectorAll(selectorsToRemove.join(', ')).forEach((element) => {
+        element.remove()
+      })
 
-      const connectionPaths = connectionsStore.connections.map((connection) => ({
-        path: getConnectionPath(connection, adjustedCardsById),
-        color: connection.color || connectionsStore.defaultLineColor,
-        thickness: connection.thickness || connectionsStore.defaultLineThickness
-      }))
+      // Удаляем классы выделения
+      clone.querySelectorAll('.card').forEach((cardEl) => {
+        cardEl.classList.remove('selected', 'connecting', 'editing')
+        cardEl.style.cursor = 'default'
+      })
 
-      const width = contentWidth + PADDING * 2
-      const height = contentHeight + PADDING * 2
+      // Удаляем классы выделения с линий
+      clone.querySelectorAll('.line').forEach((lineEl) => {
+        lineEl.classList.remove('selected')
+      })
 
-      const svgCssStyles = `
-        html,body{margin:0;height:100%;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#111827;background:#f3f4f6;}
-        #canvas{position:relative;width:100%;height:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;}
-        .zoom-button{position:absolute;left:20px;top:20px;z-index:5000;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:14px 18px;border-radius:22px;background:rgba(255,255,255,0.92);color:#111827;font-weight:700;font-size:16px;line-height:1;letter-spacing:0.2px;text-decoration:none;box-shadow:0 12px 28px rgba(15,23,42,0.16);border:1px solid rgba(15,23,42,0.14);pointer-events:auto;user-select:none;transition:transform .2s ease,box-shadow .2s ease,filter .2s ease;cursor:pointer;}
-        .zoom-button:hover{transform:translateY(-2px);filter:brightness(1.02);box-shadow:0 18px 32px rgba(15,23,42,0.22);}
-        .zoom-button:active{transform:translateY(1px);filter:brightness(0.98);box-shadow:0 8px 18px rgba(15,23,42,0.22);}
-        .zoom-button .zoom-value{font-variant-numeric:tabular-nums;}
-        .canvas-content{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:0 0;cursor:grab;}
-        .card{position:absolute;display:flex;flex-direction:column;align-items:stretch;box-sizing:border-box;pointer-events:auto;}
-        .card-shell{border-radius:26px;overflow:hidden;box-shadow:0 18px 48px rgba(15,23,42,0.18);display:flex;flex-direction:column;height:100%;}
-        .card-header{display:flex;align-items:center;justify-content:center;padding:18px 12px;position:relative;}
-        .card-title{font-size:18px;font-weight:700;letter-spacing:0.01em;color:#fff;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;}
-        .rank-badge.visible{position:absolute;top:-15px;right:15px;width:80px;height:auto;transform:rotate(15deg);}
-        .card-body{padding:20px 20px 60px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;color:#111827;font-size:16px;}
-        .card-row{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;flex-wrap:wrap;width:100%;}
-        .label{color:#6b7280;font-weight:500;font-size:14px;text-align:center;max-width:100%;word-break:break-word;overflow-wrap:anywhere;}
-        .value{color:#111827;font-weight:600;font-size:15px;outline:none;padding:3px 6px;border-radius:6px;line-height:1.5;}
-        .pv-row .value{font-size:18px;font-weight:600;}
-        .card-body-html{margin-top:8px;text-align:left;width:100%;font-size:14px;line-height:1.45;color:#111827;}
-        .svg-layer{position:absolute;inset:0;pointer-events:none;overflow:visible;}
-      `
+      // Шаг 5: Сбрасываем зум в клоне
+      const canvasContent = clone.querySelector('.canvas-content')
+      if (canvasContent) {
+        canvasContent.style.transform = 'translate(0, 0) scale(1)'
+        canvasContent.style.transformOrigin = 'top left'
+      }
 
-      const svgInteractiveScript = `
-        document.addEventListener('DOMContentLoaded', function() {
-          var canvas = document.querySelector('.canvas-content');
-          if (!canvas) return;
+      // Шаг 6: Оборачиваем клон для смещения контента в нулевые координаты
+      const wrapper = document.createElement('div')
+      wrapper.style.position = 'relative'
+      wrapper.style.left = `${-(minX - PADDING)}px`
+      wrapper.style.top = `${-(minY - PADDING)}px`
+      wrapper.style.width = `${W}px`
+      wrapper.style.height = `${H}px`
+      wrapper.appendChild(clone)
 
-          var currentX = 0;
-          var currentY = 0;
-          var currentScale = 1;
+      // Встраиваем изображения
+      await inlineImages(clone)
 
-          var MIN_SCALE = 0.01;
-          var MAX_SCALE = 5;
+      // Шаг 7: Собираем CSS
+      const collectCss = async () => {
+        let cssText = ''
 
-          function updateTransform() {
-            canvas.style.transform = 'matrix(' + currentScale + ', 0, 0, ' + currentScale + ', ' + currentX + ', ' + currentY + ')';
-            var zoomBtn = document.getElementById('zoom-btn');
-            if (zoomBtn) {
-              var zoomValue = zoomBtn.querySelector('.zoom-value');
-              if (zoomValue) {
-                zoomValue.textContent = Math.round(currentScale * 100) + '%';
+        // Собираем стили из <style> тегов
+        const styleTags = document.querySelectorAll('style')
+        styleTags.forEach((tag) => {
+          cssText += tag.textContent + '\n'
+        })
+
+        // Собираем стили из <link rel="stylesheet">
+        const linkTags = document.querySelectorAll('link[rel="stylesheet"]')
+        for (const link of linkTags) {
+          try {
+            const href = link.getAttribute('href')
+            if (href && !href.startsWith('http')) {
+              const response = await fetch(href)
+              if (response.ok) {
+                const text = await response.text()
+                cssText += text + '\n'
               }
             }
+          } catch (e) {
+            console.warn('Не удалось загрузить стили из', link.href, e)
           }
+        }
 
-          var isDragging = false;
-          var startX = 0;
-          var startY = 0;
-
-          canvas.addEventListener('mousedown', function(event) {
-            if (event.button !== 0) return;
-            isDragging = true;
-            startX = event.clientX - currentX;
-            startY = event.clientY - currentY;
-            canvas.style.cursor = 'grabbing';
-          });
-
-          window.addEventListener('mousemove', function(event) {
-            if (!isDragging) return;
-            currentX = event.clientX - startX;
-            currentY = event.clientY - startY;
-            updateTransform();
-          });
-
-          window.addEventListener('mouseup', function() {
-            if (!isDragging) return;
-            isDragging = false;
-            canvas.style.cursor = 'grab';
-          });
-
-          window.addEventListener('wheel', function(event) {
-            event.preventDefault();
-
-            var delta = -event.deltaY * 0.0005;
-            var newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, currentScale + delta));
-
-            // Получаем координаты мыши относительно окна viewport
-            var mouseX = event.clientX;
-            var mouseY = event.clientY;
-
-            // Вычисляем новую позицию так, чтобы точка под мышью оставалась на месте
-            var scaleRatio = newScale / currentScale;
-            currentX = mouseX - (mouseX - currentX) * scaleRatio;
-            currentY = mouseY - (mouseY - currentY) * scaleRatio;
-            currentScale = newScale;
-
-            updateTransform();
-          }, { passive: false });
-
-          function fitToContent() {
-            var cards = canvas.querySelectorAll('.card');
-            if (!cards || cards.length === 0) return;
-
-            var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            cards.forEach(function(card) {
-              var style = card.style;
-              var left = parseFloat(style.left) || 0;
-              var top = parseFloat(style.top) || 0;
-              var width = parseFloat(style.width) || card.offsetWidth;
-              var height = parseFloat(style.height) || card.offsetHeight;
-              minX = Math.min(minX, left);
-              minY = Math.min(minY, top);
-              maxX = Math.max(maxX, left + width);
-              maxY = Math.max(maxY, top + height);
-            });
-
-            var contentWidth = maxX - minX;
-            var contentHeight = maxY - minY;
-            var rootRect = document.getElementById('canvas').getBoundingClientRect();
-            var padding = 100;
-            var scaleX = (rootRect.width - padding * 2) / contentWidth;
-            var scaleY = (rootRect.height - padding * 2) / contentHeight;
-            var newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.min(scaleX, scaleY)));
-
-            var centerX = (minX + maxX) / 2;
-            var centerY = (minY + maxY) / 2;
-
-            currentX = rootRect.width / 2 - centerX * newScale;
-            currentY = rootRect.height / 2 - centerY * newScale;
-            currentScale = newScale;
-            updateTransform();
+        // Собираем CSS переменные
+        const computedStyle = window.getComputedStyle(canvasContainer)
+        const cssVars = [
+          '--line-color',
+          '--line-width',
+          '--card-bg',
+          '--card-border',
+          '--font-family'
+        ]
+        let varsBlock = ':root {\n'
+        cssVars.forEach((varName) => {
+          const value = computedStyle.getPropertyValue(varName)
+          if (value) {
+            varsBlock += `  ${varName}: ${value};\n`
           }
+        })
+        varsBlock += '}\n'
 
-          var zoomBtn = document.getElementById('zoom-btn');
-          if (zoomBtn) {
-            zoomBtn.addEventListener('click', fitToContent);
+        // Добавляем минимальные правила для линий
+        const lineStyles = `
+          .svg-layer .line-group,
+          .svg-layer .line {
+            stroke: #4b5563;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
           }
+          .svg-layer .line {
+            stroke: var(--line-color, currentColor);
+            stroke-width: var(--line-width, 5px);
+          }
+          .line--balance-highlight {
+            stroke-dasharray: 16;
+            animation: lineBalanceFlow 2s ease-in-out infinite;
+          }
+          .line--pv-highlight {
+            stroke-dasharray: 14;
+            animation: linePvFlow 2s ease-in-out infinite;
+          }
+          @keyframes lineBalanceFlow {
+            0% { stroke-dashoffset: -24; }
+            50% { stroke: #d93025; }
+            100% { stroke-dashoffset: 24; }
+          }
+          @keyframes linePvFlow {
+            0% { stroke-dashoffset: -18; }
+            50% { stroke: #0f62fe; }
+            100% { stroke-dashoffset: 18; }
+          }
+        `
 
-          // Автоматически подгоняем масштаб при загрузке
-          fitToContent();
-        });
-      `
+        return varsBlock + cssText + lineStyles
+      }
 
-      const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 ${width} ${height}" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <foreignObject x="0" y="0" width="100%" height="100%">
-    <body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;height:100vh;overflow:hidden;background:${backgroundColor.value || '#f3f4f6'};">
-      <style>
-        ${svgCssStyles}
-      </style>
-      <div id="canvas" style="position:relative;width:100vw;height:100vh;overflow:hidden;background:${backgroundColor.value || '#ffffff'};">
-        <button id="zoom-btn" class="zoom-button" title="Автоподгонка масштаба">
-          Масштаб: <span class="zoom-value">100%</span>
-        </button>
-        <div class="canvas-content">
-          ${cardHtmlList.join('')}
-          <svg class="svg-layer" xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-            ${connectionPaths.filter(item => item.path).map((item) => `
-              <path d="${item.path}" stroke="${item.color}" stroke-width="${item.thickness}" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-            `).join('')}
-          </svg>
-        </div>
-      </div>
-      <script>
-        ${svgInteractiveScript}
-      </script>
-    </body>
+      const cssText = await collectCss()
+
+      // Шаг 8: Копируем маркеры из SVG слоя
+      let markersHtml = ''
+      if (svgLayer) {
+        const defs = svgLayer.querySelector('defs')
+        if (defs) {
+          markersHtml = defs.outerHTML
+        }
+      }
+
+      // Шаг 9: Формируем финальный SVG
+      const backgroundColorFromBoard = backgroundColor.value ||
+        window.getComputedStyle(canvasContainer).backgroundColor ||
+        '#ffffff'
+
+      const svgString = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${W}" height="${H}"
+     viewBox="0 0 ${W} ${H}">
+  ${markersHtml ? markersHtml : `<defs>
+    <marker id="marker-dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" fill="currentColor">
+      <circle cx="5" cy="5" r="4"/>
+    </marker>
+  </defs>`}
+  <style>
+    ${cssText}
+  </style>
+  <rect x="0" y="0" width="${W}" height="${H}" fill="${backgroundColorFromBoard}"/>
+  <foreignObject x="0" y="0" width="${W}" height="${H}">
+    <div xmlns="http://www.w3.org/1999/xhtml">${wrapper.outerHTML}</div>
   </foreignObject>
 </svg>`
 
-      const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
+      // Шаг 10: Сохраняем файл
+      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
