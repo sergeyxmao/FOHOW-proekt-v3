@@ -2187,6 +2187,18 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   box-shadow: 10px 12px 24px rgba(15, 35, 95, 0.16),
     -6px -6px 18px rgba(255, 255, 255, 0.85) !important;
 }
+
+/* Во время съёмки превью скрываем вспомогательные элементы режима редактирования */
+.canvas-container--capturing .selection-box,
+.canvas-container--capturing .guides-overlay,
+.canvas-container--capturing .guide-line,
+.canvas-container--capturing .line--preview,
+.canvas-container--capturing .connection-point,
+.canvas-container--capturing .note-window,
+.canvas-container--capturing .context-menu-overlay,
+.canvas-container--capturing .card-context-menu {
+  display: none !important;
+}  
 .guides-overlay {
   position: absolute;
   top: 0;
