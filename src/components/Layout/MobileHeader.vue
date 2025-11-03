@@ -91,6 +91,28 @@ const handleMenuLogout = () => {
     authStore.logout()
   }
 }
+const handleRenameCurrentBoard = async () => {
+  const newName = prompt('Введите новое название проекта', currentBoardName.value)
+
+  if (newName === null) {
+    return
+  }
+
+  try {
+    const result = await boardStore.updateCurrentBoardName(newName)
+
+    if (!result.success) {
+      if (result.reason === 'empty') {
+        alert('Название проекта не может быть пустым.')
+      }
+
+      return
+    }
+  } catch (error) {
+    console.error('Ошибка переименования проекта:', error)
+    alert('Не удалось переименовать проект. Попробуйте позже.')
+  }
+}
 
 const toggleHierarchyMode = () => {
   canvasStore.toggleHierarchicalDragMode()
@@ -242,8 +264,16 @@ watch(
             <button class="mobile-user-menu__close" type="button" @click="closeUserMenu">✕</button>
 
             <div class="mobile-user-menu__section mobile-user-menu__section--project">
-              <span class="mobile-user-menu__project-name">{{ currentBoardName }}</span>
-              <div class="mobile-user-menu__status">
+              <button
+                class="mobile-user-menu__project-button"
+                type="button"
+                title="Переименовать проект"
+                @click="handleRenameCurrentBoard"
+              >
+                <span class="mobile-user-menu__project-name">{{ currentBoardName }}</span>
+                <span class="mobile-user-menu__project-edit" aria-hidden="true">✏️</span>
+              </button>
+             <div class="mobile-user-menu__status">
                 <template v-if="isSaving">
                   <span class="status-spinner">⏳</span>
                   <span>Сохранение...</span>
@@ -513,6 +543,38 @@ watch(
   padding-right: 26px;
   gap: 10px;
 }
+.mobile-user-menu__project-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(15, 23, 42, 0.05);
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  max-width: 100%;
+}
+
+.mobile-user-menu--dark .mobile-user-menu__project-button {
+  background: rgba(229, 243, 255, 0.05);
+  border-color: rgba(229, 243, 255, 0.18);
+}
+
+.mobile-user-menu__project-button:hover {
+  background: rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.mobile-user-menu--dark .mobile-user-menu__project-button:hover {
+  background: rgba(229, 243, 255, 0.12);
+}
+
+.mobile-user-menu__project-button:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.8);
+  outline-offset: 3px;
+}
 
 .mobile-user-menu__project-name {
   font-weight: 700;
@@ -521,6 +583,13 @@ watch(
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.mobile-user-menu__project-edit {
+  font-size: 18px;
+  flex-shrink: 0;
+  opacity: 0.75; 
 }
 
 .mobile-user-menu__status {
