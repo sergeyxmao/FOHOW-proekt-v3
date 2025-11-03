@@ -33,7 +33,12 @@
         @click="openBoard(board.id)"
       >
         <div class="board-thumbnail">
-          <img v-if="board.thumbnail_url" :src="board.thumbnail_url" alt="Preview">
+          <img
+            v-if="board.thumbnail_url"
+            :src="board.thumbnail_url"
+            alt="Preview"
+            class="board-thumb-image"
+          >
           <div v-else class="board-placeholder">
             🎨
           </div>
@@ -376,10 +381,13 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
-.board-thumbnail img {
-  width: 100%;
-  height: 100%;
+.board-thumb-image {
+  width: min(100%, 200px);
+  height: 120px;
   object-fit: cover;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.05);
+  display: block;  
 }
 
 .board-placeholder {
