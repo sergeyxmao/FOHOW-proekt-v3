@@ -39,7 +39,13 @@
                 @click="openBoard(board.id)"
               >
                 <div class="board-thumbnail">
-                  <div class="board-placeholder">🎨</div>
+                  <img
+                    v-if="board.thumbnail_url"
+                    :src="board.thumbnail_url"
+                    alt="Preview"
+                    class="board-thumb-image"
+                  >
+                  <div v-else class="board-placeholder">🎨</div>
                 </div>
                 
                 <div class="board-info">
@@ -428,6 +434,14 @@ function formatDate(dateString) {
 .board-placeholder {
   font-size: 50px;
   opacity: 0.3;
+}
+.board-thumb-image {
+  width: min(100%, 200px);
+  height: 120px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.05);
+  display: block;
 }
 
 .board-info {
