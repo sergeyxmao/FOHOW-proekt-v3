@@ -3,9 +3,6 @@ import { useCardsStore } from '../stores/cards.js'
 import { useConnectionsStore } from '../stores/connections.js'
 import { useProjectStore, formatProjectFileName } from '../stores/project.js'
 import { useCanvasStore } from '../stores/canvas.js'
-import { parseActivePV } from '../utils/activePv.js'
-import { calcStagesAndCycles } from '../utils/calculationEngine.js'
-import { buildCardCssVariables } from '../utils/constants.js'
 
 const imageDataUriCache = new Map()
 
@@ -119,144 +116,34 @@ const getExportHtmlCss = () => `
   #canvas [data-side]{display:none;}
 `
 
-const escapeHtml = (value) => String(value ?? '')
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#39;')
-
-const MARKER_OFFSET = 12
-const EXTRA_PADDING_TOP = 60
-const EXTRA_PADDING_SIDE = 50
-const PV_RIGHT_VALUE = 330
-const MIN_LEFT_PV = 30
-const MAX_LEFT_PV = 330
-
-const toFiniteNumber = (value) => {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
-const normalizePvValue = (rawValue, fallback) => {
-  const base = typeof rawValue === 'string' ? rawValue : ''
-  const match = base.match(/^(\s*)(\d{1,3})/)
-
-  if (!match) {
-    return fallback
-  }
-
-  const [, , digits] = match
-  const parsed = Number(digits)
-  if (!Number.isFinite(parsed)) {
-    return fallback
-  }
-
-  return Math.max(0, Math.min(999, parsed))
-}
-
-const buildCardMetrics = (card) => {
-  const pvPair = parseActivePV(card.activePvLocal ?? card.activePv)
-  const manualPvPair = parseActivePV(card.activePvManual ?? card.activePvLocal ?? card.activePv)
-  const rightValue = normalizePvValue(pvPair?.right, PV_RIGHT_VALUE)
-  const leftValue = normalizePvValue(pvPair?.left, PV_RIGHT_VALUE)
-  const manualAdjustmentsSource = card.activePvAdjustment ?? card.activePvManual ?? card.activePvLocal ?? card.activePv
-  const manualAdjustments = parseActivePV(manualAdjustmentsSource)
-  const manualLeftValue = normalizePvValue(manualAdjustments?.left, leftValue)
-  const manualRightValue = normalizePvValue(manualAdjustments?.right, rightValue)
-
-  const { cycles, stages } = calcStagesAndCycles({
-    pv: card.pv,
-    balanceLeft: manualLeftValue,
-    balanceRight: manualRightValue
-  })
-
-  return {
-    cycles,
-    stages,
-    pvValue: toFiniteNumber(card.pv) || 0,
-    balanceLeft: manualLeftValue,
-    balanceRight: manualRightValue
-  }
-}
-
-const getConnectionPath = (connection, cardsById) => {
-  const startCardId = connection.startCardId ?? connection.from
-  const endCardId = connection.endCardId ?? connection.to
-
-  const startCard = cardsById.get(startCardId)
-  const endCard = cardsById.get(endCardId)
-
-  if (!startCard || !endCard) {
-    return ''
-  }
-
-  const getAnchorPoint = (card, side) => {
-    const anchorKey = `anchor${side.charAt(0).toUpperCase()}${side.slice(1)}`
-    return card?.[anchorKey] || null
-  }
-
-  const startSide = connection.startSide || connection.fromSide || 'right'
-  const endSide = connection.endSide || connection.toSide || 'left'
-
-  const startAnchor = getAnchorPoint(startCard, startSide)
-  const endAnchor = getAnchorPoint(endCard, endSide)
-
-  if (!startAnchor || !endAnchor) {
-    return ''
-  }
-
-  const offsetPoint = (point, side) => {
-    if (!point) return null
-    const result = { x: point.x, y: point.y }
-    switch (side) {
-      case 'top':
-        result.y -= MARKER_OFFSET
-        break
-      case 'bottom':
-        result.y += MARKER_OFFSET
-        break
-      case 'left':
-        result.x -= MARKER_OFFSET
-        break
-      case 'right':
-        result.x += MARKER_OFFSET
-        break
-      default:
-        break
-    }
-    return result
-  }
-
-  const startPoint = offsetPoint(startAnchor, startSide)
-  const endPoint = offsetPoint(endAnchor, endSide)
-
-  const midPoint = (startSide === 'left' || startSide === 'right')
-    ? { x: endPoint.x, y: startPoint.y }
-    : { x: startPoint.x, y: endPoint.y }
-
-  const points = [startAnchor, startPoint, midPoint, endPoint, endAnchor]
-    .filter(Boolean)
-    .filter((point, index, array) => {
-      if (index === 0) return true
-      const prev = array[index - 1]
-      return !(prev && prev.x === point.x && prev.y === point.y)
-    })
-
-  if (!points.length) {
-    return ''
-  }
-
-  const [first, ...rest] = points
-  const commands = [`M ${first.x} ${first.y}`]
-  rest.forEach((point) => {
-    commands.push(`L ${point.x} ${point.y}`)
-  })
-  return commands.join(' ')
-}
+const getExportSvgCss = () => `
+  ${getExportHtmlCss()}
+  #canvas{overflow:visible;}
+  #canvas .canvas-container{overflow:visible;}
+  #canvas .canvas-content{overflow:visible;}
+  #canvas .cards-container{overflow:visible;}
+  #canvas .note-window{position:absolute;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.15);min-width:200px;min-height:200px;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(15,23,42,0.12);transform-origin:top left;}
+  #canvas .note-window::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;box-shadow:inset 0 0 0 1px rgba(15,23,42,0.04);}
+  #canvas .note-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:linear-gradient(135deg,rgba(244,67,54,0.12),rgba(255,255,255,0.9));gap:12px;user-select:none;cursor:default;}
+  #canvas .note-header__close{border:none;background:rgba(15,23,42,0.08);color:#0f172a;width:28px;height:28px;border-radius:8px;font-size:18px;display:grid;place-items:center;}
+  #canvas .note-header__colors{display:flex;align-items:center;gap:10px;margin-left:auto;}
+  #canvas .clr-dot{width:18px;height:18px;border-radius:50%;border:2px solid rgba(15,23,42,0.32);box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+  #canvas .clr-dot.active{box-shadow:0 0 0 2px rgba(15,23,42,0.22),inset 0 0 0 2px #fff;border-color:rgba(15,23,42,0.65);}
+  #canvas .note-calendar{padding:12px 16px 8px;display:flex;flex-direction:column;gap:10px;}
+  #canvas .note-calendar__nav{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+  #canvas .note-calendar__title{font-weight:600;text-transform:capitalize;color:#0f172a;}
+  #canvas .note-calendar__nav-btn{border:none;background:rgba(15,23,42,0.08);color:#0f172a;width:28px;height:28px;border-radius:8px;}
+  #canvas .note-calendar__grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+  #canvas .note-calendar__grid--header{font-size:12px;font-weight:600;color:#475569;text-transform:uppercase;}
+  #canvas .note-calendar__weekday{display:grid;place-items:center;}
+  #canvas .note-calendar__cell{border:none;background:rgba(241,245,249,0.9);color:#0f172a;height:28px;border-radius:6px;font-size:13px;display:grid;place-items:center;position:relative;}
+  #canvas .note-calendar__cell.selected{outline:2px solid var(--note-accent);background:rgba(59,130,246,0.08);}
+  #canvas .note-calendar__cell.has-entry{color:#fff;box-shadow:inset 0 0 0 2px rgba(0,0,0,0.08);}
+  #canvas .note-calendar__cell.out{opacity:0.4;}
+  #canvas .note-editor{padding:0 16px 16px;flex:1;display:flex;}
+  #canvas .note-textarea{resize:none;width:100%;flex:1;border:1px solid rgba(15,23,42,0.12);border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.4;font-family:inherit;color:#0f172a;background:rgba(248,250,252,0.85);min-height:calc(1.4em * 3 + 20px);}
+  #canvas .note-resize-handle{position:absolute;right:4px;bottom:2px;width:28px;height:28px;border-radius:50%;border:none;background:rgba(15,23,42,0.08);color:#0f172a;display:grid;place-items:center;font-size:18px;}
+`
 
 export function useProjectActions() {
   const cardsStore = useCardsStore()
@@ -381,122 +268,202 @@ export function useProjectActions() {
   }
 
   const handleExportSVG = async () => {
-    if (cardsStore.cards.length === 0) {
-      alert('На доске нет элементов для экспорта.')
-      return
-    }
-
     try {
-      const PADDING = 100
+      const canvasRoot = document.getElementById('canvas')
+      if (!canvasRoot) {
+        alert('Не удалось найти холст для экспорта.')
+        return
+      }
+      const canvasContainer = canvasRoot.querySelector('.canvas-container')
+      const canvasContent = canvasContainer?.querySelector('.canvas-content')
+      if (!canvasContainer || !canvasContent) {
+        alert('Не удалось найти содержимое холста для экспорта.')
+        return
+      }
 
-      const cards = cardsStore.cards.map(card => ({
-        ...card,
-        width: Number(card.width) || 418,
-        height: Number(card.height) || 280,
-        x: Number(card.x) || 0,
-        y: Number(card.y) || 0
-      }))
+      const cards = Array.from(canvasContainer.querySelectorAll('.card'))
+      const svgLayer = canvasContainer.querySelector('.svg-layer')
+      const noteWindows = Array.from(document.querySelectorAll('.note-window'))
 
-      let minX = Infinity
-      let minY = Infinity
-      let maxX = -Infinity
-      let maxY = -Infinity
+      const svgGraphics = svgLayer
+        ? Array.from(svgLayer.querySelectorAll('path, line, polyline, polygon, rect, circle, ellipse')).filter(
+          element => !element.classList.contains('line-hitbox')
+        )
+        : []
+
+      if (cards.length === 0 && noteWindows.length === 0 && svgGraphics.length === 0) {
+        alert('На доске нет элементов для экспорта.')
+        return
+      }
+
+      const transformValues = parseTransform(window.getComputedStyle(canvasContent).transform)
+      const safeScale = transformValues.scale || 1
+      const containerRect = canvasContainer.getBoundingClientRect()
+
+      const bounds = {
+        minX: Infinity,
+        minY: Infinity,
+        maxX: -Infinity,
+        maxY: -Infinity
+      }
+
+      const includeBounds = (left, top, right, bottom) => {
+        if ([left, top, right, bottom].some(value => !Number.isFinite(value))) {
+          return
+        }
+        bounds.minX = Math.min(bounds.minX, left)
+        bounds.minY = Math.min(bounds.minY, top)
+        bounds.maxX = Math.max(bounds.maxX, right)
+        bounds.maxY = Math.max(bounds.maxY, bottom)
+      }
 
       cards.forEach((card) => {
-        minX = Math.min(minX, card.x)
-        minY = Math.min(minY, card.y)
-        maxX = Math.max(maxX, card.x + card.width)
-        maxY = Math.max(maxY, card.y + card.height)
+        const left = Number.parseFloat(card.style.left) || card.offsetLeft || 0
+        const top = Number.parseFloat(card.style.top) || card.offsetTop || 0
+        const width = Number.parseFloat(card.style.width) || card.offsetWidth || 0
+        const explicitHeight = Number.parseFloat(card.style.height)
+        const minHeight = Number.parseFloat(card.style.minHeight)
+        const height = Number.isFinite(explicitHeight)
+          ? explicitHeight
+          : Number.isFinite(minHeight)
+            ? minHeight
+            : card.offsetHeight || 0
+        includeBounds(left, top, left + width, top + height)
       })
 
-      const contentWidth = maxX - minX
-      const contentHeight = maxY - minY
+      svgGraphics.forEach((element) => {
+        if (!(element instanceof SVGGraphicsElement)) {
+          return
+        }
+        const bbox = element.getBBox()
+        if (!bbox || (!bbox.width && !bbox.height)) {
+          return
+        }
+        includeBounds(bbox.x, bbox.y, bbox.x + bbox.width, bbox.y + bbox.height)
+      })
 
-      const cardHtmlList = await Promise.all(cards.map(async (card) => {
-        const headerBg = card.headerBg || '#5D8BF4'
-        const rankSrc = card.rankBadge ? await imageToDataUri(`/rank-${card.rankBadge}.png`) : ''
-        const strokeWidth = Number.isFinite(card.strokeWidth) ? card.strokeWidth : 2
-        const metrics = buildCardMetrics(card)
-        const cssVariables = buildCardCssVariables(card)
+      const noteMetrics = noteWindows.map((note) => {
+        const noteRect = note.getBoundingClientRect()
+        const styleLeft = Number.parseFloat(note.style.left)
+        const styleTop = Number.parseFloat(note.style.top)
+        const styleWidth = Number.parseFloat(note.style.width)
+        const styleHeight = Number.parseFloat(note.style.height)
 
-        const cardStyles = [
-          `left:${card.x - minX + PADDING}px`,
-          `top:${card.y - minY + PADDING}px`,
-          `width:${card.width}px`,
-          `height:${card.height}px`
-        ]
+        const screenLeft = Number.isFinite(styleLeft) ? styleLeft : noteRect.left - containerRect.left
+        const screenTop = Number.isFinite(styleTop) ? styleTop : noteRect.top - containerRect.top
+        const baseWidth = Number.isFinite(styleWidth) ? styleWidth : noteRect.width / safeScale
+        const baseHeight = Number.isFinite(styleHeight) ? styleHeight : noteRect.height / safeScale
 
-        const cssVariableStrings = Object.entries(cssVariables).map(([name, value]) => `${name}:${escapeHtml(value)}`)
+        const boardLeft = (screenLeft - transformValues.x) / safeScale
+        const boardTop = (screenTop - transformValues.y) / safeScale
 
-        const shellBackground = card.shellBg || 'rgba(255,255,255,0.92)'
-        const borderColor = card.borderColor || 'rgba(15,23,42,0.08)'
+        includeBounds(boardLeft, boardTop, boardLeft + baseWidth, boardTop + baseHeight)
 
-        return `
-          <div class="card" style="${cardStyles.join(';')};${cssVariableStrings.join(';')}">
-            <div class="card-shell" style="background:${escapeHtml(shellBackground)};border:${strokeWidth}px solid ${escapeHtml(borderColor)};">
-              <div class="card-header" style="background:${escapeHtml(headerBg)};">
-                <div class="card-title">${escapeHtml(card.text)}</div>
-                ${rankSrc ? `<img class="rank-badge visible" src="${rankSrc}" alt="" />` : ''}
-              </div>
-              <div class="card-body">
-                <div class="card-row">
-                  <span class="label">Личные PV</span>
-                  <span class="value">${escapeHtml(metrics.pvValue)}</span>
-                </div>
-                <div class="card-row pv-row">
-                  <span class="label">Баланс слева</span>
-                  <span class="value">${escapeHtml(metrics.balanceLeft)}</span>
-                </div>
-                <div class="card-row pv-row">
-                  <span class="label">Баланс справа</span>
-                  <span class="value">${escapeHtml(metrics.balanceRight)}</span>
-                </div>
-                <div class="card-row">
-                  <span class="label">Стадий</span>
-                  <span class="value">${escapeHtml(metrics.stages)}</span>
-                </div>
-                <div class="card-row">
-                  <span class="label">Циклов</span>
-                  <span class="value">${escapeHtml(metrics.cycles)}</span>
-                </div>
-                ${card.bodyHTML ? `<div class="card-body-html">${card.bodyHTML}</div>` : ''}
-              </div>
-            </div>
-          </div>
-        `
-      }))
+        return {
+          original: note,
+          boardLeft,
+          boardTop
+        }
+      })
 
-      // Создаем карты карточек с учетом смещения для SVG экспорта
-      const cardsById = new Map(cards.map(card => [card.id, card]))
-      const adjustedCardsById = new Map(cards.map(card => [card.id, {
-        ...card,
-        x: card.x - minX + PADDING,
-        y: card.y - minY + PADDING,
-        anchorTop: card.anchorTop ? { x: card.anchorTop.x - minX + PADDING, y: card.anchorTop.y - minY + PADDING } : null,
-        anchorBottom: card.anchorBottom ? { x: card.anchorBottom.x - minX + PADDING, y: card.anchorBottom.y - minY + PADDING } : null,
-        anchorLeft: card.anchorLeft ? { x: card.anchorLeft.x - minX + PADDING, y: card.anchorLeft.y - minY + PADDING } : null,
-        anchorRight: card.anchorRight ? { x: card.anchorRight.x - minX + PADDING, y: card.anchorRight.y - minY + PADDING } : null
-      }]))
+      if (!Number.isFinite(bounds.minX) || !Number.isFinite(bounds.minY) || !Number.isFinite(bounds.maxX) || !Number.isFinite(bounds.maxY)) {
+        alert('Не удалось определить границы для экспорта SVG.')
+        return
+      }
 
-      const connectionPaths = connectionsStore.connections
-        .map((connection) => {
-          const path = getConnectionPath(connection, adjustedCardsById)
-          if (!path) {
-            return null
+      const PADDING = 24
+      const contentWidth = Math.max(0, bounds.maxX - bounds.minX)
+      const contentHeight = Math.max(0, bounds.maxY - bounds.minY)
+      const exportWidth = Math.max(1, Math.ceil(contentWidth + PADDING * 2))
+      const exportHeight = Math.max(1, Math.ceil(contentHeight + PADDING * 2))
+      const offsetX = PADDING - bounds.minX
+      const offsetY = PADDING - bounds.minY
+      const normalizedContentWidth = Math.max(1, Math.ceil(contentWidth))
+      const normalizedContentHeight = Math.max(1, Math.ceil(contentHeight))
+
+      const containerClone = canvasContainer.cloneNode(true)
+      const contentClone = containerClone.querySelector('.canvas-content')
+      if (!contentClone) {
+        alert('Не удалось подготовить содержимое для экспорта.')
+        return
+      }
+
+      const selectorsToRemove = [
+        '.selection-box',
+        '.guides-overlay',
+        '.guide-line',
+        '.line-hitbox',
+        '.card-active-controls',
+        '.card-controls',
+        '.active-pv-btn',
+        '.card-note-btn',
+        '.card-close-btn',
+        '.connection-point',
+        '[data-role="active-pv-buttons"]'
+      ]
+
+      containerClone.querySelectorAll(selectorsToRemove.join(', ')).forEach((element) => {
+        element.remove()
+      })
+
+      containerClone.classList.remove(
+        'canvas-container--panning',
+        'canvas-container--selection-mode',
+        'canvas-container--capturing'
+      )
+      containerClone.style.position = 'absolute'
+      containerClone.style.left = '0'
+      containerClone.style.top = '0'
+      containerClone.style.width = `${exportWidth}px`
+      containerClone.style.height = `${exportHeight}px`
+      containerClone.style.overflow = 'visible'
+
+      contentClone.style.transform = 'matrix(1, 0, 0, 1, 0, 0)'
+      contentClone.style.left = `${offsetX}px`
+      contentClone.style.top = `${offsetY}px`
+      contentClone.style.width = `${normalizedContentWidth}px`
+      contentClone.style.height = `${normalizedContentHeight}px`
+
+      containerClone.querySelectorAll('.card').forEach((cardEl) => {
+        cardEl.classList.remove('selected', 'connecting', 'editing')
+        cardEl.style.cursor = 'default'
+      })
+
+      containerClone.querySelectorAll('[contenteditable]').forEach((element) => {
+        element.setAttribute('contenteditable', 'false')
+        element.style.pointerEvents = 'none'
+        element.style.userSelect = 'text'
+      })
+
+      const cardsContainerClone = containerClone.querySelector('.cards-container')
+      if (cardsContainerClone) {
+        cardsContainerClone.style.width = `${normalizedContentWidth}px`
+        cardsContainerClone.style.height = `${normalizedContentHeight}px`
+        cardsContainerClone.style.pointerEvents = 'none'
+      }
+
+      const svgLayerClone = containerClone.querySelector('.svg-layer')
+      if (svgLayerClone) {
+        svgLayerClone.setAttribute('width', String(normalizedContentWidth))
+        svgLayerClone.setAttribute('height', String(normalizedContentHeight))
+        svgLayerClone.setAttribute('viewBox', `0 0 ${normalizedContentWidth} ${normalizedContentHeight}`)
+        svgLayerClone.style.width = `${normalizedContentWidth}px`
+        svgLayerClone.style.height = `${normalizedContentHeight}px`
+        svgLayerClone.style.pointerEvents = 'none'
+      }
+
+      const noteClones = noteMetrics.map(({ original, boardLeft, boardTop }) => {
+        const noteClone = original.cloneNode(true)
+        const originalTextareas = original.querySelectorAll('textarea')
+        const clonedTextareas = noteClone.querySelectorAll('textarea')
+        clonedTextareas.forEach((textarea, index) => {
+          const source = originalTextareas[index]
+          if (source) {
+            textarea.value = source.value
+            textarea.textContent = source.value
           }
-
-          const color = connection.color || connectionsStore.defaultLineColor
-          const thickness = connection.thickness || connectionsStore.defaultLineThickness
-          const animationDuration = (connection.animationDuration ?? connectionsStore.defaultAnimationDuration) || 0
-
-          return {
-            id: connection.id,
-            path,
-            color,
-            thickness,
-            highlightType: connection.highlightType || null,
-            animationDuration
-          }
+           textarea.setAttribute('readonly', 'true')
+          textarea.setAttribute('aria-readonly', 'true')         
         })
         .filter(Boolean)
 
@@ -504,67 +471,39 @@ export function useProjectActions() {
       const height = contentHeight + PADDING * 2
 
       const svgCssStyles = `
-        html,body{margin:0;height:100%;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#111827;background:#f3f4f6;}
-        #canvas{position:relative;width:100%;height:100%;overflow:hidden;font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;}
-        .canvas-content{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:0 0;}
-        .card{position:absolute;display:flex;flex-direction:column;align-items:stretch;box-sizing:border-box;pointer-events:auto;}
-        .card-shell{border-radius:26px;overflow:hidden;box-shadow:0 18px 48px rgba(15,23,42,0.18);display:flex;flex-direction:column;height:100%;}
-        .card-header{display:flex;align-items:center;justify-content:center;padding:18px 12px;position:relative;}
-        .card-title{font-size:18px;font-weight:700;letter-spacing:0.01em;color:#fff;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;}
-        .rank-badge.visible{position:absolute;top:-15px;right:15px;width:80px;height:auto;transform:rotate(15deg);}
-        .card-body{padding:20px 20px 60px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;color:#111827;font-size:16px;}
-        .card-row{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;flex-wrap:wrap;width:100%;}
-        .label{color:#6b7280;font-weight:500;font-size:14px;text-align:center;max-width:100%;word-break:break-word;overflow-wrap:anywhere;}
-        .value{color:#111827;font-weight:600;font-size:15px;outline:none;padding:3px 6px;border-radius:6px;line-height:1.5;}
-        .pv-row .value{font-size:18px;font-weight:600;}
-        .card-body-html{margin-top:8px;text-align:left;width:100%;font-size:14px;line-height:1.45;color:#111827;}
-        .svg-layer{position:absolute;inset:0;pointer-events:none;overflow:visible;}
-        .line{fill:none;stroke:var(--line-color,#0f62fe);stroke-width:var(--line-width,5px);stroke-linecap:round;stroke-linejoin:round;pointer-events:none;filter:drop-shadow(0 0 5px rgba(15,23,42,0.12));transition:stroke-width .2s ease,filter .2s ease,stroke .2s ease;}
-        .line--balance-highlight{stroke-dasharray:16;animation:lineBalanceFlow var(--line-animation-duration,2s) ease-in-out infinite;}
-        .line--pv-highlight{stroke-dasharray:14;animation:linePvFlow var(--line-animation-duration,2s) ease-in-out infinite;}
-        @keyframes lineBalanceFlow{0%{stroke-dashoffset:-24;}50%{stroke:#d93025;}100%{stroke-dashoffset:24;}}
-        @keyframes linePvFlow{0%{stroke-dashoffset:-18;}50%{stroke:#0f62fe;}100%{stroke-dashoffset:18;}}
-      `
+        noteClone.style.position = 'absolute'
+        noteClone.style.left = `${boardLeft + offsetX}px`
+        noteClone.style.top = `${boardTop + offsetY}px`
+        noteClone.style.transform = 'scale(1)'
+        noteClone.style.transformOrigin = 'top left'
+        noteClone.style.pointerEvents = 'none'
+        return noteClone
+      })
+
+      noteClones.forEach((noteClone) => {
+        containerClone.appendChild(noteClone)
+      })
+
+      const exportRoot = document.createElement('div')
+      exportRoot.id = 'canvas'
+      exportRoot.style.position = 'relative'
+      exportRoot.style.width = `${exportWidth}px`
+      exportRoot.style.height = `${exportHeight}px`
+      exportRoot.style.overflow = 'visible'
+      exportRoot.style.background = backgroundColor.value || '#ffffff'
+      exportRoot.appendChild(containerClone)
+
+      await inlineImages(exportRoot)
+
+      const cssText = getExportSvgCss()
+      const background = backgroundColor.value || '#ffffff'
 
       const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <foreignObject x="0" y="0" width="${width}" height="${height}">
-    <body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;height:100%;overflow:hidden;background:${backgroundColor.value || '#f3f4f6'};">
-      <style>
-        ${svgCssStyles}
-      </style>
-      <div id="canvas" style="position:relative;width:${width}px;height:${height}px;overflow:hidden;background:${backgroundColor.value || '#ffffff'};">
-        <div class="canvas-content" style="transform:matrix(1,0,0,1,0,0);">
-          ${cardHtmlList.join('')}
-          <svg class="svg-layer" xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-            <defs>
-              <marker id="marker-dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" fill="currentColor">
-                <circle cx="5" cy="5" r="4" />
-              </marker>
-            </defs>
-            ${connectionPaths.map((item) => {
-              const highlightClass = item.highlightType === 'balance'
-                ? ' line--balance-highlight'
-                : item.highlightType === 'pv'
-                  ? ' line--pv-highlight'
-                  : ''
-              const styleParts = [
-                `--line-color:${escapeHtml(item.color)}`,
-                `--line-width:${escapeHtml(`${item.thickness}px`)}`,
-                `--line-animation-duration:${escapeHtml(`${item.animationDuration}ms`)}`,
-                `color:${escapeHtml(item.color)}`,
-                `stroke:${escapeHtml(item.color)}`,
-                `stroke-width:${escapeHtml(String(item.thickness))}`
-              ]
-              return `
-              <g class="line-group" data-connection-id="${escapeHtml(item.id)}">
-                <path d="${escapeHtml(item.path)}" class="line${highlightClass}" marker-start="url(#marker-dot)" marker-end="url(#marker-dot)" style="${styleParts.join(';')}" stroke="${escapeHtml(item.color)}" stroke-width="${escapeHtml(String(item.thickness))}" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-              </g>
-            `
-            }).join('')}
-          </svg>
-        </div>
-      </div>
+<svg xmlns="http://www.w3.org/2000/svg" width="${exportWidth}" height="${exportHeight}" viewBox="0 0 ${exportWidth} ${exportHeight}">
+  <foreignObject x="0" y="0" width="${exportWidth}" height="${exportHeight}">
+    <body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;height:100%;overflow:hidden;background:${background};">
+      <style>${cssText}</style>
+      ${exportRoot.outerHTML}
     </body>
   </foreignObject>
 </svg>`
