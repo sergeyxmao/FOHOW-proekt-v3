@@ -40,12 +40,7 @@ const { headerColor, headerColorIndex } = storeToRefs(viewSettingsStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
 const isSaveAvailable = computed(() => {
-  const boardId = currentBoardId.value
   const boardName = (currentBoardName.value ?? '').trim()
-
-  if (!boardId) {
-    return false
-  }
 
   return boardName.length > 0
 })
@@ -273,9 +268,41 @@ async function saveCurrentBoard() {
 
     // Получаем состояние canvas
     const canvasState = getCanvasState()
+      const boardName = (currentBoardName.value ?? '').trim()
+    let boardId = currentBoardId.value
 
-    const response = await fetch(`${API_URL}/boards/${currentBoardId.value}`, {
-      method: 'PUT',
+    if (!boardId) {
+      const createResponse = await fetch(`${API_URL}/boards`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: boardName,
+          content: canvasState
+        })
+      })
+
+      if (!createResponse.ok) {
+        throw new Error('Ошибка создания доски')
+      }
+
+      const createData = await createResponse.json()
+      const createdBoard = createData?.board ?? createData 
+
+      if (!createdBoard?.id) {
+        throw new Error('Сервер не вернул идентификатор новой доски')
+      }
+
+      boardStore.setCurrentBoard(createdBoard.id, createdBoard.name ?? boardName)
+      boardId = createdBoard.id
+
+      window.dispatchEvent(new CustomEvent('boards:refresh'))
+    }
+
+    const response = await fetch(`${API_URL}/boards/${boardId}`, {
+     method: 'PUT',
       headers: {
         'Authorization': `Bearer ${authStore.token}`,
         'Content-Type': 'application/json'
