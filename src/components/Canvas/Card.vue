@@ -31,6 +31,11 @@ const isEditing = ref(false);
 const editText = ref(props.card.text);
 const textInput = ref(null);
 
+// Состояние для редактирования PV
+const isEditingPv = ref(false);
+const editPvLeft = ref('');
+const pvLeftInput = ref(null);
+
 // Вычисляемое свойство для проверки, является ли карточка большой
 const isLargeCard = computed(() => {
   return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 543.4;
@@ -332,9 +337,28 @@ const displayedPvValue = computed(() => {
   return normalized || fallback;
 });
 
+// Извлекаем левую часть PV (например, "30" из "30/330pv")
+const pvLeftValue = computed(() => {
+  const match = displayedPvValue.value.match(/^(\d+)\//);
+  return match ? match[1] : String(PV_RIGHT_VALUE);
+});
+
+// Правая часть всегда 330pv
+const pvRightValue = computed(() => `${PV_RIGHT_VALUE}pv`);
+
 const coinFillColor = computed(() => {
   const fill = props.card?.coinFill;
   return typeof fill === 'string' && fill.trim() ? fill : '#3d85c6';
+});
+
+// Проверяем, является ли кружок синим (полным)
+const isCoinBlue = computed(() => {
+  return coinFillColor.value === '#3d85c6';
+});
+
+// Проверяем, является ли кружок золотым
+const isCoinGold = computed(() => {
+  return coinFillColor.value === '#ffd700';
 });
 const handleKeyDown = (event) => {
   if (event.key === 'Enter') {
@@ -354,22 +378,88 @@ const handleDelete = (event) => {
   cardsStore.removeCard(props.card.id);
 };
 
+// Обработчик двойного клика на левой части PV для начала редактирования
+const startEditingPv = (event) => {
+  event.stopPropagation();
+  event.preventDefault();
+  if (!isEditingPv.value) {
+    isEditingPv.value = true;
+    editPvLeft.value = pvLeftValue.value;
+    nextTick(() => {
+      if (pvLeftInput.value) {
+        pvLeftInput.value.focus();
+        pvLeftInput.value.select();
+      }
+    });
+  }
+};
+
+// Завершение редактирования левой части PV
+const finishEditingPv = () => {
+  if (isEditingPv.value) {
+    let newValue = editPvLeft.value.trim();
+
+    // Парсим введенное значение
+    let leftNum = Number.parseInt(newValue, 10);
+
+    // Проверяем корректность
+    if (!Number.isFinite(leftNum) || leftNum < MIN_LEFT_PV) {
+      leftNum = MIN_LEFT_PV;
+    }
+    if (leftNum > MAX_LEFT_PV) {
+      leftNum = MAX_LEFT_PV;
+    }
+
+    const newPvValue = `${leftNum}/${PV_RIGHT_VALUE}pv`;
+
+    if (newPvValue !== props.card.pv) {
+      cardsStore.updateCard(props.card.id, { pv: newPvValue });
+    }
+
+    isEditingPv.value = false;
+  }
+};
+
+// Отмена редактирования PV
+const cancelEditingPv = () => {
+  isEditingPv.value = false;
+  editPvLeft.value = pvLeftValue.value;
+};
+
+// Обработчик нажатия клавиш при редактировании PV
+const handlePvKeyDown = (event) => {
+  if (event.key === 'Enter') {
+    finishEditingPv();
+  } else if (event.key === 'Escape') {
+    cancelEditingPv();
+  }
+};
+
+// Обработчик клика на кружок
+const handleCoinClick = (event) => {
+  event.stopPropagation();
+
+  const currentLeft = Number.parseInt(pvLeftValue.value, 10);
+
+  if (isCoinBlue.value) {
+    // Если кружок синий (значение 330/330pv), меняем на золотой и устанавливаем 30/330pv
+    cardsStore.updateCard(props.card.id, {
+      pv: `${MIN_LEFT_PV}/${PV_RIGHT_VALUE}pv`,
+      coinFill: '#ffd700',
+      previousPvLeft: currentLeft // Сохраняем предыдущее значение
+    });
+  } else if (isCoinGold.value) {
+    // Если кружок золотой, возвращаем предыдущее значение и делаем синим
+    const previousLeft = props.card.previousPvLeft || PV_RIGHT_VALUE;
+    cardsStore.updateCard(props.card.id, {
+      pv: `${previousLeft}/${PV_RIGHT_VALUE}pv`,
+      coinFill: '#3d85c6'
+    });
+  }
+};
+
 // ИСПРАВЛЕННЫЙ ОБРАБОТЧИК для обновления значений
 const updateValue = (event, field) => {
-  if (field === 'pv') {
-    const newValue = event.target.textContent.trim();
-    const normalized = normalizePvValue(newValue, displayedPvValue.value);
-
-    if (event.target.textContent !== normalized) {
-      event.target.textContent = normalized;
-    }
-
-    if (normalized !== props.card.pv) {
-      cardsStore.updateCard(props.card.id, { [field]: normalized });
-    }
-    return;
-  }
-
   if (field === 'manual-balance') {
     const rawText = event.target.textContent || '';
     const hasDigits = /\d/.test(rawText);
@@ -549,16 +639,38 @@ watch(
       ></div>
       <!-- Иконка монетки и PV -->
       <div class="card-row pv-row">
-        <svg class="coin-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <svg
+          class="coin-icon"
+          :class="{ 'coin-icon--clickable': true }"
+          viewBox="0 0 100 100"
+          xmlns="http://www.w3.org/2000/svg"
+          @click="handleCoinClick"
+          :title="isCoinBlue ? 'Кликните, чтобы установить минимальное значение (30)' : 'Кликните, чтобы вернуть предыдущее значение'"
+        >
           <circle cx="50" cy="50" r="45" :fill="coinFillColor" stroke="#DAA520" stroke-width="5"/>
         </svg>
-        <span
-          class="value pv-value"
-          contenteditable="true"
-          @blur="updateValue($event, 'pv')"
-        >
-          {{ displayedPvValue }}
-        </span>
+        <div class="pv-value-container">
+          <input
+            v-if="isEditingPv"
+            ref="pvLeftInput"
+            v-model="editPvLeft"
+            type="text"
+            class="pv-left-input"
+            @keydown="handlePvKeyDown"
+            @blur="finishEditingPv"
+            @click.stop
+          />
+          <span
+            v-else
+            class="value pv-value-left"
+            @dblclick="startEditingPv"
+            :title="'Двойной клик для редактирования'"
+          >
+            {{ pvLeftValue }}
+          </span>
+          <span class="pv-separator">/</span>
+          <span class="value pv-value-right">{{ pvRightValue }}</span>
+        </div>
       </div>
       
       <div class="card-row">
@@ -904,6 +1016,20 @@ watch(
   flex-shrink: 0;
 }
 
+.coin-icon--clickable {
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.coin-icon--clickable:hover {
+  transform: scale(1.1);
+  filter: brightness(1.15);
+}
+
+.coin-icon--clickable:active {
+  transform: scale(1.05);
+}
+
 .label {
   font-weight: 500;
   color: #6b7280;
@@ -939,6 +1065,51 @@ watch(
 .pv-value {
   font-size: 18px;
   font-weight: 600;
+}
+
+.pv-value-container {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pv-value-left {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+  user-select: none;
+}
+
+.pv-value-left:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.pv-separator {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 1px;
+}
+
+.pv-value-right {
+  font-size: 18px;
+  font-weight: 600;
+  cursor: default;
+}
+
+.pv-left-input {
+  width: 60px;
+  padding: 2px 6px;
+  border: 2px solid #3b82f6;
+  border-radius: 4px;
+  background: #fff8dc;
+  color: #111827;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  box-shadow: 0 0 6px 2px rgba(255, 193, 7, 0.35);
 }
 
 /* Значки */
@@ -1059,6 +1230,23 @@ watch(
 
 .card--large .pv-value,
 .card--gold .pv-value {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.card--large .pv-value-left,
+.card--large .pv-value-right,
+.card--large .pv-separator,
+.card--gold .pv-value-left,
+.card--gold .pv-value-right,
+.card--gold .pv-separator {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.card--large .pv-left-input,
+.card--gold .pv-left-input {
+  width: 80px;
   font-size: 26px;
   font-weight: 800;
 }

@@ -408,7 +408,7 @@ export const useCardsStore = defineStore('cards', {
         headerBg: getHeaderColorRgb(0),
         colorIndex: 0,
         selected: false,
-        
+
         // Свойства из пресета
         ...preset,
 
@@ -417,17 +417,18 @@ export const useCardsStore = defineStore('cards', {
         activePv: '0 / 0',
         cycle: '0',
         coinFill: COIN_EMPTY_COLOR,
-        
+        previousPvLeft: 330,
+
         // Значки
         showSlfBadge: false,
         showFendouBadge: false,
         rankBadge: null,
-        
+
         // Дополнительные свойства
         bodyHTML: '',
         bodyGradient: preset.bodyGradient || '',
         type,
-        note: createDefaultNoteState(),        
+        note: createDefaultNoteState(),
         // Переданные вручную свойства (например, x, y) имеют наивысший приоритет
         ...cardData
       };
@@ -608,6 +609,7 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
           activePv: cardData.activePv || '0 / 0',
           cycle: typeof cardData.cycle === 'string' ? cardData.cycle : '0',
           coinFill: typeof cardData.coinFill === 'string' ? cardData.coinFill : COIN_EMPTY_COLOR,
+          previousPvLeft: Number.isFinite(cardData.previousPvLeft) ? cardData.previousPvLeft : 330,
           total: toFiniteNumber(cardData.total),
           stage: toFiniteNumber(cardData.stage),
           toNext: toFiniteNumber(cardData.toNext),
