@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { pool } from './db.js';
 import { authenticateToken } from './middleware/auth.js';
-import { createWriteStream } from 'fs';
+import { createWriteStream, promises as fsPromises } from 'fs';
 import { pipeline } from 'stream/promises';
 import { randomBytes } from 'crypto';
 import path from 'path';
@@ -778,6 +778,68 @@ app.post('/api/boards/:id/duplicate', async (req, reply) => {
     return reply.send({ board: result.rows[0] });
   } catch (err) {
     console.error('❌ Ошибка дублирования доски:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+// Загрузить миниатюру доски
+app.post('/api/boards/:id/thumbnail', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { id: boardId } = req.params;
+    const { image } = req.body || {};
+
+    if (typeof image !== 'string' || image.length === 0) {
+      return reply.code(400).send({ error: 'Отсутствует изображение' });
+    }
+
+    const prefix = 'data:image/png;base64,';
+    const base64Data = image.startsWith(prefix) ? image.slice(prefix.length) : image;
+
+    let buffer;
+    try {
+      buffer = Buffer.from(base64Data, 'base64');
+    } catch (error) {
+      return reply.code(400).send({ error: 'Некорректные данные изображения' });
+    }
+
+    if (buffer.length === 0) {
+      return reply.code(400).send({ error: 'Некорректные данные изображения' });
+    }
+
+    const boardResult = await pool.query(
+      'SELECT owner_id FROM boards WHERE id = $1',
+      [boardId]
+    );
+
+    if (boardResult.rows.length === 0) {
+      return reply.code(404).send({ error: 'Доска не найдена' });
+    }
+
+    if (boardResult.rows[0].owner_id !== decoded.userId) {
+      return reply.code(403).send({ error: 'Нет доступа' });
+    }
+
+    const boardsDir = path.join(__dirname, 'uploads', 'boards');
+    await fsPromises.mkdir(boardsDir, { recursive: true });
+
+    const filePath = path.join(boardsDir, `${boardId}.png`);
+    await fsPromises.writeFile(filePath, buffer);
+
+    const thumbnailUrl = `/uploads/boards/${boardId}.png`;
+
+    await pool.query(
+      'UPDATE boards SET thumbnail_url = $1 WHERE id = $2 AND owner_id = $3',
+      [thumbnailUrl, boardId, decoded.userId]
+    );
+
+    return reply.send({ thumbnail_url: thumbnailUrl });
+  } catch (err) {
+    console.error('❌ Ошибка загрузки миниатюры доски:', err);
     return reply.code(500).send({ error: 'Ошибка сервера' });
   }
 });
