@@ -33,7 +33,10 @@ const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
 const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
  
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
-
+const lastSavedFormatter = new Intl.DateTimeFormat('ru-RU', {
+  hour: '2-digit',
+  minute: '2-digit'
+})
 const userInitials = computed(() => {
   if (!authStore.user?.name) return '?'
   const names = authStore.user.name.trim().split(/\s+/)
@@ -47,6 +50,19 @@ const isHierarchyMode = computed(() => canvasStore.isHierarchicalDragMode)
 const showUserMenu = ref(false)
 const userMenuRef = ref(null)
 const userMenuTriggerRef = ref(null)
+const formattedLastSaved = computed(() => {
+  if (!lastSaved.value) return ''
+
+  const date = lastSaved.value instanceof Date
+    ? lastSaved.value
+    : new Date(lastSaved.value)
+
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  return lastSavedFormatter.format(date)
+})
 
 const handleUndo = () => {
   historyStore.undo()
@@ -278,9 +294,9 @@ watch(
                   <span class="status-spinner">⏳</span>
                   <span>Сохранение...</span>
                 </template>
-                <template v-else-if="lastSaved">
+                <template v-else-if="formattedLastSaved">
                   <span class="status-icon">✓</span>
-                  <span>Сохранено</span>
+                  <span>Сохранено в {{ formattedLastSaved }}</span>
                 </template>
                 <template v-else>
                   <span>Нет сохранений</span>
