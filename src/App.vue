@@ -65,6 +65,7 @@ const isMobileAuthModalOpen = ref(false)
 const isBoardsModalOpen = ref(false)
 const menuTouchPointers = new Map()
 let menuPointerListenersAttached = false
+let initialMenuPinchDistance = null
 
 const MENU_SCALE_MIN = 1
 const MENU_SCALE_MAX = 1.6
@@ -228,9 +229,8 @@ async function loadBoard(boardId) {
       if (content.objects && Array.isArray(content.objects)) {
         content.objects.forEach(cardData => {
           cardsStore.addCard(cardData, { saveToHistory: false })
-  document.addEventListener('click', () => {
-    activeMenu.value = null
-  })
+        })
+      }
       // Восстанавливаем соединения
       if (content.connections && Array.isArray(content.connections)) {
         content.connections.forEach(connData => {
@@ -267,7 +267,7 @@ async function saveCurrentBoard() {
 
     // Получаем состояние canvas
     const canvasState = getCanvasState()
-      const boardName = (currentBoardName.value ?? '').trim()
+    const boardName = (currentBoardName.value ?? '').trim()
     let boardId = currentBoardId.value
 
     if (!boardId) {
@@ -301,7 +301,7 @@ async function saveCurrentBoard() {
     }
 
     const response = await fetch(`${API_URL}/boards/${boardId}`, {
-     method: 'PUT',
+      method: 'PUT',
       headers: {
         'Authorization': `Bearer ${authStore.token}`,
         'Content-Type': 'application/json'
@@ -548,7 +548,7 @@ const handleMenuPointerMove = (event) => {
   }
 
   menuTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
-   updateMenuScaleState()
+  updateMenuScaleState()
 }
 
 const handleMenuPointerUp = (event) => {
@@ -560,7 +560,7 @@ const handleMenuPointerUp = (event) => {
   if (wasPresent && menuTouchPointers.size < 3) {
     initialMenuPinchDistance = null
   }
- updateMenuScaleState()
+  updateMenuScaleState()
 }
 
 const attachMenuPointerListeners = () => {
@@ -670,8 +670,9 @@ onBeforeUnmount(() => {
         :class="{ 'save-floating-button--modern': isModernTheme }"
         type="button"
         :disabled="isSaving || !isSaveAvailable"
-        :title="saveTooltip"        @click="saveCurrentBoard"
-      >
+        :title="saveTooltip"
+        @click="saveCurrentBoard"
+       >
         💾 Сохранить
       </button>
     </template>
@@ -696,7 +697,7 @@ onBeforeUnmount(() => {
         @fit-to-content="handleFitToContent"
         @open-profile="handleOpenProfile"
         @request-auth="openMobileAuthPrompt"
-       />
+      />
       <MobileSidebar
         v-show="!isPencilMode && !showResetPassword"
         :is-modern-theme="isModernTheme"
