@@ -164,16 +164,6 @@ onBeforeUnmount(() => {
     ]"
   >
     <div class="app-header__inner">
-      <div v-if="isAuthenticated" class="app-header__zoom-block">
-        <button
-          class="app-header__zoom-button"
-          type="button"
-          title="Автоподгонка масштаба"
-          @click="handleZoomClick"
-        >
-          Масштаб: <span class="app-header__zoom-value">{{ props.zoomDisplay }}</span>
-        </button>
-      </div>
       <div class="app-header__user-block">
         <div class="app-header__auth">
           <template v-if="isAuthenticated">
@@ -335,25 +325,15 @@ onBeforeUnmount(() => {
   display: contents;
 }
 
-.app-header__user-block,
-.app-header__zoom-block {
+.app-header__user-block {
   position: fixed;
   top: 16px;
+  right: 24px;
   display: flex;
   align-items: center;
   min-width: 0;
-  pointer-events: auto;
-}
-
-.app-header__user-block {
-  right: 24px;
   justify-content: flex-end;
-}
-
-.app-header__zoom-block {
-  left: 50%;
-  transform: translateX(-50%);
-  justify-content: center;
+  pointer-events: auto;
 }
 .app-header__auth {
   position: relative;
@@ -614,42 +594,7 @@ onBeforeUnmount(() => {
 .app-header--modern .user-menu__divider {
   background: rgba(229, 243, 255, 0.18);
 }
-.app-header__zoom-button {
-  padding: 10px 24px;
-  border-radius: 18px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.92);
-  color: #0f172a;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.16);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-  backdrop-filter: blur(6px);
-}
 
-.app-header__zoom-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.2);
-  background: rgba(255, 255, 255, 0.98);  
-}
-
-.app-header__zoom-value {
-  margin-left: 6px;
-  font-weight: 800;
-}
-
-.app-header--modern .app-header__zoom-button {
-  border-color: rgba(96, 164, 255, 0.38);
-  background: rgba(32, 45, 72, 0.9);
-  color: #e5f3ff;
-  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.55);
-}
-
-.app-header--modern .app-header__zoom-button:hover {
-  background: rgba(52, 72, 108, 0.96);
-  box-shadow: 0 24px 42px rgba(6, 11, 21, 0.65);
-  }
 .app-header__btn {
   padding: 8px 20px;
   border-radius: 12px;
@@ -715,11 +660,6 @@ onBeforeUnmount(() => {
   .app-header__inner {
     grid-template-columns: 1fr;
     gap: 12px;
-  }
-
-  .app-header__zoom-block {
-    left: 50%;
-    transform: translateX(-50%);
   }
 
   .app-header__user-block {

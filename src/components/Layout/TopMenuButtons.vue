@@ -1,9 +1,12 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import DiscussionMenu from './DiscussionMenu.vue'
 import ToolsMenu from './ToolsMenu.vue'
-import ViewMenu from './ViewMenu.vue'  
+import ViewMenu from './ViewMenu.vue'
 import ProjectMenu from './ProjectMenu.vue'
+import { useHistoryStore } from '../../stores/history.js'
+
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -12,6 +15,9 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['activate-pencil', 'toggle-theme'])
+
+const historyStore = useHistoryStore()
+const { canUndo, canRedo } = storeToRefs(historyStore)
   
 const menuItems = [
   { id: 'project', label: 'Проект' },
@@ -50,6 +56,17 @@ function handleToggleTheme() {
   emit('toggle-theme')
   closeMenu()
 }
+
+function handleUndo() {
+  if (!canUndo.value) return
+  historyStore.undo()
+}
+
+function handleRedo() {
+  if (!canRedo.value) return
+  historyStore.redo()
+}
+
 function handleClickOutside(event) {
   if (!menuWrapperRef.value) return
   if (!menuWrapperRef.value.contains(event.target)) {
@@ -81,6 +98,24 @@ onBeforeUnmount(() => {
     >
       <span class="top-menu__theme-icon" aria-hidden="true"></span>
       <span class="visually-hidden">{{ themeTitle }}</span>
+    </button>
+    <button
+      class="top-menu__action-button"
+      type="button"
+      title="Отменить (Ctrl+Z)"
+      :disabled="!canUndo"
+      @click.stop="handleUndo"
+    >
+      ↶
+    </button>
+    <button
+      class="top-menu__action-button"
+      type="button"
+      title="Повторить (Ctrl+Shift+Z)"
+      :disabled="!canRedo"
+      @click.stop="handleRedo"
+    >
+      ↷
     </button>
     <div v-for="item in menuItems" :key="item.id" class="top-menu__item">
       <button
@@ -178,6 +213,50 @@ onBeforeUnmount(() => {
 .top-menu__theme-icon::after {
   inset: 7px;
   opacity: 0.2;
+}
+
+.top-menu__action-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: #1d4ed8;
+  font-size: 20px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  backdrop-filter: blur(6px);
+}
+
+.top-menu__action-button:hover:enabled {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 36px rgba(15, 23, 42, 0.24);
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+.top-menu__action-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+}
+
+.top-menu--modern .top-menu__action-button {
+  border-color: rgba(96, 164, 255, 0.32);
+  background: rgba(28, 38, 62, 0.88);
+  color: #bcdcff;
+  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.55);
+}
+
+.top-menu--modern .top-menu__action-button:hover:enabled {
+  background: rgba(48, 68, 102, 0.92);
+  box-shadow: 0 24px 42px rgba(6, 11, 21, 0.65);
+  border-color: rgba(114, 182, 255, 0.55);
 }
 
 .top-menu--modern .top-menu__theme-button {

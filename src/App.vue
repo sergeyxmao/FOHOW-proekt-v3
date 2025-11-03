@@ -708,6 +708,17 @@ onBeforeUnmount(() => {
       <button
         v-if="isAuthenticated"
         v-show="!isPencilMode && !showResetPassword"
+        class="zoom-floating-button"
+        :class="{ 'zoom-floating-button--modern': isModernTheme }"
+        type="button"
+        title="Автоподгонка масштаба"
+        @click="handleFitToContent"
+      >
+        Масштаб: <span class="zoom-floating-button__value">{{ zoomDisplay }}</span>
+      </button>
+      <button
+        v-if="isAuthenticated"
+        v-show="!isPencilMode && !showResetPassword"
         class="save-floating-button"
         :class="{ 'save-floating-button--modern': isModernTheme }"
         type="button"
@@ -1056,6 +1067,53 @@ html,body{
   }
 }
 
+.zoom-floating-button {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 1800;
+  padding: 12px 22px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(248, 250, 252, 0.92);
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  backdrop-filter: blur(6px);
+}
+
+.zoom-floating-button:hover {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 24px 42px rgba(15, 98, 254, 0.32);
+  background: #0f62fe;
+  color: #ffffff;
+  border-color: rgba(15, 98, 254, 0.8);
+}
+
+.zoom-floating-button__value {
+  margin-left: 6px;
+  font-weight: 800;
+}
+
+.zoom-floating-button--modern {
+  border-color: rgba(104, 171, 255, 0.45);
+  background: rgba(32, 44, 68, 0.9);
+  color: #e5f3ff;
+  box-shadow: 0 22px 42px rgba(6, 11, 21, 0.55);
+}
+
+.zoom-floating-button--modern:hover {
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 28px 48px rgba(12, 84, 196, 0.4);
+  background: #0f62fe;
+  color: #ffffff;
+  border-color: rgba(15, 98, 254, 0.85);
+}
+
 .save-floating-button {
   position: fixed;
   right: 24px;
@@ -1124,7 +1182,8 @@ html,body{
 }
 
 /* Hide desktop-only elements in mobile mode */
-.app--mobile .save-floating-button {
+.app--mobile .save-floating-button,
+.app--mobile .zoom-floating-button {
   display: none;
 }
 
