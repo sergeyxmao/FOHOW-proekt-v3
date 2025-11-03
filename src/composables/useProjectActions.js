@@ -122,6 +122,9 @@ const getExportSvgCss = () => `
   #canvas .canvas-container{overflow:visible;}
   #canvas .canvas-content{overflow:visible;}
   #canvas .cards-container{overflow:visible;}
+  #canvas .svg-layer{overflow:visible !important;}
+  #canvas .line-group{pointer-events:none !important;}
+  #canvas .line{pointer-events:none !important;}
   #canvas .note-window{position:absolute;background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.15);min-width:200px;min-height:200px;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(15,23,42,0.12);transform-origin:top left;}
   #canvas .note-window::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;box-shadow:inset 0 0 0 1px rgba(15,23,42,0.04);}
   #canvas .note-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:linear-gradient(135deg,rgba(244,67,54,0.12),rgba(255,255,255,0.9));gap:12px;user-select:none;cursor:default;}
@@ -285,9 +288,17 @@ export function useProjectActions() {
       const svgLayer = canvasContainer.querySelector('.svg-layer')
       const noteWindows = Array.from(document.querySelectorAll('.note-window'))
 
+      // Получаем все видимые линии (не hitbox)
+      const connectionLines = svgLayer
+        ? Array.from(svgLayer.querySelectorAll('.line-group')).map(group => {
+            const pathElement = group.querySelector('.line:not(.line-hitbox)')
+            return pathElement
+          }).filter(Boolean)
+        : []
+
       const svgGraphics = svgLayer
         ? Array.from(svgLayer.querySelectorAll('path, line, polyline, polygon, rect, circle, ellipse')).filter(
-          element => !element.classList.contains('line-hitbox')
+          element => !element.classList.contains('line-hitbox') && !element.classList.contains('line--preview')
         )
         : []
 
@@ -298,7 +309,6 @@ export function useProjectActions() {
 
       const transformValues = parseTransform(window.getComputedStyle(canvasContent).transform)
       const safeScale = transformValues.scale || 1
-      const containerRect = canvasContainer.getBoundingClientRect()
 
       const bounds = {
         minX: Infinity,
@@ -317,9 +327,10 @@ export function useProjectActions() {
         bounds.maxY = Math.max(bounds.maxY, bottom)
       }
 
+      // Включаем границы карточек на основе их CSS координат (не getBoundingClientRect)
       cards.forEach((card) => {
-        const left = Number.parseFloat(card.style.left) || card.offsetLeft || 0
-        const top = Number.parseFloat(card.style.top) || card.offsetTop || 0
+        const left = Number.parseFloat(card.style.left) || 0
+        const top = Number.parseFloat(card.style.top) || 0
         const width = Number.parseFloat(card.style.width) || card.offsetWidth || 0
         const explicitHeight = Number.parseFloat(card.style.height)
         const minHeight = Number.parseFloat(card.style.minHeight)
@@ -331,38 +342,41 @@ export function useProjectActions() {
         includeBounds(left, top, left + width, top + height)
       })
 
+      // Включаем границы соединительных линий
       svgGraphics.forEach((element) => {
         if (!(element instanceof SVGGraphicsElement)) {
           return
         }
-        const bbox = element.getBBox()
-        if (!bbox || (!bbox.width && !bbox.height)) {
-          return
+        try {
+          const bbox = element.getBBox()
+          if (bbox && (bbox.width > 0 || bbox.height > 0)) {
+            includeBounds(bbox.x, bbox.y, bbox.x + bbox.width, bbox.y + bbox.height)
+          }
+        } catch (e) {
+          // Игнорируем ошибки getBBox для невалидных элементов
         }
-        includeBounds(bbox.x, bbox.y, bbox.x + bbox.width, bbox.y + bbox.height)
       })
 
       const noteMetrics = noteWindows.map((note) => {
-        const noteRect = note.getBoundingClientRect()
         const styleLeft = Number.parseFloat(note.style.left)
         const styleTop = Number.parseFloat(note.style.top)
         const styleWidth = Number.parseFloat(note.style.width)
         const styleHeight = Number.parseFloat(note.style.height)
 
-        const screenLeft = Number.isFinite(styleLeft) ? styleLeft : noteRect.left - containerRect.left
-        const screenTop = Number.isFinite(styleTop) ? styleTop : noteRect.top - containerRect.top
-        const baseWidth = Number.isFinite(styleWidth) ? styleWidth : noteRect.width / safeScale
-        const baseHeight = Number.isFinite(styleHeight) ? styleHeight : noteRect.height / safeScale
-
-        const boardLeft = (screenLeft - transformValues.x) / safeScale
-        const boardTop = (screenTop - transformValues.y) / safeScale
+        // Используем прямые координаты из стилей, если они заданы
+        const boardLeft = Number.isFinite(styleLeft) ? styleLeft : 0
+        const boardTop = Number.isFinite(styleTop) ? styleTop : 0
+        const baseWidth = Number.isFinite(styleWidth) ? styleWidth : 200
+        const baseHeight = Number.isFinite(styleHeight) ? styleHeight : 200
 
         includeBounds(boardLeft, boardTop, boardLeft + baseWidth, boardTop + baseHeight)
 
         return {
           original: note,
           boardLeft,
-          boardTop
+          boardTop,
+          width: baseWidth,
+          height: baseHeight
         }
       })
 
@@ -450,9 +464,20 @@ export function useProjectActions() {
         svgLayerClone.style.width = `${normalizedContentWidth}px`
         svgLayerClone.style.height = `${normalizedContentHeight}px`
         svgLayerClone.style.pointerEvents = 'none'
+        svgLayerClone.style.overflow = 'visible'
+
+        // Убедимся, что все линии видимы и правильно стилизованы для экспорта
+        const lineGroups = svgLayerClone.querySelectorAll('.line-group')
+        lineGroups.forEach(group => {
+          const visibleLine = group.querySelector('.line:not(.line-hitbox)')
+          if (visibleLine) {
+            // Удаляем классы анимации и выделения для экспорта
+            visibleLine.classList.remove('selected', 'line--balance-highlight', 'line--pv-highlight', 'line--balance-flash')
+          }
+        })
       }
 
-      const noteClones = noteMetrics.map(({ original, boardLeft, boardTop }) => {
+      const noteClones = noteMetrics.map(({ original, boardLeft, boardTop, width, height }) => {
         const noteClone = original.cloneNode(true)
         const originalTextareas = original.querySelectorAll('textarea')
         const clonedTextareas = noteClone.querySelectorAll('textarea')
