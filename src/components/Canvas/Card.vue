@@ -442,18 +442,19 @@ const handleCoinClick = (event) => {
   const currentLeft = Number.parseInt(pvLeftValue.value, 10);
 
   if (isCoinBlue.value) {
-    // Если кружок синий (значение 330/330pv), меняем на золотой и устанавливаем 30/330pv
+    // Если кружок синий, меняем на золотой и устанавливаем минимальное значение
     cardsStore.updateCard(props.card.id, {
       pv: `${MIN_LEFT_PV}/${PV_RIGHT_VALUE}pv`,
       coinFill: '#ffd700',
-      previousPvLeft: currentLeft // Сохраняем предыдущее значение
+      previousPvLeft: currentLeft // Сохраняем текущее значение
     });
   } else if (isCoinGold.value) {
-    // Если кружок золотой, возвращаем предыдущее значение и делаем синим
-    const previousLeft = props.card.previousPvLeft || PV_RIGHT_VALUE;
+    // Если кружок золотой, возвращаем сохраненное значение или устанавливаем максимальное
+    const previousLeft = Number.isFinite(props.card.previousPvLeft) ? props.card.previousPvLeft : PV_RIGHT_VALUE;
     cardsStore.updateCard(props.card.id, {
       pv: `${previousLeft}/${PV_RIGHT_VALUE}pv`,
-      coinFill: '#3d85c6'
+      coinFill: '#3d85c6',
+      previousPvLeft: currentLeft // Сохраняем текущее значение для следующего переключения
     });
   }
 };
