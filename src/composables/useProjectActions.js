@@ -462,15 +462,10 @@ export function useProjectActions() {
             textarea.value = source.value
             textarea.textContent = source.value
           }
-           textarea.setAttribute('readonly', 'true')
-          textarea.setAttribute('aria-readonly', 'true')         
+          textarea.setAttribute('readonly', 'true')
+          textarea.setAttribute('aria-readonly', 'true')
         })
-        .filter(Boolean)
 
-      const width = contentWidth + PADDING * 2
-      const height = contentHeight + PADDING * 2
-
-const svgCssStyles = `
         noteClone.style.position = 'absolute'
         noteClone.style.left = `${boardLeft + offsetX}px`
         noteClone.style.top = `${boardTop + offsetY}px`
