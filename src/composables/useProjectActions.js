@@ -479,11 +479,27 @@ export function useProjectActions() {
         anchorRight: card.anchorRight ? { x: card.anchorRight.x - minX + PADDING, y: card.anchorRight.y - minY + PADDING } : null
       }]))
 
-      const connectionPaths = connectionsStore.connections.map((connection) => ({
-        path: getConnectionPath(connection, adjustedCardsById),
-        color: connection.color || connectionsStore.defaultLineColor,
-        thickness: connection.thickness || connectionsStore.defaultLineThickness
-      }))
+      const connectionPaths = connectionsStore.connections
+        .map((connection) => {
+          const path = getConnectionPath(connection, adjustedCardsById)
+          if (!path) {
+            return null
+          }
+
+          const color = connection.color || connectionsStore.defaultLineColor
+          const thickness = connection.thickness || connectionsStore.defaultLineThickness
+          const animationDuration = (connection.animationDuration ?? connectionsStore.defaultAnimationDuration) || 0
+
+          return {
+            id: connection.id,
+            path,
+            color,
+            thickness,
+            highlightType: connection.highlightType || null,
+            animationDuration
+          }
+        })
+        .filter(Boolean)
 
       const width = contentWidth + PADDING * 2
       const height = contentHeight + PADDING * 2
@@ -508,6 +524,11 @@ export function useProjectActions() {
         .pv-row .value{font-size:18px;font-weight:600;}
         .card-body-html{margin-top:8px;text-align:left;width:100%;font-size:14px;line-height:1.45;color:#111827;}
         .svg-layer{position:absolute;inset:0;pointer-events:none;overflow:visible;}
+        .line{fill:none;stroke:var(--line-color,#0f62fe);stroke-width:var(--line-width,5px);stroke-linecap:round;stroke-linejoin:round;pointer-events:none;filter:drop-shadow(0 0 5px rgba(15,23,42,0.12));transition:stroke-width .2s ease,filter .2s ease,stroke .2s ease;}
+        .line--balance-highlight{stroke-dasharray:16;animation:lineBalanceFlow var(--line-animation-duration,2s) ease-in-out infinite;}
+        .line--pv-highlight{stroke-dasharray:14;animation:linePvFlow var(--line-animation-duration,2s) ease-in-out infinite;}
+        @keyframes lineBalanceFlow{0%{stroke-dashoffset:-24;}50%{stroke:#d93025;}100%{stroke-dashoffset:24;}}
+        @keyframes linePvFlow{0%{stroke-dashoffset:-18;}50%{stroke:#0f62fe;}100%{stroke-dashoffset:18;}}        
       `
 
       const svgInteractiveScript = `
@@ -635,9 +656,31 @@ export function useProjectActions() {
         <div class="canvas-content">
           ${cardHtmlList.join('')}
           <svg class="svg-layer" xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-            ${connectionPaths.filter(item => item.path).map((item) => `
-              <path d="${item.path}" stroke="${item.color}" stroke-width="${item.thickness}" fill="none" stroke-linecap="round" stroke-linejoin="round" />
-            `).join('')}
+            <defs>
+              <marker id="marker-dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" fill="currentColor">
+                <circle cx="5" cy="5" r="4" />
+              </marker>
+            </defs>
+            ${connectionPaths.map((item) => {
+              const highlightClass = item.highlightType === 'balance'
+                ? ' line--balance-highlight'
+                : item.highlightType === 'pv'
+                  ? ' line--pv-highlight'
+                  : ''
+              const styleParts = [
+                `--line-color:${escapeHtml(item.color)}`,
+                `--line-width:${escapeHtml(`${item.thickness}px`)}`,
+                `--line-animation-duration:${escapeHtml(`${item.animationDuration}ms`)}`,
+                `color:${escapeHtml(item.color)}`,
+                `stroke:${escapeHtml(item.color)}`,
+                `stroke-width:${escapeHtml(String(item.thickness))}`
+              ]
+              return `
+              <g class="line-group" data-connection-id="${escapeHtml(item.id)}">
+                <path d="${escapeHtml(item.path)}" class="line${highlightClass}" marker-start="url(#marker-dot)" marker-end="url(#marker-dot)" style="${styleParts.join(';')}" stroke="${escapeHtml(item.color)}" stroke-width="${escapeHtml(String(item.thickness))}" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+              </g>
+            `
+            }).join('')}
           </svg>
         </div>
       </div>
