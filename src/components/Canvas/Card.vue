@@ -442,15 +442,15 @@ const handleCoinClick = (event) => {
   const currentLeft = Number.parseInt(pvLeftValue.value, 10);
 
   if (isCoinBlue.value) {
-    // Если кружок синий, меняем на золотой и устанавливаем минимальное значение
+    // Если кружок синий, меняем на желтый и устанавливаем максимальное значение (330)
     cardsStore.updateCard(props.card.id, {
-      pv: `${MIN_LEFT_PV}/${PV_RIGHT_VALUE}pv`,
+      pv: `${MAX_LEFT_PV}/${PV_RIGHT_VALUE}pv`,
       coinFill: '#ffd700',
       previousPvLeft: currentLeft // Сохраняем текущее значение
     });
   } else if (isCoinGold.value) {
-    // Если кружок золотой, возвращаем сохраненное значение или устанавливаем максимальное
-    const previousLeft = Number.isFinite(props.card.previousPvLeft) ? props.card.previousPvLeft : PV_RIGHT_VALUE;
+    // Если кружок желтый, возвращаем сохраненное значение или устанавливаем минимальное
+    const previousLeft = Number.isFinite(props.card.previousPvLeft) ? props.card.previousPvLeft : MIN_LEFT_PV;
     cardsStore.updateCard(props.card.id, {
       pv: `${previousLeft}/${PV_RIGHT_VALUE}pv`,
       coinFill: '#3d85c6',
@@ -646,7 +646,7 @@ watch(
           viewBox="0 0 100 100"
           xmlns="http://www.w3.org/2000/svg"
           @click="handleCoinClick"
-          :title="isCoinBlue ? 'Кликните, чтобы установить минимальное значение (30)' : 'Кликните, чтобы вернуть предыдущее значение'"
+          :title="isCoinBlue ? 'Кликните, чтобы установить максимальное значение (330)' : 'Кликните, чтобы вернуть предыдущее значение'"
         >
           <circle cx="50" cy="50" r="45" :fill="coinFillColor" stroke="#DAA520" stroke-width="5"/>
         </svg>
