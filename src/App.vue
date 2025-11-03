@@ -212,39 +212,28 @@ async function loadBoard(boardId) {
     // Устанавливаем текущую доску
     boardStore.setCurrentBoard(data.board.id, data.board.name)
 
-    // Очищаем текущее состояние
-    cardsStore.cards = []
-    connectionsStore.connections = []
+    const content = data.board.content || {}
 
-    // Загружаем содержимое доски
-    if (data.board.content) {
-      const content = data.board.content
-
-      // Восстанавливаем фон
-      if (content.background) {
-        canvasStore.backgroundColor = content.background
-      }
-
-      // Восстанавливаем карточки
-      if (content.objects && Array.isArray(content.objects)) {
-        content.objects.forEach(cardData => {
-          cardsStore.addCard(cardData, { saveToHistory: false })
-        })
-      }
-      // Восстанавливаем соединения
-      if (content.connections && Array.isArray(content.connections)) {
-        content.connections.forEach(connData => {
-          connectionsStore.addConnection(connData.from, connData.to, {
-            ...connData,
-            saveToHistory: false
-          })
-        })
-      }
-
-      console.log('✅ Загружена доска:', data.board.name)
-      console.log('  Карточек:', content.objects?.length || 0)
-      console.log('  Соединений:', content.connections?.length || 0)
+    // Восстанавливаем фон
+    if (content.background) {
+      canvasStore.backgroundColor = content.background
     }
+  
+    // Восстанавливаем карточки через специализированный метод,
+    // чтобы сохранить оригинальные стили и параметры
+    const cardsData = Array.isArray(content.objects) ? content.objects : []
+    cardsStore.loadCards(cardsData)
+
+    // Восстанавливаем соединения через стандартный загрузчик,
+    // чтобы корректно перенести все свойства
+    const connectionsData = Array.isArray(content.connections)
+      ? content.connections
+      : []
+    connectionsStore.loadConnections(connectionsData)
+
+    console.log('✅ Загружена доска:', data.board.name)
+    console.log('  Карточек:', cardsData.length)
+    console.log('  Соединений:', connectionsData.length) 
     
     boardStore.isSaving = false
     
