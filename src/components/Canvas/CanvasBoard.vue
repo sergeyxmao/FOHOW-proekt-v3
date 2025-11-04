@@ -468,9 +468,11 @@ const handleActivePvButtonClick = (event) => {
   let result;
 
   const action = button.dataset.action || 'delta';
+  let shouldAnimate = false; // Флаг для определения, нужна ли анимация
 
   if (action === 'clear-all') {
     result = applyActivePvClear({ cards: cardsStore.cards, meta, cardId });
+    shouldAnimate = false; // Не анимируем при очистке (корзина)
   } else {
     const direction = button.dataset.dir === 'right' ? 'right' : 'left';
     let step = Number(button.dataset.step);
@@ -492,6 +494,9 @@ const handleActivePvButtonClick = (event) => {
       if (step === 0) {
         return;
       }
+      shouldAnimate = false; // Не анимируем при уменьшении (-1, -10)
+    } else {
+      shouldAnimate = true; // Анимируем только при увеличении (+1, +10)
     }
 
     result = applyActivePvDelta({
@@ -508,7 +513,7 @@ const handleActivePvButtonClick = (event) => {
 
   const updateEntries = Object.entries(updates);
 
- 
+
 
   console.log('📦 Результат applyActivePvDelta:', {
 
@@ -516,11 +521,13 @@ const handleActivePvButtonClick = (event) => {
 
     changedIds,
 
-    cardId
+    cardId,
+
+    shouldAnimate
 
   });
 
- 
+
 
   if (updateEntries.length === 0) {
 
@@ -528,7 +535,7 @@ const handleActivePvButtonClick = (event) => {
 
   }
 
- 
+
 
   updateEntries.forEach(([id, payload]) => {
 
@@ -536,7 +543,7 @@ const handleActivePvButtonClick = (event) => {
 
   });
 
- 
+
 
   const description = card?.text
 
@@ -544,11 +551,11 @@ const handleActivePvButtonClick = (event) => {
 
     : 'Изменены бонусы Active-PV';
 
- 
 
-  // Запускаем анимацию для всех измененных карточек
 
-  if (changedIds.length > 0) {
+  // Запускаем анимацию ТОЛЬКО если значения увеличились (shouldAnimate === true)
+
+  if (shouldAnimate && changedIds.length > 0) {
 
     console.log('🎯 Запуск анимации для changedIds:', changedIds);
 
@@ -558,9 +565,13 @@ const handleActivePvButtonClick = (event) => {
 
     });
 
+  } else {
+
+    console.log('❌ Анимация НЕ запускается (уменьшение или очистка)');
+
   }
 
- 
+
 
   applyActivePvPropagation(cardId, { saveHistory: true, historyDescription: description, triggerAnimation: false });
 };  

@@ -1,8 +1,9 @@
 <script setup>
 import { ref, nextTick, computed, watch } from 'vue';
 import { useCardsStore } from '../../stores/cards';
+import { useViewSettingsStore } from '../../stores/viewSettings';
 import { parseActivePV } from '../../utils/activePv';
-import { calcStagesAndCycles } from '../../utils/calculationEngine';  
+import { calcStagesAndCycles } from '../../utils/calculationEngine';
 import { buildCardCssVariables } from '../../utils/constants';
   
 const props = defineProps({
@@ -28,6 +29,7 @@ const emit = defineEmits([
   ]);
 
 const cardsStore = useCardsStore();
+const viewSettingsStore = useViewSettingsStore();
 const isEditing = ref(false);
 const editText = ref(props.card.text);
 const textInput = ref(null);
@@ -621,9 +623,14 @@ const parseBalanceValue = (str) => {
 
  
 
-// Длительность анимации (синхронизирована с анимацией линии)
+// Длительность одной пульсации числа (фиксированная)
+const PULSE_DURATION = 600;
 
-const ANIMATION_DURATION = 600;
+// Общая длительность анимации (из настроек, синхронизирована с анимацией линии)
+const animationDuration = computed(() => viewSettingsStore.animationDurationMs || 2000);
+
+// Количество повторений пульсации для соответствия длительности анимации линий
+const pulseIterations = computed(() => Math.ceil(animationDuration.value / PULSE_DURATION));
 
  
 
@@ -637,13 +644,13 @@ watch(
 
     if (!oldValue || newValue === oldValue) return;
 
- 
+
 
     const prev = parseBalanceValue(oldValue);
 
     const next = parseBalanceValue(newValue);
 
- 
+
 
     // Анимируем только если число увеличилось
 
@@ -655,11 +662,11 @@ watch(
 
         isBalanceLeftAnimating.value = false;
 
-      }, ANIMATION_DURATION);
+      }, animationDuration.value);
 
     }
 
- 
+
 
     if (next.right > prev.right) {
 
@@ -669,7 +676,7 @@ watch(
 
         isBalanceRightAnimating.value = false;
 
-      }, ANIMATION_DURATION);
+      }, animationDuration.value);
 
     }
 
@@ -689,13 +696,13 @@ watch(
 
     if (!oldValue || newValue === oldValue) return;
 
- 
+
 
     const prev = parseBalanceValue(oldValue);
 
     const next = parseBalanceValue(newValue);
 
- 
+
 
     // Анимируем только если число увеличилось
 
@@ -707,11 +714,11 @@ watch(
 
         isActiveOrdersLeftAnimating.value = false;
 
-      }, ANIMATION_DURATION);
+      }, animationDuration.value);
 
     }
 
- 
+
 
     if (next.right > prev.right) {
 
@@ -721,27 +728,9 @@ watch(
 
         isActiveOrdersRightAnimating.value = false;
 
-      }, ANIMATION_DURATION);
+      }, animationDuration.value);
 
     }
-  }
-);
-
-// Следим за изменением активных заказов
-watch(
-  () => activeOrdersDisplay.value,
-  (newValue, oldValue) => {
-    if (oldValue && newValue !== oldValue) {
-      const isIncreased = compareBalanceValues(oldValue, newValue);
-
-      if (isIncreased) {
-        isActiveOrdersAnimating.value = true;
-        setTimeout(() => {
-          isActiveOrdersAnimating.value = false;
-        }, 600);
-      }
-    }
-    previousActiveOrdersValue.value = newValue;
   }
 );
 </script>
@@ -859,11 +848,17 @@ watch(
 
         >
 
-          <span :class="{ 'value--animating': isBalanceLeftAnimating }">{{ balanceDisplay.split(' / ')[0] }}</span>
+          <span
+            :class="{ 'value--animating': isBalanceLeftAnimating }"
+            :style="{ '--pulse-iterations': pulseIterations }"
+          >{{ balanceDisplay.split(' / ')[0] }}</span>
 
           <span class="value-separator"> / </span>
 
-          <span :class="{ 'value--animating': isBalanceRightAnimating }">{{ balanceDisplay.split(' / ')[1] }}</span>
+          <span
+            :class="{ 'value--animating': isBalanceRightAnimating }"
+            :style="{ '--pulse-iterations': pulseIterations }"
+          >{{ balanceDisplay.split(' / ')[1] }}</span>
 
         </span>
 
@@ -877,11 +872,17 @@ watch(
 
         <span class="value value-container">
 
-          <span :class="{ 'value--animating': isActiveOrdersLeftAnimating }">{{ activeOrdersDisplay.split(' / ')[0] }}</span>
+          <span
+            :class="{ 'value--animating': isActiveOrdersLeftAnimating }"
+            :style="{ '--pulse-iterations': pulseIterations }"
+          >{{ activeOrdersDisplay.split(' / ')[0] }}</span>
 
           <span class="value-separator"> / </span>
 
-          <span :class="{ 'value--animating': isActiveOrdersRightAnimating }">{{ activeOrdersDisplay.split(' / ')[1] }}</span>
+          <span
+            :class="{ 'value--animating': isActiveOrdersRightAnimating }"
+            :style="{ '--pulse-iterations': pulseIterations }"
+          >{{ activeOrdersDisplay.split(' / ')[1] }}</span>
 
         </span>
       </div>
@@ -1607,6 +1608,7 @@ watch(
 
   display: inline-block;
   animation: valueIncrease 0.6s ease-out;
+  animation-iteration-count: var(--pulse-iterations, 1);
 }
 
 @keyframes valueIncrease {
@@ -1636,6 +1638,7 @@ watch(
 .card--large .value--animating,
 .card--gold .value--animating {
   animation: valueIncreaseLarge 0.6s ease-out;
+  animation-iteration-count: var(--pulse-iterations, 1);
 }
 
 @keyframes valueIncreaseLarge {
