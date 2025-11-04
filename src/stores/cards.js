@@ -355,21 +355,21 @@ export const useCardsStore = defineStore('cards', {
         large: {
           width: 543.4,
           height: 364,
-          pv: '330/330pv',
+          pv: '30/330pv',
           text: generateLicenseNumber(),
           historyText: 'Создана большая лицензия'
         },
         small: {
           width: 418,
           height: 280,
-          pv: '330/330pv',
+          pv: '30/330pv',
           text: 'Малая лицензия',
           historyText: 'Создана малая лицензия'
            },
         gold: {
           width: 543.4,
           height: 364,
-          pv: '330/330pv',
+          pv: '30/330pv',
           text: generateLicenseNumber(),
           historyText: 'Создана золотая лицензия',
           headerBg: '#d4af37',
