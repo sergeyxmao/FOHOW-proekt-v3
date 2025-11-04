@@ -591,44 +591,139 @@ watch(
 );
 
 // Анимация для изменения чисел
-const isBalanceAnimating = ref(false);
-const isActiveOrdersAnimating = ref(false);
-const previousBalanceValue = ref(null);
-const previousActiveOrdersValue = ref(null);
+const isBalanceLeftAnimating = ref(false);
 
-// Функция для сравнения двух значений баланса "X / Y"
-const compareBalanceValues = (prev, next) => {
-  if (!prev || !next) return false;
+const isBalanceRightAnimating = ref(false);
 
-  const parseBalance = (str) => {
-    const match = String(str).match(/(\d+)\s*\/\s*(\d+)/);
-    if (!match) return { left: 0, right: 0, total: 0 };
-    const left = parseInt(match[1], 10);
-    const right = parseInt(match[2], 10);
-    return { left, right, total: left + right };
+const isActiveOrdersLeftAnimating = ref(false);
+
+const isActiveOrdersRightAnimating = ref(false);
+
+ 
+
+// Функция для парсинга значения "X / Y"
+
+const parseBalanceValue = (str) => {
+
+  const match = String(str).match(/(\d+)\s*\/\s*(\d+)/);
+
+  if (!match) return { left: 0, right: 0 };
+
+  return {
+
+    left: parseInt(match[1], 10),
+
+    right: parseInt(match[2], 10)
+
   };
 
-  const prevParsed = parseBalance(prev);
-  const nextParsed = parseBalance(next);
-
-  return nextParsed.total > prevParsed.total;
 };
 
-// Следим за изменением баланса
-watch(
-  () => balanceDisplay.value,
-  (newValue, oldValue) => {
-    if (oldValue && newValue !== oldValue) {
-      const isIncreased = compareBalanceValues(oldValue, newValue);
+ 
 
-      if (isIncreased) {
-        isBalanceAnimating.value = true;
-        setTimeout(() => {
-          isBalanceAnimating.value = false;
-        }, 600);
-      }
+// Длительность анимации (синхронизирована с анимацией линии)
+
+const ANIMATION_DURATION = 600;
+
+ 
+
+// Следим за изменением баланса
+
+watch(
+
+  () => balanceDisplay.value,
+
+  (newValue, oldValue) => {
+
+    if (!oldValue || newValue === oldValue) return;
+
+ 
+
+    const prev = parseBalanceValue(oldValue);
+
+    const next = parseBalanceValue(newValue);
+
+ 
+
+    // Анимируем только если число увеличилось
+
+    if (next.left > prev.left) {
+
+      isBalanceLeftAnimating.value = true;
+
+      setTimeout(() => {
+
+        isBalanceLeftAnimating.value = false;
+
+      }, ANIMATION_DURATION);
+
     }
-    previousBalanceValue.value = newValue;
+
+ 
+
+    if (next.right > prev.right) {
+
+      isBalanceRightAnimating.value = true;
+
+      setTimeout(() => {
+
+        isBalanceRightAnimating.value = false;
+
+      }, ANIMATION_DURATION);
+
+    }
+
+  }
+
+);
+
+ 
+
+// Следим за изменением активных заказов
+
+watch(
+
+  () => activeOrdersDisplay.value,
+
+  (newValue, oldValue) => {
+
+    if (!oldValue || newValue === oldValue) return;
+
+ 
+
+    const prev = parseBalanceValue(oldValue);
+
+    const next = parseBalanceValue(newValue);
+
+ 
+
+    // Анимируем только если число увеличилось
+
+    if (next.left > prev.left) {
+
+      isActiveOrdersLeftAnimating.value = true;
+
+      setTimeout(() => {
+
+        isActiveOrdersLeftAnimating.value = false;
+
+      }, ANIMATION_DURATION);
+
+    }
+
+ 
+
+    if (next.right > prev.right) {
+
+      isActiveOrdersRightAnimating.value = true;
+
+      setTimeout(() => {
+
+        isActiveOrdersRightAnimating.value = false;
+
+      }, ANIMATION_DURATION);
+
+    }
   }
 );
 
@@ -754,19 +849,41 @@ watch(
       <div class="card-row">
         <span class="label">Баланс:</span>
         <span
-          class="value"
-          :class="{ 'value--animating': isBalanceAnimating }"
+          class="value value-container"
+
           contenteditable="true"
+
           :title="`Автоматический баланс: ${automaticBalance.L} / ${automaticBalance.R}`"
+
           @blur="updateValue($event, 'manual-balance')"
+
         >
-          {{ balanceDisplay }}
+
+          <span :class="{ 'value--animating': isBalanceLeftAnimating }">{{ balanceDisplay.split(' / ')[0] }}</span>
+
+          <span class="value-separator"> / </span>
+
+          <span :class="{ 'value--animating': isBalanceRightAnimating }">{{ balanceDisplay.split(' / ')[1] }}</span>
+
         </span>
+
       </div>
 
+ 
+
       <div class="card-row">
+
         <span class="label">Актив-заказы:</span>
-        <span class="value" :class="{ 'value--animating': isActiveOrdersAnimating }">{{ activeOrdersDisplay }}</span>
+
+        <span class="value value-container">
+
+          <span :class="{ 'value--animating': isActiveOrdersLeftAnimating }">{{ activeOrdersDisplay.split(' / ')[0] }}</span>
+
+          <span class="value-separator"> / </span>
+
+          <span :class="{ 'value--animating': isActiveOrdersRightAnimating }">{{ activeOrdersDisplay.split(' / ')[1] }}</span>
+
+        </span>
       </div>
 
       <div class="card-active-controls" data-role="active-pv-buttons">
@@ -1458,8 +1575,37 @@ watch(
 
 }
 
+/* Контейнер для значений с разделением на части */
+
+.value-container {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 0;
+
+}
+
+ 
+
+.value-separator {
+
+  display: inline-block;
+
+  margin: 0;
+
+  padding: 0;
+
+}
+
+ 
+
 /* Анимация для изменения чисел */
+
 .value--animating {
+
+  display: inline-block;
   animation: valueIncrease 0.6s ease-out;
 }
 
