@@ -589,6 +589,66 @@ watch(
     );
   }
 );
+
+// Анимация для изменения чисел
+const isBalanceAnimating = ref(false);
+const isActiveOrdersAnimating = ref(false);
+const previousBalanceValue = ref(null);
+const previousActiveOrdersValue = ref(null);
+
+// Функция для сравнения двух значений баланса "X / Y"
+const compareBalanceValues = (prev, next) => {
+  if (!prev || !next) return false;
+
+  const parseBalance = (str) => {
+    const match = String(str).match(/(\d+)\s*\/\s*(\d+)/);
+    if (!match) return { left: 0, right: 0, total: 0 };
+    const left = parseInt(match[1], 10);
+    const right = parseInt(match[2], 10);
+    return { left, right, total: left + right };
+  };
+
+  const prevParsed = parseBalance(prev);
+  const nextParsed = parseBalance(next);
+
+  return nextParsed.total > prevParsed.total;
+};
+
+// Следим за изменением баланса
+watch(
+  () => balanceDisplay.value,
+  (newValue, oldValue) => {
+    if (oldValue && newValue !== oldValue) {
+      const isIncreased = compareBalanceValues(oldValue, newValue);
+
+      if (isIncreased) {
+        isBalanceAnimating.value = true;
+        setTimeout(() => {
+          isBalanceAnimating.value = false;
+        }, 600);
+      }
+    }
+    previousBalanceValue.value = newValue;
+  }
+);
+
+// Следим за изменением активных заказов
+watch(
+  () => activeOrdersDisplay.value,
+  (newValue, oldValue) => {
+    if (oldValue && newValue !== oldValue) {
+      const isIncreased = compareBalanceValues(oldValue, newValue);
+
+      if (isIncreased) {
+        isActiveOrdersAnimating.value = true;
+        setTimeout(() => {
+          isActiveOrdersAnimating.value = false;
+        }, 600);
+      }
+    }
+    previousActiveOrdersValue.value = newValue;
+  }
+);
 </script>
 
 <template>
@@ -695,6 +755,7 @@ watch(
         <span class="label">Баланс:</span>
         <span
           class="value"
+          :class="{ 'value--animating': isBalanceAnimating }"
           contenteditable="true"
           :title="`Автоматический баланс: ${automaticBalance.L} / ${automaticBalance.R}`"
           @blur="updateValue($event, 'manual-balance')"
@@ -705,7 +766,7 @@ watch(
 
       <div class="card-row">
         <span class="label">Актив-заказы:</span>
-        <span class="value">{{ activeOrdersDisplay }}</span>
+        <span class="value" :class="{ 'value--animating': isActiveOrdersAnimating }">{{ activeOrdersDisplay }}</span>
       </div>
 
       <div class="card-active-controls" data-role="active-pv-buttons">
@@ -1395,5 +1456,63 @@ watch(
 
   }
 
+}
+
+/* Анимация для изменения чисел */
+.value--animating {
+  animation: valueIncrease 0.6s ease-out;
+}
+
+@keyframes valueIncrease {
+  0% {
+    transform: scale(1);
+    color: #111827;
+  }
+  25% {
+    transform: scale(1.2);
+    color: #ef4444;
+  }
+  50% {
+    transform: scale(1.3);
+    color: #dc2626;
+    font-weight: 700;
+  }
+  75% {
+    transform: scale(1.15);
+    color: #ef4444;
+  }
+  100% {
+    transform: scale(1);
+    color: #111827;
+  }
+}
+
+.card--large .value--animating,
+.card--gold .value--animating {
+  animation: valueIncreaseLarge 0.6s ease-out;
+}
+
+@keyframes valueIncreaseLarge {
+  0% {
+    transform: scale(1);
+    color: #111827;
+  }
+  25% {
+    transform: scale(1.2);
+    color: #ef4444;
+  }
+  50% {
+    transform: scale(1.3);
+    color: #dc2626;
+    font-weight: 900;
+  }
+  75% {
+    transform: scale(1.15);
+    color: #ef4444;
+  }
+  100% {
+    transform: scale(1);
+    color: #111827;
+  }
 }
 </style>
