@@ -42,8 +42,9 @@ const currentTool = ref('brush');
 const brushColor = ref('#ff4757');
 const brushSize = ref(4);
 const markerSize = ref(60);
-const markerOpacity = ref(0.1);
+const markerOpacity = ref(0.01);
 const eraserSize = ref(24);
+const openDropdown = ref(null);
 const baseImage = ref(null);
 let previousHtmlOverflow = '';
 let previousBodyOverflow = '';
@@ -1031,7 +1032,24 @@ const handleBoardPointerCancel = (event) => {
   }
 
   finishPan(event);
-};  
+};
+
+const toggleDropdown = (toolName) => {
+  if (openDropdown.value === toolName) {
+    openDropdown.value = null;
+  } else {
+    openDropdown.value = toolName;
+  }
+};
+
+const selectTool = (toolName) => {
+  currentTool.value = toolName;
+  openDropdown.value = null;
+};
+
+const closeAllDropdowns = () => {
+  openDropdown.value = null;
+};
 </script>
 
 <template>
@@ -1069,166 +1087,205 @@ const handleBoardPointerCancel = (event) => {
       ></div>      
     </div>
 
-    <div
-      :class="panelClasses"
-      :style="panelStyle"
+    <!-- Кнопка закрытия в правом верхнем углу -->
+    <button
+      type="button"
+      class="pencil-overlay__close-button"
+      title="Сохранить и выйти"
+      @click="handleClose"
     >
-      <button
-        type="button"
-        class="pencil-overlay__close"
-        title="Сохранить и выйти"
-        @click="handleClose"
-      >
-        ✕
-      </button>
-      <div class="pencil-overlay__section">
-        <span class="pencil-overlay__section-title">Инструменты</span>
-        <div class="pencil-overlay__tool-buttons">
-          <button
-            type="button"
-            :class="[
-              'pencil-overlay__tool-button',
-              { 'pencil-overlay__tool-button--active': currentTool === 'brush' }
-            ]"
-            title="Карандаш"
-            @click="currentTool = 'brush'"
-          >
-            ✏️
-          </button>
-          <button
-            type="button"
-            :class="[
-              'pencil-overlay__tool-button',
-              { 'pencil-overlay__tool-button--active': currentTool === 'marker' }
-            ]"
-            title="Маркер"
-            @click="currentTool = 'marker'"
-          >
-            🖍️
-          </button>
-          <button
-            type="button"
-            :class="[
-              'pencil-overlay__tool-button',
-              { 'pencil-overlay__tool-button--active': currentTool === 'eraser' }
-            ]"
-            title="Ластик"
-            @click="currentTool = 'eraser'"
-          >
-            🧽
-          </button>
-          <button
-            type="button"
-            :class="[
-              'pencil-overlay__tool-button',
-              { 'pencil-overlay__tool-button--active': currentTool === 'selection' }
-            ]"
-            title="Выделение"
-            @click="currentTool = 'selection'"
-          >
-            🔲
-          </button>
+      ✕
+    </button>
+
+    <!-- Кнопки инструментов в левом верхнем углу -->
+    <div class="pencil-overlay__tools-bar">
+      <!-- Карандаш -->
+      <div class="pencil-overlay__tool-item">
+        <button
+          type="button"
+          :class="[
+            'pencil-overlay__tool-btn',
+            { 'pencil-overlay__tool-btn--active': currentTool === 'brush' }
+          ]"
+          title="Карандаш"
+          @click="toggleDropdown('brush')"
+        >
+          ✏️
+        </button>
+        <div
+          v-if="openDropdown === 'brush'"
+          class="pencil-overlay__dropdown"
+        >
+          <div class="pencil-overlay__dropdown-content">
+            <button
+              type="button"
+              class="pencil-overlay__dropdown-select-btn"
+              @click="selectTool('brush')"
+            >
+              Выбрать карандаш
+            </button>
+            <label class="pencil-overlay__control">
+              <span>Цвет</span>
+              <input v-model="brushColor" type="color" />
+            </label>
+            <label class="pencil-overlay__control">
+              <span>Толщина: {{ brushSize }} px</span>
+              <input
+                v-model.number="brushSize"
+                type="range"
+                min="1"
+                max="24"
+              />
+            </label>
+          </div>
         </div>
       </div>
-      <div class="pencil-overlay__section">
-        <span class="pencil-overlay__section-title">Действия</span>
-        <div class="pencil-overlay__action-buttons">
-          <button
-            type="button"
-            class="pencil-overlay__action-button"
-            :disabled="!canUndo"
-            @click="undo"
-          >
-            ↶ Отмена
-          </button>
-          <button
-            type="button"
-            class="pencil-overlay__action-button"
-            :disabled="!canRedo"
-            @click="redo"
-          >
-          Повтор ↷
+
+      <!-- Маркер -->
+      <div class="pencil-overlay__tool-item">
+        <button
+          type="button"
+          :class="[
+            'pencil-overlay__tool-btn',
+            { 'pencil-overlay__tool-btn--active': currentTool === 'marker' }
+          ]"
+          title="Маркер"
+          @click="toggleDropdown('marker')"
+        >
+          🖍️
         </button>
+        <div
+          v-if="openDropdown === 'marker'"
+          class="pencil-overlay__dropdown"
+        >
+          <div class="pencil-overlay__dropdown-content">
+            <button
+              type="button"
+              class="pencil-overlay__dropdown-select-btn"
+              @click="selectTool('marker')"
+            >
+              Выбрать маркер
+            </button>
+            <label class="pencil-overlay__control">
+              <span>Цвет</span>
+              <input v-model="brushColor" type="color" />
+            </label>
+            <label class="pencil-overlay__control">
+              <span>Толщина: {{ markerSize }} px</span>
+              <input
+                v-model.number="markerSize"
+                type="range"
+                :min="MARKER_MIN_SIZE"
+                :max="MARKER_MAX_SIZE"
+              />
+            </label>
+            <label class="pencil-overlay__control">
+              <span>Прозрачность: {{ markerOpacityPercent }}%</span>
+              <input
+                v-model.number="markerOpacity"
+                type="range"
+                min="0.01"
+                max="0.1"
+                step="0.01"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ластик -->
+      <div class="pencil-overlay__tool-item">
+        <button
+          type="button"
+          :class="[
+            'pencil-overlay__tool-btn',
+            { 'pencil-overlay__tool-btn--active': currentTool === 'eraser' }
+          ]"
+          title="Ластик"
+          @click="toggleDropdown('eraser')"
+        >
+          🧽
+        </button>
+        <div
+          v-if="openDropdown === 'eraser'"
+          class="pencil-overlay__dropdown"
+        >
+          <div class="pencil-overlay__dropdown-content">
+            <button
+              type="button"
+              class="pencil-overlay__dropdown-select-btn"
+              @click="selectTool('eraser')"
+            >
+              Выбрать ластик
+            </button>
+            <label class="pencil-overlay__control">
+              <span>Диаметр: {{ eraserSize }} px</span>
+              <input
+                v-model.number="eraserSize"
+                type="range"
+                :min="ERASER_MIN_SIZE"
+                :max="ERASER_MAX_SIZE"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Выделение -->
+      <div class="pencil-overlay__tool-item">
+        <button
+          type="button"
+          :class="[
+            'pencil-overlay__tool-btn',
+            { 'pencil-overlay__tool-btn--active': currentTool === 'selection' }
+          ]"
+          title="Выделение"
+          @click="toggleDropdown('selection')"
+        >
+          🔲
+        </button>
+        <div
+          v-if="openDropdown === 'selection'"
+          class="pencil-overlay__dropdown"
+        >
+          <div class="pencil-overlay__dropdown-content">
+            <button
+              type="button"
+              class="pencil-overlay__dropdown-select-btn"
+              @click="selectTool('selection')"
+            >
+              Выбрать выделение
+            </button>
+            <p class="pencil-overlay__helper-text">
+              Выделите область, затем перемещайте содержимое левой кнопкой мыши. Для отмены выделения нажмите Esc или кликните по свободной области.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
-      
-    <div class="pencil-overlay__tool-settings">
 
-      <div
-        v-if="currentTool === 'brush'"
-        class="pencil-overlay__section"
+    <!-- Кнопки отмена/повтор в центре сверху -->
+    <div class="pencil-overlay__undo-redo-bar">
+      <button
+        type="button"
+        class="pencil-overlay__undo-redo-btn"
+        :disabled="!canUndo"
+        @click="undo"
+        title="Отмена"
       >
-        <span class="pencil-overlay__section-title">Карандаш</span>
-        <label class="pencil-overlay__control">
-          <span>Цвет</span>
-          <input v-model="brushColor" type="color" />
-        </label>
-        <label class="pencil-overlay__control">
-          <span>Толщина: {{ brushSize }} px</span>
-          <input
-            v-model.number="brushSize"
-            type="range"
-            min="1"
-            max="24"
-          />
-        </label>
-      </div>
-      <div
-        v-else-if="currentTool === 'marker'"
-        class="pencil-overlay__section"
+        ↶ Отмена
+      </button>
+      <button
+        type="button"
+        class="pencil-overlay__undo-redo-btn"
+        :disabled="!canRedo"
+        @click="redo"
+        title="Повтор"
       >
-        <span class="pencil-overlay__section-title">Маркер</span>
-        <label class="pencil-overlay__control">
-          <span>Цвет</span>
-          <input v-model="brushColor" type="color" />
-        </label>
-        <label class="pencil-overlay__control">
-          <span>Толщина: {{ markerSize }} px</span>
-          <input
-            v-model.number="markerSize"
-            type="range"
-            :min="MARKER_MIN_SIZE"
-            :max="MARKER_MAX_SIZE"
-          />
-        </label>
-        <label class="pencil-overlay__control">
-          <span>Прозрачность: {{ markerOpacityPercent }}%</span>
-          <input
-            v-model.number="markerOpacity"
-            type="range"
-            min="0.01"
-            max="0.1"
-            step="0.01"
-          />
-        </label>        
-      </div>
-      <div
-        v-else-if="currentTool === 'eraser'"
-        class="pencil-overlay__section"
-      >
-        <span class="pencil-overlay__section-title">Ластик</span>
-        <label class="pencil-overlay__control">
-          <span>Диаметр: {{ eraserSize }} px</span>
-          <input
-            v-model.number="eraserSize"
-            type="range"
-            :min="ERASER_MIN_SIZE"
-            :max="ERASER_MAX_SIZE"
-          />
-        </label>
-      </div>
-      <div
-        v-else-if="currentTool === 'selection'"
-        class="pencil-overlay__section"
-      >
-        <span class="pencil-overlay__section-title">Выделение</span>
-        <p class="pencil-overlay__helper-text">
-          Выделите область, затем перемещайте содержимое левой кнопкой мыши. Для отмены выделения нажмите Esc или кликните по свободной области.
-        </p>
-      </div>
+        Повтор ↷
+      </button>
     </div>
   </div>
-</div>  
 </template>
 
 <style scoped>
@@ -1244,6 +1301,141 @@ const handleBoardPointerCancel = (event) => {
   inset: 0;
   background: transparent;
   pointer-events: none;
+}
+
+/* Кнопка закрытия в правом верхнем углу */
+.pencil-overlay__close-button {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  z-index: 4002;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pencil-overlay__close-button:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
+}
+
+/* Панель инструментов в левом верхнем углу */
+.pencil-overlay__tools-bar {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 4002;
+}
+
+.pencil-overlay__tool-item {
+  position: relative;
+}
+
+.pencil-overlay__tool-btn {
+  width: 48px;
+  height: 48px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pencil-overlay__tool-btn:hover {
+  background: rgba(0, 0, 0, 0.85);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.pencil-overlay__tool-btn--active {
+  background: #0f62fe;
+  border-color: #0f62fe;
+  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.4);
+}
+
+/* Выпадающее меню */
+.pencil-overlay__dropdown {
+  position: absolute;
+  top: 56px;
+  left: 0;
+  min-width: 280px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+  z-index: 4003;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.pencil-overlay__dropdown-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pencil-overlay__dropdown-select-btn {
+  padding: 10px 16px;
+  background: #0f62fe;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pencil-overlay__dropdown-select-btn:hover {
+  background: #0353e9;
+  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.4);
+}
+
+/* Кнопки отмена/повтор в центре сверху */
+.pencil-overlay__undo-redo-bar {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 4002;
+}
+
+.pencil-overlay__undo-redo-btn {
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pencil-overlay__undo-redo-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.85);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.pencil-overlay__undo-redo-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .pencil-overlay__board {
@@ -1287,151 +1479,24 @@ const handleBoardPointerCancel = (event) => {
   pointer-events: none;
   box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.15);
 }
-.pencil-overlay__panel {
-  --overlay-panel-bg: rgba(255, 255, 255, 0.94);
-  --overlay-panel-color: #111827;
-  --overlay-panel-title: #475569;
-  --overlay-button-bg: rgba(248, 250, 252, 0.85);
-  --overlay-button-border: rgba(148, 163, 184, 0.5);
-  --overlay-button-color: #111827;
-  --overlay-button-shadow: rgba(15, 98, 254, 0.25);
-  --overlay-close-color: #111827;
-  --overlay-control-border: rgba(148, 163, 184, 0.6);
-  --overlay-control-bg: rgba(255, 255, 255, 0.95);
-  --overlay-helper-color: #64748b;
-  --overlay-panel-shadow: 0 24px 50px rgba(15, 23, 42, 0.35);
-  --overlay-color-picker-border: none;
-  --overlay-color-picker-bg: transparent;  
-  position: fixed;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 18px;
-  border-radius: 16px;
-  background: var(--overlay-panel-bg);
-  color: var(--overlay-panel-color);
-  box-shadow: var(--overlay-panel-shadow);
-  pointer-events: auto;
-  min-width: 220px;
-  width: min(360px, calc(100vw - 32px));  
-}
-.pencil-overlay__panel--modern {
-  --overlay-panel-bg: rgba(18, 27, 43, 0.94);
-  --overlay-panel-color: #e5f3ff;
-  --overlay-panel-title: #9cbef5;
-  --overlay-button-bg: rgba(32, 44, 68, 0.9);
-  --overlay-button-border: rgba(104, 171, 255, 0.45);
-  --overlay-button-color: #e5f3ff;
-  --overlay-button-shadow: rgba(12, 84, 196, 0.35);
-  --overlay-close-color: #e5f3ff;
-  --overlay-control-border: rgba(111, 163, 255, 0.5);
-  --overlay-control-bg: rgba(24, 36, 58, 0.9);
-  --overlay-helper-color: #afc8f8;
-  --overlay-panel-shadow: 0 26px 54px rgba(3, 8, 20, 0.6);
-  --overlay-color-picker-border: 1px solid rgba(104, 171, 255, 0.45);
-  --overlay-color-picker-bg: rgba(26, 38, 62, 0.85);
-}
 
-.pencil-overlay__panel--classic {
-  color: var(--overlay-panel-color);
-}
-.pencil-overlay__close {
-  align-self: flex-end;
-  border: none;
-  background: transparent;
-  font-size: 18px;
-  cursor: pointer;
-  color: var(--overlay-close-color);
-  transition: transform 0.2s ease;
-}
-
-.pencil-overlay__close:hover {
-  transform: scale(1.1);
-}
-
-.pencil-overlay__section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.pencil-overlay__section-title {
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--overlay-panel-title);
-}
-
-.pencil-overlay__tool-buttons {
-  display: flex;
-  gap: 8px;
-}
-.pencil-overlay__action-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.pencil-overlay__tool-button {
-  flex: 1;
-  border: 1px solid var(--overlay-button-border);
-  border-radius: 12px;
-  padding: 8px 12px;
-  background: var(--overlay-button-bg);
-  font-size: 16px;
-  color: var(--overlay-button-color);  
-  cursor: pointer;
-  transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
-}
-.pencil-overlay__action-button {
-  flex: 1;
-  border: 1px solid var(--overlay-button-border);
-  border-radius: 12px;
-  padding: 8px 12px;
-  background: var(--overlay-button-bg);
-  color: var(--overlay-button-color);
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
-}
-
-.pencil-overlay__action-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-  box-shadow: none;
-}
-
-.pencil-overlay__tool-button--active {
-  background: #0f62fe;
-  color: #ffffff;
-  border-color: rgba(15, 98, 254, 0.8);
-  box-shadow: 0 16px 30px rgba(15, 98, 254, 0.35);
-}
-.pencil-overlay__action-button:not(:disabled):hover,
-.pencil-overlay__action-button:not(:disabled):focus-visible,
-.pencil-overlay__tool-button:not(:disabled):hover,
-.pencil-overlay__tool-button:not(:disabled):focus-visible {
-  background: #0f62fe;
-  color: #ffffff;
-  border-color: rgba(15, 98, 254, 0.8);
-  box-shadow: 0 16px 30px var(--overlay-button-shadow);
-}
-
+/* Контролы в выпадающем меню */
 .pencil-overlay__control {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   font-size: 14px;
+  color: white;
 }
 
 .pencil-overlay__control input[type="color"] {
   width: 36px;
   height: 36px;
-  border: var(--overlay-color-picker-border);
-  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
   padding: 0;
-  background: var(--overlay-color-picker-bg);
+  background: transparent;
   cursor: pointer;
 }
 
@@ -1439,25 +1504,11 @@ const handleBoardPointerCancel = (event) => {
   flex: 1;
 }
 
-.pencil-overlay__control--inline {
-  justify-content: flex-start;
-}
-
-.pencil-overlay__control--inline input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-}
-
 .pencil-overlay__helper-text {
   margin: 0;
   font-size: 12px;
-  color: var(--overlay-helper-color);
-}
-
-.pencil-overlay__tool-settings {
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
 }
 
 .pencil-overlay__eraser-preview {
