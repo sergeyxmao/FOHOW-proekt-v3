@@ -640,16 +640,20 @@ watch(
       ></div>
       <!-- Иконка монетки и PV -->
       <div class="card-row pv-row">
-        <svg
-          class="coin-icon"
-          :class="{ 'coin-icon--clickable': true }"
-          viewBox="0 0 100 100"
-          xmlns="http://www.w3.org/2000/svg"
-          @click="handleCoinClick"
-          :title="isCoinBlue ? 'Кликните, чтобы установить максимальное значение (330)' : 'Кликните, чтобы вернуть предыдущее значение'"
-        >
-          <circle cx="50" cy="50" r="45" :fill="coinFillColor" stroke="#DAA520" stroke-width="5"/>
-        </svg>
+        <div class="coin-icon-wrapper">
+          <svg
+            class="coin-icon"
+            :class="{ 'coin-icon--clickable': true }"
+            viewBox="0 0 100 100"
+            xmlns="http://www.w3.org/2000/svg"
+            @click="handleCoinClick"
+            :title="isCoinBlue ? 'Кликните, чтобы установить максимальное значение (330)' : 'Кликните, чтобы вернуть предыдущее значение'"
+          >
+            <circle cx="50" cy="50" r="45" :fill="coinFillColor" stroke="#DAA520" stroke-width="5"/>
+          </svg>
+          <!-- Желтый индикатор анимации изменения баланса -->
+          <div class="balance-animation-indicator"></div>
+        </div>
         <div class="pv-value-container">
           <input
             v-if="isEditingPv"
@@ -1011,6 +1015,13 @@ watch(
   gap: 10px;
 }
 
+.coin-icon-wrapper {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
 .coin-icon {
   width: 32px;
   height: 32px;
@@ -1029,6 +1040,42 @@ watch(
 
 .coin-icon--clickable:active {
   transform: scale(1.05);
+}
+
+/* Желтый индикатор анимации изменения баланса */
+.balance-animation-indicator {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  background: #ffd700;
+  border: 2px solid #DAA520;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+  z-index: 10;
+  display: none;
+}
+
+.card--balance-propagation .balance-animation-indicator {
+  display: block;
+  animation: balance-indicator-pulse 1s ease-in-out infinite;
+}
+
+@keyframes balance-indicator-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .label {

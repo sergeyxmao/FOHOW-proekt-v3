@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia';
 import { useCardsStore } from '../../stores/cards';
 import { useConnectionsStore } from '../../stores/connections';
 import { useCanvasStore } from '../../stores/canvas';
+import { useViewSettingsStore } from '../../stores/viewSettings';
 import Card from './Card.vue';
 import NoteWindow from './NoteWindow.vue';
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
@@ -42,6 +43,7 @@ const props = defineProps({
 const cardsStore = useCardsStore();
 const connectionsStore = useConnectionsStore();
 const canvasStore = useCanvasStore();
+const viewSettingsStore = useViewSettingsStore();
 
 const { cards } = storeToRefs(cardsStore);
 const { connections } = storeToRefs(connectionsStore);
@@ -196,6 +198,64 @@ const highlightActivePvChange = (cardId) => {
   });
 };
 
+// Анимация распространения баланса вверх по структуре
+const animateBalancePropagation = (changedCardId, changedSide = null) => {
+  if (!changedCardId) {
+    return;
+  }
+
+  // Получаем длительность анимации из настроек
+  const animationDuration = viewSettingsStore.animationDurationMs || 2000;
+
+  // Показываем желтый индикатор на измененной карточке через CSS-класс
+  const cardElement = getCardElement(changedCardId);
+  if (cardElement) {
+    cardElement.classList.add('card--balance-propagation');
+    window.setTimeout(() => {
+      cardElement.classList.remove('card--balance-propagation');
+    }, animationDuration);
+  }
+
+  // Находим путь вверх по структуре
+  const meta = cardsStore.calculationMeta || {};
+  const parentOf = meta.parentOf || {};
+
+  const pathUp = [];
+  let currentId = changedCardId;
+
+  // Строим путь от текущей карточки до корня
+  while (parentOf[currentId]) {
+    const relation = parentOf[currentId];
+    const parentId = relation.parentId;
+    const side = relation.side;
+
+    if (!parentId) break;
+
+    // Находим линию между текущей карточкой и родителем
+    const connection = connections.value.find(conn =>
+      (conn.from === currentId && conn.to === parentId) ||
+      (conn.from === parentId && conn.to === currentId)
+    );
+
+    if (connection) {
+      pathUp.push({ connectionId: connection.id, side });
+    }
+
+    currentId = parentId;
+  }
+
+  // Применяем анимацию к линиям вверх по структуре
+  pathUp.forEach(({ connectionId }) => {
+    const lineElement = getConnectionElement(connectionId);
+    if (!lineElement) return;
+
+    lineElement.classList.add('line--balance-propagation');
+    window.setTimeout(() => {
+      lineElement.classList.remove('line--balance-propagation');
+    }, animationDuration);
+  });
+};
+
 const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
   if (!Array.isArray(cardsStore.cards) || cardsStore.cards.length === 0) {
     return;
@@ -203,6 +263,7 @@ const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
 
   const propagation = propagateActivePvUp(cardsStore.cards, cardsStore.calculationMeta || {});
   const datasetPayload = {};
+  const cardsWithBalanceChanges = []; // Карточки с изменениями баланса для анимации
 
   Object.entries(propagation).forEach(([cardId, data]) => {
     const card = cardsStore.cards.find(item => item.id === cardId);
@@ -277,6 +338,13 @@ const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
       || card.activePvBalance.left !== balanceLeft
       || card.activePvBalance.right !== balanceRight) {
       updates.activePvBalance = { left: balanceLeft, right: balanceRight };
+
+      // Запоминаем карточки с изменениями баланса для анимации
+      if (options.triggerAnimation) {
+        const changedSide = balanceLeft !== (card.activePvBalance?.left ?? 0) ? 'left' :
+                           balanceRight !== (card.activePvBalance?.right ?? 0) ? 'right' : null;
+        cardsWithBalanceChanges.push({ cardId, side: changedSide });
+      }
     }
 
     if (!Number.isFinite(card.activePvPacks) || card.activePvPacks !== packs) {
@@ -307,6 +375,13 @@ const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
 
   if (highlightCardId) {
     highlightActivePvChange(highlightCardId);
+  }
+
+  // Запускаем анимацию для карточек с изменениями баланса при автоматических расчетах
+  if (options.triggerAnimation && cardsWithBalanceChanges.length > 0) {
+    cardsWithBalanceChanges.forEach(({ cardId, side }) => {
+      animateBalancePropagation(cardId, side);
+    });
   }
 };
 
@@ -419,14 +494,14 @@ const engineInput = computed(() => {
 watch(engineInput, (state) => {
   if (!state.cards.length) {
     cardsStore.resetCalculationResults();
-    applyActivePvPropagation();    
+    applyActivePvPropagation(null, { triggerAnimation: false });
     return;
   }
 
   try {
     const { result, meta } = Engine.recalc(state);
     cardsStore.applyCalculationResults({ result, meta });
-    applyActivePvPropagation();    
+    applyActivePvPropagation(null, { triggerAnimation: true });
   } catch (error) {
     console.error('Engine recalculation error:', error);
   }
@@ -2260,6 +2335,31 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     stroke-dashoffset: 18;
     stroke: var(--line-color, currentColor);
     color: var(--line-color, currentColor);
+  }
+}
+
+/* Анимация красных пунктирных линий при автоматическом расчете баланса */
+.line--balance-propagation {
+  stroke: #ff0000 !important;
+  stroke-dasharray: 8 8;
+  stroke-width: calc(var(--line-width, 5px) + 2px) !important;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.6));
+  animation: balancePropagationFlow var(--line-animation-duration, 2000ms) ease-in-out;
+  animation-iteration-count: 1;
+}
+
+@keyframes balancePropagationFlow {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 0.3;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: -16;
+    opacity: 1;
   }
 }
 
