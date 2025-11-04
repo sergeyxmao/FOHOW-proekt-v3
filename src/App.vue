@@ -24,6 +24,9 @@ import { useViewSettingsStore } from './stores/viewSettings'
 import { useProjectActions } from './composables/useProjectActions'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
+import NotesSidePanel from './components/Panels/NotesSidePanel.vue'
+import CommentsSidePanel from './components/Panels/CommentsSidePanel.vue'
+import { useSidePanelsStore } from './stores/sidePanels'
  
 const authStore = useAuthStore()
 const canvasStore = useCanvasStore() // Предполагаемая инициализация
@@ -33,10 +36,12 @@ const connectionsStore = useConnectionsStore() // Assuming initialization
 const viewportStore = useViewportStore()
 const mobileStore = useMobileStore()
 const viewSettingsStore = useViewSettingsStore()
+const sidePanelsStore = useSidePanelsStore()
 const { isAuthenticated } = storeToRefs(authStore)
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMobileMode } = storeToRefs(mobileStore)
 const { headerColor, headerColorIndex } = storeToRefs(viewSettingsStore)
+const { isNotesOpen, isCommentsOpen } = storeToRefs(sidePanelsStore)
 
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
@@ -863,6 +868,21 @@ onBeforeUnmount(() => {
         />
       </div>
     </Teleport>
+
+    <!-- Side Panels -->
+    <transition name="side-panel-slide">
+      <NotesSidePanel
+        v-if="isNotesOpen && !isMobileMode"
+        :is-modern-theme="isModernTheme"
+      />
+    </transition>
+
+    <transition name="side-panel-slide">
+      <CommentsSidePanel
+        v-if="isCommentsOpen && !isMobileMode"
+        :is-modern-theme="isModernTheme"
+      />
+    </transition>
   </div>
 </template>
 
@@ -1210,5 +1230,21 @@ html,body{
     padding-top: 52px;
     padding-bottom: 64px;
   }
+}
+
+/* Side Panel Transitions */
+.side-panel-slide-enter-active,
+.side-panel-slide-leave-active {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.side-panel-slide-enter-from {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.side-panel-slide-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
 }
 </style>
