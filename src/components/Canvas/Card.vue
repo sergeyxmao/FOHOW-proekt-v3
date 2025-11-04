@@ -23,8 +23,7 @@ const props = defineProps({
 const emit = defineEmits([
   'card-click',
   'start-drag',
-  'add-note',
-  'balance-changed'
+  'add-note'
 ]);
 
 const cardsStore = useCardsStore();
@@ -523,9 +522,6 @@ const updateValue = (event, field) => {
         { manualAdjustments: manualAdditions },
         { saveToHistory: false }
       );
-
-      // Эмитим событие об изменении баланса для запуска анимации
-      emit('balance-changed', props.card.id);
     }
   }
 };
