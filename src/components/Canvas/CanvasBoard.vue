@@ -458,7 +458,7 @@ const handleActivePvButtonClick = (event) => {
     ? `Active-PV обновлены для "${card.text}"`
     : 'Изменены бонусы Active-PV';
 
-  applyActivePvPropagation(cardId, { saveHistory: true, historyDescription: description });
+    applyActivePvPropagation(cardId, { saveHistory: true, historyDescription: description, triggerAnimation: true });
 };  
 const getCurrentZoom = () => {
   const value = Number(zoomScale.value);
