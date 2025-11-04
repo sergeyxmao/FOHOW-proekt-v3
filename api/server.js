@@ -27,6 +27,13 @@ const VERIFICATION_LOCK_DURATION = 5 * 60 * 1000; // 5 минут
 
 const verificationSessions = new Map();
 
+// Проверяем наличие необходимых переменных окружения
+if (!process.env.JWT_SECRET) {
+  console.error('❌ КРИТИЧЕСКАЯ ОШИБКА: JWT_SECRET не определен в переменных окружения!');
+  console.error('Создайте файл .env и добавьте: JWT_SECRET=ваш_секретный_ключ');
+  process.exit(1);
+}
+
 function createVerificationSession(previousToken) {
   if (previousToken) {
     verificationSessions.delete(previousToken);
@@ -204,7 +211,26 @@ app.post('/api/register', async (req, reply) => {
     });
   } catch (err) {
     console.error('❌ Ошибка регистрации:', err);
-    return reply.code(500).send({ error: 'Ошибка сервера' });
+
+    // Определяем тип ошибки и возвращаем более информативное сообщение
+    if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
+      return reply.code(500).send({ error: 'Ошибка подключения к базе данных' });
+    }
+
+    if (err.name === 'JsonWebTokenError') {
+      return reply.code(500).send({ error: 'Ошибка создания токена авторизации' });
+    }
+
+    if (err.code === '23505') { // Duplicate key error в PostgreSQL
+      return reply.code(400).send({ error: 'Пользователь с таким email уже существует' });
+    }
+
+    // Общая ошибка с дополнительной информацией в режиме разработки
+    const errorMessage = process.env.NODE_ENV === 'development'
+      ? `Ошибка сервера: ${err.message}`
+      : 'Ошибка сервера. Попробуйте позже';
+
+    return reply.code(500).send({ error: errorMessage });
   }
 });
 
@@ -224,25 +250,25 @@ app.post('/api/login', async (req, reply) => {
 
   try {
     const result = await pool.query('SELECT id, email, password FROM users WHERE email = $1', [email]);
-    
+
     if (result.rows.length === 0) {
       return reply.code(401).send({ error: 'Неверный email или пароль' });
     }
-    
+
     const user = result.rows[0];
     const passwordMatch = await bcrypt.compare(password, user.password);
-    
+
     if (!passwordMatch) {
       return reply.code(401).send({ error: 'Неверный email или пароль' });
     }
-    
+
     // Создаем JWT токен
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
-    
+
     return reply.send({
       success: true,
       token,
@@ -250,7 +276,22 @@ app.post('/api/login', async (req, reply) => {
     });
   } catch (err) {
     console.error('❌ Ошибка авторизации:', err);
-    return reply.code(500).send({ error: 'Ошибка сервера' });
+
+    // Определяем тип ошибки и возвращаем более информативное сообщение
+    if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
+      return reply.code(500).send({ error: 'Ошибка подключения к базе данных' });
+    }
+
+    if (err.name === 'JsonWebTokenError') {
+      return reply.code(500).send({ error: 'Ошибка создания токена авторизации' });
+    }
+
+    // Общая ошибка с дополнительной информацией в режиме разработки
+    const errorMessage = process.env.NODE_ENV === 'development'
+      ? `Ошибка сервера: ${err.message}`
+      : 'Ошибка сервера. Попробуйте позже';
+
+    return reply.code(500).send({ error: errorMessage });
   }
 });
 
