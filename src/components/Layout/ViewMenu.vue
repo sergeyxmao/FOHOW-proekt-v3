@@ -13,7 +13,7 @@ const props = defineProps({
 const canvasStore = useCanvasStore()
 const viewSettingsStore = useViewSettingsStore()
 
-const { guidesEnabled, isGridBackgroundVisible, gridStep } = storeToRefs(canvasStore)
+const { isGridBackgroundVisible, gridStep } = storeToRefs(canvasStore)
 const {
   lineColor,
   lineThickness,
@@ -47,10 +47,6 @@ const gridStepModel = computed({
 })
 
 const sliderTrackStyle = computed(() => viewSettingsStore.sliderTrackStyle)
-
-function toggleGuides() {
-  canvasStore.toggleGuides()
-}
 
 function toggleSubmenu(id) {
   openSubmenuId.value = openSubmenuId.value === id ? null : id
@@ -114,18 +110,6 @@ function selectPresetBackground(color) {
   >
     <h3 class="view-menu__title">Вид</h3>
     <div class="view-menu__list">
-      <div class="view-menu__item">
-        <span class="view-menu__icon" aria-hidden="true">📐</span>
-        <button
-          type="button"
-          class="view-menu__action"
-          :class="{ 'view-menu__action--active': guidesEnabled }"
-          @click="toggleGuides"
-        >
-          Показать направляющие
-        </button>
-      </div>
-
       <div
         class="view-menu__item view-menu__item--submenu"
         :class="{ 'view-menu__item--open': openSubmenuId === 'grid' }"
