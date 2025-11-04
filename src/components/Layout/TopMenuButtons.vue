@@ -90,33 +90,35 @@ onBeforeUnmount(() => {
     :class="{ 'top-menu--modern': props.isModernTheme }"
     role="menubar"
   >
-    <button
-      class="top-menu__theme-button"
-      type="button"
-      :title="themeTitle"
-      @click.stop="handleToggleTheme"
-    >
-      <span class="top-menu__theme-icon" aria-hidden="true"></span>
-      <span class="visually-hidden">{{ themeTitle }}</span>
-    </button>
-    <button
-      class="top-menu__action-button"
-      type="button"
-      title="Отменить (Ctrl+Z)"
-      :disabled="!canUndo"
-      @click.stop="handleUndo"
-    >
-      ↶
-    </button>
-    <button
-      class="top-menu__action-button"
-      type="button"
-      title="Повторить (Ctrl+Shift+Z)"
-      :disabled="!canRedo"
-      @click.stop="handleRedo"
-    >
-      ↷
-    </button>
+    <div class="top-menu__controls">
+      <button
+        class="top-menu__theme-button"
+        type="button"
+        :title="themeTitle"
+        @click.stop="handleToggleTheme"
+      >
+        <span class="top-menu__theme-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">{{ themeTitle }}</span>
+      </button>
+      <button
+        class="top-menu__action-button"
+        type="button"
+        title="Отменить (Ctrl+Z)"
+        :disabled="!canUndo"
+        @click.stop="handleUndo"
+      >
+        ↶
+      </button>
+      <button
+        class="top-menu__action-button"
+        type="button"
+        title="Повторить (Ctrl+Shift+Z)"
+        :disabled="!canRedo"
+        @click.stop="handleRedo"
+      >
+        ↷
+      </button>
+    </div>
     <div v-for="item in menuItems" :key="item.id" class="top-menu__item">
       <button
         type="button"
@@ -153,12 +155,19 @@ onBeforeUnmount(() => {
   top: 16px;
   left: 24px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-start;
   flex-wrap: wrap;
   gap: 12px;
   z-index: 1950;
   max-width: calc(100% - 48px);
+}
+
+.top-menu__controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 .top-menu__item {
