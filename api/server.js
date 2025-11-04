@@ -146,12 +146,21 @@ await app.register(helmet);
 await app.register(cors, { origin: true, credentials: true });
 await app.register(multipart, {
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB максимум
+    fileSize: 10 * 1024 * 1024 // 10MB максимум для аватаров
   }
 });
 await app.register(fastifyStatic, {
-  root: path.join(__dirname, 'uploads'),
-  prefix: '/uploads/'
+  root: path.join(process.cwd(), 'api/uploads'),
+  prefix: '/uploads/',
+  immutable: true,
+  maxAge: '365d',
+  cacheControl: true,
+  setHeaders: (res, path) => {
+    // Immutable кэш для всех файлов с хешем в имени
+    if (path.includes('/avatars/')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
 });
 app.post('/api/verification-code', async (req, reply) => {
   try {
@@ -260,14 +269,14 @@ app.get('/api/profile', {
 }, async (req, reply) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, username, avatar_url, created_at, updated_at FROM users WHERE id = $1',
+      'SELECT id, email, username, avatar_url, avatar_meta, avatar_updated_at, created_at, updated_at FROM users WHERE id = $1',
       [req.user.id]
     );
-    
+
     if (result.rows.length === 0) {
       return reply.code(404).send({ error: 'Пользователь не найден' });
     }
-    
+
     return reply.send({ user: result.rows[0] });
   } catch (err) {
     console.error('❌ Ошибка получения профиля:', err);
@@ -507,8 +516,8 @@ app.delete('/api/profile', async (req, reply) => {
   }
 })
 
-// === ЗАГРУЗКА АВАТАРА ===
-app.post('/api/profile/avatar', async (req, reply) => {
+// === ЗАГРУЗКА АВАТАРА (ОПТИМИЗИРОВАННАЯ) ===
+app.post('/api/me/avatar', async (req, reply) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
@@ -516,47 +525,69 @@ app.post('/api/profile/avatar', async (req, reply) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
     // Получаем файл из multipart
     const data = await req.file();
-    
+
     if (!data) {
       return reply.code(400).send({ error: 'Файл не предоставлен' });
     }
 
-    // Проверяем тип файла
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedMimes.includes(data.mimetype)) {
-      return reply.code(400).send({ error: 'Разрешены только изображения (JPEG, PNG, GIF, WEBP)' });
+    // Читаем весь файл в буфер
+    const chunks = [];
+    for await (const chunk of data.file) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
+
+    // Проверяем размер файла (максимум 10 МБ)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 МБ
+    if (buffer.length > MAX_FILE_SIZE) {
+      return reply.code(400).send({ error: 'Файл слишком большой. Максимум 10 МБ' });
     }
 
-    // Генерируем уникальное имя файла
-    const ext = path.extname(data.filename);
-    const filename = `${decoded.userId}-${randomBytes(8).toString('hex')}${ext}`;
-    const filepath = path.join(__dirname, 'uploads', 'avatars', filename);
+    // Импортируем утилиты для обработки аватаров
+    const { processAvatar, deleteOldAvatarVersion } = await import('./utils/avatar.js');
 
-    // Сохраняем файл
-    await pipeline(data.file, createWriteStream(filepath));
-
-    // Обновляем URL аватара в БД
-    const avatarUrl = `/uploads/avatars/${filename}`;
-    await pool.query(
-      'UPDATE users SET avatar_url = $1 WHERE id = $2',
-      [avatarUrl, decoded.userId]
+    // Получаем старые метаданные для удаления старых файлов
+    const userResult = await pool.query(
+      'SELECT avatar_meta FROM users WHERE id = $1',
+      [decoded.userId]
     );
-    
+    const oldMeta = userResult.rows[0]?.avatar_meta;
+    const oldHash = oldMeta?.rev;
+
+    // Обрабатываем аватар
+    const { meta } = await processAvatar(buffer, decoded.userId);
+
+    // Обновляем метаданные в БД
+    await pool.query(
+      'UPDATE users SET avatar_meta = $1, avatar_updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [JSON.stringify(meta), decoded.userId]
+    );
+
+    // Удаляем старую версию аватара
+    if (oldHash && oldHash !== meta.rev) {
+      await deleteOldAvatarVersion(decoded.userId, oldHash);
+    }
+
     return reply.send({
       success: true,
-      avatarUrl
+      avatarMeta: meta
     });
   } catch (err) {
     console.error('❌ Ошибка загрузки аватара:', err);
+
+    if (err.message.includes('Unsupported image format')) {
+      return reply.code(400).send({ error: 'Неподдерживаемый формат. Разрешены только JPEG, PNG, WebP и AVIF' });
+    }
+
     return reply.code(500).send({ error: 'Ошибка сервера' });
   }
 });
 
 // === УДАЛЕНИЕ АВАТАРА ===
-app.delete('/api/profile/avatar', async (req, reply) => {
+app.delete('/api/me/avatar', async (req, reply) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
@@ -565,9 +596,15 @@ app.delete('/api/profile/avatar', async (req, reply) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Удаляем URL аватара из БД
+    // Импортируем утилиту для удаления файлов
+    const { deleteAvatarFiles } = await import('./utils/avatar.js');
+
+    // Удаляем все файлы аватара
+    await deleteAvatarFiles(decoded.userId);
+
+    // Очищаем метаданные в БД
     await pool.query(
-      'UPDATE users SET avatar_url = NULL WHERE id = $1',
+      'UPDATE users SET avatar_meta = NULL, avatar_updated_at = NULL WHERE id = $1',
       [decoded.userId]
     );
 

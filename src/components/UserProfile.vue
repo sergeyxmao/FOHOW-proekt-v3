@@ -15,37 +15,15 @@
     <div v-else class="profile-content">
       <!-- Информация о профиле -->
       <div v-if="!editMode" class="profile-view">
-        <!-- Аватар -->
+        <!-- Аватар (новый компонент) -->
         <div class="profile-avatar-section">
-          <div class="avatar-wrapper">
-            <img
-              v-if="user.avatar_url"
-              :src="getAvatarUrl(user.avatar_url)"
-              alt="Аватар"
-              class="profile-avatar"
-            >
-            <div v-else class="profile-avatar-placeholder">
-              {{ getInitials(user.username || user.email) }}
-            </div>
-          </div>
-          <div class="avatar-actions">
-            <label class="btn-upload">
-              <input
-                type="file"
-                accept="image/*"
-                @change="handleAvatarChange"
-                style="display: none"
-              >
-              📷 Загрузить фото
-            </label>
-            <button
-              v-if="user.avatar_url"
-              class="btn-remove"
-              @click="handleAvatarDelete"
-            >
-              🗑️ Удалить
-            </button>
-          </div>
+          <AvatarUploader
+            :avatarMeta="user.avatar_meta"
+            :username="user.username"
+            :email="user.email"
+            @upload-success="handleAvatarUploadSuccess"
+            @delete-success="handleAvatarDeleteSuccess"
+          />
         </div>
         <div class="profile-field">
           <label>Email:</label>
@@ -227,49 +205,12 @@
       </div>
     </div>
   </div>
-
-  <transition name="fade">
-    <div
-      v-if="showCropper"
-      class="cropper-overlay"
-    >
-      <div class="cropper-modal">
-        <div class="cropper-header">
-          <h3>Обрезка аватара</h3>
-          <button type="button" class="cropper-close" @click="cancelCrop">×</button>
-        </div>
-        <div class="cropper-body">
-          <img
-            v-if="selectedImageUrl"
-            :src="selectedImageUrl"
-            ref="cropperImage"
-            alt="Предпросмотр аватара"
-            class="cropper-image"
-          >
-        </div>
-        <div class="cropper-footer">
-          <button type="button" class="btn-secondary" @click="cancelCrop">
-            Отмена
-          </button>
-          <button
-            type="button"
-            class="btn-primary"
-            :disabled="uploadingAvatar"
-            @click="confirmCrop"
-          >
-            {{ uploadingAvatar ? 'Загрузка...' : 'Сохранить' }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </transition>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
-import Cropper from 'cropperjs'
-import 'cropperjs/dist/cropper.css'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import AvatarUploader from './AvatarUploader.vue'
 
 const props = defineProps({
   isModernTheme: {
@@ -281,12 +222,7 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const authStore = useAuthStore()
-// Cropper.js
-const showCropper = ref(false)
-const selectedImageUrl = ref('')
-const cropperImage = ref(null)
-let cropper = null
-const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:4000/api'
 
 const user = ref({})
 const loading = ref(true)
@@ -307,9 +243,6 @@ const showDeleteConfirm = ref(false)
 const deletePassword = ref('')
 const deleteError = ref('')
 const deleting = ref(false)
-const uploadingAvatar = ref(false)
-const originalAvatarType = ref('')
-const originalAvatarName = ref('')
 const passwordVisibility = reactive({
   current: false,
   new: false,
@@ -533,100 +466,22 @@ function getInitials(name) {
   return name.substring(0, 2).toUpperCase()
 }
 
-async function handleAvatarChange(event) {
-  const file = event.target.files[0]
-  if (!file) return
-
-  // Показываем cropper вместо прямой загрузки
-  selectedImageUrl.value = URL.createObjectURL(file)
-  showCropper.value = true
-
-  // Ждём рендеринга и инициализируем cropper
-  await nextTick()
-  
-  if (cropper) {
-    cropper.destroy()
-  }
-  
-  cropper = new Cropper(cropperImage.value, {
-    aspectRatio: 1, // квадрат
-    viewMode: 1,
-    autoCropArea: 1,
-    responsive: true,
-    background: false
-  })
+// Обработчики событий от AvatarUploader
+function handleAvatarUploadSuccess(avatarMeta) {
+  console.log('Avatar uploaded successfully:', avatarMeta)
+  // Профиль уже обновлен в AvatarUploader через authStore.fetchProfile()
+  // Просто перезагружаем локальные данные
+  user.value.avatar_meta = avatarMeta
 }
 
-function cancelCrop() {
-  if (cropper) {
-    cropper.destroy()
-    cropper = null
-  }
-  if (selectedImageUrl.value) {
-    URL.revokeObjectURL(selectedImageUrl.value)
-    selectedImageUrl.value = ''
-  }
-  showCropper.value = false
-}
-
-async function confirmCrop() {
-  if (!cropper) return
-
-  uploadingAvatar.value = true
-
-  try {
-    // Получаем обрезанное изображение как Blob
-    const canvas = cropper.getCroppedCanvas({
-      width: 400,
-      height: 400,
-      imageSmoothingQuality: 'high'
-    })
-
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        throw new Error('Ошибка создания изображения')
-      }
-
-      const formData = new FormData()
-      formData.append('avatar', blob, 'avatar.jpg')
-
-      const response = await fetch(`${API_URL}/profile/avatar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authStore.token}`
-        },
-        body: formData
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Ошибка загрузки')
-      }
-
-      // Обновляем аватар
-      user.value.avatar_url = data.avatar_url
-      authStore.user.avatar_url = data.avatar_url
-      localStorage.setItem('user', JSON.stringify(authStore.user))
-
-      success.value = 'Аватар обновлён!'
-      setTimeout(() => success.value = '', 3000)
-
-      cancelCrop()
-    }, 'image/jpeg', 0.95)
-  } catch (err) {
-    error.value = err.message
-  } finally {
-    uploadingAvatar.value = false
-  }
+function handleAvatarDeleteSuccess() {
+  console.log('Avatar deleted successfully')
+  // Профиль уже обновлен в AvatarUploader через authStore.fetchProfile()
+  user.value.avatar_meta = null
 }
 
 onMounted(() => {
   loadProfile()
-})
-
-onBeforeUnmount(() => {
-  cancelCrop()
 })
 </script>
 
@@ -698,103 +553,6 @@ onBeforeUnmount(() => {
   --profile-close-color: rgba(226, 232, 240, 0.6);
   --profile-close-color-hover: #e2e8f0;
 }
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-.cropper-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--profile-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  padding: 24px;
-  box-sizing: border-box;
-}
-
-.cropper-modal {
-  background: var(--profile-modal-bg);
-  color: var(--profile-text);
-  padding: 24px;
-  border-radius: 20px;
-  width: min(520px, 100%);
-  box-shadow: var(--profile-modal-shadow);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.cropper-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.cropper-header h3 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.cropper-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 24px;
-  line-height: 1;
-  color: var(--profile-close-color);
-  transition: color 0.2s ease;
-}
-
-.cropper-close:hover {
-  color: var(--profile-close-color-hover);
-}
-
-.cropper-body {
-  position: relative;
-  width: 100%;
-  max-height: 420px;
-  overflow: hidden;
-  border-radius: 16px;
-  background: var(--profile-control-bg);
-}
-
-.cropper-image {
-  display: block;
-  max-width: 100%;
-  width: 100%;
-}
-
-.cropper-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-@media (max-width: 480px) {
-  .cropper-modal {
-    padding: 20px;
-    gap: 12px;
-  }
-
-  .cropper-header h3 {
-    font-size: 18px;
-  }
-
-  .cropper-body {
-    max-height: 320px;
-  }
-}
-
 .profile-header {
   display: flex;
   justify-content: space-between;
@@ -1039,72 +797,10 @@ onBeforeUnmount(() => {
 
 .profile-avatar-section {
   display: flex;
-  align-items: center;
-  gap: 20px;
+  justify-content: center;
   padding: 20px;
   background: var(--profile-control-bg);
   border-radius: 12px;
   margin-bottom: 20px;
-}
-
-.avatar-wrapper {
-  flex-shrink: 0;
-}
-
-.profile-avatar,
-.profile-avatar-placeholder {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid var(--profile-border);
-}
-
-.profile-avatar-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  font-size: 36px;
-  font-weight: 700;
-}
-
-.avatar-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.btn-upload,
-.btn-remove {
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-  text-align: center;
-}
-
-.btn-upload {
-  background: #2196F3;
-  color: white;
-  display: inline-block;
-}
-
-.btn-upload:hover {
-  background: #1976D2;
-}
-
-.btn-remove {
-  background: var(--profile-secondary-bg);
-  color: var(--profile-secondary-text);
-}
-
-.btn-remove:hover {
-  background: #f44336;
-  color: white;
 }
 </style>
