@@ -1,10 +1,10 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useNotesStore } from '../../stores/notes.js'
-import { useCardsStore } from '../../stores/cards.js'
 import { useBoardCommentsStore } from '../Panels/boardComments.js'
-import BoardComments from '../Panels/BoardComments.vue'
+import { useSidePanelsStore } from '../../stores/sidePanels.js'
+
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -14,73 +14,26 @@ const props = defineProps({
 const emit = defineEmits(['request-close'])
 
 const notesStore = useNotesStore()
-const cardsStore = useCardsStore()
 const boardCommentsStore = useBoardCommentsStore()
+const sidePanelsStore = useSidePanelsStore()
 
-const { dropdownOpen, cardsWithEntries } = storeToRefs(notesStore)
 const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
+const { isNotesOpen, isCommentsOpen } = storeToRefs(sidePanelsStore)
 
 const hasNoteEntries = computed(() => notesStore.hasEntries)
-const showComments = ref(false)
-
-const closePanels = () => {
-  notesStore.closeDropdown()
-  showComments.value = false
-}
 
 const handleNotesToggle = () => {
   if (!hasNoteEntries.value) {
-    notesStore.closeDropdown()
     return
   }
-  showComments.value = false
-  notesStore.toggleDropdown()
+  sidePanelsStore.toggleNotes()
+  emit('request-close')
 }
 
 const handleCommentsToggle = () => {
-  if (showComments.value) {
-    showComments.value = false
-  } else {
-    notesStore.closeDropdown()
-    showComments.value = true
-  }
-}
-
-const handleNoteItemClick = (cardId) => {
-  notesStore.requestOpen(cardId, { focus: true })
+  sidePanelsStore.toggleComments()
   emit('request-close')
 }
-
-const handleNoteEntryClick = (cardId, date) => {
-  notesStore.requestOpen(cardId, { focus: true, date })
-  emit('request-close')
-}
-
-const handleNoteEntryDelete = (cardId, date) => {
-  cardsStore.removeCardNoteEntry(cardId, date)
-}
-
-const handleCardNotesDelete = (cardId) => {
-  cardsStore.clearCardNotes(cardId)
-}
-
-const handleEscape = (event) => {
-  if (event.key === 'Escape') {
-    if (dropdownOpen.value || showComments.value) {
-      closePanels()
-      emit('request-close')
-    }
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', handleEscape)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', handleEscape)
-  closePanels()
-})
 </script>
 
 <template>
@@ -95,7 +48,7 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="discussion-menu__action"
-        :class="{ 'discussion-menu__action--active': dropdownOpen }"
+        :class="{ 'discussion-menu__action--active': isNotesOpen }"
         :disabled="!hasNoteEntries"
         @click="handleNotesToggle"
       >
@@ -103,70 +56,12 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <transition name="discussion-menu-panel">
-      <div
-        v-if="dropdownOpen"
-        class="discussion-menu__panel discussion-menu__panel--notes"
-      >
-        <div
-          v-for="item in cardsWithEntries"
-          :key="item.id"
-          class="discussion-menu__group"
-        >
-          <div class="discussion-menu__card-row">
-            <button
-              type="button"
-              class="discussion-menu__card-button"
-              @click="handleNoteItemClick(item.id)"
-            >
-              📝 {{ item.title }}
-            </button>
-            <button
-              type="button"
-              class="discussion-menu__icon-button discussion-menu__icon-button--danger"
-              title="Удалить все заметки"
-              @click="handleCardNotesDelete(item.id)"
-            >
-              🗑️
-            </button>
-          </div>
-          <div class="discussion-menu__entries">
-            <div
-              v-for="entry in item.entries"
-              :key="entry.date"
-              class="discussion-menu__entry"
-            >
-              <button
-                type="button"
-                class="discussion-menu__entry-button"
-                @click="handleNoteEntryClick(item.id, entry.date)"
-              >
-                <span
-                  class="discussion-menu__entry-color"
-                  :style="{ backgroundColor: entry.color }"
-                ></span>
-                <span class="discussion-menu__entry-label">{{ entry.label }}</span>
-              </button>
-              <button
-                type="button"
-                class="discussion-menu__icon-button"
-                title="Удалить заметку"
-                @click="handleNoteEntryDelete(item.id, entry.date)"
-              >
-                🗑️
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </transition>
-
     <div class="discussion-menu__item">
       <span class="discussion-menu__icon" aria-hidden="true">💬</span>
       <button
         type="button"
         class="discussion-menu__action"
-        :class="{ 'discussion-menu__action--active': showComments }"
+        :class="{ 'discussion-menu__action--active': isCommentsOpen }"
         @click="handleCommentsToggle"
       >
         Комментарии доски
@@ -177,15 +72,6 @@ onBeforeUnmount(() => {
         aria-hidden="true"
       ></span>
     </div>
-
-    <transition name="discussion-menu-panel">
-      <div
-        v-if="showComments"
-        class="discussion-menu__panel discussion-menu__panel--comments"
-      >
-        <BoardComments />
-      </div>
-    </transition>
   </div>
 </template>
 
@@ -262,136 +148,6 @@ onBeforeUnmount(() => {
   background: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
 }
-
-.discussion-menu__panel {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px;
-  margin-left: 50px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 16px;
-  background: rgba(248, 250, 252, 0.96);
-  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.18);
-}
-
-.discussion-menu__panel--comments {
-  max-height: 360px;
-  overflow: auto;
-}
-
-.discussion-menu__group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.discussion-menu__group + .discussion-menu__group {
-  border-top: 1px solid rgba(15, 23, 42, 0.12);
-  padding-top: 12px;
-}
-
-.discussion-menu__card-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.discussion-menu__card-button {
-  flex: 1;
-  padding: 10px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(15, 23, 42, 0.16);
-  background: rgba(255, 255, 255, 0.92);
-  color: #0f172a;
-  font-weight: 600;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.discussion-menu__card-button:hover {
-  background: rgba(59, 130, 246, 0.15);
-  box-shadow: 0 12px 22px rgba(37, 99, 235, 0.2);
-  transform: translateY(-1px);
-}
-
-.discussion-menu__entries {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.discussion-menu__entry {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.discussion-menu__entry-button {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(255, 255, 255, 0.92);
-  color: #0f172a;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.discussion-menu__entry-button:hover {
-  background: rgba(59, 130, 246, 0.15);
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.16);
-  transform: translateY(-1px);
-}
-
-.discussion-menu__entry-color {
-  width: 14px;
-  height: 14px;
-  border-radius: 6px;
-  box-shadow: inset 0 1px 1px rgba(15, 23, 42, 0.12);
-}
-
-.discussion-menu__entry-label {
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.discussion-menu__icon-button {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(248, 250, 252, 0.92);
-  color: #475569;
-  font-size: 18px;
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.discussion-menu__icon-button:hover {
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
-  box-shadow: 0 12px 20px rgba(15, 23, 42, 0.14);
-  transform: translateY(-1px);
-}
-
-.discussion-menu__icon-button--danger {
-  color: #dc2626;
-}
-
-.discussion-menu__icon-button--danger:hover {
-  background: rgba(248, 113, 113, 0.16);
-  color: #b91c1c;
-}
 .discussion-menu--modern .discussion-menu__title {
   color: #e5f3ff;
 }
@@ -423,58 +179,5 @@ onBeforeUnmount(() => {
 .discussion-menu--modern .discussion-menu__badge {
   background: #73c8ff;
   box-shadow: 0 0 0 3px rgba(114, 182, 255, 0.3);
-}
-
-.discussion-menu--modern .discussion-menu__panel {
-  border-color: rgba(96, 164, 255, 0.35);
-  background: rgba(18, 28, 48, 0.94);
-  box-shadow: 0 24px 42px rgba(6, 11, 21, 0.72);
-}
-
-.discussion-menu--modern .discussion-menu__group + .discussion-menu__group {
-  border-color: rgba(96, 164, 255, 0.28);
-}
-
-.discussion-menu--modern .discussion-menu__card-button,
-.discussion-menu--modern .discussion-menu__entry-button {
-  border-color: rgba(96, 164, 255, 0.35);
-  background: rgba(24, 34, 58, 0.92);
-  color: #e5f3ff;
-  box-shadow: 0 16px 30px rgba(6, 11, 21, 0.6);
-}
-
-.discussion-menu--modern .discussion-menu__card-button:hover,
-.discussion-menu--modern .discussion-menu__entry-button:hover {
-  background: rgba(96, 164, 255, 0.22);
-  color: #0b1324;
-  box-shadow: 0 24px 40px rgba(6, 11, 21, 0.72);
-}
-
-.discussion-menu--modern .discussion-menu__entry-color {
-  box-shadow: inset 0 1px 1px rgba(6, 11, 21, 0.4);
-}
-
-.discussion-menu--modern .discussion-menu__icon-button {
-  border-color: rgba(96, 164, 255, 0.35);
-  background: rgba(24, 34, 58, 0.92);
-  color: #e5f3ff;
-  box-shadow: 0 16px 30px rgba(6, 11, 21, 0.6);
-}
-
-.discussion-menu--modern .discussion-menu__icon-button:hover {
-  background: rgba(96, 164, 255, 0.24);
-  color: #0b1324;
-  box-shadow: 0 24px 40px rgba(6, 11, 21, 0.74);
-}
-
-.discussion-menu-panel-enter-active,
-.discussion-menu-panel-leave-active {
-  transition: opacity 0.18s ease, transform 0.18s ease;
-}
-
-.discussion-menu-panel-enter-from,
-.discussion-menu-panel-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
 }
 </style>
