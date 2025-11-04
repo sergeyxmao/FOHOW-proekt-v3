@@ -279,6 +279,13 @@ watch(
           >
             <button class="mobile-user-menu__close" type="button" @click="closeUserMenu">✕</button>
 
+            <div class="mobile-user-menu__section mobile-user-menu__section--account">
+              <div class="mobile-user-menu__account-number">
+                RUY68241101111
+              </div>
+            </div>
+            <div class="mobile-user-menu__divider" />
+
             <div class="mobile-user-menu__section mobile-user-menu__section--project">
               <button
                 class="mobile-user-menu__project-button"
@@ -316,9 +323,6 @@ watch(
             <div class="mobile-user-menu__divider" />
 
             <div class="mobile-user-menu__section">
-              <div class="mobile-user-menu__item mobile-user-menu__item--static">
-                🔐 Номер личного кабинета: RUY68241101111
-              </div>
               <button class="mobile-user-menu__item" type="button" @click="handleMenuProfile">
                 👤 Профиль
               </button>
@@ -553,6 +557,18 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.mobile-user-menu__section--account {
+  text-align: center;
+  padding: 4px 0;
+}
+
+.mobile-user-menu__account-number {
+  font-size: 17px;
+  font-weight: 700;
+  color: inherit;
+  letter-spacing: 0.5px;
 }
 
 .mobile-user-menu__section--project {

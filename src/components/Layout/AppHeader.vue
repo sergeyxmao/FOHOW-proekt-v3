@@ -195,6 +195,13 @@ onBeforeUnmount(() => {
                 ref="userMenuRef"
                 class="user-menu"
               >
+              <div class="user-menu__section user-menu__section--account">
+                <div class="user-menu__account-number">
+                  RUY68241101111
+                </div>
+              </div>
+              <div class="user-menu__divider" />
+
               <div class="user-menu__section user-menu__section--project">
                 <button
                   class="user-menu__project-name-button"
@@ -230,9 +237,6 @@ onBeforeUnmount(() => {
               </div>
               <div class="user-menu__divider" />
               <div class="user-menu__section">
-                <div class="user-menu__item user-menu__item--static">
-                  🔐 Номер личного кабинета: RUY68241101111
-                </div>
                 <button class="user-menu__item" type="button" @click="handleProfileClick">
                   👤 Профиль
                 </button>
@@ -476,6 +480,18 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.user-menu__section--account {
+  text-align: center;
+  padding: 4px 0;
+}
+
+.user-menu__account-number {
+  font-size: 16px;
+  font-weight: 700;
+  color: inherit;
+  letter-spacing: 0.5px;
 }
 
 .user-menu__section--project {
