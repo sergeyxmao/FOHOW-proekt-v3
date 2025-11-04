@@ -14,6 +14,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fastifyStatic from '@fastify/static';
+import Redis from 'ioredis'; // <-- Добавлен импорт Redis
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,11 +22,6 @@ const __dirname = dirname(__filename);
 dotenv.config();
 
 const app = Fastify({ logger: true });
-const VERIFICATION_CODE_TTL = 5 * 60 * 1000; // 5 минут
-const VERIFICATION_MAX_ATTEMPTS = 5;
-const VERIFICATION_LOCK_DURATION = 5 * 60 * 1000; // 5 минут
-
-const verificationSessions = new Map();
 
 // Проверяем наличие необходимых переменных окружения
 if (!process.env.JWT_SECRET) {
@@ -34,120 +30,116 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
-function createVerificationSession(previousToken) {
-  if (previousToken) {
-    verificationSessions.delete(previousToken);
-  }
+// ---> НАЧАЛО НОВОГО БЛОКА С REDIS
+// Подключаемся к Redis. Если ваш Redis на том же сервере и на стандартном порту,
+// этого достаточно. Иначе укажите параметры: new Redis('redis://:password@hostname:port/0')
+const redis = new Redis();
 
-  const now = Date.now();
+redis.on('connect', () => {
+  console.log('✅ Успешное подключение к Redis');
+});
+redis.on('error', (err) => {
+  console.error('❌ Ошибка подключения к Redis:', err);
+});
 
-  for (const [storedToken, session] of verificationSessions.entries()) {
-    if (session.expiresAt <= now) {
-      verificationSessions.delete(storedToken);
-    }
-  }
+const VERIFICATION_CODE_TTL_SECONDS = 5 * 60; // 5 минут в секундах
+const VERIFICATION_MAX_ATTEMPTS = 5;
+const VERIFICATION_LOCK_DURATION_SECONDS = 5 * 60; // 5 минут в секундах
 
+async function createVerificationSession() {
   const token = randomBytes(16).toString('hex');
   const code = Math.floor(1000 + Math.random() * 9000).toString();
+  const redisKey = `verification:${token}`;
 
-  verificationSessions.set(token, {
+  const session = {
     code,
     attempts: 0,
     lockedUntil: null,
-    expiresAt: now + VERIFICATION_CODE_TTL
-  });
+  };
+
+  // Сохраняем сессию в Redis на 5 минут
+  await redis.set(redisKey, JSON.stringify(session), 'EX', VERIFICATION_CODE_TTL_SECONDS);
 
   return { token, code };
 }
 
-function getVerificationSession(token) {
+async function getVerificationSession(token) {
   if (!token) {
     return null;
   }
 
-  const session = verificationSessions.get(token);
+  const redisKey = `verification:${token}`;
+  const sessionData = await redis.get(redisKey);
 
-  if (!session) {
+  if (!sessionData) {
     return null;
   }
-
+  
+  const session = JSON.parse(sessionData);
   const now = Date.now();
 
-  if (session.expiresAt <= now) {
-    verificationSessions.delete(token);
-    return null;
-  }
-
+  // Проверяем, не снялась ли блокировка
   if (session.lockedUntil && now >= session.lockedUntil) {
     session.lockedUntil = null;
     session.attempts = 0;
+    // Обновляем сессию в Redis, чтобы снять блокировку
+    const ttl = await redis.ttl(redisKey); // Получаем оставшееся время жизни
+    if (ttl > 0) {
+      await redis.set(redisKey, JSON.stringify(session), 'EX', ttl);
+    }
   }
 
   return session;
 }
 
-function validateVerificationCode(verificationToken, verificationCode) {
-  const sanitizedCode = typeof verificationCode === 'string'
-    ? verificationCode.trim()
-    : String(verificationCode || '').trim();
+async function validateVerificationCode(verificationToken, verificationCode) {
+  const sanitizedCode = String(verificationCode || '').trim();
 
   if (!verificationToken || sanitizedCode.length === 0) {
-    return {
-      ok: false,
-      status: 400,
-      message: 'Проверочный код обязателен'
-    };
+    return { ok: false, status: 400, message: 'Проверочный код обязателен' };
   }
 
-  const session = getVerificationSession(verificationToken);
+  const redisKey = `verification:${verificationToken}`;
+  const session = await getVerificationSession(verificationToken);
 
   if (!session) {
-    return {
-      ok: false,
-      status: 400,
-      message: 'Проверочный код недействителен или истек. Обновите код.'
-    };
+    return { ok: false, status: 400, message: 'Проверочный код недействителен или истек. Обновите код.' };
   }
 
   const now = Date.now();
 
   if (session.lockedUntil && now < session.lockedUntil) {
     const retrySeconds = Math.ceil((session.lockedUntil - now) / 1000);
-
-    return {
-      ok: false,
-      status: 429,
-      message: `Превышено количество попыток. Попробуйте снова через ${retrySeconds} секунд.`
-    };
+    return { ok: false, status: 429, message: `Превышено количество попыток. Попробуйте снова через ${retrySeconds} секунд.` };
   }
 
   if (session.code !== sanitizedCode) {
     session.attempts += 1;
+    const ttl = await redis.ttl(redisKey);
 
-    if (session.attempts >= VERIFICATION_MAX_ATTEMPTS) {
-      session.lockedUntil = now + VERIFICATION_LOCK_DURATION;
-
-      return {
-        ok: false,
-        status: 429,
-        message: 'Превышено количество попыток. Форма заблокирована на 5 минут.'
-      };
+    if (ttl <= 0) { // Если ключ успел истечь между get и этой проверкой
+       return { ok: false, status: 400, message: 'Проверочный код истек. Обновите код.' };
     }
 
-    return {
-      ok: false,
-      status: 400,
-      message: 'Неверный проверочный код'
-    };
+    if (session.attempts >= VERIFICATION_MAX_ATTEMPTS) {
+      session.lockedUntil = now + (VERIFICATION_LOCK_DURATION_SECONDS * 1000);
+      await redis.set(redisKey, JSON.stringify(session), 'EX', ttl);
+      return { ok: false, status: 429, message: 'Превышено количество попыток. Форма заблокирована на 5 минут.' };
+    }
+    
+    // Просто обновляем количество попыток
+    await redis.set(redisKey, JSON.stringify(session), 'EX', ttl);
+    return { ok: false, status: 400, message: 'Неверный проверочный код' };
   }
 
-  verificationSessions.delete(verificationToken);
+  // Если код верный, удаляем сессию
+  await redis.del(redisKey);
 
-  return {
-    ok: true,
-    status: 200
-  };
+  return { ok: true, status: 200 };
 }
+// <--- КОНЕЦ НОВОГО БЛОКА С REDIS
+
+
 // Плагины безопасности
 await app.register(helmet);
 await app.register(cors, { origin: true, credentials: true });
@@ -160,10 +152,11 @@ await app.register(fastifyStatic, {
   root: path.join(__dirname, 'uploads'),
   prefix: '/uploads/'
 });
+
 app.post('/api/verification-code', async (req, reply) => {
   try {
-    const body = req.body || {};
-    const { token, code } = createVerificationSession(body.previousToken);
+    // Вызов асинхронной функции
+    const { token, code } = await createVerificationSession();
 
     return reply.send({ token, code });
   } catch (err) {
@@ -171,7 +164,8 @@ app.post('/api/verification-code', async (req, reply) => {
     return reply.code(500).send({ error: 'Не удалось создать проверочный код' });
   }
 });
-// === РЕГИСТРАЦІЯ ===
+
+// === РЕГИСТРАЦИЯ ===
 app.post('/api/register', async (req, reply) => {
    const { email, password, verificationToken, verificationCode } = req.body;
   
@@ -179,7 +173,8 @@ app.post('/api/register', async (req, reply) => {
     return reply.code(400).send({ error: 'Email и пароль обязательны' });
   }
   
-  const verificationResult = validateVerificationCode(verificationToken, verificationCode);
+  // Вызов асинхронной функции
+  const verificationResult = await validateVerificationCode(verificationToken, verificationCode);
 
   if (!verificationResult.ok) {
     return reply.code(verificationResult.status).send({ error: verificationResult.message });
@@ -212,20 +207,16 @@ app.post('/api/register', async (req, reply) => {
   } catch (err) {
     console.error('❌ Ошибка регистрации:', err);
 
-    // Определяем тип ошибки и возвращаем более информативное сообщение
     if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
       return reply.code(500).send({ error: 'Ошибка подключения к базе данных' });
     }
-
     if (err.name === 'JsonWebTokenError') {
       return reply.code(500).send({ error: 'Ошибка создания токена авторизации' });
     }
-
-    if (err.code === '23505') { // Duplicate key error в PostgreSQL
+    if (err.code === '23505') { 
       return reply.code(400).send({ error: 'Пользователь с таким email уже существует' });
     }
 
-    // Общая ошибка с дополнительной информацией в режиме разработки
     const errorMessage = process.env.NODE_ENV === 'development'
       ? `Ошибка сервера: ${err.message}`
       : 'Ошибка сервера. Попробуйте позже';
@@ -234,7 +225,7 @@ app.post('/api/register', async (req, reply) => {
   }
 });
 
-// === АВТОРИЗАЦІЯ ===
+// === АВТОРИЗАЦИЯ ===
 app.post('/api/login', async (req, reply) => {
   const { email, password, verificationToken, verificationCode } = req.body;
   
@@ -242,7 +233,8 @@ app.post('/api/login', async (req, reply) => {
     return reply.code(400).send({ error: 'Email и пароль обязательны' });
   }
   
-  const verificationResult = validateVerificationCode(verificationToken, verificationCode);
+  // Вызов асинхронной функции
+  const verificationResult = await validateVerificationCode(verificationToken, verificationCode);
 
   if (!verificationResult.ok) {
     return reply.code(verificationResult.status).send({ error: verificationResult.message });
@@ -262,7 +254,6 @@ app.post('/api/login', async (req, reply) => {
       return reply.code(401).send({ error: 'Неверный email или пароль' });
     }
 
-    // Создаем JWT токен
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
@@ -277,16 +268,13 @@ app.post('/api/login', async (req, reply) => {
   } catch (err) {
     console.error('❌ Ошибка авторизации:', err);
 
-    // Определяем тип ошибки и возвращаем более информативное сообщение
     if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
       return reply.code(500).send({ error: 'Ошибка подключения к базе данных' });
     }
-
     if (err.name === 'JsonWebTokenError') {
       return reply.code(500).send({ error: 'Ошибка создания токена авторизации' });
     }
-
-    // Общая ошибка с дополнительной информацией в режиме разработки
+    
     const errorMessage = process.env.NODE_ENV === 'development'
       ? `Ошибка сервера: ${err.message}`
       : 'Ошибка сервера. Попробуйте позже';
@@ -325,27 +313,20 @@ app.post('/api/forgot-password', async (req, reply) => {
   }
   
   try {
-    // Проверяем, существует ли пользователь
     const result = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
     
     if (result.rows.length === 0) {
-      // Не раскрываем, существует ли email (безопасность)
       return reply.send({ success: true, message: 'Если email существует, письмо будет отправлено' });
     }
     
     const userId = result.rows[0].id;
-    
-    // Генерируем токен
     const token = jwt.sign({ userId, type: 'reset' }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    
-    // Сохраняем токен в БД
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 час
     await pool.query(
       'INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)',
       [userId, token, expiresAt]
     );
     
-    // Отправляем email
     const { sendPasswordResetEmail } = await import('./utils/email.js');
     await sendPasswordResetEmail(email, token);
     
@@ -369,7 +350,6 @@ app.post('/api/reset-password', async (req, reply) => {
   }
   
   try {
-    // Проверяем токен
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -377,7 +357,6 @@ app.post('/api/reset-password', async (req, reply) => {
       return reply.code(400).send({ error: 'Недействительный или истекший токен' });
     }
     
-    // Проверяем токен в БД
     const resetResult = await pool.query(
       'SELECT user_id, expires_at FROM password_resets WHERE token = $1',
       [token]
@@ -389,19 +368,13 @@ app.post('/api/reset-password', async (req, reply) => {
     
     const { user_id, expires_at } = resetResult.rows[0];
     
-    // Проверяем, не истек ли токен
     if (new Date() > new Date(expires_at)) {
       await pool.query('DELETE FROM password_resets WHERE token = $1', [token]);
       return reply.code(400).send({ error: 'Токен истек' });
     }
     
-    // Хешируем новый пароль
     const hash = await bcrypt.hash(newPassword, 10);
-    
-    // Обновляем пароль
     await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hash, user_id]);
-    
-    // Удаляем использованный токен
     await pool.query('DELETE FROM password_resets WHERE token = $1', [token]);
     
     return reply.send({ success: true, message: 'Пароль успешно изменен' });
@@ -422,7 +395,6 @@ app.put('/api/profile', async (req, reply) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     const { username, email, currentPassword, newPassword } = req.body
 
-    // Проверяем текущего пользователя
     const userResult = await pool.query(
       'SELECT * FROM users WHERE id = $1',
       [decoded.userId]
@@ -434,7 +406,6 @@ app.put('/api/profile', async (req, reply) => {
 
     const user = userResult.rows[0]
 
-    // Если меняем email, проверяем уникальность
     if (email && email !== user.email) {
       const emailCheck = await pool.query(
         'SELECT id FROM users WHERE email = $1 AND id != $2',
@@ -445,7 +416,6 @@ app.put('/api/profile', async (req, reply) => {
       }
     }
 
-    // Если меняем username, проверяем уникальность
     if (username && username !== user.username) {
       const usernameCheck = await pool.query(
         'SELECT id FROM users WHERE username = $1 AND id != $2',
@@ -456,32 +426,26 @@ app.put('/api/profile', async (req, reply) => {
       }
     }
 
-    // Определяем, нужно ли менять пароль
     let passwordHash = user.password
     const shouldChangePassword = newPassword && newPassword.trim().length > 0
 
     if (shouldChangePassword) {
-      // Проверяем, указан ли текущий пароль
       if (!currentPassword || currentPassword.trim().length === 0) {
         return reply.code(400).send({ error: 'Укажите текущий пароль для смены пароля' })
       }
 
-      // Проверяем правильность текущего пароля
       const validPassword = await bcrypt.compare(currentPassword, user.password)
       if (!validPassword) {
         return reply.code(400).send({ error: 'Неверный текущий пароль' })
       }
 
-      // Проверяем длину нового пароля
       if (newPassword.length < 6) {
         return reply.code(400).send({ error: 'Новый пароль должен быть минимум 6 символов' })
       }
 
-      // Хешируем новый пароль
       passwordHash = await bcrypt.hash(newPassword, 10)
     }
 
-    // Обновляем профиль
     const updateResult = await pool.query(
       `UPDATE users 
        SET username = COALESCE($1, username), 
@@ -523,7 +487,6 @@ app.delete('/api/profile', async (req, reply) => {
       return reply.code(400).send({ error: 'Введите пароль для подтверждения' })
     }
 
-    // Проверяем пароль
     const userResult = await pool.query(
       'SELECT password FROM users WHERE id = $1',
       [decoded.userId]
@@ -538,7 +501,6 @@ app.delete('/api/profile', async (req, reply) => {
       return reply.code(400).send({ error: 'Неверный пароль' })
     }
 
-    // Удаляем пользователя (CASCADE удалит связанные записи)
     await pool.query('DELETE FROM users WHERE id = $1', [decoded.userId])
 
     return reply.send({ success: true, message: 'Аккаунт удалён' })
@@ -558,28 +520,23 @@ app.post('/api/profile/avatar', async (req, reply) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Получаем файл из multipart
     const data = await req.file();
     
     if (!data) {
       return reply.code(400).send({ error: 'Файл не предоставлен' });
     }
 
-    // Проверяем тип файла
     const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedMimes.includes(data.mimetype)) {
       return reply.code(400).send({ error: 'Разрешены только изображения (JPEG, PNG, GIF, WEBP)' });
     }
 
-    // Генерируем уникальное имя файла
     const ext = path.extname(data.filename);
     const filename = `${decoded.userId}-${randomBytes(8).toString('hex')}${ext}`;
     const filepath = path.join(__dirname, 'uploads', 'avatars', filename);
 
-    // Сохраняем файл
     await pipeline(data.file, createWriteStream(filepath));
 
-    // Обновляем URL аватара в БД
     const avatarUrl = `/uploads/avatars/${filename}`;
     await pool.query(
       'UPDATE users SET avatar_url = $1 WHERE id = $2',
@@ -606,7 +563,6 @@ app.delete('/api/profile/avatar', async (req, reply) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Удаляем URL аватара из БД
     await pool.query(
       'UPDATE users SET avatar_url = NULL WHERE id = $1',
       [decoded.userId]
@@ -719,7 +675,6 @@ app.put('/api/boards/:id', async (req, reply) => {
     const { id } = req.params;
     const { name, description, content } = req.body;
 
-    // Подсчитываем количество объектов
     let objectCount = 0;
     if (content && content.objects) {
       objectCount = content.objects.length;
@@ -822,6 +777,7 @@ app.post('/api/boards/:id/duplicate', async (req, reply) => {
     return reply.code(500).send({ error: 'Ошибка сервера' });
   }
 });
+
 // Загрузить миниатюру доски
 app.post('/api/boards/:id/thumbnail', async (req, reply) => {
   try {
@@ -893,7 +849,7 @@ const HOST = '127.0.0.1';
 
 try {
   await app.listen({ port: PORT, host: HOST });
-app.log.info(`API listening on http://${HOST}:${PORT}`);
+  app.log.info(`API listening on http://${HOST}:${PORT}`);
 } catch (err) {
   app.log.error(err);
   process.exit(1);
