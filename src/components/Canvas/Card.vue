@@ -23,7 +23,8 @@ const props = defineProps({
 const emit = defineEmits([
   'card-click',
   'start-drag',
-  'add-note'
+  'add-note',
+  'balance-changed'
 ]);
 
 const cardsStore = useCardsStore();
@@ -510,18 +511,21 @@ const updateValue = (event, field) => {
         { balanceManualOverride: nextValue },
         { saveToHistory: true, description: `Установлен ручной баланс для "${props.card.text}"` }
       );
-      
+
       // Также сохраняем ручные корректировки (разницу) для правильного расчёта
       const manualAdditions = {
         left: manualBalanceOffset.value.left,
         right: manualBalanceOffset.value.right
       };
-      
+
       cardsStore.updateCard(
         props.card.id,
         { manualAdjustments: manualAdditions },
         { saveToHistory: false }
       );
+
+      // Эмитим событие об изменении баланса для запуска анимации
+      emit('balance-changed', props.card.id);
     }
   }
 };
@@ -651,8 +655,6 @@ watch(
           >
             <circle cx="50" cy="50" r="45" :fill="coinFillColor" stroke="#DAA520" stroke-width="5"/>
           </svg>
-          <!-- Желтый индикатор анимации изменения баланса -->
-          <div class="balance-animation-indicator"></div>
         </div>
         <div class="pv-value-container">
           <input
@@ -1040,42 +1042,6 @@ watch(
 
 .coin-icon--clickable:active {
   transform: scale(1.05);
-}
-
-/* Желтый индикатор анимации изменения баланса */
-.balance-animation-indicator {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 16px;
-  height: 16px;
-  background: #ffd700;
-  border: 2px solid #DAA520;
-  border-radius: 50%;
-  box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
-  z-index: 10;
-  display: none;
-}
-
-.card--balance-propagation .balance-animation-indicator {
-  display: block;
-  animation: balance-indicator-pulse 1s ease-in-out infinite;
-}
-
-@keyframes balance-indicator-pulse {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.8;
-    box-shadow: 0 0 12px rgba(255, 215, 0, 1);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
 }
 
 .label {
