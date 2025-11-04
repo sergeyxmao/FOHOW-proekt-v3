@@ -12,8 +12,8 @@ const props = defineProps({
 const emit = defineEmits(['request-close', 'activate-pencil'])
 
 const canvasStore = useCanvasStore()
-const historyStore = useHistoryStore()  
-const { isSelectionMode, isHierarchicalDragMode } = storeToRefs(canvasStore)
+const historyStore = useHistoryStore()
+const { isSelectionMode, isHierarchicalDragMode, guidesEnabled } = storeToRefs(canvasStore)
 const { canUndo, canRedo } = storeToRefs(historyStore)
 
 const handleSelectionMode = () => {
@@ -46,6 +46,11 @@ const handleRedo = () => {
   }
 
   historyStore.redo()
+  emit('request-close')
+}
+
+const toggleGuides = () => {
+  canvasStore.toggleGuides()
   emit('request-close')
 }  
 </script>
@@ -88,6 +93,17 @@ const handleRedo = () => {
           @click="handleActivatePencil"
         >
           Режим рисования
+        </button>
+      </div>
+      <div class="tools-menu__item">
+        <span class="tools-menu__icon" aria-hidden="true">📐</span>
+        <button
+          type="button"
+          class="tools-menu__action"
+          :class="{ 'tools-menu__action--active': guidesEnabled }"
+          @click="toggleGuides"
+        >
+          Показать направляющие
         </button>
       </div>
     </div>
