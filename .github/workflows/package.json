@@ -1,0 +1,30 @@
+{
+  "name": "fohow-interactive-board",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test tests/*.spec.js",
+    "deploy": "npm run build && cd dist && git init && git branch -M gh-pages && git add . && git commit -m \"Deploy to GitHub Pages\" && git remote add origin https://github.com/sergeyxmao/FOHOW-proekt-v3.git && git push -f origin gh-pages",
+    "deploy:windows": "deploy.bat"
+  },
+  "dependencies": {
+    "@vueuse/core": "^13.9.0",
+    "cropperjs": "^1.6.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.3",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.22"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vite": "^7.1.7",
+    "vite-plugin-vue-devtools": "^8.0.2"
+  }
+}
