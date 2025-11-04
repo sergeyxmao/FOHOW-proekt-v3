@@ -79,6 +79,19 @@ const success = ref('');
 const previewMeta = ref(null);
 const fileInput = ref(null);
 
+async function checkServerHealth() {
+  try {
+    const response = await fetch(`${API_URL}/api/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000) // 5 секунд таймаут
+    });
+    return response.ok;
+  } catch (err) {
+    console.error('Server health check failed:', err);
+    return false;
+  }
+}
+
 async function handleFileSelect(event) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -101,6 +114,14 @@ async function handleFileSelect(event) {
   error.value = '';
   success.value = '';
 
+  // Проверка доступности сервера
+  console.log('Checking server health...');
+  const serverHealthy = await checkServerHealth();
+  if (!serverHealthy) {
+    error.value = 'Сервер недоступен. Проверьте, что API запущен на ' + API_URL;
+    return;
+  }
+
   // Создаём превью
   const reader = new FileReader();
   reader.onload = (e) => {
@@ -121,7 +142,14 @@ async function uploadAvatar(file) {
     const formData = new FormData();
     formData.append('file', file);
 
+    console.log('Uploading avatar to:', `${API_URL}/api/me/avatar`);
+    console.log('File size:', file.size, 'bytes');
+    console.log('File type:', file.type);
+
     const xhr = new XMLHttpRequest();
+
+    // Timeout через 60 секунд
+    xhr.timeout = 60000;
 
     // Отслеживание прогресса
     xhr.upload.addEventListener('progress', (e) => {
@@ -133,24 +161,53 @@ async function uploadAvatar(file) {
     // Обработка ответа
     const uploadPromise = new Promise((resolve, reject) => {
       xhr.addEventListener('load', () => {
+        console.log('XHR load event, status:', xhr.status);
+        console.log('Response text:', xhr.responseText);
+
         if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(JSON.parse(xhr.responseText));
+          try {
+            const data = JSON.parse(xhr.responseText);
+            resolve(data);
+          } catch (parseErr) {
+            reject(new Error('Ошибка парсинга ответа сервера'));
+          }
         } else {
-          reject(new Error(JSON.parse(xhr.responseText).error || 'Ошибка загрузки'));
+          try {
+            const errorData = JSON.parse(xhr.responseText);
+            reject(new Error(errorData.error || `Ошибка сервера: ${xhr.status}`));
+          } catch (parseErr) {
+            reject(new Error(`Ошибка сервера: ${xhr.status}`));
+          }
         }
       });
 
-      xhr.addEventListener('error', () => {
-        reject(new Error('Ошибка сети'));
+      xhr.addEventListener('error', (e) => {
+        console.error('XHR error event:', e);
+        console.error('XHR state:', xhr.readyState);
+        console.error('XHR status:', xhr.status);
+        reject(new Error('Ошибка сети. Проверьте подключение к серверу.'));
+      });
+
+      xhr.addEventListener('timeout', () => {
+        console.error('XHR timeout');
+        reject(new Error('Превышено время ожидания. Попробуйте загрузить файл меньшего размера.'));
+      });
+
+      xhr.addEventListener('abort', () => {
+        console.error('XHR abort');
+        reject(new Error('Загрузка отменена'));
       });
     });
 
     // Отправка запроса
     xhr.open('POST', `${API_URL}/api/me/avatar`);
     xhr.setRequestHeader('Authorization', `Bearer ${authStore.token}`);
+
+    console.log('Sending request...');
     xhr.send(formData);
 
     const response = await uploadPromise;
+    console.log('Upload successful:', response);
 
     // Обновляем профиль
     await authStore.fetchProfile();

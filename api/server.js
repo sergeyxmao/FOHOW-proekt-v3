@@ -518,20 +518,32 @@ app.delete('/api/profile', async (req, reply) => {
 
 // === ЗАГРУЗКА АВАТАРА (ОПТИМИЗИРОВАННАЯ) ===
 app.post('/api/me/avatar', async (req, reply) => {
+  const startTime = Date.now();
+  console.log('📤 Avatar upload request received');
+
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
+      console.log('❌ No authorization token');
       return reply.code(401).send({ error: 'Не авторизован' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('✅ User authenticated:', decoded.userId);
 
     // Получаем файл из multipart
     const data = await req.file();
 
     if (!data) {
+      console.log('❌ No file in request');
       return reply.code(400).send({ error: 'Файл не предоставлен' });
     }
+
+    console.log('📎 File received:', {
+      filename: data.filename,
+      mimetype: data.mimetype,
+      encoding: data.encoding
+    });
 
     // Читаем весь файл в буфер
     const chunks = [];
@@ -540,9 +552,12 @@ app.post('/api/me/avatar', async (req, reply) => {
     }
     const buffer = Buffer.concat(chunks);
 
+    console.log('📊 File size:', buffer.length, 'bytes');
+
     // Проверяем размер файла (максимум 10 МБ)
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 МБ
     if (buffer.length > MAX_FILE_SIZE) {
+      console.log('❌ File too large:', buffer.length);
       return reply.code(400).send({ error: 'Файл слишком большой. Максимум 10 МБ' });
     }
 
@@ -557,9 +572,11 @@ app.post('/api/me/avatar', async (req, reply) => {
     const oldMeta = userResult.rows[0]?.avatar_meta;
     const oldHash = oldMeta?.rev;
 
+    console.log('🔄 Processing avatar...');
     // Обрабатываем аватар
     const { meta } = await processAvatar(buffer, decoded.userId);
 
+    console.log('💾 Updating database...');
     // Обновляем метаданные в БД
     await pool.query(
       'UPDATE users SET avatar_meta = $1, avatar_updated_at = CURRENT_TIMESTAMP WHERE id = $2',
@@ -568,21 +585,32 @@ app.post('/api/me/avatar', async (req, reply) => {
 
     // Удаляем старую версию аватара
     if (oldHash && oldHash !== meta.rev) {
+      console.log('🗑️ Deleting old avatar version:', oldHash);
       await deleteOldAvatarVersion(decoded.userId, oldHash);
     }
+
+    const duration = Date.now() - startTime;
+    console.log(`✅ Avatar uploaded successfully in ${duration}ms`);
 
     return reply.send({
       success: true,
       avatarMeta: meta
     });
   } catch (err) {
-    console.error('❌ Ошибка загрузки аватара:', err);
+    const duration = Date.now() - startTime;
+    console.error(`❌ Ошибка загрузки аватара (${duration}ms):`, err);
+    console.error('Error stack:', err.stack);
 
     if (err.message.includes('Unsupported image format')) {
       return reply.code(400).send({ error: 'Неподдерживаемый формат. Разрешены только JPEG, PNG, WebP и AVIF' });
     }
 
-    return reply.code(500).send({ error: 'Ошибка сервера' });
+    // Возвращаем более детальную информацию об ошибке в development
+    const isDev = process.env.NODE_ENV === 'development';
+    return reply.code(500).send({
+      error: 'Ошибка сервера',
+      ...(isDev && { details: err.message, stack: err.stack })
+    });
   }
 });
 
