@@ -1687,6 +1687,18 @@ const handleAddNoteClick = (cardId) => {
   }
 };
 
+const handlePvChanged = (cardId) => {
+
+  console.log('🔵 PV changed for card:', cardId);
+
+  // Запускаем анимацию для карточки, у которой изменился PV
+
+  // Это вызовет пересчет баланса и анимацию распространения вверх
+
+  animateBalancePropagation(cardId);
+
+};
+
 const handleStageClick = (event) => {
   if (suppressNextStageClick) {
     suppressNextStageClick = false;
@@ -2190,6 +2202,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           @card-click="(event) => handleCardClick(event, card.id)"
           @start-drag="startDrag"
           @add-note="handleAddNoteClick"
+          @pv-changed="handlePvChanged"         
           style="pointer-events: auto;"
           />
       </div>
@@ -2449,8 +2462,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   stroke-width: calc(var(--line-width, 5px) + 2px) !important;
   stroke-linecap: round;
   filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.6));
-  animation: balancePropagationFlow var(--line-animation-duration, 2000ms) ease-in-out;
-  animation-iteration-count: 1;
+  animation: balancePropagationFlow var(--line-animation-duration, 2000ms) ease-in-out infinite;
 }
 
 @keyframes balancePropagationFlow {
