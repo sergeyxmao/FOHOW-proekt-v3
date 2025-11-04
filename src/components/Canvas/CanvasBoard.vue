@@ -207,18 +207,25 @@ const animateBalancePropagation = (changedCardId, changedSide = null) => {
   // Получаем длительность анимации из настроек
   const animationDuration = viewSettingsStore.animationDurationMs || 2000;
 
+  console.log('🎨 Запуск анимации баланса для карточки:', changedCardId, 'длительность:', animationDuration);
+
   // Показываем желтый индикатор на измененной карточке через CSS-класс
   const cardElement = getCardElement(changedCardId);
   if (cardElement) {
+    console.log('✅ Карточка найдена, добавляем класс card--balance-propagation');
     cardElement.classList.add('card--balance-propagation');
     window.setTimeout(() => {
       cardElement.classList.remove('card--balance-propagation');
     }, animationDuration);
+  } else {
+    console.warn('❌ Карточка не найдена:', changedCardId);
   }
 
   // Находим путь вверх по структуре
   const meta = cardsStore.calculationMeta || {};
   const parentOf = meta.parentOf || {};
+
+  console.log('📊 Метаданные parentOf:', parentOf);
 
   const pathUp = [];
   let currentId = changedCardId;
@@ -229,6 +236,7 @@ const animateBalancePropagation = (changedCardId, changedSide = null) => {
     const parentId = relation.parentId;
     const side = relation.side;
 
+    console.log(`🔗 Связь найдена: ${currentId} -> ${parentId} (сторона: ${side})`);
     if (!parentId) break;
 
     // Находим линию между текущей карточкой и родителем
@@ -238,18 +246,24 @@ const animateBalancePropagation = (changedCardId, changedSide = null) => {
     );
 
     if (connection) {
+      console.log(`✅ Соединение найдено: ${connection.id}`);
       pathUp.push({ connectionId: connection.id, side });
+    } else {
+      console.warn(`❌ Соединение НЕ найдено между ${currentId} и ${parentId}`);
     }
-
     currentId = parentId;
   }
 
-  // Применяем анимацию к линиям вверх по структуре
-  pathUp.forEach(({ connectionId }) => {
-    const lineElement = getConnectionElement(connectionId);
-    if (!lineElement) return;
+  console.log('📍 Путь вверх построен, найдено линий:', pathUp.length);
 
+  // Применяем анимацию к линиям вверх по структуре
+  pathUp.forEach(({ connectionId }, index) => {
+    const lineElement = getConnectionElement(connectionId);
+    console.log(`Линия ${index + 1}/${pathUp.length}:`, connectionId, '→ элемент найден:', !!lineElement);
+
+    if (!lineElement) return;
     lineElement.classList.add('line--balance-propagation');
+    console.log('✅ Класс line--balance-propagation добавлен к линии:', connectionId);
     window.setTimeout(() => {
       lineElement.classList.remove('line--balance-propagation');
     }, animationDuration);
