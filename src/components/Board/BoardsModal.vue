@@ -92,7 +92,7 @@ const loading = ref(false)
 const error = ref('')
 const activeMenu = ref(null)
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru'
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {

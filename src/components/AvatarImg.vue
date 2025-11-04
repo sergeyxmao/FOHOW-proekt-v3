@@ -51,7 +51,7 @@ const props = defineProps({
 });
 
 // API base URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:4000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru';
 
 // Определяем наилучший размер на основе DPR и запрошенного размера
 const displaySize = computed(() => props.size);

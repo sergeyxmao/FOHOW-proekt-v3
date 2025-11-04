@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:4000/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -19,7 +19,7 @@ export const useAuthStore = defineStore('auth', {
         
         // Загружаем актуальные данные пользователя с сервера
         try {
-          const response = await fetch(`${API_URL}/profile`, {
+          const response = await fetch(`${API_URL}/api/profile`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -49,7 +49,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async register(email, password, verificationCode, verificationToken) {
-      const response = await fetch(`${API_URL}/register`, {
+      const response = await fetch(`${API_URL}/api/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, verificationCode, verificationToken })
@@ -66,7 +66,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async login(email, password, verificationCode, verificationToken) {
-      const response = await fetch(`${API_URL}/login`, {
+      const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, verificationCode, verificationToken })
@@ -86,7 +86,7 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('token', token)
 
       try {
-        const profileResponse = await fetch(`${API_URL}/profile`, {
+        const profileResponse = await fetch(`${API_URL}/api/profile`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -113,7 +113,7 @@ export const useAuthStore = defineStore('auth', {
       }
 
       try {
-        const response = await fetch(`${API_URL}/profile`, {
+        const response = await fetch(`${API_URL}/api/profile`, {
           headers: {
             'Authorization': `Bearer ${this.token}`
           }

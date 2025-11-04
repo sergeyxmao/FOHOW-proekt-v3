@@ -82,7 +82,7 @@ const loading = ref(true)
 const error = ref('')
 const activeMenu = ref(null)
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru'
 
 async function loadBoards() {
   loading.value = true

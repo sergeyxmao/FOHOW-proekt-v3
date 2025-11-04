@@ -10,7 +10,7 @@ export const useBoardStore = defineStore('board', () => {
   const hasUnsavedChanges = ref(false)
 
   const isCurrentBoard = computed(() => currentBoardId.value !== null)
-  const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+  const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru'
 
   function setCurrentBoard(id, name) {
     currentBoardId.value = id
@@ -62,7 +62,7 @@ export const useBoardStore = defineStore('board', () => {
     try {
       isSaving.value = true
 
-      const response = await fetch(`${API_URL}/boards/${currentBoardId.value}`, {
+      const response = await fetch(`${API_URL}/api/boards/${currentBoardId.value}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${authStore.token}`,

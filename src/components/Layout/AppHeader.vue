@@ -35,7 +35,7 @@ const showBoards = ref(false)
 const showUserMenu = ref(false)
 const userMenuRef = ref(null)
 const userTriggerRef = ref(null)
-const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru'
 import HeaderActions from './HeaderActions.vue'  
 
 const emit = defineEmits(['open-board', 'save-board', 'toggle-theme', 'fit-to-content'])

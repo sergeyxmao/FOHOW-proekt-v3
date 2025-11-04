@@ -109,7 +109,7 @@ const resetToken = ref('')
 
 // Автосохранение
 let autoSaveInterval = null
-const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru'
 
 function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
