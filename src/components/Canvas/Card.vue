@@ -23,8 +23,9 @@ const props = defineProps({
 const emit = defineEmits([
   'card-click',
   'start-drag',
-  'add-note'
-]);
+  'add-note',
+  'pv-changed'
+  ]);
 
 const cardsStore = useCardsStore();
 const isEditing = ref(false);
@@ -448,14 +449,28 @@ const handleCoinClick = (event) => {
       coinFill: '#ffd700',
       previousPvLeft: currentLeft // Сохраняем текущее значение
     });
+    // Эмитим событие об изменении PV для запуска анимации баланса
+
+    emit('pv-changed', props.card.id);
+
   } else if (isCoinGold.value) {
+
     // Если кружок желтый, возвращаем сохраненное значение или устанавливаем минимальное
+
     const previousLeft = Number.isFinite(props.card.previousPvLeft) ? props.card.previousPvLeft : MIN_LEFT_PV;
+
     cardsStore.updateCard(props.card.id, {
+
       pv: `${previousLeft}/${PV_RIGHT_VALUE}pv`,
+
       coinFill: '#3d85c6',
+
       previousPvLeft: currentLeft // Сохраняем текущее значение для следующего переключения
-    });
+          });
+
+    // Эмитим событие об изменении PV для запуска анимации баланса
+
+    emit('pv-changed', props.card.id);
   }
 };
 
