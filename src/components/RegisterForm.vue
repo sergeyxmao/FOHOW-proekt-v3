@@ -87,7 +87,7 @@ const props = defineProps({
     default: false
   }
 })
-const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru'
 
 const authStore = useAuthStore()
 const email = ref('')

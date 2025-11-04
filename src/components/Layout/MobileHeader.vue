@@ -32,7 +32,7 @@ const mobileStore = useMobileStore()
 const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
 const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
  
-const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru'
 const lastSavedFormatter = new Intl.DateTimeFormat('ru-RU', {
   hour: '2-digit',
   minute: '2-digit'
