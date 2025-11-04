@@ -353,10 +353,31 @@ const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
       || card.activePvBalance.right !== balanceRight) {
       updates.activePvBalance = { left: balanceLeft, right: balanceRight };
 
+      console.log(`💰 Изменение баланса для карточки ${cardId}:`, {
+
+        oldLeft: card.activePvBalance?.left ?? 0,
+
+        newLeft: balanceLeft,
+
+        oldRight: card.activePvBalance?.right ?? 0,
+
+        newRight: balanceRight,
+
+        triggerAnimation: options.triggerAnimation
+
+      });
+
+ 
+
       // Запоминаем карточки с изменениями баланса для анимации
+
       if (options.triggerAnimation) {
+
         const changedSide = balanceLeft !== (card.activePvBalance?.left ?? 0) ? 'left' :
+
                            balanceRight !== (card.activePvBalance?.right ?? 0) ? 'right' : null;
+
+        console.log(`  ➡️ Добавляем в массив анимации: cardId=${cardId}, side=${changedSide}`);
         cardsWithBalanceChanges.push({ cardId, side: changedSide });
       }
     }
@@ -391,11 +412,35 @@ const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
     highlightActivePvChange(highlightCardId);
   }
 
+  console.log('🔍 Проверка запуска анимации:');
+
+  console.log('  - options.triggerAnimation:', options.triggerAnimation);
+
+  console.log('  - cardsWithBalanceChanges.length:', cardsWithBalanceChanges.length);
+
+  console.log('  - cardsWithBalanceChanges:', cardsWithBalanceChanges);
+
+ 
+
   // Запускаем анимацию для карточек с изменениями баланса при автоматических расчетах
+
   if (options.triggerAnimation && cardsWithBalanceChanges.length > 0) {
+
+    console.log('✅ Запускаем анимацию для', cardsWithBalanceChanges.length, 'карточек');
+
     cardsWithBalanceChanges.forEach(({ cardId, side }) => {
+
       animateBalancePropagation(cardId, side);
+
     });
+
+  } else {
+
+    console.warn('❌ Анимация НЕ запускается. Причина:');
+
+    if (!options.triggerAnimation) console.warn('   - triggerAnimation = false');
+
+    if (cardsWithBalanceChanges.length === 0) console.warn('   - нет карточек с изменениями баланса');
   }
 };
 
