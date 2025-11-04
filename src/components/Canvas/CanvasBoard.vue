@@ -504,20 +504,65 @@ const handleActivePvButtonClick = (event) => {
   }
 
   const updates = result?.updates || {};
-  const updateEntries = Object.entries(updates);
-  if (updateEntries.length === 0) {
-    return;
-  }
+  const changedIds = result?.changedIds || [];
 
-  updateEntries.forEach(([id, payload]) => {
-    cardsStore.updateCard(id, payload, { saveToHistory: false });
+  const updateEntries = Object.entries(updates);
+
+ 
+
+  console.log('📦 Результат applyActivePvDelta:', {
+
+    updatesCount: updateEntries.length,
+
+    changedIds,
+
+    cardId
+
   });
 
+ 
+
+  if (updateEntries.length === 0) {
+
+    return;
+
+  }
+
+ 
+
+  updateEntries.forEach(([id, payload]) => {
+
+    cardsStore.updateCard(id, payload, { saveToHistory: false });
+
+  });
+
+ 
+
   const description = card?.text
+
     ? `Active-PV обновлены для "${card.text}"`
+
     : 'Изменены бонусы Active-PV';
 
-    applyActivePvPropagation(cardId, { saveHistory: true, historyDescription: description, triggerAnimation: true });
+ 
+
+  // Запускаем анимацию для всех измененных карточек
+
+  if (changedIds.length > 0) {
+
+    console.log('🎯 Запуск анимации для changedIds:', changedIds);
+
+    changedIds.forEach(id => {
+
+      animateBalancePropagation(id);
+
+    });
+
+  }
+
+ 
+
+  applyActivePvPropagation(cardId, { saveHistory: true, historyDescription: description, triggerAnimation: false });
 };  
 const getCurrentZoom = () => {
   const value = Number(zoomScale.value);
