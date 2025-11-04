@@ -1687,6 +1687,12 @@ const handleAddNoteClick = (cardId) => {
   }
 };
 
+const handleBalanceChanged = (cardId) => {
+  console.log('💰 Balance changed manually for card:', cardId);
+  // Запускаем анимацию для измененной карточки
+  animateBalancePropagation(cardId);
+};
+
 const handleStageClick = (event) => {
   if (suppressNextStageClick) {
     suppressNextStageClick = false;
@@ -2190,6 +2196,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           @card-click="(event) => handleCardClick(event, card.id)"
           @start-drag="startDrag"
           @add-note="handleAddNoteClick"
+          @balance-changed="handleBalanceChanged"
           style="pointer-events: auto;"
           />
       </div>
