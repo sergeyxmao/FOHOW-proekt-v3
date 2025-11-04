@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:4000/api'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -105,6 +105,33 @@ export const useAuthStore = defineStore('auth', {
 
       this.isAuthenticated = true
       localStorage.setItem('user', JSON.stringify(this.user))
+    },
+
+    async fetchProfile() {
+      if (!this.token) {
+        throw new Error('Not authenticated')
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/profile`, {
+          headers: {
+            'Authorization': `Bearer ${this.token}`
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch profile')
+        }
+
+        const data = await response.json()
+        this.user = data.user
+        localStorage.setItem('user', JSON.stringify(data.user))
+
+        return data.user
+      } catch (err) {
+        console.error('Error fetching profile:', err)
+        throw err
+      }
     },
 
     logout() {
