@@ -913,8 +913,8 @@ app.post('/api/notes', async (req, reply) => {
       return reply.code(404).send({ error: 'Доска не найдена или нет доступа' });
     }
 
-    // Проверяем, нужно ли удалить заметку
-    const shouldDelete = (!content || content.trim() === '') && (!color || color.trim() === '');
+    // Проверяем, нужно ли удалить заметку (пустой текст = удаление, независимо от цвета)
+    const shouldDelete = !content || content.trim() === '';
 
     if (shouldDelete) {
       // Удаляем заметку
