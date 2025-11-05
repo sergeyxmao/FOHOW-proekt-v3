@@ -97,7 +97,17 @@ export const useUserCommentsStore = defineStore('userComments', () => {
     error.value = null
 
     try {
-      const response = await fetch(`${API_URL}/comments/${commentId}`, {
+      // Валидация commentId на клиенте
+      if (!commentId || commentId === 'undefined' || commentId === 'null') {
+        throw new Error('Некорректный ID комментария')
+      }
+
+      const commentIdNum = Number(commentId)
+      if (!Number.isInteger(commentIdNum) || commentIdNum <= 0) {
+        throw new Error('ID комментария должен быть положительным числом')
+      }
+
+      const response = await fetch(`${API_URL}/comments/${commentIdNum}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(updateData)
@@ -111,7 +121,7 @@ export const useUserCommentsStore = defineStore('userComments', () => {
       const data = await response.json()
 
       // Обновляем комментарий в массиве
-      const index = comments.value.findIndex(c => c.id === commentId)
+      const index = comments.value.findIndex(c => c.id === commentIdNum)
       if (index !== -1) {
         comments.value[index] = data.comment
       }
@@ -135,7 +145,17 @@ export const useUserCommentsStore = defineStore('userComments', () => {
     error.value = null
 
     try {
-      const response = await fetch(`${API_URL}/comments/${commentId}`, {
+      // Валидация commentId на клиенте
+      if (!commentId || commentId === 'undefined' || commentId === 'null') {
+        throw new Error('Некорректный ID комментария')
+      }
+
+      const commentIdNum = Number(commentId)
+      if (!Number.isInteger(commentIdNum) || commentIdNum <= 0) {
+        throw new Error('ID комментария должен быть положительным числом')
+      }
+
+      const response = await fetch(`${API_URL}/comments/${commentIdNum}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       })
@@ -146,7 +166,7 @@ export const useUserCommentsStore = defineStore('userComments', () => {
       }
 
       // Удаляем комментарий из массива
-      comments.value = comments.value.filter(c => c.id !== commentId)
+      comments.value = comments.value.filter(c => c.id !== commentIdNum)
     } catch (err) {
       error.value = err.message
       console.error('❌ Ошибка удаления комментария:', err)
