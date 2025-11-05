@@ -12,7 +12,8 @@ import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
 import AuthModal from './components/AuthModal.vue'
 import UserProfile from './components/UserProfile.vue'
-import BoardsModal from './components/Board/BoardsModal.vue' 
+import BoardsModal from './components/Board/BoardsModal.vue'
+import StructureNameModal from './components/Board/StructureNameModal.vue'
 import { useAuthStore } from './stores/auth'
 import { useCanvasStore } from './stores/canvas' // Предполагаемый импорт
 import { useBoardStore } from './stores/board'
@@ -55,8 +56,8 @@ const isSaveAvailable = computed(() => {
 
 const saveTooltip = computed(() =>
   isSaveAvailable.value
-    ? 'Сохранить проект'
-    : 'Задайте название проекта, чтобы сохранить'
+    ? 'Сохранить структуру'
+    : 'Задайте название структуры, чтобы сохранить'
 )
 
 const { handleExportHTML, handleLoadProject } = useProjectActions()
@@ -71,6 +72,8 @@ const showMobileAuthPrompt = ref(false)
 const mobileAuthModalView = ref('login')
 const isMobileAuthModalOpen = ref(false)
 const isBoardsModalOpen = ref(false)
+const isStructureNameModalOpen = ref(false)
+const pendingAction = ref(null)
 const menuTouchPointers = new Map()
 let menuPointerListenersAttached = false
 let initialMenuPinchDistance = null
@@ -196,6 +199,92 @@ function handleResetPasswordSuccess() {
   showResetPassword.value = false
 }
 
+async function ensureStructureExists(action) {
+  if (!authStore.isAuthenticated) {
+    return false
+  }
+
+  if (currentBoardId.value !== null) {
+    return true
+  }
+
+  return new Promise((resolve) => {
+    pendingAction.value = { action, resolve }
+    isStructureNameModalOpen.value = true
+  })
+}
+
+async function handleStructureNameConfirm(name) {
+  isStructureNameModalOpen.value = false
+
+  if (!pendingAction.value) {
+    return
+  }
+
+  try {
+    boardStore.isSaving = true
+
+    const canvasState = getCanvasState()
+
+    const createResponse = await fetch(`${API_URL}/boards`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: name,
+        content: canvasState
+      })
+    })
+
+    if (!createResponse.ok) {
+      throw new Error('Ошибка создания структуры')
+    }
+
+    const createData = await createResponse.json()
+    const createdBoard = createData?.board ?? createData
+
+    if (!createdBoard?.id) {
+      throw new Error('Сервер не вернул идентификатор новой структуры')
+    }
+
+    boardStore.setCurrentBoard(createdBoard.id, createdBoard.name ?? name)
+    window.dispatchEvent(new CustomEvent('boards:refresh'))
+
+    const { action, resolve } = pendingAction.value
+    pendingAction.value = null
+
+    if (action) {
+      action()
+    }
+
+    if (resolve) {
+      resolve(true)
+    }
+
+    boardStore.isSaving = false
+  } catch (err) {
+    console.error('❌ Ошибка создания структуры:', err)
+    alert('Не удалось создать структуру')
+    boardStore.isSaving = false
+
+    if (pendingAction.value?.resolve) {
+      pendingAction.value.resolve(false)
+    }
+    pendingAction.value = null
+  }
+}
+
+function handleStructureNameCancel() {
+  isStructureNameModalOpen.value = false
+
+  if (pendingAction.value?.resolve) {
+    pendingAction.value.resolve(false)
+  }
+  pendingAction.value = null
+}
+
 async function openBoard(boardId) {
   // Загружаем доску
   await loadBoard(boardId)
@@ -212,7 +301,7 @@ async function loadBoard(boardId) {
     })
 
     if (!response.ok) {
-      throw new Error('Ошибка загрузки доски')
+      throw new Error('Ошибка загрузки структуры')
     }
 
     const data = await response.json()
@@ -239,14 +328,14 @@ async function loadBoard(boardId) {
       : []
     connectionsStore.loadConnections(connectionsData)
 
-    console.log('✅ Загружена доска:', data.board.name)
+    console.log('✅ Загружена структура:', data.board.name)
     console.log('  Карточек:', cardsData.length)
     console.log('  Соединений:', connectionsData.length)
 
-    // Загружаем заметки для доски
+    // Загружаем заметки для структуры
     try {
       await notesStore.fetchNotesForBoard(boardId)
-      console.log('✅ Загружены заметки для доски')
+      console.log('✅ Загружены заметки для структуры')
     } catch (error) {
       console.error('⚠️ Ошибка загрузки заметок:', error)
       // Продолжаем работу, даже если заметки не загрузились
@@ -257,8 +346,8 @@ async function loadBoard(boardId) {
     // Запускаем автосохранение происходит через наблюдатель isSaveAvailable
 
   } catch (err) {
-    console.error('❌ Ошибка загрузки доски:', err)
-    alert('Не удалось загрузить доску')
+    console.error('❌ Ошибка загрузки структуры:', err)
+    alert('Не удалось загрузить структуру')
     boardStore.isSaving = false
   }
 }
@@ -268,43 +357,20 @@ async function saveCurrentBoard() {
     return
   }
 
+  const boardId = currentBoardId.value
+
+  if (!boardId) {
+    const canProceed = await ensureStructureExists(() => {
+      saveCurrentBoard()
+    })
+    return
+  }
+
   try {
     boardStore.isSaving = true
 
     // Получаем состояние canvas
     const canvasState = getCanvasState()
-    const boardName = (currentBoardName.value ?? '').trim()
-    let boardId = currentBoardId.value
-
-    if (!boardId) {
-      const createResponse = await fetch(`${API_URL}/boards`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authStore.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: boardName,
-          content: canvasState
-        })
-      })
-
-      if (!createResponse.ok) {
-        throw new Error('Ошибка создания доски')
-      }
-
-      const createData = await createResponse.json()
-      const createdBoard = createData?.board ?? createData 
-
-      if (!createdBoard?.id) {
-        throw new Error('Сервер не вернул идентификатор новой доски')
-      }
-
-      boardStore.setCurrentBoard(createdBoard.id, createdBoard.name ?? boardName)
-      boardId = createdBoard.id
-
-      window.dispatchEvent(new CustomEvent('boards:refresh'))
-    }
 
     const response = await fetch(`${API_URL}/boards/${boardId}`, {
       method: 'PUT',
@@ -323,8 +389,8 @@ async function saveCurrentBoard() {
 
     boardStore.markAsSaved()
     await uploadBoardThumbnail(boardId)
-   
-    console.log('💾 Доска автоматически сохранена:', new Date().toLocaleTimeString())
+
+    console.log('💾 Структура автоматически сохранена:', new Date().toLocaleTimeString())
   } catch (err) {
     console.error('❌ Ошибка автосохранения:', err)
     boardStore.isSaving = false
@@ -375,7 +441,7 @@ async function uploadBoardThumbnail(boardId) {
       })
     )
   } catch (error) {
-    console.error('❌ Не удалось обновить миниатюру доски:', error)
+    console.error('❌ Не удалось обновить миниатюру структуры:', error)
   }
 }
 
@@ -453,50 +519,94 @@ function stopAutoSave() {
 }
 
 // Mobile-specific functions
-function handleAddLicense() {
-  cardsStore.addCard({
-    type: 'small',
-    headerBg: headerColor.value,
-    colorIndex: headerColorIndex.value
+async function handleAddLicense() {
+  const canProceed = await ensureStructureExists(() => {
+    cardsStore.addCard({
+      type: 'small',
+      headerBg: headerColor.value,
+      colorIndex: headerColorIndex.value
+    })
   })
+
+  if (canProceed && currentBoardId.value !== null) {
+    cardsStore.addCard({
+      type: 'small',
+      headerBg: headerColor.value,
+      colorIndex: headerColorIndex.value
+    })
+  }
 }
 
-function handleAddLower() {
-  cardsStore.addCard({
-    type: 'large',
-    headerBg: headerColor.value,
-    colorIndex: headerColorIndex.value
-  })
-}
-
-function handleAddGold() {
-  cardsStore.addCard({
-    type: 'gold'
-  })
-}
-
-function handleAddTemplate(templateId) {
-  if (!templateId) {
-    // If no template ID is provided, just add a default card
+async function handleAddLower() {
+  const canProceed = await ensureStructureExists(() => {
     cardsStore.addCard({
       type: 'large',
       headerBg: headerColor.value,
       colorIndex: headerColorIndex.value
     })
-    return
-  }
+  })
 
-  // Load and insert the template
-  // This will be handled by the template insertion logic in MobileSidebar
-  console.log('Template selected:', templateId)
+  if (canProceed && currentBoardId.value !== null) {
+    cardsStore.addCard({
+      type: 'large',
+      headerBg: headerColor.value,
+      colorIndex: headerColorIndex.value
+    })
+  }
+}
+
+async function handleAddGold() {
+  const canProceed = await ensureStructureExists(() => {
+    cardsStore.addCard({
+      type: 'gold'
+    })
+  })
+
+  if (canProceed && currentBoardId.value !== null) {
+    cardsStore.addCard({
+      type: 'gold'
+    })
+  }
+}
+
+async function handleAddTemplate(templateId) {
+  const canProceed = await ensureStructureExists(async () => {
+    if (!templateId) {
+      cardsStore.addCard({
+        type: 'large',
+        headerBg: headerColor.value,
+        colorIndex: headerColorIndex.value
+      })
+    } else {
+      console.log('Template selected:', templateId)
+    }
+  })
+
+  if (canProceed && currentBoardId.value !== null) {
+    if (!templateId) {
+      cardsStore.addCard({
+        type: 'large',
+        headerBg: headerColor.value,
+        colorIndex: headerColorIndex.value
+      })
+    } else {
+      console.log('Template selected:', templateId)
+    }
+  }
 }
 
 function handleMobileExportHTML() {
   handleExportHTML()
 }
 
-function handleMobileLoadJSON() {
-  handleLoadProject()
+async function handleMobileLoadJSON() {
+  const canProceed = await ensureStructureExists(() => {
+    handleLoadProject()
+  })
+
+  if (canProceed) {
+    handleLoadProject()
+  }
 }
 function openMobileAuthPrompt() {
   showMobileAuthPrompt.value = true
@@ -866,7 +976,12 @@ onBeforeUnmount(() => {
       :is-open="isBoardsModalOpen"
       @close="handleMobileBoardsClose"
       @open-board="handleMobileBoardSelect"
-    />   
+    />
+    <StructureNameModal
+      :is-open="isStructureNameModalOpen"
+      @close="handleStructureNameCancel"
+      @confirm="handleStructureNameConfirm"
+    />
     <Teleport to="body">
       <div
         v-if="showProfile"

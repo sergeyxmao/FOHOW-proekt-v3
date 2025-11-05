@@ -7,15 +7,15 @@
           
           <div class="boards-container">
             <div class="boards-header">
-              <h2>📋 Мои доски</h2>
+              <h2>📋 Мои структуры</h2>
               <button class="btn-create" @click="createNewBoard">
-                ➕ Создать доску
+                ➕ Создать структуру
               </button>
             </div>
 
             <div v-if="loading" class="loading">
               <div class="spinner"></div>
-              <p>Загрузка досок...</p>
+              <p>Загрузка структур...</p>
             </div>
 
             <div v-else-if="error" class="error-message">
@@ -24,10 +24,10 @@
 
             <div v-else-if="boards.length === 0" class="empty-state">
               <div class="empty-icon">🎨</div>
-              <h3>У вас пока нет досок</h3>
-              <p>Создайте первую доску, чтобы начать работу</p>
+              <h3>У вас пока нет структур</h3>
+              <p>Создайте первую структуру, чтобы начать работу</p>
               <button class="btn-create-big" @click="createNewBoard">
-                ➕ Создать первую доску
+                ➕ Создать первую структуру
               </button>
             </div>
 
@@ -122,7 +122,7 @@ async function loadBoards() {
     })
     
     if (!response.ok) {
-      throw new Error('Ошибка загрузки досок')
+      throw new Error('Ошибка загрузки структур')
     }
     
     const data = await response.json()
@@ -143,7 +143,7 @@ async function createNewBoard() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        name: 'Новая доска',
+        name: 'Новая структура',
         content: {
           objects: [],
           background: '#ffffff',
@@ -153,7 +153,7 @@ async function createNewBoard() {
     })
     
     if (!response.ok) {
-      throw new Error('Ошибка создания доски')
+      throw new Error('Ошибка создания структуры')
     }
     
     const data = await response.json()
@@ -201,7 +201,7 @@ async function renameBoard(board) {
 }
 
 async function duplicateBoard(id) {
-  if (!confirm('Создать копию доски?')) return
+  if (!confirm('Создать копию структуры?')) return
   
   try {
     const response = await fetch(`${API_URL}/boards/${id}/duplicate`, {
@@ -221,7 +221,7 @@ async function duplicateBoard(id) {
 }
 
 async function deleteBoard(id) {
-  if (!confirm('Удалить доску? Это действие нельзя отменить.')) return
+  if (!confirm('Удалить структуру? Это действие нельзя отменить.')) return
   
   try {
     const response = await fetch(`${API_URL}/boards/${id}`, {
