@@ -41,11 +41,10 @@ export const useNotesStore = defineStore('notes', {
 
     requestOpen(cardId, { focus = true, date = null } = {}) {
       this.pendingOpenCardId = cardId;
-      this.pendingSelectedDate = typeof date === 'string' ? date : null;      
+      this.pendingSelectedDate = typeof date === 'string' ? date : null;
       if (focus) {
         this.pendingFocusCardId = cardId;
       }
-      this.dropdownOpen = false;
     },
 
     consumeOpenRequest() {

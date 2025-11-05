@@ -211,7 +211,6 @@ function handleColorSelect(color) {
     return;
   }
   note.value.colors[selectedDate.value] = color;
-  note.value.highlightColor = color;
   commitHistory('Изменен цвет заметки для карточки');
 }
 
