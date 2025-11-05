@@ -2,10 +2,11 @@
 import { ref, nextTick, computed, watch } from 'vue';
 import { useCardsStore } from '../../stores/cards';
 import { useViewSettingsStore } from '../../stores/viewSettings';
+import { useNotesStore } from '../../stores/notes';
 import { parseActivePV } from '../../utils/activePv';
 import { calcStagesAndCycles } from '../../utils/calculationEngine';
 import { buildCardCssVariables } from '../../utils/constants';
-  
+
 const props = defineProps({
   card: {
     type: Object,
@@ -30,6 +31,7 @@ const emit = defineEmits([
 
 const cardsStore = useCardsStore();
 const viewSettingsStore = useViewSettingsStore();
+const notesStore = useNotesStore();
 const isEditing = ref(false);
 const editText = ref(props.card.text);
 const textInput = ref(null);
@@ -43,15 +45,21 @@ const pvLeftInput = ref(null);
 const isLargeCard = computed(() => {
   return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 543.4;
 });
-const noteState = computed(() => props.card.note || null);
+
+// Проверка наличия заметок из store
 const hasNotes = computed(() => {
-  const entries = noteState.value?.entries;
-  if (!entries || typeof entries !== 'object') {
+  const cardNotes = notesStore.getNotesForCard(props.card.id);
+  if (!cardNotes || typeof cardNotes !== 'object') {
     return false;
   }
-  return Object.values(entries).some(entry => typeof entry?.text === 'string' && entry.text.trim());
+  return Object.values(cardNotes).some(note =>
+    note && typeof note.content === 'string' && note.content.trim().length > 0
+  );
 });
-const isNoteVisible = computed(() => Boolean(noteState.value?.visible));
+
+// Проверка видимости окна заметки (сохраняем для совместимости, но теперь это нужно управлять через другой механизм)
+const isNoteVisible = computed(() => Boolean(props.card.note?.visible));
+
 const noteButtonClasses = computed(() => ({
   'card-note-btn': true,
   'has-notes': hasNotes.value,

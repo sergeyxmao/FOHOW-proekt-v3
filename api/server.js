@@ -844,6 +844,125 @@ app.post('/api/boards/:id/thumbnail', async (req, reply) => {
 // Проверка живости API
 app.get('/api/health', async () => ({ ok: true }));
 
+// ============================================
+// ЗАМЕТКИ (NOTES)
+// ============================================
+
+// Получить все заметки для доски
+app.get('/api/boards/:boardId/notes', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { boardId } = req.params;
+
+    // Проверяем, что пользователь является владельцем доски
+    const boardCheck = await pool.query(
+      'SELECT id FROM boards WHERE id = $1 AND owner_id = $2',
+      [boardId, decoded.userId]
+    );
+
+    if (boardCheck.rows.length === 0) {
+      return reply.code(404).send({ error: 'Доска не найдена или нет доступа' });
+    }
+
+    // Получаем все заметки для этой доски
+    const result = await pool.query(
+      `SELECT id, card_uid, note_date, content, color, created_at, updated_at
+       FROM notes
+       WHERE board_id = $1
+       ORDER BY note_date ASC`,
+      [boardId]
+    );
+
+    return reply.send({ notes: result.rows });
+  } catch (err) {
+    console.error('❌ Ошибка получения заметок:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// Создать/обновить/удалить заметку (UPSERT + DELETE)
+app.post('/api/notes', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { boardId, cardUid, noteDate, content, color } = req.body;
+
+    // Валидация входных данных
+    if (!boardId || !cardUid || !noteDate) {
+      return reply.code(400).send({
+        error: 'Обязательные поля: boardId, cardUid, noteDate'
+      });
+    }
+
+    // Проверяем, что пользователь является владельцем доски
+    const boardCheck = await pool.query(
+      'SELECT id FROM boards WHERE id = $1 AND owner_id = $2',
+      [boardId, decoded.userId]
+    );
+
+    if (boardCheck.rows.length === 0) {
+      return reply.code(404).send({ error: 'Доска не найдена или нет доступа' });
+    }
+
+    // Проверяем, нужно ли удалить заметку
+    const shouldDelete = (!content || content.trim() === '') && (!color || color.trim() === '');
+
+    if (shouldDelete) {
+      // Удаляем заметку
+      const deleteResult = await pool.query(
+        `DELETE FROM notes
+         WHERE board_id = $1 AND card_uid = $2 AND note_date = $3
+         RETURNING id`,
+        [boardId, cardUid, noteDate]
+      );
+
+      if (deleteResult.rows.length > 0) {
+        return reply.send({
+          success: true,
+          deleted: true,
+          message: 'Заметка удалена'
+        });
+      } else {
+        return reply.send({
+          success: true,
+          deleted: false,
+          message: 'Заметка не найдена'
+        });
+      }
+    }
+
+    // UPSERT: создаём или обновляем заметку
+    const result = await pool.query(
+      `INSERT INTO notes (board_id, card_uid, note_date, content, color)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (board_id, card_uid, note_date)
+       DO UPDATE SET
+         content = EXCLUDED.content,
+         color = EXCLUDED.color,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [boardId, cardUid, noteDate, content || null, color || null]
+    );
+
+    return reply.send({
+      success: true,
+      note: result.rows[0]
+    });
+  } catch (err) {
+    console.error('❌ Ошибка сохранения заметки:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
 const PORT = Number(process.env.PORT || 4000);
 const HOST = '127.0.0.1';
 

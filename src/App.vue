@@ -21,6 +21,7 @@ import { useConnectionsStore } from './stores/connections' // Assuming this stor
 import { useViewportStore } from './stores/viewport'
 import { useMobileStore } from './stores/mobile'
 import { useViewSettingsStore } from './stores/viewSettings'
+import { useNotesStore } from './stores/notes'
 import { useProjectActions } from './composables/useProjectActions'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
@@ -36,6 +37,7 @@ const connectionsStore = useConnectionsStore() // Assuming initialization
 const viewportStore = useViewportStore()
 const mobileStore = useMobileStore()
 const viewSettingsStore = useViewSettingsStore()
+const notesStore = useNotesStore()
 const sidePanelsStore = useSidePanelsStore()
 const { isAuthenticated } = storeToRefs(authStore)
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
@@ -239,8 +241,17 @@ async function loadBoard(boardId) {
 
     console.log('✅ Загружена доска:', data.board.name)
     console.log('  Карточек:', cardsData.length)
-    console.log('  Соединений:', connectionsData.length) 
-    
+    console.log('  Соединений:', connectionsData.length)
+
+    // Загружаем заметки для доски
+    try {
+      await notesStore.fetchNotesForBoard(boardId)
+      console.log('✅ Загружены заметки для доски')
+    } catch (error) {
+      console.error('⚠️ Ошибка загрузки заметок:', error)
+      // Продолжаем работу, даже если заметки не загрузились
+    }
+
     boardStore.isSaving = false
     
     // Запускаем автосохранение происходит через наблюдатель isSaveAvailable
@@ -382,11 +393,11 @@ function getCanvasState() {
     strokeWidth: card.strokeWidth,
     headerBg: card.headerBg,
     colorIndex: card.colorIndex,
-    type: card.type,   
+    type: card.type,
     bodyHTML: card.bodyHTML,
-    bodyGradient: card.bodyGradient,  
-    pv: card.pv,
-    note: card.note // сохраняем заметки тоже
+    bodyGradient: card.bodyGradient,
+    pv: card.pv
+    // Заметки больше не сохраняются в составе карточки, они хранятся отдельно в таблице notes
   }))
 
   const connectionsData = connectionsStore.connections.map(conn => ({

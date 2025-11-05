@@ -1,20 +1,15 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
-import { storeToRefs } from 'pinia';  
+import { storeToRefs } from 'pinia';
 import { useHistoryStore } from '../../stores/history';
-import { useViewportStore } from '../../stores/viewport';  
+import { useViewportStore } from '../../stores/viewport';
+import { useNotesStore } from '../../stores/notes';
+import { useBoardStore } from '../../stores/board';
 import {
   NOTE_COLORS,
-  ensureNoteStructure,
   formatLocalYMD,
-  setNoteEntryValue,
-  getNoteEntryInfo,
   getMonthMatrix,
-  adjustViewDate,
-  applyCardRectToNote,
-  updateNoteOffsets,
-  getSelectedColor,
-  ensureSelectedDate
+  adjustViewDate
 } from '../../utils/noteUtils';
 
 const props = defineProps({
@@ -28,14 +23,25 @@ const emit = defineEmits(['close', 'sync']);
 
 const historyStore = useHistoryStore();
 const viewportStore = useViewportStore();
-const { zoomScale } = storeToRefs(viewportStore);  
+const notesStore = useNotesStore();
+const boardStore = useBoardStore();
+const { zoomScale } = storeToRefs(viewportStore);
 
-const note = computed(() => {
-  const normalized = ensureNoteStructure(props.card.note);
-  if (normalized !== props.card.note) {
-    props.card.note = normalized;
-  }
-  return normalized;
+// ============================================
+// ЛОКАЛЬНОЕ СОСТОЯНИЕ ДЛЯ UI ОКНА
+// ============================================
+
+// Состояние окна заметки (раньше хранилось в card.note)
+const noteWindowState = ref({
+  x: 0,
+  y: 0,
+  width: 260,
+  height: 380,
+  offsetX: null,
+  offsetY: null,
+  selectedDate: formatLocalYMD(new Date()),
+  viewDate: `${formatLocalYMD(new Date()).slice(0, 7)}-01`,
+  highlightColor: NOTE_COLORS[0]
 });const windowEl = ref(null);
 const textareaRef = ref(null);
 const headerRef = ref(null);
@@ -49,6 +55,10 @@ const resizePointerId = ref(null);
 const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 });
 const cardElement = ref(null);
 const textareaValue = ref('');
+
+// ============================================
+// COMPUTED СВОЙСТВА
+// ============================================
 
 function resolveMonthState(viewDate) {
   const state = getMonthMatrix(viewDate);
@@ -64,47 +74,61 @@ function resolveMonthState(viewDate) {
   return state;
 }
 
-const monthState = ref(resolveMonthState(note.value.viewDate));
-const selectedDate = computed(() => ensureSelectedDate(note.value, formatLocalYMD(new Date())));
-const selectedColor = computed(() => getSelectedColor(note.value));
+const monthState = ref(resolveMonthState(noteWindowState.value.viewDate));
+const selectedDate = computed(() => noteWindowState.value.selectedDate);
+
+// Получаем все заметки для текущей карточки из store
+const cardNotes = computed(() => notesStore.getNotesForCard(props.card.id));
+
+// Получаем текущую заметку для выбранной даты
+const currentNote = computed(() => {
+  const note = notesStore.getNote(props.card.id, selectedDate.value);
+  return note || { content: '', color: '' };
+});
+
+// Цвет для текущей даты
+const selectedColor = computed(() => {
+  return currentNote.value.color || noteWindowState.value.highlightColor;
+});
 
 const effectiveScale = computed(() => {
   const value = Number(zoomScale.value);
   return Number.isFinite(value) && value > 0 ? value : 1;
 });
+
 const VIEWPORT_MARGIN = 16;
 
-function clampNotePosition(noteData, options = {}) {
+function clampNotePosition(options = {}) {
   if (typeof window === 'undefined') {
     return;
   }
 
   const scale = Number.isFinite(options.scale) && options.scale > 0 ? options.scale : effectiveScale.value;
-  const width = Math.max(0, (options.width ?? noteData.width) * scale);
-  const height = Math.max(0, (options.height ?? noteData.height) * scale);
+  const width = Math.max(0, (options.width ?? noteWindowState.value.width) * scale);
+  const height = Math.max(0, (options.height ?? noteWindowState.value.height) * scale);
 
   const maxLeft = Math.max(VIEWPORT_MARGIN, window.innerWidth - width - VIEWPORT_MARGIN);
   const maxTop = Math.max(VIEWPORT_MARGIN, window.innerHeight - height - VIEWPORT_MARGIN);
 
-  const nextX = Math.min(Math.max(noteData.x, VIEWPORT_MARGIN), maxLeft);
-  const nextY = Math.min(Math.max(noteData.y, VIEWPORT_MARGIN), maxTop);
+  const nextX = Math.min(Math.max(noteWindowState.value.x, VIEWPORT_MARGIN), maxLeft);
+  const nextY = Math.min(Math.max(noteWindowState.value.y, VIEWPORT_MARGIN), maxTop);
 
-  if (noteData.x !== nextX) {
-    noteData.x = nextX;
+  if (noteWindowState.value.x !== nextX) {
+    noteWindowState.value.x = nextX;
   }
-  if (noteData.y !== nextY) {
-    noteData.y = nextY;
+  if (noteWindowState.value.y !== nextY) {
+    noteWindowState.value.y = nextY;
   }
 }
 
 const noteStyle = computed(() => {
   const scale = effectiveScale.value;
   return {
-    left: `${note.value.x}px`,
-    top: `${note.value.y}px`,
-    width: `${note.value.width}px`,
-    height: `${note.value.height}px`,
-    '--note-accent': note.value.highlightColor || NOTE_COLORS[0],
+    left: `${noteWindowState.value.x}px`,
+    top: `${noteWindowState.value.y}px`,
+    width: `${noteWindowState.value.width}px`,
+    height: `${noteWindowState.value.height}px`,
+    '--note-accent': noteWindowState.value.highlightColor || NOTE_COLORS[0],
     transform: `scale(${scale})`,
     transformOrigin: 'top left'
   };
@@ -112,15 +136,15 @@ const noteStyle = computed(() => {
 
 const colorDots = computed(() => NOTE_COLORS.map(color => ({
   color,
-  active: note.value.colors[selectedDate.value] === color
+  active: currentNote.value.color === color
 })));
 
 const monthTitle = computed(() => monthState.value.title || '');
 
 const daysGrid = computed(() => (monthState.value.days || []).map(day => {
-  const entry = getNoteEntryInfo(note.value.entries[day.date]);
-  const hasContent = entry.text.trim().length > 0;
-  const color = note.value.colors[day.date] || note.value.highlightColor;
+  const noteForDay = notesStore.getNote(props.card.id, day.date);
+  const hasContent = noteForDay && noteForDay.content && noteForDay.content.trim().length > 0;
+  const color = (noteForDay && noteForDay.color) || noteWindowState.value.highlightColor;
   const isSelected = day.date === selectedDate.value;
   return {
     ...day,
@@ -133,6 +157,10 @@ const daysGrid = computed(() => (monthState.value.days || []).map(day => {
 
 const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
+// ============================================
+// ФУНКЦИИ
+// ============================================
+
 function focusTextarea() {
   nextTick(() => {
     textareaRef.value?.focus();
@@ -140,8 +168,7 @@ function focusTextarea() {
 }
 
 function updateTextareaFromEntry() {
-  const entry = getNoteEntryInfo(note.value.entries[selectedDate.value]);
-  textareaValue.value = entry.text;
+  textareaValue.value = currentNote.value.content || '';
 }
 
 function ensureCardElement() {
@@ -159,22 +186,31 @@ function syncWithCardPosition(options = {}) {
   const rect = element.getBoundingClientRect();
   const scale = Number.isFinite(options.scale) && options.scale > 0 ? options.scale : effectiveScale.value;
   const shouldForce = Boolean(options.forceAlign)
-    || !Number.isFinite(note.value.offsetX)
-    || !Number.isFinite(note.value.offsetY);
+    || !Number.isFinite(noteWindowState.value.offsetX)
+    || !Number.isFinite(noteWindowState.value.offsetY);
 
   if (shouldForce) {
-    applyCardRectToNote(note.value, rect, {
-      scale,
-      align: 'right',
-      forceAlign: true
-    });
-  } else {
-    note.value.x = rect.left + note.value.offsetX * scale;
-    note.value.y = rect.top + note.value.offsetY * scale;
+    // Первоначальная установка позиции справа от карточки
+    const cardWidth = Number.isFinite(rect.width) ? rect.width : 0;
+    const gap = 15;
+    noteWindowState.value.offsetX = cardWidth + gap;
+    noteWindowState.value.offsetY = 0;
+
+    if (rect.height) {
+      noteWindowState.value.height = Math.max(rect.height, 380);
+    }
   }
-  clampNotePosition(note.value, { scale });  
-  updateNoteOffsets(note.value, rect, { scale });
-  emit('sync', { x: note.value.x, y: note.value.y });
+
+  noteWindowState.value.x = rect.left + noteWindowState.value.offsetX * scale;
+  noteWindowState.value.y = rect.top + noteWindowState.value.offsetY * scale;
+
+  clampNotePosition({ scale });
+
+  // Обновляем смещения
+  noteWindowState.value.offsetX = (noteWindowState.value.x - rect.left) / scale;
+  noteWindowState.value.offsetY = (noteWindowState.value.y - rect.top) / scale;
+
+  emit('sync', { x: noteWindowState.value.x, y: noteWindowState.value.y });
 }
 
 function commitHistory(description = 'Обновлена заметка') {
@@ -188,40 +224,62 @@ function handleClose() {
 }
 
 function handleDayClick(day) {
-  note.value.selectedDate = day.date;
-  if (!note.value.colors[note.value.selectedDate]) {
-    note.value.highlightColor = selectedColor.value;
-  }
+  noteWindowState.value.selectedDate = day.date;
   updateTextareaFromEntry();
   focusTextarea();
 }
 
 function handlePrevMonth() {
-  note.value.viewDate = adjustViewDate(note.value.viewDate, -1);
-  monthState.value = resolveMonthState(note.value.viewDate);
+  noteWindowState.value.viewDate = adjustViewDate(noteWindowState.value.viewDate, -1);
+  monthState.value = resolveMonthState(noteWindowState.value.viewDate);
 }
 
 function handleNextMonth() {
-  note.value.viewDate = adjustViewDate(note.value.viewDate, 1);
-  monthState.value = resolveMonthState(note.value.viewDate);
+  noteWindowState.value.viewDate = adjustViewDate(noteWindowState.value.viewDate, 1);
+  monthState.value = resolveMonthState(noteWindowState.value.viewDate);
 }
 
-function handleColorSelect(color) {
-  if (!selectedDate.value) {
+async function handleColorSelect(color) {
+  if (!selectedDate.value || !boardStore.currentBoardId) {
     return;
   }
-  note.value.colors[selectedDate.value] = color;
-  commitHistory('Изменен цвет заметки для карточки');
+
+  try {
+    await notesStore.saveNote({
+      boardId: boardStore.currentBoardId,
+      cardUid: props.card.id,
+      noteDate: selectedDate.value,
+      content: textareaValue.value,
+      color: color
+    });
+    commitHistory('Изменен цвет заметки для карточки');
+  } catch (error) {
+    console.error('Ошибка сохранения цвета:', error);
+  }
 }
 
 function handleTextareaInput(event) {
   const value = event.target.value;
   textareaValue.value = value;
-  setNoteEntryValue(note.value, selectedDate.value, value);
 }
 
-function handleTextareaBlur() {
-  commitHistory('Обновлена заметка для карточки');
+async function handleTextareaBlur() {
+  if (!boardStore.currentBoardId) {
+    return;
+  }
+
+  try {
+    await notesStore.saveNote({
+      boardId: boardStore.currentBoardId,
+      cardUid: props.card.id,
+      noteDate: selectedDate.value,
+      content: textareaValue.value,
+      color: currentNote.value.color || ''
+    });
+    commitHistory('Обновлена заметка для карточки');
+  } catch (error) {
+    console.error('Ошибка сохранения заметки:', error);
+  }
 }
 
 function startDrag(event) {
@@ -245,8 +303,9 @@ function onDragMove(event) {
   event.preventDefault();
   const dx = event.clientX - dragStart.value.x;
   const dy = event.clientY - dragStart.value.y;
-  note.value.x = initialPosition.value.x + dx;
-  clampNotePosition(note.value);
+  noteWindowState.value.x = initialPosition.value.x + dx;
+  noteWindowState.value.y = initialPosition.value.y + dy;
+  clampNotePosition();
 }
 
 function endDrag(event) {
@@ -260,7 +319,9 @@ function endDrag(event) {
     const element = ensureCardElement();
     if (element) {
       const rect = element.getBoundingClientRect();
-      updateNoteOffsets(note.value, rect, { scale: effectiveScale.value });
+      const scale = effectiveScale.value;
+      noteWindowState.value.offsetX = (noteWindowState.value.x - rect.left) / scale;
+      noteWindowState.value.offsetY = (noteWindowState.value.y - rect.top) / scale;
     }
   }
   isDragging.value = false;
@@ -274,8 +335,8 @@ function startResize(event) {
   resizeStart.value = {
     x: event.clientX,
     y: event.clientY,
-    width: windowEl.value?.offsetWidth || note.value.width,
-    height: windowEl.value?.offsetHeight || note.value.height
+    width: windowEl.value?.offsetWidth || noteWindowState.value.width,
+    height: windowEl.value?.offsetHeight || noteWindowState.value.height
   };
   resizeHandleRef.value?.setPointerCapture?.(event.pointerId);
   window.addEventListener('pointermove', onResizeMove, { passive: false });
@@ -292,8 +353,9 @@ function onResizeMove(event) {
   const dy = event.clientY - resizeStart.value.y;
   const nextWidth = Math.max(200, resizeStart.value.width + dx);
   const nextHeight = Math.max(200, resizeStart.value.height + dy);
-  note.value.width = nextWidth;
-  clampNotePosition(note.value, { width: nextWidth, height: nextHeight });
+  noteWindowState.value.width = nextWidth;
+  noteWindowState.value.height = nextHeight;
+  clampNotePosition({ width: nextWidth, height: nextHeight });
 }
 
 function endResize(event) {
@@ -308,23 +370,23 @@ function endResize(event) {
   commitHistory('Изменен размер окна заметки');
 }
 
-watch(() => note.value.viewDate, (value) => {
+watch(() => noteWindowState.value.viewDate, (value) => {
   monthState.value = resolveMonthState(value);
 });
+
 watch(
-  () => [note.value.x, note.value.y, note.value.width, note.value.height, effectiveScale.value],
+  () => [noteWindowState.value.x, noteWindowState.value.y, noteWindowState.value.width, noteWindowState.value.height, effectiveScale.value],
   () => {
-    clampNotePosition(note.value);
+    clampNotePosition();
   },
   { immediate: true }
 );
 
 watch(selectedDate, () => {
   updateTextareaFromEntry();
-  note.value.highlightColor = selectedColor.value;
 });
 
-watch(() => note.value.highlightColor, (color) => {
+watch(() => noteWindowState.value.highlightColor, (color) => {
   if (windowEl.value) {
     windowEl.value.style.setProperty('--note-accent', color);
   }
@@ -332,11 +394,11 @@ watch(() => note.value.highlightColor, (color) => {
 
 onMounted(() => {
   cardElement.value = ensureCardElement();
-  syncWithCardPosition({ force: true });
+  syncWithCardPosition({ forceAlign: true });
   updateTextareaFromEntry();
   nextTick(() => {
     if (windowEl.value) {
-      windowEl.value.style.setProperty('--note-accent', note.value.highlightColor);
+      windowEl.value.style.setProperty('--note-accent', noteWindowState.value.highlightColor);
     }
   });
 });
