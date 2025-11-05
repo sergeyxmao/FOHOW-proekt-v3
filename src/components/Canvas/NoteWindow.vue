@@ -136,7 +136,7 @@ const noteStyle = computed(() => {
 
 const colorDots = computed(() => NOTE_COLORS.map(color => ({
   color,
-  active: currentNote.value.color === color
+  active: selectedColor.value === color
 })));
 
 const monthTitle = computed(() => monthState.value.title || '');
@@ -225,6 +225,13 @@ function handleClose() {
 
 function handleDayClick(day) {
   noteWindowState.value.selectedDate = day.date;
+
+  // Обновляем highlightColor на основе заметки для выбранной даты
+  const note = notesStore.getNote(props.card.id, day.date);
+  if (note && note.color) {
+    noteWindowState.value.highlightColor = note.color;
+  }
+
   updateTextareaFromEntry();
   focusTextarea();
 }
@@ -244,17 +251,24 @@ async function handleColorSelect(color) {
     return;
   }
 
-  try {
-    await notesStore.saveNote({
-      boardId: boardStore.currentBoardId,
-      cardUid: props.card.id,
-      noteDate: selectedDate.value,
-      content: textareaValue.value,
-      color: color
-    });
-    commitHistory('Изменен цвет заметки для карточки');
-  } catch (error) {
-    console.error('Ошибка сохранения цвета:', error);
+  // Обновляем локальный цвет
+  noteWindowState.value.highlightColor = color;
+
+  // Сохраняем только если есть текст в заметке
+  const content = textareaValue.value || '';
+  if (content.trim()) {
+    try {
+      await notesStore.saveNote({
+        boardId: boardStore.currentBoardId,
+        cardUid: props.card.id,
+        noteDate: selectedDate.value,
+        content: content,
+        color: color
+      });
+      commitHistory('Изменен цвет заметки для карточки');
+    } catch (error) {
+      console.error('Ошибка сохранения цвета:', error);
+    }
   }
 }
 
@@ -274,7 +288,7 @@ async function handleTextareaBlur() {
       cardUid: props.card.id,
       noteDate: selectedDate.value,
       content: textareaValue.value,
-      color: currentNote.value.color || ''
+      color: selectedColor.value || ''
     });
     commitHistory('Обновлена заметка для карточки');
   } catch (error) {
