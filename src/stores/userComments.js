@@ -13,11 +13,11 @@ export const useUserCommentsStore = defineStore('userComments', () => {
   const hasComments = computed(() => comments.value.length > 0)
   const commentsCount = computed(() => comments.value.length)
 
-  // Helper function to get auth headers
+  // --- ИСПРАВЛЕНИЕ 1: Упрощенная функция для получения заголовков ---
+  // Теперь она возвращает только то, что нужно всегда - токен авторизации.
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token') // Предполагается, что токен хранится здесь
     return {
-      'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     }
   }
@@ -33,7 +33,7 @@ export const useUserCommentsStore = defineStore('userComments', () => {
 
     try {
       const response = await fetch(`${API_URL}/comments`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeaders() // Используем новую "чистую" функцию
       })
 
       if (!response.ok) {
@@ -42,19 +42,8 @@ export const useUserCommentsStore = defineStore('userComments', () => {
       }
 
       const data = await response.json()
-      const rawComments = data.comments || []
-
-      // Фильтруем комментарии с некорректными ID
-      const validComments = rawComments.filter(comment => {
-        const hasValidId = comment.id && Number.isInteger(Number(comment.id)) && Number(comment.id) > 0
-        if (!hasValidId) {
-          console.warn('⚠️ Пропущен комментарий с некорректным ID:', comment)
-        }
-        return hasValidId
-      })
-
-      comments.value = validComments
-      console.log(`✅ Загружено ${validComments.length} комментариев`)
+      comments.value = data.comments || []
+      
     } catch (err) {
       error.value = err.message
       console.error('❌ Ошибка загрузки комментариев:', err)
@@ -75,7 +64,11 @@ export const useUserCommentsStore = defineStore('userComments', () => {
     try {
       const response = await fetch(`${API_URL}/comments`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        // --- ИСПРАВЛЕНИЕ 2: Явно добавляем Content-Type ---
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(commentData)
       })
 
@@ -87,16 +80,8 @@ export const useUserCommentsStore = defineStore('userComments', () => {
       const data = await response.json()
       const newComment = data.comment
 
-      // Проверяем, что у комментария есть валидный ID
-      if (!newComment.id || !Number.isInteger(Number(newComment.id)) || Number(newComment.id) <= 0) {
-        console.error('❌ Сервер вернул комментарий с некорректным ID:', newComment)
-        throw new Error('Сервер вернул некорректные данные комментария')
-      }
-
-      // Добавляем новый комментарий в начало массива (так как сортируем по created_at DESC)
       comments.value.unshift(newComment)
-      console.log('✅ Комментарий создан с ID:', newComment.id)
-
+      
       return newComment
     } catch (err) {
       error.value = err.message
@@ -117,19 +102,17 @@ export const useUserCommentsStore = defineStore('userComments', () => {
     error.value = null
 
     try {
-      // Валидация commentId на клиенте
-      if (!commentId || commentId === 'undefined' || commentId === 'null') {
-        throw new Error('Некорректный ID комментария')
+      if (!commentId || !Number.isInteger(Number(commentId)) || Number(commentId) <= 0) {
+        throw new Error('Некорректный ID комментария для обновления')
       }
 
-      const commentIdNum = Number(commentId)
-      if (!Number.isInteger(commentIdNum) || commentIdNum <= 0) {
-        throw new Error('ID комментария должен быть положительным числом')
-      }
-
-      const response = await fetch(`${API_URL}/comments/${commentIdNum}`, {
+      const response = await fetch(`${API_URL}/comments/${commentId}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        // --- ИСПРАВЛЕНИЕ 2: Явно добавляем Content-Type ---
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(updateData)
       })
 
@@ -141,19 +124,9 @@ export const useUserCommentsStore = defineStore('userComments', () => {
       const data = await response.json()
       const updatedComment = data.comment
 
-      // Проверяем, что сервер вернул комментарий с валидным ID
-      if (!updatedComment.id || !Number.isInteger(Number(updatedComment.id)) || Number(updatedComment.id) <= 0) {
-        console.error('❌ Сервер вернул комментарий с некорректным ID:', updatedComment)
-        throw new Error('Сервер вернул некорректные данные комментария')
-      }
-
-      // Обновляем комментарий в массиве
-      const index = comments.value.findIndex(c => c.id === commentIdNum)
+      const index = comments.value.findIndex(c => c.id === updatedComment.id)
       if (index !== -1) {
         comments.value[index] = updatedComment
-        console.log('✅ Комментарий обновлен, ID:', updatedComment.id)
-      } else {
-        console.warn('⚠️ Комментарий не найден в локальном массиве, ID:', commentIdNum)
       }
 
       return updatedComment
@@ -174,55 +147,36 @@ export const useUserCommentsStore = defineStore('userComments', () => {
     loading.value = true
     error.value = null
 
-    console.log('🔍 deleteComment вызван с ID:', commentId, 'Тип:', typeof commentId)
-
     try {
-      // Валидация commentId на клиенте
-      if (!commentId || commentId === 'undefined' || commentId === 'null') {
-        throw new Error('Некорректный ID комментария')
+      if (!commentId || !Number.isInteger(Number(commentId)) || Number(commentId) <= 0) {
+        throw new Error('Некорректный ID комментария для удаления')
       }
 
-      const commentIdNum = Number(commentId)
-      console.log('🔢 Преобразованный commentIdNum:', commentIdNum, 'isInteger:', Number.isInteger(commentIdNum))
-
-      if (!Number.isInteger(commentIdNum) || commentIdNum <= 0) {
-        throw new Error('ID комментария должен быть положительным числом')
-      }
-
-      const url = `${API_URL}/comments/${commentIdNum}`
-      console.log('🌐 Отправка DELETE запроса на:', url)
-
-      const response = await fetch(url, {
+      const response = await fetch(`${API_URL}/comments/${commentId}`, {
         method: 'DELETE',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders() // Используем новую "чистую" функцию
       })
 
-      console.log('📡 Ответ сервера - статус:', response.status, 'OK:', response.ok)
-
       if (!response.ok) {
-        const contentType = response.headers.get('content-type')
-        console.log('📄 Content-Type ответа:', contentType)
-
-        let errorMessage = 'Ошибка удаления комментария'
+        // Улучшенная обработка ошибок для DELETE
+        let errorMessage = `Ошибка сервера: ${response.status}`
         try {
           const data = await response.json()
-          console.log('📦 Данные ошибки от сервера:', data)
-          errorMessage = data.error || errorMessage
-        } catch (parseErr) {
-          console.error('❌ Не удалось распарсить JSON ошибки:', parseErr)
-          const text = await response.text()
-          console.log('📝 Текст ответа сервера:', text)
+          errorMessage = data.error || data.message || errorMessage
+        } catch {
+          // Если тело ответа пустое или не JSON
+          errorMessage = await response.text() || errorMessage
         }
         throw new Error(errorMessage)
       }
 
-      // Удаляем комментарий из массива
-      comments.value = comments.value.filter(c => c.id !== commentIdNum)
-      console.log('✅ Комментарий успешно удалён из локального состояния')
+      comments.value = comments.value.filter(c => c.id !== commentId)
+      
     } catch (err) {
       error.value = err.message
+      // Отображаем ошибку в UI, так как throw здесь не отлавливается
+      alert(`Ошибка удаления комментария: ${err.message}`)
       console.error('❌ Ошибка удаления комментария:', err)
-      throw err
     } finally {
       loading.value = false
     }
