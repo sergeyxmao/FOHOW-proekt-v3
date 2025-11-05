@@ -1071,6 +1071,14 @@ const openNoteForCard = (card, options = {}) => {
   if (!note) {
     return;
   }
+
+  // Закрыть все другие открытые заметки перед открытием новой
+  cards.value.forEach(c => {
+    if (c.id !== card.id && c.note && c.note.visible) {
+      c.note.visible = false;
+    }
+  });
+
   note.width = Number.isFinite(note.width) ? note.width : DEFAULT_NOTE_WIDTH;
   note.height = Number.isFinite(note.height) ? note.height : DEFAULT_NOTE_HEIGHT;
   const rect = getCardElementRect(card.id);
