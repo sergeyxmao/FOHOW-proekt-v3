@@ -107,13 +107,22 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('user', JSON.stringify(this.user))
     },
 
-    logout() {
+    async logout() {
       this.user = null
       this.token = null
       this.isAuthenticated = false
 
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+
+      // Очищаем личные комментарии при выходе
+      try {
+        const { useUserCommentsStore } = await import('./userComments.js')
+        const userCommentsStore = useUserCommentsStore()
+        userCommentsStore.clearComments()
+      } catch (err) {
+        console.error('Ошибка очистки комментариев:', err)
+      }
     }
   }
 })
