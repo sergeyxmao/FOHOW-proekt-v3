@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { useAuthStore } from './auth.js';
+import { useBoardStore } from './board.js';
 
 export const useNotesStore = defineStore('notes', () => {
   // ============================================
@@ -98,10 +99,16 @@ export const useNotesStore = defineStore('notes', () => {
    */
   async function saveNote(noteData) {
     const authStore = useAuthStore();
+    const boardStore = useBoardStore();
 
     if (!authStore.isAuthenticated || !authStore.token) {
       console.warn('Пользователь не авторизован');
       return;
+    }
+
+    if (!boardStore.currentBoardId) {
+      console.warn('Структура еще не создана');
+      return { error: 'no_structure', message: 'Необходимо создать структуру перед созданием заметки' };
     }
 
     const { boardId, cardUid, noteDate, content, color } = noteData;

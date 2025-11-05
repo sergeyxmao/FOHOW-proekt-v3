@@ -72,7 +72,7 @@ export const useBoardStore = defineStore('board', () => {
       })
 
       if (!response.ok) {
-        throw new Error('Ошибка переименования доски')
+        throw new Error('Ошибка переименования структуры')
       }
 
       lastSaved.value = new Date()

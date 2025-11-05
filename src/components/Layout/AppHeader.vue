@@ -117,7 +117,7 @@ function handleProfileClick() {
   closeUserMenu()
 }
 async function handleRenameCurrentBoard() {
-  const newName = prompt('Введите новое название проекта', currentBoardName.value)
+  const newName = prompt('Введите новое название структуры', currentBoardName.value)
 
   if (newName === null) {
     return
@@ -128,14 +128,14 @@ async function handleRenameCurrentBoard() {
 
     if (!result.success) {
       if (result.reason === 'empty') {
-        alert('Название проекта не может быть пустым.')
+        alert('Название структуры не может быть пустым.')
       }
 
       return
     }
   } catch (error) {
-    console.error('Ошибка переименования проекта:', error)
-    alert('Не удалось переименовать проект. Попробуйте позже.')
+    console.error('Ошибка переименования структуры:', error)
+    alert('Не удалось переименовать структуру. Попробуйте позже.')
   }
 }
 function handleClickOutside(event) {
@@ -206,7 +206,7 @@ onBeforeUnmount(() => {
                 <button
                   class="user-menu__project-name-button"
                   type="button"
-                  title="Переименовать проект"
+                  title="Переименовать структуру"
                   @click="handleRenameCurrentBoard"
                 >
                   <span class="user-menu__project-name">{{ currentBoardName }}</span>
@@ -229,10 +229,10 @@ onBeforeUnmount(() => {
 
               <div class="user-menu__section">
                 <button class="user-menu__item" type="button" @click="openBoards">
-                  📁 Мои проекты
+                  📁 Мои структуры
                 </button>
                 <div class="user-menu__item user-menu__item--static">
-                  🤝 Совместные проекты
+                  🤝 Совместные структуры
                 </div>
               </div>
               <div class="user-menu__divider" />
