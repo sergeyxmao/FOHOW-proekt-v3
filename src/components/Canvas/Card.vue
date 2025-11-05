@@ -601,7 +601,13 @@ const isActiveOrdersLeftAnimating = ref(false);
 
 const isActiveOrdersRightAnimating = ref(false);
 
- 
+// Хранилище ID таймеров для отмены предыдущих анимаций
+let balanceLeftTimer = null;
+let balanceRightTimer = null;
+let activeOrdersLeftTimer = null;
+let activeOrdersRightTimer = null;
+
+
 
 // Функция для парсинга значения "X / Y"
 
@@ -656,11 +662,17 @@ watch(
 
     if (next.left > prev.left) {
 
+      // Отменяем предыдущую анимацию левого баланса
+      if (balanceLeftTimer !== null) {
+        clearTimeout(balanceLeftTimer);
+      }
+
       isBalanceLeftAnimating.value = true;
 
-      setTimeout(() => {
+      balanceLeftTimer = setTimeout(() => {
 
         isBalanceLeftAnimating.value = false;
+        balanceLeftTimer = null;
 
       }, animationDuration.value);
 
@@ -670,11 +682,17 @@ watch(
 
     if (next.right > prev.right) {
 
+      // Отменяем предыдущую анимацию правого баланса
+      if (balanceRightTimer !== null) {
+        clearTimeout(balanceRightTimer);
+      }
+
       isBalanceRightAnimating.value = true;
 
-      setTimeout(() => {
+      balanceRightTimer = setTimeout(() => {
 
         isBalanceRightAnimating.value = false;
+        balanceRightTimer = null;
 
       }, animationDuration.value);
 
@@ -708,11 +726,17 @@ watch(
 
     if (next.left > prev.left) {
 
+      // Отменяем предыдущую анимацию левых активных заказов
+      if (activeOrdersLeftTimer !== null) {
+        clearTimeout(activeOrdersLeftTimer);
+      }
+
       isActiveOrdersLeftAnimating.value = true;
 
-      setTimeout(() => {
+      activeOrdersLeftTimer = setTimeout(() => {
 
         isActiveOrdersLeftAnimating.value = false;
+        activeOrdersLeftTimer = null;
 
       }, animationDuration.value);
 
@@ -722,11 +746,17 @@ watch(
 
     if (next.right > prev.right) {
 
+      // Отменяем предыдущую анимацию правых активных заказов
+      if (activeOrdersRightTimer !== null) {
+        clearTimeout(activeOrdersRightTimer);
+      }
+
       isActiveOrdersRightAnimating.value = true;
 
-      setTimeout(() => {
+      activeOrdersRightTimer = setTimeout(() => {
 
         isActiveOrdersRightAnimating.value = false;
+        activeOrdersRightTimer = null;
 
       }, animationDuration.value);
 
