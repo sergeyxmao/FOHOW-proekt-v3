@@ -204,7 +204,25 @@ const cancelAllActiveAnimations = () => {
   });
 
   activeAnimationTimers.clear();
-  console.log('✅ Все анимации отменены');
+  // Отменяем анимацию чисел на всех карточках
+
+  const root = canvasContainerRef.value || document;
+
+  const animatingValues = root.querySelectorAll('.value--animating');
+
+  console.log('🔢 Отмена анимации чисел, найдено элементов:', animatingValues.length);
+
+ 
+
+  animatingValues.forEach(element => {
+
+    element.classList.remove('value--animating');
+
+  });
+
+ 
+
+  console.log('✅ Все анимации отменены (линии и числа)');
 };
 
 const highlightActivePvChange = (cardId) => {
