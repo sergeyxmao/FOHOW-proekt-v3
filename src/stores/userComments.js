@@ -42,7 +42,19 @@ export const useUserCommentsStore = defineStore('userComments', () => {
       }
 
       const data = await response.json()
-      comments.value = data.comments || []
+      const rawComments = data.comments || []
+
+      // Фильтруем комментарии с некорректными ID
+      const validComments = rawComments.filter(comment => {
+        const hasValidId = comment.id && Number.isInteger(Number(comment.id)) && Number(comment.id) > 0
+        if (!hasValidId) {
+          console.warn('⚠️ Пропущен комментарий с некорректным ID:', comment)
+        }
+        return hasValidId
+      })
+
+      comments.value = validComments
+      console.log(`✅ Загружено ${validComments.length} комментариев`)
     } catch (err) {
       error.value = err.message
       console.error('❌ Ошибка загрузки комментариев:', err)
@@ -73,11 +85,19 @@ export const useUserCommentsStore = defineStore('userComments', () => {
       }
 
       const data = await response.json()
+      const newComment = data.comment
+
+      // Проверяем, что у комментария есть валидный ID
+      if (!newComment.id || !Number.isInteger(Number(newComment.id)) || Number(newComment.id) <= 0) {
+        console.error('❌ Сервер вернул комментарий с некорректным ID:', newComment)
+        throw new Error('Сервер вернул некорректные данные комментария')
+      }
 
       // Добавляем новый комментарий в начало массива (так как сортируем по created_at DESC)
-      comments.value.unshift(data.comment)
+      comments.value.unshift(newComment)
+      console.log('✅ Комментарий создан с ID:', newComment.id)
 
-      return data.comment
+      return newComment
     } catch (err) {
       error.value = err.message
       console.error('❌ Ошибка создания комментария:', err)
@@ -119,14 +139,24 @@ export const useUserCommentsStore = defineStore('userComments', () => {
       }
 
       const data = await response.json()
+      const updatedComment = data.comment
+
+      // Проверяем, что сервер вернул комментарий с валидным ID
+      if (!updatedComment.id || !Number.isInteger(Number(updatedComment.id)) || Number(updatedComment.id) <= 0) {
+        console.error('❌ Сервер вернул комментарий с некорректным ID:', updatedComment)
+        throw new Error('Сервер вернул некорректные данные комментария')
+      }
 
       // Обновляем комментарий в массиве
       const index = comments.value.findIndex(c => c.id === commentIdNum)
       if (index !== -1) {
-        comments.value[index] = data.comment
+        comments.value[index] = updatedComment
+        console.log('✅ Комментарий обновлен, ID:', updatedComment.id)
+      } else {
+        console.warn('⚠️ Комментарий не найден в локальном массиве, ID:', commentIdNum)
       }
 
-      return data.comment
+      return updatedComment
     } catch (err) {
       error.value = err.message
       console.error('❌ Ошибка обновления комментария:', err)
