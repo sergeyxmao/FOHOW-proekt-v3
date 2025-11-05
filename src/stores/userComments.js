@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { useBoardStore } from './board.js'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
@@ -59,13 +58,6 @@ export const useUserCommentsStore = defineStore('userComments', () => {
    * @param {Object} commentData - Данные комментария { content, color }
    */
   async function addComment(commentData) {
-    const boardStore = useBoardStore()
-
-    if (!boardStore.currentBoardId) {
-      console.warn('Структура еще не создана');
-      return { error: 'no_structure', message: 'Необходимо создать структуру перед созданием комментария' };
-    }
-
     loading.value = true
     error.value = null
 
