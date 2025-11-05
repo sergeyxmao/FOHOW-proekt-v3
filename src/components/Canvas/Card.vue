@@ -384,9 +384,9 @@ const handleBlur = () => {
 };
 
 // Обработчик для удаления карточки
-const handleDelete = (event) => {
+const handleDelete = async (event) => {
   event.stopPropagation();
-  cardsStore.removeCard(props.card.id);
+  await cardsStore.removeCard(props.card.id);
 };
 
 // Обработчик двойного клика на левой части PV для начала редактирования

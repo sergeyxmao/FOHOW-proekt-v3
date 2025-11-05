@@ -200,6 +200,17 @@ export const useNotesStore = defineStore('notes', () => {
   }
 
   /**
+   * Очищает все заметки для конкретной карточки
+   * @param {string} cardUid - ID карточки
+   */
+  function clearNotesForCard(cardUid) {
+    if (notesByBoard.value[cardUid]) {
+      delete notesByBoard.value[cardUid];
+      updateCardsWithEntries();
+    }
+  }
+
+  /**
    * Обновляет список карточек с заметками для UI
    * @private
    */
@@ -309,6 +320,7 @@ export const useNotesStore = defineStore('notes', () => {
     getNote,
     getNotesForCard,
     clearNotes,
+    clearNotesForCard,
 
     // Actions - UI
     setCardsWithEntries,
