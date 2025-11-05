@@ -208,19 +208,20 @@ async function ensureStructureExists(action) {
     return true
   }
 
+  // В мобильном режиме создаем структуру автоматически с именем по умолчанию
+  if (isMobileMode.value) {
+    const defaultName = `Структура ${new Date().toLocaleDateString('ru-RU')}`
+    return await createStructureWithName(defaultName, action)
+  }
+
+  // В десктопном режиме показываем модальное окно
   return new Promise((resolve) => {
     pendingAction.value = { action, resolve }
     isStructureNameModalOpen.value = true
   })
 }
 
-async function handleStructureNameConfirm(name) {
-  isStructureNameModalOpen.value = false
-
-  if (!pendingAction.value) {
-    return
-  }
-
+async function createStructureWithName(name, action = null) {
   try {
     boardStore.isSaving = true
 
@@ -252,27 +253,36 @@ async function handleStructureNameConfirm(name) {
     boardStore.setCurrentBoard(createdBoard.id, createdBoard.name ?? name)
     window.dispatchEvent(new CustomEvent('boards:refresh'))
 
-    const { action, resolve } = pendingAction.value
-    pendingAction.value = null
-
     if (action) {
       action()
     }
 
-    if (resolve) {
-      resolve(true)
-    }
-
     boardStore.isSaving = false
+    return true
   } catch (err) {
     console.error('❌ Ошибка создания структуры:', err)
-    alert('Не удалось создать структуру')
-    boardStore.isSaving = false
-
-    if (pendingAction.value?.resolve) {
-      pendingAction.value.resolve(false)
+    if (!isMobileMode.value) {
+      alert('Не удалось создать структуру')
     }
-    pendingAction.value = null
+    boardStore.isSaving = false
+    return false
+  }
+}
+
+async function handleStructureNameConfirm(name) {
+  isStructureNameModalOpen.value = false
+
+  if (!pendingAction.value) {
+    return
+  }
+
+  const { action, resolve } = pendingAction.value
+  pendingAction.value = null
+
+  const success = await createStructureWithName(name, action)
+
+  if (resolve) {
+    resolve(success)
   }
 }
 
