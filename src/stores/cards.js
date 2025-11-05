@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { useConnectionsStore } from './connections'
 import { useHistoryStore } from './history'
+import { useBoardStore } from './board'
+import { useAuthStore } from './auth'
+import { useNotesStore } from './notes'
 import { getHeaderColorRgb } from '../utils/constants'
 import {
   createDefaultNoteState,
@@ -12,6 +15,7 @@ import {
 const COIN_FULL_COLOR = '#ffd700'
 const COIN_EMPTY_COLOR = '#3d85c6'
 const CANVAS_SAFE_MARGIN = 32
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
 function parseCanvasTransform(transformValue) {
   if (!transformValue || transformValue === 'none') {
@@ -443,10 +447,39 @@ export const useCardsStore = defineStore('cards', {
       return newCard;
     },
     
-removeCard(cardId) {
+async removeCard(cardId) {
       const connectionsStore = useConnectionsStore()
+      const boardStore = useBoardStore()
+      const authStore = useAuthStore()
+      const notesStore = useNotesStore()
+
       const card = this.cards.find(c => c.id === cardId)
       if (!card) return false
+
+      // Удаляем заметки на сервере перед удалением карточки
+      if (boardStore.currentBoardId && authStore.isAuthenticated && authStore.token) {
+        try {
+          const response = await fetch(
+            `${API_URL}/boards/${boardStore.currentBoardId}/cards/${cardId}/notes`,
+            {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${authStore.token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          )
+
+          if (!response.ok) {
+            console.error('Ошибка при удалении заметок карточки:', await response.text())
+          } else {
+            // Очищаем заметки из локального состояния
+            notesStore.clearNotesForCard(cardId)
+          }
+        } catch (error) {
+          console.error('Ошибка сети при удалении заметок:', error)
+        }
+      }
 
       const historyStore = useHistoryStore()
       // Устанавливаем метаданные до всех изменений
@@ -458,7 +491,7 @@ removeCard(cardId) {
       const index = this.cards.findIndex(c => c.id === cardId)
       if (index !== -1) {
         this.cards.splice(index, 1)
-        
+
         // Теперь сохраняем итоговое состояние в историю один раз
         historyStore.saveState()
         return true
