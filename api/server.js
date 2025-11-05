@@ -1037,9 +1037,29 @@ app.put('/api/comments/:commentId', async (req, reply) => {
       return reply.code(401).send({ error: 'Не авторизован' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtErr) {
+      console.error('❌ Ошибка верификации токена:', jwtErr);
+      return reply.code(401).send({ error: 'Неверный токен авторизации' });
+    }
+
     const { commentId } = req.params;
     const { content, color } = req.body;
+
+    // Валидация commentId
+    if (!commentId || commentId === 'undefined' || commentId === 'null') {
+      console.error('❌ Некорректный commentId:', commentId);
+      return reply.code(400).send({ error: 'Некорректный ID комментария' });
+    }
+
+    // Проверяем, что commentId является числом
+    const commentIdNum = Number(commentId);
+    if (!Number.isInteger(commentIdNum) || commentIdNum <= 0) {
+      console.error('❌ commentId не является положительным числом:', commentId);
+      return reply.code(400).send({ error: 'ID комментария должен быть положительным числом' });
+    }
 
     // Валидация входных данных
     if (!content || content.trim() === '') {
@@ -1051,7 +1071,7 @@ app.put('/api/comments/:commentId', async (req, reply) => {
     // Проверяем, что комментарий принадлежит текущему пользователю
     const ownerCheck = await pool.query(
       'SELECT user_id FROM user_comments WHERE id = $1',
-      [commentId]
+      [commentIdNum]
     );
 
     if (ownerCheck.rows.length === 0) {
@@ -1070,7 +1090,7 @@ app.put('/api/comments/:commentId', async (req, reply) => {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $3 AND user_id = $4
        RETURNING id, user_id, content, color, created_at, updated_at`,
-      [content.trim(), color || null, commentId, decoded.userId]
+      [content.trim(), color || null, commentIdNum, decoded.userId]
     );
 
     return reply.send({
@@ -1091,13 +1111,33 @@ app.delete('/api/comments/:commentId', async (req, reply) => {
       return reply.code(401).send({ error: 'Не авторизован' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtErr) {
+      console.error('❌ Ошибка верификации токена:', jwtErr);
+      return reply.code(401).send({ error: 'Неверный токен авторизации' });
+    }
+
     const { commentId } = req.params;
+
+    // Валидация commentId
+    if (!commentId || commentId === 'undefined' || commentId === 'null') {
+      console.error('❌ Некорректный commentId:', commentId);
+      return reply.code(400).send({ error: 'Некорректный ID комментария' });
+    }
+
+    // Проверяем, что commentId является числом
+    const commentIdNum = Number(commentId);
+    if (!Number.isInteger(commentIdNum) || commentIdNum <= 0) {
+      console.error('❌ commentId не является положительным числом:', commentId);
+      return reply.code(400).send({ error: 'ID комментария должен быть положительным числом' });
+    }
 
     // Проверяем, что комментарий принадлежит текущему пользователю
     const ownerCheck = await pool.query(
       'SELECT user_id FROM user_comments WHERE id = $1',
-      [commentId]
+      [commentIdNum]
     );
 
     if (ownerCheck.rows.length === 0) {
@@ -1111,7 +1151,7 @@ app.delete('/api/comments/:commentId', async (req, reply) => {
     // Удаляем комментарий
     await pool.query(
       'DELETE FROM user_comments WHERE id = $1 AND user_id = $2',
-      [commentId, decoded.userId]
+      [commentIdNum, decoded.userId]
     );
 
     return reply.send({ success: true });
