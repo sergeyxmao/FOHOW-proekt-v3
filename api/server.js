@@ -963,6 +963,164 @@ app.post('/api/notes', async (req, reply) => {
   }
 });
 
+// ============================================
+// ЛИЧНЫЕ КОММЕНТАРИИ ПОЛЬЗОВАТЕЛЯ (USER_COMMENTS)
+// ============================================
+
+// Получить все личные комментарии пользователя
+app.get('/api/comments', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Получаем все комментарии пользователя, отсортированные по дате создания (новые вверху)
+    const result = await pool.query(
+      `SELECT id, user_id, content, color, created_at, updated_at
+       FROM user_comments
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [decoded.userId]
+    );
+
+    return reply.send({ comments: result.rows });
+  } catch (err) {
+    console.error('❌ Ошибка получения комментариев:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// Создать новый личный комментарий
+app.post('/api/comments', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { content, color } = req.body;
+
+    // Валидация входных данных
+    if (!content || content.trim() === '') {
+      return reply.code(400).send({
+        error: 'Содержимое комментария обязательно'
+      });
+    }
+
+    // Создаём новый комментарий
+    const result = await pool.query(
+      `INSERT INTO user_comments (user_id, content, color)
+       VALUES ($1, $2, $3)
+       RETURNING id, user_id, content, color, created_at, updated_at`,
+      [decoded.userId, content.trim(), color || null]
+    );
+
+    return reply.send({
+      success: true,
+      comment: result.rows[0]
+    });
+  } catch (err) {
+    console.error('❌ Ошибка создания комментария:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// Обновить личный комментарий
+app.put('/api/comments/:commentId', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { commentId } = req.params;
+    const { content, color } = req.body;
+
+    // Валидация входных данных
+    if (!content || content.trim() === '') {
+      return reply.code(400).send({
+        error: 'Содержимое комментария обязательно'
+      });
+    }
+
+    // Проверяем, что комментарий принадлежит текущему пользователю
+    const ownerCheck = await pool.query(
+      'SELECT user_id FROM user_comments WHERE id = $1',
+      [commentId]
+    );
+
+    if (ownerCheck.rows.length === 0) {
+      return reply.code(404).send({ error: 'Комментарий не найден' });
+    }
+
+    if (ownerCheck.rows[0].user_id !== decoded.userId) {
+      return reply.code(403).send({ error: 'Нет доступа к редактированию этого комментария' });
+    }
+
+    // Обновляем комментарий
+    const result = await pool.query(
+      `UPDATE user_comments
+       SET content = $1,
+           color = $2,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3 AND user_id = $4
+       RETURNING id, user_id, content, color, created_at, updated_at`,
+      [content.trim(), color || null, commentId, decoded.userId]
+    );
+
+    return reply.send({
+      success: true,
+      comment: result.rows[0]
+    });
+  } catch (err) {
+    console.error('❌ Ошибка обновления комментария:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// Удалить личный комментарий
+app.delete('/api/comments/:commentId', async (req, reply) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+      return reply.code(401).send({ error: 'Не авторизован' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const { commentId } = req.params;
+
+    // Проверяем, что комментарий принадлежит текущему пользователю
+    const ownerCheck = await pool.query(
+      'SELECT user_id FROM user_comments WHERE id = $1',
+      [commentId]
+    );
+
+    if (ownerCheck.rows.length === 0) {
+      return reply.code(404).send({ error: 'Комментарий не найден' });
+    }
+
+    if (ownerCheck.rows[0].user_id !== decoded.userId) {
+      return reply.code(403).send({ error: 'Нет доступа к удалению этого комментария' });
+    }
+
+    // Удаляем комментарий
+    await pool.query(
+      'DELETE FROM user_comments WHERE id = $1 AND user_id = $2',
+      [commentId, decoded.userId]
+    );
+
+    return reply.send({ success: true });
+  } catch (err) {
+    console.error('❌ Ошибка удаления комментария:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
 const PORT = Number(process.env.PORT || 4000);
 const HOST = '127.0.0.1';
 

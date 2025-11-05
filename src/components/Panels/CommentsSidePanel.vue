@@ -1,5 +1,5 @@
 <script setup>
-import BoardComments from './BoardComments.vue'
+import UserComments from './UserComments.vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 
 const props = defineProps({
@@ -22,7 +22,7 @@ const handleClose = () => {
     :class="{ 'comments-side-panel--modern': props.isModernTheme }"
   >
     <div class="comments-side-panel__header">
-      <h2 class="comments-side-panel__title">Комментарии к доске</h2>
+      <h2 class="comments-side-panel__title">Личные комментарии</h2>
       <button
         type="button"
         class="comments-side-panel__close"
@@ -34,7 +34,7 @@ const handleClose = () => {
     </div>
 
     <div class="comments-side-panel__content">
-      <BoardComments />
+      <UserComments />
     </div>
   </div>
 </template>
