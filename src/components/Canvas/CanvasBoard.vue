@@ -173,6 +173,40 @@ const updateActivePvDatasets = (payload = {}) => {
   });
 };
 
+// Хранилище активных таймеров анимации
+const activeAnimationTimers = new Map(); // cardId -> { cardTimer, lineTimers: [] }
+
+// Функция отмены всех активных анимаций
+const cancelAllActiveAnimations = () => {
+  console.log('🛑 Отмена всех активных анимаций, количество:', activeAnimationTimers.size);
+
+  activeAnimationTimers.forEach((timers, cardId) => {
+    // Отменяем таймер карточки
+    if (timers.cardTimer) {
+      clearTimeout(timers.cardTimer);
+      // Убираем класс анимации с карточки
+      const cardElement = getCardElement(cardId);
+      if (cardElement) {
+        cardElement.classList.remove('card--balance-propagation');
+      }
+    }
+
+    // Отменяем таймеры линий
+    if (Array.isArray(timers.lineTimers)) {
+      timers.lineTimers.forEach(({ timer, lineElement }) => {
+        clearTimeout(timer);
+        // Убираем класс анимации с линии
+        if (lineElement) {
+          lineElement.classList.remove('line--balance-propagation');
+        }
+      });
+    }
+  });
+
+  activeAnimationTimers.clear();
+  console.log('✅ Все анимации отменены');
+};
+
 const highlightActivePvChange = (cardId) => {
   if (!cardId) {
     return;
@@ -209,14 +243,21 @@ const animateBalancePropagation = (changedCardId, changedSide = null) => {
 
   console.log('🎨 Запуск анимации баланса для карточки:', changedCardId, 'длительность:', animationDuration);
 
+  // Инициализируем хранилище таймеров для этой карточки
+  const timers = {
+    cardTimer: null,
+    lineTimers: []
+  };
+
   // Показываем желтый индикатор на измененной карточке через CSS-класс
   const cardElement = getCardElement(changedCardId);
   if (cardElement) {
     console.log('✅ Карточка найдена, добавляем класс card--balance-propagation');
     cardElement.classList.add('card--balance-propagation');
-    window.setTimeout(() => {
+    const cardTimer = window.setTimeout(() => {
       cardElement.classList.remove('card--balance-propagation');
     }, animationDuration);
+    timers.cardTimer = cardTimer;
   } else {
     console.warn('❌ Карточка не найдена:', changedCardId);
   }
@@ -264,10 +305,14 @@ const animateBalancePropagation = (changedCardId, changedSide = null) => {
     if (!lineElement) return;
     lineElement.classList.add('line--balance-propagation');
     console.log('✅ Класс line--balance-propagation добавлен к линии:', connectionId);
-    window.setTimeout(() => {
+    const lineTimer = window.setTimeout(() => {
       lineElement.classList.remove('line--balance-propagation');
     }, animationDuration);
+    timers.lineTimers.push({ timer: lineTimer, lineElement });
   });
+
+  // Сохраняем таймеры в глобальном хранилище
+  activeAnimationTimers.set(changedCardId, timers);
 };
 
 const applyActivePvPropagation = (highlightCardId = null, options = {}) => {
@@ -558,6 +603,9 @@ const handleActivePvButtonClick = (event) => {
   if (shouldAnimate && changedIds.length > 0) {
 
     console.log('🎯 Запуск анимации для changedIds:', changedIds);
+
+    // Отменяем все предыдущие анимации перед запуском новых
+    cancelAllActiveAnimations();
 
     changedIds.forEach(id => {
 
