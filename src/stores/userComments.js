@@ -144,6 +144,8 @@ export const useUserCommentsStore = defineStore('userComments', () => {
     loading.value = true
     error.value = null
 
+    console.log('🔍 deleteComment вызван с ID:', commentId, 'Тип:', typeof commentId)
+
     try {
       // Валидация commentId на клиенте
       if (!commentId || commentId === 'undefined' || commentId === 'null') {
@@ -151,22 +153,42 @@ export const useUserCommentsStore = defineStore('userComments', () => {
       }
 
       const commentIdNum = Number(commentId)
+      console.log('🔢 Преобразованный commentIdNum:', commentIdNum, 'isInteger:', Number.isInteger(commentIdNum))
+
       if (!Number.isInteger(commentIdNum) || commentIdNum <= 0) {
         throw new Error('ID комментария должен быть положительным числом')
       }
 
-      const response = await fetch(`${API_URL}/comments/${commentIdNum}`, {
+      const url = `${API_URL}/comments/${commentIdNum}`
+      console.log('🌐 Отправка DELETE запроса на:', url)
+
+      const response = await fetch(url, {
         method: 'DELETE',
         headers: getAuthHeaders()
       })
 
+      console.log('📡 Ответ сервера - статус:', response.status, 'OK:', response.ok)
+
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Ошибка удаления комментария')
+        const contentType = response.headers.get('content-type')
+        console.log('📄 Content-Type ответа:', contentType)
+
+        let errorMessage = 'Ошибка удаления комментария'
+        try {
+          const data = await response.json()
+          console.log('📦 Данные ошибки от сервера:', data)
+          errorMessage = data.error || errorMessage
+        } catch (parseErr) {
+          console.error('❌ Не удалось распарсить JSON ошибки:', parseErr)
+          const text = await response.text()
+          console.log('📝 Текст ответа сервера:', text)
+        }
+        throw new Error(errorMessage)
       }
 
       // Удаляем комментарий из массива
       comments.value = comments.value.filter(c => c.id !== commentIdNum)
+      console.log('✅ Комментарий успешно удалён из локального состояния')
     } catch (err) {
       error.value = err.message
       console.error('❌ Ошибка удаления комментария:', err)

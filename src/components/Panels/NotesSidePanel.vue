@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useNotesStore } from '../../stores/notes.js'
 import { useCardsStore } from '../../stores/cards.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
+import { useBoardStore } from '../../stores/board.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -29,12 +30,65 @@ const handleNoteEntryClick = (cardId, date) => {
   notesStore.requestOpen(cardId, { focus: true, date })
 }
 
-const handleNoteEntryDelete = (cardId, date) => {
-  cardsStore.removeCardNoteEntry(cardId, date)
+const handleNoteEntryDelete = async (cardId, date) => {
+  if (!confirm('Вы уверены, что хотите удалить эту заметку?')) return
+
+  console.log('🗑️ Попытка удалить заметку:', { cardId, date })
+
+  try {
+    // Удаляем локально
+    cardsStore.removeCardNoteEntry(cardId, date)
+
+    // Синхронизируем с сервером (отправляем пустое содержимое для удаления)
+    const boardStore = useBoardStore()
+    if (boardStore.currentBoardId) {
+      await notesStore.saveNote({
+        boardId: boardStore.currentBoardId,
+        cardUid: cardId,
+        noteDate: date,
+        content: '', // Пустое содержимое = удаление на сервере
+        color: ''
+      })
+      console.log('✅ Заметка успешно удалена')
+    }
+  } catch (err) {
+    console.error('❌ Ошибка удаления заметки:', err)
+    alert('Ошибка удаления заметки: ' + err.message)
+  }
 }
 
-const handleCardNotesDelete = (cardId) => {
-  cardsStore.clearCardNotes(cardId)
+const handleCardNotesDelete = async (cardId) => {
+  if (!confirm('Вы уверены, что хотите удалить все заметки для этой карточки?')) return
+
+  console.log('🗑️ Попытка удалить все заметки для карточки:', cardId)
+
+  try {
+    // Получаем все даты заметок для этой карточки
+    const cardNotes = notesStore.getNotesForCard(cardId)
+    const dates = Object.keys(cardNotes)
+
+    // Удаляем локально
+    cardsStore.clearCardNotes(cardId)
+
+    // Синхронизируем с сервером
+    const boardStore = useBoardStore()
+    if (boardStore.currentBoardId && dates.length > 0) {
+      // Удаляем каждую заметку на сервере
+      for (const date of dates) {
+        await notesStore.saveNote({
+          boardId: boardStore.currentBoardId,
+          cardUid: cardId,
+          noteDate: date,
+          content: '', // Пустое содержимое = удаление
+          color: ''
+        })
+      }
+      console.log('✅ Все заметки успешно удалены')
+    }
+  } catch (err) {
+    console.error('❌ Ошибка удаления всех заметок:', err)
+    alert('Ошибка удаления заметок: ' + err.message)
+  }
 }
 </script>
 
