@@ -2605,4 +2605,158 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   transform: translateY(0);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
 }  
+
+}
+
+ 
+
+/* Print Styles - Обеспечиваем корректное отображение холста и карточек при печати */
+
+@media print {
+
+  .canvas-container {
+
+    overflow: visible !important;
+
+    position: static !important;
+
+    width: 100% !important;
+
+    height: auto !important;
+
+  }
+
+}
+
+ 
+
+/* Print Styles - Обеспечиваем корректное отображение холста и карточек при печати */
+
+@media print {
+
+  .canvas-container {
+
+    overflow: visible !important;
+
+    position: static !important;
+
+    width: 100% !important;
+
+    height: auto !important;
+
+  }
+
+ 
+
+  .canvas-content {
+
+    position: static !important;
+
+    transform: none !important;
+
+    width: 100% !important;
+
+    height: auto !important;
+
+    overflow: visible !important;
+
+  }
+
+   /* Убираем фоновую сетку при печати */
+
+  .canvas-content::before {
+
+    display: none !important;
+
+  }
+
+  .cards-container {
+
+    position: relative !important;
+
+    overflow: visible !important;
+
+    width: 100% !important;
+
+    height: auto !important;
+
+  }
+
+ 
+
+  /* Скрываем элементы интерфейса */
+
+  .marketing-watermark,
+
+  .selection-box,
+
+  .guides-overlay,
+
+  .guide-line,
+
+  .line--preview,
+
+  .note-window {
+
+    display: none !important;
+
+  }
+
+ 
+
+  /* Линии соединений остаются видимыми */
+
+  .svg-layer {
+
+    position: absolute !important;
+
+    overflow: visible !important;
+
+  }
+
+ 
+
+  .line-group {
+
+    pointer-events: none !important;
+
+  }
+
+ 
+
+  .line {
+
+    pointer-events: none !important;
+
+  }
+
+ 
+
+  /* Убираем интерактивные эффекты и анимации */
+
+  .line--balance-highlight,
+
+  .line--pv-highlight,
+
+  .line--balance-propagation {
+
+    animation: none !important;
+
+    filter: none !important;
+
+  }
+
+ 
+
+  /* Убираем выделение линий */
+
+  .line.selected {
+
+    stroke-dasharray: none !important;
+
+    animation: none !important;
+
+  }
+
+}
 </style>
