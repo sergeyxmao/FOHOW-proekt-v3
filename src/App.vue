@@ -61,18 +61,6 @@ const saveTooltip = computed(() =>
     : 'Задайте название структуры, чтобы сохранить'
 )
 
-const { handleExportHTML, handleLoadProject } = useProjectActions()
-
-// Инициализация жеста масштабирования UI для мобильной версии
-if (typeof window !== 'undefined') {
-  useMobileUIScaleGesture({
-    edgeZonePercent: 15,
-    minScale: 1,
-    sensitivity: 0.002,
-    safetyMargin: 8
-  })
-}
-
 const isModernTheme = ref(false)
 const isPencilMode = ref(false)
 const pencilSnapshot = ref(null)
@@ -666,6 +654,26 @@ onMounted(async () => {
 
   // Определяем тип устройства
   mobileStore.detectDevice()
+  
+  // Инициализация жеста масштабирования UI для мобильной версии
+
+  if (mobileStore.isMobileMode) {
+
+    console.log('🎯 Инициализация жеста масштабирования UI для мобильной версии')
+
+    useMobileUIScaleGesture({
+
+      edgeZonePercent: 15,
+
+      minScale: 1,
+
+      sensitivity: 0.002,
+
+      safetyMargin: 8
+
+    })
+
+  }  
 
   // Проверяем URL на токен сброса пароля
   const urlParams = new URLSearchParams(window.location.search)
