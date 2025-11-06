@@ -109,16 +109,6 @@ export const useMobileStore = defineStore('mobile', () => {
     }
   }
 
-  const increaseMenuScale = () => {
-    const newScale = Math.min(menuScale.value + 0.1, 2)
-    setMenuScale(newScale)
-  }
-
-  const decreaseMenuScale = () => {
-    const newScale = Math.max(menuScale.value - 0.1, 1)
-    setMenuScale(newScale)
-  }
-
   const isMenuScaled = computed(() => menuScale.value > 1.01)
 
   return {
@@ -134,8 +124,6 @@ export const useMobileStore = defineStore('mobile', () => {
     switchToDesktop,
     closeMobileDialog,
     setMenuScale,
-    resetMenuScale,
-    increaseMenuScale,
-    decreaseMenuScale
+    resetMenuScale
   }
 })

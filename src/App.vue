@@ -7,7 +7,6 @@ import MobileHeader from './components/Layout/MobileHeader.vue'
 import MobileToolbar from './components/Layout/MobileToolbar.vue'
 import MobileSidebar from './components/Layout/MobileSidebar.vue'
 import MobileVersionDialog from './components/Layout/MobileVersionDialog.vue'
-import MobileScaleControl from './components/Layout/MobileScaleControl.vue'
 import VersionSwitcher from './components/Layout/VersionSwitcher.vue'
 import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
@@ -25,6 +24,7 @@ import { useMobileStore } from './stores/mobile'
 import { useViewSettingsStore } from './stores/viewSettings'
 import { useNotesStore } from './stores/notes'
 import { useProjectActions } from './composables/useProjectActions'
+import { useMobileUIScaleGesture } from './composables/useMobileUIScaleGesture'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
 import NotesSidePanel from './components/Panels/NotesSidePanel.vue'
@@ -62,6 +62,16 @@ const saveTooltip = computed(() =>
 )
 
 const { handleExportHTML, handleLoadProject } = useProjectActions()
+
+// Инициализация жеста масштабирования UI для мобильной версии
+if (typeof window !== 'undefined') {
+  useMobileUIScaleGesture({
+    edgeZonePercent: 15,
+    minScale: 1,
+    sensitivity: 0.002,
+    safetyMargin: 8
+  })
+}
 
 const isModernTheme = ref(false)
 const isPencilMode = ref(false)
@@ -748,10 +758,6 @@ onBeforeUnmount(() => {
         @add-lower="handleAddLower"
         @add-gold="handleAddGold"
         @add-template="handleAddTemplate"
-      />
-      <MobileScaleControl
-        v-show="!isPencilMode && !showResetPassword"
-        :is-modern-theme="isModernTheme"
       />
       <MobileVersionDialog />
     </template>

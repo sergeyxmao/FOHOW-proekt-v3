@@ -73,22 +73,6 @@ const handleProfileClick = () => {
 
   emit('request-auth')
 }
-
-const handleIncreaseScale = () => {
-  mobileStore.increaseMenuScale()
-}
-
-const handleDecreaseScale = () => {
-  mobileStore.decreaseMenuScale()
-}
-
-const handleResetScale = () => {
-  mobileStore.resetMenuScale()
-}
-
-const formattedScale = computed(() => {
-  return Math.round(menuScale.value * 100)
-})
 </script>
 
 <template>
