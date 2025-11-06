@@ -47,21 +47,20 @@ const handleClose = () => {
 </script>
 
 <template>
-  <div class="modal-overlay" @click.self="handleClose">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h2 class="modal-title">Настройки экспорта PNG</h2>
-        <button
-          type="button"
-          class="modal-close-btn"
-          @click="handleClose"
-          aria-label="Закрыть"
-        >
-          ×
-        </button>
-      </div>
+  <div class="export-settings-panel">
+    <div class="export-settings-panel__header">
+      <h3 class="export-settings-panel__title">Настройки экспорта PNG</h3>
+      <button
+        type="button"
+        class="export-settings-panel__close"
+        @click="handleClose"
+        aria-label="Закрыть"
+      >
+        ×
+      </button>
+    </div>
 
-      <div class="modal-body">
+    <div class="export-settings-panel__body">
         <!-- Формат листа -->
         <div class="form-group">
           <label for="page-format" class="form-label">Формат листа:</label>
@@ -166,20 +165,20 @@ const handleClose = () => {
         </div>
       </div>
 
-      <div class="modal-footer">
+      <div class="export-settings-panel__footer">
         <button
           type="button"
-          class="btn btn-secondary"
+          class="export-btn export-btn--secondary"
           @click="handleClose"
         >
-          Закрыть
+          Отмена
         </button>
         <button
           type="button"
-          class="btn btn-primary"
+          class="export-btn export-btn--primary"
           @click="handleExport"
         >
-          Сохранить
+          Экспорт
         </button>
       </div>
     </div>
@@ -187,97 +186,100 @@ const handleClose = () => {
 </template>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  backdrop-filter: blur(4px);
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.modal-dialog {
-  background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.25);
-  max-width: 500px;
-  width: 90%;
-  max-height: 90vh;
-  overflow: hidden;
+.export-settings-panel {
+  min-width: 360px;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 16px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.2);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
-  animation: slideUp 0.3s ease;
+  max-height: calc(100vh - 120px);
+  overflow: hidden;
+  animation: slideIn 0.25s ease-out;
 }
 
-@keyframes slideUp {
+@keyframes slideIn {
   from {
-    transform: translateY(20px);
     opacity: 0;
+    transform: translateX(-10px);
   }
   to {
-    transform: translateY(0);
     opacity: 1;
+    transform: translateX(0);
   }
 }
 
-.modal-header {
+.export-settings-panel__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 28px;
+  padding: 18px 20px;
   border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(248, 250, 252, 0.6);
 }
 
-.modal-title {
+.export-settings-panel__title {
   margin: 0;
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.01em;
 }
 
-.modal-close-btn {
+.export-settings-panel__close {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   background: rgba(15, 23, 42, 0.06);
   color: #0f172a;
-  font-size: 28px;
+  font-size: 24px;
   cursor: pointer;
   transition: all 0.2s ease;
   line-height: 1;
+  flex-shrink: 0;
 }
 
-.modal-close-btn:hover {
+.export-settings-panel__close:hover {
   background: rgba(239, 68, 68, 0.12);
   color: #dc2626;
   transform: scale(1.05);
 }
 
-.modal-close-btn:active {
+.export-settings-panel__close:active {
   transform: scale(0.95);
 }
 
-.modal-body {
+.export-settings-panel__body {
   flex: 1;
   overflow-y: auto;
-  padding: 28px;
+  padding: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.3) rgba(15, 23, 42, 0.05);
+}
+
+.export-settings-panel__body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.export-settings-panel__body::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.05);
+  border-radius: 3px;
+}
+
+.export-settings-panel__body::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 3px;
+}
+
+.export-settings-panel__body::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
 }
 
 .form-group {
@@ -290,8 +292,8 @@ const handleClose = () => {
 
 .form-label {
   display: block;
-  margin-bottom: 10px;
-  font-size: 15px;
+  margin-bottom: 8px;
+  font-size: 14px;
   font-weight: 600;
   color: #0f172a;
   letter-spacing: 0.01em;
@@ -299,26 +301,26 @@ const handleClose = () => {
 
 .form-select {
   width: 100%;
-  padding: 12px 16px;
-  font-size: 15px;
+  padding: 10px 14px;
+  font-size: 14px;
   font-family: inherit;
   color: #0f172a;
-  background: rgba(248, 250, 252, 0.9);
+  background: rgba(248, 250, 252, 0.95);
   border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .form-select:hover {
-  border-color: rgba(59, 130, 246, 0.3);
-  background: rgba(248, 250, 252, 1);
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(255, 255, 255, 1);
 }
 
 .form-select:focus {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
 .orientation-buttons {
@@ -331,30 +333,30 @@ const handleClose = () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 16px 12px;
-  border: 2px solid rgba(15, 23, 42, 0.12);
-  border-radius: 14px;
-  background: rgba(248, 250, 252, 0.7);
+  gap: 6px;
+  padding: 12px 8px;
+  border: 1.5px solid rgba(15, 23, 42, 0.12);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.8);
   color: #0f172a;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .orientation-btn:hover {
-  border-color: rgba(59, 130, 246, 0.3);
-  background: rgba(248, 250, 252, 1);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+  border-color: rgba(59, 130, 246, 0.4);
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.1);
 }
 
 .orientation-btn.active {
   border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
+  background: rgba(59, 130, 246, 0.12);
   color: #1d4ed8;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 .orientation-btn:active {
@@ -362,74 +364,75 @@ const handleClose = () => {
 }
 
 .orientation-icon {
-  font-size: 32px;
+  font-size: 28px;
   line-height: 1;
 }
 
 .info-box {
-  margin-top: 20px;
-  padding: 16px;
+  margin-top: 16px;
+  padding: 12px 14px;
   background: rgba(59, 130, 246, 0.08);
   border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .info-text {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   color: #1e40af;
   line-height: 1.5;
 }
 
-.modal-footer {
+.export-settings-panel__footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
-  padding: 20px 28px;
+  gap: 10px;
+  padding: 16px 20px;
   border-top: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(248, 250, 252, 0.5);
+  background: rgba(248, 250, 252, 0.6);
 }
 
-.btn {
-  padding: 12px 24px;
+.export-btn {
+  padding: 10px 20px;
   border: none;
-  border-radius: 12px;
-  font-size: 15px;
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
   letter-spacing: 0.01em;
 }
 
-.btn-secondary {
+.export-btn--secondary {
   background: rgba(15, 23, 42, 0.08);
   color: #0f172a;
+  border: 1px solid rgba(15, 23, 42, 0.12);
 }
 
-.btn-secondary:hover {
+.export-btn--secondary:hover {
   background: rgba(15, 23, 42, 0.14);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.1);
 }
 
-.btn-secondary:active {
+.export-btn--secondary:active {
   transform: translateY(0);
 }
 
-.btn-primary {
+.export-btn--primary {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-.btn-primary:hover {
+.export-btn--primary:hover {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 14px rgba(59, 130, 246, 0.4);
 }
 
-.btn-primary:active {
+.export-btn--primary:active {
   transform: translateY(0);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
@@ -437,38 +440,38 @@ const handleClose = () => {
 .checkbox-group {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
 }
 
 .checkbox-label {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: rgba(248, 250, 252, 0.7);
-  border: 2px solid rgba(15, 23, 42, 0.08);
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1.5px solid rgba(15, 23, 42, 0.08);
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
 }
 
 .checkbox-label:hover {
-  background: rgba(248, 250, 252, 1);
-  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(59, 130, 246, 0.4);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
 }
 
 .checkbox-label:has(.checkbox-input:checked) {
-  background: rgba(59, 130, 246, 0.08);
+  background: rgba(59, 130, 246, 0.1);
   border-color: #3b82f6;
 }
 
 .checkbox-input {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
   border: 2px solid rgba(15, 23, 42, 0.24);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -481,7 +484,7 @@ const handleClose = () => {
 }
 
 .checkbox-text {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: #0f172a;
   letter-spacing: 0.01em;
