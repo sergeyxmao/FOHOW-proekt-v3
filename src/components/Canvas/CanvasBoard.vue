@@ -2604,11 +2604,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 .marketing-watermark:active {
   transform: translateY(0);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
-}  
-
 }
-
- 
 
 /* Print Styles - Обеспечиваем корректное отображение холста и карточек при печати */
 
