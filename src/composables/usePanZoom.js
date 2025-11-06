@@ -321,11 +321,18 @@ export function usePanZoom(canvasElement) {
       event.preventDefault()    
       return
     }
-    // Панорамирование по средней кнопке мыши
-    if (event.button === 1) {
+    // Панорамирование по левой кнопке мыши
+    if (event.button === 0) {
       if (!canvasElement.value.contains(event.target)) {
         return
-      }      
+      }
+
+      // Проверяем, что клик не на исключенных элементах (карточки, заметки и т.д.)
+      const target = event?.target
+      if (target && typeof target.closest === 'function' && PAN_EXCLUDE_SELECTOR && target.closest(PAN_EXCLUDE_SELECTOR)) {
+        return
+      }
+
       event.preventDefault()
       startPan(event)
     }
