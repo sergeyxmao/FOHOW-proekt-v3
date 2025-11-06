@@ -7,6 +7,7 @@ import MobileHeader from './components/Layout/MobileHeader.vue'
 import MobileToolbar from './components/Layout/MobileToolbar.vue'
 import MobileSidebar from './components/Layout/MobileSidebar.vue'
 import MobileVersionDialog from './components/Layout/MobileVersionDialog.vue'
+import MobileScaleControl from './components/Layout/MobileScaleControl.vue'
 import VersionSwitcher from './components/Layout/VersionSwitcher.vue'
 import PencilOverlay from './components/Overlay/PencilOverlay.vue'
 import ResetPasswordForm from './components/ResetPasswordForm.vue'
@@ -24,7 +25,6 @@ import { useMobileStore } from './stores/mobile'
 import { useViewSettingsStore } from './stores/viewSettings'
 import { useNotesStore } from './stores/notes'
 import { useProjectActions } from './composables/useProjectActions'
-import { useMobileGesture } from './composables/useMobileGesture'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
 import NotesSidePanel from './components/Panels/NotesSidePanel.vue'
@@ -63,9 +63,6 @@ const saveTooltip = computed(() =>
 
 const { handleExportHTML, handleLoadProject } = useProjectActions()
 
-// Активируем обработчик жеста для масштабирования UI элементов
-useMobileGesture()
-
 const isModernTheme = ref(false)
 const isPencilMode = ref(false)
 const pencilSnapshot = ref(null)
@@ -78,45 +75,7 @@ const isMobileAuthModalOpen = ref(false)
 const isBoardsModalOpen = ref(false)
 const isStructureNameModalOpen = ref(false)
 const pendingAction = ref(null)
-const menuTouchPointers = new Map()
-let menuPointerListenersAttached = false
-let initialMenuPinchDistance = null
 
-const MENU_SCALE_MIN = 1
-const MENU_SCALE_MAX = 1.6
-
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
-
-const calculateAverageDistance = () => {
-  const pointers = Array.from(menuTouchPointers.values())
-  if (pointers.length < 2) {
-    return 0
-  }
-
-  const activePointers = pointers.slice(0, 3)
-  let totalDistance = 0
-  let pairs = 0
-
-  for (let i = 0; i < activePointers.length; i += 1) {
-    for (let j = i + 1; j < activePointers.length; j += 1) {
-      const dx = activePointers[i].x - activePointers[j].x
-      const dy = activePointers[i].y - activePointers[j].y
-      totalDistance += Math.hypot(dx, dy)
-      pairs += 1
-    }
-  }
-
-  if (pairs === 0) {
-    return 0
-  }
-
-  return totalDistance / pairs
-}
-
-const resetMenuPinchState = () => {
-  initialMenuPinchDistance = null
-  mobileStore.resetMenuScale()
-} 
 // Состояние для сброса пароля
 const showResetPassword = ref(false)
 const resetToken = ref('')
@@ -677,103 +636,6 @@ function handleMobileBoardSelect(boardId) {
   openBoard(boardId)
 }
 
-const updateMenuScaleState = () => {
-  if (!isMobileMode.value) {
-    menuTouchPointers.clear()
-    resetMenuPinchState()
-    return   
-  }
-
-  if (menuTouchPointers.size < 3) {
-    resetMenuPinchState()
-    return
-  }
-
-  const distance = calculateAverageDistance()
-  if (!distance) {
-    return
-  }
-
-  if (initialMenuPinchDistance === null) {
-    initialMenuPinchDistance = distance
-    mobileStore.resetMenuScale()
-    return
-  }
-
-  if (initialMenuPinchDistance === 0) {
-    return
-  }
-
-  const scaleRatio = clamp(distance / initialMenuPinchDistance, MENU_SCALE_MIN, MENU_SCALE_MAX)
-  mobileStore.setMenuScale(scaleRatio)
-}
-
-const handleMenuPointerDown = (event) => {
-  if (!isMobileMode.value || event.pointerType !== 'touch') {
-    return
-  }
-
-  menuTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
-  if (menuTouchPointers.size >= 3) {
-    initialMenuPinchDistance = null
-  }
-  updateMenuScaleState()
-}
-
-const handleMenuPointerMove = (event) => {
-  if (!isMobileMode.value || event.pointerType !== 'touch') {
-    return
-  }
-
-  if (!menuTouchPointers.has(event.pointerId)) {
-    return
-  }
-
-  menuTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
-  updateMenuScaleState()
-}
-
-const handleMenuPointerUp = (event) => {
-  if (event.pointerType !== 'touch') {
-    return
-  }
-
-  const wasPresent = menuTouchPointers.delete(event.pointerId)
-  if (wasPresent && menuTouchPointers.size < 3) {
-    initialMenuPinchDistance = null
-  }
-  updateMenuScaleState()
-}
-
-const attachMenuPointerListeners = () => {
-  if (menuPointerListenersAttached) {
-    return
-  }
-
-  window.addEventListener('pointerdown', handleMenuPointerDown)
-  window.addEventListener('pointermove', handleMenuPointerMove) 
-  window.addEventListener('pointerup', handleMenuPointerUp)
-  window.addEventListener('pointercancel', handleMenuPointerUp)
-  window.addEventListener('pointerleave', handleMenuPointerUp)
-  window.addEventListener('pointerout', handleMenuPointerUp)
-  menuPointerListenersAttached = true
-}
-
-const detachMenuPointerListeners = () => {
-  if (!menuPointerListenersAttached) {
-    return
-  }
-
-  window.removeEventListener('pointerdown', handleMenuPointerDown)
-  window.removeEventListener('pointermove', handleMenuPointerMove) 
-  window.removeEventListener('pointerup', handleMenuPointerUp)
-  window.removeEventListener('pointercancel', handleMenuPointerUp)
-  window.removeEventListener('pointerleave', handleMenuPointerUp)
-  window.removeEventListener('pointerout', handleMenuPointerUp)
-  menuPointerListenersAttached = false
-  menuTouchPointers.clear()
-  resetMenuPinchState()
-}
 watch(isAuthenticated, (value) => {
   if (value) {
     showMobileAuthPrompt.value = false
@@ -786,14 +648,6 @@ watch(isSaveAvailable, (canSave) => {
   } else {
     stopAutoSave()
   }
-}) 
-watch(isMobileMode, (value) => {
-  if (!value) {
-    isBoardsModalOpen.value = false
-    detachMenuPointerListeners()
-  } else {
-    attachMenuPointerListeners()   
-  }
 })
 
 onMounted(async () => {
@@ -802,9 +656,6 @@ onMounted(async () => {
 
   // Определяем тип устройства
   mobileStore.detectDevice()
-  if (isMobileMode.value) {
-    attachMenuPointerListeners()
-  }
 
   // Проверяем URL на токен сброса пароля
   const urlParams = new URLSearchParams(window.location.search)
@@ -822,7 +673,6 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
   stopAutoSave()
-  detachMenuPointerListeners() 
 })
 </script>
 
@@ -898,6 +748,10 @@ onBeforeUnmount(() => {
         @add-lower="handleAddLower"
         @add-gold="handleAddGold"
         @add-template="handleAddTemplate"
+      />
+      <MobileScaleControl
+        v-show="!isPencilMode && !showResetPassword"
+        :is-modern-theme="isModernTheme"
       />
       <MobileVersionDialog />
     </template>

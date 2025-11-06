@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+
+const MENU_SCALE_STORAGE_KEY = 'fohow_mobile_menu_scale'
 
 export const useMobileStore = defineStore('mobile', () => {
   // Определяем, является ли устройство мобильным
@@ -10,8 +12,25 @@ export const useMobileStore = defineStore('mobile', () => {
 
   // Пользователь принудительно включил десктопную версию
   const forceDesktopMode = ref(false)
+
+  // Загружаем сохраненный масштаб из localStorage или используем 1 по умолчанию
+  const loadSavedScale = () => {
+    try {
+      const saved = localStorage.getItem(MENU_SCALE_STORAGE_KEY)
+      if (saved) {
+        const parsed = parseFloat(saved)
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= 2) {
+          return parsed
+        }
+      }
+    } catch (error) {
+      console.warn('Не удалось загрузить сохраненный масштаб:', error)
+    }
+    return 1
+  }
+
   // Текущее масштабирование элементов мобильного меню
-  const menuScale = ref(1)
+  const menuScale = ref(loadSavedScale())
 
   // Показывать ли диалог о мобильной версии
   const showMobileDialog = ref(false)
@@ -70,11 +89,34 @@ export const useMobileStore = defineStore('mobile', () => {
       return
     }
 
-    const clamped = Math.min(Math.max(numericValue, 1), 1.6)
+    const clamped = Math.min(Math.max(numericValue, 1), 2)
     menuScale.value = clamped
+
+    // Сохраняем в localStorage
+    try {
+      localStorage.setItem(MENU_SCALE_STORAGE_KEY, String(clamped))
+    } catch (error) {
+      console.warn('Не удалось сохранить масштаб:', error)
+    }
   }
+
   const resetMenuScale = () => {
     menuScale.value = 1
+    try {
+      localStorage.setItem(MENU_SCALE_STORAGE_KEY, '1')
+    } catch (error) {
+      console.warn('Не удалось сохранить масштаб:', error)
+    }
+  }
+
+  const increaseMenuScale = () => {
+    const newScale = Math.min(menuScale.value + 0.1, 2)
+    setMenuScale(newScale)
+  }
+
+  const decreaseMenuScale = () => {
+    const newScale = Math.max(menuScale.value - 0.1, 1)
+    setMenuScale(newScale)
   }
 
   const isMenuScaled = computed(() => menuScale.value > 1.01)
@@ -92,6 +134,8 @@ export const useMobileStore = defineStore('mobile', () => {
     switchToDesktop,
     closeMobileDialog,
     setMenuScale,
-    resetMenuScale
+    resetMenuScale,
+    increaseMenuScale,
+    decreaseMenuScale
   }
 })
