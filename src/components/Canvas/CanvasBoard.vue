@@ -2614,7 +2614,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     left: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     transform: none !important;
   }
 
@@ -2622,11 +2622,11 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    overflow: hidden !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
     transform: none !important;
-    transform-origin: center center !important;
+    transform-origin: top left !important;
   }
 
   /* Убираем фоновую сетку при печати */
@@ -2638,9 +2638,9 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    overflow: hidden !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .svg-layer {
@@ -2649,7 +2649,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     left: 0 !important;
     width: 100% !important;
     height: 100% !important;
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
   /* Скрываем ненужные элементы интерфейса внутри холста */
