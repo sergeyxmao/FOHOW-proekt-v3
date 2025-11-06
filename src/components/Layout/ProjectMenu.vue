@@ -15,6 +15,7 @@ const {
   handleLoadProject,
   handleExportHTML,
   handleExportSVG,
+  handleExportPNG,
   handlePrint
 } = useProjectActions()
 
@@ -42,6 +43,12 @@ const items = computed(() => [
     icon: '🖋️',
     label: 'Экспорт в SVG',
     action: handleExportSVG
+  },
+  {
+    id: 'export-png',
+    icon: '🖼️',
+    label: 'Экспорт в PNG',
+    action: handleExportPNG
   },
   {
     id: 'print',

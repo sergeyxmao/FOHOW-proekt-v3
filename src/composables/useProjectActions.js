@@ -1,4 +1,5 @@
 import { storeToRefs } from 'pinia'
+import html2canvas from 'html2canvas'
 import { useCardsStore } from '../stores/cards.js'
 import { useConnectionsStore } from '../stores/connections.js'
 import { useProjectStore, formatProjectFileName } from '../stores/project.js'
@@ -595,10 +596,121 @@ export function useProjectActions() {
     input.click()
   }
 
+  const handleExportPNG = async () => {
+    try {
+      const canvasContainer = document.querySelector('.canvas-container')
+      const canvasContent = canvasContainer?.querySelector('.canvas-content')
+
+      if (!canvasContainer || !canvasContent) {
+        alert('Не удалось найти содержимое холста для экспорта.')
+        return
+      }
+
+      if (cardsStore.cards.length === 0 && connectionsStore.connections.length === 0) {
+        alert('На доске нет элементов для экспорта.')
+        return
+      }
+
+      // Добавляем класс для скрытия UI элементов
+      canvasContainer.classList.add('canvas-container--capturing')
+
+      // Сохраняем оригинальный transform
+      const originalTransform = canvasContent.style.transform
+
+      // Сбрасываем transform для захвата в масштабе 1:1
+      canvasContent.style.transform = 'matrix(1, 0, 0, 1, 0, 0)'
+
+      // Вычисляем границы всех карточек
+      const cards = cardsStore.cards
+      let minX = Infinity
+      let minY = Infinity
+      let maxX = -Infinity
+      let maxY = -Infinity
+
+      cards.forEach(card => {
+        const left = card.x || 0
+        const top = card.y || 0
+        const width = card.width || 0
+        const height = card.height || 0
+
+        minX = Math.min(minX, left)
+        minY = Math.min(minY, top)
+        maxX = Math.max(maxX, left + width)
+        maxY = Math.max(maxY, top + height)
+      })
+
+      // Добавляем отступы
+      const PADDING = 50
+      minX -= PADDING
+      minY -= PADDING
+      maxX += PADDING
+      maxY += PADDING
+
+      const contentWidth = maxX - minX
+      const contentHeight = maxY - minY
+
+      // Устанавливаем позицию canvas-content для захвата нужной области
+      const originalLeft = canvasContent.style.left
+      const originalTop = canvasContent.style.top
+
+      canvasContent.style.left = `${-minX}px`
+      canvasContent.style.top = `${-minY}px`
+
+      // Захватываем изображение
+      const canvas = await html2canvas(canvasContainer, {
+        backgroundColor: backgroundColor.value || '#ffffff',
+        logging: false,
+        useCORS: true,
+        scale: 2, // Увеличиваем разрешение для лучшего качества
+        width: contentWidth,
+        height: contentHeight,
+        windowWidth: contentWidth,
+        windowHeight: contentHeight
+      })
+
+      // Восстанавливаем оригинальные значения
+      canvasContent.style.transform = originalTransform
+      canvasContent.style.left = originalLeft
+      canvasContent.style.top = originalTop
+      canvasContainer.classList.remove('canvas-container--capturing')
+
+      // Конвертируем в blob и скачиваем
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert('Не удалось создать изображение.')
+          return
+        }
+
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+
+        // Формируем имя файла: название проекта + дата и время
+        const now = new Date()
+        const dateStr = now.getFullYear() + '-' +
+          String(now.getMonth() + 1).padStart(2, '0') + '-' +
+          String(now.getDate()).padStart(2, '0')
+        const timeStr = String(now.getHours()).padStart(2, '0') + '-' +
+          String(now.getMinutes()).padStart(2, '0') + '-' +
+          String(now.getSeconds()).padStart(2, '0')
+
+        const baseFileName = formatProjectFileName(normalizedProjectName.value || projectStore.projectName, 'scheme')
+        link.download = `${baseFileName}_${dateStr}_${timeStr}.png`
+
+        link.href = url
+        link.click()
+        URL.revokeObjectURL(url)
+      }, 'image/png')
+    } catch (error) {
+      console.error('Ошибка при экспорте в PNG:', error)
+      alert('Экспорт в PNG завершился ошибкой. Подробности в консоли.')
+    }
+  }
+
   return {
     handleSaveProject,
     handleExportHTML,
     handleExportSVG,
+    handleExportPNG,
     handlePrint,
     handleLoadProject
   }
