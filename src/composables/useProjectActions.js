@@ -731,32 +731,32 @@ export function useProjectActions() {
         return
       }
 
-      // Добавляем класс для скрытия UI элементов
+      // Add a class to hide UI elements
       canvasContainer.classList.add('canvas-container--capturing')
 
-      // Применяем опции экспорта
+      // Apply export options
       const tempStyles = []
 
-      // Опция "Скрыть содержимое"
+      // Option "Скрыть содержимое"
       if (exportSettings?.hideContent) {
-        // Скрываем все текстовые элементы на карточках
+        // Hide all text elements on the cards
         const textElements = canvasContainer.querySelectorAll('.card-title, .card-body, .label, .value, .card-row, .card-body-html')
         textElements.forEach(el => {
           tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
           el.style.visibility = 'hidden'
         })
-
-        // Скрываем кнопки управления карточкой (крестик и кнопку заметок)
-        const controlButtons = canvasContainer.querySelectorAll('.card-close-btn, .card-note-btn')
-        controlButtons.forEach(el => {
-          tempStyles.push({ element: el, property: 'display', originalValue: el.style.display })
-          el.style.display = 'none'
-        })
       }
 
-      // Опция "Ч/Б (контур)"
+      // Hide control buttons
+      const controlButtons = canvasContainer.querySelectorAll('.card-close-btn, .card-note-btn, .active-pv-btn, [data-role="active-pv-buttons"]')
+      controlButtons.forEach(el => {
+        tempStyles.push({ element: el, property: 'display', originalValue: el.style.display })
+        el.style.display = 'none'
+      })
+
+      // Option "Ч/Б (контур)"
       if (exportSettings?.blackAndWhite) {
-        // Устанавливаем белый фон карточек и черный контур
+        // Set white background for cards and a black border
         const cards = canvasContainer.querySelectorAll('.card')
         cards.forEach(card => {
           tempStyles.push({ element: card, property: 'background', originalValue: card.style.background })
@@ -767,23 +767,25 @@ export function useProjectActions() {
           card.style.border = '2px solid #000000'
         })
 
-        // Устанавливаем белый фон у заголовков карточек с черной разделительной полосой
-        const cardHeaders = canvasContainer.querySelectorAll('.card-header')
+        // Set a white background for card headers with a black separating line
+        const cardHeaders = canvasContainer.querySelectorAll('.card-header, .card-title')
         cardHeaders.forEach(header => {
           tempStyles.push({ element: header, property: 'background', originalValue: header.style.background })
           tempStyles.push({ element: header, property: 'border-bottom', originalValue: header.style.borderBottom })
+          tempStyles.push({ element: header, property: 'color', originalValue: header.style.color })
           header.style.background = '#ffffff'
           header.style.borderBottom = '2px solid #000000'
+          header.style.color = '#000000'
         })
 
-        // Скрываем цветные элементы (иконки, значки)
+        // Hide colored elements (icons, badges)
         const coloredElements = canvasContainer.querySelectorAll('.coin-icon, .slf-badge, .fendou-badge, .rank-badge')
         coloredElements.forEach(el => {
           tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
           el.style.visibility = 'hidden'
         })
 
-        // Делаем все линии соединений черными
+        // Make all connection lines black
         const lines = canvasContainer.querySelectorAll('.line')
         lines.forEach(line => {
           tempStyles.push({ element: line, property: 'stroke', originalValue: line.style.stroke })
@@ -791,13 +793,13 @@ export function useProjectActions() {
         })
       }
 
-      // Сохраняем оригинальный transform
+      // Save the original transform
       const originalTransform = canvasContent.style.transform
 
-      // Сбрасываем transform для захвата в масштабе 1:1
+      // Reset the transform to capture at a 1:1 scale
       canvasContent.style.transform = 'matrix(1, 0, 0, 1, 0, 0)'
 
-      // Вычисляем границы всех карточек
+      // Calculate the boundaries of all cards
       const cards = cardsStore.cards
       let minX = Infinity
       let minY = Infinity
@@ -816,7 +818,7 @@ export function useProjectActions() {
         maxY = Math.max(maxY, top + height)
       })
 
-      // Добавляем отступы
+      // Add padding
       const PADDING = 50
       minX -= PADDING
       minY -= PADDING
@@ -826,41 +828,41 @@ export function useProjectActions() {
       const contentWidth = maxX - minX
       const contentHeight = maxY - minY
 
-      // Устанавливаем позицию canvas-content для захвата нужной области
+      // Set the position of canvas-content to capture the desired area
       const originalLeft = canvasContent.style.left
       const originalTop = canvasContent.style.top
 
       canvasContent.style.left = `${-minX}px`
       canvasContent.style.top = `${-minY}px`
 
-      // Определяем параметры экспорта
+      // Determine the export parameters
       let finalWidth, finalHeight, scale
 
       if (exportSettings && exportSettings.format !== 'original') {
-        // Вычисляем размеры в пикселях на основе формата и DPI
+        // Calculate the dimensions in pixels based on format and DPI
         let pageWidthMm = exportSettings.width
         let pageHeightMm = exportSettings.height
 
-        // Применяем ориентацию
+        // Apply orientation
         if (exportSettings.orientation === 'landscape') {
           [pageWidthMm, pageHeightMm] = [pageHeightMm, pageWidthMm]
         }
 
-        // Конвертируем миллиметры в пиксели: pixels = (mm / 25.4) * DPI
+        // Convert millimeters to pixels: pixels = (mm / 25.4) * DPI
         finalWidth = Math.round((pageWidthMm / 25.4) * exportSettings.dpi)
         finalHeight = Math.round((pageHeightMm / 25.4) * exportSettings.dpi)
 
-        // Вычисляем scale для html2canvas на основе DPI
-        // Базовое разрешение - 96 DPI
+        // Calculate the scale for html2canvas based on DPI
+        // The base resolution is 96 DPI
         scale = exportSettings.dpi / 96
       } else {
-        // Оригинальный размер
+        // Original size
         finalWidth = contentWidth
         finalHeight = contentHeight
-        scale = 2 // Увеличиваем разрешение для лучшего качества
+        scale = 2 // Increase the resolution for better quality
       }
 
-      // Захватываем изображение контента
+      // Capture the content image
       const contentCanvas = await html2canvas(canvasContainer, {
         backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
         logging: false,
@@ -872,13 +874,13 @@ export function useProjectActions() {
         windowHeight: contentHeight
       })
 
-      // Восстанавливаем оригинальные значения
+      // Restore original values
       canvasContent.style.transform = originalTransform
       canvasContent.style.left = originalLeft
       canvasContent.style.top = originalTop
       canvasContainer.classList.remove('canvas-container--capturing')
 
-      // Восстанавливаем временные стили
+      // Restore temporary styles
       tempStyles.forEach(({ element, property, originalValue }) => {
         if (originalValue) {
           element.style[property] = originalValue
@@ -890,49 +892,49 @@ export function useProjectActions() {
       let finalCanvas
 
       if (exportSettings && exportSettings.format !== 'original') {
-        // Создаем финальный canvas с заданными размерами
+        // Create the final canvas with the specified dimensions
         finalCanvas = document.createElement('canvas')
         finalCanvas.width = finalWidth
         finalCanvas.height = finalHeight
 
         const ctx = finalCanvas.getContext('2d')
 
-        // Заливаем фон
+        // Fill the background
         ctx.fillStyle = exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff')
         ctx.fillRect(0, 0, finalWidth, finalHeight)
 
-        // Вычисляем масштаб для вписывания контента в финальный размер
+        // Calculate the scale to fit the content within the final size
         const scaleX = finalWidth / contentCanvas.width
         const scaleY = finalHeight / contentCanvas.height
         const fitScale = Math.min(scaleX, scaleY)
 
-        // Вычисляем размеры масштабированного контента
+        // Calculate the dimensions of the scaled content
         const scaledWidth = contentCanvas.width * fitScale
         const scaledHeight = contentCanvas.height * fitScale
 
-        // Центрируем изображение
+        // Center the image
         const offsetX = (finalWidth - scaledWidth) / 2
         const offsetY = (finalHeight - scaledHeight) / 2
 
-        // Рисуем масштабированное и отцентрованное изображение
+        // Draw the scaled and centered image
         ctx.drawImage(
           contentCanvas,
           0, 0, contentCanvas.width, contentCanvas.height,
           offsetX, offsetY, scaledWidth, scaledHeight
         )
       } else {
-        // Используем оригинальный canvas
+        // Use the original canvas
         finalCanvas = contentCanvas
       }
 
-      // Конвертируем в blob и скачиваем
+      // Convert to a blob and download
       finalCanvas.toBlob(async (blob) => {
         if (!blob) {
           alert('Не удалось создать изображение.')
           return
         }
 
-        // Добавляем метаданные DPI в PNG файл
+        // Add DPI metadata to the PNG file
         let finalBlob = blob
         if (exportSettings?.dpi) {
           finalBlob = await addPngDpiMetadata(blob, exportSettings.dpi)
@@ -941,7 +943,7 @@ export function useProjectActions() {
         const url = URL.createObjectURL(finalBlob)
         const link = document.createElement('a')
 
-        // Формируем имя файла: название проекта + дата и время
+        // Form the file name: project name + date and time
         const now = new Date()
         const dateStr = now.getFullYear() + '-' +
           String(now.getMonth() + 1).padStart(2, '0') + '-' +
@@ -952,7 +954,7 @@ export function useProjectActions() {
 
         const baseFileName = formatProjectFileName(normalizedProjectName.value || projectStore.projectName, 'scheme')
 
-        // Добавляем информацию о формате в имя файла, если не оригинальный размер
+        // Add format information to the file name if not the original size
         let formatSuffix = ''
         if (exportSettings && exportSettings.format !== 'original') {
           formatSuffix = `_${exportSettings.format.toUpperCase()}_${exportSettings.orientation === 'portrait' ? 'P' : 'L'}_${exportSettings.dpi}dpi`
