@@ -2608,15 +2608,6 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 
 /* Print Styles - Обеспечиваем корректное отображение холста и карточек при печати */
 @media print {
-  /* ... старый код ... */
-}
-```
-
-**На что заменить:**
-
-```css
-/* Print Styles - Обеспечиваем корректное отображение холста и карточек при печати */
-@media print {
   .canvas-container,
   .canvas-content {
     position: relative !important; /* ВАЖНО: сохраняем контекст позиционирования */
