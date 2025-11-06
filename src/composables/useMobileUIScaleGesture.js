@@ -146,14 +146,23 @@ export function useMobileUIScaleGesture(options = {}) {
     const touch = event.touches[0]
     const edgeZoneWidth = window.innerWidth * (edgeZonePercent / 100)
 
-    // Проверяем, что касание началось в левой зоне экрана
-    if (touch.clientX <= edgeZoneWidth) {
-      isGestureActive.value = true
-      gestureStartY.value = touch.clientY
-      gestureStartScale.value = mobileStore.menuScale
+    console.log('👆 Touch start:', {
 
-      // Вычисляем максимальный масштаб при начале жеста
-      currentMaxScale.value = calculateMaxScale()
+      x: touch.clientX,
+
+      y: touch.clientY,
+
+      edgeZoneWidth,
+
+      isInZone: touch.clientX <= edgeZoneWidth
+
+    })
+
+ 
+
+    // Проверяем, что касание началось в левой зоне экрана
+
+    if (touch.clientX <= edgeZoneWidth) {
     }
   }
 
@@ -177,6 +186,20 @@ export function useMobileUIScaleGesture(options = {}) {
 
     // Ограничиваем масштаб
     newScale = Math.max(minScale, Math.min(currentMaxScale.value, newScale))
+
+    console.log('📏 Масштабирование:', {
+
+      deltaY,
+
+      scaleDelta,
+
+      newScale,
+
+      currentScale: mobileStore.menuScale,
+
+      maxScale: currentMaxScale.value
+
+    })
 
     // Применяем масштаб
     mobileStore.setMenuScale(newScale)
@@ -206,10 +229,21 @@ export function useMobileUIScaleGesture(options = {}) {
   function setupEventListeners() {
     if (typeof window === 'undefined') return
 
+    console.log('🎬 Настройка обработчиков жеста масштабирования UI')
+
+ 
+
     document.addEventListener('touchstart', handleTouchStart, { passive: false })
+
     document.addEventListener('touchmove', handleTouchMove, { passive: false })
+
     document.addEventListener('touchend', handleTouchEnd, { passive: true })
+
     document.addEventListener('touchcancel', handleTouchCancel, { passive: true })
+
+ 
+
+    console.log('✅ Обработчики жеста настроены')
   }
 
   /**
