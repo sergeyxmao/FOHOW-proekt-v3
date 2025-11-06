@@ -745,29 +745,50 @@ export function useProjectActions() {
           tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
           el.style.visibility = 'hidden'
         })
+
+        // Скрываем кнопки управления карточкой (крестик и кнопку заметок)
+        const controlButtons = canvasContainer.querySelectorAll('.card-close-btn, .card-note-btn')
+        controlButtons.forEach(el => {
+          tempStyles.push({ element: el, property: 'display', originalValue: el.style.display })
+          el.style.display = 'none'
+        })
       }
 
       // Опция "Ч/Б (контур)"
       if (exportSettings?.blackAndWhite) {
-        // Убираем фоны карточек
+        // Устанавливаем белый фон карточек и черный контур
         const cards = canvasContainer.querySelectorAll('.card')
         cards.forEach(card => {
           tempStyles.push({ element: card, property: 'background', originalValue: card.style.background })
           tempStyles.push({ element: card, property: 'box-shadow', originalValue: card.style.boxShadow })
+          tempStyles.push({ element: card, property: 'border', originalValue: card.style.border })
           card.style.background = '#ffffff'
           card.style.boxShadow = 'none'
+          card.style.border = '2px solid #000000'
         })
 
-        // Убираем фоны у заголовков карточек
-        const cardTitles = canvasContainer.querySelectorAll('.card-title')
-        cardTitles.forEach(title => {
-          tempStyles.push({ element: title, property: 'background', originalValue: title.style.background })
-          title.style.background = 'transparent'
+        // Устанавливаем белый фон у заголовков карточек с черной разделительной полосой
+        const cardHeaders = canvasContainer.querySelectorAll('.card-header')
+        cardHeaders.forEach(header => {
+          tempStyles.push({ element: header, property: 'background', originalValue: header.style.background })
+          tempStyles.push({ element: header, property: 'border-bottom', originalValue: header.style.borderBottom })
+          header.style.background = '#ffffff'
+          header.style.borderBottom = '2px solid #000000'
         })
 
-        // Применяем черно-белый фильтр ко всему контейнеру
-        tempStyles.push({ element: canvasContainer, property: 'filter', originalValue: canvasContainer.style.filter })
-        canvasContainer.style.filter = 'grayscale(100%)'
+        // Скрываем цветные элементы (иконки, значки)
+        const coloredElements = canvasContainer.querySelectorAll('.coin-icon, .slf-badge, .fendou-badge, .rank-badge')
+        coloredElements.forEach(el => {
+          tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+          el.style.visibility = 'hidden'
+        })
+
+        // Делаем все линии соединений черными
+        const lines = canvasContainer.querySelectorAll('.line')
+        lines.forEach(line => {
+          tempStyles.push({ element: line, property: 'stroke', originalValue: line.style.stroke })
+          line.style.stroke = '#000000'
+        })
       }
 
       // Сохраняем оригинальный transform
@@ -841,7 +862,7 @@ export function useProjectActions() {
 
       // Захватываем изображение контента
       const contentCanvas = await html2canvas(canvasContainer, {
-        backgroundColor: backgroundColor.value || '#ffffff',
+        backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
         logging: false,
         useCORS: true,
         scale: scale,
@@ -877,7 +898,7 @@ export function useProjectActions() {
         const ctx = finalCanvas.getContext('2d')
 
         // Заливаем фон
-        ctx.fillStyle = backgroundColor.value || '#ffffff'
+        ctx.fillStyle = exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff')
         ctx.fillRect(0, 0, finalWidth, finalHeight)
 
         // Вычисляем масштаб для вписывания контента в финальный размер
