@@ -2608,14 +2608,25 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 
 /* Print Styles - Обеспечиваем корректное отображение холста и карточек при печати */
 @media print {
-  .canvas-container,
+  .canvas-container {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+    transform: none !important;
+  }
+
   .canvas-content {
-    position: relative !important; /* ВАЖНО: сохраняем контекст позиционирования */
-    transform: none !important; /* Сбрасываем pan & zoom */
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
     width: 100% !important;
-    height: auto !important;
-    min-height: 100vh;
-    overflow: visible !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    transform: none !important;
+    transform-origin: center center !important;
   }
 
   /* Убираем фоновую сетку при печати */
@@ -2624,19 +2635,21 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   }
 
   .cards-container {
-    position: absolute !important; /* Карточки позиционируются относительно .canvas-content */
-    top: 0;
-    left: 0;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
     width: 100% !important;
     height: 100% !important;
-    overflow: visible !important;
+    overflow: hidden !important;
   }
 
   .svg-layer {
-    position: absolute !important; /* Линии также позиционируются относительно .canvas-content */
-    top: 0;
-    left: 0;
-    overflow: visible !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
   }
 
   /* Скрываем ненужные элементы интерфейса внутри холста */
@@ -2645,7 +2658,13 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   .guides-overlay,
   .guide-line,
   .line--preview,
-  .note-window {
+  .note-window,
+  .connection-point,
+  .card-close-btn,
+  .card-note-btn,
+  .active-pv-btn,
+  .card-controls,
+  .card-active-controls {
     display: none !important;
   }
 
@@ -2661,6 +2680,11 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     animation: none !important;
     filter: none !important;
     stroke-dasharray: none !important;
+  }
+
+  /* Карточки остаются на своих позициях */
+  .card {
+    page-break-inside: avoid !important;
   }
 }
 </style>

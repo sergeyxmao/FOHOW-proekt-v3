@@ -1279,29 +1279,34 @@ html,body{
     display: none !important;
   }
 
-  /* Настройка страницы для печати */
+  /* Настройка страницы для печати - убираем поля и устанавливаем размер A4 альбомная */
   @page {
     margin: 0;
-    size: auto;
+    size: A4 landscape;
   }
 
   html, body, #app {
     margin: 0 !important;
     padding: 0 !important;
-    height: auto !important;
-    overflow: visible !important;
-    background: #ffffff !important; /* Устанавливаем белый фон для печати */
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
   }
 
-  /* Холст занимает всю страницу */
+  /* Холст занимает ровно одну страницу */
   #canvas {
-    position: static !important;
-    width: 100% !important;
-    height: auto !important;
-    min-height: 100vh;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
     padding: 0 !important;
-    overflow: visible !important;
+    margin: 0 !important;
+    overflow: hidden !important;
     transform: none !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
   }
 }
 </style>
