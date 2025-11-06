@@ -2607,152 +2607,69 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 }
 
 /* Print Styles - Обеспечиваем корректное отображение холста и карточек при печати */
-
 @media print {
-
-  .canvas-container {
-
-    overflow: visible !important;
-
-    position: static !important;
-
-    width: 100% !important;
-
-    height: auto !important;
-
-  }
-
+  /* ... старый код ... */
 }
+```
 
- 
+**На что заменить:**
 
+```css
 /* Print Styles - Обеспечиваем корректное отображение холста и карточек при печати */
-
 @media print {
-
-  .canvas-container {
-
-    overflow: visible !important;
-
-    position: static !important;
-
-    width: 100% !important;
-
-    height: auto !important;
-
-  }
-
- 
-
+  .canvas-container,
   .canvas-content {
-
-    position: static !important;
-
-    transform: none !important;
-
+    position: relative !important; /* ВАЖНО: сохраняем контекст позиционирования */
+    transform: none !important; /* Сбрасываем pan & zoom */
     width: 100% !important;
-
     height: auto !important;
-
+    min-height: 100vh;
     overflow: visible !important;
-
   }
 
-   /* Убираем фоновую сетку при печати */
-
+  /* Убираем фоновую сетку при печати */
   .canvas-content::before {
-
     display: none !important;
-
   }
 
   .cards-container {
-
-    position: relative !important;
-
-    overflow: visible !important;
-
+    position: absolute !important; /* Карточки позиционируются относительно .canvas-content */
+    top: 0;
+    left: 0;
     width: 100% !important;
-
-    height: auto !important;
-
+    height: 100% !important;
+    overflow: visible !important;
   }
-
- 
-
-  /* Скрываем элементы интерфейса */
-
-  .marketing-watermark,
-
-  .selection-box,
-
-  .guides-overlay,
-
-  .guide-line,
-
-  .line--preview,
-
-  .note-window {
-
-    display: none !important;
-
-  }
-
- 
-
-  /* Линии соединений остаются видимыми */
 
   .svg-layer {
-
-    position: absolute !important;
-
+    position: absolute !important; /* Линии также позиционируются относительно .canvas-content */
+    top: 0;
+    left: 0;
     overflow: visible !important;
-
   }
 
- 
-
-  .line-group {
-
-    pointer-events: none !important;
-
+  /* Скрываем ненужные элементы интерфейса внутри холста */
+  .marketing-watermark,
+  .selection-box,
+  .guides-overlay,
+  .guide-line,
+  .line--preview,
+  .note-window {
+    display: none !important;
   }
-
- 
-
-  .line {
-
-    pointer-events: none !important;
-
-  }
-
- 
 
   /* Убираем интерактивные эффекты и анимации */
+  .line-group, .line {
+    pointer-events: none !important;
+  }
 
   .line--balance-highlight,
-
   .line--pv-highlight,
-
-  .line--balance-propagation {
-
-    animation: none !important;
-
-    filter: none !important;
-
-  }
-
- 
-
-  /* Убираем выделение линий */
-
+  .line--balance-propagation,
   .line.selected {
-
-    stroke-dasharray: none !important;
-
     animation: none !important;
-
+    filter: none !important;
+    stroke-dasharray: none !important;
   }
-
 }
 </style>
