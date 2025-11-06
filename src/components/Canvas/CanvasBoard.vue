@@ -1751,10 +1751,15 @@ const handleCardClick = (event, cardId) => {
   if (suppressNextCardClick.value) {
     suppressNextCardClick.value = false;
     return;
-  }  
+  }
+
+  // Останавливаем всплытие события, чтобы клик не дошел до canvas-content
+  // Это важно для режима размещения стикеров
+  event.stopPropagation();
+
   const isCtrlPressed = event.ctrlKey || event.metaKey;
   selectedConnectionIds.value = [];
-  
+
   if (isCtrlPressed) {
     cardsStore.toggleCardSelection(cardId);
   } else {
@@ -1798,10 +1803,23 @@ const handleStageClick = async (event) => {
 
   // Если активен режим размещения стикера, создаем новый стикер
   if (stickersStore.isPlacementMode) {
-    const canvas = event.currentTarget.closest('.canvas-content');
+    // Получаем canvas-content из DOM или из event.currentTarget
+    const canvas = event.currentTarget.classList?.contains('canvas-content')
+      ? event.currentTarget
+      : event.currentTarget.closest('.canvas-content');
+
     if (canvas && boardStore.currentBoardId) {
       const rect = canvas.getBoundingClientRect();
-      const scale = parseFloat(getComputedStyle(canvas).getPropertyValue('transform').split(',')[0].replace('matrix(', '')) || 1;
+
+      // Получаем масштаб из transform
+      const transformValue = getComputedStyle(canvas).getPropertyValue('transform');
+      let scale = 1;
+      if (transformValue && transformValue !== 'none') {
+        const matrix = transformValue.match(/matrix\(([^)]+)\)/);
+        if (matrix) {
+          scale = parseFloat(matrix[1].split(',')[0]) || 1;
+        }
+      }
 
       // Вычисляем координаты клика относительно холста с учетом масштаба
       const x = (event.clientX - rect.left) / scale;
@@ -2223,7 +2241,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       class="selection-box"
       :style="selectionBoxStyle"
     ></div>  
-    <div class="canvas-content" :style="canvasContentStyle">
+    <div class="canvas-content" :style="canvasContentStyle" @click="handleStageClick">
       <div
         v-if="guidesEnabled && (activeGuides.vertical !== null || activeGuides.horizontal !== null)"
         class="guides-overlay"
