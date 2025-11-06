@@ -8,6 +8,7 @@ import { useCanvasStore } from '../../stores/canvas';
 import { useViewSettingsStore } from '../../stores/viewSettings';
 import Card from './Card.vue';
 import NoteWindow from './NoteWindow.vue';
+import Sticker from './Sticker.vue';
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { getHeaderColorRgb } from '../../utils/constants';
 import { batchDeleteCards } from '../../utils/historyOperations';
@@ -15,7 +16,9 @@ import { usePanZoom } from '../../composables/usePanZoom';
 import { useHistoryStore } from '../../stores/history.js';
 import { useViewportStore } from '../../stores/viewport.js';
 import { useNotesStore } from '../../stores/notes.js';
-import { useMobileStore } from '../../stores/mobile.js';  
+import { useMobileStore } from '../../stores/mobile.js';
+import { useStickersStore } from '../../stores/stickers.js';
+import { useBoardStore } from '../../stores/board.js';  
 import { Engine } from '../../utils/calculationEngine';
 import {
   propagateActivePvUp,
@@ -32,7 +35,9 @@ import {
 } from '../../utils/noteUtils';
 const historyStore = useHistoryStore();
 const notesStore = useNotesStore();
-const mobileStore = useMobileStore();  
+const mobileStore = useMobileStore();
+const stickersStore = useStickersStore();
+const boardStore = useBoardStore();  
 const emit = defineEmits(['update-connection-status']);
 const props = defineProps({
   isModernTheme: {
@@ -834,7 +839,8 @@ const guideOverlayStyle = computed(() => ({
 
   
 const canvasContainerClasses = computed(() => ({
-  'canvas-container--selection-mode': isSelectionMode.value
+  'canvas-container--selection-mode': isSelectionMode.value,
+  'canvas-container--sticker-placement': stickersStore.isPlacementMode
 }));
 
 const selectionBoxStyle = computed(() => {
@@ -1784,24 +1790,53 @@ const handlePvChanged = (cardId) => {
 
 };
 
-const handleStageClick = (event) => {
+const handleStageClick = async (event) => {
   if (suppressNextStageClick) {
     suppressNextStageClick = false;
     return;
   }
+
+  // Если активен режим размещения стикера, создаем новый стикер
+  if (stickersStore.isPlacementMode) {
+    const canvas = event.currentTarget.closest('.canvas-content');
+    if (canvas && boardStore.currentBoardId) {
+      const rect = canvas.getBoundingClientRect();
+      const scale = parseFloat(getComputedStyle(canvas).getPropertyValue('transform').split(',')[0].replace('matrix(', '')) || 1;
+
+      // Вычисляем координаты клика относительно холста с учетом масштаба
+      const x = (event.clientX - rect.left) / scale;
+      const y = (event.clientY - rect.top) / scale;
+
+      try {
+        await stickersStore.addSticker(boardStore.currentBoardId, {
+          pos_x: Math.round(x),
+          pos_y: Math.round(y),
+          color: '#FFFF88'
+        });
+      } catch (error) {
+        console.error('Ошибка создания стикера:', error);
+        alert('Не удалось создать стикер');
+      }
+    }
+
+    // Выключаем режим размещения после создания стикера
+    stickersStore.disablePlacementMode();
+    return;
+  }
+
   const preserveCardSelection = isSelectionMode.value;
   if (!event.ctrlKey && !event.metaKey) {
     if (!preserveCardSelection) {
       cardsStore.deselectAllCards();
     }
   }
-  
+
   selectedConnectionIds.value = [];
   cancelDrawing();
 
   if (!preserveCardSelection) {
     selectedCardId.value = null;
-  }  
+  }
 };
 
 const addNewCard = () => {
@@ -1912,7 +1947,7 @@ onMounted(() => {
   if (canvasContainerRef.value) { // Добавляем проверку
     canvasContainerRef.value.addEventListener('pointermove', handleMouseMove);
     canvasContainerRef.value.addEventListener('pointerdown', handlePointerDown);
-    canvasContainerRef.value.addEventListener('click', handleActivePvButtonClick, true);    
+    canvasContainerRef.value.addEventListener('click', handleActivePvButtonClick, true);
   }
 
   handleWindowResize();
@@ -1920,12 +1955,22 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
   window.addEventListener('scroll', handleViewportChange, true);
 
+  // Загружаем стикеры для текущей доски
+  if (boardStore.currentBoardId) {
+    stickersStore.fetchStickers(boardStore.currentBoardId).catch(err => {
+      console.error('Ошибка загрузки стикеров:', err);
+    });
+  }
+
   nextTick(() => {
     applyActivePvPropagation();
   });
 });
 
 onBeforeUnmount(() => {
+  // Очищаем стикеры при размонтировании
+  stickersStore.clearStickers();
+
   if (canvasContainerRef.value) { // Добавляем проверку
     canvasContainerRef.value.removeEventListener('pointermove', handleMouseMove);
     canvasContainerRef.value.removeEventListener('pointerdown', handlePointerDown);
@@ -2297,6 +2342,11 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         :card="card"
         :ref="el => handleNoteWindowRegister(card.id, el)"
         @close="() => handleNoteWindowClose(card.id)"
+      />
+      <Sticker
+        v-for="sticker in stickersStore.stickers"
+        :key="`sticker-${sticker.id}`"
+        :sticker="sticker"
       /> 
     </div>
     <a
@@ -2322,6 +2372,14 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   touch-action: none;  
 }
 .canvas-container--selection-mode {
+  cursor: crosshair;
+}
+.canvas-container--sticker-placement {
+  cursor: crosshair;
+}
+.canvas-container--sticker-placement .canvas-content,
+.canvas-container--sticker-placement .cards-container,
+.canvas-container--sticker-placement .svg-layer {
   cursor: crosshair;
 }
 .canvas-container--panning,

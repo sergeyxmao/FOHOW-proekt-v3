@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { useNotesStore } from '../../stores/notes.js'
 import { useBoardCommentsStore } from '../Panels/boardComments.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
+import { useStickersStore } from '../../stores/stickers.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -16,6 +17,7 @@ const emit = defineEmits(['request-close'])
 const notesStore = useNotesStore()
 const boardCommentsStore = useBoardCommentsStore()
 const sidePanelsStore = useSidePanelsStore()
+const stickersStore = useStickersStore()
 
 const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
 const { isNotesOpen, isCommentsOpen } = storeToRefs(sidePanelsStore)
@@ -32,6 +34,11 @@ const handleNotesToggle = () => {
 
 const handleCommentsToggle = () => {
   sidePanelsStore.toggleComments()
+  emit('request-close')
+}
+
+const handleAddSticker = () => {
+  stickersStore.enablePlacementMode()
   emit('request-close')
 }
 </script>
@@ -71,6 +78,17 @@ const handleCommentsToggle = () => {
         class="discussion-menu__badge"
         aria-hidden="true"
       ></span>
+    </div>
+
+    <div class="discussion-menu__item">
+      <span class="discussion-menu__icon" aria-hidden="true">📝</span>
+      <button
+        type="button"
+        class="discussion-menu__action"
+        @click="handleAddSticker"
+      >
+        Добавить стикер
+      </button>
     </div>
   </div>
 </template>
