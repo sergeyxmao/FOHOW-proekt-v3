@@ -1,6 +1,8 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useProjectActions } from '../../composables/useProjectActions.js'
+import ExportSettingsModal from '../ExportSettingsModal.vue'
+
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -18,6 +20,25 @@ const {
   handleExportPNG,
   handlePrint
 } = useProjectActions()
+
+const showExportModal = ref(false)
+
+const openExportModal = () => {
+  showExportModal.value = true
+}
+
+const closeExportModal = () => {
+  showExportModal.value = false
+}
+
+const handleExport = async (settings) => {
+  try {
+    await handleExportPNG(settings)
+  } finally {
+    closeExportModal()
+    emit('request-close')
+  }
+}
 
 const items = computed(() => [
   {
@@ -48,7 +69,7 @@ const items = computed(() => [
     id: 'export-png',
     icon: '🖼️',
     label: 'Экспорт в PNG',
-    action: handleExportPNG
+    action: openExportModal
   },
   {
     id: 'print',
@@ -60,13 +81,18 @@ const items = computed(() => [
 
 const handleItemClick = async (item) => {
   if (typeof item.action === 'function') {
-    try {
-      const result = item.action()
-      if (result instanceof Promise) {
-        await result
+    // Для экспорта PNG не закрываем меню сразу - модальное окно само закроет
+    if (item.id === 'export-png') {
+      item.action()
+    } else {
+      try {
+        const result = item.action()
+        if (result instanceof Promise) {
+          await result
+        }
+      } finally {
+        emit('request-close')
       }
-    } finally {
-      emit('request-close')
     }
   } else {
     emit('request-close')
@@ -92,6 +118,12 @@ const handleItemClick = async (item) => {
       <span class="project-menu__label">{{ item.label }}</span>
     </button>
   </div>
+
+  <ExportSettingsModal
+    v-if="showExportModal"
+    @close="closeExportModal"
+    @export="handleExport"
+  />
 </template>
 
 <style scoped>

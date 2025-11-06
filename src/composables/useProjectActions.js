@@ -596,7 +596,7 @@ export function useProjectActions() {
     input.click()
   }
 
-  const handleExportPNG = async () => {
+  const handleExportPNG = async (exportSettings = null) => {
     try {
       const canvasContainer = document.querySelector('.canvas-container')
       const canvasContent = canvasContainer?.querySelector('.canvas-content')
@@ -656,12 +656,39 @@ export function useProjectActions() {
       canvasContent.style.left = `${-minX}px`
       canvasContent.style.top = `${-minY}px`
 
-      // Захватываем изображение
-      const canvas = await html2canvas(canvasContainer, {
+      // Определяем параметры экспорта
+      let finalWidth, finalHeight, scale
+
+      if (exportSettings && exportSettings.format !== 'original') {
+        // Вычисляем размеры в пикселях на основе формата и DPI
+        let pageWidthMm = exportSettings.width
+        let pageHeightMm = exportSettings.height
+
+        // Применяем ориентацию
+        if (exportSettings.orientation === 'landscape') {
+          [pageWidthMm, pageHeightMm] = [pageHeightMm, pageWidthMm]
+        }
+
+        // Конвертируем миллиметры в пиксели: pixels = (mm / 25.4) * DPI
+        finalWidth = Math.round((pageWidthMm / 25.4) * exportSettings.dpi)
+        finalHeight = Math.round((pageHeightMm / 25.4) * exportSettings.dpi)
+
+        // Вычисляем scale для html2canvas на основе DPI
+        // Базовое разрешение - 96 DPI
+        scale = exportSettings.dpi / 96
+      } else {
+        // Оригинальный размер
+        finalWidth = contentWidth
+        finalHeight = contentHeight
+        scale = 2 // Увеличиваем разрешение для лучшего качества
+      }
+
+      // Захватываем изображение контента
+      const contentCanvas = await html2canvas(canvasContainer, {
         backgroundColor: backgroundColor.value || '#ffffff',
         logging: false,
         useCORS: true,
-        scale: 2, // Увеличиваем разрешение для лучшего качества
+        scale: scale,
         width: contentWidth,
         height: contentHeight,
         windowWidth: contentWidth,
@@ -674,8 +701,46 @@ export function useProjectActions() {
       canvasContent.style.top = originalTop
       canvasContainer.classList.remove('canvas-container--capturing')
 
+      let finalCanvas
+
+      if (exportSettings && exportSettings.format !== 'original') {
+        // Создаем финальный canvas с заданными размерами
+        finalCanvas = document.createElement('canvas')
+        finalCanvas.width = finalWidth
+        finalCanvas.height = finalHeight
+
+        const ctx = finalCanvas.getContext('2d')
+
+        // Заливаем фон
+        ctx.fillStyle = backgroundColor.value || '#ffffff'
+        ctx.fillRect(0, 0, finalWidth, finalHeight)
+
+        // Вычисляем масштаб для вписывания контента в финальный размер
+        const scaleX = finalWidth / contentCanvas.width
+        const scaleY = finalHeight / contentCanvas.height
+        const fitScale = Math.min(scaleX, scaleY)
+
+        // Вычисляем размеры масштабированного контента
+        const scaledWidth = contentCanvas.width * fitScale
+        const scaledHeight = contentCanvas.height * fitScale
+
+        // Центрируем изображение
+        const offsetX = (finalWidth - scaledWidth) / 2
+        const offsetY = (finalHeight - scaledHeight) / 2
+
+        // Рисуем масштабированное и отцентрованное изображение
+        ctx.drawImage(
+          contentCanvas,
+          0, 0, contentCanvas.width, contentCanvas.height,
+          offsetX, offsetY, scaledWidth, scaledHeight
+        )
+      } else {
+        // Используем оригинальный canvas
+        finalCanvas = contentCanvas
+      }
+
       // Конвертируем в blob и скачиваем
-      canvas.toBlob((blob) => {
+      finalCanvas.toBlob((blob) => {
         if (!blob) {
           alert('Не удалось создать изображение.')
           return
@@ -694,7 +759,14 @@ export function useProjectActions() {
           String(now.getSeconds()).padStart(2, '0')
 
         const baseFileName = formatProjectFileName(normalizedProjectName.value || projectStore.projectName, 'scheme')
-        link.download = `${baseFileName}_${dateStr}_${timeStr}.png`
+
+        // Добавляем информацию о формате в имя файла, если не оригинальный размер
+        let formatSuffix = ''
+        if (exportSettings && exportSettings.format !== 'original') {
+          formatSuffix = `_${exportSettings.format.toUpperCase()}_${exportSettings.orientation === 'portrait' ? 'P' : 'L'}_${exportSettings.dpi}dpi`
+        }
+
+        link.download = `${baseFileName}${formatSuffix}_${dateStr}_${timeStr}.png`
 
         link.href = url
         link.click()
