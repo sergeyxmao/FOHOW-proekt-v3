@@ -24,6 +24,7 @@ import { useMobileStore } from './stores/mobile'
 import { useViewSettingsStore } from './stores/viewSettings'
 import { useNotesStore } from './stores/notes'
 import { useProjectActions } from './composables/useProjectActions'
+import { useMobileGesture } from './composables/useMobileGesture'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
 import NotesSidePanel from './components/Panels/NotesSidePanel.vue'
@@ -61,6 +62,9 @@ const saveTooltip = computed(() =>
 )
 
 const { handleExportHTML, handleLoadProject } = useProjectActions()
+
+// Активируем обработчик жеста для масштабирования UI элементов
+useMobileGesture()
 
 const isModernTheme = ref(false)
 const isPencilMode = ref(false)
