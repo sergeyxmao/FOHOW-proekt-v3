@@ -61,131 +61,131 @@ const handleClose = () => {
     </div>
 
     <div class="export-settings-panel__body">
-        <!-- Формат листа -->
-        <div class="form-group">
-          <label for="page-format" class="form-label">Формат листа:</label>
-          <select
-            id="page-format"
-            v-model="selectedFormat"
-            class="form-select"
+      <!-- Формат листа -->
+      <div class="form-group">
+        <label for="page-format" class="form-label">Формат листа:</label>
+        <select
+          id="page-format"
+          v-model="selectedFormat"
+          class="form-select"
+        >
+          <option
+            v-for="format in pageFormats"
+            :key="format.id"
+            :value="format.id"
           >
-            <option
-              v-for="format in pageFormats"
-              :key="format.id"
-              :value="format.id"
-            >
-              {{ format.label }}
-            </option>
-          </select>
-        </div>
+            {{ format.label }}
+          </option>
+        </select>
+      </div>
 
-        <!-- Ориентация -->
-        <div class="form-group">
-          <label class="form-label">Ориентация:</label>
-          <div class="orientation-buttons">
-            <button
-              type="button"
-              class="orientation-btn"
-              :class="{ active: selectedOrientation === 'portrait' }"
-              @click="selectedOrientation = 'portrait'"
-            >
-              <span class="orientation-icon">📄</span>
-              <span>Книжная</span>
-            </button>
-            <button
-              type="button"
-              class="orientation-btn"
-              :class="{ active: selectedOrientation === 'landscape' }"
-              @click="selectedOrientation = 'landscape'"
-            >
-              <span class="orientation-icon">📃</span>
-              <span>Альбомная</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Разрешение (DPI) -->
-        <div class="form-group">
-          <label for="dpi" class="form-label">Разрешение:</label>
-          <select
-            id="dpi"
-            v-model.number="selectedDPI"
-            class="form-select"
+      <!-- Ориентация -->
+      <div class="form-group">
+        <label class="form-label">Ориентация:</label>
+        <div class="orientation-buttons">
+          <button
+            type="button"
+            class="orientation-btn"
+            :class="{ active: selectedOrientation === 'portrait' }"
+            @click="selectedOrientation = 'portrait'"
           >
-            <option
-              v-for="dpi in dpiOptions"
-              :key="dpi.value"
-              :value="dpi.value"
-            >
-              {{ dpi.label }}
-            </option>
-          </select>
-        </div>
-
-        <!-- Дополнительные опции -->
-        <div class="form-group">
-          <label class="form-label">Дополнительные опции:</label>
-          <div class="checkbox-group">
-            <label class="checkbox-label">
-              <input
-                type="checkbox"
-                v-model="hideContent"
-                class="checkbox-input"
-              />
-              <span class="checkbox-text">Скрыть содержимое</span>
-            </label>
-            <label class="checkbox-label">
-              <input
-                type="checkbox"
-                v-model="blackAndWhite"
-                class="checkbox-input"
-              />
-              <span class="checkbox-text">Ч/Б (контур)</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Информация о размере -->
-        <div v-if="selectedFormat !== 'original'" class="info-box">
-          <p class="info-text">
-            <strong>Размер изображения:</strong>
-            {{
-              selectedOrientation === 'portrait'
-                ? Math.round((pageFormats.find(f => f.id === selectedFormat).width / 25.4) * selectedDPI)
-                : Math.round((pageFormats.find(f => f.id === selectedFormat).height / 25.4) * selectedDPI)
-            }}
-            ×
-            {{
-              selectedOrientation === 'portrait'
-                ? Math.round((pageFormats.find(f => f.id === selectedFormat).height / 25.4) * selectedDPI)
-                : Math.round((pageFormats.find(f => f.id === selectedFormat).width / 25.4) * selectedDPI)
-            }}
-            пикселей
-          </p>
+            <span class="orientation-icon">📄</span>
+            <span>Книжная</span>
+          </button>
+          <button
+            type="button"
+            class="orientation-btn"
+            :class="{ active: selectedOrientation === 'landscape' }"
+            @click="selectedOrientation = 'landscape'"
+          >
+            <span class="orientation-icon">📃</span>
+            <span>Альбомная</span>
+          </button>
         </div>
       </div>
 
-      <div class="export-settings-panel__footer">
-        <button
-          type="button"
-          class="export-btn export-btn--secondary"
-          @click="handleClose"
+      <!-- Разрешение (DPI) -->
+      <div class="form-group">
+        <label for="dpi" class="form-label">Разрешение:</label>
+        <select
+          id="dpi"
+          v-model.number="selectedDPI"
+          class="form-select"
         >
-          Отмена
-        </button>
-        <button
-          type="button"
-          class="export-btn export-btn--primary"
-          @click="handleExport"
-        >
-          Экспорт
-        </button>
+          <option
+            v-for="dpi in dpiOptions"
+            :key="dpi.value"
+            :value="dpi.value"
+          >
+            {{ dpi.label }}
+          </option>
+        </select>
       </div>
+
+      <!-- Дополнительные опции -->
+      <div class="form-group">
+        <label class="form-label">Дополнительные опции:</label>
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              v-model="hideContent"
+              class="checkbox-input"
+            />
+            <span class="checkbox-text">Скрыть содержимое</span>
+          </label>
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              v-model="blackAndWhite"
+              class="checkbox-input"
+            />
+            <span class="checkbox-text">Ч/Б (контур)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Информация о размере -->
+      <div v-if="selectedFormat !== 'original'" class="info-box">
+        <p class="info-text">
+          <strong>Размер изображения:</strong>
+          {{
+            selectedOrientation === 'portrait'
+              ? Math.round((pageFormats.find(f => f.id === selectedFormat).width / 25.4) * selectedDPI)
+              : Math.round((pageFormats.find(f => f.id === selectedFormat).height / 25.4) * selectedDPI)
+          }}
+          ×
+          {{
+            selectedOrientation === 'portrait'
+              ? Math.round((pageFormats.find(f => f.id === selectedFormat).height / 25.4) * selectedDPI)
+              : Math.round((pageFormats.find(f => f.id === selectedFormat).width / 25.4) * selectedDPI)
+          }}
+          пикселей
+        </p>
+      </div>
+    </div>
+
+    <div class="export-settings-panel__footer">
+      <button
+        type="button"
+        class="export-btn export-btn--secondary"
+        @click="handleClose"
+      >
+        Отмена
+      </button>
+      <button
+        type="button"
+        class="export-btn export-btn--primary"
+        @click="handleExport"
+      >
+        Экспорт
+      </button>
     </div>
   </div>
 </template>
 
 <style scoped>
+/* Стили остаются без изменений */
 .export-settings-panel {
   min-width: 360px;
   max-width: 420px;
