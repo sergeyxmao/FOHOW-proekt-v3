@@ -7,6 +7,126 @@ import { useCanvasStore } from '../stores/canvas.js'
 
 const imageDataUriCache = new Map()
 
+// Функция для добавления pHYs чанка в PNG для указания DPI
+const addPngDpiMetadata = async (blob, dpi) => {
+  try {
+    const arrayBuffer = await blob.arrayBuffer()
+    const bytes = new Uint8Array(arrayBuffer)
+
+    // Проверяем, что это PNG файл
+    const pngSignature = [137, 80, 78, 71, 13, 10, 26, 10]
+    for (let i = 0; i < 8; i++) {
+      if (bytes[i] !== pngSignature[i]) {
+        console.warn('Файл не является валидным PNG')
+        return blob
+      }
+    }
+
+    // Конвертируем DPI в пиксели на метр (PPM)
+    // 1 дюйм = 0.0254 метра
+    const pixelsPerMeter = Math.round(dpi / 0.0254)
+
+    // Создаем pHYs чанк
+    const createPhysChunk = () => {
+      const data = new Uint8Array(9)
+      const view = new DataView(data.buffer)
+
+      // Пиксели на метр по X (4 байта, big-endian)
+      view.setUint32(0, pixelsPerMeter, false)
+      // Пиксели на метр по Y (4 байта, big-endian)
+      view.setUint32(4, pixelsPerMeter, false)
+      // Единица измерения: 1 = метр (1 байт)
+      view.setUint8(8, 1)
+
+      return data
+    }
+
+    // Вычисляем CRC32
+    const crc32 = (data) => {
+      let crc = -1
+      for (let i = 0; i < data.length; i++) {
+        const byte = data[i]
+        crc = crc ^ byte
+        for (let j = 0; j < 8; j++) {
+          if (crc & 1) {
+            crc = (crc >>> 1) ^ 0xedb88320
+          } else {
+            crc = crc >>> 1
+          }
+        }
+      }
+      return (crc ^ -1) >>> 0
+    }
+
+    const physData = createPhysChunk()
+    const physType = new TextEncoder().encode('pHYs')
+
+    // Создаем полный pHYs чанк
+    const physChunkLength = physData.length
+    const physChunk = new Uint8Array(4 + 4 + physChunkLength + 4)
+    const physView = new DataView(physChunk.buffer)
+
+    // Длина данных (4 байта)
+    physView.setUint32(0, physChunkLength, false)
+    // Тип чанка (4 байта)
+    physChunk.set(physType, 4)
+    // Данные
+    physChunk.set(physData, 8)
+    // CRC (4 байта)
+    const crcData = new Uint8Array(4 + physChunkLength)
+    crcData.set(physType, 0)
+    crcData.set(physData, 4)
+    const crcValue = crc32(crcData)
+    physView.setUint32(8 + physChunkLength, crcValue, false)
+
+    // Находим позицию первого IDAT чанка
+    let position = 8 // Пропускаем сигнатуру PNG
+    let idatPosition = -1
+
+    while (position < bytes.length) {
+      const chunkLength = new DataView(bytes.buffer, position, 4).getUint32(0, false)
+      const chunkType = String.fromCharCode(...bytes.slice(position + 4, position + 8))
+
+      if (chunkType === 'IDAT') {
+        idatPosition = position
+        break
+      }
+
+      // Проверяем, есть ли уже pHYs чанк
+      if (chunkType === 'pHYs') {
+        console.log('pHYs чанк уже существует, заменяем его')
+        // Создаем новый массив без старого pHYs чанка
+        const beforePhys = bytes.slice(0, position)
+        const afterPhys = bytes.slice(position + 4 + 4 + chunkLength + 4)
+        const withoutPhys = new Uint8Array(beforePhys.length + afterPhys.length)
+        withoutPhys.set(beforePhys)
+        withoutPhys.set(afterPhys, beforePhys.length)
+        return addPngDpiMetadata(new Blob([withoutPhys], { type: 'image/png' }), dpi)
+      }
+
+      position += 4 + 4 + chunkLength + 4
+    }
+
+    if (idatPosition === -1) {
+      console.warn('IDAT чанк не найден')
+      return blob
+    }
+
+    // Вставляем pHYs чанк перед IDAT
+    const before = bytes.slice(0, idatPosition)
+    const after = bytes.slice(idatPosition)
+    const result = new Uint8Array(before.length + physChunk.length + after.length)
+    result.set(before)
+    result.set(physChunk, before.length)
+    result.set(after, before.length + physChunk.length)
+
+    return new Blob([result], { type: 'image/png' })
+  } catch (error) {
+    console.error('Ошибка при добавлении DPI метаданных:', error)
+    return blob
+  }
+}
+
 const normalizeAssetUrl = (src) => {
   try {
     return new URL(src, window.location.href).href
@@ -614,6 +734,42 @@ export function useProjectActions() {
       // Добавляем класс для скрытия UI элементов
       canvasContainer.classList.add('canvas-container--capturing')
 
+      // Применяем опции экспорта
+      const tempStyles = []
+
+      // Опция "Скрыть содержимое"
+      if (exportSettings?.hideContent) {
+        // Скрываем все текстовые элементы на карточках
+        const textElements = canvasContainer.querySelectorAll('.card-title, .card-body, .label, .value, .card-row, .card-body-html')
+        textElements.forEach(el => {
+          tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+          el.style.visibility = 'hidden'
+        })
+      }
+
+      // Опция "Ч/Б (контур)"
+      if (exportSettings?.blackAndWhite) {
+        // Убираем фоны карточек
+        const cards = canvasContainer.querySelectorAll('.card')
+        cards.forEach(card => {
+          tempStyles.push({ element: card, property: 'background', originalValue: card.style.background })
+          tempStyles.push({ element: card, property: 'box-shadow', originalValue: card.style.boxShadow })
+          card.style.background = '#ffffff'
+          card.style.boxShadow = 'none'
+        })
+
+        // Убираем фоны у заголовков карточек
+        const cardTitles = canvasContainer.querySelectorAll('.card-title')
+        cardTitles.forEach(title => {
+          tempStyles.push({ element: title, property: 'background', originalValue: title.style.background })
+          title.style.background = 'transparent'
+        })
+
+        // Применяем черно-белый фильтр ко всему контейнеру
+        tempStyles.push({ element: canvasContainer, property: 'filter', originalValue: canvasContainer.style.filter })
+        canvasContainer.style.filter = 'grayscale(100%)'
+      }
+
       // Сохраняем оригинальный transform
       const originalTransform = canvasContent.style.transform
 
@@ -701,6 +857,15 @@ export function useProjectActions() {
       canvasContent.style.top = originalTop
       canvasContainer.classList.remove('canvas-container--capturing')
 
+      // Восстанавливаем временные стили
+      tempStyles.forEach(({ element, property, originalValue }) => {
+        if (originalValue) {
+          element.style[property] = originalValue
+        } else {
+          element.style[property] = ''
+        }
+      })
+
       let finalCanvas
 
       if (exportSettings && exportSettings.format !== 'original') {
@@ -740,13 +905,19 @@ export function useProjectActions() {
       }
 
       // Конвертируем в blob и скачиваем
-      finalCanvas.toBlob((blob) => {
+      finalCanvas.toBlob(async (blob) => {
         if (!blob) {
           alert('Не удалось создать изображение.')
           return
         }
 
-        const url = URL.createObjectURL(blob)
+        // Добавляем метаданные DPI в PNG файл
+        let finalBlob = blob
+        if (exportSettings?.dpi) {
+          finalBlob = await addPngDpiMetadata(blob, exportSettings.dpi)
+        }
+
+        const url = URL.createObjectURL(finalBlob)
         const link = document.createElement('a')
 
         // Формируем имя файла: название проекта + дата и время

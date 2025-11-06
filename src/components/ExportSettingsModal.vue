@@ -24,6 +24,8 @@ const dpiOptions = [
 const selectedFormat = ref('a4')
 const selectedOrientation = ref('portrait') // 'portrait' или 'landscape'
 const selectedDPI = ref(300)
+const hideContent = ref(false) // Скрыть содержимое
+const blackAndWhite = ref(false) // Ч/Б (контур)
 
 const handleExport = () => {
   const format = pageFormats.find(f => f.id === selectedFormat.value)
@@ -33,7 +35,9 @@ const handleExport = () => {
     width: format.width,
     height: format.height,
     orientation: selectedOrientation.value,
-    dpi: selectedDPI.value
+    dpi: selectedDPI.value,
+    hideContent: hideContent.value,
+    blackAndWhite: blackAndWhite.value
   })
 }
 
@@ -117,6 +121,29 @@ const handleClose = () => {
               {{ dpi.label }}
             </option>
           </select>
+        </div>
+
+        <!-- Дополнительные опции -->
+        <div class="form-group">
+          <label class="form-label">Дополнительные опции:</label>
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                v-model="hideContent"
+                class="checkbox-input"
+              />
+              <span class="checkbox-text">Скрыть содержимое</span>
+            </label>
+            <label class="checkbox-label">
+              <input
+                type="checkbox"
+                v-model="blackAndWhite"
+                class="checkbox-input"
+              />
+              <span class="checkbox-text">Ч/Б (контур)</span>
+            </label>
+          </div>
         </div>
 
         <!-- Информация о размере -->
@@ -405,5 +432,58 @@ const handleClose = () => {
 .btn-primary:active {
   transform: translateY(0);
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.7);
+  border: 2px solid rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.checkbox-label:hover {
+  background: rgba(248, 250, 252, 1);
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.checkbox-label:has(.checkbox-input:checked) {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: #3b82f6;
+}
+
+.checkbox-input {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid rgba(15, 23, 42, 0.24);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  accent-color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.checkbox-input:checked {
+  border-color: #3b82f6;
+}
+
+.checkbox-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: 0.01em;
 }
 </style>
