@@ -1285,14 +1285,12 @@ html,body{
     size: auto;
   }
 
-  html, body {
-    margin: 0;
-    padding: 0;
-    overflow: visible;
-  }
-
-  #app {
-    overflow: visible;
+  html, body, #app {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important; /* Устанавливаем белый фон для печати */
   }
 
   /* Холст занимает всю страницу */
@@ -1300,8 +1298,10 @@ html,body{
     position: static !important;
     width: 100% !important;
     height: auto !important;
+    min-height: 100vh;
     padding: 0 !important;
     overflow: visible !important;
+    transform: none !important;
   }
 }
 </style>
