@@ -101,29 +101,37 @@ const handleItemClick = async (item) => {
 </script>
 
 <template>
-  <div
-    class="project-menu"
-    :class="{ 'project-menu--modern': props.isModernTheme }"
-    role="menu"
-  >
-    <button
-      v-for="item in items"
-      :key="item.id"
-      type="button"
-      class="project-menu__item"
-      role="menuitem"
-      @click="handleItemClick(item)"
+  <div class="project-menu-wrapper">
+    <div
+      class="project-menu"
+      :class="{ 'project-menu--modern': props.isModernTheme }"
+      role="menu"
     >
-      <span class="project-menu__icon" aria-hidden="true">{{ item.icon }}</span>
-      <span class="project-menu__label">{{ item.label }}</span>
-    </button>
-  </div>
+      <button
+        v-for="item in items"
+        :key="item.id"
+        type="button"
+        class="project-menu__item"
+        role="menuitem"
+        @click="handleItemClick(item)"
+      >
+        <span class="project-menu__icon" aria-hidden="true">{{ item.icon }}</span>
+        <span class="project-menu__label">{{ item.label }}</span>
+      </button>
+    </div>
 
-  <ExportSettingsModal
-    v-if="showExportModal"
-    @close="closeExportModal"
-    @export="handleExport"
-  />
+    <transition name="export-panel-fade">
+      <div
+        v-if="showExportModal"
+        class="export-panel-container"
+      >
+        <ExportSettingsModal
+          @close="closeExportModal"
+          @export="handleExport"
+        />
+      </div>
+    </transition>
+  </div>
 </template>
 
 <style scoped>
@@ -191,5 +199,34 @@ const handleItemClick = async (item) => {
   flex: 1;
   text-align: left;
   white-space: nowrap;
+}
+
+.project-menu-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.export-panel-container {
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 0;
+  z-index: 100;
+}
+
+.export-panel-fade-enter-active,
+.export-panel-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.export-panel-fade-enter-from {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.export-panel-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
 }
 </style>
