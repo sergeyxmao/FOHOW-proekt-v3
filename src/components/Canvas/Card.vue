@@ -1702,4 +1702,37 @@ watch(
     color: #111827;
   }
 }
+
+/* Print Styles - Скрываем кнопки управления при печати */
+@media print {
+  /* Скрываем кнопки управления карточкой */
+  .card-close-btn,
+  .card-note-btn,
+  .card-controls,
+  .card-active-controls,
+  .active-pv-btn,
+  .connection-point {
+    display: none !important;
+  }
+
+  /* Убираем интерактивные эффекты */
+  .card {
+    cursor: default !important;
+  }
+
+  .card:hover {
+    transform: none !important;
+    box-shadow: 0 18px 32px rgba(47, 128, 237, 0.12) !important;
+  }
+
+  /* Иконка монетки остается видимой, но не интерактивной */
+  .coin-icon {
+    cursor: default !important;
+  }
+
+  .coin-icon--clickable:hover {
+    transform: none !important;
+    filter: none !important;
+  }
+}
 </style>

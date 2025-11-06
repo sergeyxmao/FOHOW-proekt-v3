@@ -700,12 +700,14 @@ onBeforeUnmount(() => {
     <template v-if="!isMobileMode">
       <TopMenuButtons
         v-show="!isPencilMode && !showResetPassword"
+        class="no-print"
         :is-modern-theme="isModernTheme"
         @toggle-theme="toggleTheme"
         @activate-pencil="handleActivatePencil"
       />
       <AppHeader
         v-show="!isPencilMode && !showResetPassword"
+        class="no-print"
         :is-modern-theme="isModernTheme"
         :zoom-display="zoomDisplay"
         @open-board="openBoard"
@@ -716,7 +718,7 @@ onBeforeUnmount(() => {
       <button
         v-if="isAuthenticated"
         v-show="!isPencilMode && !showResetPassword"
-        class="zoom-floating-button"
+        class="zoom-floating-button no-print"
         :class="{ 'zoom-floating-button--modern': isModernTheme }"
         type="button"
         title="Автоподгонка масштаба"
@@ -727,7 +729,7 @@ onBeforeUnmount(() => {
       <button
         v-if="isAuthenticated"
         v-show="!isPencilMode && !showResetPassword"
-        class="save-floating-button"
+        class="save-floating-button no-print"
         :class="{ 'save-floating-button--modern': isModernTheme }"
         type="button"
         :disabled="isSaving || !isSaveAvailable"
@@ -742,6 +744,7 @@ onBeforeUnmount(() => {
     <template v-else>
       <MobileHeader
         v-show="!isPencilMode && !showResetPassword"
+        class="no-print"
         :is-modern-theme="isModernTheme"
         @toggle-theme="toggleTheme"
         @open-profile="handleOpenProfile"
@@ -752,6 +755,7 @@ onBeforeUnmount(() => {
       />
       <MobileToolbar
         v-show="!isPencilMode && !showResetPassword"
+        class="no-print"
         :is-modern-theme="isModernTheme"
         @save="saveCurrentBoard"
         @toggle-theme="toggleTheme"
@@ -761,13 +765,14 @@ onBeforeUnmount(() => {
       />
       <MobileSidebar
         v-show="!isPencilMode && !showResetPassword"
+        class="no-print"
         :is-modern-theme="isModernTheme"
         @add-license="handleAddLicense"
         @add-lower="handleAddLower"
         @add-gold="handleAddGold"
         @add-template="handleAddTemplate"
       />
-      <MobileVersionDialog />
+      <MobileVersionDialog class="no-print" />
     </template>
     <transition name="fade">
       <div
@@ -843,11 +848,13 @@ onBeforeUnmount(() => {
     <VersionSwitcher
       v-if="!isMobileMode"
       v-show="!isPencilMode && !showResetPassword"
+      class="no-print"
       :is-modern-theme="isModernTheme"
     />
 
     <AuthModal
       v-if="isMobileAuthModalOpen"
+      class="no-print"
       :is-open="isMobileAuthModalOpen"
       :initial-view="mobileAuthModalView"
       :is-modern-theme="isModernTheme"
@@ -855,11 +862,13 @@ onBeforeUnmount(() => {
       @success="handleMobileAuthSuccess"
     />
     <BoardsModal
+      class="no-print"
       :is-open="isBoardsModalOpen"
       @close="handleMobileBoardsClose"
       @open-board="handleMobileBoardSelect"
     />
     <StructureNameModal
+      class="no-print"
       :is-open="isStructureNameModalOpen"
       @close="handleStructureNameCancel"
       @confirm="handleStructureNameConfirm"
@@ -867,7 +876,7 @@ onBeforeUnmount(() => {
     <Teleport to="body">
       <div
         v-if="showProfile"
-        :class="['profile-modal-overlay', { 'profile-modal-overlay--modern': isModernTheme }]"
+        :class="['profile-modal-overlay no-print', { 'profile-modal-overlay--modern': isModernTheme }]"
         @click.self="showProfile = false"
       >
         <UserProfile
@@ -881,6 +890,7 @@ onBeforeUnmount(() => {
     <transition name="side-panel-slide">
       <NotesSidePanel
         v-if="isNotesOpen && !isMobileMode"
+        class="no-print"
         :is-modern-theme="isModernTheme"
       />
     </transition>
@@ -888,6 +898,7 @@ onBeforeUnmount(() => {
     <transition name="side-panel-slide">
       <CommentsSidePanel
         v-if="isCommentsOpen && !isMobileMode"
+        class="no-print"
         :is-modern-theme="isModernTheme"
       />
     </transition>
@@ -1254,5 +1265,43 @@ html,body{
 .side-panel-slide-leave-to {
   transform: translateX(-100%);
   opacity: 0;
+}
+
+/* Print Styles - Печать только холста с карточками */
+@media print {
+  /* Скрываем все элементы интерфейса с классом no-print */
+  .no-print,
+  .zoom-floating-button,
+  .save-floating-button,
+  .mobile-auth-overlay,
+  .reset-password-overlay,
+  .profile-modal-overlay {
+    display: none !important;
+  }
+
+  /* Настройка страницы для печати */
+  @page {
+    margin: 0;
+    size: auto;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  #app {
+    overflow: visible;
+  }
+
+  /* Холст занимает всю страницу */
+  #canvas {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
 }
 </style>
