@@ -69,7 +69,11 @@ export const useStickersStore = defineStore('stickers', () => {
       }
 
       const data = await response.json();
-      stickers.value = data.stickers || [];
+      // Нормализуем данные стикеров, убеждаемся что ID всегда числа
+      stickers.value = (data.stickers || []).map(sticker => ({
+        ...sticker,
+        id: parseInt(sticker.id, 10)
+      }));
 
     } catch (error) {
       console.error('❌ Ошибка загрузки стикеров:', error);
@@ -105,7 +109,10 @@ export const useStickersStore = defineStore('stickers', () => {
       }
 
       const data = await response.json();
-      const newSticker = data.sticker;
+      const newSticker = {
+        ...data.sticker,
+        id: parseInt(data.sticker.id, 10)
+      };
 
       // Добавляем новый стикер в массив
       stickers.value.push(newSticker);
@@ -143,7 +150,10 @@ export const useStickersStore = defineStore('stickers', () => {
       }
 
       const data = await response.json();
-      const updatedSticker = data.sticker;
+      const updatedSticker = {
+        ...data.sticker,
+        id: parseInt(data.sticker.id, 10)
+      };
 
       // Обновляем стикер в массиве
       const index = stickers.value.findIndex(s => s.id === updatedSticker.id);
@@ -163,13 +173,23 @@ export const useStickersStore = defineStore('stickers', () => {
    * @param {number} stickerId - ID стикера
    */
   async function deleteSticker(stickerId) {
+    // Улучшенная валидация stickerId
     if (!stickerId) {
-      console.warn('StickerId не указан');
-      return;
+      const error = new Error('ID стикера не указан');
+      console.warn('❌ StickerId не указан');
+      throw error;
+    }
+
+    // Проверяем, что stickerId является числом
+    const stickerIdNum = parseInt(stickerId, 10);
+    if (isNaN(stickerIdNum) || stickerIdNum <= 0) {
+      const error = new Error(`Некорректный ID стикера: ${stickerId}`);
+      console.error('❌ Некорректный stickerId:', stickerId);
+      throw error;
     }
 
     try {
-      const response = await fetch(`${API_URL}/stickers/${stickerId}`, {
+      const response = await fetch(`${API_URL}/stickers/${stickerIdNum}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
@@ -181,15 +201,16 @@ export const useStickersStore = defineStore('stickers', () => {
           errorMessage = data.error || data.message || errorMessage;
         } catch (parseError) {
           // Если не удалось распарсить JSON, используем текст ответа
-          errorMessage = await response.text() || errorMessage;
+          const textError = await response.text();
+          errorMessage = textError || `Ошибка сервера (${response.status})`;
         }
         throw new Error(errorMessage);
       }
 
       // Удаляем стикер из массива
-      stickers.value = stickers.value.filter(s => s.id !== stickerId);
+      stickers.value = stickers.value.filter(s => s.id !== stickerIdNum);
 
-      console.log('✅ Стикер успешно удален:', stickerId);
+      console.log('✅ Стикер успешно удален:', stickerIdNum);
 
     } catch (error) {
       console.error('❌ Ошибка удаления стикера:', error);
@@ -208,9 +229,9 @@ export const useStickersStore = defineStore('stickers', () => {
       return;
     }
 
-    // Преобразуем данные в нужный формат
+    // Преобразуем данные в нужный формат с нормализацией ID
     stickers.value = stickersData.map(stickerData => ({
-      id: stickerData.id,
+      id: parseInt(stickerData.id, 10),
       pos_x: stickerData.pos_x || 0,
       pos_y: stickerData.pos_y || 0,
       color: stickerData.color || '#FFFF88',
