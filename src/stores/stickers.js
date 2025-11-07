@@ -189,32 +189,42 @@ export const useStickersStore = defineStore('stickers', () => {
     }
 
     try {
+      // ---> НАЧАЛО ИЗМЕНЕНИЙ
+      // Создаем заголовки специально для этого запроса, БЕЗ 'Content-Type'
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Authorization': `Bearer ${token}`
+      };
+      
       const response = await fetch(`${API_URL}/stickers/${stickerIdNum}`, {
         method: 'DELETE',
-        headers: getAuthHeaders()
+        headers: headers // <-- Используем новые заголовки
       });
+      // <--- КОНЕЦ ИЗМЕНЕНИЙ
 
+      // Этот код остается таким же, как и был
       if (!response.ok) {
         let errorMessage = 'Ошибка удаления стикера';
         try {
+          // Если сервер все же ответил с JSON (например, 404), пытаемся его прочитать
           const data = await response.json();
           errorMessage = data.error || data.message || errorMessage;
         } catch (parseError) {
-          // Если не удалось распарсить JSON, используем текст ответа
-          const textError = await response.text();
-          errorMessage = textError || `Ошибка сервера (${response.status})`;
+          // Если не удалось распарсить JSON (например, при ответе 204),
+          // используем текст статуса ответа
+          errorMessage = response.statusText || `Ошибка сервера (${response.status})`;
         }
         throw new Error(errorMessage);
       }
 
-      // Удаляем стикер из массива
+      // Удаляем стикер из массива в сторе
       stickers.value = stickers.value.filter(s => s.id !== stickerIdNum);
 
       console.log('✅ Стикер успешно удален:', stickerIdNum);
 
     } catch (error) {
       console.error('❌ Ошибка удаления стикера:', error);
-      throw error;
+      throw error; // Пробрасываем ошибку дальше, чтобы компонент мог ее поймать и показать alert
     }
   }
 
