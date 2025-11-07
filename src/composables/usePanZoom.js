@@ -296,6 +296,19 @@ export function usePanZoom(canvasElement) {
       if (!canvasElement.value.contains(event.target)) {
         return
       }
+	  
+ 
+
+      // Отключаем панорамирование, если активен режим размещения стикера
+
+      if (canvasElement.value.classList.contains('canvas-container--sticker-placement')) {
+
+        return
+
+      }
+
+ 	  
+	  
       activeTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
 
       if (activeTouchPointers.size === 1) {
@@ -327,6 +340,14 @@ export function usePanZoom(canvasElement) {
         return
       }
 
+      // Отключаем панорамирование, если активен режим размещения стикера
+
+      if (canvasElement.value.classList.contains('canvas-container--sticker-placement')) {
+
+        return
+
+      }
+ 
       // Проверяем, что клик не на исключенных элементах (карточки, заметки и т.д.)
       const target = event?.target
       if (target && typeof target.closest === 'function' && PAN_EXCLUDE_SELECTOR && target.closest(PAN_EXCLUDE_SELECTOR)) {
