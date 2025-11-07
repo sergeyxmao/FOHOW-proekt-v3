@@ -175,17 +175,50 @@ export const useStickersStore = defineStore('stickers', () => {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Ошибка удаления стикера');
+        let errorMessage = 'Ошибка удаления стикера';
+        try {
+          const data = await response.json();
+          errorMessage = data.error || data.message || errorMessage;
+        } catch (parseError) {
+          // Если не удалось распарсить JSON, используем текст ответа
+          errorMessage = await response.text() || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       // Удаляем стикер из массива
       stickers.value = stickers.value.filter(s => s.id !== stickerId);
 
+      console.log('✅ Стикер успешно удален:', stickerId);
+
     } catch (error) {
       console.error('❌ Ошибка удаления стикера:', error);
       throw error;
     }
+  }
+
+  /**
+   * Загрузить стикеры из сохраненных данных (для восстановления из структуры)
+   * @param {Array} stickersData - Массив данных стикеров
+   */
+  function loadStickers(stickersData) {
+    if (!Array.isArray(stickersData)) {
+      console.warn('loadStickers: данные должны быть массивом');
+      stickers.value = [];
+      return;
+    }
+
+    // Преобразуем данные в нужный формат
+    stickers.value = stickersData.map(stickerData => ({
+      id: stickerData.id,
+      pos_x: stickerData.pos_x || 0,
+      pos_y: stickerData.pos_y || 0,
+      color: stickerData.color || '#FFFF88',
+      content: stickerData.content || '',
+      selected: false
+    }));
+
+    console.log('✅ Загружено стикеров из сохраненных данных:', stickers.value.length);
   }
 
   /**
@@ -295,6 +328,7 @@ export const useStickersStore = defineStore('stickers', () => {
     addSticker,
     updateSticker,
     deleteSticker,
+    loadStickers,
     clearStickers,
     enablePlacementMode,
     disablePlacementMode,
