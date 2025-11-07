@@ -29,6 +29,7 @@ import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
 import NotesSidePanel from './components/Panels/NotesSidePanel.vue'
 import CommentsSidePanel from './components/Panels/CommentsSidePanel.vue'
+import StickerMessagesPanel from './components/Panels/StickerMessagesPanel.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
  
 const authStore = useAuthStore()
@@ -45,7 +46,7 @@ const { isAuthenticated } = storeToRefs(authStore)
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMobileMode } = storeToRefs(mobileStore)
 const { headerColor, headerColorIndex } = storeToRefs(viewSettingsStore)
-const { isNotesOpen, isCommentsOpen } = storeToRefs(sidePanelsStore)
+const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen } = storeToRefs(sidePanelsStore)
 
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
@@ -898,6 +899,14 @@ onBeforeUnmount(() => {
     <transition name="side-panel-slide">
       <CommentsSidePanel
         v-if="isCommentsOpen && !isMobileMode"
+        class="no-print"
+        :is-modern-theme="isModernTheme"
+      />
+    </transition>
+
+    <transition name="side-panel-slide">
+      <StickerMessagesPanel
+        v-if="isStickerMessagesOpen && !isMobileMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />

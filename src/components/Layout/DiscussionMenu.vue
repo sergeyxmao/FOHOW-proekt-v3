@@ -20,7 +20,7 @@ const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
 
 const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
-const { isNotesOpen, isCommentsOpen } = storeToRefs(sidePanelsStore)
+const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen } = storeToRefs(sidePanelsStore)
 
 const hasNoteEntries = computed(() => notesStore.hasEntries)
 
@@ -34,6 +34,11 @@ const handleNotesToggle = () => {
 
 const handleCommentsToggle = () => {
   sidePanelsStore.toggleComments()
+  emit('request-close')
+}
+
+const handleStickerMessagesToggle = () => {
+  sidePanelsStore.toggleStickerMessages()
   emit('request-close')
 }
 
@@ -78,6 +83,18 @@ const handleAddSticker = () => {
         class="discussion-menu__badge"
         aria-hidden="true"
       ></span>
+    </div>
+
+    <div class="discussion-menu__item">
+      <span class="discussion-menu__icon" aria-hidden="true">📌</span>
+      <button
+        type="button"
+        class="discussion-menu__action"
+        :class="{ 'discussion-menu__action--active': isStickerMessagesOpen }"
+        @click="handleStickerMessagesToggle"
+      >
+        Сообщения стикеров
+      </button>
     </div>
 
     <div class="discussion-menu__item">
