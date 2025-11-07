@@ -33,14 +33,3 @@
     "vite-plugin-vue-devtools": "^8.0.2"
   }
 }
-
-### Что было изменено:
-
-Единственное добавление — это этот блок:
-
-```json
-  "pnpm": {
-    "neverBuiltDependencies": [
-      "rollup"
-    ]
-  }
