@@ -21,6 +21,7 @@ export const useNotesStore = defineStore('notes', () => {
 
   const dropdownOpen = ref(false);
   const cardsWithEntries = ref([]);
+  const visibleNoteCardId = ref(null); 
   const pendingOpenCardId = ref(null);
   const pendingFocusCardId = ref(null);
   const pendingSelectedDate = ref(null);
@@ -305,6 +306,14 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
+    function showNoteForCard(cardId) {
+      visibleNoteCardId.value = cardId;
+    }
+
+    function hideNoteForCard() {
+      visibleNoteCardId.value = null;
+    }
+
   function toggleDropdown() {
     if (!hasEntries.value) {
       dropdownOpen.value = false;
@@ -355,6 +364,7 @@ export const useNotesStore = defineStore('notes', () => {
     // State - UI
     dropdownOpen,
     cardsWithEntries,
+	visibleNoteCardId,
     pendingOpenCardId,
     pendingFocusCardId,
     pendingSelectedDate,
@@ -372,6 +382,8 @@ export const useNotesStore = defineStore('notes', () => {
 
     // Actions - UI
     setCardsWithEntries,
+    showNoteForCard, // <--- И СЮДА
+    hideNoteForCard, // <--- И СЮДА	
     toggleDropdown,
     closeDropdown,
     requestOpen,
