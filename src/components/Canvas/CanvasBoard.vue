@@ -1253,6 +1253,7 @@ const collectDragTargets = (cardId, event) => {
     }
 
     cardsStore.deselectAllCards();
+    stickersStore.deselectAllStickers();
     dragIds.add(cardId);
     cardsStore.selectCard(cardId);
 
@@ -1265,17 +1266,46 @@ const collectDragTargets = (cardId, event) => {
     const isCardAlreadySelected = cardsStore.selectedCardIds.includes(cardId);
 
     if (isCardAlreadySelected) {
+      // Добавляем все выделенные карточки
       cardsStore.selectedCardIds.forEach(id => dragIds.add(id));
+      // Добавляем все выделенные стикеры
+      stickersStore.selectedStickerIds.forEach(id => dragIds.add(id));
     } else if (event?.ctrlKey || event?.metaKey) {
-      return [];    
+      return [];
     } else {
       cardsStore.deselectAllCards();
+      stickersStore.deselectAllStickers();
       cardsStore.selectCard(cardId);
       dragIds.add(cardId);
     }
   }
 
   selectedCardId.value = cardId;
+  selectedConnectionIds.value = [];
+
+  return Array.from(dragIds);
+};
+
+const collectStickerDragTargets = (stickerId, event) => {
+  const dragIds = new Set();
+
+  const isStickerAlreadySelected = stickersStore.selectedStickerIds.includes(stickerId);
+
+  if (isStickerAlreadySelected) {
+    // Добавляем все выделенные стикеры
+    stickersStore.selectedStickerIds.forEach(id => dragIds.add(id));
+    // Добавляем все выделенные карточки
+    cardsStore.selectedCardIds.forEach(id => dragIds.add(id));
+  } else if (event?.ctrlKey || event?.metaKey) {
+    return [];
+  } else {
+    stickersStore.deselectAllStickers();
+    cardsStore.deselectAllCards();
+    stickersStore.selectSticker(stickerId);
+    dragIds.add(stickerId);
+  }
+
+  selectedCardId.value = null;
   selectedConnectionIds.value = [];
 
   return Array.from(dragIds);
@@ -1342,9 +1372,15 @@ const removeSelectionListeners = () => {
 };
 
 const applySelectionFromRect = (rect) => {
-  const nextSelectionIds = new Set(selectionBaseSelection);
+  const nextSelectionCardIds = new Set(
+    Array.from(selectionBaseSelection).filter(id => cardsStore.cards.some(c => c.id === id))
+  );
+  const nextSelectionStickerIds = new Set(
+    Array.from(selectionBaseSelection).filter(id => stickersStore.stickers.some(s => s.id === id))
+  );
 
   if (canvasContainerRef.value) {
+    // Проверяем карточки
     const cardElements = canvasContainerRef.value.querySelectorAll('.card');
     cardElements.forEach((element) => {
       const cardId = element.dataset.cardId;
@@ -1360,19 +1396,46 @@ const applySelectionFromRect = (rect) => {
         cardRect.bottom > rect.top;
 
       if (intersects) {
-        nextSelectionIds.add(cardId);
+        nextSelectionCardIds.add(cardId);
+      }
+    });
+
+    // Проверяем стикеры
+    const stickerElements = canvasContainerRef.value.querySelectorAll('.sticker');
+    stickerElements.forEach((element) => {
+      const stickerId = element.dataset.stickerId;
+      if (!stickerId) {
+        return;
+      }
+
+      const stickerRect = element.getBoundingClientRect();
+      const intersects =
+        stickerRect.left < rect.right &&
+        stickerRect.right > rect.left &&
+        stickerRect.top < rect.bottom &&
+        stickerRect.bottom > rect.top;
+
+      if (intersects) {
+        nextSelectionStickerIds.add(Number(stickerId));
       }
     });
   }
 
+  // Применяем выделение для карточек
   cardsStore.deselectAllCards();
-
-  const orderedIds = Array.from(nextSelectionIds);
-  orderedIds.forEach((id) => {
+  const orderedCardIds = Array.from(nextSelectionCardIds);
+  orderedCardIds.forEach((id) => {
     cardsStore.selectCard(id);
   });
 
-  selectedCardId.value = orderedIds.length > 0 ? orderedIds[orderedIds.length - 1] : null;
+  // Применяем выделение для стикеров
+  stickersStore.deselectAllStickers();
+  const orderedStickerIds = Array.from(nextSelectionStickerIds);
+  orderedStickerIds.forEach((id) => {
+    stickersStore.selectSticker(id);
+  });
+
+  selectedCardId.value = orderedCardIds.length > 0 ? orderedCardIds[orderedCardIds.length - 1] : null;
 };
 
 const updateSelectionRectFromEvent = (event) => {
@@ -1446,10 +1509,17 @@ const startSelection = (event) => {
   suppressNextStageClick = true;
   isSelecting.value = true;
   selectionStartPoint = { x: event.clientX, y: event.clientY };
-  selectionBaseSelection = new Set(event.ctrlKey || event.metaKey ? cardsStore.selectedCardIds : []);
 
-  if (!(event.ctrlKey || event.metaKey)) {
+  // Сохраняем базовое выделение (включая карточки и стикеры)
+  if (event.ctrlKey || event.metaKey) {
+    selectionBaseSelection = new Set([
+      ...cardsStore.selectedCardIds,
+      ...stickersStore.selectedStickerIds
+    ]);
+  } else {
+    selectionBaseSelection = new Set();
     cardsStore.deselectAllCards();
+    stickersStore.deselectAllStickers();
   }
 
   selectedConnectionIds.value = [];
@@ -1490,25 +1560,130 @@ const startDrag = (event, cardId) => {
   }
 
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
+
+  // Собираем карточки
   const cardsToDrag = dragTargetIds
     .map(id => {
       const card = findCardById(id);
       if (!card) return null;
       return {
         id: card.id,
+        type: 'card',
         startX: card.x,
         startY: card.y
       };
     })
     .filter(Boolean);
 
-  if (cardsToDrag.length === 0) {
+  // Собираем стикеры
+  const stickersToDrag = dragTargetIds
+    .map(id => {
+      const sticker = stickersStore.stickers.find(s => s.id === id);
+      if (!sticker) return null;
+      return {
+        id: sticker.id,
+        type: 'sticker',
+        startX: sticker.pos_x,
+        startY: sticker.pos_y
+      };
+    })
+    .filter(Boolean);
+
+  const itemsToDrag = [...cardsToDrag, ...stickersToDrag];
+
+  if (itemsToDrag.length === 0) {
     return;
   }
-  const movingIds = new Set(cardsToDrag.map(item => item.id));
-  const primaryEntry = cardsToDrag.find(item => item.id === cardId) || cardsToDrag[0] || null;
+
+  const movingIds = new Set(itemsToDrag.map(item => item.id));
+  const primaryEntry = itemsToDrag.find(item => item.id === cardId) || itemsToDrag[0] || null;
+
   dragState.value = {
     cards: cardsToDrag,
+    stickers: stickersToDrag,
+    items: itemsToDrag,
+    startPointer: canvasPos,
+    hasMoved: false,
+    movingIds,
+    primaryCardId: primaryEntry ? primaryEntry.id : null,
+    primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
+    axisLock: null
+  };
+  resetActiveGuides();
+
+  const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent;
+
+  if (isPointerEvent) {
+    activeDragPointerId = event.pointerId;
+    dragPointerCaptureElement = event.target;
+    dragPointerCaptureElement?.setPointerCapture?.(activeDragPointerId);
+    window.addEventListener('pointermove', handleDrag, { passive: false });
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+  } else {
+    window.addEventListener('mousemove', handleDrag);
+    window.addEventListener('mouseup', endDrag);
+  }
+  event.preventDefault();
+};
+
+const startStickerDrag = (event, stickerId) => {
+  if (event.button !== 0) {
+    return;
+  }
+
+  if (isSelecting.value) {
+    return;
+  }
+
+  const dragTargetIds = collectStickerDragTargets(stickerId, event);
+  if (dragTargetIds.length === 0) {
+    return;
+  }
+
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+
+  // Собираем стикеры
+  const stickersToDrag = dragTargetIds
+    .map(id => {
+      const sticker = stickersStore.stickers.find(s => s.id === id);
+      if (!sticker) return null;
+      return {
+        id: sticker.id,
+        type: 'sticker',
+        startX: sticker.pos_x,
+        startY: sticker.pos_y
+      };
+    })
+    .filter(Boolean);
+
+  // Собираем карточки
+  const cardsToDrag = dragTargetIds
+    .map(id => {
+      const card = findCardById(id);
+      if (!card) return null;
+      return {
+        id: card.id,
+        type: 'card',
+        startX: card.x,
+        startY: card.y
+      };
+    })
+    .filter(Boolean);
+
+  const itemsToDrag = [...stickersToDrag, ...cardsToDrag];
+
+  if (itemsToDrag.length === 0) {
+    return;
+  }
+
+  const movingIds = new Set(itemsToDrag.map(item => item.id));
+  const primaryEntry = itemsToDrag.find(item => item.id === stickerId) || itemsToDrag[0] || null;
+
+  dragState.value = {
+    cards: cardsToDrag,
+    stickers: stickersToDrag,
+    items: itemsToDrag,
     startPointer: canvasPos,
     hasMoved: false,
     movingIds,
@@ -1535,10 +1710,10 @@ const startDrag = (event, cardId) => {
 };
 
 const handleDrag = (event) => {
-  if (!dragState.value || dragState.value.cards.length === 0) {
+  if (!dragState.value || (!dragState.value.cards.length && !dragState.value.stickers.length)) {
     return;
   }
- 
+
   if (
     activeDragPointerId !== null &&
     event.pointerId !== undefined &&
@@ -1549,7 +1724,7 @@ const handleDrag = (event) => {
 
   if (event.cancelable) {
     event.preventDefault();
-  } 
+  }
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
   const rawDx = canvasPos.x - dragState.value.startPointer.x;
   const rawDy = canvasPos.y - dragState.value.startPointer.y;
@@ -1600,6 +1775,7 @@ const handleDrag = (event) => {
   const finalDx = dx + guideAdjustX;
   const finalDy = dy + guideAdjustY;
 
+  // Обновляем позиции карточек
   dragState.value.cards.forEach(item => {
     cardsStore.updateCardPosition(
       item.id,
@@ -1610,8 +1786,18 @@ const handleDrag = (event) => {
     const movingCard = findCardById(item.id);
     if (movingCard?.note?.visible) {
       syncNoteWindowWithCard(item.id);
-    }    
+    }
   });
+
+  // Обновляем позиции стикеров
+  dragState.value.stickers.forEach(item => {
+    const sticker = stickersStore.stickers.find(s => s.id === item.id);
+    if (sticker) {
+      sticker.pos_x = Math.round(item.startX + finalDx);
+      sticker.pos_y = Math.round(item.startY + finalDy);
+    }
+  });
+
   updateStageSize();
 
   if (dx !== 0 || dy !== 0) {
@@ -1619,7 +1805,7 @@ const handleDrag = (event) => {
   }
 };
 
-const endDrag = (event) => {
+const endDrag = async (event) => {
   if (
     event &&
     activeDragPointerId !== null &&
@@ -1630,14 +1816,26 @@ const endDrag = (event) => {
   }
   if (dragState.value && dragState.value.hasMoved) {
     const movedCardIds = dragState.value.cards.map(item => item.id);
-    const movedCount = movedCardIds.length;
+    const movedStickerIds = dragState.value.stickers.map(item => item.id);
+    const totalCount = movedCardIds.length + movedStickerIds.length;
 
     let description = '';
-    if (movedCount === 1) {
-      const card = findCardById(movedCardIds[0]);
-      description = card ? `Перемещена карточка "${card.text}"` : 'Перемещена карточка';
+    if (totalCount === 1) {
+      if (movedCardIds.length === 1) {
+        const card = findCardById(movedCardIds[0]);
+        description = card ? `Перемещена карточка "${card.text}"` : 'Перемещена карточка';
+      } else {
+        description = 'Перемещен стикер';
+      }
     } else {
-      description = `Перемещено ${movedCount} карточек`;
+      const parts = [];
+      if (movedCardIds.length > 0) {
+        parts.push(`${movedCardIds.length} карточек`);
+      }
+      if (movedStickerIds.length > 0) {
+        parts.push(`${movedStickerIds.length} стикеров`);
+      }
+      description = `Перемещено ${parts.join(' и ')}`;
     }
 
     historyStore.setActionMetadata('update', description);
@@ -1645,16 +1843,30 @@ const endDrag = (event) => {
       syncNoteWindowWithCard(id);
     });
     historyStore.saveState();
-    historyStore.saveState();
+
+    // Сохраняем позиции стикеров на сервере
+    for (const item of dragState.value.stickers) {
+      const sticker = stickersStore.stickers.find(s => s.id === item.id);
+      if (sticker) {
+        try {
+          await stickersStore.updateSticker(sticker.id, {
+            pos_x: sticker.pos_x,
+            pos_y: sticker.pos_y
+          });
+        } catch (error) {
+          console.error('Ошибка сохранения позиции стикера:', error);
+        }
+      }
+    }
 
     suppressNextCardClick.value = true;
     setTimeout(() => {
       suppressNextCardClick.value = false;
-    }, 0);    
+    }, 0);
   }
 
   dragState.value = null;
-    resetActiveGuides();
+  resetActiveGuides();
 
   if (activeDragPointerId !== null) {
     dragPointerCaptureElement?.releasePointerCapture?.(activeDragPointerId);
@@ -1793,6 +2005,26 @@ const handleCardClick = (event, cardId) => {
   }
   selectedCardId.value = cardId;
 };
+
+const handleStickerClick = (event, stickerId) => {
+  // Останавливаем всплытие события
+  event.stopPropagation();
+
+  const isCtrlPressed = event.ctrlKey || event.metaKey;
+  selectedConnectionIds.value = [];
+
+  if (isCtrlPressed) {
+    stickersStore.toggleStickerSelection(stickerId);
+  } else {
+    if (!stickersStore.selectedStickerIds.includes(stickerId) || stickersStore.selectedStickerIds.length > 1) {
+      stickersStore.deselectAllStickers();
+      cardsStore.deselectAllCards();
+      stickersStore.selectSticker(stickerId);
+    }
+  }
+  selectedCardId.value = null;
+};
+
 const handleAddNoteClick = (cardId) => {
   const card = findCardById(cardId);
   if (!card) {
@@ -2380,6 +2612,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         v-for="sticker in stickersStore.stickers"
         :key="`sticker-${sticker.id}`"
         :sticker="sticker"
+        @sticker-click="handleStickerClick"
+        @start-drag="startStickerDrag"
       /> 
     </div>
     <a
