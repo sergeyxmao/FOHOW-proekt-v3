@@ -44,6 +44,7 @@ const noteWindowState = ref({
   highlightColor: NOTE_COLORS[0]
 });const windowEl = ref(null);
 const textareaRef = ref(null);
+const isClosing = ref(false); 
 const headerRef = ref(null);
 const resizeHandleRef = ref(null);
 const isDragging = ref(false);
@@ -219,6 +220,7 @@ function commitHistory(description = 'Обновлена заметка') {
 }
 
 function handleClose() {
+  isClosing.value = true; // <--- ДОБАВЬТЕ ЭТУ СТРОКУ
   emit('close');
   commitHistory('Закрыта заметка для карточки');
 }
@@ -278,10 +280,14 @@ function handleTextareaInput(event) {
 }
 
 async function handleTextareaBlur() {
+  if (isClosing.value) { // <--- ДОБАВЬТЕ ЭТУ ПРОВЕРКУ
+    return;             // <--- И ВЫХОД ИЗ ФУНКЦИИ
+  }
+
   if (!boardStore.currentBoardId) {
     return;
   }
-
+  
   const content = textareaValue.value || '';
 
   try {
