@@ -2201,7 +2201,7 @@ watch(() => notesStore.pendingOpenCardId, (cardId) => {
       note.selectedDate = requestedDate;
       note.viewDate = `${requestedDate.slice(0, 7)}-01`;
     }
-  }});
+  });
 
 watch(() => notesStore.pendingFocusCardId, (cardId) => {
   if (!cardId) {
