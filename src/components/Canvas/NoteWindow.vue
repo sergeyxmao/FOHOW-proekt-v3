@@ -277,15 +277,11 @@ function handleTextareaInput(event) {
   textareaValue.value = value;
 }
 
-    async function handleTextareaBlur() {
-      if (!boardStore.currentBoardId) {
-        return;
-      }
-
+async function handleTextareaBlur() {
   if (!boardStore.currentBoardId) {
     return;
   }
-  
+
   const content = textareaValue.value || '';
 
   try {
