@@ -1052,10 +1052,16 @@ app.delete('/api/stickers/:stickerId', async (req, reply) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { stickerId } = req.params;
 
+    // Валидация stickerId
+    const stickerIdNum = parseInt(stickerId, 10);
+    if (isNaN(stickerIdNum)) {
+      return reply.code(400).send({ error: 'Неверный ID стикера' });
+    }
+
     // Проверяем, что стикер существует и принадлежит текущему пользователю
     const ownerCheck = await pool.query(
       'SELECT user_id FROM stickers WHERE id = $1',
-      [stickerId]
+      [stickerIdNum]
     );
 
     if (ownerCheck.rows.length === 0) {
@@ -1069,7 +1075,7 @@ app.delete('/api/stickers/:stickerId', async (req, reply) => {
     // Удаляем стикер
     await pool.query(
       'DELETE FROM stickers WHERE id = $1',
-      [stickerId]
+      [stickerIdNum]
     );
 
     return reply.send({ success: true });
