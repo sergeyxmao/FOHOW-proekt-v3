@@ -19,6 +19,7 @@ import { useCanvasStore } from './stores/canvas' // Предполагаемый
 import { useBoardStore } from './stores/board'
 import { useCardsStore } from './stores/cards' // Assuming this store exists
 import { useConnectionsStore } from './stores/connections' // Assuming this store exists
+import { useStickersStore } from './stores/stickers'
 import { useViewportStore } from './stores/viewport'
 import { useMobileStore } from './stores/mobile'
 import { useViewSettingsStore } from './stores/viewSettings'
@@ -37,6 +38,7 @@ const canvasStore = useCanvasStore() // Предполагаемая иници�
 const boardStore = useBoardStore()
 const cardsStore = useCardsStore() // Assuming initialization
 const connectionsStore = useConnectionsStore() // Assuming initialization
+const stickersStore = useStickersStore()
 const viewportStore = useViewportStore()
 const mobileStore = useMobileStore()
 const viewSettingsStore = useViewSettingsStore()
@@ -300,9 +302,16 @@ async function loadBoard(boardId) {
       : []
     connectionsStore.loadConnections(connectionsData)
 
+    // Восстанавливаем стикеры из сохраненных данных
+    const stickersData = Array.isArray(content.stickers)
+      ? content.stickers
+      : []
+    stickersStore.loadStickers(stickersData)
+
     console.log('✅ Загружена структура:', data.board.name)
     console.log('  Карточек:', cardsData.length)
     console.log('  Соединений:', connectionsData.length)
+    console.log('  Стикеров:', stickersData.length)
 
     // Загружаем заметки для структуры
     try {
@@ -450,9 +459,19 @@ function getCanvasState() {
     animationDuration: conn.animationDuration
   }))
 
+  // Сохраняем стикеры
+  const stickersData = stickersStore.stickers.map(sticker => ({
+    id: sticker.id,
+    pos_x: sticker.pos_x,
+    pos_y: sticker.pos_y,
+    color: sticker.color,
+    content: sticker.content
+  }))
+
   console.log('📤 Сохраняем состояние:', {
     cardsCount: cardsData.length,
-    connectionsCount: connectionsData.length
+    connectionsCount: connectionsData.length,
+    stickersCount: stickersData.length
   })
 
   return {
@@ -460,7 +479,8 @@ function getCanvasState() {
     background: canvasStore.backgroundColor,
     zoom: 1, // пока фиксированное значение
     objects: cardsData,
-    connections: connectionsData
+    connections: connectionsData,
+    stickers: stickersData
   }
 }
 

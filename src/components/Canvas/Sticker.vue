@@ -147,7 +147,8 @@ const handleDelete = async (event) => {
     await stickersStore.deleteSticker(props.sticker.id);
   } catch (error) {
     console.error('Ошибка удаления стикера:', error);
-    alert('Не удалось удалить стикер');
+    const errorMessage = error.message || 'Не удалось удалить стикер';
+    alert(`Не удалось удалить стикер: ${errorMessage}`);
   }
 };
 </script>

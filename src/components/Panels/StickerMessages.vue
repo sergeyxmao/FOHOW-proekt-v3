@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, inject } from 'vue'
+import { computed, onMounted, inject, ref } from 'vue'
 import { useStickersStore } from '../../stores/stickers.js'
 
 const stickersStore = useStickersStore()
@@ -14,9 +14,63 @@ const messagesStickers = computed(() => {
 
 const hasMessages = computed(() => messagesStickers.value.length > 0)
 
-const handleStickerClick = (sticker) => {
+// Состояние редактирования
+const editingStickerId = ref(null)
+const editingContent = ref('')
+
+const handleStickerClick = (sticker, event) => {
+  // Проверяем, что клик не по кнопкам действий
+  if (event.target.closest('.sticker-message-item__actions')) {
+    return
+  }
+
   if (focusStickerOnCanvas) {
     focusStickerOnCanvas(sticker.id)
+  }
+}
+
+const handleEdit = (sticker, event) => {
+  event.stopPropagation()
+  editingStickerId.value = sticker.id
+  editingContent.value = sticker.content || ''
+}
+
+const handleSaveEdit = async (stickerId) => {
+  if (editingContent.value.trim() === '') {
+    alert('Содержимое стикера не может быть пустым')
+    return
+  }
+
+  try {
+    await stickersStore.updateSticker(stickerId, {
+      content: editingContent.value
+    })
+    editingStickerId.value = null
+    editingContent.value = ''
+  } catch (error) {
+    console.error('Ошибка обновления стикера:', error)
+    alert('Не удалось обновить стикер')
+  }
+}
+
+const handleCancelEdit = () => {
+  editingStickerId.value = null
+  editingContent.value = ''
+}
+
+const handleDelete = async (sticker, event) => {
+  event.stopPropagation()
+
+  if (!confirm(`Вы уверены, что хотите удалить стикер?`)) {
+    return
+  }
+
+  try {
+    await stickersStore.deleteSticker(sticker.id)
+  } catch (error) {
+    console.error('Ошибка удаления стикера:', error)
+    const errorMessage = error.message || 'Не удалось удалить стикер'
+    alert(`Не удалось удалить стикер: ${errorMessage}`)
   }
 }
 
@@ -73,19 +127,62 @@ onMounted(() => {
         v-for="sticker in messagesStickers"
         :key="sticker.id"
         class="sticker-message-item"
+        :class="{ 'sticker-message-item--editing': editingStickerId === sticker.id }"
         :style="{ borderLeftColor: sticker.color || '#FFFF88' }"
-        @click="handleStickerClick(sticker)"
+        @click="handleStickerClick(sticker, $event)"
       >
         <div class="sticker-message-item__header">
           <span class="sticker-message-item__author">
             {{ sticker.author_username || 'Неизвестный пользователь' }}
           </span>
-          <span class="sticker-message-item__date">
-            {{ formatDate(sticker.created_at) }}
-          </span>
+          <div class="sticker-message-item__actions">
+            <button
+              type="button"
+              class="sticker-message-item__action sticker-message-item__action--edit"
+              title="Редактировать"
+              @click="handleEdit(sticker, $event)"
+            >
+              ✏️
+            </button>
+            <button
+              type="button"
+              class="sticker-message-item__action sticker-message-item__action--delete"
+              title="Удалить"
+              @click="handleDelete(sticker, $event)"
+            >
+              🗑️
+            </button>
+          </div>
         </div>
-        <div class="sticker-message-item__content">
+        <div v-if="editingStickerId !== sticker.id" class="sticker-message-item__content">
           {{ getPreview(sticker.content) }}
+        </div>
+        <div v-else class="sticker-message-item__edit">
+          <textarea
+            v-model="editingContent"
+            class="sticker-message-item__textarea"
+            placeholder="Введите текст стикера..."
+            @click.stop
+          ></textarea>
+          <div class="sticker-message-item__edit-actions">
+            <button
+              type="button"
+              class="sticker-message-item__edit-btn sticker-message-item__edit-btn--save"
+              @click.stop="handleSaveEdit(sticker.id)"
+            >
+              Сохранить
+            </button>
+            <button
+              type="button"
+              class="sticker-message-item__edit-btn sticker-message-item__edit-btn--cancel"
+              @click.stop="handleCancelEdit"
+            >
+              Отмена
+            </button>
+          </div>
+        </div>
+        <div v-if="editingStickerId !== sticker.id" class="sticker-message-item__date">
+          {{ formatDate(sticker.created_at) }}
         </div>
       </div>
     </div>
@@ -185,10 +282,43 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
+.sticker-message-item__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sticker-message-item__action {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(248, 250, 252, 0.8);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.sticker-message-item__action:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.15);
+}
+
+.sticker-message-item__action--edit:hover {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.sticker-message-item__action--delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
 .sticker-message-item__date {
   font-size: 11px;
   color: #9ca3af;
-  white-space: nowrap;
+  margin-top: 4px;
 }
 
 .sticker-message-item__content {
@@ -197,6 +327,73 @@ onMounted(() => {
   color: #1f2937;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  margin-bottom: 4px;
+}
+
+.sticker-message-item--editing {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.sticker-message-item__edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sticker-message-item__textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #1f2937;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.sticker-message-item__textarea:focus {
+  border-color: rgba(59, 130, 246, 0.6);
+}
+
+.sticker-message-item__edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sticker-message-item__edit-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sticker-message-item__edit-btn--save {
+  background: #3b82f6;
+  color: white;
+}
+
+.sticker-message-item__edit-btn--save:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.sticker-message-item__edit-btn--cancel {
+  background: rgba(107, 114, 128, 0.1);
+  color: #4b5563;
+}
+
+.sticker-message-item__edit-btn--cancel:hover {
+  background: rgba(107, 114, 128, 0.2);
+  transform: translateY(-1px);
 }
 
 /* Темная тема */
@@ -234,6 +431,21 @@ onMounted(() => {
   }
 
   .sticker-message-item__content {
+    color: #cbd5e1;
+  }
+
+  .sticker-message-item__action {
+    background: rgba(24, 34, 58, 0.8);
+  }
+
+  .sticker-message-item__textarea {
+    background: rgba(24, 34, 58, 0.8);
+    color: #e5f3ff;
+    border-color: rgba(59, 130, 246, 0.4);
+  }
+
+  .sticker-message-item__edit-btn--cancel {
+    background: rgba(148, 163, 184, 0.2);
     color: #cbd5e1;
   }
 }
