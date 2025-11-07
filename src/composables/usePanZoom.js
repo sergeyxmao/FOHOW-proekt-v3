@@ -334,8 +334,8 @@ export function usePanZoom(canvasElement) {
       event.preventDefault()    
       return
     }
-    // Панорамирование по левой кнопке мыши
-    if (event.button === 0) {
+    // Панорамирование по средней кнопке мыши (колесико)
+    if (event.button === 1) {
       if (!canvasElement.value.contains(event.target)) {
         return
       }
