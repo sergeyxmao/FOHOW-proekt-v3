@@ -5,6 +5,7 @@ import { useNotesStore } from '../../stores/notes.js'
 import { useBoardCommentsStore } from '../Panels/boardComments.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
+import { useBoardStore } from '../../stores/board.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -18,10 +19,11 @@ const notesStore = useNotesStore()
 const boardCommentsStore = useBoardCommentsStore()
 const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
+const boardStore = useBoardStore()
 
 const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
 const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen } = storeToRefs(sidePanelsStore)
-const { currentBoardId } = storeToRefs(stickersStore)
+const { currentBoardId } = storeToRefs(boardStore)
 
 const hasNoteEntries = computed(() => notesStore.hasEntries)
 
