@@ -9,6 +9,8 @@ const props = defineProps({
   }
 });
 
+const emit = defineEmits(['sticker-click', 'start-drag']);
+
 const stickersStore = useStickersStore();
 
 // Локальное состояние
@@ -26,6 +28,9 @@ const stickerStyle = computed(() => ({
   top: `${tempPosition.value.y !== null ? tempPosition.value.y : props.sticker.pos_y}px`,
   backgroundColor: props.sticker.color || '#FFFF88'
 }));
+
+// Проверка, выделен ли стикер
+const isSelected = computed(() => props.sticker.selected === true);
 
 // Редактирование
 const handleDoubleClick = () => {
@@ -59,15 +64,26 @@ const handlePointerDown = (e) => {
   // Игнорируем правую кнопку мыши
   if (e.button === 2) return;
 
-  isDragging.value = true;
+  // Проверка Ctrl/Meta для выделения
+  if (e.ctrlKey || e.metaKey) {
+    e.stopPropagation();
 
-  const rect = e.currentTarget.getBoundingClientRect();
-  dragOffset.value = {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top
-  };
+    // Эмитим событие выделения
+    emit('sticker-click', e, props.sticker.id);
+    return;
+  }
 
-  e.currentTarget.setPointerCapture(e.pointerId);
+  // Начинаем перетаскивание через общую систему
+  emit('start-drag', e, props.sticker.id);
+
+  // Не начинаем локальное перетаскивание - оно будет управляться из CanvasBoard
+  // isDragging.value = true; - закомментировано
+  // const rect = e.currentTarget.getBoundingClientRect();
+  // dragOffset.value = {
+  //   x: e.clientX - rect.left,
+  //   y: e.clientY - rect.top
+  // };
+  // e.currentTarget.setPointerCapture(e.pointerId);
 };
 
 const handlePointerMove = (e) => {
@@ -139,8 +155,13 @@ const handleDelete = async (event) => {
 <template>
   <div
     class="sticker"
-    :class="{ 'sticker--dragging': isDragging, 'sticker--editing': isEditing }"
+    :class="{
+      'sticker--dragging': isDragging,
+      'sticker--editing': isEditing,
+      'sticker--selected': isSelected
+    }"
     :style="stickerStyle"
+    :data-sticker-id="sticker.id"
     @dblclick="handleDoubleClick"
     @pointerdown="handlePointerDown"
     @pointermove="handlePointerMove"
@@ -216,6 +237,12 @@ const handleDelete = async (event) => {
   cursor: default;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
   z-index: 1000;
+}
+
+.sticker--selected {
+  outline: 3px solid #2196F3;
+  outline-offset: 2px;
+  box-shadow: 0 8px 16px rgba(33, 150, 243, 0.4);
 }
 
 .sticker__pin {

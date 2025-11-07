@@ -20,6 +20,9 @@ export const useStickersStore = defineStore('stickers', () => {
   // ID текущей доски
   const currentBoardId = ref(null);
 
+  // Массив ID выделенных стикеров
+  const selectedStickerIds = ref([]);
+
   // ============================================
   // GETTERS
   // ============================================
@@ -192,6 +195,7 @@ export const useStickersStore = defineStore('stickers', () => {
     stickers.value = [];
     currentBoardId.value = null;
     isPlacementMode.value = false;
+    selectedStickerIds.value = [];
   }
 
   /**
@@ -215,6 +219,62 @@ export const useStickersStore = defineStore('stickers', () => {
     isPlacementMode.value = !isPlacementMode.value;
   }
 
+  /**
+   * Выделить стикер
+   * @param {number} stickerId - ID стикера
+   */
+  function selectSticker(stickerId) {
+    const sticker = stickers.value.find(s => s.id === stickerId);
+    if (sticker && !sticker.selected) {
+      sticker.selected = true;
+      if (!selectedStickerIds.value.includes(stickerId)) {
+        selectedStickerIds.value.push(stickerId);
+      }
+    }
+  }
+
+  /**
+   * Снять выделение со стикера
+   * @param {number} stickerId - ID стикера
+   */
+  function deselectSticker(stickerId) {
+    const sticker = stickers.value.find(s => s.id === stickerId);
+    if (sticker && sticker.selected) {
+      sticker.selected = false;
+      const index = selectedStickerIds.value.indexOf(stickerId);
+      if (index > -1) {
+        selectedStickerIds.value.splice(index, 1);
+      }
+    }
+  }
+
+  /**
+   * Переключить выделение стикера
+   * @param {number} stickerId - ID стикера
+   */
+  function toggleStickerSelection(stickerId) {
+    const sticker = stickers.value.find(s => s.id === stickerId);
+    if (sticker) {
+      if (sticker.selected) {
+        deselectSticker(stickerId);
+      } else {
+        selectSticker(stickerId);
+      }
+    }
+  }
+
+  /**
+   * Снять выделение со всех стикеров
+   */
+  function deselectAllStickers() {
+    stickers.value.forEach(sticker => {
+      if (sticker.selected) {
+        sticker.selected = false;
+      }
+    });
+    selectedStickerIds.value = [];
+  }
+
   // ============================================
   // RETURN
   // ============================================
@@ -225,6 +285,7 @@ export const useStickersStore = defineStore('stickers', () => {
     isLoading,
     isPlacementMode,
     currentBoardId,
+    selectedStickerIds,
 
     // Getters
     hasStickers,
@@ -237,6 +298,10 @@ export const useStickersStore = defineStore('stickers', () => {
     clearStickers,
     enablePlacementMode,
     disablePlacementMode,
-    togglePlacementMode
+    togglePlacementMode,
+    selectSticker,
+    deselectSticker,
+    toggleStickerSelection,
+    deselectAllStickers
   };
 });
