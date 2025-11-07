@@ -1803,45 +1803,32 @@ const handleStageClick = async (event) => {
 
   // Если активен режим размещения стикера, создаем новый стикер
   if (stickersStore.isPlacementMode) {
-    // Получаем canvas-content из DOM или из event.currentTarget
-    const canvas = event.currentTarget.classList?.contains('canvas-content')
-      ? event.currentTarget
-      : event.currentTarget.closest('.canvas-content');
-
-    if (canvas && boardStore.currentBoardId) {
-      const rect = canvas.getBoundingClientRect();
-
-      // Получаем масштаб из transform
-      const transformValue = getComputedStyle(canvas).getPropertyValue('transform');
-      let scale = 1;
-      if (transformValue && transformValue !== 'none') {
-        const matrix = transformValue.match(/matrix\(([^)]+)\)/);
-        if (matrix) {
-          scale = parseFloat(matrix[1].split(',')[0]) || 1;
-        }
-      }
-
-      // Вычисляем координаты клика относительно холста с учетом масштаба
-      const x = (event.clientX - rect.left) / scale;
-      const y = (event.clientY - rect.top) / scale;
+    // Проверяем, что ID доски доступен
+    if (boardStore.currentBoardId) {
+      // Используем существующую вспомогательную функцию для получения корректных координат
+      const { x, y } = screenToCanvas(event.clientX, event.clientY);
 
       try {
+        // Вызываем action для добавления стикера
         await stickersStore.addSticker(boardStore.currentBoardId, {
           pos_x: Math.round(x),
           pos_y: Math.round(y),
-          color: '#FFFF88'
+          color: '#FFFF88' // Цвет по умолчанию, как в ТЗ
         });
       } catch (error) {
         console.error('Ошибка создания стикера:', error);
         alert('Не удалось создать стикер');
       }
+    } else {
+      console.error('Не удалось создать стикер: ID доски не определен.');
     }
 
-    // Выключаем режим размещения после создания стикера
+    // Выключаем режим размещения после попытки создания стикера
     stickersStore.disablePlacementMode();
-    return;
+    return; // Завершаем выполнение функции
   }
 
+  // Логика для снятия выделения с карточек (остается без изменений)
   const preserveCardSelection = isSelectionMode.value;
   if (!event.ctrlKey && !event.metaKey) {
     if (!preserveCardSelection) {
@@ -1855,7 +1842,6 @@ const handleStageClick = async (event) => {
   if (!preserveCardSelection) {
     selectedCardId.value = null;
   }
-};
 
 const addNewCard = () => {
   const colors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336'];
