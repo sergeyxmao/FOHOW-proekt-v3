@@ -1803,6 +1803,12 @@ const handleStageClick = async (event) => {
 
   // Если активен режим размещения стикера, создаем новый стикер
   if (stickersStore.isPlacementMode) {
+    // Выключаем режим размещения СРАЗУ, чтобы предотвратить дублирование
+    stickersStore.disablePlacementMode();
+
+    // Останавливаем всплытие события, чтобы предотвратить повторное срабатывание
+    event.stopPropagation();
+
     // Проверяем, что ID доски доступен
     if (boardStore.currentBoardId) {
       // Используем существующую вспомогательную функцию для получения корректных координат
@@ -1823,8 +1829,6 @@ const handleStageClick = async (event) => {
       console.error('Не удалось создать стикер: ID доски не определен.');
     }
 
-    // Выключаем режим размещения после попытки создания стикера
-    stickersStore.disablePlacementMode();
     return; // Завершаем выполнение функции
   }
 
