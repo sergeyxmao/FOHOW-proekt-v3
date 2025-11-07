@@ -282,15 +282,24 @@ async function handleTextareaBlur() {
     return;
   }
 
+  const content = textareaValue.value || '';
+
   try {
+    // Сохраняем заметку только если есть текст
+    // Если текст пустой, отправляем пустое содержимое для удаления
     await notesStore.saveNote({
       boardId: boardStore.currentBoardId,
       cardUid: props.card.id,
       noteDate: selectedDate.value,
-      content: textareaValue.value,
+      content: content,
       color: selectedColor.value || ''
     });
-    commitHistory('Обновлена заметка для карточки');
+
+    if (content.trim()) {
+      commitHistory('Обновлена заметка для карточки');
+    } else {
+      commitHistory('Удалена пустая заметка для карточки');
+    }
   } catch (error) {
     console.error('Ошибка сохранения заметки:', error);
   }

@@ -2,6 +2,7 @@ import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 import { useAuthStore } from './auth.js';
 import { useBoardStore } from './board.js';
+import { useCardsStore } from './cards.js';
 
 export const useNotesStore = defineStore('notes', () => {
   // ============================================
@@ -223,24 +224,41 @@ export const useNotesStore = defineStore('notes', () => {
    */
   function updateCardsWithEntries() {
     const cards = [];
+    const cardsStore = useCardsStore();
 
     Object.keys(notesByBoard.value).forEach(cardUid => {
       const notes = notesByBoard.value[cardUid];
-      const entries = Object.keys(notes).map(date => ({
-        date,
-        day: parseInt(date.split('-')[2], 10),
-        label: date,
-        color: notes[date].color || '#f44336'
-      })).sort((a, b) => a.day - b.day);
 
+      // Фильтруем только заметки с непустым содержимым
+      const entries = Object.keys(notes)
+        .filter(date => {
+          const content = notes[date].content || '';
+          return content.trim() !== ''; // Показываем только заметки с текстом
+        })
+        .map(date => ({
+          date,
+          day: parseInt(date.split('-')[2], 10),
+          label: date,
+          color: notes[date].color || '#f44336'
+        }))
+        .sort((a, b) => a.day - b.day);
+
+      // Добавляем карточку только если есть непустые заметки
       if (entries.length > 0) {
+        // Получаем настоящее название карточки из cardsStore
+        const card = cardsStore.cards.find(c => c.id === cardUid);
+        const cardTitle = card ? card.text : cardUid;
+
         cards.push({
           id: cardUid,
-          title: cardUid,
+          title: cardTitle,
           entries
         });
       }
     });
+
+    // Сортируем карточки по названию лицензии
+    cards.sort((a, b) => a.title.localeCompare(b.title));
 
     cardsWithEntries.value = cards;
   }
