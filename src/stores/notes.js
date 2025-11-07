@@ -102,12 +102,41 @@ export const useNotesStore = defineStore('notes', () => {
    * @param {Object} noteData - { boardId, cardUid, noteDate, content, color }
    */
   async function saveNote(noteData) {
-    // ... (код до блока try...catch остается таким же)
-    // ...
+    const authStore = useAuthStore();
+    const boardStore = useBoardStore();
+
+    if (!authStore.isAuthenticated || !authStore.token) {
+      console.warn('Пользователь не авторизован');
+      return;
+    }
+
+    if (!boardStore.currentBoardId) {
+      console.warn('Структура еще не создана');
+      return { error: 'no_structure', message: 'Необходимо создать структуру перед созданием заметки' };
+    }
+
+    const { boardId, cardUid, noteDate, content, color } = noteData;
+
+    if (!boardId || !cardUid || !noteDate) {
+      console.error('Отсутствуют обязательные поля:', noteData);
+      return;
+    }
 
     try {
+      // ВОТ ИСПРАВЛЕННЫЙ ЗАПРОС К СЕРВЕРУ
       const response = await fetch(`${API_URL}/notes`, {
-        // ... (тело запроса остается таким же)
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          boardId,
+          cardUid,
+          noteDate,
+          content: content || '',
+          color: color || ''
+        })
       });
 
       if (!response.ok) {
@@ -116,7 +145,7 @@ export const useNotesStore = defineStore('notes', () => {
 
       const data = await response.json();
 
-      // ---> ИЗМЕНЕНИЯ ЗДЕСЬ
+      // АРХИТЕКТУРНЫЕ ИЗМЕНЕНИЯ (ОНИ УЖЕ БЫЛИ ПРАВИЛЬНЫМИ)
       // Убеждаемся, что у нас есть объект для текущей доски
       if (!notesByBoard.value[boardId]) {
         notesByBoard.value[boardId] = {};
@@ -142,7 +171,6 @@ export const useNotesStore = defineStore('notes', () => {
           color: color || ''
         };
       }
-      // <--- КОНЕЦ ИЗМЕНЕНИЙ
 
       // Обновляем cardsWithEntries для UI
       updateCardsWithEntries();
