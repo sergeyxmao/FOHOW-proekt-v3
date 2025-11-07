@@ -171,7 +171,46 @@ const handleDelete = async (event) => {
     @mouseleave="isHovering = false"
   >
     <!-- Иконка "булавки" -->
-    <div class="sticker__pin" aria-hidden="true">📌</div>
+    <div class="sticker__pin" aria-hidden="true">
+      <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <!-- Тень под булавкой -->
+        <ellipse cx="18" cy="36" rx="8" ry="2" fill="rgba(0,0,0,0.2)" />
+
+        <!-- Иголка (металлическая часть) -->
+        <defs>
+          <linearGradient id="needleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#b8b8b8;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#e8e8e8;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#c0c0c0;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <path d="M 18 14 L 16 32"
+              stroke="url(#needleGradient)"
+              stroke-width="2"
+              stroke-linecap="round"
+              fill="none" />
+
+        <!-- Шляпка булавки (основа) -->
+        <defs>
+          <radialGradient id="pinHeadGradient">
+            <stop offset="0%" style="stop-color:#ff4444;stop-opacity:1" />
+            <stop offset="70%" style="stop-color:#cc0000;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#990000;stop-opacity:1" />
+          </radialGradient>
+        </defs>
+        <circle cx="18" cy="12" r="9" fill="url(#pinHeadGradient)" />
+
+        <!-- Блик на шляпке для объема -->
+        <ellipse cx="15" cy="9" rx="3" ry="4" fill="rgba(255,255,255,0.4)" />
+        <ellipse cx="16" cy="10" rx="1.5" ry="2" fill="rgba(255,255,255,0.6)" />
+
+        <!-- Внутренняя тень для глубины -->
+        <circle cx="18" cy="12" r="9"
+                fill="none"
+                stroke="rgba(0,0,0,0.2)"
+                stroke-width="0.5" />
+      </svg>
+    </div>
 
     <!-- Кнопка удаления -->
     <button
@@ -248,11 +287,14 @@ const handleDelete = async (event) => {
 
 .sticker__pin {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  font-size: 18px;
+  top: -12px;
+  left: -8px;
+  width: 32px;
+  height: 32px;
   pointer-events: none;
-  transform: rotate(-45deg);
+  transform: rotate(-35deg);
+  filter: drop-shadow(2px 2px 3px rgba(0, 0, 0, 0.3));
+  z-index: 10;
 }
 
 .sticker__delete {
