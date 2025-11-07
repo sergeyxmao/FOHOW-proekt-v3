@@ -1149,40 +1149,49 @@ const focusCardOnCanvas = (cardId) => {
 const focusStickerOnCanvas = (stickerId) => {
   const sticker = stickersStore.stickers.find(s => s.id === stickerId);
   if (!sticker || !canvasContainerRef.value) {
+    console.warn(`Стикер с ID ${stickerId} не найден для фокусировки.`);
     return;
   }
 
-  // Снимаем выделение со всех стикеров
-  stickersStore.deselectAllStickers();
-
+  // 1. Получаем текущие параметры холста
   const scale = zoomScale.value || 1;
   const containerRect = canvasContainerRef.value.getBoundingClientRect();
-  // Стикеры имеют примерный размер 200x150
+
+  // 2. Вычисляем целевые координаты для центрирования стикера
+  // Размеры стикера примерно 200x150, берем центр
   const stickerCenterX = sticker.pos_x + 100;
   const stickerCenterY = sticker.pos_y + 75;
   const targetTranslateX = containerRect.width / 2 - stickerCenterX * scale;
   const targetTranslateY = containerRect.height / 2 - stickerCenterY * scale;
 
+  // 3. Плавно перемещаем холст
   setZoomTransform({
     scale,
     translateX: targetTranslateX,
     translateY: targetTranslateY
   });
 
-  // Выделяем стикер после небольшой задержки, чтобы пользователь увидел анимацию перемещения
+  // 4. Снимаем выделение со всего остального
+  stickersStore.deselectAllStickers();
+  cardsStore.deselectAllCards();
+
+  // 5. Выделяем нужный стикер и запускаем анимацию
+  // Небольшая задержка, чтобы пользователь увидел перемещение холста
   setTimeout(() => {
+    // Выделяем стикер
     stickersStore.selectSticker(stickerId);
 
-    // Добавляем класс для анимации пульсации
+    // Находим DOM-элемент стикера и добавляем класс для анимации
     const stickerElement = document.querySelector(`[data-sticker-id="${stickerId}"]`);
     if (stickerElement) {
       stickerElement.classList.add('sticker--focused');
-      // Убираем класс после окончания анимации
+      
+      // Убираем класс после завершения анимации (длительность 2000ms)
       setTimeout(() => {
         stickerElement.classList.remove('sticker--focused');
       }, 2000);
     }
-  }, 100);
+  }, 150); // Задержка в 150мс
 };
 
 // Предоставляем функцию фокусировки для дочерних компонентов
