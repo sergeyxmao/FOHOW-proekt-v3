@@ -21,6 +21,7 @@ const stickersStore = useStickersStore()
 
 const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
 const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen } = storeToRefs(sidePanelsStore)
+const { currentBoardId } = storeToRefs(stickersStore)
 
 const hasNoteEntries = computed(() => notesStore.hasEntries)
 
@@ -43,6 +44,11 @@ const handleStickerMessagesToggle = () => {
 }
 
 const handleAddSticker = () => {
+  if (!currentBoardId.value) {
+    alert('Пожалуйста, создайте новую структуру или войдите в существующую, чтобы добавить стикер.')
+    emit('request-close')
+    return
+  }
   stickersStore.enablePlacementMode()
   emit('request-close')
 }
