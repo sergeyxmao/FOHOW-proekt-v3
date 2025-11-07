@@ -1041,7 +1041,7 @@ app.put('/api/stickers/:stickerId', async (req, reply) => {
   }
 });
 
-// Удалить стикер
+// Удалить стикер (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 app.delete('/api/stickers/:stickerId', async (req, reply) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
@@ -1051,34 +1051,31 @@ app.delete('/api/stickers/:stickerId', async (req, reply) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { stickerId } = req.params;
+    const userId = decoded.userId;
 
-    // Валидация stickerId
+    // Валидация ID стикера
     const stickerIdNum = parseInt(stickerId, 10);
-    if (isNaN(stickerIdNum)) {
-      return reply.code(400).send({ error: 'Неверный ID стикера' });
+    if (isNaN(stickerIdNum) || stickerIdNum <= 0) {
+      // Это единственная валидная причина для 400 Bad Request
+      return reply.code(400).send({ error: 'Некорректный ID стикера' });
     }
 
-    // Проверяем, что стикер существует и принадлежит текущему пользователю
-    const ownerCheck = await pool.query(
-      'SELECT user_id FROM stickers WHERE id = $1',
-      [stickerIdNum]
+    // Выполняем ОДИН безопасный запрос на удаление
+    const result = await pool.query(
+      'DELETE FROM stickers WHERE id = $1 AND user_id = $2',
+      [stickerIdNum, userId]
     );
 
-    if (ownerCheck.rows.length === 0) {
-      return reply.code(404).send({ error: 'Стикер не найден' });
+    // Проверяем, была ли удалена строка.
+    // Если rowCount === 0, значит стикер либо не найден, либо не принадлежит пользователю.
+    if (result.rowCount === 0) {
+      return reply.code(404).send({ error: 'Стикер не найден или у вас нет прав на его удаление' });
     }
 
-    if (ownerCheck.rows[0].user_id !== decoded.userId) {
-      return reply.code(403).send({ error: 'Нет доступа к удалению этого стикера' });
-    }
+    // Отправляем успешный ответ. Стандарт для DELETE - это 204 No Content.
+    // Фронтенд увидит, что response.ok === true и не будет пытаться парсить тело ответа.
+    return reply.code(204).send();
 
-    // Удаляем стикер
-    await pool.query(
-      'DELETE FROM stickers WHERE id = $1',
-      [stickerIdNum]
-    );
-
-    return reply.send({ success: true });
   } catch (err) {
     console.error('❌ Ошибка удаления стикера:', err);
     return reply.code(500).send({ error: 'Ошибка сервера' });
