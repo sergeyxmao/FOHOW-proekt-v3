@@ -650,6 +650,7 @@ const getCurrentZoom = () => {
   const value = Number(zoomScale.value);
   return Number.isFinite(value) && value > 0 ? value : 1;
 };  
+const cardsWithVisibleNotes = computed(() => cards.value.filter(card => card.note && card.note.visible));
 const notesSummary = computed(() => getCardNotesSummary(cards.value));
 
 const engineInput = computed(() => {
@@ -1069,6 +1070,58 @@ const card = findCardById(cardId);
     });
     updateNoteOffsets(card.note, rect, { scale });
   }
+};
+
+const openNoteForCard = (card, options = {}) => {
+  const note = ensureCardNote(card);
+  if (!note) {
+    return;
+  }
+
+  // Закрыть все другие открытые заметки перед открытием новой
+  cards.value.forEach(c => {
+    if (c.id !== card.id && c.note && c.note.visible) {
+      c.note.visible = false;
+    }
+  });
+
+  note.width = Number.isFinite(note.width) ? note.width : DEFAULT_NOTE_WIDTH;
+  note.height = Number.isFinite(note.height) ? note.height : DEFAULT_NOTE_HEIGHT;
+  const rect = getCardElementRect(card.id);
+  if (rect) {
+    const scale = getCurrentZoom();
+    applyCardRectToNote(note, rect, {
+      scale,
+      align: 'right',
+      forceAlign: Boolean(options?.forceAlign)
+    });
+    updateNoteOffsets(note, rect, { scale });
+  }
+  if (!note.viewDate && note.selectedDate) {
+    note.viewDate = `${note.selectedDate.slice(0, 7)}-01`;
+  }
+  note.visible = true;
+  syncNoteWindowWithCard(card.id, { forceAlign: Boolean(options?.forceAlign), align: 'right' });
+};
+
+const closeNoteForCard = (card, options = { saveToHistory: false }) => {
+  const note = ensureCardNote(card);
+  if (!note) {
+    return;
+  }
+  note.visible = false;
+  if (options.saveToHistory) {
+    historyStore.setActionMetadata('update', `Закрыта заметка для карточки "${card.text}"`);
+    historyStore.saveState();
+  }
+};
+
+const handleNoteWindowClose = (cardId) => {
+  const card = findCardById(cardId);
+  if (!card) {
+    return;
+  }
+  closeNoteForCard(card);
 };
 
 const focusCardOnCanvas = (cardId) => {
@@ -2006,13 +2059,18 @@ const handleStickerClick = (event, stickerId) => {
   selectedCardId.value = null;
 };
 
-    const handleAddNoteClick = (cardId) => {
-      if (notesStore.visibleNoteCardId === cardId) {
-        notesStore.hideNoteForCard();
-      } else {
-        notesStore.showNoteForCard(cardId);
-      }
-    };
+const handleAddNoteClick = (cardId) => {
+  const card = findCardById(cardId);
+  if (!card) {
+    return;
+  }
+  const note = ensureCardNote(card);
+  if (!note.visible) {
+    openNoteForCard(card);
+  } else {
+    closeNoteForCard(card, { saveToHistory: true });
+  }
+};
 
 const handlePvChanged = (cardId) => {
 
@@ -2577,13 +2635,13 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           style="pointer-events: auto;"
           />
       </div>
-    <NoteWindow
-      v-if="notesStore.visibleNoteCardId"
-      :key="`note-${notesStore.visibleNoteCardId}`"
-      :card="cards.find(c => c.id === notesStore.visibleNoteCardId)"
-      :ref="el => handleNoteWindowRegister(notesStore.visibleNoteCardId, el)"
-      @close="handleNoteWindowClose"
-    />
+      <NoteWindow
+        v-for="card in cardsWithVisibleNotes"
+        :key="`note-${card.id}`"
+        :card="card"
+        :ref="el => handleNoteWindowRegister(card.id, el)"
+        @close="() => handleNoteWindowClose(card.id)"
+      />
       <Sticker
         v-for="sticker in stickersStore.stickers"
         :key="`sticker-${sticker.id}`"
