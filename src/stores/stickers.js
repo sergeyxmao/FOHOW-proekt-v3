@@ -23,6 +23,9 @@ export const useStickersStore = defineStore('stickers', () => {
   // Массив ID выделенных стикеров
   const selectedStickerIds = ref([]);
 
+  // ID стикера, на который нужно сфокусироваться
+  const pendingFocusStickerId = ref(null);
+
   // ============================================
   // GETTERS
   // ============================================
@@ -339,6 +342,14 @@ export const useStickersStore = defineStore('stickers', () => {
     selectedStickerIds.value = [];
   }
 
+  /**
+   * Запросить фокусировку на стикере
+   * @param {number} stickerId - ID стикера для фокусировки
+   */
+  function requestFocusOnSticker(stickerId) {
+    pendingFocusStickerId.value = stickerId;
+  }
+
   // ============================================
   // RETURN
   // ============================================
@@ -350,6 +361,7 @@ export const useStickersStore = defineStore('stickers', () => {
     isPlacementMode,
     currentBoardId,
     selectedStickerIds,
+    pendingFocusStickerId,
 
     // Getters
     hasStickers,
@@ -367,6 +379,7 @@ export const useStickersStore = defineStore('stickers', () => {
     selectSticker,
     deselectSticker,
     toggleStickerSelection,
-    deselectAllStickers
+    deselectAllStickers,
+    requestFocusOnSticker
   };
 });

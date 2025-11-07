@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick, provide } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue';
 import html2canvas from 'html2canvas';  
 import { storeToRefs } from 'pinia';
 import { useCardsStore } from '../../stores/cards';
@@ -1194,9 +1194,15 @@ const focusStickerOnCanvas = (stickerId) => {
   }, 150); // Задержка в 150мс
 };
 
-// Предоставляем функцию фокусировки для дочерних компонентов
-provide('focusStickerOnCanvas', focusStickerOnCanvas);
-  
+// Наблюдаем за запросами на фокусировку стикера через Pinia store
+watch(() => stickersStore.pendingFocusStickerId, (stickerId) => {
+  if (stickerId !== null) {
+    focusStickerOnCanvas(stickerId);
+    // Сбрасываем состояние, чтобы можно было повторно кликнуть на тот же стикер
+    stickersStore.pendingFocusStickerId = null;
+  }
+});
+
 const getBranchDescendants = (startCardId, branchFilter) => {
   const visited = new Set([startCardId]);
   const descendants = new Set();

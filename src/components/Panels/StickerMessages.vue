@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, inject, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useStickersStore } from '../../stores/stickers.js'
 
 const props = defineProps({
@@ -10,9 +10,6 @@ const props = defineProps({
 })
 
 const stickersStore = useStickersStore()
-
-// Получаем функцию фокусировки из CanvasBoard
-const focusStickerOnCanvas = inject('focusStickerOnCanvas', null)
 
 // Вычисляемое свойство для получения стикеров с непустым содержимым
 const messagesStickers = computed(() => {
@@ -31,9 +28,8 @@ const handleStickerClick = (sticker, event) => {
     return
   }
 
-  if (focusStickerOnCanvas) {
-    focusStickerOnCanvas(sticker.id)
-  }
+  // Запрашиваем фокусировку через store
+  stickersStore.requestFocusOnSticker(sticker.id)
 }
 
 const handleEdit = (sticker, event) => {
