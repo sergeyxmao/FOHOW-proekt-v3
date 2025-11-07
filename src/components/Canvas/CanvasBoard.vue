@@ -1842,6 +1842,7 @@ const handleStageClick = async (event) => {
   if (!preserveCardSelection) {
     selectedCardId.value = null;
   }
+};
 
 const addNewCard = () => {
   const colors = ['#4CAF50', '#2196F3', '#FF9800', '#9C27B0', '#F44336'];
