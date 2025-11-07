@@ -334,8 +334,8 @@ export function usePanZoom(canvasElement) {
       event.preventDefault()    
       return
     }
-    // Панорамирование по левой кнопке мыши
-    if (event.button === 0) {
+    // Панорамирование по средней кнопке мыши (колесико)
+    if (event.button === 1) {
       if (!canvasElement.value.contains(event.target)) {
         return
       }
@@ -402,7 +402,7 @@ export function usePanZoom(canvasElement) {
       activeTouchPointers.delete(event.pointerId)
       if (isPanning && panPointerType === 'touch' && panPointerId === event.pointerId) {
         stopPanning()
-      }      
+      }
       if (activeTouchPointers.size < 2) {
         pinchState = null
       } else {
@@ -415,16 +415,31 @@ export function usePanZoom(canvasElement) {
       stopPanning()
     }
   }
-  
+
+  // Предотвращаем стандартное поведение средней кнопки мыши (автоскролл)
+  const handleMouseDown = (event) => {
+    if (event.button === 1) {
+      event.preventDefault()
+    }
+  }
+
+  const handleAuxClick = (event) => {
+    if (event.button === 1) {
+      event.preventDefault()
+    }
+  }
+
   onMounted(() => {
     if (!canvasElement.value) return
-    
+
     window.addEventListener('wheel', handleWheel, { passive: false })
     window.addEventListener('pointerdown', handlePointerDown)
     window.addEventListener('pointermove', handlePointerMove)
     window.addEventListener('pointerup', handlePointerUp)
     window.addEventListener('pointercancel', handlePointerUp)
-    
+    window.addEventListener('mousedown', handleMouseDown)
+    window.addEventListener('auxclick', handleAuxClick)
+
     updateTransform()
   })
   
@@ -434,6 +449,8 @@ export function usePanZoom(canvasElement) {
     window.removeEventListener('pointermove', handlePointerMove)
     window.removeEventListener('pointerup', handlePointerUp)
     window.removeEventListener('pointercancel', handlePointerUp)
+    window.removeEventListener('mousedown', handleMouseDown)
+    window.removeEventListener('auxclick', handleAuxClick)
     setBodyCursor()
     if (canvasElement.value) {
       canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
