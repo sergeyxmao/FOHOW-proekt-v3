@@ -37,7 +37,7 @@ export const useNotesStore = defineStore('notes', () => {
   // ACTIONS - Работа с API
   // ============================================
 
-  /**
+ /**
    * Загружает все заметки для указанной доски
    * @param {number|string} boardId - ID доски
    */
@@ -64,9 +64,8 @@ export const useNotesStore = defineStore('notes', () => {
 
       const data = await response.json();
 
-      // Очищаем текущее состояние
-      notesByBoard.value = {};
-      currentBoardId.value = boardId;
+      // ---> ИЗМЕНЕНИЯ ЗДЕСЬ
+      const groupedNotes = {}; // Создаем временный объект для группировки
 
       // Группируем заметки по card_uid и note_date
       if (data.notes && Array.isArray(data.notes)) {
@@ -74,19 +73,23 @@ export const useNotesStore = defineStore('notes', () => {
           const cardUid = note.card_uid;
           const noteDate = note.note_date;
 
-          if (!notesByBoard.value[cardUid]) {
-            notesByBoard.value[cardUid] = {};
+          if (!groupedNotes[cardUid]) {
+            groupedNotes[cardUid] = {};
           }
 
-          notesByBoard.value[cardUid][noteDate] = {
+          groupedNotes[cardUid][noteDate] = {
             content: note.content || '',
             color: note.color || ''
           };
         });
       }
+      // Записываем сгруппированные заметки в главный объект под ключом boardId
+      notesByBoard.value[boardId] = groupedNotes;
+      currentBoardId.value = boardId; // Обновляем ID текущей доски
 
       // Обновляем cardsWithEntries для UI
       updateCardsWithEntries();
+      // <--- КОНЕЦ ИЗМЕНЕНИЙ
 
     } catch (error) {
       console.error('Ошибка загрузки заметок:', error);
@@ -99,40 +102,12 @@ export const useNotesStore = defineStore('notes', () => {
    * @param {Object} noteData - { boardId, cardUid, noteDate, content, color }
    */
   async function saveNote(noteData) {
-    const authStore = useAuthStore();
-    const boardStore = useBoardStore();
-
-    if (!authStore.isAuthenticated || !authStore.token) {
-      console.warn('Пользователь не авторизован');
-      return;
-    }
-
-    if (!boardStore.currentBoardId) {
-      console.warn('Структура еще не создана');
-      return { error: 'no_structure', message: 'Необходимо создать структуру перед созданием заметки' };
-    }
-
-    const { boardId, cardUid, noteDate, content, color } = noteData;
-
-    if (!boardId || !cardUid || !noteDate) {
-      console.error('Отсутствуют обязательные поля:', noteData);
-      return;
-    }
+    // ... (код до блока try...catch остается таким же)
+    // ...
 
     try {
       const response = await fetch(`${API_URL}/notes`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authStore.token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          boardId,
-          cardUid,
-          noteDate,
-          content: content || '',
-          color: color || ''
-        })
+        // ... (тело запроса остается таким же)
       });
 
       if (!response.ok) {
@@ -141,28 +116,33 @@ export const useNotesStore = defineStore('notes', () => {
 
       const data = await response.json();
 
+      // ---> ИЗМЕНЕНИЯ ЗДЕСЬ
+      // Убеждаемся, что у нас есть объект для текущей доски
+      if (!notesByBoard.value[boardId]) {
+        notesByBoard.value[boardId] = {};
+      }
+      const notesForCurrentBoard = notesByBoard.value[boardId];
+
       // Обновляем локальное состояние
       if (data.deleted) {
         // Заметка была удалена
-        if (notesByBoard.value[cardUid]) {
-          delete notesByBoard.value[cardUid][noteDate];
-
-          // Если у карточки не осталось заметок, удаляем её из объекта
-          if (Object.keys(notesByBoard.value[cardUid]).length === 0) {
-            delete notesByBoard.value[cardUid];
+        if (notesForCurrentBoard[cardUid]) {
+          delete notesForCurrentBoard[cardUid][noteDate];
+          if (Object.keys(notesForCurrentBoard[cardUid]).length === 0) {
+            delete notesForCurrentBoard[cardUid];
           }
         }
       } else {
         // Заметка была создана или обновлена
-        if (!notesByBoard.value[cardUid]) {
-          notesByBoard.value[cardUid] = {};
+        if (!notesForCurrentBoard[cardUid]) {
+          notesForCurrentBoard[cardUid] = {};
         }
-
-        notesByBoard.value[cardUid][noteDate] = {
+        notesForCurrentBoard[cardUid][noteDate] = {
           content: content || '',
           color: color || ''
         };
       }
+      // <--- КОНЕЦ ИЗМЕНЕНИЙ
 
       // Обновляем cardsWithEntries для UI
       updateCardsWithEntries();
@@ -175,33 +155,43 @@ export const useNotesStore = defineStore('notes', () => {
   }
 
   /**
-   * Получает заметку для конкретной карточки и даты
+   * Получает срез заметок для текущей активной доски
+   * @private
+   */
+  const notesForCurrentBoard = computed(() => {
+    const boardStore = useBoardStore();
+    if (!boardStore.currentBoardId) return {};
+    return notesByBoard.value[boardStore.currentBoardId] || {};
+  });
+
+  /**
+   * Получает заметку для конкретной карточки и даты на ТЕКУЩЕЙ доске
    * @param {string} cardUid - ID карточки
    * @param {string} noteDate - Дата в формате YYYY-MM-DD
    * @returns {Object|null} - { content, color } или null
    */
   function getNote(cardUid, noteDate) {
-    if (!notesByBoard.value[cardUid]) {
+    const notesForCard = notesForCurrentBoard.value[cardUid];
+    if (!notesForCard) {
       return null;
     }
-
-    return notesByBoard.value[cardUid][noteDate] || null;
+    return notesForCard[noteDate] || null;
   }
 
   /**
-   * Получает все заметки для карточки
+   * Получает все заметки для карточки на ТЕКУЩЕЙ доске
    * @param {string} cardUid - ID карточки
    * @returns {Object} - { "2025-11-04": { content, color }, ... }
    */
   function getNotesForCard(cardUid) {
-    return notesByBoard.value[cardUid] || {};
+    return notesForCurrentBoard.value[cardUid] || {};
   }
 
   /**
    * Очищает все заметки
    */
   function clearNotes() {
-    notesByBoard.value = {};
+    notesByBoard.value = {}; // <--- ИЗМЕНЕНИЕ ЗДЕСЬ
     currentBoardId.value = null;
     cardsWithEntries.value = [];
     dropdownOpen.value = false;
@@ -225,9 +215,14 @@ export const useNotesStore = defineStore('notes', () => {
   function updateCardsWithEntries() {
     const cards = [];
     const cardsStore = useCardsStore();
+    
+    // ---> ИЗМЕНЕНИЯ ЗДЕСЬ
+    // Используем геттер, который уже знает о текущей доске
+    const currentNotes = notesForCurrentBoard.value; 
+    // <--- КОНЕЦ ИЗМЕНЕНИЙ
 
-    Object.keys(notesByBoard.value).forEach(cardUid => {
-      const notes = notesByBoard.value[cardUid];
+    Object.keys(currentNotes).forEach(cardUid => {
+      const notes = currentNotes[cardUid];
 
       // Фильтруем только заметки с непустым содержимым
       const entries = Object.keys(notes)
