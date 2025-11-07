@@ -362,4 +362,28 @@ const handleDelete = async (event) => {
 .sticker__textarea:focus {
   border-color: #FF9800;
 }
+
+/* Анимация при фокусировке из панели */
+.sticker--focused {
+  animation: stickerPulse 2s ease-in-out;
+}
+
+@keyframes stickerPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  25% {
+    transform: scale(1.1);
+    box-shadow: 0 8px 24px rgba(33, 150, 243, 0.6);
+  }
+  50% {
+    transform: scale(1);
+    box-shadow: 0 6px 16px rgba(33, 150, 243, 0.4);
+  }
+  75% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 24px rgba(33, 150, 243, 0.6);
+  }
+}
 </style>
