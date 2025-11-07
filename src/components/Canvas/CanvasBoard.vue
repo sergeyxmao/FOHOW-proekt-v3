@@ -1151,6 +1151,10 @@ const focusStickerOnCanvas = (stickerId) => {
   if (!sticker || !canvasContainerRef.value) {
     return;
   }
+
+  // Снимаем выделение со всех стикеров
+  stickersStore.deselectAllStickers();
+
   const scale = zoomScale.value || 1;
   const containerRect = canvasContainerRef.value.getBoundingClientRect();
   // Стикеры имеют примерный размер 200x150
@@ -1164,6 +1168,21 @@ const focusStickerOnCanvas = (stickerId) => {
     translateX: targetTranslateX,
     translateY: targetTranslateY
   });
+
+  // Выделяем стикер после небольшой задержки, чтобы пользователь увидел анимацию перемещения
+  setTimeout(() => {
+    stickersStore.selectSticker(stickerId);
+
+    // Добавляем класс для анимации пульсации
+    const stickerElement = document.querySelector(`[data-sticker-id="${stickerId}"]`);
+    if (stickerElement) {
+      stickerElement.classList.add('sticker--focused');
+      // Убираем класс после окончания анимации
+      setTimeout(() => {
+        stickerElement.classList.remove('sticker--focused');
+      }, 2000);
+    }
+  }, 100);
 };
 
 // Предоставляем функцию фокусировки для дочерних компонентов
