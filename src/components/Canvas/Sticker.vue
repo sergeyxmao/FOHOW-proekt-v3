@@ -17,11 +17,13 @@ const editableContent = ref(props.sticker.content || '');
 const isDragging = ref(false);
 const dragOffset = ref({ x: 0, y: 0 });
 const isHovering = ref(false);
+// Временная позиция во время перетаскивания
+const tempPosition = ref({ x: null, y: null });
 
 // Вычисляемые свойства
 const stickerStyle = computed(() => ({
-  left: `${props.sticker.pos_x}px`,
-  top: `${props.sticker.pos_y}px`,
+  left: `${tempPosition.value.x !== null ? tempPosition.value.x : props.sticker.pos_x}px`,
+  top: `${tempPosition.value.y !== null ? tempPosition.value.y : props.sticker.pos_y}px`,
   backgroundColor: props.sticker.color || '#FFFF88'
 }));
 
@@ -84,9 +86,8 @@ const handlePointerMove = (e) => {
   const newX = (e.clientX - canvasRect.left) / scale - dragOffset.value.x;
   const newY = (e.clientY - canvasRect.top) / scale - dragOffset.value.y;
 
-  // Временно обновляем позицию (визуально)
-  e.currentTarget.style.left = `${newX}px`;
-  e.currentTarget.style.top = `${newY}px`;
+  // Обновляем временную позицию (используется в computed свойстве)
+  tempPosition.value = { x: newX, y: newY };
 };
 
 const handlePointerUp = async (e) => {
@@ -95,15 +96,9 @@ const handlePointerUp = async (e) => {
   isDragging.value = false;
   e.currentTarget.releasePointerCapture(e.pointerId);
 
-  // Получаем финальные координаты
-  const canvas = e.currentTarget.closest('.canvas-content');
-  if (!canvas) return;
-
-  const canvasRect = canvas.getBoundingClientRect();
-  const scale = parseFloat(getComputedStyle(canvas).getPropertyValue('transform').split(',')[0].replace('matrix(', '')) || 1;
-
-  const newX = (e.clientX - canvasRect.left) / scale - dragOffset.value.x;
-  const newY = (e.clientY - canvasRect.top) / scale - dragOffset.value.y;
+  // Используем сохраненные временные координаты
+  const newX = tempPosition.value.x !== null ? tempPosition.value.x : props.sticker.pos_x;
+  const newY = tempPosition.value.y !== null ? tempPosition.value.y : props.sticker.pos_y;
 
   // Сохраняем новую позицию на сервере
   try {
@@ -111,14 +106,23 @@ const handlePointerUp = async (e) => {
       pos_x: Math.round(newX),
       pos_y: Math.round(newY)
     });
+
+    // Очищаем временную позицию после успешного сохранения
+    tempPosition.value = { x: null, y: null };
   } catch (error) {
     console.error('Ошибка сохранения позиции стикера:', error);
     alert('Не удалось сохранить новую позицию');
+    // В случае ошибки возвращаем стикер на старое место
+    tempPosition.value = { x: null, y: null };
   }
 };
 
 // Удаление
-const handleDelete = async () => {
+const handleDelete = async (event) => {
+  // Останавливаем всплытие события
+  event.stopPropagation();
+  event.preventDefault();
+
   if (!confirm('Вы уверены, что хотите удалить этот стикер?')) {
     return;
   }
