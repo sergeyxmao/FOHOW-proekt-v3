@@ -2,6 +2,13 @@
 import { computed, onMounted, inject, ref } from 'vue'
 import { useStickersStore } from '../../stores/stickers.js'
 
+const props = defineProps({
+  isModernTheme: {
+    type: Boolean,
+    default: false
+  }
+})
+
 const stickersStore = useStickersStore()
 
 // Получаем функцию фокусировки из CanvasBoard
@@ -104,7 +111,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="sticker-messages">
+  <div class="sticker-messages" :class="{ 'sticker-messages--modern': props.isModernTheme }">
     <div class="sticker-messages__header">
       <h3 class="sticker-messages__title">
         Сообщения
@@ -128,7 +135,10 @@ onMounted(() => {
         :key="sticker.id"
         class="sticker-message-item"
         :class="{ 'sticker-message-item--editing': editingStickerId === sticker.id }"
-        :style="{ borderLeftColor: sticker.color || '#FFFF88' }"
+        :style="{
+          borderLeftColor: sticker.color || '#FFFF88',
+          backgroundColor: (sticker.color || '#FFFF88') + '20'
+        }"
         @click="handleStickerClick(sticker, $event)"
       >
         <div class="sticker-message-item__header">
@@ -254,7 +264,7 @@ onMounted(() => {
 
 .sticker-message-item {
   padding: 12px;
-  background: rgba(248, 250, 252, 0.8);
+  /* Фон переопределяется через inline-стиль с цветом стикера */
   border-left: 4px solid #FFFF88;
   border-radius: 8px;
   cursor: pointer;
@@ -262,9 +272,9 @@ onMounted(() => {
 }
 
 .sticker-message-item:hover {
-  background: rgba(241, 245, 249, 1);
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
   transform: translateX(4px);
+  filter: brightness(0.95);
 }
 
 .sticker-message-item__header {
@@ -396,57 +406,57 @@ onMounted(() => {
   transform: translateY(-1px);
 }
 
-/* Темная тема */
-@media (prefers-color-scheme: dark) {
-  .sticker-messages__title {
-    color: #e5f3ff;
-  }
+/* Темная тема (Modern Theme) */
+.sticker-messages--modern .sticker-messages__title {
+  color: #e5f3ff;
+}
 
-  .sticker-messages__count {
-    color: #94a3b8;
-  }
+.sticker-messages--modern .sticker-messages__count {
+  color: #94a3b8;
+}
 
-  .sticker-messages__empty-text {
-    color: #94a3b8;
-  }
+.sticker-messages--modern .sticker-messages__empty-text {
+  color: #94a3b8;
+}
 
-  .sticker-messages__empty-hint {
-    color: #64748b;
-  }
+.sticker-messages--modern .sticker-messages__empty-hint {
+  color: #64748b;
+}
 
-  .sticker-message-item {
-    background: rgba(24, 34, 58, 0.6);
-  }
+.sticker-messages--modern .sticker-message-item {
+  /* Фон переопределяется через inline-стиль с цветом стикера */
+  /* Добавляем небольшую темную подложку для читаемости */
+  box-shadow: inset 0 0 0 1000px rgba(24, 34, 58, 0.3);
+}
 
-  .sticker-message-item:hover {
-    background: rgba(30, 41, 68, 0.8);
-  }
+.sticker-messages--modern .sticker-message-item:hover {
+  box-shadow: inset 0 0 0 1000px rgba(24, 34, 58, 0.4), 0 4px 12px rgba(6, 11, 21, 0.3);
+}
 
-  .sticker-message-item__author {
-    color: #e5f3ff;
-  }
+.sticker-messages--modern .sticker-message-item__author {
+  color: #e5f3ff;
+}
 
-  .sticker-message-item__date {
-    color: #64748b;
-  }
+.sticker-messages--modern .sticker-message-item__date {
+  color: #64748b;
+}
 
-  .sticker-message-item__content {
-    color: #cbd5e1;
-  }
+.sticker-messages--modern .sticker-message-item__content {
+  color: #cbd5e1;
+}
 
-  .sticker-message-item__action {
-    background: rgba(24, 34, 58, 0.8);
-  }
+.sticker-messages--modern .sticker-message-item__action {
+  background: rgba(24, 34, 58, 0.8);
+}
 
-  .sticker-message-item__textarea {
-    background: rgba(24, 34, 58, 0.8);
-    color: #e5f3ff;
-    border-color: rgba(59, 130, 246, 0.4);
-  }
+.sticker-messages--modern .sticker-message-item__textarea {
+  background: rgba(24, 34, 58, 0.8);
+  color: #e5f3ff;
+  border-color: rgba(59, 130, 246, 0.4);
+}
 
-  .sticker-message-item__edit-btn--cancel {
-    background: rgba(148, 163, 184, 0.2);
-    color: #cbd5e1;
-  }
+.sticker-messages--modern .sticker-message-item__edit-btn--cancel {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
 }
 </style>

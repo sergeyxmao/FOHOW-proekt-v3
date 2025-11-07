@@ -34,7 +34,7 @@ const handleClose = () => {
     </div>
 
     <div class="sticker-messages-panel__content">
-      <StickerMessages />
+      <StickerMessages :isModernTheme="props.isModernTheme" />
     </div>
   </div>
 </template>
