@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick, provide } from 'vue';
 import html2canvas from 'html2canvas';  
 import { storeToRefs } from 'pinia';
 import { useCardsStore } from '../../stores/cards';
@@ -1145,6 +1145,29 @@ const focusCardOnCanvas = (cardId) => {
   cardsStore.deselectAllCards();
   cardsStore.selectCard(cardId);
 };
+
+const focusStickerOnCanvas = (stickerId) => {
+  const sticker = stickersStore.stickers.find(s => s.id === stickerId);
+  if (!sticker || !canvasContainerRef.value) {
+    return;
+  }
+  const scale = zoomScale.value || 1;
+  const containerRect = canvasContainerRef.value.getBoundingClientRect();
+  // Стикеры имеют примерный размер 200x150
+  const stickerCenterX = sticker.pos_x + 100;
+  const stickerCenterY = sticker.pos_y + 75;
+  const targetTranslateX = containerRect.width / 2 - stickerCenterX * scale;
+  const targetTranslateY = containerRect.height / 2 - stickerCenterY * scale;
+
+  setZoomTransform({
+    scale,
+    translateX: targetTranslateX,
+    translateY: targetTranslateY
+  });
+};
+
+// Предоставляем функцию фокусировки для дочерних компонентов
+provide('focusStickerOnCanvas', focusStickerOnCanvas);
   
 const getBranchDescendants = (startCardId, branchFilter) => {
   const visited = new Set([startCardId]);
