@@ -1,7 +1,5 @@
 <script setup>
-import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useNotesStore } from '../../stores/notes.js'
 import { useBoardCommentsStore } from '../Panels/boardComments.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
@@ -15,7 +13,6 @@ const props = defineProps({
 })
 const emit = defineEmits(['request-close'])
 
-const notesStore = useNotesStore()
 const boardCommentsStore = useBoardCommentsStore()
 const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
@@ -25,12 +22,7 @@ const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
 const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen } = storeToRefs(sidePanelsStore)
 const { currentBoardId } = storeToRefs(boardStore)
 
-const hasNoteEntries = computed(() => notesStore.hasEntries)
-
 const handleNotesToggle = () => {
-  if (!hasNoteEntries.value) {
-    return
-  }
   sidePanelsStore.toggleNotes()
   emit('request-close')
 }
@@ -69,7 +61,6 @@ const handleAddSticker = () => {
         type="button"
         class="discussion-menu__action"
         :class="{ 'discussion-menu__action--active': isNotesOpen }"
-        :disabled="!hasNoteEntries"
         @click="handleNotesToggle"
       >
         Список заметок
