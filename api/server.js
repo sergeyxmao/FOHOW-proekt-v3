@@ -289,7 +289,12 @@ app.get('/api/profile', {
 }, async (req, reply) => {
   try {
     const result = await pool.query(
-      'SELECT id, email, username, avatar_url, created_at, updated_at FROM users WHERE id = $1',
+    `SELECT id, email, username, avatar_url, created_at, updated_at, 
+            country, city, office, personal_id, phone, full_name, 
+            telegram_user, telegram_channel, vk_profile, ok_profile, 
+            instagram_profile, whatsapp_contact, 
+            visibility_settings, search_settings 
+     FROM users WHERE id = $1`
       [req.user.id]
     );
     
