@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 
+// API_URL лучше вынести в константу
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
 export const useAuthStore = defineStore('auth', {
@@ -7,7 +8,7 @@ export const useAuthStore = defineStore('auth', {
     user: null,
     token: null,
     isAuthenticated: false,
-    isLoadingProfile: true
+    isLoadingProfile: true // Изначально считаем, что профиль загружается
   }),
 
   actions: {
@@ -15,23 +16,22 @@ export const useAuthStore = defineStore('auth', {
       const token = localStorage.getItem('token');
       const cachedUser = localStorage.getItem('user');
 
-      this.isLoadingProfile = true; // Начинаем загрузку в любом случае
+      this.isLoadingProfile = true; // Начинаем загрузку
 
       if (token) {
         this.token = token;
-        this.isAuthenticated = true; // Сразу считаем авторизованным
-
+        
         // Если есть кэшированные данные пользователя, показываем их немедленно
         if (cachedUser) {
           try {
             this.user = JSON.parse(cachedUser);
           } catch (e) {
             console.error("Ошибка парсинга кэшированного пользователя:", e);
-            localStorage.removeItem('user');
+            localStorage.removeItem('user'); // Удаляем некорректные данные
           }
         }
 
-        // В фоне всегда запрашиваем свежие данные профиля
+        // Всегда пытаемся запросить свежие данные профиля, чтобы проверить токен
         try {
           const response = await fetch(`${API_URL}/profile`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -41,23 +41,27 @@ export const useAuthStore = defineStore('auth', {
             const data = await response.json();
             this.user = data.user; // Обновляем на свежие данные
             localStorage.setItem('user', JSON.stringify(data.user)); // Обновляем кэш
+            this.isAuthenticated = true; // Токен валиден, пользователь авторизован
           } else {
-            // Токен невалидный - полный сброс
-            this.logout(); 
+            // Токен невалидный - вызываем logout для полного сброса
+            await this.logout(); 
           }
         } catch (err) {
           console.error('Ошибка фоновой загрузки профиля:', err);
-          // Если нет сети, мы продолжим работать с кэшированными данными
+          // Если нет сети или другая ошибка, считаем, что токен невалиден
+          await this.logout(); 
         } finally {
-          this.isLoadingProfile = false; // Завершаем загрузку
+          this.isLoadingProfile = false; // Завершаем загрузку в любом случае
         }
       } else {
-        // Если токена нет, просто завершаем
-        this.isLoadingProfile = false;
+        // Если токена нет в localStorage, пользователь не авторизован
+        this.isAuthenticated = false;
+        this.isLoadingProfile = false; // Завершаем загрузку
       }
     },
 
     async register(email, password, verificationCode, verificationToken) {
+      // ... (код регистрации остается без изменений) ...
       const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -71,10 +75,10 @@ export const useAuthStore = defineStore('auth', {
       }
 
       await this.finalizeAuthentication(data.token, data.user)
-
     },
 
     async login(email, password, verificationCode, verificationToken) {
+      // ... (код входа остается без изменений) ...
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,30 +110,33 @@ export const useAuthStore = defineStore('auth', {
           const profileData = await profileResponse.json()
           this.user = profileData.user
         } else {
+          // Если данные профиля не удалось получить, используем fallbackUser
           this.user = fallbackUser
         }
       } catch (err) {
         console.error('Ошибка загрузки профиля после входа:', err)
+        // Если была ошибка сети, используем fallbackUser
         this.user = fallbackUser
       } finally {
-        this.isLoadingProfile = false
+        this.isLoadingProfile = false // Завершаем загрузку профиля
       }
 
-      this.isAuthenticated = true
+      this.isAuthenticated = true // Устанавливаем isAuthenticated в true только после всех манипуляций
       localStorage.setItem('user', JSON.stringify(this.user))
     },
 
     async logout() {
       this.user = null
       this.token = null
-      this.isAuthenticated = false
+      this.isAuthenticated = false // Убеждаемся, что isAuthenticated сброшен в false
 
       localStorage.removeItem('token')
       localStorage.removeItem('user')
 
       // Очищаем личные комментарии при выходе
       try {
-        const { useUserCommentsStore } = await import('./userComments.js')
+        // Динамический импорт, чтобы не загружать этот модуль, если он не нужен
+        const { useUserCommentsStore } = await import('./userComments.js') 
         const userCommentsStore = useUserCommentsStore()
         userCommentsStore.clearComments()
       } catch (err) {
@@ -139,6 +146,8 @@ export const useAuthStore = defineStore('auth', {
 
     async fetchProfile() {
       if (!this.token) {
+        // Если токена нет, нет смысла запрашивать профиль
+        this.isLoadingProfile = false; // Завершаем загрузку
         throw new Error('Отсутствует токен авторизации')
       }
 
@@ -152,12 +161,14 @@ export const useAuthStore = defineStore('auth', {
         })
 
         if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.error || 'Ошибка загрузки профиля')
+          // Если токен невалиден, вызываем logout
+          const errorData = await response.json().catch(() => ({})); // Пытаемся получить тело ошибки
+          console.error('Ошибка загрузки профиля (невалидный токен?):', errorData.error || response.statusText);
+          await this.logout(); 
+          throw new Error(errorData.error || 'Ошибка загрузки профиля'); // Перебрасываем ошибку дальше
         }
 
         const data = await response.json()
-        // Сохраняем весь объект пользователя без фильтрации полей
         this.user = data.user
         localStorage.setItem('user', JSON.stringify(data.user))
 
@@ -187,7 +198,6 @@ export const useAuthStore = defineStore('auth', {
       }
 
       const data = await response.json()
-      // Обновляем состояние user данными, которые вернул сервер
       this.user = data.user
       localStorage.setItem('user', JSON.stringify(data.user))
 
