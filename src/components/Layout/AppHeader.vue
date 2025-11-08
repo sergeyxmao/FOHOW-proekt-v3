@@ -20,7 +20,7 @@ const props = defineProps({
 
 const authStore = useAuthStore()
 const boardStore = useBoardStore()
-const { isAuthenticated, user } = storeToRefs(authStore)
+const { isAuthenticated, user, isLoadingProfile } = storeToRefs(authStore)
 const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
   
 const lastSavedFormatter = new Intl.DateTimeFormat('ru-RU', {
@@ -166,7 +166,7 @@ onBeforeUnmount(() => {
     <div class="app-header__inner">
       <div class="app-header__user-block">
         <div class="app-header__auth">
-          <template v-if="isAuthenticated">
+          <template v-if="isAuthenticated && !isLoadingProfile">
             <div class="app-header__user-column">
               <button
                 ref="userTriggerRef"
