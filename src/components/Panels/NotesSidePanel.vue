@@ -1,7 +1,6 @@
 <script setup>
 import { storeToRefs } from 'pinia'
 import { useNotesStore } from '../../stores/notes.js'
-import { useCardsStore } from '../../stores/cards.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useBoardStore } from '../../stores/board.js'
 
@@ -13,7 +12,6 @@ const props = defineProps({
 })
 
 const notesStore = useNotesStore()
-const cardsStore = useCardsStore()
 const sidePanelsStore = useSidePanelsStore()
 
 const { cardsWithEntries } = storeToRefs(notesStore)
@@ -36,9 +34,6 @@ const handleNoteEntryDelete = async (cardId, date) => {
   console.log('🗑️ Попытка удалить заметку:', { cardId, date })
 
   try {
-    // Удаляем локально
-    cardsStore.removeCardNoteEntry(cardId, date)
-
     // Синхронизируем с сервером (отправляем пустое содержимое для удаления)
     const boardStore = useBoardStore()
     if (boardStore.currentBoardId) {
@@ -66,9 +61,6 @@ const handleCardNotesDelete = async (cardId) => {
     // Получаем все даты заметок для этой карточки
     const cardNotes = notesStore.getNotesForCard(cardId)
     const dates = Object.keys(cardNotes)
-
-    // Удаляем локально
-    cardsStore.clearCardNotes(cardId)
 
     // Синхронизируем с сервером
     const boardStore = useBoardStore()
