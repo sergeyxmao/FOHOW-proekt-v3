@@ -690,7 +690,6 @@ watch(isSaveAvailable, (canSave) => {
 
 onMounted(async () => {
   // Инициализируем authStore - загружаем данные пользователя
-  await authStore.init()
 
   // Определяем тип устройства
   mobileStore.detectDevice()
@@ -735,7 +734,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- Теперь v-if и v-else находятся на одном уровне, что корректно -->
+  <!-- Показываем основной интерфейс только ПОСЛЕ полной инициализации приложения -->
   <div v-if="isAppInitialized" id="app" :class="{ 'app--mobile': isMobileMode }">
     
     <!-- Desktop UI -->
@@ -920,11 +919,11 @@ onBeforeUnmount(() => {
       <div
         v-if="showProfile"
         :class="['profile-modal-overlay no-print', { 'profile-modal-overlay--modern': isModernTheme }]"
-        @click.self="showProfile = false"
+        @click.self="handleCloseProfile"
       >
         <UserProfile
           :is-modern-theme="isModernTheme"
-          @close="showProfile = false"
+          @close="handleCloseProfile"
         />
       </div>
     </Teleport>
