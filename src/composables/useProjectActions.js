@@ -716,228 +716,261 @@ export function useProjectActions() {
     input.click()
   }
 
-   const handleExportPNG = async (exportSettings = null) => {
-      try {
-        const canvasContainer = document.querySelector('.canvas-container');
-        const canvasContent = canvasContainer?.querySelector('.canvas-content');
+  const handleExportPNG = async (exportSettings = null) => {
+    try {
+      const canvasContainer = document.querySelector('.canvas-container')
+      const canvasContent = canvasContainer?.querySelector('.canvas-content')
 
-        if (!canvasContainer || !canvasContent) {
-          alert('Не удалось найти содержимое холста для экспорта.');
-          return;
-        }
-
-        if (cardsStore.cards.length === 0 && connectionsStore.connections.length === 0) {
-          alert('На доске нет элементов для экспорта.');
-          return;
-        }
-
-        // Add a class to hide UI elements
-        canvasContainer.classList.add('canvas-container--capturing');
-
-        // Apply export options
-        const tempStyles = [];
-
-        // Option "Скрыть содержимое"
-        if (exportSettings?.hideContent) {
-          const elementsToHide = canvasContainer.querySelectorAll('.card-title, .value, .card-body-html');
-          elementsToHide.forEach(el => {
-            tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility });
-            el.style.visibility = 'hidden';
-          });
-          const coinIcons = canvasContainer.querySelectorAll('.coin-icon');
-          coinIcons.forEach(el => {
-            tempStyles.push({ element: el, property: 'display', originalValue: el.style.display });
-            el.style.display = 'none';
-          });
-        }
-
-        // Hide control buttons
-        const controlButtons = canvasContainer.querySelectorAll('.card-close-btn, .card-note-btn, .active-pv-btn, [data-role="active-pv-buttons"]');
-        controlButtons.forEach(el => {
-          tempStyles.push({ element: el, property: 'display', originalValue: el.style.display });
-          el.style.display = 'none';
-        });
-
-        // Option "Ч/Б (контур)"
-        if (exportSettings?.blackAndWhite) {
-          const cards = canvasContainer.querySelectorAll('.card');
-          cards.forEach(card => {
-            tempStyles.push({ element: card, property: 'background', originalValue: card.style.background });
-            tempStyles.push({ element: card, property: 'box-shadow', originalValue: card.style.boxShadow });
-            tempStyles.push({ element: card, property: 'border', originalValue: card.style.border });
-            card.style.background = '#ffffff';
-            card.style.boxShadow = 'none';
-            card.style.border = '2px solid #000000';
-          });
-          const cardHeadersBW = canvasContainer.querySelectorAll('.card-header, .card-title');
-          cardHeadersBW.forEach(header => {
-            tempStyles.push({ element: header, property: 'background', originalValue: header.style.background });
-            tempStyles.push({ element: header, property: 'border-bottom', originalValue: header.style.borderBottom });
-            tempStyles.push({ element: header, property: 'color', originalValue: header.style.color });
-            header.style.background = '#ffffff';
-            header.style.borderBottom = 'none';
-            header.style.color = '#000000';
-          });
-          const allText = canvasContainer.querySelectorAll('.label, .value, .card-body-html');
-          allText.forEach(el => {
-            tempStyles.push({ element: el, property: 'color', originalValue: el.style.color });
-            el.style.color = '#000000';
-          });
-          const coloredElements = canvasContainer.querySelectorAll('.coin-icon, .slf-badge, .fendou-badge, .rank-badge');
-          coloredElements.forEach(el => {
-            tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility });
-            el.style.visibility = 'hidden';
-          });
-          const lines = canvasContainer.querySelectorAll('.line');
-          lines.forEach(line => {
-            tempStyles.push({ element: line, property: 'stroke', originalValue: line.style.stroke });
-            line.style.stroke = '#000000';
-          });
-        }
-        
-        // Временно упрощаем фон заголовков для корректного рендеринга
-        const cardHeaders = canvasContainer.querySelectorAll('.card-header, .card-title');
-        cardHeaders.forEach(header => {
-            const computedBgColor = window.getComputedStyle(header).backgroundColor;
-            tempStyles.push({ element: header, property: 'background', originalValue: header.style.background });
-            header.style.background = computedBgColor || 'rgba(0,0,0,0.1)';
-        });
-
-        // Save the original transform
-        const originalTransform = canvasContent.style.transform;
-
-        // Reset the transform to capture at a 1:1 scale
-        canvasContent.style.transform = 'matrix(1, 0, 0, 1, 0, 0)';
-
-        // Calculate the boundaries of all cards
-        const cards = cardsStore.cards;
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-        cards.forEach(card => {
-          const left = card.x || 0, top = card.y || 0, width = card.width || 0, height = card.height || 0;
-          minX = Math.min(minX, left);
-          minY = Math.min(minY, top);
-          maxX = Math.max(maxX, left + width);
-          maxY = Math.max(maxY, top + height);
-        });
-
-        // Add padding
-        const PADDING = 50;
-        minX -= PADDING;
-        minY -= PADDING;
-        maxX += PADDING;
-        maxY += PADDING;
-
-        const contentWidth = maxX - minX;
-        const contentHeight = maxY - minY;
-
-        // Set the position of canvas-content to capture the desired area
-        const originalLeft = canvasContent.style.left;
-        const originalTop = canvasContent.style.top;
-
-        canvasContent.style.left = `${-minX}px`;
-        canvasContent.style.top = `${-minY}px`;
-
-        // Determine the export parameters
-        let finalWidth, finalHeight, scale;
-
-        if (exportSettings && exportSettings.format !== 'original') {
-          let pageWidthMm = exportSettings.width, pageHeightMm = exportSettings.height;
-          if (exportSettings.orientation === 'landscape') {
-            [pageWidthMm, pageHeightMm] = [pageHeightMm, pageWidthMm];
-          }
-          finalWidth = Math.round((pageWidthMm / 25.4) * exportSettings.dpi);
-          finalHeight = Math.round((pageHeightMm / 25.4) * exportSettings.dpi);
-          scale = exportSettings.dpi / 96;
-        } else {
-          finalWidth = contentWidth;
-          finalHeight = contentHeight;
-          scale = 2;
-        }
-
-        // Capture the content image
-        const contentCanvas = await html2canvas(canvasContainer, {
-          backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
-          logging: false,
-          useCORS: true,
-          scale: scale,
-          width: contentWidth,
-          height: contentHeight,
-          windowWidth: contentWidth,
-          windowHeight: contentHeight
-        });
-
-        // Restore original values
-        canvasContent.style.transform = originalTransform;
-        canvasContent.style.left = originalLeft;
-        canvasContent.style.top = originalTop;
-        canvasContainer.classList.remove('canvas-container--capturing');
-
-        tempStyles.forEach(({ element, property, originalValue }) => {
-          element.style[property] = originalValue || '';
-        });
-
-        let finalCanvas;
-
-        if (exportSettings && exportSettings.format !== 'original') {
-          finalCanvas = document.createElement('canvas');
-          finalCanvas.width = finalWidth;
-          finalCanvas.height = finalHeight;
-
-          const ctx = finalCanvas.getContext('2d');
-          ctx.fillStyle = exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff');
-          ctx.fillRect(0, 0, finalWidth, finalHeight);
-
-          const scaleX = finalWidth / contentCanvas.width;
-          const scaleY = finalHeight / contentCanvas.height;
-          const fitScale = Math.min(scaleX, scaleY);
-
-          const scaledWidth = contentCanvas.width * fitScale;
-          const scaledHeight = contentCanvas.height * fitScale;
-
-          const offsetX = (finalWidth - scaledWidth) / 2;
-          const offsetY = (finalHeight - scaledHeight) / 2;
-
-          ctx.drawImage(contentCanvas, 0, 0, contentCanvas.width, contentCanvas.height, offsetX, offsetY, scaledWidth, scaledHeight);
-        } else {
-          finalCanvas = contentCanvas;
-        }
-
-        finalCanvas.toBlob(async (blob) => {
-          if (!blob) {
-            alert('Не удалось создать изображение.');
-            return;
-          }
-
-          let finalBlob = blob;
-          if (exportSettings?.dpi) {
-            finalBlob = await addPngDpiMetadata(blob, exportSettings.dpi);
-          }
-
-          const url = URL.createObjectURL(finalBlob);
-          const link = document.createElement('a');
-
-          const now = new Date();
-          const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-          const timeStr = `${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
-          
-          const baseFileName = formatProjectFileName(normalizedProjectName.value || projectStore.projectName, 'scheme');
-          
-          let formatSuffix = '';
-          if (exportSettings && exportSettings.format !== 'original') {
-            formatSuffix = `_${exportSettings.format.toUpperCase()}_${exportSettings.orientation === 'portrait' ? 'P' : 'L'}_${exportSettings.dpi}dpi`;
-          }
-
-          link.download = `${baseFileName}${formatSuffix}_${dateStr}_${timeStr}.png`;
-          link.href = url;
-          link.click();
-          URL.revokeObjectURL(url);
-        }, 'image/png');
-      } catch (error) {
-        console.error('Ошибка при экспорте в PNG:', error);
-        alert('Экспорт в PNG завершился ошибкой. Подробности в консоли.');
+      if (!canvasContainer || !canvasContent) {
+        alert('Не удалось найти содержимое холста для экспорта.')
+        return
       }
-    };
+
+      if (cardsStore.cards.length === 0 && connectionsStore.connections.length === 0) {
+        alert('На доске нет элементов для экспорта.')
+        return
+      }
+
+      // Add a class to hide UI elements
+      canvasContainer.classList.add('canvas-container--capturing')
+
+      // Apply export options
+      const tempStyles = []
+
+      // Option "Скрыть содержимое"
+      if (exportSettings?.hideContent) {
+        // Hide all text elements on the cards
+        const textElements = canvasContainer.querySelectorAll('.card-title, .card-body, .label, .value, .card-row, .card-body-html')
+        textElements.forEach(el => {
+          tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+          el.style.visibility = 'hidden'
+        })
+      }
+
+      // Hide control buttons
+      const controlButtons = canvasContainer.querySelectorAll('.card-close-btn, .card-note-btn, .active-pv-btn, [data-role="active-pv-buttons"]')
+      controlButtons.forEach(el => {
+        tempStyles.push({ element: el, property: 'display', originalValue: el.style.display })
+        el.style.display = 'none'
+      })
+
+      // Option "Ч/Б (контур)"
+      if (exportSettings?.blackAndWhite) {
+        // Set white background for cards and a black border
+        const cards = canvasContainer.querySelectorAll('.card')
+        cards.forEach(card => {
+          tempStyles.push({ element: card, property: 'background', originalValue: card.style.background })
+          tempStyles.push({ element: card, property: 'box-shadow', originalValue: card.style.boxShadow })
+          tempStyles.push({ element: card, property: 'border', originalValue: card.style.border })
+          card.style.background = '#ffffff'
+          card.style.boxShadow = 'none'
+          card.style.border = '2px solid #000000'
+        })
+
+        // Set a white background for card headers with a black separating line
+        const cardHeaders = canvasContainer.querySelectorAll('.card-header, .card-title')
+        cardHeaders.forEach(header => {
+          tempStyles.push({ element: header, property: 'background', originalValue: header.style.background })
+          tempStyles.push({ element: header, property: 'border-bottom', originalValue: header.style.borderBottom })
+          tempStyles.push({ element: header, property: 'color', originalValue: header.style.color })
+          header.style.background = '#ffffff'
+          header.style.borderBottom = '2px solid #000000'
+          header.style.color = '#000000'
+        })
+
+        // Hide colored elements (icons, badges)
+        const coloredElements = canvasContainer.querySelectorAll('.coin-icon, .slf-badge, .fendou-badge, .rank-badge')
+        coloredElements.forEach(el => {
+          tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+          el.style.visibility = 'hidden'
+        })
+
+        // Make all connection lines black
+        const lines = canvasContainer.querySelectorAll('.line')
+        lines.forEach(line => {
+          tempStyles.push({ element: line, property: 'stroke', originalValue: line.style.stroke })
+          line.style.stroke = '#000000'
+        })
+      }
+
+      // Save the original transform
+      const originalTransform = canvasContent.style.transform
+
+      // Reset the transform to capture at a 1:1 scale
+      canvasContent.style.transform = 'matrix(1, 0, 0, 1, 0, 0)'
+
+      // Calculate the boundaries of all cards
+      const cards = cardsStore.cards
+      let minX = Infinity
+      let minY = Infinity
+      let maxX = -Infinity
+      let maxY = -Infinity
+
+      cards.forEach(card => {
+        const left = card.x || 0
+        const top = card.y || 0
+        const width = card.width || 0
+        const height = card.height || 0
+
+        minX = Math.min(minX, left)
+        minY = Math.min(minY, top)
+        maxX = Math.max(maxX, left + width)
+        maxY = Math.max(maxY, top + height)
+      })
+
+      // Add padding
+      const PADDING = 50
+      minX -= PADDING
+      minY -= PADDING
+      maxX += PADDING
+      maxY += PADDING
+
+      const contentWidth = maxX - minX
+      const contentHeight = maxY - minY
+
+      // Set the position of canvas-content to capture the desired area
+      const originalLeft = canvasContent.style.left
+      const originalTop = canvasContent.style.top
+
+      canvasContent.style.left = `${-minX}px`
+      canvasContent.style.top = `${-minY}px`
+
+      // Determine the export parameters
+      let finalWidth, finalHeight, scale
+
+      if (exportSettings && exportSettings.format !== 'original') {
+        // Calculate the dimensions in pixels based on format and DPI
+        let pageWidthMm = exportSettings.width
+        let pageHeightMm = exportSettings.height
+
+        // Apply orientation
+        if (exportSettings.orientation === 'landscape') {
+          [pageWidthMm, pageHeightMm] = [pageHeightMm, pageWidthMm]
+        }
+
+        // Convert millimeters to pixels: pixels = (mm / 25.4) * DPI
+        finalWidth = Math.round((pageWidthMm / 25.4) * exportSettings.dpi)
+        finalHeight = Math.round((pageHeightMm / 25.4) * exportSettings.dpi)
+
+        // Calculate the scale for html2canvas based on DPI
+        // The base resolution is 96 DPI
+        scale = exportSettings.dpi / 96
+      } else {
+        // Original size
+        finalWidth = contentWidth
+        finalHeight = contentHeight
+        scale = 2 // Increase the resolution for better quality
+      }
+
+      // Capture the content image
+      const contentCanvas = await html2canvas(canvasContainer, {
+        backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
+        logging: false,
+        useCORS: true,
+        scale: scale,
+        width: contentWidth,
+        height: contentHeight,
+        windowWidth: contentWidth,
+        windowHeight: contentHeight
+      })
+
+      // Restore original values
+      canvasContent.style.transform = originalTransform
+      canvasContent.style.left = originalLeft
+      canvasContent.style.top = originalTop
+      canvasContainer.classList.remove('canvas-container--capturing')
+
+      // Restore temporary styles
+      tempStyles.forEach(({ element, property, originalValue }) => {
+        if (originalValue) {
+          element.style[property] = originalValue
+        } else {
+          element.style[property] = ''
+        }
+      })
+
+      let finalCanvas
+
+      if (exportSettings && exportSettings.format !== 'original') {
+        // Create the final canvas with the specified dimensions
+        finalCanvas = document.createElement('canvas')
+        finalCanvas.width = finalWidth
+        finalCanvas.height = finalHeight
+
+        const ctx = finalCanvas.getContext('2d')
+
+        // Fill the background
+        ctx.fillStyle = exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff')
+        ctx.fillRect(0, 0, finalWidth, finalHeight)
+
+        // Calculate the scale to fit the content within the final size
+        const scaleX = finalWidth / contentCanvas.width
+        const scaleY = finalHeight / contentCanvas.height
+        const fitScale = Math.min(scaleX, scaleY)
+
+        // Calculate the dimensions of the scaled content
+        const scaledWidth = contentCanvas.width * fitScale
+        const scaledHeight = contentCanvas.height * fitScale
+
+        // Center the image
+        const offsetX = (finalWidth - scaledWidth) / 2
+        const offsetY = (finalHeight - scaledHeight) / 2
+
+        // Draw the scaled and centered image
+        ctx.drawImage(
+          contentCanvas,
+          0, 0, contentCanvas.width, contentCanvas.height,
+          offsetX, offsetY, scaledWidth, scaledHeight
+        )
+      } else {
+        // Use the original canvas
+        finalCanvas = contentCanvas
+      }
+
+      // Convert to a blob and download
+      finalCanvas.toBlob(async (blob) => {
+        if (!blob) {
+          alert('Не удалось создать изображение.')
+          return
+        }
+
+        // Add DPI metadata to the PNG file
+        let finalBlob = blob
+        if (exportSettings?.dpi) {
+          finalBlob = await addPngDpiMetadata(blob, exportSettings.dpi)
+        }
+
+        const url = URL.createObjectURL(finalBlob)
+        const link = document.createElement('a')
+
+        // Form the file name: project name + date and time
+        const now = new Date()
+        const dateStr = now.getFullYear() + '-' +
+          String(now.getMonth() + 1).padStart(2, '0') + '-' +
+          String(now.getDate()).padStart(2, '0')
+        const timeStr = String(now.getHours()).padStart(2, '0') + '-' +
+          String(now.getMinutes()).padStart(2, '0') + '-' +
+          String(now.getSeconds()).padStart(2, '0')
+
+        const baseFileName = formatProjectFileName(normalizedProjectName.value || projectStore.projectName, 'scheme')
+
+        // Add format information to the file name if not the original size
+        let formatSuffix = ''
+        if (exportSettings && exportSettings.format !== 'original') {
+          formatSuffix = `_${exportSettings.format.toUpperCase()}_${exportSettings.orientation === 'portrait' ? 'P' : 'L'}_${exportSettings.dpi}dpi`
+        }
+
+        link.download = `${baseFileName}${formatSuffix}_${dateStr}_${timeStr}.png`
+
+        link.href = url
+        link.click()
+        URL.revokeObjectURL(url)
+      }, 'image/png')
+    } catch (error) {
+      console.error('Ошибка при экспорте в PNG:', error)
+      alert('Экспорт в PNG завершился ошибкой. Подробности в консоли.')
+    }
+  }
 
   return {
     handleSaveProject,
