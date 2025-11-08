@@ -761,77 +761,19 @@ export function useProjectActions() {
         el.style.display = 'none'
       })
 
-    // Option "Ч/Б (контур)"
-    if (exportSettings?.blackAndWhite) {
-      // Устанавливаем белый фон для карточек и черный контур
-      const cards = canvasContainer.querySelectorAll('.card');
-      cards.forEach(card => {
-        tempStyles.push({ element: card, property: 'background', originalValue: card.style.background });
-        tempStyles.push({ element: card, property: 'box-shadow', originalValue: card.style.boxShadow });
-        tempStyles.push({ element: card, property: 'border', originalValue: card.style.border });
-        card.style.background = '#ffffff';
-        card.style.boxShadow = 'none';
-        card.style.border = '2px solid #000000'; // Черный контур для всей карточки
-      });
-
-      // Делаем заголовки белыми и УБИРАЕМ нижнюю границу
-      const cardHeaders = canvasContainer.querySelectorAll('.card-header, .card-title');
-      cardHeaders.forEach(header => {
-        tempStyles.push({ element: header, property: 'background', originalValue: header.style.background });
-        tempStyles.push({ element: header, property: 'border-bottom', originalValue: header.style.borderBottom }); // Запоминаем границу
-        tempStyles.push({ element: header, property: 'color', originalValue: header.style.color });
-        header.style.background = '#ffffff';
-        header.style.borderBottom = 'none'; // Убираем полосу
-        header.style.color = '#000000'; // Весь текст делаем черным
-      });
-
-      // Весь остальной текст тоже делаем черным
-      const allText = canvasContainer.querySelectorAll('.label, .value, .card-body-html');
-      allText.forEach(el => {
-        tempStyles.push({ element: el, property: 'color', originalValue: el.style.color });
-        el.style.color = '#000000';
-      });
-
-      // Скрываем цветные элементы
-      const coloredElements = canvasContainer.querySelectorAll('.coin-icon, .slf-badge, .fendou-badge, .rank-badge');
-      coloredElements.forEach(el => {
-        tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility });
-        el.style.visibility = 'hidden';
-      });
-
-      // Делаем все линии черными
-      const lines = canvasContainer.querySelectorAll('.line');
-      lines.forEach(line => {
-        tempStyles.push({ element: line, property: 'stroke', originalValue: line.style.stroke });
-        line.style.stroke = '#000000';
-      });
-    }
-
-        // Set a white background for card headers with a black separating line
-        const cardHeaders = canvasContainer.querySelectorAll('.card-header, .card-title')
-        cardHeaders.forEach(header => {
-          tempStyles.push({ element: header, property: 'background', originalValue: header.style.background })
-          tempStyles.push({ element: header, property: 'border-bottom', originalValue: header.style.borderBottom })
-          tempStyles.push({ element: header, property: 'color', originalValue: header.style.color })
-          header.style.background = '#ffffff'
-          header.style.borderBottom = '2px solid #000000'
-          header.style.color = '#000000'
+      // Option "Ч/Б (контур)"
+      if (exportSettings?.blackAndWhite) {
+        // Set white background for cards and a black border
+        const cards = canvasContainer.querySelectorAll('.card')
+        cards.forEach(card => {
+          tempStyles.push({ element: card, property: 'background', originalValue: card.style.background })
+          tempStyles.push({ element: card, property: 'box-shadow', originalValue: card.style.boxShadow })
+          tempStyles.push({ element: card, property: 'border', originalValue: card.style.border })
+          card.style.background = '#ffffff'
+          card.style.boxShadow = 'none'
+          card.style.border = '2px solid #000000'
         })
 
-        // Hide colored elements (icons, badges)
-        const coloredElements = canvasContainer.querySelectorAll('.coin-icon, .slf-badge, .fendou-badge, .rank-badge')
-        coloredElements.forEach(el => {
-          tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
-          el.style.visibility = 'hidden'
-        })
-
-        // Make all connection lines black
-        const lines = canvasContainer.querySelectorAll('.line')
-        lines.forEach(line => {
-          tempStyles.push({ element: line, property: 'stroke', originalValue: line.style.stroke })
-          line.style.stroke = '#000000'
-        })
-      }
 
     // Временно упрощаем фон заголовков для корректного рендеринга в html2canvas
     const cardHeaders = canvasContainer.querySelectorAll('.card-header, .card-title');
