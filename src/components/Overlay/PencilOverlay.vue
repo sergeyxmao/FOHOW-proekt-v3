@@ -31,6 +31,7 @@ const drawingCanvasRef = ref(null);
 const canvasContext = ref(null);
 const canvasWidth = ref(0);
 const canvasHeight = ref(0);
+const canvasScale = ref(1); // Масштаб между canvas и отображаемым размером
 const zoomScale = ref(1);
 const minZoomScale = ref(1);
 const isReady = ref(false);
@@ -102,12 +103,14 @@ const boardStyle = computed(() => {
   const scale = zoomScale.value || 1;
   const offset = panOffset.value || { x: 0, y: 0 };
 
+  // Используем bounds для отображаемых размеров, а не высокоразрешенные размеры canvas
   return {
     top: `${props.bounds.top}px`,
     left: `${props.bounds.left}px`,
-    width: `${canvasWidth.value}px`,
-    height: `${canvasHeight.value}px`,
+    width: `${props.bounds.width}px`,
+    height: `${props.bounds.height}px`,
     backgroundImage: `url(${props.snapshot})`,
+    backgroundSize: '100% 100%', // Масштабируем фон под размеры
     transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
     transformOrigin: 'top left'
   };
@@ -117,11 +120,14 @@ const selectionStyle = computed(() => {
     return null;
   }
 
+  // Преобразуем координаты из canvas пикселей в экранные пиксели
+  const displayScale = canvasScale.value || 1;
+
   return {
-    top: `${selectionRect.value.y}px`,
-    left: `${selectionRect.value.x}px`,
-    width: `${selectionRect.value.width}px`,
-    height: `${selectionRect.value.height}px`
+    top: `${selectionRect.value.y / displayScale}px`,
+    left: `${selectionRect.value.x / displayScale}px`,
+    width: `${selectionRect.value.width / displayScale}px`,
+    height: `${selectionRect.value.height / displayScale}px`
   };
 });
 
@@ -132,11 +138,14 @@ const eraserPreviewStyle = computed(() => {
     return null;
   }
 
+  // Преобразуем координаты и размеры из canvas пикселей в экранные пиксели
+  const displayScale = canvasScale.value || 1;
+
   return {
     width: `${eraserSize.value}px`,
     height: `${eraserSize.value}px`,
-    top: `${pointerPosition.value.y}px`,
-    left: `${pointerPosition.value.x}px`
+    top: `${pointerPosition.value.y / displayScale}px`,
+    left: `${pointerPosition.value.x / displayScale}px`
   };
 });
 const panelStyle = computed(() => {
@@ -344,9 +353,11 @@ const getCanvasPoint = (event) => {
 
   const rect = canvas.getBoundingClientRect();
   const scale = zoomScale.value || 1;
+  // Учитываем масштаб между отображаемым размером и высокоразрешенным canvas
+  const displayScale = canvasScale.value || 1;
   return {
-    x: (event.clientX - rect.left) / scale,
-    y: (event.clientY - rect.top) / scale
+    x: ((event.clientX - rect.left) / scale) * displayScale,
+    y: ((event.clientY - rect.top) / scale) * displayScale
   };
 };
 
@@ -358,18 +369,21 @@ const startStroke = (point) => {
   context.lineJoin = 'round';
   context.globalAlpha = 1;
 
+  // Масштабируем размеры инструментов с учетом высокого разрешения canvas
+  const displayScale = canvasScale.value || 1;
+
   if (currentTool.value === 'eraser') {
     context.globalCompositeOperation = 'destination-out';
     context.strokeStyle = 'rgba(0, 0, 0, 1)';
-    context.lineWidth = eraserSize.value;
+    context.lineWidth = eraserSize.value * displayScale;
   } else {
     context.globalCompositeOperation = 'source-over';
     if (currentTool.value === 'marker') {
       context.strokeStyle = hexToRgba(brushColor.value, markerOpacity.value);
-      context.lineWidth = markerSize.value;
+      context.lineWidth = markerSize.value * displayScale;
     } else {
       context.strokeStyle = brushColor.value;
-      context.lineWidth = brushSize.value;
+      context.lineWidth = brushSize.value * displayScale;
     }
   }
 
@@ -377,7 +391,7 @@ const startStroke = (point) => {
   context.moveTo(point.x, point.y);
   lastPoint.value = point;
   isDrawing.value = true;
-  hasStrokeChanges.value = false;  
+  hasStrokeChanges.value = false;
 };
 
 const continueStroke = (point) => {
@@ -832,10 +846,13 @@ const loadBaseImage = () => {
     return;
   }
 
-  isReady.value = false  
+  isReady.value = false
   const image = new Image();
   image.onload = () => {
     baseImage.value = image;
+
+    // Вычисляем масштаб между высокоразрешенным canvas и отображаемым размером
+    canvasScale.value = image.width / props.bounds.width;
     canvasWidth.value = image.width;
     canvasHeight.value = image.height;
     zoomScale.value = 1;
@@ -849,10 +866,20 @@ const loadBaseImage = () => {
         return;
       }
 
+      // Создаем canvas с высоким разрешением
       canvas.width = image.width;
       canvas.height = image.height;
-      canvasContext.value = canvas.getContext('2d');
+
+      canvasContext.value = canvas.getContext('2d', {
+        alpha: true,
+        desynchronized: false,
+        willReadFrequently: false
+      });
+
       if (canvasContext.value) {
+        // Настройки качества рендеринга
+        canvasContext.value.imageSmoothingEnabled = true;
+        canvasContext.value.imageSmoothingQuality = 'high';
         canvasContext.value.setTransform(1, 0, 0, 1, 0, 0);
         canvasContext.value.clearRect(0, 0, canvas.width, canvas.height);
       }
