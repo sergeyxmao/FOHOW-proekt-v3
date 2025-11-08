@@ -141,7 +141,7 @@
       </div>
 
       <!-- Форма редактирования -->
-      <form v-else class="profile-edit" @submit.prevent="handleUpdate">
+      <form v-else class="profile-edit" @submit.prevent="saveProfile">
         <div class="form-group">
           <label>Имя пользователя:</label>
           <input
@@ -579,7 +579,7 @@ async function loadProfile() {
   }
 }
 
-async function handleUpdate() {
+async function saveProfile() {
   error.value = ''
   success.value = ''
   updating.value = true
@@ -611,60 +611,46 @@ async function handleUpdate() {
       }
     }
 
-    const body = {
+    // Формируем данные профиля для отправки
+    const profileData = {
       email: trimmedEmail
     }
 
     if (trimmedUsername) {
-      body.username = trimmedUsername
+      profileData.username = trimmedUsername
     }
 
     // Добавляем новые поля профиля
-    body.country = editForm.value.country?.trim() || ''
-    body.city = editForm.value.city?.trim() || ''
-    body.office = editForm.value.office?.trim() || ''
-    body.personal_id = editForm.value.personal_id?.trim() || ''
-    body.phone = editForm.value.phone?.trim() || ''
-    body.full_name = editForm.value.full_name?.trim() || ''
-    body.telegram_user = editForm.value.telegram_user?.trim() || ''
-    body.telegram_channel = editForm.value.telegram_channel?.trim() || ''
-    body.vk_profile = editForm.value.vk_profile?.trim() || ''
-    body.ok_profile = editForm.value.ok_profile?.trim() || ''
-    body.instagram_profile = editForm.value.instagram_profile?.trim() || ''
-    body.whatsapp_contact = editForm.value.whatsapp_contact?.trim() || ''
+    profileData.country = editForm.value.country?.trim() || ''
+    profileData.city = editForm.value.city?.trim() || ''
+    profileData.office = editForm.value.office?.trim() || ''
+    profileData.personal_id = editForm.value.personal_id?.trim() || ''
+    profileData.phone = editForm.value.phone?.trim() || ''
+    profileData.full_name = editForm.value.full_name?.trim() || ''
+    profileData.telegram_user = editForm.value.telegram_user?.trim() || ''
+    profileData.telegram_channel = editForm.value.telegram_channel?.trim() || ''
+    profileData.vk_profile = editForm.value.vk_profile?.trim() || ''
+    profileData.ok_profile = editForm.value.ok_profile?.trim() || ''
+    profileData.instagram_profile = editForm.value.instagram_profile?.trim() || ''
+    profileData.whatsapp_contact = editForm.value.whatsapp_contact?.trim() || ''
 
     // Добавляем пароли ТОЛЬКО если реально меняем пароль
     if (isChangingPassword && editForm.value.newPassword && editForm.value.currentPassword) {
-      body.currentPassword = editForm.value.currentPassword
-      body.newPassword = editForm.value.newPassword
+      profileData.currentPassword = editForm.value.currentPassword
+      profileData.newPassword = editForm.value.newPassword
     }
 
-    const response = await fetch(`${API_URL}/profile`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authStore.token}`
-      },
-      body: JSON.stringify(body)
-    })
+    // Вызываем экшен authStore.updateProfile
+    const updatedUser = await authStore.updateProfile(profileData)
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Ошибка обновления профиля')
-    }
-
-    // КРИТИЧНО: Обновляем пользователя в authStore и localStorage
-    user.value = data.user
-    authStore.user = data.user
-
-    editForm.value.username = data.user.username || ''
-    editForm.value.email = data.user.email || ''
-    // Сохраняем в localStorage
-    localStorage.setItem('user', JSON.stringify(data.user))
+    // Обновляем локальные данные
+    user.value = updatedUser
+    editForm.value.username = updatedUser.username || ''
+    editForm.value.email = updatedUser.email || ''
 
     success.value = 'Профиль успешно обновлён!'
 
+    // Переключаем обратно в режим просмотра после успешного сохранения
     setTimeout(() => {
       editMode.value = false
       editForm.value.currentPassword = ''
@@ -675,7 +661,8 @@ async function handleUpdate() {
       passwordVisibility.confirm = false
     }, 1500)
   } catch (err) {
-    error.value = err.message
+    // Обработка ошибок, включая "Личный номер уже используется" и другие
+    error.value = err.message || 'Произошла ошибка при сохранении профиля'
   } finally {
     updating.value = false
   }
