@@ -24,7 +24,6 @@ import { useViewportStore } from './stores/viewport'
 import { useMobileStore } from './stores/mobile'
 import { useViewSettingsStore } from './stores/viewSettings'
 import { useNotesStore } from './stores/notes'
-// Убрал useProjectActions, так как он не используется в этом файле
 import { useMobileUIScaleGesture } from './composables/useMobileUIScaleGesture'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
@@ -33,7 +32,7 @@ import CommentsSidePanel from './components/Panels/CommentsSidePanel.vue'
 import StickerMessagesPanel from './components/Panels/StickerMessagesPanel.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
 
-// --- ШАГ 1: ВОЗВРАЩАЕМ ФЛАГ ИНИЦИАЛИЗАЦИИ ---
+// Флаг, который защищает от рендеринга до готовности
 const isAppInitialized = ref(false)
  
 const authStore = useAuthStore()
@@ -689,7 +688,8 @@ watch(isSaveAvailable, (canSave) => {
 })
 
 onMounted(() => {
-  // Мы НЕ вызываем здесь authStore.init()! Он уже отработал в main.js.
+  // Вся асинхронная инициализация (authStore.init) УЖЕ ЗАВЕРШИЛАСЬ в main.js
+  // до того, как этот компонент был смонтирован.
   // Теперь мы просто выполняем логику, которая нужна самому компоненту App.vue.
 
   // Определяем тип устройства
@@ -704,7 +704,7 @@ onMounted(() => {
       sensitivity: 0.002,
       safetyMargin: 8
     })
-  }    
+  }  
 
   // Проверяем URL на токен сброса пароля
   const urlParams = new URLSearchParams(window.location.search)
@@ -717,7 +717,7 @@ onMounted(() => {
 
   window.addEventListener('keydown', handleGlobalKeydown)
 
-  // В самом конце говорим, что приложение готово к отображению
+  // В самом конце мы безопасно говорим, что приложение готово к отображению.
   isAppInitialized.value = true
 })
 
