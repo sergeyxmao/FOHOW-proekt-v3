@@ -735,7 +735,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div id="app" :class="{ 'app--mobile': isMobileMode }">
+  <!-- Теперь v-if и v-else находятся на одном уровне, что корректно -->
+  <div v-if="isAppInitialized" id="app" :class="{ 'app--mobile': isMobileMode }">
+    
     <!-- Desktop UI -->
     <template v-if="!isMobileMode">
       <TopMenuButtons
@@ -756,7 +758,7 @@ onBeforeUnmount(() => {
         @fit-to-content="handleFitToContent"
       />
       <button
-        v-if="isAuthenticated"
+        v-if="isAuthenticated && !isLoadingProfile"
         v-show="!isPencilMode && !showResetPassword"
         class="zoom-floating-button no-print"
         :class="{ 'zoom-floating-button--modern': isModernTheme }"
@@ -767,7 +769,7 @@ onBeforeUnmount(() => {
         Масштаб: <span class="zoom-floating-button__value">{{ zoomDisplay }}</span>
       </button>
       <button
-        v-if="isAuthenticated"
+        v-if="isAuthenticated && !isLoadingProfile"
         v-show="!isPencilMode && !showResetPassword"
         class="save-floating-button no-print"
         :class="{ 'save-floating-button--modern': isModernTheme }"
@@ -814,6 +816,7 @@ onBeforeUnmount(() => {
       />
       <MobileVersionDialog class="no-print" />
     </template>
+    
     <transition name="fade">
       <div
         v-if="showMobileAuthPrompt && isMobileMode"
@@ -950,6 +953,11 @@ onBeforeUnmount(() => {
         :is-modern-theme="isModernTheme"
       />
     </transition>
+  </div>
+
+  <!-- Пока идет инициализация, показываем заглушку -->
+  <div v-else class="app-loading-placeholder">
+    Загрузка приложения...
   </div>
 </template>
 
