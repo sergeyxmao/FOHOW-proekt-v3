@@ -72,7 +72,7 @@
         </div>
 
         <div class="profile-field">
-          <label>Личный ID:</label>
+          <label>Комп. номер:</label>
           <span>{{ user.personal_id || 'Не указано' }}</span>
         </div>
 
@@ -92,7 +92,7 @@
         </div>
 
         <div class="profile-field">
-          <label>Офис:</label>
+          <label>Представительство:</label>
           <span>{{ user.office || 'Не указано' }}</span>
         </div>
 
@@ -255,12 +255,12 @@
         </div>
 
         <div class="form-group">
-          <label for="profile-personal-id">Личный ID:</label>
+          <label for="profile-personal-id">Комп. номер:</label>
           <input
             id="profile-personal-id"
             v-model="editForm.personal_id"
             type="text"
-            placeholder="Введите личный ID"
+            placeholder="Введите компьютерный номер"
           />
         </div>
 
@@ -295,12 +295,12 @@
         </div>
 
         <div class="form-group">
-          <label for="profile-office">Офис:</label>
+          <label for="profile-office">Представительство:</label>
           <input
             id="profile-office"
             v-model="editForm.office"
             type="text"
-            placeholder="Введите офис"
+            placeholder="Введите представительство"
           />
         </div>
 
