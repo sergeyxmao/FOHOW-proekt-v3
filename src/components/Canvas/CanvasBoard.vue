@@ -2369,7 +2369,8 @@ const captureViewportSnapshot = async () => {
 
   try {
     const deviceScale = Math.max(1, window.devicePixelRatio || 1);
-    const captureScale = Math.min(deviceScale, 3);    
+    // Увеличиваем масштаб до 4 для лучшего качества в режиме рисования
+    const captureScale = Math.min(deviceScale, 4);
     const canvas = await html2canvas(element, {
       backgroundColor: null,
       logging: false,
@@ -2380,21 +2381,9 @@ const captureViewportSnapshot = async () => {
       width,
       height
     });
-    if (captureScale <= 1) {
-      return canvas.toDataURL('image/png');
-    }
 
-    const scaledCanvas = document.createElement('canvas');
-    scaledCanvas.width = width;
-    scaledCanvas.height = height;
-
-    const context = scaledCanvas.getContext('2d');
-    if (context) {
-      context.imageSmoothingEnabled = true;
-      context.imageSmoothingQuality = 'high';
-      context.drawImage(canvas, 0, 0, width, height);
-      return scaledCanvas.toDataURL('image/png');
-    }
+    // Возвращаем canvas в полном разрешении без уменьшения
+    // для максимального качества в режиме рисования
     return canvas.toDataURL('image/png');
   } catch (error) {
     console.error('Не удалось сделать снимок полотна', error);
