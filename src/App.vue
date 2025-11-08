@@ -691,43 +691,33 @@ watch(isSaveAvailable, (canSave) => {
   }
 })
 
-onMounted(async () => {
-  try {
-    // Инициализируем authStore - загружаем данные пользователя
-    await authStore.init()
-    // Определяем тип устройства
-    mobileStore.detectDevice()
-    
-    // Инициализация жеста масштабирования UI для мобильной версии
-    if (mobileStore.isMobileMode) {
-      console.log('🎯 Инициализация жеста масштабирования UI для мобильной версии')
-      useMobileUIScaleGesture({
-        edgeZonePercent: 15,
-        minScale: 1,
-        sensitivity: 0.002,
-        safetyMargin: 8
-      })
-    }  
+onMounted(() => {
+  // Определяем тип устройства - эта логика относится к компоненту App и остается здесь
+  mobileStore.detectDevice()
+  
+  // Инициализация жеста масштабирования UI для мобильной версии
+  if (mobileStore.isMobileMode) {
+    console.log('🎯 Инициализация жеста масштабирования UI для мобильной версии')
+    useMobileUIScaleGesture({
+      edgeZonePercent: 15,
+      minScale: 1,
+      sensitivity: 0.002,
+      safetyMargin: 8
+    })
+  }  
 
-    // Проверяем URL на токен сброса пароля
-    const urlParams = new URLSearchParams(window.location.search)
-    const token = urlParams.get('token')
-    if (token) {
-      resetToken.value = token
-      showResetPassword.value = true
-      // Очищаем URL от токена
-      window.history.replaceState({}, document.title, window.location.pathname)
-    }
-
-    window.addEventListener('keydown', handleGlobalKeydown)
-  } catch (error) {
-    console.error("Критическая ошибка при инициализации приложения:", error)
-    // Даже если есть ошибка, мы все равно должны показать приложение (например, в состоянии "не авторизован")
-  } finally {
-    // Этот блок выполнится в любом случае: и при успехе, и при ошибке
-    // Устанавливаем флаг, что инициализация завершена
-    isAppInitialized.value = true
+  // Проверяем URL на токен сброса пароля - это тоже логика уровня приложения
+  const urlParams = new URLSearchParams(window.location.search)
+  const token = urlParams.get('token')
+  if (token) {
+    resetToken.value = token
+    showResetPassword.value = true
+    // Очищаем URL от токена
+    window.history.replaceState({}, document.title, window.location.pathname)
   }
+
+  // Добавляем глобальный обработчик событий клавиатуры
+  window.addEventListener('keydown', handleGlobalKeydown)
 })
 
 onBeforeUnmount(() => {
