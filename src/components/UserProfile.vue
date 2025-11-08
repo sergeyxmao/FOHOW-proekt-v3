@@ -478,7 +478,7 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const authStore = useAuthStore()
-const { isLoadingProfile } = storeToRefs(authStore)
+const { user, isLoadingProfile } = storeToRefs(authStore)
 // Cropper.js
 const showCropper = ref(false)
 const selectedImageUrl = ref('')
@@ -486,9 +486,6 @@ const cropperImage = ref(null)
 let cropper = null
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
-// Локальная переменная для отображения спиннера внутри модального окна
-const loading = ref(false)
-const user = ref({})
 const editMode = ref(false)
 const editForm = ref({
   username: '',
@@ -540,40 +537,6 @@ watch(showDeleteConfirm, (visible) => {
     passwordVisibility.delete = false
   }
 })
-
-async function loadProfile() {
-  loading.value = true
-  try {
-    // Используем метод из authStore для загрузки профиля
-    await authStore.fetchProfile()
-
-    // Обновляем форму редактирования актуальными данными
-    const userData = authStore.user
-    user.value = userData
-    editForm.value.username = userData.username || ''
-    editForm.value.email = userData.email
-    editForm.value.currentPassword = ''
-    editForm.value.newPassword = ''
-    editForm.value.confirmPassword = ''
-    // Копируем новые поля профиля
-    editForm.value.country = userData.country || ''
-    editForm.value.city = userData.city || ''
-    editForm.value.office = userData.office || ''
-    editForm.value.personal_id = userData.personal_id || ''
-    editForm.value.phone = userData.phone || ''
-    editForm.value.full_name = userData.full_name || ''
-    editForm.value.telegram_user = userData.telegram_user || ''
-    editForm.value.telegram_channel = userData.telegram_channel || ''
-    editForm.value.vk_profile = userData.vk_profile || ''
-    editForm.value.ok_profile = userData.ok_profile || ''
-    editForm.value.instagram_profile = userData.instagram_profile || ''
-    editForm.value.whatsapp_contact = userData.whatsapp_contact || ''
-  } catch (err) {
-    console.error('Ошибка загрузки профиля:', err)
-  } finally {
-    loading.value = false
-  }
-}
 
 async function saveProfile() {
   error.value = ''
@@ -666,24 +629,24 @@ async function saveProfile() {
 
 function cancelEdit() {
   editMode.value = false
-  editForm.value.username = user.value.username || ''
-  editForm.value.email = user.value.email
+  editForm.value.username = user.value?.username || ''
+  editForm.value.email = user.value?.email
   editForm.value.currentPassword = ''
   editForm.value.newPassword = ''
   editForm.value.confirmPassword = ''
   // Восстанавливаем новые поля профиля
-  editForm.value.country = user.value.country || ''
-  editForm.value.city = user.value.city || ''
-  editForm.value.office = user.value.office || ''
-  editForm.value.personal_id = user.value.personal_id || ''
-  editForm.value.phone = user.value.phone || ''
-  editForm.value.full_name = user.value.full_name || ''
-  editForm.value.telegram_user = user.value.telegram_user || ''
-  editForm.value.telegram_channel = user.value.telegram_channel || ''
-  editForm.value.vk_profile = user.value.vk_profile || ''
-  editForm.value.ok_profile = user.value.ok_profile || ''
-  editForm.value.instagram_profile = user.value.instagram_profile || ''
-  editForm.value.whatsapp_contact = user.value.whatsapp_contact || ''
+  editForm.value.country = user.value?.country || ''
+  editForm.value.city = user.value?.city || ''
+  editForm.value.office = user.value?.office || ''
+  editForm.value.personal_id = user.value?.personal_id || ''
+  editForm.value.phone = user.value?.phone || ''
+  editForm.value.full_name = user.value?.full_name || ''
+  editForm.value.telegram_user = user.value?.telegram_user || ''
+  editForm.value.telegram_channel = user.value?.telegram_channel || ''
+  editForm.value.vk_profile = user.value?.vk_profile || ''
+  editForm.value.ok_profile = user.value?.ok_profile || ''
+  editForm.value.instagram_profile = user.value?.instagram_profile || ''
+  editForm.value.whatsapp_contact = user.value?.whatsapp_contact || ''
   error.value = ''
   success.value = ''
   passwordVisibility.current = false
@@ -692,24 +655,24 @@ function cancelEdit() {
 }
 function startEdit() {
   editMode.value = true
-  editForm.value.username = user.value.username || ''
-  editForm.value.email = user.value.email
+  editForm.value.username = user.value?.username || ''
+  editForm.value.email = user.value?.email
   editForm.value.currentPassword = ''
   editForm.value.newPassword = ''
   editForm.value.confirmPassword = ''
   // Копируем новые поля профиля
-  editForm.value.country = user.value.country || ''
-  editForm.value.city = user.value.city || ''
-  editForm.value.office = user.value.office || ''
-  editForm.value.personal_id = user.value.personal_id || ''
-  editForm.value.phone = user.value.phone || ''
-  editForm.value.full_name = user.value.full_name || ''
-  editForm.value.telegram_user = user.value.telegram_user || ''
-  editForm.value.telegram_channel = user.value.telegram_channel || ''
-  editForm.value.vk_profile = user.value.vk_profile || ''
-  editForm.value.ok_profile = user.value.ok_profile || ''
-  editForm.value.instagram_profile = user.value.instagram_profile || ''
-  editForm.value.whatsapp_contact = user.value.whatsapp_contact || ''
+  editForm.value.country = user.value?.country || ''
+  editForm.value.city = user.value?.city || ''
+  editForm.value.office = user.value?.office || ''
+  editForm.value.personal_id = user.value?.personal_id || ''
+  editForm.value.phone = user.value?.phone || ''
+  editForm.value.full_name = user.value?.full_name || ''
+  editForm.value.telegram_user = user.value?.telegram_user || ''
+  editForm.value.telegram_channel = user.value?.telegram_channel || ''
+  editForm.value.vk_profile = user.value?.vk_profile || ''
+  editForm.value.ok_profile = user.value?.ok_profile || ''
+  editForm.value.instagram_profile = user.value?.instagram_profile || ''
+  editForm.value.whatsapp_contact = user.value?.whatsapp_contact || ''
   passwordVisibility.current = false
   passwordVisibility.new = false
   passwordVisibility.confirm = false
@@ -866,10 +829,10 @@ async function confirmCrop() {
   }
 }
 
-onMounted(() => {
-  // Загружаем свежие данные профиля при открытии модального окна
-  loadProfile()
-})
+    onMounted(() => {
+      // Инициализация формы редактирования теперь происходит в startEdit()
+      // А данные для просмотра берутся напрямую из authStore.user
+    })
 
 onBeforeUnmount(() => {
   cancelCrop()
