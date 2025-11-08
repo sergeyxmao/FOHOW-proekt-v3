@@ -12,53 +12,48 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     async init() {
-      // Загружаем токен из localStorage
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('token');
+      const cachedUser = localStorage.getItem('user');
+
+      this.isLoadingProfile = true; // Начинаем загрузку в любом случае
 
       if (token) {
-        // Немедленно устанавливаем токен и isAuthenticated для предотвращения "вылета"
-        this.token = token
-        this.isAuthenticated = true
+        this.token = token;
+        this.isAuthenticated = true; // Сразу считаем авторизованным
 
-        // Теперь начинаем асинхронную загрузку профиля
-        this.isLoadingProfile = true
+        // Если есть кэшированные данные пользователя, показываем их немедленно
+        if (cachedUser) {
+          try {
+            this.user = JSON.parse(cachedUser);
+          } catch (e) {
+            console.error("Ошибка парсинга кэшированного пользователя:", e);
+            localStorage.removeItem('user');
+          }
+        }
 
+        // В фоне всегда запрашиваем свежие данные профиля
         try {
           const response = await fetch(`${API_URL}/profile`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
 
           if (response.ok) {
-            const data = await response.json()
-            this.user = data.user
-
-            // Сохраняем в localStorage
-            localStorage.setItem('user', JSON.stringify(data.user))
+            const data = await response.json();
+            this.user = data.user; // Обновляем на свежие данные
+            localStorage.setItem('user', JSON.stringify(data.user)); // Обновляем кэш
           } else {
-            // Токен невалидный - сбрасываем состояние
-            this.isAuthenticated = false
-            this.token = null
-            this.user = null
-            localStorage.removeItem('token')
-            localStorage.removeItem('user')
+            // Токен невалидный - полный сброс
+            this.logout(); 
           }
         } catch (err) {
-          console.error('Ошибка загрузки профиля:', err)
-          // В случае ошибки сети сбрасываем состояние
-          this.isAuthenticated = false
-          this.token = null
-          this.user = null
-          localStorage.removeItem('token')
-          localStorage.removeItem('user')
+          console.error('Ошибка фоновой загрузки профиля:', err);
+          // Если нет сети, мы продолжим работать с кэшированными данными
         } finally {
-          // Всегда устанавливаем флаг загрузки в false после завершения
-          this.isLoadingProfile = false
+          this.isLoadingProfile = false; // Завершаем загрузку
         }
       } else {
-        // Если токена нет, сразу завершаем загрузку
-        this.isLoadingProfile = false
+        // Если токена нет, просто завершаем
+        this.isLoadingProfile = false;
       }
     },
 
