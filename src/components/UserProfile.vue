@@ -10,7 +10,7 @@
       <button class="close-btn" @click="$emit('close')">×</button>
     </div>
 
-    <div v-if="isLoadingProfile" class="loading">Загрузка профиля...</div>
+    <div v-if="loading" class="loading">Загрузка профиля...</div>
 
     <div v-else class="profile-content">
       <!-- Информация о профиле -->
@@ -486,6 +486,8 @@ const cropperImage = ref(null)
 let cropper = null
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
+// Локальная переменная для отображения спиннера внутри модального окна
+const loading = ref(false)
 const user = ref({})
 const editMode = ref(false)
 const editForm = ref({
@@ -540,6 +542,7 @@ watch(showDeleteConfirm, (visible) => {
 })
 
 async function loadProfile() {
+  loading.value = true
   try {
     // Используем метод из authStore для загрузки профиля
     await authStore.fetchProfile()
@@ -567,6 +570,8 @@ async function loadProfile() {
     editForm.value.whatsapp_contact = userData.whatsapp_contact || ''
   } catch (err) {
     console.error('Ошибка загрузки профиля:', err)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -862,24 +867,8 @@ async function confirmCrop() {
 }
 
 onMounted(() => {
-  // Инициализируем локальные данные из authStore
-  if (authStore.user) {
-    user.value = authStore.user
-    editForm.value.username = authStore.user.username || ''
-    editForm.value.email = authStore.user.email
-    editForm.value.country = authStore.user.country || ''
-    editForm.value.city = authStore.user.city || ''
-    editForm.value.office = authStore.user.office || ''
-    editForm.value.personal_id = authStore.user.personal_id || ''
-    editForm.value.phone = authStore.user.phone || ''
-    editForm.value.full_name = authStore.user.full_name || ''
-    editForm.value.telegram_user = authStore.user.telegram_user || ''
-    editForm.value.telegram_channel = authStore.user.telegram_channel || ''
-    editForm.value.vk_profile = authStore.user.vk_profile || ''
-    editForm.value.ok_profile = authStore.user.ok_profile || ''
-    editForm.value.instagram_profile = authStore.user.instagram_profile || ''
-    editForm.value.whatsapp_contact = authStore.user.whatsapp_contact || ''
-  }
+  // Загружаем свежие данные профиля при открытии модального окна
+  loadProfile()
 })
 
 onBeforeUnmount(() => {

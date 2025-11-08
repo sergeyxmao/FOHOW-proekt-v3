@@ -12,16 +12,17 @@ export const useAuthStore = defineStore('auth', {
 
   actions: {
     async init() {
-      // Устанавливаем состояние загрузки
-      this.isLoadingProfile = true
-
       // Загружаем токен из localStorage
       const token = localStorage.getItem('token')
 
       if (token) {
+        // Немедленно устанавливаем токен и isAuthenticated для предотвращения "вылета"
         this.token = token
+        this.isAuthenticated = true
 
-        // Загружаем актуальные данные пользователя с сервера
+        // Теперь начинаем асинхронную загрузку профиля
+        this.isLoadingProfile = true
+
         try {
           const response = await fetch(`${API_URL}/profile`, {
             headers: {
@@ -32,22 +33,25 @@ export const useAuthStore = defineStore('auth', {
           if (response.ok) {
             const data = await response.json()
             this.user = data.user
-            this.isAuthenticated = true
 
             // Сохраняем в localStorage
             localStorage.setItem('user', JSON.stringify(data.user))
           } else {
-            // Токен невалидный - очищаем
-            this.logout()
+            // Токен невалидный - сбрасываем состояние
+            this.isAuthenticated = false
+            this.token = null
+            this.user = null
+            localStorage.removeItem('token')
+            localStorage.removeItem('user')
           }
         } catch (err) {
           console.error('Ошибка загрузки профиля:', err)
-          // В случае ошибки используем данные из localStorage
-          const savedUser = localStorage.getItem('user')
-          if (savedUser) {
-            this.user = JSON.parse(savedUser)
-            this.isAuthenticated = true
-          }
+          // В случае ошибки сети сбрасываем состояние
+          this.isAuthenticated = false
+          this.token = null
+          this.user = null
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
         } finally {
           // Всегда устанавливаем флаг загрузки в false после завершения
           this.isLoadingProfile = false
