@@ -29,7 +29,6 @@ import {
   ensureNoteStructure,
   applyCardRectToNote,
   updateNoteOffsets,
-  getCardNotesSummary,
   DEFAULT_NOTE_WIDTH,
   DEFAULT_NOTE_HEIGHT
 } from '../../utils/noteUtils';
@@ -651,7 +650,6 @@ const getCurrentZoom = () => {
   return Number.isFinite(value) && value > 0 ? value : 1;
 };  
 const cardsWithVisibleNotes = computed(() => cards.value.filter(card => card.note && card.note.visible));
-const notesSummary = computed(() => getCardNotesSummary(cards.value));
 
 const engineInput = computed(() => {
   const normalizedCards = cards.value.map(card => ({
@@ -2470,10 +2468,6 @@ watch([zoomScale, zoomTranslateX, zoomTranslateY], () => {
 watch(cardsWithVisibleNotes, () => {
   nextTick(() => syncAllNoteWindows());
 });
-
-watch(notesSummary, (summary) => {
-  notesStore.setCardsWithEntries(summary);
-}, { immediate: true });
 
 watch(() => notesStore.pendingOpenCardId, (cardId) => {
   if (!cardId) {
