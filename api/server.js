@@ -225,7 +225,7 @@ app.post('/api/register', async (req, reply) => {
   }
 });
 
-// === АВТОРИЗАЦИЯ ===
+// === АВТОРИЗАЦИЯ (ИСПРАВЛЕННАЯ ВЕРСИЯ) ===
 app.post('/api/login', async (req, reply) => {
   const { email, password, verificationToken, verificationCode } = req.body;
   
@@ -233,7 +233,6 @@ app.post('/api/login', async (req, reply) => {
     return reply.code(400).send({ error: 'Email и пароль обязательны' });
   }
   
-  // Вызов асинхронной функции
   const verificationResult = await validateVerificationCode(verificationToken, verificationCode);
 
   if (!verificationResult.ok) {
@@ -241,7 +240,8 @@ app.post('/api/login', async (req, reply) => {
   }
 
   try {
-    const result = await pool.query('SELECT id, email, password FROM users WHERE email = $1', [email]);
+    // ЗАПРАШИВАЕМ ВСЕ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ СРАЗУ
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
 
     if (result.rows.length === 0) {
       return reply.code(401).send({ error: 'Неверный email или пароль' });
@@ -253,6 +253,9 @@ app.post('/api/login', async (req, reply) => {
     if (!passwordMatch) {
       return reply.code(401).send({ error: 'Неверный email или пароль' });
     }
+    
+    // Удаляем хэш пароля перед отправкой на клиент
+    delete user.password; 
 
     const token = jwt.sign(
       { userId: user.id, email: user.email },
@@ -260,14 +263,15 @@ app.post('/api/login', async (req, reply) => {
       { expiresIn: '7d' }
     );
 
+    // ВОЗВРАЩАЕМ ПОЛНЫЙ ОБЪЕКТ ПОЛЬЗОВАТЕЛЯ
     return reply.send({
       success: true,
       token,
-      user: { id: user.id, email: user.email }
+      user: user // Отправляем весь объект user
     });
   } catch (err) {
     console.error('❌ Ошибка авторизации:', err);
-
+    // ... (остальная часть обработки ошибок остается без изменений)
     if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
       return reply.code(500).send({ error: 'Ошибка подключения к базе данных' });
     }
