@@ -15,16 +15,16 @@ import UserProfile from './components/UserProfile.vue'
 import BoardsModal from './components/Board/BoardsModal.vue'
 import StructureNameModal from './components/Board/StructureNameModal.vue'
 import { useAuthStore } from './stores/auth'
-import { useCanvasStore } from './stores/canvas' // Предполагаемый импорт
+import { useCanvasStore } from './stores/canvas'
 import { useBoardStore } from './stores/board'
-import { useCardsStore } from './stores/cards' // Assuming this store exists
-import { useConnectionsStore } from './stores/connections' // Assuming this store exists
+import { useCardsStore } from './stores/cards'
+import { useConnectionsStore } from './stores/connections'
 import { useStickersStore } from './stores/stickers'
 import { useViewportStore } from './stores/viewport'
 import { useMobileStore } from './stores/mobile'
 import { useViewSettingsStore } from './stores/viewSettings'
 import { useNotesStore } from './stores/notes'
-import { useProjectActions } from './composables/useProjectActions'
+// Убрал useProjectActions, так как он не используется в этом файле
 import { useMobileUIScaleGesture } from './composables/useMobileUIScaleGesture'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
@@ -33,14 +33,14 @@ import CommentsSidePanel from './components/Panels/CommentsSidePanel.vue'
 import StickerMessagesPanel from './components/Panels/StickerMessagesPanel.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
 
-// --- НОВАЯ ПЕРЕМЕННАЯ ДЛЯ УПРАВЛЕНИЯ ЗАГРУЗКОЙ ---
+// --- ШАГ 1: ВОЗВРАЩАЕМ ФЛАГ ИНИЦИАЛИЗАЦИИ ---
 const isAppInitialized = ref(false)
  
 const authStore = useAuthStore()
-const canvasStore = useCanvasStore() // Предполагаемая инициализация
+const canvasStore = useCanvasStore()
 const boardStore = useBoardStore()
-const cardsStore = useCardsStore() // Assuming initialization
-const connectionsStore = useConnectionsStore() // Assuming initialization
+const cardsStore = useCardsStore()
+const connectionsStore = useConnectionsStore()
 const stickersStore = useStickersStore()
 const viewportStore = useViewportStore()
 const mobileStore = useMobileStore()
@@ -57,7 +57,6 @@ const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
 const isSaveAvailable = computed(() => {
   const boardName = (currentBoardName.value ?? '').trim()
-
   return boardName.length > 0
 })
 
@@ -80,11 +79,9 @@ const isBoardsModalOpen = ref(false)
 const isStructureNameModalOpen = ref(false)
 const pendingAction = ref(null)
 
-// Состояние для сброса пароля
 const showResetPassword = ref(false)
 const resetToken = ref('')
 
-// Автосохранение
 let autoSaveInterval = null
 const API_URL = import.meta.env.VITE_API_URL || '/api' // Используем относительный путь для прокси
 
@@ -692,7 +689,10 @@ watch(isSaveAvailable, (canSave) => {
 })
 
 onMounted(() => {
-  // Определяем тип устройства - эта логика относится к компоненту App и остается здесь
+  // Мы НЕ вызываем здесь authStore.init()! Он уже отработал в main.js.
+  // Теперь мы просто выполняем логику, которая нужна самому компоненту App.vue.
+
+  // Определяем тип устройства
   mobileStore.detectDevice()
   
   // Инициализация жеста масштабирования UI для мобильной версии
@@ -704,20 +704,21 @@ onMounted(() => {
       sensitivity: 0.002,
       safetyMargin: 8
     })
-  }  
+  }    
 
-  // Проверяем URL на токен сброса пароля - это тоже логика уровня приложения
+  // Проверяем URL на токен сброса пароля
   const urlParams = new URLSearchParams(window.location.search)
   const token = urlParams.get('token')
   if (token) {
     resetToken.value = token
     showResetPassword.value = true
-    // Очищаем URL от токена
     window.history.replaceState({}, document.title, window.location.pathname)
   }
 
-  // Добавляем глобальный обработчик событий клавиатуры
   window.addEventListener('keydown', handleGlobalKeydown)
+
+  // В самом конце говорим, что приложение готово к отображению
+  isAppInitialized.value = true
 })
 
 onBeforeUnmount(() => {
@@ -727,7 +728,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- Показываем основной интерфейс только ПОСЛЕ полной инициализации приложения -->
+  <!-- Показываем основной интерфейс только ПОСЛЕ полной инициализации -->
   <div v-if="isAppInitialized" id="app" :class="{ 'app--mobile': isMobileMode }">
     
     <!-- Desktop UI -->
@@ -750,7 +751,7 @@ onBeforeUnmount(() => {
         @fit-to-content="handleFitToContent"
       />
       <button
-        v-if="isAuthenticated && !isLoadingProfile"
+        v-if="isAuthenticated"
         v-show="!isPencilMode && !showResetPassword"
         class="zoom-floating-button no-print"
         :class="{ 'zoom-floating-button--modern': isModernTheme }"
@@ -761,7 +762,7 @@ onBeforeUnmount(() => {
         Масштаб: <span class="zoom-floating-button__value">{{ zoomDisplay }}</span>
       </button>
       <button
-        v-if="isAuthenticated && !isLoadingProfile"
+        v-if="isAuthenticated"
         v-show="!isPencilMode && !showResetPassword"
         class="save-floating-button no-print"
         :class="{ 'save-floating-button--modern': isModernTheme }"
@@ -912,11 +913,11 @@ onBeforeUnmount(() => {
       <div
         v-if="showProfile"
         :class="['profile-modal-overlay no-print', { 'profile-modal-overlay--modern': isModernTheme }]"
-        @click.self="handleCloseProfile"
+        @click.self="showProfile = false"
       >
         <UserProfile
           :is-modern-theme="isModernTheme"
-          @close="handleCloseProfile"
+          @close="showProfile = false"
         />
       </div>
     </Teleport>
@@ -948,7 +949,7 @@ onBeforeUnmount(() => {
   </div>
 
   <!-- Пока идет инициализация, показываем заглушку -->
-  <div v-else class="app-loading-placeholder">
+  <div v-else style="padding: 20px; font-family: sans-serif;">
     Загрузка приложения...
   </div>
 </template>
