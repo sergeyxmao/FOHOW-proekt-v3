@@ -690,7 +690,7 @@ watch(isSaveAvailable, (canSave) => {
 
 onMounted(async () => {
   // Инициализируем authStore - загружаем данные пользователя
-
+  await authStore.init()
   // Определяем тип устройства
   mobileStore.detectDevice()
   
