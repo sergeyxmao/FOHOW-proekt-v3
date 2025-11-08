@@ -739,9 +739,16 @@ export function useProjectActions() {
 
       // Option "Скрыть содержимое"
       if (exportSettings?.hideContent) {
-        // Hide all text elements on the cards
-        const textElements = canvasContainer.querySelectorAll('.card-title, .card-body, .label, .value, .card-row, .card-body-html')
-        textElements.forEach(el => {
+        // Hide card titles, body, and html content
+        const elementsToHide = canvasContainer.querySelectorAll('.card-title, .card-body, .card-body-html')
+        elementsToHide.forEach(el => {
+          tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+          el.style.visibility = 'hidden'
+        })
+
+        // Hide only values (numbers), keep labels (text like "Баланс:", "Актив - заказы:", etc.)
+        const values = canvasContainer.querySelectorAll('.value')
+        values.forEach(el => {
           tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
           el.style.visibility = 'hidden'
         })
@@ -760,21 +767,25 @@ export function useProjectActions() {
         const cards = canvasContainer.querySelectorAll('.card')
         cards.forEach(card => {
           tempStyles.push({ element: card, property: 'background', originalValue: card.style.background })
+          tempStyles.push({ element: card, property: 'backgroundImage', originalValue: card.style.backgroundImage })
           tempStyles.push({ element: card, property: 'box-shadow', originalValue: card.style.boxShadow })
           tempStyles.push({ element: card, property: 'border', originalValue: card.style.border })
           card.style.background = '#ffffff'
+          card.style.backgroundImage = 'none'
           card.style.boxShadow = 'none'
           card.style.border = '2px solid #000000'
         })
 
-        // Set a white background for card headers with a black separating line
+        // Set a white background for card headers without borders
         const cardHeaders = canvasContainer.querySelectorAll('.card-header, .card-title')
         cardHeaders.forEach(header => {
           tempStyles.push({ element: header, property: 'background', originalValue: header.style.background })
+          tempStyles.push({ element: header, property: 'backgroundImage', originalValue: header.style.backgroundImage })
           tempStyles.push({ element: header, property: 'border-bottom', originalValue: header.style.borderBottom })
           tempStyles.push({ element: header, property: 'color', originalValue: header.style.color })
           header.style.background = '#ffffff'
-          header.style.borderBottom = '2px solid #000000'
+          header.style.backgroundImage = 'none'
+          header.style.borderBottom = 'none'
           header.style.color = '#000000'
         })
 
