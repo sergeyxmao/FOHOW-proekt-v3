@@ -317,6 +317,16 @@ async function loadBoard(boardId) {
     try {
       await notesStore.fetchNotesForBoard(boardId)
       console.log('✅ Загружены заметки для структуры')
+
+      // Очищаем старые заметки из card.note.entries, чтобы избежать конфликта
+      // с новой системой хранения заметок в notesStore
+      cardsStore.cards.forEach(card => {
+        if (card.note && card.note.entries) {
+          card.note.entries = {}
+          card.note.colors = {}
+        }
+      })
+      console.log('✅ Очищены старые заметки из карточек')
     } catch (error) {
       console.error('⚠️ Ошибка загрузки заметок:', error)
       // Продолжаем работу, даже если заметки не загрузились
