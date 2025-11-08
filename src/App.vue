@@ -34,7 +34,6 @@ import StickerMessagesPanel from './components/Panels/StickerMessagesPanel.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
  
 const authStore = useAuthStore()
-const isAppInitialized = ref(false);
 const canvasStore = useCanvasStore() // Предполагаемая инициализация
 const boardStore = useBoardStore()
 const cardsStore = useCardsStore() // Assuming initialization
@@ -45,7 +44,7 @@ const mobileStore = useMobileStore()
 const viewSettingsStore = useViewSettingsStore()
 const notesStore = useNotesStore()
 const sidePanelsStore = useSidePanelsStore()
-const { isAuthenticated, isLoadingProfile } = storeToRefs(authStore)
+const { isAuthenticated } = storeToRefs(authStore)
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMobileMode } = storeToRefs(mobileStore)
 const { headerColor, headerColorIndex } = storeToRefs(viewSettingsStore)
@@ -651,22 +650,10 @@ function handleMobileAuthSuccess() {
 function handleOpenProfile() {
   if (isAuthenticated.value) {
     showProfile.value = true
-    // Добавляем параметр в URL для сохранения состояния при перезагрузке
-    const url = new URL(window.location)
-    url.searchParams.set('profile', '1')
-    window.history.pushState({}, '', url)
     return
   }
 
   openMobileAuthPrompt()
-}
-
-function handleCloseProfile() {
-  showProfile.value = false
-  // Удаляем параметр из URL при закрытии профиля
-  const url = new URL(window.location)
-  url.searchParams.delete('profile')
-  window.history.pushState({}, '', url)
 }
 
 function handleOpenMobileBoards() {
@@ -702,53 +689,44 @@ watch(isSaveAvailable, (canSave) => {
 })
 
 onMounted(async () => {
-  try {
-    // Ждем полного завершения инициализации authStore.
-    // После этой строки authStore будет в актуальном состоянии (isAuthenticated, user и т.д.).
-    await authStore.init(); 
+  // Инициализируем authStore - загружаем данные пользователя
+  await authStore.init()
 
-    // --- ТЕПЕРЬ, КОГДА МЫ УВЕРЕНЫ В СТАТУСЕ АВТОРИЗАЦИИ, ВЫПОЛНЯЕМ ОСТАЛЬНОЙ КОД ---
+  // Определяем тип устройства
+  mobileStore.detectDevice()
+  
+  // Инициализация жеста масштабирования UI для мобильной версии
 
-    // Определяем тип устройства
-    mobileStore.detectDevice();
+  if (mobileStore.isMobileMode) {
 
-    // Инициализация жеста масштабирования UI для мобильной версии
-    if (mobileStore.isMobileMode) {
-      console.log('🎯 Инициализация жеста масштабирования UI для мобильной версии');
-      useMobileUIScaleGesture({
-        edgeZonePercent: 15,
-        minScale: 1,
-        sensitivity: 0.002,
-        safetyMargin: 8
-      });
-    }
+    console.log('🎯 Инициализация жеста масштабирования UI для мобильной версии')
 
-    // Проверяем URL на наличие токена для сброса пароля
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    if (token) {
-      resetToken.value = token;
-      showResetPassword.value = true;
-      // Очищаем URL от токена, чтобы он не мешал при перезагрузке
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    useMobileUIScaleGesture({
 
-    // Проверяем, нужно ли открыть профиль (теперь isAuthenticated.value будет правильным)
-    const profileParam = urlParams.get('profile');
-    if (profileParam === '1' && isAuthenticated.value) {
-      showProfile.value = true;
-    }
+      edgeZonePercent: 15,
 
-    // Добавляем глобальный обработчик клавиш
-    window.addEventListener('keydown', handleGlobalKeydown);
+      minScale: 1,
 
-  } catch (e) {
-    console.error("Критическая ошибка инициализации приложения:", e);
-  } finally {
-    // В любом случае (успех или ошибка) говорим, что инициализация завершена и можно отрисовывать приложение
-    isAppInitialized.value = true; 
+      sensitivity: 0.002,
+
+      safetyMargin: 8
+
+    })
+
+  }  
+
+  // Проверяем URL на токен сброса пароля
+  const urlParams = new URLSearchParams(window.location.search)
+  const token = urlParams.get('token')
+  if (token) {
+    resetToken.value = token
+    showResetPassword.value = true
+    // Очищаем URL от токена
+    window.history.replaceState({}, document.title, window.location.pathname)
   }
-});
+
+  window.addEventListener('keydown', handleGlobalKeydown)
+})
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
@@ -757,9 +735,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- Показываем основной интерфейс только ПОСЛЕ полной инициализации приложения -->
-  <div v-if="isAppInitialized" id="app" :class="{ 'app--mobile': isMobileMode }">
-    
+  <div id="app" :class="{ 'app--mobile': isMobileMode }">
     <!-- Desktop UI -->
     <template v-if="!isMobileMode">
       <TopMenuButtons
@@ -780,7 +756,7 @@ onBeforeUnmount(() => {
         @fit-to-content="handleFitToContent"
       />
       <button
-        v-if="isAuthenticated && !isLoadingProfile"
+        v-if="isAuthenticated"
         v-show="!isPencilMode && !showResetPassword"
         class="zoom-floating-button no-print"
         :class="{ 'zoom-floating-button--modern': isModernTheme }"
@@ -791,7 +767,7 @@ onBeforeUnmount(() => {
         Масштаб: <span class="zoom-floating-button__value">{{ zoomDisplay }}</span>
       </button>
       <button
-        v-if="isAuthenticated && !isLoadingProfile"
+        v-if="isAuthenticated"
         v-show="!isPencilMode && !showResetPassword"
         class="save-floating-button no-print"
         :class="{ 'save-floating-button--modern': isModernTheme }"
@@ -838,7 +814,6 @@ onBeforeUnmount(() => {
       />
       <MobileVersionDialog class="no-print" />
     </template>
-    
     <transition name="fade">
       <div
         v-if="showMobileAuthPrompt && isMobileMode"
@@ -942,11 +917,11 @@ onBeforeUnmount(() => {
       <div
         v-if="showProfile"
         :class="['profile-modal-overlay no-print', { 'profile-modal-overlay--modern': isModernTheme }]"
-        @click.self="handleCloseProfile"
+        @click.self="showProfile = false"
       >
         <UserProfile
           :is-modern-theme="isModernTheme"
-          @close="handleCloseProfile"
+          @close="showProfile = false"
         />
       </div>
     </Teleport>
@@ -975,12 +950,6 @@ onBeforeUnmount(() => {
         :is-modern-theme="isModernTheme"
       />
     </transition>
-  </div>
-
-  <!-- Пока идет инициализация, показываем заглушку -->
-  <div v-else class="app-loading-placeholder">
-    <!-- Сюда можно добавить красивый спиннер или логотип -->
-    Загрузка приложения...
   </div>
 </template>
 
@@ -1387,15 +1356,5 @@ html,body{
     page-break-after: avoid !important;
     page-break-inside: avoid !important;
   }
-    .app-loading-placeholder {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100vw;
-      height: 100vh;
-      font-size: 20px;
-      color: #666;
-    }  
-  
 }
 </style>
