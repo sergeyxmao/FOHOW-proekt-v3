@@ -315,20 +315,29 @@ async function loadBoard(boardId) {
 
     // Загружаем заметки для структуры
     try {
-      await notesStore.fetchNotesForBoard(boardId)
-      console.log('✅ Загружены заметки для структуры')
+      await notesStore.fetchNotesForBoard(boardId);
+      console.log('✅ Загружены заметки для структуры');
 
-      // Очищаем старые заметки из card.note.entries, чтобы избежать конфликта
-      // с новой системой хранения заметок в notesStore
-      cardsStore.cards.forEach(card => {
-        if (card.note && card.note.entries) {
-          card.note.entries = {}
-          card.note.colors = {}
+      // Создаем НОВЫЙ массив карточек, чтобы "разбудить" реактивность Vue
+      const cleanedCards = cardsStore.cards.map(card => {
+        // Создаем копию карточки, чтобы не мутировать оригинал напрямую
+        const newCard = { ...card };
+        if (newCard.note && (newCard.note.entries || newCard.note.colors)) {
+          // Создаем и копию объекта note, удаляя старые поля
+          const { entries, colors, ...restOfNote } = newCard.note;
+          newCard.note = restOfNote;
         }
-      })
-      console.log('✅ Очищены старые заметки из карточек')
+        return newCard;
+      });
+
+      // Заменяем старый массив карточек на новый.
+      // Это "сильное" изменение, которое Vue точно заметит.
+      cardsStore.cards = cleanedCards;
+
+      console.log('✅ Очищены старые заметки и принудительно обновлен cardsStore');
+
     } catch (error) {
-      console.error('⚠️ Ошибка загрузки заметок:', error)
+      console.error('⚠️ Ошибка загрузки заметок:', error);
       // Продолжаем работу, даже если заметки не загрузились
     }
 
