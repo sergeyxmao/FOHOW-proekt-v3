@@ -32,6 +32,9 @@ import NotesSidePanel from './components/Panels/NotesSidePanel.vue'
 import CommentsSidePanel from './components/Panels/CommentsSidePanel.vue'
 import StickerMessagesPanel from './components/Panels/StickerMessagesPanel.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
+
+// --- НОВАЯ ПЕРЕМЕННАЯ ДЛЯ УПРАВЛЕНИЯ ЗАГРУЗКОЙ ---
+const isAppInitialized = ref(false)
  
 const authStore = useAuthStore()
 const canvasStore = useCanvasStore() // Предполагаемая инициализация
@@ -83,7 +86,7 @@ const resetToken = ref('')
 
 // Автосохранение
 let autoSaveInterval = null
-const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+const API_URL = import.meta.env.VITE_API_URL || '/api' // Используем относительный путь для прокси
 
 function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
@@ -689,42 +692,42 @@ watch(isSaveAvailable, (canSave) => {
 })
 
 onMounted(async () => {
-  // Инициализируем authStore - загружаем данные пользователя
-  await authStore.init()
-  // Определяем тип устройства
-  mobileStore.detectDevice()
-  
-  // Инициализация жеста масштабирования UI для мобильной версии
+  try {
+    // Инициализируем authStore - загружаем данные пользователя
+    await authStore.init()
+    // Определяем тип устройства
+    mobileStore.detectDevice()
+    
+    // Инициализация жеста масштабирования UI для мобильной версии
+    if (mobileStore.isMobileMode) {
+      console.log('🎯 Инициализация жеста масштабирования UI для мобильной версии')
+      useMobileUIScaleGesture({
+        edgeZonePercent: 15,
+        minScale: 1,
+        sensitivity: 0.002,
+        safetyMargin: 8
+      })
+    }  
 
-  if (mobileStore.isMobileMode) {
+    // Проверяем URL на токен сброса пароля
+    const urlParams = new URLSearchParams(window.location.search)
+    const token = urlParams.get('token')
+    if (token) {
+      resetToken.value = token
+      showResetPassword.value = true
+      // Очищаем URL от токена
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
 
-    console.log('🎯 Инициализация жеста масштабирования UI для мобильной версии')
-
-    useMobileUIScaleGesture({
-
-      edgeZonePercent: 15,
-
-      minScale: 1,
-
-      sensitivity: 0.002,
-
-      safetyMargin: 8
-
-    })
-
-  }  
-
-  // Проверяем URL на токен сброса пароля
-  const urlParams = new URLSearchParams(window.location.search)
-  const token = urlParams.get('token')
-  if (token) {
-    resetToken.value = token
-    showResetPassword.value = true
-    // Очищаем URL от токена
-    window.history.replaceState({}, document.title, window.location.pathname)
+    window.addEventListener('keydown', handleGlobalKeydown)
+  } catch (error) {
+    console.error("Критическая ошибка при инициализации приложения:", error)
+    // Даже если есть ошибка, мы все равно должны показать приложение (например, в состоянии "не авторизован")
+  } finally {
+    // Этот блок выполнится в любом случае: и при успехе, и при ошибке
+    // Устанавливаем флаг, что инициализация завершена
+    isAppInitialized.value = true
   }
-
-  window.addEventListener('keydown', handleGlobalKeydown)
 })
 
 onBeforeUnmount(() => {
