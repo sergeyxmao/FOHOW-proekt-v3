@@ -10,10 +10,11 @@
       <button class="close-btn" @click="$emit('close')">×</button>
     </div>
 
-    <div v-if="loading" class="loading">Загрузка профиля...</div>
-
-    <div v-else class="profile-content">
-      <!-- Информация о профиле -->
+    <!-- Показываем основной контент ТОЛЬКО ЕСЛИ объект user существует и загружен -->
+    <div v-if="user" class="profile-content">
+      <!-- ============================================ -->
+      <!-- Режим просмотра профиля (когда editMode = false) -->
+      <!-- ============================================ -->
       <div v-if="!editMode" class="profile-view">
         <!-- Аватар -->
         <div class="profile-avatar-section">
@@ -140,7 +141,9 @@
         </div>
       </div>
 
-      <!-- Форма редактирования -->
+      <!-- ============================================ -->
+      <!-- Форма редактирования (когда editMode = true) -->
+      <!-- ============================================ -->
       <form v-else class="profile-edit" @submit.prevent="saveProfile">
         <div class="form-group">
           <label>Имя пользователя:</label>
@@ -382,6 +385,13 @@
       </form>
     </div>
 
+    <!-- Показываем заглушку, если user еще не загружен -->
+    <div v-else class="loading">Загрузка профиля...</div>
+    
+    <!-- ============================================ -->
+    <!-- Модальные окна (остаются снаружи v-if="user") -->
+    <!-- ============================================ -->
+    
     <!-- Подтверждение удаления -->
     <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="showDeleteConfirm = false">
       <div class="delete-confirm">
@@ -424,6 +434,7 @@
     </div>
   </div>
 
+  <!-- Cropper -->
   <transition name="fade">
     <div
       v-if="showCropper"
@@ -478,7 +489,11 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const authStore = useAuthStore()
-const { user, isLoadingProfile } = storeToRefs(authStore)
+// Используем только user, так как его наличие - главный индикатор
+const { user } = storeToRefs(authStore) 
+
+const loading = ref(false) // Локальное состояние загрузки для аватара и т.д.
+
 // Cropper.js
 const showCropper = ref(false)
 const selectedImageUrl = ref('')
@@ -829,10 +844,10 @@ async function confirmCrop() {
   }
 }
 
-    onMounted(() => {
-      // Инициализация формы редактирования теперь происходит в startEdit()
-      // А данные для просмотра берутся напрямую из authStore.user
-    })
+onMounted(() => {
+  // Данные для просмотра берутся напрямую из authStore.user,
+  // который уже должен быть загружен к моменту открытия этого модального окна.
+})
 
 onBeforeUnmount(() => {
   cancelCrop()
