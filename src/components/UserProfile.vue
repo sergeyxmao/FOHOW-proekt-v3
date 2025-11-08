@@ -62,6 +62,74 @@
           <span>{{ formatDate(user.created_at) }}</span>
         </div>
 
+        <div class="form-divider">
+          <span>Личная информация</span>
+        </div>
+
+        <div class="profile-field">
+          <label>Полное имя:</label>
+          <span>{{ user.full_name || 'Не указано' }}</span>
+        </div>
+
+        <div class="profile-field">
+          <label>Личный ID:</label>
+          <span>{{ user.personal_id || 'Не указано' }}</span>
+        </div>
+
+        <div class="profile-field">
+          <label>Телефон:</label>
+          <span>{{ user.phone || 'Не указано' }}</span>
+        </div>
+
+        <div class="profile-field">
+          <label>Страна:</label>
+          <span>{{ user.country || 'Не указано' }}</span>
+        </div>
+
+        <div class="profile-field">
+          <label>Город:</label>
+          <span>{{ user.city || 'Не указано' }}</span>
+        </div>
+
+        <div class="profile-field">
+          <label>Офис:</label>
+          <span>{{ user.office || 'Не указано' }}</span>
+        </div>
+
+        <div class="form-divider">
+          <span>Социальные сети и контакты</span>
+        </div>
+
+        <div class="profile-field">
+          <label>Telegram (пользователь):</label>
+          <span>{{ user.telegram_user || 'Не указано' }}</span>
+        </div>
+
+        <div class="profile-field">
+          <label>Telegram (канал):</label>
+          <span>{{ user.telegram_channel || 'Не указано' }}</span>
+        </div>
+
+        <div class="profile-field">
+          <label>WhatsApp:</label>
+          <span>{{ user.whatsapp_contact || 'Не указано' }}</span>
+        </div>
+
+        <div class="profile-field">
+          <label>ВКонтакте:</label>
+          <span>{{ user.vk_profile || 'Не указано' }}</span>
+        </div>
+
+        <div class="profile-field">
+          <label>Одноклассники:</label>
+          <span>{{ user.ok_profile || 'Не указано' }}</span>
+        </div>
+
+        <div class="profile-field">
+          <label>Instagram:</label>
+          <span>{{ user.instagram_profile || 'Не указано' }}</span>
+        </div>
+
         <div class="profile-actions">
           <button class="btn-primary" @click="startEdit">
             Редактировать профиль
@@ -170,6 +238,134 @@
               {{ passwordVisibility.confirm ? 'Скрыть' : 'Показать' }}
             </button>
           </div>
+        </div>
+
+        <div class="form-divider">
+          <span>Личная информация</span>
+        </div>
+
+        <div class="form-group">
+          <label for="profile-full-name">Полное имя:</label>
+          <input
+            id="profile-full-name"
+            v-model="editForm.full_name"
+            type="text"
+            placeholder="Введите полное имя"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-personal-id">Личный ID:</label>
+          <input
+            id="profile-personal-id"
+            v-model="editForm.personal_id"
+            type="text"
+            placeholder="Введите личный ID"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-phone">Телефон:</label>
+          <input
+            id="profile-phone"
+            v-model="editForm.phone"
+            type="tel"
+            placeholder="Введите телефон"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-country">Страна:</label>
+          <input
+            id="profile-country"
+            v-model="editForm.country"
+            type="text"
+            placeholder="Введите страну"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-city">Город:</label>
+          <input
+            id="profile-city"
+            v-model="editForm.city"
+            type="text"
+            placeholder="Введите город"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-office">Офис:</label>
+          <input
+            id="profile-office"
+            v-model="editForm.office"
+            type="text"
+            placeholder="Введите офис"
+          />
+        </div>
+
+        <div class="form-divider">
+          <span>Социальные сети и контакты</span>
+        </div>
+
+        <div class="form-group">
+          <label for="profile-telegram-user">Telegram (пользователь):</label>
+          <input
+            id="profile-telegram-user"
+            v-model="editForm.telegram_user"
+            type="text"
+            placeholder="@username"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-telegram-channel">Telegram (канал):</label>
+          <input
+            id="profile-telegram-channel"
+            v-model="editForm.telegram_channel"
+            type="text"
+            placeholder="@channel"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-whatsapp">WhatsApp:</label>
+          <input
+            id="profile-whatsapp"
+            v-model="editForm.whatsapp_contact"
+            type="text"
+            placeholder="+7 (XXX) XXX-XX-XX"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-vk">ВКонтакте:</label>
+          <input
+            id="profile-vk"
+            v-model="editForm.vk_profile"
+            type="text"
+            placeholder="vk.com/username"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-ok">Одноклассники:</label>
+          <input
+            id="profile-ok"
+            v-model="editForm.ok_profile"
+            type="text"
+            placeholder="ok.ru/profile"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="profile-instagram">Instagram:</label>
+          <input
+            id="profile-instagram"
+            v-model="editForm.instagram_profile"
+            type="text"
+            placeholder="@username"
+          />
         </div>
 
         <div v-if="error" class="error-message">{{ error }}</div>
@@ -296,7 +492,20 @@ const editForm = ref({
   email: '',
   currentPassword: '',
   newPassword: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  // Новые поля профиля
+  country: '',
+  city: '',
+  office: '',
+  personal_id: '',
+  phone: '',
+  full_name: '',
+  telegram_user: '',
+  telegram_channel: '',
+  vk_profile: '',
+  ok_profile: '',
+  instagram_profile: '',
+  whatsapp_contact: ''
 })
 
 const error = ref('')
@@ -350,6 +559,19 @@ async function loadProfile() {
     editForm.value.currentPassword = ''
     editForm.value.newPassword = ''
     editForm.value.confirmPassword = ''
+    // Копируем новые поля профиля
+    editForm.value.country = data.user.country || ''
+    editForm.value.city = data.user.city || ''
+    editForm.value.office = data.user.office || ''
+    editForm.value.personal_id = data.user.personal_id || ''
+    editForm.value.phone = data.user.phone || ''
+    editForm.value.full_name = data.user.full_name || ''
+    editForm.value.telegram_user = data.user.telegram_user || ''
+    editForm.value.telegram_channel = data.user.telegram_channel || ''
+    editForm.value.vk_profile = data.user.vk_profile || ''
+    editForm.value.ok_profile = data.user.ok_profile || ''
+    editForm.value.instagram_profile = data.user.instagram_profile || ''
+    editForm.value.whatsapp_contact = data.user.whatsapp_contact || ''
   } catch (err) {
     console.error('Ошибка загрузки профиля:', err)
   } finally {
@@ -396,6 +618,20 @@ async function handleUpdate() {
     if (trimmedUsername) {
       body.username = trimmedUsername
     }
+
+    // Добавляем новые поля профиля
+    body.country = editForm.value.country?.trim() || ''
+    body.city = editForm.value.city?.trim() || ''
+    body.office = editForm.value.office?.trim() || ''
+    body.personal_id = editForm.value.personal_id?.trim() || ''
+    body.phone = editForm.value.phone?.trim() || ''
+    body.full_name = editForm.value.full_name?.trim() || ''
+    body.telegram_user = editForm.value.telegram_user?.trim() || ''
+    body.telegram_channel = editForm.value.telegram_channel?.trim() || ''
+    body.vk_profile = editForm.value.vk_profile?.trim() || ''
+    body.ok_profile = editForm.value.ok_profile?.trim() || ''
+    body.instagram_profile = editForm.value.instagram_profile?.trim() || ''
+    body.whatsapp_contact = editForm.value.whatsapp_contact?.trim() || ''
 
     // Добавляем пароли ТОЛЬКО если реально меняем пароль
     if (isChangingPassword && editForm.value.newPassword && editForm.value.currentPassword) {
@@ -452,6 +688,19 @@ function cancelEdit() {
   editForm.value.currentPassword = ''
   editForm.value.newPassword = ''
   editForm.value.confirmPassword = ''
+  // Восстанавливаем новые поля профиля
+  editForm.value.country = user.value.country || ''
+  editForm.value.city = user.value.city || ''
+  editForm.value.office = user.value.office || ''
+  editForm.value.personal_id = user.value.personal_id || ''
+  editForm.value.phone = user.value.phone || ''
+  editForm.value.full_name = user.value.full_name || ''
+  editForm.value.telegram_user = user.value.telegram_user || ''
+  editForm.value.telegram_channel = user.value.telegram_channel || ''
+  editForm.value.vk_profile = user.value.vk_profile || ''
+  editForm.value.ok_profile = user.value.ok_profile || ''
+  editForm.value.instagram_profile = user.value.instagram_profile || ''
+  editForm.value.whatsapp_contact = user.value.whatsapp_contact || ''
   error.value = ''
   success.value = ''
   passwordVisibility.current = false
@@ -465,6 +714,19 @@ function startEdit() {
   editForm.value.currentPassword = ''
   editForm.value.newPassword = ''
   editForm.value.confirmPassword = ''
+  // Копируем новые поля профиля
+  editForm.value.country = user.value.country || ''
+  editForm.value.city = user.value.city || ''
+  editForm.value.office = user.value.office || ''
+  editForm.value.personal_id = user.value.personal_id || ''
+  editForm.value.phone = user.value.phone || ''
+  editForm.value.full_name = user.value.full_name || ''
+  editForm.value.telegram_user = user.value.telegram_user || ''
+  editForm.value.telegram_channel = user.value.telegram_channel || ''
+  editForm.value.vk_profile = user.value.vk_profile || ''
+  editForm.value.ok_profile = user.value.ok_profile || ''
+  editForm.value.instagram_profile = user.value.instagram_profile || ''
+  editForm.value.whatsapp_contact = user.value.whatsapp_contact || ''
   passwordVisibility.current = false
   passwordVisibility.new = false
   passwordVisibility.confirm = false
