@@ -238,9 +238,9 @@ watch(
       <div class="mobile-header-section mobile-header-section--right">
         <!-- Аватар -->
         <button
-          v-if="authStore.isAuthenticated"
+          v-if="authStore.isAuthenticated && !authStore.isLoadingProfile"
           class="mobile-header-avatar"
-          ref="userMenuTriggerRef"         
+          ref="userMenuTriggerRef"
           type="button"
           @click="handleAvatarClick"
           :title="authStore.user?.name || 'Профиль'"
@@ -254,7 +254,7 @@ watch(
           <span v-else class="avatar-initials">{{ userInitials }}</span>
         </button>
         <button
-          v-else
+          v-else-if="!authStore.isLoadingProfile"
           class="mobile-header-button"
           type="button"
           @click="handleAuthButtonClick"

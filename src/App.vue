@@ -44,7 +44,7 @@ const mobileStore = useMobileStore()
 const viewSettingsStore = useViewSettingsStore()
 const notesStore = useNotesStore()
 const sidePanelsStore = useSidePanelsStore()
-const { isAuthenticated } = storeToRefs(authStore)
+const { isAuthenticated, isLoadingProfile } = storeToRefs(authStore)
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMobileMode } = storeToRefs(mobileStore)
 const { headerColor, headerColorIndex } = storeToRefs(viewSettingsStore)
@@ -756,7 +756,7 @@ onBeforeUnmount(() => {
         @fit-to-content="handleFitToContent"
       />
       <button
-        v-if="isAuthenticated"
+        v-if="isAuthenticated && !isLoadingProfile"
         v-show="!isPencilMode && !showResetPassword"
         class="zoom-floating-button no-print"
         :class="{ 'zoom-floating-button--modern': isModernTheme }"
@@ -767,7 +767,7 @@ onBeforeUnmount(() => {
         Масштаб: <span class="zoom-floating-button__value">{{ zoomDisplay }}</span>
       </button>
       <button
-        v-if="isAuthenticated"
+        v-if="isAuthenticated && !isLoadingProfile"
         v-show="!isPencilMode && !showResetPassword"
         class="save-floating-button no-print"
         :class="{ 'save-floating-button--modern': isModernTheme }"

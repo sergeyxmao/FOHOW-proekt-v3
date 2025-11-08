@@ -10,7 +10,7 @@
       <button class="close-btn" @click="$emit('close')">×</button>
     </div>
 
-    <div v-if="loading" class="loading">Загрузка...</div>
+    <div v-if="isLoadingProfile" class="loading">Загрузка профиля...</div>
 
     <div v-else class="profile-content">
       <!-- Информация о профиле -->
@@ -463,6 +463,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
+import { storeToRefs } from 'pinia'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 import { useAuthStore } from '@/stores/auth'
@@ -477,6 +478,7 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const authStore = useAuthStore()
+const { isLoadingProfile } = storeToRefs(authStore)
 // Cropper.js
 const showCropper = ref(false)
 const selectedImageUrl = ref('')
@@ -485,7 +487,6 @@ let cropper = null
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
 const user = ref({})
-const loading = ref(true)
 const editMode = ref(false)
 const editForm = ref({
   username: '',
@@ -539,43 +540,33 @@ watch(showDeleteConfirm, (visible) => {
 })
 
 async function loadProfile() {
-  loading.value = true
   try {
-    const response = await fetch(`${API_URL}/profile`, {
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
+    // Используем метод из authStore для загрузки профиля
+    await authStore.fetchProfile()
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Ошибка загрузки профиля')
-    }
-
-    user.value = data.user
-    editForm.value.username = data.user.username || ''
-    editForm.value.email = data.user.email
+    // Обновляем форму редактирования актуальными данными
+    const userData = authStore.user
+    user.value = userData
+    editForm.value.username = userData.username || ''
+    editForm.value.email = userData.email
     editForm.value.currentPassword = ''
     editForm.value.newPassword = ''
     editForm.value.confirmPassword = ''
     // Копируем новые поля профиля
-    editForm.value.country = data.user.country || ''
-    editForm.value.city = data.user.city || ''
-    editForm.value.office = data.user.office || ''
-    editForm.value.personal_id = data.user.personal_id || ''
-    editForm.value.phone = data.user.phone || ''
-    editForm.value.full_name = data.user.full_name || ''
-    editForm.value.telegram_user = data.user.telegram_user || ''
-    editForm.value.telegram_channel = data.user.telegram_channel || ''
-    editForm.value.vk_profile = data.user.vk_profile || ''
-    editForm.value.ok_profile = data.user.ok_profile || ''
-    editForm.value.instagram_profile = data.user.instagram_profile || ''
-    editForm.value.whatsapp_contact = data.user.whatsapp_contact || ''
+    editForm.value.country = userData.country || ''
+    editForm.value.city = userData.city || ''
+    editForm.value.office = userData.office || ''
+    editForm.value.personal_id = userData.personal_id || ''
+    editForm.value.phone = userData.phone || ''
+    editForm.value.full_name = userData.full_name || ''
+    editForm.value.telegram_user = userData.telegram_user || ''
+    editForm.value.telegram_channel = userData.telegram_channel || ''
+    editForm.value.vk_profile = userData.vk_profile || ''
+    editForm.value.ok_profile = userData.ok_profile || ''
+    editForm.value.instagram_profile = userData.instagram_profile || ''
+    editForm.value.whatsapp_contact = userData.whatsapp_contact || ''
   } catch (err) {
     console.error('Ошибка загрузки профиля:', err)
-  } finally {
-    loading.value = false
   }
 }
 
@@ -871,7 +862,24 @@ async function confirmCrop() {
 }
 
 onMounted(() => {
-  loadProfile()
+  // Инициализируем локальные данные из authStore
+  if (authStore.user) {
+    user.value = authStore.user
+    editForm.value.username = authStore.user.username || ''
+    editForm.value.email = authStore.user.email
+    editForm.value.country = authStore.user.country || ''
+    editForm.value.city = authStore.user.city || ''
+    editForm.value.office = authStore.user.office || ''
+    editForm.value.personal_id = authStore.user.personal_id || ''
+    editForm.value.phone = authStore.user.phone || ''
+    editForm.value.full_name = authStore.user.full_name || ''
+    editForm.value.telegram_user = authStore.user.telegram_user || ''
+    editForm.value.telegram_channel = authStore.user.telegram_channel || ''
+    editForm.value.vk_profile = authStore.user.vk_profile || ''
+    editForm.value.ok_profile = authStore.user.ok_profile || ''
+    editForm.value.instagram_profile = authStore.user.instagram_profile || ''
+    editForm.value.whatsapp_contact = authStore.user.whatsapp_contact || ''
+  }
 })
 
 onBeforeUnmount(() => {

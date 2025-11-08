@@ -6,17 +6,21 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
     token: null,
-    isAuthenticated: false
+    isAuthenticated: false,
+    isLoadingProfile: true
   }),
 
   actions: {
     async init() {
+      // Устанавливаем состояние загрузки
+      this.isLoadingProfile = true
+
       // Загружаем токен из localStorage
       const token = localStorage.getItem('token')
-      
+
       if (token) {
         this.token = token
-        
+
         // Загружаем актуальные данные пользователя с сервера
         try {
           const response = await fetch(`${API_URL}/profile`, {
@@ -24,12 +28,12 @@ export const useAuthStore = defineStore('auth', {
               'Authorization': `Bearer ${token}`
             }
           })
-          
+
           if (response.ok) {
             const data = await response.json()
             this.user = data.user
             this.isAuthenticated = true
-            
+
             // Сохраняем в localStorage
             localStorage.setItem('user', JSON.stringify(data.user))
           } else {
@@ -44,7 +48,13 @@ export const useAuthStore = defineStore('auth', {
             this.user = JSON.parse(savedUser)
             this.isAuthenticated = true
           }
+        } finally {
+          // Всегда устанавливаем флаг загрузки в false после завершения
+          this.isLoadingProfile = false
         }
+      } else {
+        // Если токена нет, сразу завершаем загрузку
+        this.isLoadingProfile = false
       }
     },
 
@@ -82,6 +92,7 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async finalizeAuthentication(token, fallbackUser) {
+      this.isLoadingProfile = true
       this.token = token
       localStorage.setItem('token', token)
 
@@ -101,6 +112,8 @@ export const useAuthStore = defineStore('auth', {
       } catch (err) {
         console.error('Ошибка загрузки профиля после входа:', err)
         this.user = fallbackUser
+      } finally {
+        this.isLoadingProfile = false
       }
 
       this.isAuthenticated = true
@@ -130,23 +143,29 @@ export const useAuthStore = defineStore('auth', {
         throw new Error('Отсутствует токен авторизации')
       }
 
-      const response = await fetch(`${API_URL}/profile`, {
-        headers: {
-          'Authorization': `Bearer ${this.token}`
+      this.isLoadingProfile = true
+
+      try {
+        const response = await fetch(`${API_URL}/profile`, {
+          headers: {
+            'Authorization': `Bearer ${this.token}`
+          }
+        })
+
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || 'Ошибка загрузки профиля')
         }
-      })
 
-      if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || 'Ошибка загрузки профиля')
+        // Сохраняем весь объект пользователя без фильтрации полей
+        this.user = data.user
+        localStorage.setItem('user', JSON.stringify(data.user))
+
+        return data.user
+      } finally {
+        this.isLoadingProfile = false
       }
-
-      const data = await response.json()
-      // Сохраняем весь объект пользователя без фильтрации полей
-      this.user = data.user
-      localStorage.setItem('user', JSON.stringify(data.user))
-
-      return data.user
     },
 
     async updateProfile(profileData) {
