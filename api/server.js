@@ -384,93 +384,117 @@ app.post('/api/reset-password', async (req, reply) => {
   }
 });
 
-// === ОБНОВЛЕНИЕ ПРОФИЛЯ ===
-app.put('/api/profile', async (req, reply) => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '')
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' })
-    }
+    // === ОБНОВЛЕНИЕ ПРОФИЛЯ (РАСШИРЕННАЯ ВЕРСИЯ) ===
+    app.put('/api/profile', async (req, reply) => {
+      try {
+        // 1. Аутентификация и авторизация
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (!token) {
+          return reply.code(401).send({ error: 'Не авторизован' });
+        }
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.userId;
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
-    const { username, email, currentPassword, newPassword } = req.body
+        // 2. Извлекаем все возможные поля из тела запроса
+        const {
+          username, email, currentPassword, newPassword,
+          country, city, office, personal_id, phone, full_name,
+          telegram_user, telegram_channel, vk_profile, ok_profile,
+          instagram_profile, whatsapp_contact
+        } = req.body;
 
-    const userResult = await pool.query(
-      'SELECT * FROM users WHERE id = $1',
-      [decoded.userId]
-    )
+        // 3. Получаем текущее состояние пользователя из БД
+        const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+        if (userResult.rows.length === 0) {
+          return reply.code(404).send({ error: 'Пользователь не найден' });
+        }
+        const user = userResult.rows[0];
 
-    if (userResult.rows.length === 0) {
-      return reply.code(404).send({ error: 'Пользователь не найден' })
-    }
+        // 4. Проверки уникальности (если поля были изменены)
+        if (email && email !== user.email) {
+          const emailCheck = await pool.query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, userId]);
+          if (emailCheck.rows.length > 0) {
+            return reply.code(409).send({ error: 'Этот email уже используется' });
+          }
+        }
+        if (username && username !== user.username) {
+          const usernameCheck = await pool.query('SELECT id FROM users WHERE username = $1 AND id != $2', [username, userId]);
+          if (usernameCheck.rows.length > 0) {
+            return reply.code(409).send({ error: 'Это имя пользователя уже занято' });
+          }
+        }
+        if (personal_id && personal_id !== user.personal_id) {
+          const personalIdCheck = await pool.query('SELECT id FROM users WHERE personal_id = $1 AND id != $2', [personal_id, userId]);
+          if (personalIdCheck.rows.length > 0) {
+            return reply.code(409).send({ error: 'Этот личный номер уже используется' });
+          }
+        }
 
-    const user = userResult.rows[0]
+        // 5. Логика смены пароля (остается без изменений)
+        let passwordHash = user.password;
+        if (newPassword && newPassword.trim().length > 0) {
+          if (!currentPassword || currentPassword.trim().length === 0) {
+            return reply.code(400).send({ error: 'Укажите текущий пароль для его смены' });
+          }
+          const validPassword = await bcrypt.compare(currentPassword, user.password);
+          if (!validPassword) {
+            return reply.code(400).send({ error: 'Неверный текущий пароль' });
+          }
+          if (newPassword.length < 6) {
+            return reply.code(400).send({ error: 'Новый пароль должен быть минимум 6 символов' });
+          }
+          passwordHash = await bcrypt.hash(newPassword, 10);
+        }
 
-    if (email && email !== user.email) {
-      const emailCheck = await pool.query(
-        'SELECT id FROM users WHERE email = $1 AND id != $2',
-        [email, decoded.userId]
-      )
-      if (emailCheck.rows.length > 0) {
-        return reply.code(400).send({ error: 'Email уже используется' })
+        // 6. Формируем и выполняем SQL-запрос на обновление
+        const updateResult = await pool.query(
+          `UPDATE users SET 
+             username = COALESCE($1, username), 
+             email = COALESCE($2, email), 
+             password = $3, 
+             country = COALESCE($4, country),
+             city = COALESCE($5, city),
+             office = COALESCE($6, office),
+             personal_id = COALESCE($7, personal_id),
+             phone = COALESCE($8, phone),
+             full_name = COALESCE($9, full_name),
+             telegram_user = COALESCE($10, telegram_user),
+             telegram_channel = COALESCE($11, telegram_channel),
+             vk_profile = COALESCE($12, vk_profile),
+             ok_profile = COALESCE($13, ok_profile),
+             instagram_profile = COALESCE($14, instagram_profile),
+             whatsapp_contact = COALESCE($15, whatsapp_contact),
+             updated_at = CURRENT_TIMESTAMP
+           WHERE id = $16
+           RETURNING id, email, username, avatar_url, created_at, updated_at, 
+                     country, city, office, personal_id, phone, full_name, 
+                     telegram_user, telegram_channel, vk_profile, ok_profile, 
+                     instagram_profile, whatsapp_contact, 
+                     visibility_settings, search_settings`,
+          [
+            username, email, passwordHash,
+            country, city, office, personal_id, phone, full_name,
+            telegram_user, telegram_channel, vk_profile, ok_profile,
+            instagram_profile, whatsapp_contact,
+            userId
+          ]
+        );
+
+        // 7. Возвращаем обновленный профиль
+        return reply.send({
+          success: true,
+          user: updateResult.rows[0]
+        });
+
+      } catch (err) {
+        // Специальная обработка ошибки уникальности для personal_id
+        if (err.code === '23505' && err.constraint === 'users_personal_id_unique') {
+            return reply.code(409).send({ error: 'Этот личный номер уже используется' });
+        }
+        console.error('❌ Ошибка обновления профиля:', err);
+        return reply.code(500).send({ error: 'Ошибка сервера', details: err.message });
       }
-    }
-
-    if (username && username !== user.username) {
-      const usernameCheck = await pool.query(
-        'SELECT id FROM users WHERE username = $1 AND id != $2',
-        [username, decoded.userId]
-      )
-      if (usernameCheck.rows.length > 0) {
-        return reply.code(400).send({ error: 'Имя пользователя занято' })
-      }
-    }
-
-    let passwordHash = user.password
-    const shouldChangePassword = newPassword && newPassword.trim().length > 0
-
-    if (shouldChangePassword) {
-      if (!currentPassword || currentPassword.trim().length === 0) {
-        return reply.code(400).send({ error: 'Укажите текущий пароль для смены пароля' })
-      }
-
-      const validPassword = await bcrypt.compare(currentPassword, user.password)
-      if (!validPassword) {
-        return reply.code(400).send({ error: 'Неверный текущий пароль' })
-      }
-
-      if (newPassword.length < 6) {
-        return reply.code(400).send({ error: 'Новый пароль должен быть минимум 6 символов' })
-      }
-
-      passwordHash = await bcrypt.hash(newPassword, 10)
-    }
-
-    const updateResult = await pool.query(
-      `UPDATE users 
-       SET username = COALESCE($1, username), 
-           email = COALESCE($2, email), 
-           password = $3, 
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $4
-       RETURNING id, username, email, avatar_url, created_at, updated_at`,
-      [
-        username || null,
-        email || null,
-        passwordHash,
-        decoded.userId
-      ]
-    )
-
-    return reply.send({
-      success: true,
-      user: updateResult.rows[0]
-    })
-  } catch (err) {
-    console.error('❌ Ошибка update-profile:', err)
-    return reply.code(500).send({ error: 'Ошибка сервера', details: err.message })
-  }
-})
+    });
 
 // === УДАЛЕНИЕ АККАУНТА ===
 app.delete('/api/profile', async (req, reply) => {
