@@ -72,7 +72,7 @@ export const useNotesStore = defineStore('notes', () => {
       if (data.notes && Array.isArray(data.notes)) {
         data.notes.forEach(note => {
           const cardUid = note.card_uid;
-          const noteDate = note.note_date;
+          const noteDate = note.note_date.slice(0, 10); // Обрезаем до "ГГГГ-ММ-ДД"
 
           if (!groupedNotes[cardUid]) {
             groupedNotes[cardUid] = {};
