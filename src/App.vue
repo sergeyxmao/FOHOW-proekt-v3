@@ -650,10 +650,22 @@ function handleMobileAuthSuccess() {
 function handleOpenProfile() {
   if (isAuthenticated.value) {
     showProfile.value = true
+    // Добавляем параметр в URL для сохранения состояния при перезагрузке
+    const url = new URL(window.location)
+    url.searchParams.set('profile', '1')
+    window.history.pushState({}, '', url)
     return
   }
 
   openMobileAuthPrompt()
+}
+
+function handleCloseProfile() {
+  showProfile.value = false
+  // Удаляем параметр из URL при закрытии профиля
+  const url = new URL(window.location)
+  url.searchParams.delete('profile')
+  window.history.pushState({}, '', url)
 }
 
 function handleOpenMobileBoards() {
@@ -694,7 +706,7 @@ onMounted(async () => {
 
   // Определяем тип устройства
   mobileStore.detectDevice()
-  
+
   // Инициализация жеста масштабирования UI для мобильной версии
 
   if (mobileStore.isMobileMode) {
@@ -713,9 +725,9 @@ onMounted(async () => {
 
     })
 
-  }  
+  }
 
-  // Проверяем URL на токен сброса пароля
+  // Проверяем URL на токен сброса пароля и параметр профиля
   const urlParams = new URLSearchParams(window.location.search)
   const token = urlParams.get('token')
   if (token) {
@@ -723,6 +735,12 @@ onMounted(async () => {
     showResetPassword.value = true
     // Очищаем URL от токена
     window.history.replaceState({}, document.title, window.location.pathname)
+  }
+
+  // Проверяем параметр profile в URL - если он есть и пользователь авторизован, открываем профиль
+  const profileParam = urlParams.get('profile')
+  if (profileParam === '1' && isAuthenticated.value) {
+    showProfile.value = true
   }
 
   window.addEventListener('keydown', handleGlobalKeydown)
@@ -917,11 +935,11 @@ onBeforeUnmount(() => {
       <div
         v-if="showProfile"
         :class="['profile-modal-overlay no-print', { 'profile-modal-overlay--modern': isModernTheme }]"
-        @click.self="showProfile = false"
+        @click.self="handleCloseProfile"
       >
         <UserProfile
           :is-modern-theme="isModernTheme"
-          @close="showProfile = false"
+          @close="handleCloseProfile"
         />
       </div>
     </Teleport>
