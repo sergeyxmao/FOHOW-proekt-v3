@@ -384,7 +384,7 @@ app.post('/api/reset-password', async (req, reply) => {
   }
 });
 
-    // === ОБНОВЛЕНИЕ ПРОФИЛЯ (РАСШИРЕННАЯ ВЕРСИЯ) ===
+    // === ОБНОВЛЕНИЕ ПРОФИЛЯ (ИСПРАВЛЕННАЯ ВЕРСИЯ 2.0) ===
     app.put('/api/profile', async (req, reply) => {
       try {
         // 1. Аутентификация и авторизация
@@ -430,7 +430,7 @@ app.post('/api/reset-password', async (req, reply) => {
           }
         }
 
-        // 5. Логика смены пароля (остается без изменений)
+        // 5. Логика смены пароля
         let passwordHash = user.password;
         if (newPassword && newPassword.trim().length > 0) {
           if (!currentPassword || currentPassword.trim().length === 0) {
@@ -472,10 +472,10 @@ app.post('/api/reset-password', async (req, reply) => {
                      instagram_profile, whatsapp_contact, 
                      visibility_settings, search_settings`,
           [
-            username, email, passwordHash,
-            country, city, office, personal_id, phone, full_name,
-            telegram_user, telegram_channel, vk_profile, ok_profile,
-            instagram_profile, whatsapp_contact,
+            username || null, email || null, passwordHash,
+            country || null, city || null, office || null, personal_id || null, phone || null, full_name || null,
+            telegram_user || null, telegram_channel || null, vk_profile || null, ok_profile || null,
+            instagram_profile || null, whatsapp_contact || null,
             userId
           ]
         );
@@ -487,7 +487,6 @@ app.post('/api/reset-password', async (req, reply) => {
         });
 
       } catch (err) {
-        // Специальная обработка ошибки уникальности для personal_id
         if (err.code === '23505' && err.constraint === 'users_personal_id_unique') {
             return reply.code(409).send({ error: 'Этот личный номер уже используется' });
         }
