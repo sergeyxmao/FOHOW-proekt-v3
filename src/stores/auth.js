@@ -123,6 +123,57 @@ export const useAuthStore = defineStore('auth', {
       } catch (err) {
         console.error('Ошибка очистки комментариев:', err)
       }
+    },
+
+    async fetchProfile() {
+      if (!this.token) {
+        throw new Error('Отсутствует токен авторизации')
+      }
+
+      const response = await fetch(`${API_URL}/profile`, {
+        headers: {
+          'Authorization': `Bearer ${this.token}`
+        }
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Ошибка загрузки профиля')
+      }
+
+      const data = await response.json()
+      // Сохраняем весь объект пользователя без фильтрации полей
+      this.user = data.user
+      localStorage.setItem('user', JSON.stringify(data.user))
+
+      return data.user
+    },
+
+    async updateProfile(profileData) {
+      if (!this.token) {
+        throw new Error('Отсутствует токен авторизации')
+      }
+
+      const response = await fetch(`${API_URL}/profile`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(profileData)
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Ошибка обновления профиля')
+      }
+
+      const data = await response.json()
+      // Обновляем состояние user данными, которые вернул сервер
+      this.user = data.user
+      localStorage.setItem('user', JSON.stringify(data.user))
+
+      return data.user
     }
   }
 })
