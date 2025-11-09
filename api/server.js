@@ -16,6 +16,8 @@ import { dirname } from 'path';
 import fastifyStatic from '@fastify/static';
 import Redis from 'ioredis'; // <-- Добавлен импорт Redis
 import { checkFeature } from './middleware/checkFeature.js';
+import { checkUsageLimit } from './middleware/checkUsageLimit.js';
+
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -654,7 +656,9 @@ app.get('/api/boards/:id', async (req, reply) => {
 });
 
 // Создать новую доску
-app.post('/api/boards', async (req, reply) => {
+    app.post('/api/boards', {
+      preHandler: [authenticateToken, checkUsageLimit('boards', 'max_boards')]
+    }, async (req, reply) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
@@ -920,7 +924,9 @@ app.get('/api/boards/:boardId/stickers', async (req, reply) => {
 });
 
 // Создать новый стикер
-app.post('/api/boards/:boardId/stickers', async (req, reply) => {
+    app.post('/api/boards/:boardId/stickers', {
+      preHandler: [authenticateToken, checkUsageLimit('stickers', 'max_stickers_per_board')] // Используем более точное имя фичи
+    }, async (req, reply) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
@@ -1146,7 +1152,9 @@ app.get('/api/boards/:boardId/notes', async (req, reply) => {
 });
 
 // Создать/обновить/удалить заметку (UPSERT + DELETE)
-app.post('/api/notes', async (req, reply) => {
+    app.post('/api/notes', {
+      preHandler: [authenticateToken, checkUsageLimit('notes', 'max_notes_per_board')] // Уточняем имя фичи
+    }, async (req, reply) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
@@ -1254,7 +1262,9 @@ app.get('/api/comments', async (req, reply) => {
 });
 
 // Создать новый личный комментарий
-app.post('/api/comments', async (req, reply) => {
+    app.post('/api/comments', {
+      preHandler: [authenticateToken, checkUsageLimit('comments', 'max_comments')]
+    }, async (req, reply) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
