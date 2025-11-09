@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useNotesStore } from '../../stores/notes.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useBoardStore } from '../../stores/board.js'
+import { useStickersStore } from '../../stores/stickers.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -13,6 +14,7 @@ const props = defineProps({
 
 const notesStore = useNotesStore()
 const sidePanelsStore = useSidePanelsStore()
+const stickersStore = useStickersStore()
 
 const { cardsWithEntries } = storeToRefs(notesStore)
 
@@ -87,7 +89,10 @@ const handleCardNotesDelete = async (cardId) => {
 <template>
   <div
     class="notes-side-panel"
-    :class="{ 'notes-side-panel--modern': props.isModernTheme }"
+    :class="{
+      'notes-side-panel--modern': props.isModernTheme,
+      'notes-side-panel--no-pointer': stickersStore.isPlacementMode
+    }"
   >
     <div class="notes-side-panel__header">
       <h2 class="notes-side-panel__title">Список заметок</h2>
@@ -167,6 +172,11 @@ const handleCardNotesDelete = async (cardId) => {
   border-right: 1px solid rgba(15, 23, 42, 0.12);
   box-shadow: 4px 0 24px rgba(15, 23, 42, 0.18);
   z-index: 2000;
+}
+
+.notes-side-panel--no-pointer {
+  pointer-events: none;
+  opacity: 0.3;
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(8px);

@@ -1,6 +1,7 @@
 <script setup>
 import UserComments from './UserComments.vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
+import { useStickersStore } from '../../stores/stickers.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -10,6 +11,7 @@ const props = defineProps({
 })
 
 const sidePanelsStore = useSidePanelsStore()
+const stickersStore = useStickersStore()
 
 const handleClose = () => {
   sidePanelsStore.closePanel()
@@ -19,7 +21,10 @@ const handleClose = () => {
 <template>
   <div
     class="comments-side-panel"
-    :class="{ 'comments-side-panel--modern': props.isModernTheme }"
+    :class="{
+      'comments-side-panel--modern': props.isModernTheme,
+      'comments-side-panel--no-pointer': stickersStore.isPlacementMode
+    }"
   >
     <div class="comments-side-panel__header">
       <h2 class="comments-side-panel__title">Личные комментарии</h2>
@@ -53,6 +58,11 @@ const handleClose = () => {
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(8px);
+}
+
+.comments-side-panel--no-pointer {
+  pointer-events: none;
+  opacity: 0.3;
 }
 
 .comments-side-panel__header {
