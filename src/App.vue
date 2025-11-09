@@ -770,6 +770,7 @@ onBeforeUnmount(() => {
     <!-- Desktop UI -->
     <template v-if="!isMobileMode">
       <TopMenuButtons
+        v-if="isAuthenticated"
         v-show="!isPencilMode && !showResetPassword"
         class="no-print"
         :is-modern-theme="isModernTheme"
@@ -837,6 +838,7 @@ onBeforeUnmount(() => {
         @request-auth="openMobileAuthPrompt"
       />
       <MobileSidebar
+        v-if="isAuthenticated"
         v-show="!isPencilMode && !showResetPassword"
         class="no-print"
         :is-modern-theme="isModernTheme"
