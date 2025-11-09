@@ -722,7 +722,7 @@ app.put('/api/boards/:id', async (req, reply) => {
         if (!isNaN(limit) && limit !== -1 && newObjectCount > limit) {
           // Если количество карточек превышает лимит, возвращаем ошибку
           return reply.code(403).send({
-            error: `Достигнут лимит карточек (${limit}) на тарифе "${planName}".`,
+            error: `Достигнут лимит карточек (${limit}) на вашем тарифе "${planName}".`, // <--- УЛУЧШЕНО
             code: 'USAGE_LIMIT_REACHED',
             upgradeRequired: true
           });
