@@ -14,7 +14,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['activate-pencil', 'toggle-theme'])
+const emit = defineEmits(['activate-pencil', 'toggle-theme', 'clear-canvas', 'new-structure'])
 
 const historyStore = useHistoryStore()
 const { canUndo, canRedo } = storeToRefs(historyStore)
@@ -54,6 +54,14 @@ function handleActivatePencil() {
 }
 function handleToggleTheme() {
   emit('toggle-theme')
+  closeMenu()
+}
+function handleClearCanvas() {
+  emit('clear-canvas')
+  closeMenu()
+}
+function handleNewStructure(shouldSave) {
+  emit('new-structure', shouldSave)
   closeMenu()
 }
 
@@ -137,9 +145,11 @@ onBeforeUnmount(() => {
           <component
             :is="getMenuComponent(item.id)"
             v-if="getMenuComponent(item.id)"
-            :is-modern-theme="props.isModernTheme"            
+            :is-modern-theme="props.isModernTheme"
             @request-close="closeMenu"
             @activate-pencil="handleActivatePencil"
+            @clear-canvas="handleClearCanvas"
+            @new-structure="handleNewStructure"
           />
         </div>
       </transition>

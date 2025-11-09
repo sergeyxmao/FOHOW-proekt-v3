@@ -24,6 +24,7 @@ import { useViewportStore } from './stores/viewport'
 import { useMobileStore } from './stores/mobile'
 import { useViewSettingsStore } from './stores/viewSettings'
 import { useNotesStore } from './stores/notes'
+import { useHistoryStore } from './stores/history'
 import { useMobileUIScaleGesture } from './composables/useMobileUIScaleGesture'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
@@ -142,6 +143,41 @@ function handlePencilClose(payload) {
   }
 
   resetPencilState()
+}
+
+function handleClearCanvas() {
+  // Очищаем все карточки
+  cardsStore.cards = []
+
+  // Очищаем все соединения
+  connectionsStore.connections = []
+
+  // Очищаем все стикеры
+  stickersStore.clearStickers()
+
+  // Очищаем все заметки
+  notesStore.notes = []
+
+  console.log('🧹 Холст очищен')
+}
+
+async function handleNewStructure(shouldSave) {
+  // Если нужно сохранить текущую структуру перед созданием новой
+  if (shouldSave && currentBoardId.value && authStore.isAuthenticated) {
+    await saveCurrentBoard()
+  }
+
+  // Очищаем холст
+  handleClearCanvas()
+
+  // Сбрасываем текущую доску
+  boardStore.clearCurrentBoard()
+
+  // Сбрасываем историю
+  const historyStore = useHistoryStore()
+  historyStore.reset()
+
+  console.log('📄 Создана новая структура')
 }
 
 function handleGlobalKeydown(event) {
@@ -739,6 +775,8 @@ onBeforeUnmount(() => {
         :is-modern-theme="isModernTheme"
         @toggle-theme="toggleTheme"
         @activate-pencil="handleActivatePencil"
+        @clear-canvas="handleClearCanvas"
+        @new-structure="handleNewStructure"
       />
       <AppHeader
         v-show="!isPencilMode && !showResetPassword"
