@@ -181,6 +181,7 @@ watch(
       <div class="mobile-header-section mobile-header-section--left">
         <!-- Отмена -->
         <button
+          v-if="authStore.isAuthenticated"
           class="mobile-header-button"
           type="button"
           :disabled="!historyStore.canUndo"
@@ -192,6 +193,7 @@ watch(
 
         <!-- Повтор -->
         <button
+          v-if="authStore.isAuthenticated"
           class="mobile-header-button"
           type="button"
           :disabled="!historyStore.canRedo"
@@ -205,6 +207,7 @@ watch(
       <div class="mobile-header-section mobile-header-section--center">
         <!-- Режим иерархии -->
         <button
+          v-if="authStore.isAuthenticated"
           class="mobile-header-button"
           :class="{ 'mobile-header-button--active': isHierarchyMode }"
           type="button"
@@ -216,6 +219,7 @@ watch(
 
         <!-- Загрузить JSON -->
         <button
+          v-if="authStore.isAuthenticated"
           class="mobile-header-button"
           type="button"
           @click="handleLoadJSON"
@@ -226,6 +230,7 @@ watch(
 
         <!-- Экспортировать HTML -->
         <button
+          v-if="authStore.isAuthenticated"
           class="mobile-header-button"
           type="button"
           @click="handleExportHTML"
