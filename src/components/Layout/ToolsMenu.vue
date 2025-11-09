@@ -161,39 +161,43 @@ const cancelNewStructure = () => {
     </div>
 
     <!-- Диалог подтверждения очистки холста -->
-    <div v-if="showClearCanvasDialog" class="dialog-overlay" @click="cancelClearCanvas">
-      <div class="dialog-content" @click.stop>
-        <h3 class="dialog-title">Подтверждение очистки</h3>
-        <p class="dialog-message">Вы уверены, что хотите очистить холст? Все объекты будут удалены.</p>
-        <div class="dialog-actions">
-          <button class="dialog-button dialog-button--cancel" @click="cancelClearCanvas">
-            Отмена
-          </button>
-          <button class="dialog-button dialog-button--confirm" @click="confirmClearCanvas">
-            Продолжить
-          </button>
+    <Teleport to="body">
+      <div v-if="showClearCanvasDialog" class="dialog-overlay" @click="cancelClearCanvas">
+        <div class="dialog-content" @click.stop>
+          <h3 class="dialog-title">Подтверждение очистки</h3>
+          <p class="dialog-message">Вы уверены, что хотите очистить холст? Все объекты будут удалены.</p>
+          <div class="dialog-actions">
+            <button class="dialog-button dialog-button--cancel" @click="cancelClearCanvas">
+              Отмена
+            </button>
+            <button class="dialog-button dialog-button--confirm" @click="confirmClearCanvas">
+              Продолжить
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Диалог новой структуры -->
-    <div v-if="showNewStructureDialog" class="dialog-overlay" @click="cancelNewStructure">
-      <div class="dialog-content" @click.stop>
-        <h3 class="dialog-title">Новая структура</h3>
-        <p class="dialog-message">Хотите сохранить текущую структуру перед созданием новой?</p>
-        <div class="dialog-actions">
-          <button class="dialog-button dialog-button--cancel" @click="cancelNewStructure">
-            Отмена
-          </button>
-          <button class="dialog-button dialog-button--secondary" @click="confirmNewStructure(false)">
-            Не сохранять
-          </button>
-          <button class="dialog-button dialog-button--confirm" @click="confirmNewStructure(true)">
-            Сохранить и создать новую
-          </button>
+    <Teleport to="body">
+      <div v-if="showNewStructureDialog" class="dialog-overlay" @click="cancelNewStructure">
+        <div class="dialog-content" @click.stop>
+          <h3 class="dialog-title">Новая структура</h3>
+          <p class="dialog-message">Хотите сохранить текущую структуру перед созданием новой?</p>
+          <div class="dialog-actions">
+            <button class="dialog-button dialog-button--cancel" @click="cancelNewStructure">
+              Отмена
+            </button>
+            <button class="dialog-button dialog-button--secondary" @click="confirmNewStructure(false)">
+              Не сохранять
+            </button>
+            <button class="dialog-button dialog-button--confirm" @click="confirmNewStructure(true)">
+              Сохранить и создать новую
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
