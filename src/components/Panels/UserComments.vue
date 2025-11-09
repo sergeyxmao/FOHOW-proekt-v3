@@ -15,24 +15,10 @@ const editColor = ref('')
 
 // Палитра цветов
 const colorPalette = [
-  '#FFEB3B', // Желтый
-  '#FFC107', // Оранжевый
-  '#FF9800', // Темно-оранжевый
-  '#FF5722', // Красно-оранжевый
   '#F44336', // Красный
-  '#E91E63', // Розовый
-  '#9C27B0', // Фиолетовый
-  '#673AB7', // Темно-фиолетовый
-  '#3F51B5', // Индиго
-  '#2196F3', // Синий
-  '#03A9F4', // Светло-синий
-  '#00BCD4', // Циан
-  '#009688', // Бирюзовый
+  '#FFEB3B', // Желтый
   '#4CAF50', // Зеленый
-  '#8BC34A', // Светло-зеленый
-  '#CDDC39', // Лаймовый
-  '#FFF9C4', // Светло-желтый
-  '#F5F5F5', // Серый
+  '#2196F3', // Синий
 ]
 
 const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
@@ -74,7 +60,6 @@ const handleSubmit = async () => {
 const handleEditStart = (comment) => {
   editingId.value = comment.id
   editContent.value = comment.content
-  editColor.value = comment.color || '#FFEB3B'
 }
 
 // Сохранить изменения
@@ -83,8 +68,7 @@ const handleEditSave = async () => {
 
   try {
     await commentsStore.updateComment(editingId.value, {
-      content: editContent.value.trim(),
-      color: editColor.value
+      content: editContent.value.trim()
     })
     resetEditingState()
   } catch (err) {
@@ -154,6 +138,19 @@ const formatDate = (isoString) => {
     <!-- Форма добавления нового комментария -->
     <div class="user-comments__header">
       <h3 class="user-comments__title">Личные комментарии</h3>
+      <!-- Палитра цветов в заголовке -->
+      <div class="user-comments__header-colors">
+        <button
+          v-for="color in colorPalette"
+          :key="color"
+          type="button"
+          class="user-comments__color-btn"
+          :class="{ 'user-comments__color-btn--active': newCommentColor === color }"
+          :style="{ backgroundColor: color }"
+          :title="color"
+          @click="newCommentColor = color"
+        />
+      </div>
     </div>
 
     <form class="user-comments__form" @submit.prevent="handleSubmit">
@@ -163,23 +160,6 @@ const formatDate = (isoString) => {
         placeholder="Добавьте личный комментарий..."
         rows="3"
       ></textarea>
-
-      <!-- Палитра цветов -->
-      <div class="user-comments__color-palette">
-        <label class="user-comments__color-label">Цвет:</label>
-        <div class="user-comments__colors">
-          <button
-            v-for="color in colorPalette"
-            :key="color"
-            type="button"
-            class="user-comments__color-btn"
-            :class="{ 'user-comments__color-btn--active': newCommentColor === color }"
-            :style="{ backgroundColor: color }"
-            :title="color"
-            @click="newCommentColor = color"
-          />
-        </div>
-      </div>
 
       <button
         class="user-comments__submit"
@@ -233,23 +213,6 @@ const formatDate = (isoString) => {
             rows="3"
           ></textarea>
 
-          <!-- Палитра цветов для редактирования -->
-          <div class="user-comments__color-palette">
-            <label class="user-comments__color-label">Цвет:</label>
-            <div class="user-comments__colors">
-              <button
-                v-for="color in colorPalette"
-                :key="color"
-                type="button"
-                class="user-comments__color-btn"
-                :class="{ 'user-comments__color-btn--active': editColor === color }"
-                :style="{ backgroundColor: color }"
-                :title="color"
-                @click="editColor = color"
-              />
-            </div>
-          </div>
-
           <div class="user-comments__edit-actions">
             <button
               class="user-comments__submit"
@@ -291,6 +254,7 @@ const formatDate = (isoString) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
 
 .user-comments__title {
@@ -298,6 +262,11 @@ const formatDate = (isoString) => {
   font-size: 18px;
   font-weight: 600;
   color: #1f2937;
+}
+
+.user-comments__header-colors {
+  display: flex;
+  gap: 6px;
 }
 
 .user-comments__form {
@@ -322,24 +291,6 @@ const formatDate = (isoString) => {
   outline: none;
   border-color: #5d8bf4;
   box-shadow: 0 0 0 3px rgba(93, 139, 244, 0.1);
-}
-
-.user-comments__color-palette {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.user-comments__color-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #4b5563;
-}
-
-.user-comments__colors {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 .user-comments__color-btn {
