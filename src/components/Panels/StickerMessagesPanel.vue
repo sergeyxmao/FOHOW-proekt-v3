@@ -1,6 +1,7 @@
 <script setup>
 import StickerMessages from './StickerMessages.vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
+import { useStickersStore } from '../../stores/stickers.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -10,6 +11,7 @@ const props = defineProps({
 })
 
 const sidePanelsStore = useSidePanelsStore()
+const stickersStore = useStickersStore()
 
 const handleClose = () => {
   sidePanelsStore.closePanel()
@@ -19,7 +21,10 @@ const handleClose = () => {
 <template>
   <div
     class="sticker-messages-panel"
-    :class="{ 'sticker-messages-panel--modern': props.isModernTheme }"
+    :class="{
+      'sticker-messages-panel--modern': props.isModernTheme,
+      'sticker-messages-panel--no-pointer': stickersStore.isPlacementMode
+    }"
   >
     <div class="sticker-messages-panel__header">
       <h2 class="sticker-messages-panel__title">Сообщения стикеров</h2>
@@ -53,6 +58,11 @@ const handleClose = () => {
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(8px);
+}
+
+.sticker-messages-panel--no-pointer {
+  pointer-events: none;
+  opacity: 0.3;
 }
 
 .sticker-messages-panel__header {
