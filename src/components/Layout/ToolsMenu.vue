@@ -1,7 +1,8 @@
 <script setup>
+import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCanvasStore } from '../../stores/canvas.js'
-import { useHistoryStore } from '../../stores/history.js'  
+import { useHistoryStore } from '../../stores/history.js'
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -9,12 +10,15 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['request-close', 'activate-pencil'])
+const emit = defineEmits(['request-close', 'activate-pencil', 'clear-canvas', 'new-structure'])
 
 const canvasStore = useCanvasStore()
 const historyStore = useHistoryStore()
 const { isSelectionMode, isHierarchicalDragMode, guidesEnabled } = storeToRefs(canvasStore)
 const { canUndo, canRedo } = storeToRefs(historyStore)
+
+const showClearCanvasDialog = ref(false)
+const showNewStructureDialog = ref(false)
 
 const handleSelectionMode = () => {
   canvasStore.toggleSelectionMode()
@@ -52,7 +56,35 @@ const handleRedo = () => {
 const toggleGuides = () => {
   canvasStore.toggleGuides()
   emit('request-close')
-}  
+}
+
+const handleClearCanvas = () => {
+  showClearCanvasDialog.value = true
+}
+
+const confirmClearCanvas = () => {
+  showClearCanvasDialog.value = false
+  emit('clear-canvas')
+  emit('request-close')
+}
+
+const cancelClearCanvas = () => {
+  showClearCanvasDialog.value = false
+}
+
+const handleNewStructure = () => {
+  showNewStructureDialog.value = true
+}
+
+const confirmNewStructure = (shouldSave) => {
+  showNewStructureDialog.value = false
+  emit('new-structure', shouldSave)
+  emit('request-close')
+}
+
+const cancelNewStructure = () => {
+  showNewStructureDialog.value = false
+}
 </script>
 
 <template>
@@ -105,6 +137,61 @@ const toggleGuides = () => {
         >
           Показать направляющие
         </button>
+      </div>
+      <div class="tools-menu__item">
+        <span class="tools-menu__icon" aria-hidden="true">🧹</span>
+        <button
+          type="button"
+          class="tools-menu__action"
+          @click="handleClearCanvas"
+        >
+          Очистить холст
+        </button>
+      </div>
+      <div class="tools-menu__item">
+        <span class="tools-menu__icon" aria-hidden="true">📄</span>
+        <button
+          type="button"
+          class="tools-menu__action"
+          @click="handleNewStructure"
+        >
+          Новая структура
+        </button>
+      </div>
+    </div>
+
+    <!-- Диалог подтверждения очистки холста -->
+    <div v-if="showClearCanvasDialog" class="dialog-overlay" @click="cancelClearCanvas">
+      <div class="dialog-content" @click.stop>
+        <h3 class="dialog-title">Подтверждение очистки</h3>
+        <p class="dialog-message">Вы уверены, что хотите очистить холст? Все объекты будут удалены.</p>
+        <div class="dialog-actions">
+          <button class="dialog-button dialog-button--cancel" @click="cancelClearCanvas">
+            Отмена
+          </button>
+          <button class="dialog-button dialog-button--confirm" @click="confirmClearCanvas">
+            Продолжить
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Диалог новой структуры -->
+    <div v-if="showNewStructureDialog" class="dialog-overlay" @click="cancelNewStructure">
+      <div class="dialog-content" @click.stop>
+        <h3 class="dialog-title">Новая структура</h3>
+        <p class="dialog-message">Хотите сохранить текущую структуру перед созданием новой?</p>
+        <div class="dialog-actions">
+          <button class="dialog-button dialog-button--cancel" @click="cancelNewStructure">
+            Отмена
+          </button>
+          <button class="dialog-button dialog-button--secondary" @click="confirmNewStructure(false)">
+            Не сохранять
+          </button>
+          <button class="dialog-button dialog-button--confirm" @click="confirmNewStructure(true)">
+            Сохранить и создать новую
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -199,5 +286,87 @@ const toggleGuides = () => {
   background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
   color: #051125;
   box-shadow: 0 20px 40px rgba(6, 11, 21, 0.75);
-}  
+}
+
+/* Диалоговые окна */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+
+.dialog-content {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.dialog-title {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dialog-message {
+  margin: 0 0 24px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.dialog-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dialog-button--cancel {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.dialog-button--cancel:hover {
+  background: #cbd5e1;
+}
+
+.dialog-button--secondary {
+  background: #f59e0b;
+  color: white;
+}
+
+.dialog-button--secondary:hover {
+  background: #d97706;
+}
+
+.dialog-button--confirm {
+  background: linear-gradient(120deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+}
+
+.dialog-button--confirm:hover {
+  background: linear-gradient(120deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
 </style>
