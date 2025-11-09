@@ -28,6 +28,7 @@ const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen } = storeToRefs(sideP
 const { currentBoardId } = storeToRefs(boardStore)
 const { cardsWithEntries } = storeToRefs(notesStore)
 const { commentsCount } = storeToRefs(userCommentsStore)
+const { stickers } = storeToRefs(stickersStore)
 
 // Подсчет общего количества заметок
 const totalNotesCount = computed(() => {
@@ -38,6 +39,16 @@ const totalNotesCount = computed(() => {
 
 // Количество комментариев доски
 const boardCommentsCount = computed(() => boardComments.value.length)
+
+// Количество сообщений стикеров (стикеры с непустым содержимым)
+const stickerMessagesCount = computed(() => {
+  return stickers.value.filter(sticker => sticker.content && sticker.content.trim()).length
+})
+
+// Общее количество элементов для всех обсуждений
+const totalDiscussionsCount = computed(() => {
+  return totalNotesCount.value + boardCommentsCount.value + stickerMessagesCount.value
+})
 
 const handleNotesToggle = () => {
   sidePanelsStore.toggleNotes()
@@ -70,7 +81,16 @@ const handleAddSticker = () => {
     class="discussion-menu"
     :class="{ 'discussion-menu--modern': props.isModernTheme }"
   >
-    <div class="discussion-menu__title">Обсуждение</div>
+    <div class="discussion-menu__header">
+      <div class="discussion-menu__title">Обсуждение</div>
+      <span
+        v-if="totalDiscussionsCount > 0"
+        class="discussion-menu__total-count"
+        aria-label="Общее количество элементов"
+      >
+        {{ totalDiscussionsCount }}
+      </span>
+    </div>
 
     <div class="discussion-menu__item">
       <span class="discussion-menu__icon" aria-hidden="true">🗒️</span>
@@ -120,6 +140,13 @@ const handleAddSticker = () => {
       >
         Сообщения стикеров
       </button>
+      <span
+        v-if="stickerMessagesCount > 0"
+        class="discussion-menu__count"
+        aria-label="Количество сообщений стикеров"
+      >
+        {{ stickerMessagesCount }}
+      </span>
     </div>
 
     <div class="discussion-menu__item">
@@ -144,10 +171,33 @@ const handleAddSticker = () => {
   min-width: 280px;
 }
 
+.discussion-menu__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .discussion-menu__title {
   font-size: 15px;
   font-weight: 700;
   color: #1f2937;
+}
+
+.discussion-menu__total-count {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+  transition: all 0.2s ease;
 }
 
 .discussion-menu__item {
@@ -248,5 +298,11 @@ const handleAddSticker = () => {
   background: linear-gradient(135deg, #73c8ff 0%, #3b82f6 100%);
   color: #051125;
   box-shadow: 0 2px 8px rgba(114, 182, 255, 0.5);
+}
+
+.discussion-menu--modern .discussion-menu__total-count {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  color: #051125;
+  box-shadow: 0 2px 8px rgba(52, 211, 153, 0.5);
 }
 </style>
