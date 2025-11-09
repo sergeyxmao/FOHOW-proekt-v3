@@ -79,7 +79,7 @@
           // 3. Сравниваем лимит и текущее использование
           if (currentUsage >= limit) {
             return reply.code(403).send({
-              error: `Достигнут лимит (${limit}) для данного ресурса на тарифе "${planName}".`,
+              error: `Достигнут лимит (${limit}) для ресурса "${resourceType}" на вашем тарифе "${planName}".`, // <--- УЛУЧШЕНО
               code: 'USAGE_LIMIT_REACHED',
               upgradeRequired: true
             });
