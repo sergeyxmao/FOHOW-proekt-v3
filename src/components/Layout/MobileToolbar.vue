@@ -103,6 +103,7 @@ const handleProfileClick = () => {
       <div class="mobile-toolbar-section mobile-toolbar-section--center">
         <!-- Переключатель темы -->
         <button
+          v-if="authStore.isAuthenticated"
           class="mobile-toolbar-button theme-button"
           type="button"
           @click="handleToggleTheme"
@@ -113,6 +114,7 @@ const handleProfileClick = () => {
         </button>
         <!-- Текущий масштаб -->
         <button
+          v-if="authStore.isAuthenticated"
           class="mobile-toolbar-button zoom-button"
           type="button"
           @click="handleFitToContent"
@@ -123,6 +125,7 @@ const handleProfileClick = () => {
         </button>
         <!-- Переключатель версии -->
         <button
+          v-if="authStore.isAuthenticated"
           class="mobile-toolbar-button version-button"
           type="button"
           @click="handleToggleVersion"
@@ -144,7 +147,7 @@ const handleProfileClick = () => {
         >
           <span class="button-icon">👤</span>
         </button>
-        
+
         <!-- Кнопка сохранения -->
         <button
           v-if="authStore.isAuthenticated"

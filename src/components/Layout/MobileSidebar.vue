@@ -5,6 +5,7 @@ import { useCardsStore } from '@/stores/cards'
 import { useConnectionsStore } from '@/stores/connections'
 import { useViewSettingsStore } from '@/stores/viewSettings'
 import { useMobileStore } from '@/stores/mobile'
+import { useAuthStore } from '@/stores/auth'
  
 const props = defineProps({
   isModernTheme: {
@@ -24,6 +25,7 @@ const cardsStore = useCardsStore()
 const connectionsStore = useConnectionsStore()
 const viewSettingsStore = useViewSettingsStore()
 const mobileStore = useMobileStore()
+const authStore = useAuthStore()
 
 const { headerColor, headerColorIndex, lineColor, lineThickness, animationSeconds } = storeToRefs(viewSettingsStore)
 const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
@@ -185,9 +187,10 @@ onBeforeUnmount(() => {
 
 <template>
   <div
+    v-if="authStore.isAuthenticated"
     class="mobile-sidebar"
     :class="{ 'mobile-sidebar--dark': isModernTheme, 'mobile-sidebar--scaled': isMenuScaled }"
-    :style="{ '--menu-scale': menuScale }" 
+    :style="{ '--menu-scale': menuScale }"
    >
    <!-- Добавить лицензию -->
     <button
