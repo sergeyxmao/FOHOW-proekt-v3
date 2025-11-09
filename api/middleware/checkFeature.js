@@ -7,7 +7,10 @@
      */
     export function checkFeature(featureName, requiredValue = true) {
       return async (req, reply) => {
-        const userId = req.user.userId; // В вашем authenticateToken userId находится в req.user.userId
+        console.log('--- [DEBUG] checkFeature ---');
+        console.log('Содержимое req.user:', req.user);
+        console.log('---------------------------');
+        const userId = req.user.userId;
 
         try {
           // 1. Делаем ОДИН запрос, чтобы получить и план, и срок подписки
