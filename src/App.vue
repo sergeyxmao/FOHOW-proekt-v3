@@ -239,6 +239,21 @@ async function createStructureWithName(name, action = null) {
     })
 
     if (!createResponse.ok) {
+      // Проверяем, не превышен ли лимит
+      if (createResponse.status === 403) {
+        try {
+          const errorData = await createResponse.json()
+          if (errorData.code === 'USAGE_LIMIT_REACHED') {
+            // Показываем специфичное сообщение о превышении лимита
+            alert(errorData.error || 'Достигнут лимит создания досок')
+            boardStore.isSaving = false
+            return false
+          }
+        } catch (parseError) {
+          // Если не удалось распарсить JSON, показываем общую ошибку
+        }
+      }
+
       throw new Error('Ошибка создания структуры')
     }
 
