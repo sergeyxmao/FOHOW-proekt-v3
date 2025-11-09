@@ -687,7 +687,7 @@ app.get('/api/boards/:id', async (req, reply) => {
   }
 });
 
-// Обновить доску (автосохранение)
+// Обновить доску (автосохранение) - С ПРОВЕРКОЙ ЛИМИТА КАРТОЧЕК
 app.put('/api/boards/:id', async (req, reply) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
@@ -695,10 +695,43 @@ app.put('/api/boards/:id', async (req, reply) => {
       return reply.code(401).send({ error: 'Не авторизован' });
     }
 
+    // В вашем authenticateToken ID кладется в req.user.id
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id; // ИСПРАВЛЕНО
     const { id } = req.params;
     const { name, description, content } = req.body;
 
+    // --- НАЧАЛО НОВОГО БЛОКА ПРОВЕРКИ ЛИМИТА КАРТОЧЕК ---
+    if (content && content.objects) {
+      const newObjectCount = content.objects.length;
+
+      // Получаем лимит из тарифного плана пользователя
+      const planResult = await pool.query(
+        `SELECT sp.features->>'max_cards_per_board' as limit, sp.name as plan_name
+         FROM users u
+         JOIN subscription_plans sp ON u.plan_id = sp.id
+         WHERE u.id = $1`,
+        [userId]
+      );
+
+      if (planResult.rows.length > 0) {
+        const limit = parseInt(planResult.rows[0].limit, 10);
+        const planName = planResult.rows[0].plan_name;
+
+        // -1 или NaN (если поле не найдено) означает безлимит, пропускаем проверку
+        if (!isNaN(limit) && limit !== -1 && newObjectCount > limit) {
+          // Если количество карточек превышает лимит, возвращаем ошибку
+          return reply.code(403).send({
+            error: `Достигнут лимит карточек (${limit}) на тарифе "${planName}".`,
+            code: 'USAGE_LIMIT_REACHED',
+            upgradeRequired: true
+          });
+        }
+      }
+    }
+    // --- КОНЕЦ НОВОГО БЛОКА ПРОВЕРКИ ---
+
+    // Основная логика обновления доски (остается без изменений)
     let objectCount = 0;
     if (content && content.objects) {
       objectCount = content.objects.length;
@@ -719,7 +752,7 @@ app.put('/api/boards/:id', async (req, reply) => {
         content ? JSON.stringify(content) : null,
         objectCount,
         id,
-        decoded.userId
+        userId // Используем userId, полученный из токена
       ]
     );
 
