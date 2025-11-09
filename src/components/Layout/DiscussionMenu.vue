@@ -1,12 +1,9 @@
 <script setup>
-import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useBoardCommentsStore } from '../Panels/boardComments.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
 import { useBoardStore } from '../../stores/board.js'
-import { useNotesStore } from '../../stores/notes.js'
-import { useUserCommentsStore } from '../../stores/userComments.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -20,35 +17,10 @@ const boardCommentsStore = useBoardCommentsStore()
 const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
-const notesStore = useNotesStore()
-const userCommentsStore = useUserCommentsStore()
 
-const { hasComments: hasBoardComments, comments: boardComments } = storeToRefs(boardCommentsStore)
+const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
 const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen } = storeToRefs(sidePanelsStore)
 const { currentBoardId } = storeToRefs(boardStore)
-const { cardsWithEntries } = storeToRefs(notesStore)
-const { commentsCount } = storeToRefs(userCommentsStore)
-const { stickers } = storeToRefs(stickersStore)
-
-// Подсчет общего количества заметок
-const totalNotesCount = computed(() => {
-  return cardsWithEntries.value.reduce((total, card) => {
-    return total + (card.entries?.length || 0)
-  }, 0)
-})
-
-// Количество комментариев доски
-const boardCommentsCount = computed(() => boardComments.value.length)
-
-// Количество сообщений стикеров (стикеры с непустым содержимым)
-const stickerMessagesCount = computed(() => {
-  return stickers.value.filter(sticker => sticker.content && sticker.content.trim()).length
-})
-
-// Общее количество элементов для всех обсуждений
-const totalDiscussionsCount = computed(() => {
-  return totalNotesCount.value + boardCommentsCount.value + stickerMessagesCount.value
-})
 
 const handleNotesToggle = () => {
   sidePanelsStore.toggleNotes()
@@ -81,16 +53,7 @@ const handleAddSticker = () => {
     class="discussion-menu"
     :class="{ 'discussion-menu--modern': props.isModernTheme }"
   >
-    <div class="discussion-menu__header">
-      <div class="discussion-menu__title">Обсуждение</div>
-      <span
-        v-if="totalDiscussionsCount > 0"
-        class="discussion-menu__total-count"
-        aria-label="Общее количество элементов"
-      >
-        {{ totalDiscussionsCount }}
-      </span>
-    </div>
+    <div class="discussion-menu__title">Обсуждение</div>
 
     <div class="discussion-menu__item">
       <span class="discussion-menu__icon" aria-hidden="true">🗒️</span>
@@ -102,13 +65,6 @@ const handleAddSticker = () => {
       >
         Список заметок
       </button>
-      <span
-        v-if="totalNotesCount > 0"
-        class="discussion-menu__count"
-        aria-label="Количество заметок"
-      >
-        {{ totalNotesCount }}
-      </span>
     </div>
 
     <div class="discussion-menu__item">
@@ -122,12 +78,10 @@ const handleAddSticker = () => {
         Комментарии доски
       </button>
       <span
-        v-if="boardCommentsCount > 0"
-        class="discussion-menu__count"
-        aria-label="Количество комментариев"
-      >
-        {{ boardCommentsCount }}
-      </span>
+        v-if="hasBoardComments"
+        class="discussion-menu__badge"
+        aria-hidden="true"
+      ></span>
     </div>
 
     <div class="discussion-menu__item">
@@ -140,13 +94,6 @@ const handleAddSticker = () => {
       >
         Сообщения стикеров
       </button>
-      <span
-        v-if="stickerMessagesCount > 0"
-        class="discussion-menu__count"
-        aria-label="Количество сообщений стикеров"
-      >
-        {{ stickerMessagesCount }}
-      </span>
     </div>
 
     <div class="discussion-menu__item">
@@ -171,33 +118,10 @@ const handleAddSticker = () => {
   min-width: 280px;
 }
 
-.discussion-menu__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 .discussion-menu__title {
   font-size: 15px;
   font-weight: 700;
   color: #1f2937;
-}
-
-.discussion-menu__total-count {
-  min-width: 28px;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
-  transition: all 0.2s ease;
 }
 
 .discussion-menu__item {
@@ -248,23 +172,15 @@ const handleAddSticker = () => {
   box-shadow: 0 16px 28px rgba(37, 99, 235, 0.32);
 }
 
-.discussion-menu__count {
+.discussion-menu__badge {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 11px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
-  transition: all 0.2s ease;
+  top: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
 }
 .discussion-menu--modern .discussion-menu__title {
   color: #e5f3ff;
@@ -294,15 +210,8 @@ const handleAddSticker = () => {
   box-shadow: 0 26px 44px rgba(6, 11, 21, 0.78);
 }
 
-.discussion-menu--modern .discussion-menu__count {
-  background: linear-gradient(135deg, #73c8ff 0%, #3b82f6 100%);
-  color: #051125;
-  box-shadow: 0 2px 8px rgba(114, 182, 255, 0.5);
-}
-
-.discussion-menu--modern .discussion-menu__total-count {
-  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-  color: #051125;
-  box-shadow: 0 2px 8px rgba(52, 211, 153, 0.5);
+.discussion-menu--modern .discussion-menu__badge {
+  background: #73c8ff;
+  box-shadow: 0 0 0 3px rgba(114, 182, 255, 0.3);
 }
 </style>
