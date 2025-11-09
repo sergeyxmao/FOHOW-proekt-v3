@@ -10,7 +10,7 @@
         console.log('--- [DEBUG] checkFeature ---');
         console.log('Содержимое req.user:', req.user);
         console.log('---------------------------');
-        const userId = req.user.userId;
+        const userId = req.user.id; // <-- Правильно читаем ID
 
         try {
           // 1. Делаем ОДИН запрос, чтобы получить и план, и срок подписки
