@@ -15,6 +15,8 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fastifyStatic from '@fastify/static';
 import Redis from 'ioredis'; // <-- Добавлен импорт Redis
+import { checkFeature } from './middleware/checkFeature.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -756,7 +758,9 @@ app.delete('/api/boards/:id', async (req, reply) => {
 });
 
 // Дублировать доску
-app.post('/api/boards/:id/duplicate', async (req, reply) => {
+app.post('/api/boards/:id/duplicate', {
+      preHandler: [authenticateToken, checkFeature('can_duplicate_boards', true)]
+    }, async (req, reply) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
