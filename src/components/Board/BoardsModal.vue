@@ -14,7 +14,7 @@
             </div>
 
             <UsageLimitBar
-              v-if="userStore.features && userStore.usage && userStore.features.max_boards !== -1"
+              v-if="userStore.plan && userStore.features.max_boards !== -1"
               label="Доски"
               :current="userStore.usage.boards.current"
               :limit="userStore.features.max_boards"
