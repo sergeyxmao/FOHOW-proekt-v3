@@ -10,6 +10,9 @@ async function startApp() {
   const app = createApp(App)
   const pinia = createPinia()
 
+  // Принудительно включить Vue Devtools для production-сборки
+  app.config.devtools = true
+
   app.use(pinia)
 
   // --- Логика инициализации ДО монтирования ---

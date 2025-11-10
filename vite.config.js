@@ -7,7 +7,10 @@ export default defineConfig({
   base: '/',
   plugins: [
     vue(),
-    vueDevTools(),
+    vueDevTools({
+      // Принудительно включить devtools для всех режимов (включая production)
+      enabled: true,
+    }),
   ],
   resolve: {
     alias: {
