@@ -186,6 +186,7 @@ async function createNewBoard() {
     }
 
     const data = await response.json()
+    userStore.usage.boards.current++
     emit('open-board', data.board.id)
     close()
   } catch (err) {
@@ -284,6 +285,7 @@ async function duplicateBoard(id) {
       throw new Error('Ошибка дублирования')
     }
 
+    userStore.usage.boards.current++
     await loadBoards()
     activeMenu.value = null
   } catch (err) {
@@ -303,7 +305,8 @@ async function deleteBoard(id) {
     })
     
     if (!response.ok) throw new Error('Ошибка удаления')
-    
+
+    userStore.usage.boards.current--
     await loadBoards()
     activeMenu.value = null
   } catch (err) {
