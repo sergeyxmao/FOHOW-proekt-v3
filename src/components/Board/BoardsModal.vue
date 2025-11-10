@@ -192,84 +192,53 @@ async function loadBoards() {
   }
 }
 
-async function createNewBoard() {
-  // Очищаем предыдущие ошибки
-  creationErrorMessage.value = ''
+    // Новая, правильная функция createNewBoard
+    async function createNewBoard() {
+      // Сначала очищаем старые ошибки, если они были
+      error.value = ''; 
 
-  // Проверяем лимит досок ПЕРЕД запросом
-  const currentBoards = userStore.usage?.boards?.current || 0
-  const maxBoards = userStore.features?.max_boards || -1
-  
-  console.log('📊 Checking limits before creation:')
-  console.log('   Current boards:', currentBoards)
-  console.log('   Max boards:', maxBoards)
-  
-  if (maxBoards !== -1 && currentBoards >= maxBoards) {
-    console.log('⚠️ Limit reached! Opening UpgradeModal...')
-    showUpgradeModal.value = true
-    return
-  }
+      try {
+        const response = await fetch(`${API_URL}/boards`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: 'Новая структура',
+            content: {
+              objects: [],
+              background: '#ffffff',
+              zoom: 1
+            }
+          })
+        });
 
-  try {
-    const response = await fetch(`${API_URL}/boards`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name: 'Новая структура',
-        content: {
-          objects: [],
-          background: '#ffffff',
-          zoom: 1
+        // Если ответ сервера НЕ успешный (статус 4xx или 5xx)
+        if (!response.ok) {
+          const errorData = await response.json();
+          // Передаем ошибку с сервера в блок catch
+          throw errorData; 
         }
-      })
-    })
 
-    const responseData = await response.json()
-    console.log('📬 Server response:', responseData)
+        // Этот код выполнится только при успешном создании
+        const data = await response.json();
+        userStore.usage.boards.current++;
+        emit('open-board', data.board.id);
+        close();
 
-    if (!response.ok) {
-      // Проверяем различные варианты кода ошибки
-      if (responseData.code === 'USAGE_LIMIT_REACHED' || 
-          responseData.error?.includes('лимит') ||
-          responseData.error?.includes('limit') ||
-          responseData.upgradeRequired === true) {
-        console.log('🚫 Server returned limit error, opening UpgradeModal...')
-        showUpgradeModal.value = true
-        return
+      } catch (err) {
+        // Здесь мы ловим ВСЕ ошибки: и сетевые, и те, что пришли с сервера
+        
+        // Если это ошибка о превышении лимита
+        if (err.code === 'USAGE_LIMIT_REACHED') {
+          showUpgradeModal.value = true;
+        } else {
+          // Для всех остальных ошибок показываем красную плашку
+          error.value = err.error || 'Произошла неизвестная ошибка при создании структуры.';
+        }
       }
-      
-      throw responseData
     }
-
-    // Успешное создание
-    userStore.usage.boards.current++
-    emit('open-board', responseData.board.id)
-    close()
-  } catch (err) {
-    console.error('❌ Error creating board:', err)
-    
-    // Проверяем еще раз на случай, если ошибка имеет код USAGE_LIMIT_REACHED
-    if (err.code === 'USAGE_LIMIT_REACHED' || 
-        err.upgradeRequired === true ||
-        err.error?.includes('лимит') ||
-        err.error?.includes('limit')) {
-      console.log('🚫 Caught limit error in catch block, opening UpgradeModal...')
-      showUpgradeModal.value = true
-      return
-    }
-
-    // Для всех остальных ошибок показываем красную плашку
-    creationErrorMessage.value = err.error || err.message || 'Произошла неизвестная ошибка'
-    
-    // Автоматически скрываем сообщение об ошибке через 5 секунд
-    setTimeout(() => {
-      creationErrorMessage.value = ''
-    }, 5000)
-  }
-}
 
 function openBoard(id) {
   emit('open-board', id)
