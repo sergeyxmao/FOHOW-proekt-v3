@@ -13,6 +13,13 @@
               </button>
             </div>
 
+            <UsageLimitBar
+              v-if="userStore.features.max_boards !== -1"
+              label="Доски"
+              :current="userStore.usage.boards.current"
+              :limit="userStore.features.max_boards"
+            />
+
             <div v-if="loading" class="loading">
               <div class="spinner"></div>
               <p>Загрузка структур...</p>
@@ -76,6 +83,8 @@
 <script setup>
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '../../stores/auth'
+import { useUserStore } from '@/stores/user'
+import UsageLimitBar from '@/components/UsageLimitBar.vue'
 
 const props = defineProps({
   isOpen: {
@@ -87,6 +96,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'open-board'])
 
 const authStore = useAuthStore()
+const userStore = useUserStore()
 const boards = ref([])
 const loading = ref(false)
 const error = ref('')
