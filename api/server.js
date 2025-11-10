@@ -293,7 +293,7 @@ app.post('/api/login', async (req, reply) => {
 
 // === ЗАЩИЩЕННЫЙ МАРШРУТ - ПРОФИЛЬ ===
 app.get('/api/profile', {
-  preHandler: authenticateToken
+  preHandler: [authenticateToken]
 }, async (req, reply) => {
   try {
     const result = await pool.query(
@@ -302,7 +302,7 @@ app.get('/api/profile', {
             telegram_user, telegram_channel, vk_profile, ok_profile, 
             instagram_profile, whatsapp_contact, 
             visibility_settings, search_settings 
-     FROM users WHERE id = $1`
+     FROM users WHERE id = $1`,
       [req.user.id]
     );
     
@@ -398,19 +398,16 @@ app.post('/api/reset-password', async (req, reply) => {
 });
 
     // === ОБНОВЛЕНИЕ ПРОФИЛЯ (ОТЛАДОЧНАЯ ВЕРСЯ 3.0) ===
-    app.put('/api/profile', async (req, reply) => {
+    app.put('/api/profile', {
+      preHandler: [authenticateToken]
+    }, async (req, reply) => {
       // --- ОТЛАДКА: Логируем входящие данные ---
       console.log('--- [DEBUG] PUT /api/profile ---');
       console.log('Тело запроса (req.body):', req.body);
       console.log('---------------------------------');
 
       try {
-        const token = req.headers.authorization?.replace('Bearer ', '');
-        if (!token) {
-          return reply.code(401).send({ error: 'Не авторизован' });
-        }
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const userId = decoded.userId;
+        const userId = req.user.id;
 
         const {
           username, email, currentPassword, newPassword,
@@ -495,53 +492,44 @@ app.post('/api/reset-password', async (req, reply) => {
     });
 
 // === УДАЛЕНИЕ АККАУНТА ===
-app.delete('/api/profile', async (req, reply) => {
+app.delete('/api/profile', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '')
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' })
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
-    const { password } = req.body
+    const { password } = req.body;
 
     if (!password) {
-      return reply.code(400).send({ error: 'Введите пароль для подтверждения' })
+      return reply.code(400).send({ error: 'Введите пароль для подтверждения' });
     }
 
     const userResult = await pool.query(
       'SELECT password FROM users WHERE id = $1',
-      [decoded.userId]
-    )
+      [req.user.id]
+    );
 
     if (userResult.rows.length === 0) {
-      return reply.code(404).send({ error: 'Пользователь не найден' })
+      return reply.code(404).send({ error: 'Пользователь не найден' });
     }
 
-    const validPassword = await bcrypt.compare(password, userResult.rows[0].password)
+    const validPassword = await bcrypt.compare(password, userResult.rows[0].password);
     if (!validPassword) {
-      return reply.code(400).send({ error: 'Неверный пароль' })
+      return reply.code(400).send({ error: 'Неверный пароль' });
     }
 
-    await pool.query('DELETE FROM users WHERE id = $1', [decoded.userId])
+    await pool.query('DELETE FROM users WHERE id = $1', [req.user.id]);
 
-    return reply.send({ success: true, message: 'Аккаунт удалён' })
+    return reply.send({ success: true, message: 'Аккаунт удалён' });
   } catch (err) {
-    console.error('❌ Ошибка delete-profile:', err)
-    return reply.code(500).send({ error: 'Ошибка сервера' })
+    console.error('❌ Ошибка delete-profile:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
   }
-})
+});
 
 // === ЗАГРУЗКА АВАТАРА ===
-app.post('/api/profile/avatar', async (req, reply) => {
+app.post('/api/profile/avatar', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
     const data = await req.file();
     
     if (!data) {
@@ -554,7 +542,7 @@ app.post('/api/profile/avatar', async (req, reply) => {
     }
 
     const ext = path.extname(data.filename);
-    const filename = `${decoded.userId}-${randomBytes(8).toString('hex')}${ext}`;
+    const filename = `${req.user.id}-${randomBytes(8).toString('hex')}${ext}`;
     const filepath = path.join(__dirname, 'uploads', 'avatars', filename);
 
     await pipeline(data.file, createWriteStream(filepath));
@@ -562,7 +550,7 @@ app.post('/api/profile/avatar', async (req, reply) => {
     const avatarUrl = `/uploads/avatars/${filename}`;
     await pool.query(
       'UPDATE users SET avatar_url = $1 WHERE id = $2',
-      [avatarUrl, decoded.userId]
+      [avatarUrl, req.user.id]
     );
     
     return reply.send({
@@ -576,18 +564,13 @@ app.post('/api/profile/avatar', async (req, reply) => {
 });
 
 // === УДАЛЕНИЕ АВАТАРА ===
-app.delete('/api/profile/avatar', async (req, reply) => {
+app.delete('/api/profile/avatar', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     await pool.query(
       'UPDATE users SET avatar_url = NULL WHERE id = $1',
-      [decoded.userId]
+      [req.user.id]
     );
 
     return reply.send({ success: true });
@@ -602,22 +585,17 @@ app.delete('/api/profile/avatar', async (req, reply) => {
 // ============================================
 
 // Получить все доски пользователя
-app.get('/api/boards', async (req, reply) => {
+app.get('/api/boards', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     const result = await pool.query(
       `SELECT id, name, description, thumbnail_url, is_public, 
               created_at, updated_at, object_count
        FROM boards 
        WHERE owner_id = $1 
        ORDER BY updated_at DESC`,
-      [decoded.userId]
+      [req.user.id]
     );
 
     return reply.send({ boards: result.rows });
@@ -628,20 +606,16 @@ app.get('/api/boards', async (req, reply) => {
 });
 
 // Получить одну доску
-app.get('/api/boards/:id', async (req, reply) => {
+app.get('/api/boards/:id', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { id } = req.params;
 
     const result = await pool.query(
       `SELECT * FROM boards 
        WHERE id = $1 AND owner_id = $2`,
-      [id, decoded.userId]
+      [id, req.user.id]
     );
 
     if (result.rows.length === 0) {
@@ -660,12 +634,6 @@ app.get('/api/boards/:id', async (req, reply) => {
       preHandler: [authenticateToken, checkUsageLimit('boards', 'max_boards')]
     }, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { name, description, content } = req.body;
 
     const result = await pool.query(
@@ -673,7 +641,7 @@ app.get('/api/boards/:id', async (req, reply) => {
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
       [
-        decoded.userId,
+        req.user.id,
         name || 'Без названия',
         description || null,
         content ? JSON.stringify(content) : null
@@ -760,19 +728,15 @@ app.get('/api/boards/:id', async (req, reply) => {
     });
 
 // Удалить доску
-app.delete('/api/boards/:id', async (req, reply) => {
+app.delete('/api/boards/:id', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { id } = req.params;
 
     const result = await pool.query(
       'DELETE FROM boards WHERE id = $1 AND owner_id = $2 RETURNING id',
-      [id, decoded.userId]
+      [id, req.user.id]
     );
 
     if (result.rows.length === 0) {
@@ -791,17 +755,11 @@ app.post('/api/boards/:id/duplicate', {
       preHandler: [authenticateToken, checkFeature('can_duplicate_boards', true)]
     }, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { id } = req.params;
 
     const original = await pool.query(
       'SELECT * FROM boards WHERE id = $1 AND owner_id = $2',
-      [id, decoded.userId]
+      [id, req.user.id]
     );
 
     if (original.rows.length === 0) {
@@ -814,7 +772,7 @@ app.post('/api/boards/:id/duplicate', {
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
       [
-        decoded.userId,
+        req.user.id,
         `${board.name} (копия)`,
         board.description,
         board.content,
@@ -830,14 +788,10 @@ app.post('/api/boards/:id/duplicate', {
 });
 
 // Загрузить миниатюру доски
-app.post('/api/boards/:id/thumbnail', async (req, reply) => {
+app.post('/api/boards/:id/thumbnail', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { id: boardId } = req.params;
     const { image } = req.body || {};
 
@@ -868,7 +822,7 @@ app.post('/api/boards/:id/thumbnail', async (req, reply) => {
       return reply.code(404).send({ error: 'Доска не найдена' });
     }
 
-    if (boardResult.rows[0].owner_id !== decoded.userId) {
+    if (boardResult.rows[0].owner_id !== req.user.id) {
       return reply.code(403).send({ error: 'Нет доступа' });
     }
 
@@ -882,7 +836,7 @@ app.post('/api/boards/:id/thumbnail', async (req, reply) => {
 
     await pool.query(
       'UPDATE boards SET thumbnail_url = $1 WHERE id = $2 AND owner_id = $3',
-      [thumbnailUrl, boardId, decoded.userId]
+      [thumbnailUrl, boardId, req.user.id]
     );
 
     return reply.send({ thumbnail_url: thumbnailUrl });
@@ -900,20 +854,16 @@ app.get('/api/health', async () => ({ ok: true }));
 // ============================================
 
 // Получить все стикеры для доски
-app.get('/api/boards/:boardId/stickers', async (req, reply) => {
+app.get('/api/boards/:boardId/stickers', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { boardId } = req.params;
 
     // Проверяем, что пользователь является владельцем доски
     const boardCheck = await pool.query(
       'SELECT id FROM boards WHERE id = $1 AND owner_id = $2',
-      [boardId, decoded.userId]
+      [boardId, req.user.id]
     );
 
     if (boardCheck.rows.length === 0) {
@@ -953,12 +903,6 @@ app.get('/api/boards/:boardId/stickers', async (req, reply) => {
       preHandler: [authenticateToken, checkUsageLimit('stickers', 'max_stickers_per_board')] // Используем более точное имя фичи
     }, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { boardId } = req.params;
     const { pos_x, pos_y, color } = req.body;
 
@@ -972,7 +916,7 @@ app.get('/api/boards/:boardId/stickers', async (req, reply) => {
     // Проверяем, что пользователь является владельцем доски
     const boardCheck = await pool.query(
       'SELECT id FROM boards WHERE id = $1 AND owner_id = $2',
-      [boardId, decoded.userId]
+      [boardId, req.user.id]
     );
 
     if (boardCheck.rows.length === 0) {
@@ -984,7 +928,7 @@ app.get('/api/boards/:boardId/stickers', async (req, reply) => {
       `INSERT INTO stickers (board_id, user_id, content, color, pos_x, pos_y)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [boardId, decoded.userId, '', color || '#FFFF88', pos_x, pos_y]
+      [boardId, req.user.id, '', color || '#FFFF88', pos_x, pos_y]
     );
 
     // Получаем информацию об авторе
@@ -1010,14 +954,10 @@ app.get('/api/boards/:boardId/stickers', async (req, reply) => {
 });
 
 // Обновить стикер
-app.put('/api/stickers/:stickerId', async (req, reply) => {
+app.put('/api/stickers/:stickerId', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { stickerId } = req.params;
     const { content, pos_x, pos_y, color } = req.body;
 
@@ -1031,7 +971,7 @@ app.put('/api/stickers/:stickerId', async (req, reply) => {
       return reply.code(404).send({ error: 'Стикер не найден' });
     }
 
-    if (ownerCheck.rows[0].user_id !== decoded.userId) {
+    if (ownerCheck.rows[0].user_id !== req.user.id) {
       return reply.code(403).send({ error: 'Нет доступа к редактированию этого стикера' });
     }
 
@@ -1095,16 +1035,12 @@ app.put('/api/stickers/:stickerId', async (req, reply) => {
 });
 
 // Удалить стикер (ИСПРАВЛЕННАЯ ВЕРСИЯ)
-app.delete('/api/stickers/:stickerId', async (req, reply) => {
+app.delete('/api/stickers/:stickerId', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { stickerId } = req.params;
-    const userId = decoded.userId;
+    const userId = req.user.id;
 
     // Валидация ID стикера
     const stickerIdNum = parseInt(stickerId, 10);
@@ -1140,20 +1076,16 @@ app.delete('/api/stickers/:stickerId', async (req, reply) => {
 // ============================================
 
 // Получить все заметки для доски
-app.get('/api/boards/:boardId/notes', async (req, reply) => {
+app.get('/api/boards/:boardId/notes', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { boardId } = req.params;
 
     // Проверяем, что пользователь является владельцем доски
     const boardCheck = await pool.query(
       'SELECT id FROM boards WHERE id = $1 AND owner_id = $2',
-      [boardId, decoded.userId]
+      [boardId, req.user.id]
     );
 
     if (boardCheck.rows.length === 0) {
@@ -1181,12 +1113,6 @@ app.get('/api/boards/:boardId/notes', async (req, reply) => {
       preHandler: [authenticateToken, checkUsageLimit('notes', 'max_notes_per_board')] // Уточняем имя фичи
     }, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { boardId, cardUid, noteDate, content, color } = req.body;
 
     // Валидация входных данных
@@ -1199,7 +1125,7 @@ app.get('/api/boards/:boardId/notes', async (req, reply) => {
     // Проверяем, что пользователь является владельцем доски
     const boardCheck = await pool.query(
       'SELECT id FROM boards WHERE id = $1 AND owner_id = $2',
-      [boardId, decoded.userId]
+      [boardId, req.user.id]
     );
 
     if (boardCheck.rows.length === 0) {
@@ -1261,22 +1187,17 @@ app.get('/api/boards/:boardId/notes', async (req, reply) => {
 // ============================================
 
 // Получить все личные комментарии пользователя
-app.get('/api/comments', async (req, reply) => {
+app.get('/api/comments', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     // Получаем все комментарии пользователя, отсортированные по дате создания (новые вверху)
     const result = await pool.query(
       `SELECT id, user_id, content, color, created_at, updated_at
        FROM user_comments
        WHERE user_id = $1
        ORDER BY created_at DESC`,
-      [decoded.userId]
+      [req.user.id]
     );
 
     return reply.send({ comments: result.rows });
@@ -1291,12 +1212,6 @@ app.get('/api/comments', async (req, reply) => {
       preHandler: [authenticateToken, checkUsageLimit('comments', 'max_comments')]
     }, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const { content, color } = req.body;
 
     // Валидация входных данных
@@ -1311,7 +1226,7 @@ app.get('/api/comments', async (req, reply) => {
       `INSERT INTO user_comments (user_id, content, color)
        VALUES ($1, $2, $3)
        RETURNING id, user_id, content, color, created_at, updated_at`,
-      [decoded.userId, content.trim(), color || null]
+      [req.user.id, content.trim(), color || null]
     );
 
     return reply.send({
@@ -1325,21 +1240,10 @@ app.get('/api/comments', async (req, reply) => {
 });
 
 // Обновить личный комментарий
-app.put('/api/comments/:commentId', async (req, reply) => {
+app.put('/api/comments/:commentId', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (jwtErr) {
-      console.error('❌ Ошибка верификации токена:', jwtErr);
-      return reply.code(401).send({ error: 'Неверный токен авторизации' });
-    }
-
     const { commentId } = req.params;
     const { content, color } = req.body;
 
@@ -1373,7 +1277,7 @@ app.put('/api/comments/:commentId', async (req, reply) => {
       return reply.code(404).send({ error: 'Комментарий не найден' });
     }
 
-    if (ownerCheck.rows[0].user_id !== decoded.userId) {
+    if (ownerCheck.rows[0].user_id !== req.user.id) {
       return reply.code(403).send({ error: 'Нет доступа к редактированию этого комментария' });
     }
 
@@ -1385,7 +1289,7 @@ app.put('/api/comments/:commentId', async (req, reply) => {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $3 AND user_id = $4
        RETURNING id, user_id, content, color, created_at, updated_at`,
-      [content.trim(), color || null, commentIdNum, decoded.userId]
+      [content.trim(), color || null, commentIdNum, req.user.id]
     );
 
     return reply.send({
@@ -1399,21 +1303,10 @@ app.put('/api/comments/:commentId', async (req, reply) => {
 });
 
 // Удалить личный комментарий
-app.delete('/api/comments/:commentId', async (req, reply) => {
+app.delete('/api/comments/:commentId', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return reply.code(401).send({ error: 'Не авторизован' });
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (jwtErr) {
-      console.error('❌ Ошибка верификации токена:', jwtErr);
-      return reply.code(401).send({ error: 'Неверный токен авторизации' });
-    }
-
     const { commentId } = req.params;
 
     // Валидация commentId
@@ -1439,14 +1332,14 @@ app.delete('/api/comments/:commentId', async (req, reply) => {
       return reply.code(404).send({ error: 'Комментарий не найден' });
     }
 
-    if (ownerCheck.rows[0].user_id !== decoded.userId) {
+    if (ownerCheck.rows[0].user_id !== req.user.id) {
       return reply.code(403).send({ error: 'Нет доступа к удалению этого комментария' });
     }
 
     // Удаляем комментарий
     await pool.query(
       'DELETE FROM user_comments WHERE id = $1 AND user_id = $2',
-      [commentIdNum, decoded.userId]
+      [commentIdNum, req.user.id]
     );
 
     return reply.send({ success: true });
