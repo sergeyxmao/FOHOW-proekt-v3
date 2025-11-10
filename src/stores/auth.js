@@ -240,12 +240,16 @@ export const useAuthStore = defineStore('auth', {
         body: JSON.stringify({ code })
       })
 
-      const data = await response.json()
-
+      // Сначала проверяем response.ok
       if (!response.ok) {
-        // Показываем конкретное сообщение об ошибке из API
+        // Читаем тело ответа как JSON
+        const data = await response.json()
+        // Выбрасываем ошибку с сообщением из поля error
         throw new Error(data.error || 'Ошибка применения промокода')
       }
+
+      // Если response.ok, читаем успешный ответ
+      const data = await response.json()
 
       // После успешного применения промокода обновляем профиль пользователя
       await this.fetchProfile()
