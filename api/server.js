@@ -258,14 +258,65 @@ app.post('/api/login', async (req, reply) => {
     if (!passwordMatch) {
       return reply.code(401).send({ error: 'Неверный email или пароль' });
     }
-    
+
+    // === УПРАВЛЕНИЕ СЕССИЯМИ ===
+    // Получаем тарифный план пользователя и лимит сессий
+    const planResult = await pool.query(
+      `SELECT sp.features->>'session_limit' as session_limit
+       FROM users u
+       LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
+       WHERE u.id = $1`,
+      [user.id]
+    );
+
+    let sessionLimit = null;
+    if (planResult.rows.length > 0 && planResult.rows[0].session_limit) {
+      sessionLimit = parseInt(planResult.rows[0].session_limit, 10);
+    }
+
+    // Если установлен лимит сессий, управляем ими
+    if (sessionLimit && !isNaN(sessionLimit) && sessionLimit > 0) {
+      // Подсчитываем активные сессии
+      const sessionsCountResult = await pool.query(
+        'SELECT COUNT(*) as count FROM active_sessions WHERE user_id = $1',
+        [user.id]
+      );
+
+      const currentSessionsCount = parseInt(sessionsCountResult.rows[0].count, 10);
+
+      // Если количество сессий >= лимита, удаляем самую старую
+      if (currentSessionsCount >= sessionLimit) {
+        await pool.query(
+          `DELETE FROM active_sessions
+           WHERE id IN (
+             SELECT id FROM active_sessions
+             WHERE user_id = $1
+             ORDER BY created_at ASC
+             LIMIT 1
+           )`,
+          [user.id]
+        );
+      }
+    }
+
     // Удаляем хэш пароля перед отправкой на клиент
-    delete user.password; 
+    delete user.password;
 
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
+    );
+
+    // Декодируем токен, чтобы получить дату истечения
+    const decodedToken = jwt.decode(token);
+    const expiresAt = new Date(decodedToken.exp * 1000);
+
+    // Создаем новую сессию в базе данных
+    await pool.query(
+      `INSERT INTO active_sessions (user_id, token_signature, ip_address, user_agent, expires_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [user.id, token, req.ip, req.headers['user-agent'] || null, expiresAt]
     );
 
     // ВОЗВРАЩАЕМ ПОЛНЫЙ ОБЪЕКТ ПОЛЬЗОВАТЕЛЯ
