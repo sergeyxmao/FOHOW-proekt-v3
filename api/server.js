@@ -264,19 +264,20 @@ app.post('/api/login', async (req, reply) => {
     // === УПРАВЛЕНИЕ СЕССИЯМИ ===
     // Получаем тарифный план пользователя и лимит сессий
     const planResult = await pool.query(
-      `SELECT sp.features->>'session_limit' as session_limit
+      `SELECT sp.session_limit
        FROM users u
-       LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
+       JOIN subscription_plans sp ON u.plan_id = sp.id
        WHERE u.id = $1`,
       [user.id]
     );
 
-    let sessionLimit = null;
-    if (planResult.rows.length > 0 && planResult.rows[0].session_limit) {
-      sessionLimit = parseInt(planResult.rows[0].session_limit, 10);
+    if (!planResult.rows.length || planResult.rows[0].session_limit == null) {
+      console.error(`[LOGIN] Не удалось определить лимит сессий для пользователя ID: ${user.id}. Возможно, у пользователя нет тарифа или в тарифе не указан session_limit.`);
+      // Отправляем ответ без создания сессии, но логин считаем успешным
+      return reply.send({ token });
     }
-
-    console.log(`[LOGIN] Тариф получен. Лимит сессий: ${planResult.rows[0]?.session_limit || 'не установлен'}`);
+    const sessionLimit = planResult.rows[0].session_limit;
+    console.log(`[LOGIN] Тариф получен. Лимит сессий: ${sessionLimit}`);
 
     // Если установлен лимит сессий, управляем ими
     if (sessionLimit && !isNaN(sessionLimit) && sessionLimit > 0) {
@@ -286,12 +287,12 @@ app.post('/api/login', async (req, reply) => {
         [user.id]
       );
 
-      const currentSessionsCount = parseInt(sessionsCountResult.rows[0].count, 10);
+      const activeSessionsCount = parseInt(sessionsCountResult.rows[0].count, 10);
 
-      console.log(`[LOGIN] Найдено активных сессий: ${sessionsCountResult.rows[0].count}`);
+      console.log(`[LOGIN] Найдено активных сессий: ${activeSessionsCount}`);
 
       // Если количество сессий >= лимита, удаляем самую старую
-      if (currentSessionsCount >= sessionLimit) {
+      if (activeSessionsCount >= sessionLimit) {
         console.log(`[LOGIN] Лимит сессий превышен. Удаляем самую старую сессию.`);
         await pool.query(
           `DELETE FROM active_sessions
