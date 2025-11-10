@@ -13,15 +13,18 @@
         try {
           // 1. Получаем лимит из тарифного плана пользователя
           const planResult = await pool.query(
-            `SELECT sp.features->>'${limitFeatureName}' as limit, sp.name as plan_name
+            `SELECT sp.features->'${limitFeatureName}' as limit, sp.name as plan_name
              FROM users u
              JOIN subscription_plans sp ON u.plan_id = sp.id
              WHERE u.id = $1`,
             [userId]
           );
 
-          if (planResult.rows.length === 0) {
-            return reply.code(403).send({ error: 'Тариф не найден' });
+          if (planResult.rows.length === 0 || planResult.rows[0].limit === null) {
+            return reply.code(403).send({
+              error: `Не удалось определить лимит "${limitFeatureName}" для вашего тарифа.`,
+              code: 'LIMIT_NOT_FOUND'
+            });
           }
 
           const limit = parseInt(planResult.rows[0].limit, 10);
