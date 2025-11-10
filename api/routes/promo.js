@@ -178,7 +178,19 @@ export function registerPromoRoutes(app) {
 
         const newPlan = planResult.rows[0];
 
-
+  // Записываем в историю подписок
+    await client.query(
+      `INSERT INTO subscription_history
+       (user_id, plan_id, start_date, end_date, source, promo_code_id)
+       VALUES ($1, $2, $3, $4, 'промокод', $5)`,
+      [
+        userId,
+        promo.target_plan_id, // ID нового плана
+        user.subscription_expires_at || new Date(), // Дата начала - старая дата окончания или сейчас
+        newExpiration, // Новая дата окончания
+        promo.id // ID использованного промокода
+      ]
+    );
 
         // ============================================
         // ЗАВЕРШЕНИЕ ТРАНЗАКЦИИ
