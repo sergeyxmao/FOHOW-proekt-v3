@@ -148,9 +148,26 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async logout() {
+      // Пытаемся отправить запрос на сервер для удаления сессии
+      if (this.token) {
+        try {
+          await fetch(`${API_URL}/logout`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.token}`
+            }
+          })
+          // Не проверяем response.ok, так как локальную очистку нужно сделать в любом случае
+        } catch (err) {
+          // Игнорируем ошибки сети (например, отсутствие интернета)
+          console.warn('Не удалось уведомить сервер о выходе:', err)
+        }
+      }
+
+      // ГАРАНТИРОВАННАЯ локальная очистка (выполняется всегда)
       this.user = null
       this.token = null
-      this.isAuthenticated = false // Убеждаемся, что isAuthenticated сброшен в false
+      this.isAuthenticated = false
 
       localStorage.removeItem('token')
       localStorage.removeItem('user')
@@ -158,7 +175,7 @@ export const useAuthStore = defineStore('auth', {
       // Очищаем личные комментарии при выходе
       try {
         // Динамический импорт, чтобы не загружать этот модуль, если он не нужен
-        const { useUserCommentsStore } = await import('./userComments.js') 
+        const { useUserCommentsStore } = await import('./userComments.js')
         const userCommentsStore = useUserCommentsStore()
         userCommentsStore.clearComments()
       } catch (err) {
