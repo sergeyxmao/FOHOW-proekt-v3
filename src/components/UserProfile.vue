@@ -131,6 +131,32 @@
           <span>{{ user.instagram_profile || 'Не указано' }}</span>
         </div>
 
+        <div class="form-divider">
+          <span>Промокод</span>
+        </div>
+
+        <div class="promo-section">
+          <div class="promo-input-group">
+            <input
+              v-model="promoCodeInput"
+              type="text"
+              placeholder="Введите промокод"
+              class="promo-input"
+              :disabled="applyingPromo"
+            />
+            <button
+              class="btn-promo"
+              @click="handleApplyPromo"
+              :disabled="!promoCodeInput.trim() || applyingPromo"
+            >
+              {{ applyingPromo ? 'Применение...' : 'Применить' }}
+            </button>
+          </div>
+
+          <div v-if="promoError" class="error-message">{{ promoError }}</div>
+          <div v-if="promoSuccess" class="success-message">{{ promoSuccess }}</div>
+        </div>
+
         <div class="profile-actions">
           <button class="btn-primary" @click="startEdit">
             Редактировать профиль
@@ -541,6 +567,12 @@ const passwordVisibility = reactive({
   delete: false
 })
 
+// Промокод
+const promoCodeInput = ref('')
+const promoError = ref('')
+const promoSuccess = ref('')
+const applyingPromo = ref(false)
+
 function togglePasswordVisibility(field) {
   passwordVisibility[field] = !passwordVisibility[field]
 }
@@ -728,6 +760,35 @@ async function handleDelete() {
     deleteError.value = err.message
   } finally {
     deleting.value = false
+  }
+}
+
+async function handleApplyPromo() {
+  promoError.value = ''
+  promoSuccess.value = ''
+
+  const code = promoCodeInput.value.trim()
+
+  if (!code) {
+    promoError.value = 'Введите промокод'
+    return
+  }
+
+  applyingPromo.value = true
+
+  try {
+    await authStore.applyPromoCode(code)
+    promoSuccess.value = 'Промокод успешно применен!'
+    promoCodeInput.value = ''
+
+    // Скрыть сообщение об успехе через 5 секунд
+    setTimeout(() => {
+      promoSuccess.value = ''
+    }, 5000)
+  } catch (err) {
+    promoError.value = err.message || 'Ошибка применения промокода'
+  } finally {
+    applyingPromo.value = false
   }
 }
 
@@ -1330,5 +1391,70 @@ onBeforeUnmount(() => {
 .btn-remove:hover {
   background: #f44336;
   color: white;
+}
+
+.promo-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.promo-input-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.promo-input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid var(--profile-input-border);
+  border-radius: 5px;
+  font-size: 14px;
+  background: var(--profile-input-bg);
+  color: var(--profile-text);
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.promo-input::placeholder {
+  color: var(--profile-input-placeholder);
+}
+
+.promo-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-promo {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #2196F3;
+  color: white;
+  transition: background 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-promo:hover:not(:disabled) {
+  background: #1976D2;
+}
+
+.btn-promo:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .promo-input-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-promo {
+    width: 100%;
+  }
 }
 </style>
