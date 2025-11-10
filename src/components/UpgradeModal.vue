@@ -1,60 +1,58 @@
 <template>
-  <Teleport to="body">
-    <div v-if="isOpen" class="modal-overlay" @click.self="close">
-      <div class="modal-content">
-        <button class="close-btn" @click="close">×</button>
+  <div v-if="isOpen" class="modal-overlay" @click.self="close">
+    <div class="modal-content">
+      <button class="close-btn" @click="close">×</button>
 
-        <div class="modal-body">
-          <!-- Иконка и заголовок -->
-          <div class="header-section">
-            <div class="lock-icon">🔒</div>
-            <h2 class="modal-title">Функция недоступна</h2>
-          </div>
+      <div class="modal-body">
+        <!-- Иконка и заголовок -->
+        <div class="header-section">
+          <div class="lock-icon">🔒</div>
+          <h2 class="modal-title">Функция недоступна</h2>
+        </div>
 
-          <!-- Сообщение об ограничении -->
-          <div class="limit-message">
-            <p>{{ limitMessage }}</p>
-          </div>
+        <!-- Сообщение об ограничении -->
+        <div class="limit-message">
+          <p>{{ limitMessage }}</p>
+        </div>
 
-          <!-- Карточки тарифов -->
-          <div class="plans-section">
-            <h3 class="section-title">Улучшите свой тариф</h3>
-            <div class="plans-grid">
-              <div
-                v-for="plan in recommendedPlans"
-                :key="plan.id"
-                class="plan-card"
-              >
-                <div class="plan-header">
-                  <h4 class="plan-name">{{ plan.name }}</h4>
-                  <div class="plan-price">
-                    <span class="price-amount">{{ plan.price }}₽</span>
-                    <span class="price-period">/месяц</span>
-                  </div>
+        <!-- Карточки тарифов -->
+        <div class="plans-section">
+          <h3 class="section-title">Улучшите свой тариф</h3>
+          <div class="plans-grid">
+            <div
+              v-for="plan in recommendedPlans"
+              :key="plan.id"
+              class="plan-card"
+            >
+              <div class="plan-header">
+                <h4 class="plan-name">{{ plan.name }}</h4>
+                <div class="plan-price">
+                  <span class="price-amount">{{ plan.price }}₽</span>
+                  <span class="price-period">/месяц</span>
                 </div>
-                <ul class="plan-features">
-                  <li v-for="feature in plan.features" :key="feature">
-                    <span class="feature-icon">✓</span>
-                    {{ feature }}
-                  </li>
-                </ul>
-                <button class="select-btn" @click="selectPlan(plan.id)">
-                  Выбрать
-                </button>
               </div>
+              <ul class="plan-features">
+                <li v-for="feature in plan.features" :key="feature">
+                  <span class="feature-icon">✓</span>
+                  {{ feature }}
+                </li>
+              </ul>
+              <button class="select-btn" @click="selectPlan(plan.id)">
+                Выбрать
+              </button>
             </div>
           </div>
+        </div>
 
-          <!-- Ссылка на сравнение всех тарифов -->
-          <div class="footer-section">
-            <a href="/pricing" class="compare-link" @click.prevent="goToPricing">
-              Сравнить все тарифы →
-            </a>
-          </div>
+        <!-- Ссылка на сравнение всех тарифов -->
+        <div class="footer-section">
+          <a href="/pricing" class="compare-link" @click.prevent="goToPricing">
+            Сравнить все тарифы →
+          </a>
         </div>
       </div>
     </div>
-  </Teleport>
+  </div>
 </template>
 
 <script setup>
