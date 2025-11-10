@@ -259,6 +259,8 @@ app.post('/api/login', async (req, reply) => {
       return reply.code(401).send({ error: 'Неверный email или пароль' });
     }
 
+    console.log(`[LOGIN] Успешная аутентификация для пользователя ID: ${user.id}. Начинаем управление сессиями.`);
+
     // === УПРАВЛЕНИЕ СЕССИЯМИ ===
     // Получаем тарифный план пользователя и лимит сессий
     const planResult = await pool.query(
@@ -274,6 +276,8 @@ app.post('/api/login', async (req, reply) => {
       sessionLimit = parseInt(planResult.rows[0].session_limit, 10);
     }
 
+    console.log(`[LOGIN] Тариф получен. Лимит сессий: ${planResult.rows[0]?.session_limit || 'не установлен'}`);
+
     // Если установлен лимит сессий, управляем ими
     if (sessionLimit && !isNaN(sessionLimit) && sessionLimit > 0) {
       // Подсчитываем активные сессии
@@ -284,8 +288,11 @@ app.post('/api/login', async (req, reply) => {
 
       const currentSessionsCount = parseInt(sessionsCountResult.rows[0].count, 10);
 
+      console.log(`[LOGIN] Найдено активных сессий: ${sessionsCountResult.rows[0].count}`);
+
       // Если количество сессий >= лимита, удаляем самую старую
       if (currentSessionsCount >= sessionLimit) {
+        console.log(`[LOGIN] Лимит сессий превышен. Удаляем самую старую сессию.`);
         await pool.query(
           `DELETE FROM active_sessions
            WHERE id IN (
@@ -312,12 +319,16 @@ app.post('/api/login', async (req, reply) => {
     const decodedToken = jwt.decode(token);
     const expiresAt = new Date(decodedToken.exp * 1000);
 
+    console.log(`[LOGIN] Подготовка к созданию новой сессии. Токен: ${token}`);
+
     // Создаем новую сессию в базе данных
     await pool.query(
       `INSERT INTO active_sessions (user_id, token_signature, ip_address, user_agent, expires_at)
        VALUES ($1, $2, $3, $4, $5)`,
       [user.id, token, req.ip, req.headers['user-agent'] || null, expiresAt]
     );
+
+    console.log(`[LOGIN] Новая сессия успешно создана в базе данных.`);
 
     // ВОЗВРАЩАЕМ ПОЛНЫЙ ОБЪЕКТ ПОЛЬЗОВАТЕЛЯ
     return reply.send({
@@ -327,6 +338,7 @@ app.post('/api/login', async (req, reply) => {
     });
   } catch (err) {
     console.error('❌ Ошибка авторизации:', err);
+    console.error('[LOGIN] Ошибка при управлении сессией:', err);
     // ... (остальная часть обработки ошибок остается без изменений)
     if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
       return reply.code(500).send({ error: 'Ошибка подключения к базе данных' });
