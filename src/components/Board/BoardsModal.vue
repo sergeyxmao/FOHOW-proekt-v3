@@ -1,12 +1,12 @@
 <template>
-  <!-- 
+  <!--
     Один Teleport для управления обоими модальными окнами.
     Это правильный подход, чтобы избежать вложенности.
   -->
   <Teleport to="body">
     <!-- Основное модальное окно -->
     <Transition name="modal">
-      <div v-if="isOpen" class="modal-overlay" @click="close">
+      <div v-if="isOpen" class="modal-overlay" :class="{ 'modal-hidden': showUpgradeModal }" @click="close">
         <div class="modal-content" @click.stop>
           <button class="modal-close" @click="close">✕</button>
           
@@ -230,7 +230,7 @@ async function loadBoards() {
 
       } catch (err) {
         // Здесь мы ловим ВСЕ ошибки: и сетевые, и те, что пришли с сервера
-        
+
         // Если это ошибка о превышении лимита
         if (err.code === 'USAGE_LIMIT_REACHED') {
           showUpgradeModal.value = true;
@@ -385,6 +385,12 @@ function formatDate(dateString) {
   align-items: center;
   justify-content: center;
   z-index: 9999; /* Уменьшаем z-index основного модала */
+}
+
+/* Скрываем окно с досками когда открыто окно с тарифами */
+.modal-overlay.modal-hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .modal-content {
