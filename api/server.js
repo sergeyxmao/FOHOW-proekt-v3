@@ -17,6 +17,7 @@ import fastifyStatic from '@fastify/static';
 import Redis from 'ioredis'; // <-- Добавлен импорт Redis
 import { checkFeature } from './middleware/checkFeature.js';
 import { checkUsageLimit } from './middleware/checkUsageLimit.js';
+import { registerPromoRoutes } from './routes/promo.js';
 
 
 
@@ -882,6 +883,11 @@ app.post('/api/boards/:id/thumbnail', {
 
 // Проверка живости API
 app.get('/api/health', async () => ({ ok: true }));
+
+// ============================================
+// ПРОМОКОДЫ (PROMO CODES)
+// ============================================
+registerPromoRoutes(app);
 
 // ============================================
 // СТИКЕРЫ (STICKERS)
