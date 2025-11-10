@@ -297,20 +297,54 @@ app.get('/api/profile', {
 }, async (req, reply) => {
   try {
     const result = await pool.query(
-    `SELECT id, email, username, avatar_url, created_at, updated_at, 
-            country, city, office, personal_id, phone, full_name, 
-            telegram_user, telegram_channel, vk_profile, ok_profile, 
-            instagram_profile, whatsapp_contact, 
-            visibility_settings, search_settings 
-     FROM users WHERE id = $1`,
+    `SELECT u.id, u.email, u.username, u.avatar_url, u.created_at, u.updated_at,
+            u.country, u.city, u.office, u.personal_id, u.phone, u.full_name,
+            u.telegram_user, u.telegram_channel, u.vk_profile, u.ok_profile,
+            u.instagram_profile, u.whatsapp_contact,
+            u.visibility_settings, u.search_settings,
+            sp.id as plan_id, sp.name as plan_name, sp.features
+     FROM users u
+     LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
+     WHERE u.id = $1`,
       [req.user.id]
     );
-    
+
     if (result.rows.length === 0) {
       return reply.code(404).send({ error: 'Пользователь не найден' });
     }
-    
-    return reply.send({ user: result.rows[0] });
+
+    const userData = result.rows[0];
+
+    // Формируем объект пользователя с информацией о плане
+    const user = {
+      id: userData.id,
+      email: userData.email,
+      username: userData.username,
+      avatar_url: userData.avatar_url,
+      created_at: userData.created_at,
+      updated_at: userData.updated_at,
+      country: userData.country,
+      city: userData.city,
+      office: userData.office,
+      personal_id: userData.personal_id,
+      phone: userData.phone,
+      full_name: userData.full_name,
+      telegram_user: userData.telegram_user,
+      telegram_channel: userData.telegram_channel,
+      vk_profile: userData.vk_profile,
+      ok_profile: userData.ok_profile,
+      instagram_profile: userData.instagram_profile,
+      whatsapp_contact: userData.whatsapp_contact,
+      visibility_settings: userData.visibility_settings,
+      search_settings: userData.search_settings,
+      plan: userData.plan_id ? {
+        id: userData.plan_id,
+        name: userData.plan_name,
+        features: userData.features
+      } : null
+    };
+
+    return reply.send({ user });
   } catch (err) {
     console.error('❌ Ошибка получения профиля:', err);
     return reply.code(500).send({ error: 'Ошибка сервера' });

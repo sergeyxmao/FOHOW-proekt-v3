@@ -11,6 +11,28 @@ export const useAuthStore = defineStore('auth', {
     isLoadingProfile: true // Изначально считаем, что профиль загружается
   }),
 
+  getters: {
+    // Получить лимит на количество карточек на доске
+    maxCardsPerBoard: (state) => {
+      if (!state.user?.plan?.features) {
+        return -1 // -1 означает безлимит (на случай если план не определен)
+      }
+      const limit = state.user.plan.features.max_cards_per_board
+      return typeof limit === 'number' ? limit : -1
+    },
+
+    // Получить название плана
+    planName: (state) => {
+      return state.user?.plan?.name || 'Не определен'
+    },
+
+    // Проверить, есть ли лимит на карточки
+    hasCardsLimit: (state) => {
+      const limit = state.user?.plan?.features?.max_cards_per_board
+      return typeof limit === 'number' && limit > 0
+    }
+  },
+
   actions: {
     async init() {
       const token = localStorage.getItem('token');
