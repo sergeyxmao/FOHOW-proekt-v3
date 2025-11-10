@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useCardsStore } from '../../stores/cards'
 import { useConnectionsStore } from '../../stores/connections'
 import { useViewSettingsStore } from '../../stores/viewSettings'
+import { checkAndAlertCardLimit } from '../../utils/limitsCheck'
 
 const props = defineProps({
   isModernTheme: {
@@ -171,8 +172,13 @@ function togglePanel() {
 }
 // Добавление карточек
 function addCard() {
+  // Проверяем лимит перед добавлением карточки
+  if (!checkAndAlertCardLimit(1)) {
+    return
+  }
+
   // Эта функция вызывается кнопкой "Добавить лицензию" (маленькую)
-  cardsStore.addCard({ 
+  cardsStore.addCard({
     type: 'small',
     headerBg: headerColor.value,
     colorIndex: headerColorIndex.value
@@ -180,14 +186,24 @@ function addCard() {
 }
 
 function addLargeCard() {
+  // Проверяем лимит перед добавлением карточки
+  if (!checkAndAlertCardLimit(1)) {
+    return
+  }
+
   // Эта функция вызывается кнопкой "Добавить большую лицензию"
-  cardsStore.addCard({ 
+  cardsStore.addCard({
     type: 'large',
     headerBg: headerColor.value,
     colorIndex: headerColorIndex.value
   });
 }
 function addGoldCard() {
+  // Проверяем лимит перед добавлением карточки
+  if (!checkAndAlertCardLimit(1)) {
+    return
+  }
+
   cardsStore.addCard({
     type: 'gold'
   });

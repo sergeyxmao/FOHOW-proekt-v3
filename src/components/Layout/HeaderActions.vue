@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { useCardsStore } from '../../stores/cards'
 import { useConnectionsStore } from '../../stores/connections'
 import { useViewSettingsStore } from '../../stores/viewSettings'
+import { checkAndAlertCardLimit } from '../../utils/limitsCheck'
 
 const props = defineProps({
   isModernTheme: {
@@ -90,6 +91,11 @@ const themeTitle = computed(() =>
 const isMenuVariant = computed(() => props.variant === 'menu')
 
 function addCard() {
+  // Проверяем лимит перед добавлением карточки
+  if (!checkAndAlertCardLimit(1)) {
+    return
+  }
+
   cardsStore.addCard({
     type: 'small',
     headerBg: headerColor.value,
@@ -98,6 +104,11 @@ function addCard() {
 }
 
 function addLargeCard() {
+  // Проверяем лимит перед добавлением карточки
+  if (!checkAndAlertCardLimit(1)) {
+    return
+  }
+
   cardsStore.addCard({
     type: 'large',
     headerBg: headerColor.value,
@@ -106,6 +117,11 @@ function addLargeCard() {
 }
 
 function addGoldCard() {
+  // Проверяем лимит перед добавлением карточки
+  if (!checkAndAlertCardLimit(1)) {
+    return
+  }
+
   cardsStore.addCard({
     type: 'gold'
   })
@@ -131,6 +147,12 @@ function handleTemplateButtonClick(event) {
 
 function insertTemplate(templateData) {
   if (!templateData || !Array.isArray(templateData.cards)) {
+    return
+  }
+
+  // Проверяем лимит перед добавлением шаблона
+  const cardsToAdd = templateData.cards.length
+  if (!checkAndAlertCardLimit(cardsToAdd)) {
     return
   }
 
