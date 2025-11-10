@@ -82,10 +82,12 @@
       </div>
     </Transition>
 
+    <!-- UpgradeModal должен быть вне Transition и не зависеть от isOpen основного модала -->
     <UpgradeModal
       :is-open="showUpgradeModal"
       :feature-name="'max_boards'"
       @close="showUpgradeModal = false"
+      @select-plan="handlePlanSelection"
     />
   </Teleport>
 </template>
@@ -119,12 +121,24 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    showUpgradeModal.value = false
+    // Убираем сброс showUpgradeModal при открытии основного модала
+    // showUpgradeModal.value = false  // <-- УДАЛИЛИ ЭТУ СТРОКУ
     loadBoards()
   }
 })
+
 function handleBoardsRefresh() {
   loadBoards()
+}
+
+function handlePlanSelection(planName) {
+  console.log('Selected plan:', planName)
+  // Здесь можно добавить логику для перехода на страницу оплаты
+  // или открытия модального окна с оплатой
+  showUpgradeModal.value = false
+  
+  // Временно показываем сообщение
+  alert(`Переход на тариф "${planName}" будет доступен в ближайшее время`)
 }
 
 onMounted(() => {
@@ -134,6 +148,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('boards:refresh', handleBoardsRefresh)
 })
+
 async function loadBoards() {
   loading.value = true
   error.value = ''
@@ -181,6 +196,14 @@ async function createNewBoard() {
 
     if (!response.ok) {
       const errorData = await response.json()
+      
+      // Проверяем, является ли это ошибкой превышения лимита
+      if (errorData.code === 'USAGE_LIMIT_REACHED') {
+        console.log('Открываем UpgradeModal из-за превышения лимита')
+        showUpgradeModal.value = true
+        return
+      }
+      
       throw errorData
     }
 
@@ -189,14 +212,20 @@ async function createNewBoard() {
     emit('open-board', data.board.id)
     close()
   } catch (err) {
-    // Проверяем, является ли это ошибкой превышения лимита
+    // Проверяем еще раз на случай, если ошибка имеет код USAGE_LIMIT_REACHED
     if (err.code === 'USAGE_LIMIT_REACHED') {
+      console.log('Открываем UpgradeModal из-за превышения лимита (catch)')
       showUpgradeModal.value = true
       return
     }
 
     // Для всех остальных ошибок показываем красную плашку
-    creationErrorMessage.value = err.error || 'Произошла неизвестная ошибка'
+    creationErrorMessage.value = err.error || err.message || 'Произошла неизвестная ошибка'
+    
+    // Автоматически скрываем сообщение об ошибке через 5 секунд
+    setTimeout(() => {
+      creationErrorMessage.value = ''
+    }, 5000)
   }
 }
 
@@ -233,8 +262,8 @@ async function renameBoard(board) {
         try {
           const errorData = await response.json()
           if (errorData.code === 'USAGE_LIMIT_REACHED') {
-            // Показываем специфичное сообщение о превышении лимита
-            alert(errorData.error || 'Достигнут лимит на вашем тарифе')
+            // Показываем модальное окно вместо alert
+            showUpgradeModal.value = true
             activeMenu.value = null
             return
           }
@@ -269,8 +298,9 @@ async function duplicateBoard(id) {
         try {
           const errorData = await response.json()
           if (errorData.code === 'USAGE_LIMIT_REACHED') {
-            // Показываем специфичное сообщение о превышении лимита
-            alert(errorData.error || 'Достигнут лимит досок на вашем тарифе')
+            // Показываем UpgradeModal вместо alert
+            console.log('Открываем UpgradeModal при дублировании')
+            showUpgradeModal.value = true
             activeMenu.value = null
             return
           }
@@ -281,6 +311,7 @@ async function duplicateBoard(id) {
       throw new Error('Ошибка дублирования')
     }
 
+    const data = await response.json()
     userStore.usage.boards.current++
     await loadBoards()
     activeMenu.value = null
@@ -437,6 +468,7 @@ function formatDate(dateString) {
   padding: 20px;
   border-radius: 12px;
   text-align: center;
+  margin-bottom: 20px;
 }
 
 .empty-state {
@@ -505,6 +537,7 @@ function formatDate(dateString) {
   font-size: 50px;
   opacity: 0.3;
 }
+
 .board-thumb-image {
   width: min(100%, 200px);
   height: 120px;
