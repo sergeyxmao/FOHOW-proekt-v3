@@ -152,21 +152,19 @@ export function registerPromoRoutes(app) {
           [promo.target_plan_id, newExpiration, userId]
         );
 
-        // Записываем использование промокода
-        await client.query(
-          `INSERT INTO promo_code_usages (promo_code_id, user_id)
-           VALUES ($1, $2)`,
-          [promo.id, userId]
-        );
-
-        // Увеличиваем счетчик использований промокода
-        await client.query(
-          `UPDATE promo_codes
-           SET current_uses = current_uses + 1,
-               updated_at = CURRENT_TIMESTAMP
-           WHERE id = $1`,
-          [promo.id]
-        );
+    // Записываем в историю подписок
+    await client.query(
+      `INSERT INTO subscription_history
+       (user_id, plan_id, start_date, end_date, source, promo_code_id)
+       VALUES ($1, $2, $3, $4, 'промокод', $5)`,
+      [
+        userId,
+        promo.target_plan_id, // Записываем ID нового плана, на который перешли
+        user.subscription_expires_at || new Date(), // Когда началась "новая" подписка
+        newExpiration, // Когда она закончится
+        promo.id // ID использованного промокода
+      ]
+    );
 
         // Получаем информацию о новом тарифном плане
         const planResult = await client.query(
