@@ -20,6 +20,10 @@
               :limit="userStore.features.max_boards"
             />
 
+            <div v-if="creationErrorMessage" class="error-message">
+              ❌ {{ creationErrorMessage }}
+            </div>
+
             <div v-if="loading" class="loading">
               <div class="spinner"></div>
               <p>Загрузка структур...</p>
@@ -109,6 +113,7 @@ const loading = ref(false)
 const error = ref('')
 const activeMenu = ref(null)
 const showUpgradeModal = ref(false)
+const creationErrorMessage = ref('')
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
@@ -154,6 +159,9 @@ async function loadBoards() {
 }
 
 async function createNewBoard() {
+  // Очищаем предыдущие ошибки
+  creationErrorMessage.value = ''
+
   try {
     const response = await fetch(`${API_URL}/boards`, {
       method: 'POST',
@@ -172,22 +180,8 @@ async function createNewBoard() {
     })
 
     if (!response.ok) {
-      // Пытаемся получить сообщение об ошибке от сервера
-      try {
-        const errorData = await response.json()
-        // Проверяем, не превышен ли лимит
-        if (errorData.code === 'USAGE_LIMIT_REACHED') {
-          showUpgradeModal.value = true
-          return
-        }
-        // Для других ошибок можно вывести alert или показать другое уведомление
-        alert(errorData.error || 'Ошибка создания структуры')
-        return
-      } catch (parseError) {
-        // Если не удалось распарсить JSON, показываем общую ошибку
-        alert('Ошибка создания структуры')
-        return
-      }
+      const errorData = await response.json()
+      throw errorData
     }
 
     const data = await response.json()
@@ -195,21 +189,14 @@ async function createNewBoard() {
     emit('open-board', data.board.id)
     close()
   } catch (err) {
-    // Обрабатываем сетевые ошибки
-    if (err.response) {
-      try {
-        const errorData = await err.response.json()
-        if (errorData.code === 'USAGE_LIMIT_REACHED') {
-          showUpgradeModal.value = true
-          return
-        }
-        alert(errorData.error || 'Ошибка создания структуры')
-      } catch (parseError) {
-        alert('Ошибка создания структуры')
-      }
-    } else {
-      alert('Произошла сетевая ошибка')
+    // Проверяем, является ли это ошибкой превышения лимита
+    if (err.code === 'USAGE_LIMIT_REACHED') {
+      showUpgradeModal.value = true
+      return
     }
+
+    // Для всех остальных ошибок показываем красную плашку
+    creationErrorMessage.value = err.error || 'Произошла неизвестная ошибка'
   }
 }
 
