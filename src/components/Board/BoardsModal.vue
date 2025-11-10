@@ -1,6 +1,10 @@
 <template>
-  <!-- Основное модальное окно -->
+  <!-- 
+    Один Teleport для управления обоими модальными окнами.
+    Это правильный подход, чтобы избежать вложенности.
+  -->
   <Teleport to="body">
+    <!-- Основное модальное окно -->
     <Transition name="modal">
       <div v-if="isOpen" class="modal-overlay" @click="close">
         <div class="modal-content" @click.stop>
@@ -13,7 +17,7 @@
                 ➕ Создать структуру
               </button>
             </div>
-
+  
             <UsageLimitBar
               v-if="userStore.plan && userStore.features.max_boards !== -1"
               label="Доски"
@@ -26,7 +30,8 @@
               <p>Загрузка структур...</p>
             </div>
 
-            <div v-else-if="error" class="error-message">
+            <!-- ШАГ 1: Блок ошибки исправлен и теперь использует "error" -->
+            <div v-if="error" class="error-message">
               ❌ {{ error }}
             </div>
 
@@ -78,10 +83,11 @@
         </div>
       </div>
     </Transition>
-  </Teleport>
-  
-  <!-- UpgradeModal вынесен в отдельный Teleport для независимого отображения -->
-  <Teleport to="body">
+
+    <!-- 
+      ШАГ 2: UpgradeModal находится ЗДЕСЬ, на том же уровне, что и Transition,
+      внутри общего Teleport. Вложенность устранена.
+    -->
     <UpgradeModal
       v-if="showUpgradeModal"
       :is-open="showUpgradeModal"
