@@ -72,6 +72,21 @@ export const useBoardStore = defineStore('board', () => {
       })
 
       if (!response.ok) {
+        // Проверяем, не превышен ли лимит
+        if (response.status === 403) {
+          try {
+            const errorData = await response.json()
+            if (errorData.code === 'USAGE_LIMIT_REACHED') {
+              // Показываем специфичное сообщение о превышении лимита
+              alert(errorData.error || 'Достигнут лимит на вашем тарифе')
+              currentBoardName.value = previousName
+              isSaving.value = false
+              return { success: false, synced: false, limitReached: true }
+            }
+          } catch (parseError) {
+            // Если не удалось распарсить JSON, продолжаем с общей ошибкой
+          }
+        }
         throw new Error('Ошибка переименования структуры')
       }
 

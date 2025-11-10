@@ -107,6 +107,20 @@ export const useStickersStore = defineStore('stickers', () => {
       });
 
       if (!response.ok) {
+        // Проверяем, не превышен ли лимит
+        if (response.status === 403) {
+          try {
+            const errorData = await response.json();
+            if (errorData.code === 'USAGE_LIMIT_REACHED') {
+              // Показываем специфичное сообщение о превышении лимита
+              alert(errorData.error || 'Достигнут лимит стикеров на вашем тарифе');
+              isLoading.value = false;
+              return null;
+            }
+          } catch (parseError) {
+            // Если не удалось распарсить JSON, продолжаем с общей ошибкой
+          }
+        }
         const data = await response.json();
         throw new Error(data.error || 'Ошибка создания стикера');
       }
@@ -148,6 +162,19 @@ export const useStickersStore = defineStore('stickers', () => {
       });
 
       if (!response.ok) {
+        // Проверяем, не превышен ли лимит
+        if (response.status === 403) {
+          try {
+            const errorData = await response.json();
+            if (errorData.code === 'USAGE_LIMIT_REACHED') {
+              // Показываем специфичное сообщение о превышении лимита
+              alert(errorData.error || 'Достигнут лимит на вашем тарифе');
+              return null;
+            }
+          } catch (parseError) {
+            // Если не удалось распарсить JSON, продолжаем с общей ошибкой
+          }
+        }
         const data = await response.json();
         throw new Error(data.error || 'Ошибка обновления стикера');
       }
