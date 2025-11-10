@@ -28,12 +28,13 @@ export async function authenticateToken(request, reply) {
       const tokenSignature = tokenParts[2];
 
       // Обновляем last_seen без await, чтобы не замедлять основной запрос
+      console.log(`[AUTH] Попытка обновить last_seen для токена: ${token}`);
       pool.query(
         'UPDATE active_sessions SET last_seen = NOW() WHERE token_signature = $1',
         [tokenSignature]
       ).catch((err) => {
         // Логируем ошибку, но не прерываем выполнение основного запроса
-        console.error('❌ Ошибка обновления last_seen:', err);
+        console.error(`[AUTH] Ошибка при обновлении last_seen для токена ${token}:`, err);
       });
     }
   } catch (err) {
