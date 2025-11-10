@@ -224,6 +224,33 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('user', JSON.stringify(data.user))
 
       return data.user
+    },
+
+    async applyPromoCode(code) {
+      if (!this.token) {
+        throw new Error('Отсутствует токен авторизации')
+      }
+
+      const response = await fetch(`${API_URL}/promo/apply`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ code })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        // Показываем конкретное сообщение об ошибке из API
+        throw new Error(data.error || 'Ошибка применения промокода')
+      }
+
+      // После успешного применения промокода обновляем профиль пользователя
+      await this.fetchProfile()
+
+      return data
     }
   }
 })
