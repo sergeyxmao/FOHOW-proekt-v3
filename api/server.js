@@ -322,11 +322,15 @@ app.post('/api/login', async (req, reply) => {
 
     console.log(`[LOGIN] Подготовка к созданию новой сессии. Токен: ${token}`);
 
+    // Извлекаем signature из токена (последняя часть после второй точки)
+    const tokenParts = token.split('.');
+    const tokenSignature = tokenParts.length === 3 ? tokenParts[2] : token;
+
     // Создаем новую сессию в базе данных
     await pool.query(
       `INSERT INTO active_sessions (user_id, token_signature, ip_address, user_agent, expires_at)
        VALUES ($1, $2, $3, $4, $5)`,
-      [user.id, token, req.ip, req.headers['user-agent'] || null, expiresAt]
+      [user.id, tokenSignature, req.ip, req.headers['user-agent'] || null, expiresAt]
     );
 
     console.log(`[LOGIN] Новая сессия успешно создана в базе данных.`);
