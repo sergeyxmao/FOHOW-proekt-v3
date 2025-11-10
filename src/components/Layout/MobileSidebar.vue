@@ -6,6 +6,7 @@ import { useConnectionsStore } from '@/stores/connections'
 import { useViewSettingsStore } from '@/stores/viewSettings'
 import { useMobileStore } from '@/stores/mobile'
 import { useAuthStore } from '@/stores/auth'
+import { checkAndAlertCardLimit } from '@/utils/limitsCheck'
  
 const props = defineProps({
   isModernTheme: {
@@ -105,6 +106,12 @@ const selectTemplate = (templateId) => {
 
 function insertTemplate(templateData) {
   if (!templateData || !Array.isArray(templateData.cards)) {
+    return
+  }
+
+  // Проверяем лимит перед добавлением карточек из шаблона
+  const cardsToAdd = templateData.cards.length
+  if (!checkAndAlertCardLimit(cardsToAdd)) {
     return
   }
 

@@ -28,6 +28,7 @@ import { useHistoryStore } from './stores/history'
 import { useMobileUIScaleGesture } from './composables/useMobileUIScaleGesture'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
+import { checkAndAlertCardLimit } from './utils/limitsCheck'
 import NotesSidePanel from './components/Panels/NotesSidePanel.vue'
 import CommentsSidePanel from './components/Panels/CommentsSidePanel.vue'
 import StickerMessagesPanel from './components/Panels/StickerMessagesPanel.vue'
@@ -608,6 +609,11 @@ function stopAutoSave() {
 
 // Mobile-specific functions
 async function handleAddLicense() {
+  // Проверяем лимит перед добавлением карточки
+  if (!checkAndAlertCardLimit(1)) {
+    return
+  }
+
   const canProceed = await ensureStructureExists(() => {
     cardsStore.addCard({
       type: 'small',
@@ -626,6 +632,11 @@ async function handleAddLicense() {
 }
 
 async function handleAddLower() {
+  // Проверяем лимит перед добавлением карточки
+  if (!checkAndAlertCardLimit(1)) {
+    return
+  }
+
   const canProceed = await ensureStructureExists(() => {
     cardsStore.addCard({
       type: 'large',
@@ -644,6 +655,11 @@ async function handleAddLower() {
 }
 
 async function handleAddGold() {
+  // Проверяем лимит перед добавлением карточки
+  if (!checkAndAlertCardLimit(1)) {
+    return
+  }
+
   const canProceed = await ensureStructureExists(() => {
     cardsStore.addCard({
       type: 'gold'
