@@ -21,10 +21,6 @@
               :limit="userStore.features.max_boards"
             />
 
-            <div v-if="creationErrorMessage" class="error-message">
-              ❌ {{ creationErrorMessage }}
-            </div>
-
             <div v-if="loading" class="loading">
               <div class="spinner"></div>
               <p>Загрузка структур...</p>
@@ -119,7 +115,6 @@ const loading = ref(false)
 const error = ref('')
 const activeMenu = ref(null)
 const showUpgradeModal = ref(false)
-const creationErrorMessage = ref('')
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
@@ -193,26 +188,26 @@ async function loadBoards() {
 }
 
     // Новая, правильная функция createNewBoard
-    async function createNewBoard() {
-      // Сначала очищаем старые ошибки, если они были
-      error.value = ''; 
-
-      try {
-        const response = await fetch(`${API_URL}/boards`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authStore.token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            name: 'Новая структура',
-            content: {
-              objects: [],
-              background: '#ffffff',
-              zoom: 1
+        async function createNewBoard() {
+          error.value = ''; 
+          try {
+            const response = await fetch(`${API_URL}/boards`, { /* ... */ });
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw errorData; 
             }
-          })
-        });
+            const data = await response.json();
+            userStore.usage.boards.current++;
+            emit('open-board', data.board.id);
+            close();
+          } catch (err) {
+            if (err.code === 'USAGE_LIMIT_REACHED') {
+              showUpgradeModal.value = true;
+            } else {
+              error.value = err.error || 'Произошла неизвестная ошибка при создании структуры.';
+            }
+          }
+        }
 
         // Если ответ сервера НЕ успешный (статус 4xx или 5xx)
         if (!response.ok) {
