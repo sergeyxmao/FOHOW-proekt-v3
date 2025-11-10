@@ -28,14 +28,20 @@ export async function authenticateToken(request, reply) {
       const tokenSignature = tokenParts[2];
 
       // Обновляем last_seen без await, чтобы не замедлять основной запрос
-      console.log(`[AUTH] Попытка обновить last_seen для токена: ${token}`);
-      pool.query(
-        'UPDATE active_sessions SET last_seen = NOW() WHERE token_signature = $1',
-        [tokenSignature]
-      ).catch((err) => {
-        // Логируем ошибку, но не прерываем выполнение основного запроса
-        console.error(`[AUTH] Ошибка при обновлении last_seen для токена ${token}:`, err);
-      });
+      console.log(`[AUTH] Пытаюсь выполнить UPDATE last_seen для токена: ${token.substring(0, 10)}...`);
+
+      (async () => {
+        try {
+          await pool.query(
+            'UPDATE active_sessions SET last_seen = NOW() WHERE token_signature = $1',
+            [tokenSignature]
+          );
+          console.log(`[AUTH] UPDATE last_seen успешно выполнен для токена: ${token.substring(0, 10)}...`);
+        } catch (err) {
+          // Логируем ошибку, но не прерываем выполнение основного запроса
+          console.error(`[AUTH] ОШИБКА при выполнении UPDATE last_seen для токена ${token.substring(0, 10)}...:`, err);
+        }
+      })();
     }
   } catch (err) {
     return reply.code(403).send({ error: 'Недействительный токен' });
