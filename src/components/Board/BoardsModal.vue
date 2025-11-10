@@ -188,26 +188,26 @@ async function loadBoards() {
 }
 
     // Новая, правильная функция createNewBoard
-        async function createNewBoard() {
-          error.value = ''; 
-          try {
-            const response = await fetch(`${API_URL}/boards`, { /* ... */ });
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw errorData; 
+    async function createNewBoard() {
+      // Сначала очищаем старые ошибки, если они были
+      error.value = ''; 
+
+      try {
+        const response = await fetch(`${API_URL}/boards`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            name: 'Новая структура',
+            content: {
+              objects: [],
+              background: '#ffffff',
+              zoom: 1
             }
-            const data = await response.json();
-            userStore.usage.boards.current++;
-            emit('open-board', data.board.id);
-            close();
-          } catch (err) {
-            if (err.code === 'USAGE_LIMIT_REACHED') {
-              showUpgradeModal.value = true;
-            } else {
-              error.value = err.error || 'Произошла неизвестная ошибка при создании структуры.';
-            }
-          }
-        }
+          })
+        });
 
         // Если ответ сервера НЕ успешный (статус 4xx или 5xx)
         if (!response.ok) {
