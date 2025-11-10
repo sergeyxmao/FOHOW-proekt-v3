@@ -1,12 +1,12 @@
 <template>
-  <!--
+  <!-- 
     Один Teleport для управления обоими модальными окнами.
     Это правильный подход, чтобы избежать вложенности.
   -->
   <Teleport to="body">
     <!-- Основное модальное окно -->
     <Transition name="modal">
-      <div v-if="isOpen" class="modal-overlay" :class="{ 'modal-hidden': showUpgradeModal }" @click="close">
+      <div v-if="isOpen" class="modal-overlay" @click="close">
         <div class="modal-content" @click.stop>
           <button class="modal-close" @click="close">✕</button>
           
@@ -194,26 +194,27 @@ async function loadBoards() {
 }
 
     // Новая, правильная функция createNewBoard
-    async function createNewBoard() {
-      // Сначала очищаем старые ошибки, если они были
-      error.value = ''; 
-
-      try {
-        const response = await fetch(`${API_URL}/boards`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authStore.token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            name: 'Новая структура',
-            content: {
-              objects: [],
-              background: '#ffffff',
-              zoom: 1
+         async function createNewBoard() {
+          error.value = ''; 
+          try {
+            const response = await fetch(`${API_URL}/boards`, { /* ... */ });
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw errorData; 
             }
-          })
-        });
+            const data = await response.json();
+            userStore.usage.boards.current++;
+            emit('open-board', data.board.id);
+            close();
+          } catch (err) {
+            if (err.code === 'USAGE_LIMIT_REACHED') {
+              close(); // <-- ЗАКРЫВАЕМ ОКНО ДОСОК
+              emit('show-upgrade'); // <-- ПРОСИМ РОДИТЕЛЯ ОТКРЫТЬ ОКНО АПГРЕЙДА
+            } else {
+              error.value = err.error || 'Произошла неизвестная ошибка.';
+            }
+          }
+        }
 
         // Если ответ сервера НЕ успешный (статус 4xx или 5xx)
         if (!response.ok) {
@@ -230,7 +231,7 @@ async function loadBoards() {
 
       } catch (err) {
         // Здесь мы ловим ВСЕ ошибки: и сетевые, и те, что пришли с сервера
-
+        
         // Если это ошибка о превышении лимита
         if (err.code === 'USAGE_LIMIT_REACHED') {
           showUpgradeModal.value = true;
@@ -385,12 +386,6 @@ function formatDate(dateString) {
   align-items: center;
   justify-content: center;
   z-index: 9999; /* Уменьшаем z-index основного модала */
-}
-
-/* Скрываем окно с досками когда открыто окно с тарифами */
-.modal-overlay.modal-hidden {
-  opacity: 0;
-  pointer-events: none;
 }
 
 .modal-content {
