@@ -1,4 +1,5 @@
 <template>
+  <!-- Основное модальное окно -->
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="isOpen" class="modal-overlay" @click="close">
@@ -81,12 +82,15 @@
         </div>
       </div>
     </Transition>
-
-    <!-- UpgradeModal должен быть вне Transition и не зависеть от isOpen основного модала -->
+  </Teleport>
+  
+  <!-- UpgradeModal вынесен в отдельный Teleport для независимого отображения -->
+  <Teleport to="body">
     <UpgradeModal
+      v-if="showUpgradeModal"
       :is-open="showUpgradeModal"
       :feature-name="'max_boards'"
-      @close="showUpgradeModal = false"
+      @close="handleUpgradeModalClose"
       @select-plan="handlePlanSelection"
     />
   </Teleport>
@@ -121,9 +125,18 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    // Убираем сброс showUpgradeModal при открытии основного модала
-    // showUpgradeModal.value = false  // <-- УДАЛИЛИ ЭТУ СТРОКУ
+    // НЕ сбрасываем showUpgradeModal при открытии основного модала
     loadBoards()
+  }
+})
+
+// Добавляем логирование для диагностики
+watch(() => showUpgradeModal.value, (newVal) => {
+  console.log('🔄 showUpgradeModal changed to:', newVal)
+  if (newVal) {
+    console.log('📊 Current user plan:', userStore.plan)
+    console.log('📊 Current usage:', userStore.usage)
+    console.log('📊 Max boards:', userStore.features?.max_boards)
   }
 })
 
@@ -131,10 +144,14 @@ function handleBoardsRefresh() {
   loadBoards()
 }
 
+function handleUpgradeModalClose() {
+  console.log('🚪 Closing UpgradeModal')
+  showUpgradeModal.value = false
+}
+
 function handlePlanSelection(planName) {
-  console.log('Selected plan:', planName)
+  console.log('✅ Selected plan:', planName)
   // Здесь можно добавить логику для перехода на страницу оплаты
-  // или открытия модального окна с оплатой
   showUpgradeModal.value = false
   
   // Временно показываем сообщение
@@ -143,6 +160,8 @@ function handlePlanSelection(planName) {
 
 onMounted(() => {
   window.addEventListener('boards:refresh', handleBoardsRefresh)
+  // Загружаем информацию о тарифе пользователя
+  userStore.fetchUserPlan().catch(console.error)
 })
 
 onBeforeUnmount(() => {
@@ -177,6 +196,20 @@ async function createNewBoard() {
   // Очищаем предыдущие ошибки
   creationErrorMessage.value = ''
 
+  // Проверяем лимит досок ПЕРЕД запросом
+  const currentBoards = userStore.usage?.boards?.current || 0
+  const maxBoards = userStore.features?.max_boards || -1
+  
+  console.log('📊 Checking limits before creation:')
+  console.log('   Current boards:', currentBoards)
+  console.log('   Max boards:', maxBoards)
+  
+  if (maxBoards !== -1 && currentBoards >= maxBoards) {
+    console.log('⚠️ Limit reached! Opening UpgradeModal...')
+    showUpgradeModal.value = true
+    return
+  }
+
   try {
     const response = await fetch(`${API_URL}/boards`, {
       method: 'POST',
@@ -194,27 +227,36 @@ async function createNewBoard() {
       })
     })
 
+    const responseData = await response.json()
+    console.log('📬 Server response:', responseData)
+
     if (!response.ok) {
-      const errorData = await response.json()
-      
-      // Проверяем, является ли это ошибкой превышения лимита
-      if (errorData.code === 'USAGE_LIMIT_REACHED') {
-        console.log('Открываем UpgradeModal из-за превышения лимита')
+      // Проверяем различные варианты кода ошибки
+      if (responseData.code === 'USAGE_LIMIT_REACHED' || 
+          responseData.error?.includes('лимит') ||
+          responseData.error?.includes('limit') ||
+          responseData.upgradeRequired === true) {
+        console.log('🚫 Server returned limit error, opening UpgradeModal...')
         showUpgradeModal.value = true
         return
       }
       
-      throw errorData
+      throw responseData
     }
 
-    const data = await response.json()
+    // Успешное создание
     userStore.usage.boards.current++
-    emit('open-board', data.board.id)
+    emit('open-board', responseData.board.id)
     close()
   } catch (err) {
+    console.error('❌ Error creating board:', err)
+    
     // Проверяем еще раз на случай, если ошибка имеет код USAGE_LIMIT_REACHED
-    if (err.code === 'USAGE_LIMIT_REACHED') {
-      console.log('Открываем UpgradeModal из-за превышения лимита (catch)')
+    if (err.code === 'USAGE_LIMIT_REACHED' || 
+        err.upgradeRequired === true ||
+        err.error?.includes('лимит') ||
+        err.error?.includes('limit')) {
+      console.log('🚫 Caught limit error in catch block, opening UpgradeModal...')
       showUpgradeModal.value = true
       return
     }
@@ -257,19 +299,12 @@ async function renameBoard(board) {
     })
 
     if (!response.ok) {
-      // Проверяем, не превышен ли лимит
-      if (response.status === 403) {
-        try {
-          const errorData = await response.json()
-          if (errorData.code === 'USAGE_LIMIT_REACHED') {
-            // Показываем модальное окно вместо alert
-            showUpgradeModal.value = true
-            activeMenu.value = null
-            return
-          }
-        } catch (parseError) {
-          // Если не удалось распарсить JSON, продолжаем с общей ошибкой
-        }
+      const errorData = await response.json()
+      if (errorData.code === 'USAGE_LIMIT_REACHED' || errorData.upgradeRequired) {
+        console.log('🚫 Rename limit reached, opening UpgradeModal...')
+        showUpgradeModal.value = true
+        activeMenu.value = null
+        return
       }
       throw new Error('Ошибка переименования')
     }
@@ -284,6 +319,16 @@ async function renameBoard(board) {
 async function duplicateBoard(id) {
   if (!confirm('Создать копию структуры?')) return
 
+  // Проверяем лимит досок ПЕРЕД запросом
+  const currentBoards = userStore.usage?.boards?.current || 0
+  const maxBoards = userStore.features?.max_boards || -1
+  
+  if (maxBoards !== -1 && currentBoards >= maxBoards) {
+    console.log('⚠️ Cannot duplicate: limit reached! Opening UpgradeModal...')
+    showUpgradeModal.value = true
+    return
+  }
+
   try {
     const response = await fetch(`${API_URL}/boards/${id}/duplicate`, {
       method: 'POST',
@@ -293,20 +338,12 @@ async function duplicateBoard(id) {
     })
 
     if (!response.ok) {
-      // Проверяем, не превышен ли лимит
-      if (response.status === 403) {
-        try {
-          const errorData = await response.json()
-          if (errorData.code === 'USAGE_LIMIT_REACHED') {
-            // Показываем UpgradeModal вместо alert
-            console.log('Открываем UpgradeModal при дублировании')
-            showUpgradeModal.value = true
-            activeMenu.value = null
-            return
-          }
-        } catch (parseError) {
-          // Если не удалось распарсить JSON, продолжаем с общей ошибкой
-        }
+      const errorData = await response.json()
+      if (errorData.code === 'USAGE_LIMIT_REACHED' || errorData.upgradeRequired) {
+        console.log('🚫 Duplicate limit reached, opening UpgradeModal...')
+        showUpgradeModal.value = true
+        activeMenu.value = null
+        return
       }
       throw new Error('Ошибка дублирования')
     }
@@ -365,6 +402,7 @@ function formatDate(dateString) {
 </script>
 
 <style scoped>
+/* Стили остаются без изменений */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -376,7 +414,7 @@ function formatDate(dateString) {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: 9999; /* Уменьшаем z-index основного модала */
 }
 
 .modal-content {
