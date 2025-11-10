@@ -20,11 +20,6 @@
               :limit="userStore.features.max_boards"
             />
 
-            <div v-if="creationErrorMessage" class="creation-error-message">
-              ❌ {{ creationErrorMessage }}
-              <button class="error-close" @click="creationErrorMessage = ''">✕</button>
-            </div>
-
             <div v-if="loading" class="loading">
               <div class="spinner"></div>
               <p>Загрузка структур...</p>
@@ -82,6 +77,12 @@
         </div>
       </div>
     </Transition>
+
+    <UpgradeModal
+      :is-open="showUpgradeModal"
+      :feature-name="'max_boards'"
+      @close="showUpgradeModal = false"
+    />
   </Teleport>
 </template>
 
@@ -90,6 +91,7 @@ import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useUserStore } from '@/stores/user'
 import UsageLimitBar from '@/components/UsageLimitBar.vue'
+import UpgradeModal from '@/components/UpgradeModal.vue'
 
 const props = defineProps({
   isOpen: {
@@ -106,13 +108,13 @@ const boards = ref([])
 const loading = ref(false)
 const error = ref('')
 const activeMenu = ref(null)
-const creationErrorMessage = ref('')
+const showUpgradeModal = ref(false)
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    creationErrorMessage.value = ''
+    showUpgradeModal.value = false
     loadBoards()
   }
 })
@@ -152,9 +154,6 @@ async function loadBoards() {
 }
 
 async function createNewBoard() {
-  // Очищаем предыдущие ошибки
-  creationErrorMessage.value = ''
-
   try {
     const response = await fetch(`${API_URL}/boards`, {
       method: 'POST',
@@ -176,11 +175,17 @@ async function createNewBoard() {
       // Пытаемся получить сообщение об ошибке от сервера
       try {
         const errorData = await response.json()
-        creationErrorMessage.value = errorData.error || 'Ошибка создания структуры'
+        // Проверяем, не превышен ли лимит
+        if (errorData.code === 'USAGE_LIMIT_REACHED') {
+          showUpgradeModal.value = true
+          return
+        }
+        // Для других ошибок можно вывести alert или показать другое уведомление
+        alert(errorData.error || 'Ошибка создания структуры')
         return
       } catch (parseError) {
         // Если не удалось распарсить JSON, показываем общую ошибку
-        creationErrorMessage.value = 'Ошибка создания структуры'
+        alert('Ошибка создания структуры')
         return
       }
     }
@@ -194,12 +199,16 @@ async function createNewBoard() {
     if (err.response) {
       try {
         const errorData = await err.response.json()
-        creationErrorMessage.value = errorData.error || 'Ошибка создания структуры'
+        if (errorData.code === 'USAGE_LIMIT_REACHED') {
+          showUpgradeModal.value = true
+          return
+        }
+        alert(errorData.error || 'Ошибка создания структуры')
       } catch (parseError) {
-        creationErrorMessage.value = 'Ошибка создания структуры'
+        alert('Ошибка создания структуры')
       }
     } else {
-      creationErrorMessage.value = 'Произошла сетевая ошибка'
+      alert('Произошла сетевая ошибка')
     }
   }
 }
@@ -441,36 +450,6 @@ function formatDate(dateString) {
   padding: 20px;
   border-radius: 12px;
   text-align: center;
-}
-
-.creation-error-message {
-  background: #ffebee;
-  color: #c62828;
-  padding: 16px 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.error-close {
-  background: none;
-  border: none;
-  color: #c62828;
-  font-size: 18px;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: background 0.2s;
-  flex-shrink: 0;
-  margin-left: 12px;
-}
-
-.error-close:hover {
-  background: rgba(198, 40, 40, 0.1);
 }
 
 .empty-state {
