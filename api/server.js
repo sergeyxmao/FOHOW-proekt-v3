@@ -189,11 +189,26 @@ app.post('/api/register', async (req, reply) => {
     if (existing.rows.length > 0) {
       return reply.code(400).send({ error: 'Пользователь с таким email уже существует' });
     }
-    
+
+    // Получаем ID демо-тарифа
+    const demoPlanResult = await pool.query(
+      'SELECT id FROM subscription_plans WHERE code_name = $1',
+      ['demo']
+    );
+
+    if (demoPlanResult.rows.length === 0) {
+      console.error('❌ Демо-тариф не найден в базе данных');
+      return reply.code(500).send({ error: 'Ошибка настройки тарифного плана' });
+    }
+
+    const demoPlanId = demoPlanResult.rows[0].id;
+
     const hash = await bcrypt.hash(password, 10);
     const insertResult = await pool.query(
-      'INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id, email',
-      [email, hash]
+      `INSERT INTO users (email, password, plan_id, subscription_expires_at)
+       VALUES ($1, $2, $3, NOW() + INTERVAL '3 days')
+       RETURNING id, email`,
+      [email, hash, demoPlanId]
     );
 
     const newUser = insertResult.rows[0];
