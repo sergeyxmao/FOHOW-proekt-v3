@@ -25,6 +25,7 @@ import { useMobileStore } from './stores/mobile'
 import { useViewSettingsStore } from './stores/viewSettings'
 import { useNotesStore } from './stores/notes'
 import { useHistoryStore } from './stores/history'
+import { useUserStore } from './stores/user'
 import { useMobileUIScaleGesture } from './composables/useMobileUIScaleGesture'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
@@ -48,6 +49,7 @@ const mobileStore = useMobileStore()
 const viewSettingsStore = useViewSettingsStore()
 const notesStore = useNotesStore()
 const sidePanelsStore = useSidePanelsStore()
+const userStore = useUserStore()
 const { isAuthenticated } = storeToRefs(authStore)
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMobileMode } = storeToRefs(mobileStore)
@@ -781,14 +783,14 @@ watch(isSaveAvailable, (canSave) => {
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
   // Вся асинхронная инициализация (authStore.init) УЖЕ ЗАВЕРШИЛАСЬ в main.js
   // до того, как этот компонент был смонтирован.
   // Теперь мы просто выполняем логику, которая нужна самому компоненту App.vue.
 
   // Определяем тип устройства
   mobileStore.detectDevice()
-  
+
   // Инициализация жеста масштабирования UI для мобильной версии
   if (mobileStore.isMobileMode) {
     console.log('🎯 Инициализация жеста масштабирования UI для мобильной версии')
@@ -798,7 +800,7 @@ onMounted(() => {
       sensitivity: 0.002,
       safetyMargin: 8
     })
-  }  
+  }
 
   // Проверяем URL на токен сброса пароля
   const urlParams = new URLSearchParams(window.location.search)
@@ -807,6 +809,15 @@ onMounted(() => {
     resetToken.value = token
     showResetPassword.value = true
     window.history.replaceState({}, document.title, window.location.pathname)
+  }
+
+  // Загружаем данные о подписке пользователя, если авторизован
+  if (localStorage.getItem('token')) {
+    try {
+      await userStore.fetchUserPlan()
+    } catch (error) {
+      console.error('⚠️ Ошибка загрузки данных о подписке:', error)
+    }
   }
 
   window.addEventListener('keydown', handleGlobalKeydown)
