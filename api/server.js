@@ -356,6 +356,32 @@ app.post('/api/login', async (req, reply) => {
   }
 });
 
+// === ВЫХОД (LOGOUT) ===
+app.post('/api/logout', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
+  try {
+    // Получаем JWT-токен из заголовка Authorization
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return reply.code(401).send({ error: 'Токен не предоставлен' });
+    }
+
+    // Удаляем сессию из базы данных по token_signature
+    await pool.query(
+      'DELETE FROM active_sessions WHERE token_signature = $1',
+      [token]
+    );
+
+    return reply.send({ success: true });
+  } catch (err) {
+    console.error('❌ Ошибка выхода:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
 // === ЗАЩИЩЕННЫЙ МАРШРУТ - ПРОФИЛЬ ===
 app.get('/api/profile', {
   preHandler: [authenticateToken]
