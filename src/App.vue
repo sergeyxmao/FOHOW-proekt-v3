@@ -14,6 +14,8 @@ import AuthModal from './components/AuthModal.vue'
 import UserProfile from './components/UserProfile.vue'
 import BoardsModal from './components/Board/BoardsModal.vue'
 import StructureNameModal from './components/Board/StructureNameModal.vue'
+// 👇 ШАГ 1.1: Импортируем новый компонент
+import UpgradeModal from './components/UpgradeModal.vue' 
 import { useAuthStore } from './stores/auth'
 import { useCanvasStore } from './stores/canvas'
 import { useBoardStore } from './stores/board'
@@ -87,6 +89,18 @@ const resetToken = ref('')
 
 let autoSaveInterval = null
 const API_URL = import.meta.env.VITE_API_URL || '/api' // Используем относительный путь для прокси
+
+// 👇 ШАГ 1.2: Создаем переменную, чтобы его показывать/скрывать
+const showUpgradeModal = ref(false) 
+
+// 👇 ШАГ 1.3: Создаем функции, которые будут вызываться из UpgradeModal
+function handleUpgradeModalClose() {
+  showUpgradeModal.value = false
+}
+function handlePlanSelection(planName) {
+  showUpgradeModal.value = false
+  alert(`Выбран план: ${planName}. Логика оплаты будет добавлена позже.`)
+}
 
 function toggleTheme() {
   isModernTheme.value = !isModernTheme.value
@@ -1006,12 +1020,22 @@ onBeforeUnmount(() => {
       @close="handleMobileAuthClose"
       @success="handleMobileAuthSuccess"
     />
+    <!-- 👇 ШАГ 2.1: Модифицируем BoardsModal, добавляя новое событие -->
     <BoardsModal
       class="no-print"
       :is-open="isBoardsModalOpen"
       @close="handleMobileBoardsClose"
       @open-board="handleMobileBoardSelect"
+      @show-upgrade="showUpgradeModal = true"  
     />
+    <!-- 👇 ШАГ 2.2: Добавляем UpgradeModal после него -->
+    <UpgradeModal
+      :is-open="showUpgradeModal"
+      feature-name="max_boards"
+      @close="handleUpgradeModalClose"
+      @select-plan="handlePlanSelection"
+    />
+
     <StructureNameModal
       class="no-print"
       :is-open="isStructureNameModalOpen"
