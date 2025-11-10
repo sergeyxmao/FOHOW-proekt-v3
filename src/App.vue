@@ -434,6 +434,20 @@ async function saveCurrentBoard() {
     })
 
     if (!response.ok) {
+      // Проверяем, не превышен ли лимит
+      if (response.status === 403) {
+        try {
+          const errorData = await response.json()
+          if (errorData.code === 'USAGE_LIMIT_REACHED') {
+            // Показываем специфичное сообщение о превышении лимита
+            alert(errorData.error || 'Достигнут лимит на вашем тарифе')
+            boardStore.isSaving = false
+            return
+          }
+        } catch (parseError) {
+          // Если не удалось распарсить JSON, продолжаем с общей ошибкой
+        }
+      }
       throw new Error('Ошибка сохранения')
     }
 
@@ -472,6 +486,19 @@ async function uploadBoardThumbnail(boardId) {
     })
 
     if (!response.ok) {
+      // Проверяем, не превышен ли лимит
+      if (response.status === 403) {
+        try {
+          const errorData = await response.json()
+          if (errorData.code === 'USAGE_LIMIT_REACHED') {
+            // Для миниатюры просто логируем, не показываем alert
+            console.warn('Достигнут лимит:', errorData.error)
+            return
+          }
+        } catch (parseError) {
+          // Если не удалось распарсить JSON, продолжаем с общей ошибкой
+        }
+      }
       throw new Error('Ошибка загрузки миниатюры')
     }
 

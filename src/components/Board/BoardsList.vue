@@ -125,11 +125,24 @@ async function createNewBoard() {
         }
       })
     })
-    
+
     if (!response.ok) {
+      // Проверяем, не превышен ли лимит
+      if (response.status === 403) {
+        try {
+          const errorData = await response.json()
+          if (errorData.code === 'USAGE_LIMIT_REACHED') {
+            // Показываем специфичное сообщение о превышении лимита
+            alert(errorData.error || 'Достигнут лимит досок на вашем тарифе')
+            return
+          }
+        } catch (parseError) {
+          // Если не удалось распарсить JSON, продолжаем с общей ошибкой
+        }
+      }
       throw new Error('Ошибка создания структуры')
     }
-    
+
     const data = await response.json()
     router.push(`/board/${data.board.id}`)
   } catch (err) {
@@ -148,7 +161,7 @@ function toggleMenu(id) {
 async function renameBoard(board) {
   const newName = prompt('Введите новое название:', board.name)
   if (!newName || newName === board.name) return
-  
+
   try {
     const response = await fetch(`${API_URL}/boards/${board.id}`, {
       method: 'PUT',
@@ -158,9 +171,25 @@ async function renameBoard(board) {
       },
       body: JSON.stringify({ name: newName })
     })
-    
-    if (!response.ok) throw new Error('Ошибка переименования')
-    
+
+    if (!response.ok) {
+      // Проверяем, не превышен ли лимит
+      if (response.status === 403) {
+        try {
+          const errorData = await response.json()
+          if (errorData.code === 'USAGE_LIMIT_REACHED') {
+            // Показываем специфичное сообщение о превышении лимита
+            alert(errorData.error || 'Достигнут лимит на вашем тарифе')
+            activeMenu.value = null
+            return
+          }
+        } catch (parseError) {
+          // Если не удалось распарсить JSON, продолжаем с общей ошибкой
+        }
+      }
+      throw new Error('Ошибка переименования')
+    }
+
     await loadBoards()
     activeMenu.value = null
   } catch (err) {
@@ -170,7 +199,7 @@ async function renameBoard(board) {
 
 async function duplicateBoard(id) {
   if (!confirm('Создать копию структуры?')) return
-  
+
   try {
     const response = await fetch(`${API_URL}/boards/${id}/duplicate`, {
       method: 'POST',
@@ -178,9 +207,25 @@ async function duplicateBoard(id) {
         'Authorization': `Bearer ${authStore.token}`
       }
     })
-    
-    if (!response.ok) throw new Error('Ошибка дублирования')
-    
+
+    if (!response.ok) {
+      // Проверяем, не превышен ли лимит
+      if (response.status === 403) {
+        try {
+          const errorData = await response.json()
+          if (errorData.code === 'USAGE_LIMIT_REACHED') {
+            // Показываем специфичное сообщение о превышении лимита
+            alert(errorData.error || 'Достигнут лимит досок на вашем тарифе')
+            activeMenu.value = null
+            return
+          }
+        } catch (parseError) {
+          // Если не удалось распарсить JSON, продолжаем с общей ошибкой
+        }
+      }
+      throw new Error('Ошибка дублирования')
+    }
+
     await loadBoards()
     activeMenu.value = null
   } catch (err) {
