@@ -20,6 +20,11 @@
               :limit="userStore.features.max_boards"
             />
 
+            <div v-if="creationErrorMessage" class="creation-error-message">
+              ❌ {{ creationErrorMessage }}
+              <button class="error-close" @click="creationErrorMessage = ''">✕</button>
+            </div>
+
             <div v-if="loading" class="loading">
               <div class="spinner"></div>
               <p>Загрузка структур...</p>
@@ -101,11 +106,13 @@ const boards = ref([])
 const loading = ref(false)
 const error = ref('')
 const activeMenu = ref(null)
+const creationErrorMessage = ref('')
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
+    creationErrorMessage.value = ''
     loadBoards()
   }
 })
@@ -145,6 +152,9 @@ async function loadBoards() {
 }
 
 async function createNewBoard() {
+  // Очищаем предыдущие ошибки
+  creationErrorMessage.value = ''
+
   try {
     const response = await fetch(`${API_URL}/boards`, {
       method: 'POST',
@@ -163,27 +173,33 @@ async function createNewBoard() {
     })
 
     if (!response.ok) {
-      // Проверяем, не превышен ли лимит
-      if (response.status === 403) {
-        try {
-          const errorData = await response.json()
-          if (errorData.code === 'USAGE_LIMIT_REACHED') {
-            // Показываем специфичное сообщение о превышении лимита
-            alert(errorData.error || 'Достигнут лимит досок на вашем тарифе')
-            return
-          }
-        } catch (parseError) {
-          // Если не удалось распарсить JSON, продолжаем с общей ошибкой
-        }
+      // Пытаемся получить сообщение об ошибке от сервера
+      try {
+        const errorData = await response.json()
+        creationErrorMessage.value = errorData.error || 'Ошибка создания структуры'
+        return
+      } catch (parseError) {
+        // Если не удалось распарсить JSON, показываем общую ошибку
+        creationErrorMessage.value = 'Ошибка создания структуры'
+        return
       }
-      throw new Error('Ошибка создания структуры')
     }
 
     const data = await response.json()
     emit('open-board', data.board.id)
     close()
   } catch (err) {
-    error.value = err.message
+    // Обрабатываем сетевые ошибки
+    if (err.response) {
+      try {
+        const errorData = await err.response.json()
+        creationErrorMessage.value = errorData.error || 'Ошибка создания структуры'
+      } catch (parseError) {
+        creationErrorMessage.value = 'Ошибка создания структуры'
+      }
+    } else {
+      creationErrorMessage.value = 'Произошла сетевая ошибка'
+    }
   }
 }
 
@@ -422,6 +438,36 @@ function formatDate(dateString) {
   padding: 20px;
   border-radius: 12px;
   text-align: center;
+}
+
+.creation-error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.error-close {
+  background: none;
+  border: none;
+  color: #c62828;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.error-close:hover {
+  background: rgba(198, 40, 40, 0.1);
 }
 
 .empty-state {
