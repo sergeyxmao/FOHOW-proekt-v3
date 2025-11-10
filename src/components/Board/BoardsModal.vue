@@ -193,54 +193,44 @@ async function loadBoards() {
   }
 }
 
-    // Новая, правильная функция createNewBoard
-         async function createNewBoard() {
-          error.value = ''; 
-          try {
-            const response = await fetch(`${API_URL}/boards`, { /* ... */ });
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw errorData; 
-            }
-            const data = await response.json();
-            userStore.usage.boards.current++;
-            emit('open-board', data.board.id);
-            close();
-          } catch (err) {
-            if (err.code === 'USAGE_LIMIT_REACHED') {
-              close(); // <-- ЗАКРЫВАЕМ ОКНО ДОСОК
-              emit('show-upgrade'); // <-- ПРОСИМ РОДИТЕЛЯ ОТКРЫТЬ ОКНО АПГРЕЙДА
-            } else {
-              error.value = err.error || 'Произошла неизвестная ошибка.';
-            }
-          }
-        }
+async function createNewBoard() {
+  error.value = ''
 
-        // Если ответ сервера НЕ успешный (статус 4xx или 5xx)
-        if (!response.ok) {
-          const errorData = await response.json();
-          // Передаем ошибку с сервера в блок catch
-          throw errorData; 
-        }
+  try {
+    const response = await fetch(`${API_URL}/boards`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name: 'Новая структура' })
+    })
 
-        // Этот код выполнится только при успешном создании
-        const data = await response.json();
-        userStore.usage.boards.current++;
-        emit('open-board', data.board.id);
-        close();
-
-      } catch (err) {
-        // Здесь мы ловим ВСЕ ошибки: и сетевые, и те, что пришли с сервера
-        
-        // Если это ошибка о превышении лимита
-        if (err.code === 'USAGE_LIMIT_REACHED') {
-          showUpgradeModal.value = true;
-        } else {
-          // Для всех остальных ошибок показываем красную плашку
-          error.value = err.error || 'Произошла неизвестная ошибка при создании структуры.';
-        }
-      }
+    // Если ответ сервера НЕ успешный (статус 4xx или 5xx)
+    if (!response.ok) {
+      const errorData = await response.json()
+      // Передаем ошибку с сервера в блок catch
+      throw errorData
     }
+
+    // Этот код выполнится только при успешном создании
+    const data = await response.json()
+    userStore.usage.boards.current++
+    emit('open-board', data.board.id)
+    close()
+
+  } catch (err) {
+    // Здесь мы ловим ВСЕ ошибки: и сетевые, и те, что пришли с сервера
+
+    // Если это ошибка о превышении лимита
+    if (err.code === 'USAGE_LIMIT_REACHED') {
+      showUpgradeModal.value = true
+    } else {
+      // Для всех остальных ошибок показываем красную плашку
+      error.value = err.error || 'Произошла неизвестная ошибка при создании структуры.'
+    }
+  }
+}
 
 function openBoard(id) {
   emit('open-board', id)
