@@ -18,6 +18,13 @@ export default defineConfig({
     },
   },
 
+  // Глобальные переменные для включения Vue Devtools в production
+  define: {
+    '__VUE_PROD_DEVTOOLS__': true,
+    '__VUE_OPTIONS_API__': true,
+    '__VUE_PROD_HYDRATION_MISMATCH_DETAILS__': false,
+  },
+
   // --- ДОБАВЛЕННЫЙ БЛОК ДЛЯ ПРОКСИРОВАНИЯ API-ЗАПРОСОВ ---
   // Эта настройка решает проблему CORS в режиме разработки.
   // Все запросы из вашего Vue-приложения, которые начинаются с "/api",
