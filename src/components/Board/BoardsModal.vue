@@ -23,6 +23,7 @@
               label="Доски"
               :current="userStore.usage.boards.current"
               :limit="userStore.features.max_boards"
+              @upgrade="showUpgradeModal = true"
             />
 
             <div v-if="loading" class="loading">
