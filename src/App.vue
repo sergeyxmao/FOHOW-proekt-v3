@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import AppHeader from './components/Layout/AppHeader.vue'
 import TopMenuButtons from './components/Layout/TopMenuButtons.vue'
@@ -38,7 +39,11 @@ import { useSidePanelsStore } from './stores/sidePanels'
 
 // Флаг, который защищает от рендеринга до готовности
 const isAppInitialized = ref(false)
- 
+
+// Определяем layout для текущего маршрута
+const route = useRoute()
+const layout = computed(() => route.meta.layout)
+
 const authStore = useAuthStore()
 const canvasStore = useCanvasStore()
 const boardStore = useBoardStore()
@@ -836,7 +841,14 @@ onBeforeUnmount(() => {
 <template>
   <!-- Показываем основной интерфейс только ПОСЛЕ полной инициализации -->
   <div v-if="isAppInitialized" id="app" :class="{ 'app--mobile': isMobileMode }">
-    
+
+    <!-- Для публичных страниц показываем только компонент маршрута -->
+    <template v-if="layout === 'public'">
+      <router-view />
+    </template>
+
+    <!-- Для основного приложения показываем полный интерфейс -->
+    <template v-else>
     <!-- Desktop UI -->
     <template v-if="!isMobileMode">
       <TopMenuButtons
@@ -1060,6 +1072,7 @@ onBeforeUnmount(() => {
 
     <!-- Контейнер для тост-уведомлений -->
     <TheNotifications />
+    </template>
   </div>
 
   <!-- Пока идет инициализация, показываем заглушку -->
