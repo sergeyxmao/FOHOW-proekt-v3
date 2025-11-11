@@ -18,6 +18,7 @@ import Redis from 'ioredis'; // <-- Добавлен импорт Redis
 import { checkFeature } from './middleware/checkFeature.js';
 import { checkUsageLimit } from './middleware/checkUsageLimit.js';
 import { registerPromoRoutes } from './routes/promo.js';
+import { initializeCronTasks } from './cron/tasks.js';
 
 
 
@@ -1636,6 +1637,9 @@ const HOST = '127.0.0.1';
 try {
   await app.listen({ port: PORT, host: HOST });
   app.log.info(`API listening on http://${HOST}:${PORT}`);
+
+  // Инициализируем крон-задачи после успешного запуска сервера
+  initializeCronTasks();
 } catch (err) {
   app.log.error(err);
   process.exit(1);
