@@ -24,7 +24,8 @@ const router = createRouter({
     {
       path: '/pricing',
       name: 'pricing',
-      component: () => import('../views/PricingPage.vue')
+      component: () => import('../views/PricingPage.vue'),
+      meta: { layout: 'public' }
     }
   ],
 })
