@@ -2,5 +2,5 @@
   <router-view />
 </template>
 <script setup>
-// пусто
+// пусто!
 </script>
