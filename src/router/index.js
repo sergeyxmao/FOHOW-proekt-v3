@@ -1,49 +1,32 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+
+// Прямые тестовые компоненты — не использовать внешние импорты вообще!
+const HomeView = { template: '<h1>HOME PAGE</h1>' }
+const PricingTest = { template: '<h1>ПРИЦИНГ ПУБЛИК ✅</h1>' }
+const TestPage = { template: '<h1>ТЕСТ СТРАНИЦА ✅</h1>' }
+
+const routes = [
+  {
+    path: '/',
+    name: 'home',
+    component: HomeView
+  },
+  {
+    path: '/pricing',
+    name: 'pricing',
+    component: PricingTest
+  },
+  {
+    path: '/test',
+    name: 'test',
+    component: TestPage
+  }
+]
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: '/',
-      name: 'home',
-      component: HomeView,
-    },
-    {
-      path: '/boards',
-      name: 'boards',
-      component: () => import('../components/Board/BoardsList.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/board/:id',
-      name: 'board',
-      component: HomeView, // Временно, позже создадим отдельный компонент
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/pricing',
-      name: 'pricing',
-      component: () => import('../views/PricingPage.vue')
-      // Страница с тарифами доступна всем пользователям
-    }
-  ],
+  history: createWebHistory('/'), // BASE_URL всегда '/'
+  routes
 })
 
-// Защита маршрутов - требуется авторизация
-router.beforeEach((to, from, next) => {
-  
- console.log('Навигация из:', from.path, '-> в:', to.path);
- debugger; // <--- СТАВИМ ТОЧКУ ОСТАНОВА
-
-  const token = localStorage.getItem('token')
-  
-  if (to.meta.requiresAuth && !token) {
-    // Если нужна авторизация, но токена нет - на главную
-    next('/')
-  } else {
-    next()
-  }
-})
-
+// НЕ добавлять никаких beforeEach, навигационных guard и доп. logic!
 export default router
