@@ -6,7 +6,15 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/pricing'
+      name: 'pricing-home',
+      component: () => import('../views/PricingPage.vue'),
+      meta: { layout: 'public' }
+    },
+    {
+      path: '/pricing',
+      name: 'pricing',
+      component: () => import('../views/PricingPage.vue'),
+      meta: { layout: 'public' }
     },
     {
       path: '/home',
@@ -24,12 +32,6 @@ const router = createRouter({
       name: 'board',
       component: HomeView, // Временно, позже создадим отдельный компонент
       meta: { requiresAuth: true }
-    },
-    {
-      path: '/pricing',
-      name: 'pricing',
-      component: () => import('../views/PricingPage.vue'),
-      meta: { layout: 'public' }
     }
   ],
 })
