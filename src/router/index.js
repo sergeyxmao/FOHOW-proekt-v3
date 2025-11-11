@@ -1,52 +1,48 @@
-import HomeView from './views/HomeView.vue'
-import PricingPage from './views/PricingPage.vue'
+import { createRouter, createWebHistory } from 'vue-router'
+import HomeView from '../views/HomeView.vue'
+import PricingPage from '../views/PricingPage.vue'
 
 const routes = [
-  { path: '/', component: HomeView },
-  { path: '/pricing', component: PricingPage },
+  {
+    path: '/',
+    name: 'home',
+    component: HomeView,
+  },
+  {
+    path: '/boards',
+    name: 'boards',
+    component: () => import('../components/Board/BoardsList.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/board/:id',
+    name: 'board',
+    component: HomeView, // Временно
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/pricing',
+    name: 'pricing',
+    component: PricingPage // Можно также через () => import('../views/PricingPage.vue')
+    // публичная
+  }
+]
 
-    history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
-    {
-      path: '/',
-      name: 'home',
-      component: HomeView,
-    },
-    {
-      path: '/boards',
-      name: 'boards',
-      component: () => import('../components/Board/BoardsList.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/board/:id',
-      name: 'board',
-      component: HomeView, // Временно, позже создадим отдельный компонент
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/pricing',
-      name: 'pricing',
-      component: () => import('../views/PricingPage.vue')
-      // Страница с тарифами доступна всем пользователям
-    }
-  ],
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes
 })
 
-// Защита маршрутов - требуется авторизация
+// Защита авторизации
 router.beforeEach((to, from, next) => {
-  
- console.log('Навигация из:', from.path, '-> в:', to.path);
- debugger; // <--- СТАВИМ ТОЧКУ ОСТАНОВА
-
+  console.log('Навигация из:', from.path, '-> в:', to.path);
+  // debugger; // Только для отладки! На проде убирай!
   const token = localStorage.getItem('token')
-  
   if (to.meta.requiresAuth && !token) {
-    // Если нужна авторизация, но токена нет - на главную
-    next('/')
+    next('/')     // возвращаем на главную если нет токена
   } else {
     next()
   }
 })
 
-export default route
+export default router
