@@ -24,7 +24,7 @@ const router = createRouter({
     {
       path: '/pricing',
       name: 'pricing',
-      component: () => import('../views/PricingView.vue')
+      component: () => import('../views/PricingPage.vue')
       // Страница с тарифами доступна всем пользователям
     }
   ],
