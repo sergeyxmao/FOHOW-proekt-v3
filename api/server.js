@@ -1047,6 +1047,24 @@ app.get('/api/user/plan', {
   }
 });
 
+// === ПОЛУЧИТЬ СПИСОК ПУБЛИЧНЫХ ТАРИФНЫХ ПЛАНОВ ===
+app.get('/api/plans', async (req, reply) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, code_name, description, price_monthly, price_yearly,
+              features, display_order, is_public, created_at, updated_at
+       FROM subscription_plans
+       WHERE is_public = true
+       ORDER BY display_order ASC`
+    );
+
+    return reply.send({ plans: result.rows });
+  } catch (err) {
+    console.error('❌ Ошибка получения списка тарифных планов:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
 // Проверка живости API
 app.get('/api/health', async () => ({ ok: true }));
 
