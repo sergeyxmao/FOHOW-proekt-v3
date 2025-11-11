@@ -23,7 +23,7 @@
               label="Доски"
               :current="userStore.usage.boards.current"
               :limit="userStore.features.max_boards"
-              @upgrade="showUpgradeModal = true"
+              @upgrade="handleUpgradeClick"
             />
 
             <div v-if="loading" class="loading">
@@ -84,18 +84,6 @@
         </div>
       </div>
     </Transition>
-
-    <!-- 
-      ШАГ 2: UpgradeModal находится ЗДЕСЬ, на том же уровне, что и Transition,
-      внутри общего Teleport. Вложенность устранена.
-    -->
-    <UpgradeModal
-      v-if="showUpgradeModal"
-      :is-open="showUpgradeModal"
-      :feature-name="'max_boards'"
-      @close="handleUpgradeModalClose"
-      @select-plan="handlePlanSelection"
-    />
   </Teleport>
 </template>
 
@@ -103,8 +91,8 @@
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useUserStore } from '@/stores/user'
+import { useNotificationsStore } from '@/stores/notifications'
 import UsageLimitBar from '@/components/UsageLimitBar.vue'
-import UpgradeModal from '@/components/UpgradeModal.vue'
 
 const props = defineProps({
   isOpen: {
@@ -117,28 +105,17 @@ const emit = defineEmits(['close', 'open-board'])
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
+const notificationsStore = useNotificationsStore()
 const boards = ref([])
 const loading = ref(false)
 const error = ref('')
 const activeMenu = ref(null)
-const showUpgradeModal = ref(false)
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    // НЕ сбрасываем showUpgradeModal при открытии основного модала
     loadBoards()
-  }
-})
-
-// Добавляем логирование для диагностики
-watch(() => showUpgradeModal.value, (newVal) => {
-  console.log('🔄 showUpgradeModal changed to:', newVal)
-  if (newVal) {
-    console.log('📊 Current user plan:', userStore.plan)
-    console.log('📊 Current usage:', userStore.usage)
-    console.log('📊 Max boards:', userStore.features?.max_boards)
   }
 })
 
@@ -146,18 +123,15 @@ function handleBoardsRefresh() {
   loadBoards()
 }
 
-function handleUpgradeModalClose() {
-  console.log('🚪 Closing UpgradeModal')
-  showUpgradeModal.value = false
-}
-
-function handlePlanSelection(planName) {
-  console.log('✅ Selected plan:', planName)
-  // Здесь можно добавить логику для перехода на страницу оплаты
-  showUpgradeModal.value = false
-  
-  // Временно показываем сообщение
-  alert(`Переход на тариф "${planName}" будет доступен в ближайшее время`)
+function handleUpgradeClick() {
+  notificationsStore.addNotification({
+    type: 'info',
+    message: 'Достигнут лимит на вашем тарифе.',
+    actionText: 'Улучшить тариф',
+    onAction: () => {
+      window.location.href = '/pricing'
+    }
+  })
 }
 
 onMounted(() => {
@@ -225,7 +199,15 @@ async function createNewBoard() {
 
     // Если это ошибка о превышении лимита
     if (err.code === 'USAGE_LIMIT_REACHED') {
-      showUpgradeModal.value = true
+      notificationsStore.addNotification({
+        type: 'error',
+        message: err.error || 'Достигнут лимит на вашем тарифе.',
+        actionText: 'Улучшить тариф',
+        onAction: () => {
+          // Переход на страницу тарифов
+          window.location.href = '/pricing'
+        }
+      })
     } else {
       // Для всех остальных ошибок показываем красную плашку
       error.value = err.error || 'Произошла неизвестная ошибка при создании структуры.'
@@ -263,8 +245,15 @@ async function renameBoard(board) {
     if (!response.ok) {
       const errorData = await response.json()
       if (errorData.code === 'USAGE_LIMIT_REACHED' || errorData.upgradeRequired) {
-        console.log('🚫 Rename limit reached, opening UpgradeModal...')
-        showUpgradeModal.value = true
+        console.log('🚫 Rename limit reached, showing notification...')
+        notificationsStore.addNotification({
+          type: 'error',
+          message: errorData.error || 'Достигнут лимит на вашем тарифе.',
+          actionText: 'Улучшить тариф',
+          onAction: () => {
+            window.location.href = '/pricing'
+          }
+        })
         activeMenu.value = null
         return
       }
@@ -284,10 +273,17 @@ async function duplicateBoard(id) {
   // Проверяем лимит досок ПЕРЕД запросом
   const currentBoards = userStore.usage?.boards?.current || 0
   const maxBoards = userStore.features?.max_boards || -1
-  
+
   if (maxBoards !== -1 && currentBoards >= maxBoards) {
-    console.log('⚠️ Cannot duplicate: limit reached! Opening UpgradeModal...')
-    showUpgradeModal.value = true
+    console.log('⚠️ Cannot duplicate: limit reached! Showing notification...')
+    notificationsStore.addNotification({
+      type: 'error',
+      message: 'Достигнут лимит создания досок на вашем тарифе.',
+      actionText: 'Улучшить тариф',
+      onAction: () => {
+        window.location.href = '/pricing'
+      }
+    })
     return
   }
 
@@ -302,8 +298,15 @@ async function duplicateBoard(id) {
     if (!response.ok) {
       const errorData = await response.json()
       if (errorData.code === 'USAGE_LIMIT_REACHED' || errorData.upgradeRequired) {
-        console.log('🚫 Duplicate limit reached, opening UpgradeModal...')
-        showUpgradeModal.value = true
+        console.log('🚫 Duplicate limit reached, showing notification...')
+        notificationsStore.addNotification({
+          type: 'error',
+          message: errorData.error || 'Достигнут лимит на вашем тарифе.',
+          actionText: 'Улучшить тариф',
+          onAction: () => {
+            window.location.href = '/pricing'
+          }
+        })
         activeMenu.value = null
         return
       }
