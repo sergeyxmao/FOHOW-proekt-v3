@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
-import PricingPage from '../views/PricingPage.vue'   // ✅ ПРЯМОЙ ИМПОРТ
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -19,27 +18,32 @@ const router = createRouter({
     {
       path: '/board/:id',
       name: 'board',
-      component: HomeView,
+      component: HomeView, // Временно, позже создадим отдельный компонент
       meta: { requiresAuth: true }
     },
-
-    // ✅ ТВОЙ МАРШРУТ ДОЛЖЕН БЫТЬ ЗДЕСЬ ВНУТРИ МАССИВА
     {
       path: '/pricing',
       name: 'pricing',
-      component: PricingPage
+      component: () => import('../views/PricingPage.vue')
+      // Страница с тарифами доступна всем пользователям
     }
   ],
 })
 
+// Защита маршрутов - требуется авторизация
 router.beforeEach((to, from, next) => {
+  
+ console.log('Навигация из:', from.path, '-> в:', to.path);
+ debugger; // <--- СТАВИМ ТОЧКУ ОСТАНОВА
+
   const token = localStorage.getItem('token')
-
+  
   if (to.meta.requiresAuth && !token) {
-    return next('/')
+    // Если нужна авторизация, но токена нет - на главную
+    next('/')
+  } else {
+    next()
   }
-
-  next()
 })
 
 export default router
