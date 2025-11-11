@@ -8,7 +8,7 @@
     export function checkUsageLimit(resourceType, limitFeatureName) {
       return async (req, reply) => {
         const userId = req.user.id;
-        const boardId = req.params.boardId || req.body.boardId;
+        const boardId = req.params.boardId || req.params.id || req.body.boardId;
 
         try {
           // 1. Получаем лимит из тарифного плана пользователя
@@ -65,10 +65,14 @@
               };
               break;
             case 'cards':
-              // Это сложнее, так как карточки в JSON.
-              // Для простоты пока предположим, что у нас есть поле object_count в `boards`.
-              const board = await pool.query('SELECT object_count FROM boards WHERE id = $1', [boardId]);
-              currentUsage = board.rows[0]?.object_count || 0;
+              // Для карточек проверяем НОВОЕ количество из req.body.content.objects
+              // (а не текущее), чтобы не блокировать обновление/удаление карточек
+              if (req.body.content && req.body.content.objects) {
+                currentUsage = req.body.content.objects.length;
+              } else {
+                // Если content не передан, считаем что это обновление без изменения карточек
+                currentUsage = 0;
+              }
               break;
             default:
               return reply.code(500).send({ error: 'Неизвестный тип ресурса' });
