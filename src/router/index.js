@@ -6,18 +6,6 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'pricing-home',
-      component: () => import('../views/PricingPage.vue'),
-      meta: { layout: 'public' }
-    },
-    {
-      path: '/pricing',
-      name: 'pricing',
-      component: () => import('../views/PricingPage.vue'),
-      meta: { layout: 'public' }
-    },
-    {
-      path: '/home',
       name: 'home',
       component: HomeView,
     },
@@ -32,6 +20,12 @@ const router = createRouter({
       name: 'board',
       component: HomeView, // Временно, позже создадим отдельный компонент
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/pricing',
+      name: 'pricing',
+      component: () => import('../views/PricingView.vue')
+      // Страница с тарифами доступна всем пользователям
     }
   ],
 })
