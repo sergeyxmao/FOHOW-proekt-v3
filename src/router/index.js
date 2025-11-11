@@ -32,8 +32,11 @@ const router = createRouter({
 
 // Защита маршрутов - требуется авторизация
 router.beforeEach((to, from, next) => {
+  
+ console.log('Навигация из:', from.path, '-> в:', to.path);
+ debugger; // <--- СТАВИМ ТОЧКУ ОСТАНОВА
+
   const token = localStorage.getItem('token')
-  debugger;
   
   if (to.meta.requiresAuth && !token) {
     // Если нужна авторизация, но токена нет - на главную
