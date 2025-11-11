@@ -23,8 +23,8 @@ const routes = [
   {
     path: '/pricing',
     name: 'pricing',
-    component: PricingPage // Можно также через () => import('../views/PricingPage.vue')
-    // публичная
+    component: PricingPage,
+    meta: { layout: 'public' } // Публичная страница без интерфейса приложения
   }
 ]
 
