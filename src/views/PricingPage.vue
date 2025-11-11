@@ -133,11 +133,24 @@ onMounted(async () => {
 })
 </script>
 
+<style>
+/* Глобальные стили для публичной страницы pricing */
+body {
+  background: #f5f5f5 !important;
+}
+
+html {
+  background: #f5f5f5 !important;
+}
+</style>
+
 <style scoped>
 .pricing-page {
   min-height: 100vh;
   padding: 40px 20px;
-  background: var(--color-background);
+  background: #ffffff;
+  position: relative;
+  z-index: 1;
 }
 
 .pricing-container {
