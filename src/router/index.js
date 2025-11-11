@@ -20,6 +20,11 @@ const router = createRouter({
       name: 'board',
       component: HomeView, // Временно, позже создадим отдельный компонент
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/pricing',
+      name: 'pricing',
+      component: () => import('../views/PricingPage.vue')
     }
   ],
 })
