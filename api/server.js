@@ -801,39 +801,12 @@ app.get('/api/boards/:id', {
 
     // Обновить доску (автосохранение) - С ПРОВЕРКОЙ ЛИМИТА КАРТОЧЕК
     app.put('/api/boards/:id', {
-      preHandler: [authenticateToken] // <-- ДОБАВЛЕНО: сначала аутентифицируем
+      preHandler: [authenticateToken, checkUsageLimit('cards', 'max_cards_per_board')]
     }, async (req, reply) => {
       try {
         const userId = req.user.id; // <-- ИСПРАВЛЕНО: берем ID из req.user
         const { id } = req.params;
         const { name, description, content } = req.body;
-
-        // --- БЛОК ПРОВЕРКИ ЛИМИТА КАРТОЧЕК ---
-        if (content && content.objects) {
-          const newObjectCount = content.objects.length;
-
-          const planResult = await pool.query(
-            `SELECT sp.features->>'max_cards_per_board' as limit, sp.name as plan_name
-             FROM users u
-             JOIN subscription_plans sp ON u.plan_id = sp.id
-             WHERE u.id = $1`,
-            [userId]
-          );
-
-          if (planResult.rows.length > 0) {
-            const limit = parseInt(planResult.rows[0].limit, 10);
-            const planName = planResult.rows[0].plan_name;
-
-            if (!isNaN(limit) && limit !== -1 && newObjectCount > limit) {
-              return reply.code(403).send({
-                error: `Достигнут лимит карточек (${limit}) на вашем тарифе "${planName}".`,
-                code: 'USAGE_LIMIT_REACHED',
-                upgradeRequired: true
-              });
-            }
-          }
-        }
-        // --- КОНЕЦ БЛОКА ПРОВЕРКИ ---
 
         // Основная логика обновления доски
         let objectCount = 0;
