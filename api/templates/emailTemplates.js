@@ -341,7 +341,7 @@ function getDaysWord(days) {
   return 'дней';
 }
 
-module.exports = {
+export {
   getSubscriptionExpiringTemplate,
   getSubscriptionExpiredTemplate,
   getWelcomeTemplate
