@@ -56,12 +56,17 @@
             <div class="price-section">
               <div class="price">
                 <span class="price-amount">
-                  {{ billingPeriod === 'monthly' ? plan.price_monthly : plan.price_yearly }}
+                  {{ getDisplayPrice(plan) }}
                 </span>
                 <span class="price-currency">₽</span>
               </div>
               <div class="price-period">
                 {{ billingPeriod === 'monthly' ? '/ месяц' : '/ год' }}
+              </div>
+
+              <!-- Показать экономию при годовой оплате -->
+              <div v-if="billingPeriod === 'yearly' && getMonthlySavings(plan) > 0" class="savings-badge">
+                Экономия {{ getMonthlySavings(plan) }}₽ в год
               </div>
             </div>
 
@@ -211,6 +216,28 @@ function getDisplayFeatures(features) {
 // Проверка текущего плана
 function isCurrentPlan(plan) {
   return subscriptionStore.currentPlan?.code_name === plan.code_name
+}
+
+// Вычисление отображаемой цены (с учетом скидки для годовой оплаты)
+function getDisplayPrice(plan) {
+  if (billingPeriod.value === 'yearly') {
+    // Годовая цена с 20% скидкой
+    const basePrice = plan.price_monthly || 0
+    const yearlyPrice = basePrice * 12 * 0.8
+    return Math.round(yearlyPrice)
+  }
+  return plan.price_monthly || 0
+}
+
+// Вычисление экономии при годовой оплате
+function getMonthlySavings(plan) {
+  if (billingPeriod.value === 'yearly') {
+    const basePrice = plan.price_monthly || 0
+    const fullYearly = basePrice * 12
+    const discountedYearly = getDisplayPrice(plan)
+    return fullYearly - discountedYearly
+  }
+  return 0
 }
 
 // Загрузка тарифов при монтировании компонента
@@ -483,6 +510,19 @@ html {
   font-size: 1rem;
   color: var(--color-text);
   opacity: 0.7;
+}
+
+/* Бейдж экономии */
+.savings-badge {
+  margin-top: 12px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 /* Список возможностей */
