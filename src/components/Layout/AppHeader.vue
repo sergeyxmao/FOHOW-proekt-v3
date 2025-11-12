@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth.js'
 import { useBoardStore } from '../../stores/board.js'
 import AuthModal from '../AuthModal.vue'
@@ -9,6 +10,7 @@ import UserProfile from '../UserProfile.vue'
 import BoardsModal from '../Board/BoardsModal.vue'
 
 const { t } = useI18n()
+const router = useRouter()
 
 const props = defineProps({
   isModernTheme: {
@@ -119,6 +121,12 @@ function handleProfileClick() {
   showProfile.value = true
   closeUserMenu()
 }
+
+function handleAdminClick() {
+  closeUserMenu()
+  router.push('/admin')
+}
+
 async function handleRenameCurrentBoard() {
   const newName = prompt('Введите новое название структуры', currentBoardName.value)
 
@@ -242,6 +250,9 @@ onBeforeUnmount(() => {
               <div class="user-menu__section">
                 <button class="user-menu__item" type="button" @click="handleProfileClick">
                   👤 {{ t('profile.title') }}
+                </button>
+                <button v-if="user?.role === 'admin'" class="user-menu__item user-menu__item--admin" type="button" @click="handleAdminClick">
+                  ⚙️ Админ панель
                 </button>
                 <button class="user-menu__item user-menu__item--danger" type="button" @click="handleLogout">
                   🚪 {{ t('auth.logout') }}
@@ -604,6 +615,10 @@ onBeforeUnmount(() => {
 
 .user-menu__item--danger:hover {
   background: rgba(244, 67, 54, 0.12);
+}
+
+.user-menu__item--admin:hover {
+  background: rgba(33, 150, 243, 0.12);
 }
 
 .user-menu__divider {
