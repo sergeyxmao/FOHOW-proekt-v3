@@ -21,11 +21,9 @@
             </div>
   
             <UsageLimitBar
-              v-if="userStore.plan && userStore.features.max_boards !== -1"
+              v-if="subscriptionStore.currentPlan"
+              resourceType="boards"
               label="Доски"
-              :current="userStore.usage.boards.current"
-              :limit="userStore.features.max_boards"
-              @upgrade="handleUpgradeClick"
             />
 
             <div v-if="loading" class="loading">
@@ -97,6 +95,7 @@
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useUserStore } from '@/stores/user'
+import { useSubscriptionStore } from '@/stores/subscription'
 import { useNotificationsStore } from '@/stores/notifications'
 import FeatureGate from '@/components/FeatureGate.vue'
 import UsageLimitBar from '@/components/UsageLimitBar.vue'
@@ -112,6 +111,7 @@ const emit = defineEmits(['close', 'open-board'])
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
+const subscriptionStore = useSubscriptionStore()
 const notificationsStore = useNotificationsStore()
 const boards = ref([])
 const loading = ref(false)
@@ -120,8 +120,14 @@ const activeMenu = ref(null)
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
-watch(() => props.isOpen, (newVal) => {
+watch(() => props.isOpen, async (newVal) => {
   if (newVal) {
+    // Загружаем план подписки перед показом модалки
+    try {
+      await subscriptionStore.loadPlan()
+    } catch (error) {
+      console.error('Ошибка загрузки плана подписки:', error)
+    }
     loadBoards()
   }
 })
@@ -143,8 +149,8 @@ function handleUpgradeClick() {
 
 onMounted(() => {
   window.addEventListener('boards:refresh', handleBoardsRefresh)
-  // Загружаем информацию о тарифе пользователя
-  userStore.fetchUserPlan().catch(console.error)
+  // Загружаем информацию о тарифе пользователя через subscription store
+  subscriptionStore.loadPlan().catch(console.error)
 })
 
 onBeforeUnmount(() => {
@@ -197,7 +203,8 @@ async function createNewBoard() {
 
     // Этот код выполнится только при успешном создании
     const data = await response.json()
-    userStore.usage.boards.current++
+    // Обновляем статистику использования
+    await subscriptionStore.refreshUsage()
     emit('open-board', data.board.id)
     close()
 
@@ -277,11 +284,10 @@ async function renameBoard(board) {
 async function duplicateBoard(id) {
   if (!confirm('Создать копию структуры?')) return
 
-  // Проверяем лимит досок ПЕРЕД запросом
-  const currentBoards = userStore.usage?.boards?.current || 0
-  const maxBoards = userStore.features?.max_boards || -1
+  // Проверяем лимит досок ПЕРЕД запросом через subscription store
+  const limitInfo = subscriptionStore.checkLimit('boards')
 
-  if (maxBoards !== -1 && currentBoards >= maxBoards) {
+  if (!limitInfo.canCreate) {
     console.log('⚠️ Cannot duplicate: limit reached! Showing notification...')
     notificationsStore.addNotification({
       type: 'error',
@@ -321,7 +327,8 @@ async function duplicateBoard(id) {
     }
 
     const data = await response.json()
-    userStore.usage.boards.current++
+    // Обновляем статистику использования
+    await subscriptionStore.refreshUsage()
     await loadBoards()
     activeMenu.value = null
   } catch (err) {
@@ -342,7 +349,8 @@ async function deleteBoard(id) {
     
     if (!response.ok) throw new Error('Ошибка удаления')
 
-    userStore.usage.boards.current--
+    // Обновляем статистику использования
+    await subscriptionStore.refreshUsage()
     await loadBoards()
     activeMenu.value = null
   } catch (err) {
