@@ -70,10 +70,10 @@
           <div v-if="activeMenu === board.id" class="dropdown-menu">
             <button @click="openBoard(board.id)">📂 Открыть</button>
             <button @click="renameBoard(board)">✏️ Переименовать</button>
-            <FeatureGate feature="can_duplicate_boards">
+            <FeatureGate feature="can_duplicate_boards" displayMode="hide" :showUpgrade="false">
               <button @click="duplicateBoard(board.id)">📋 Дублировать</button>
             </FeatureGate>
-            <FeatureGate feature="can_export_pdf">
+            <FeatureGate feature="can_export_pdf" displayMode="hide" :showUpgrade="false">
               <button @click="exportBoardToPDF(board.id)">📄 Экспорт PDF</button>
             </FeatureGate>
             <button @click="deleteBoard(board.id)" class="danger">🗑️ Удалить</button>
