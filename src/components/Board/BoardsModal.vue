@@ -13,9 +13,11 @@
           <div class="boards-container">
             <div class="boards-header">
               <h2>📋 Мои структуры</h2>
-              <button class="btn-create" @click="createNewBoard">
-                ➕ Создать структуру
-              </button>
+              <FeatureGate feature="max_boards">
+                <button class="btn-create" @click="createNewBoard">
+                  ➕ Создать структуру
+                </button>
+              </FeatureGate>
             </div>
   
             <UsageLimitBar
@@ -40,9 +42,11 @@
               <div class="empty-icon">🎨</div>
               <h3>У вас пока нет структур</h3>
               <p>Создайте первую структуру, чтобы начать работу</p>
-              <button class="btn-create-big" @click="createNewBoard">
-                ➕ Создать первую структуру
-              </button>
+              <FeatureGate feature="max_boards">
+                <button class="btn-create-big" @click="createNewBoard">
+                  ➕ Создать первую структуру
+                </button>
+              </FeatureGate>
             </div>
 
             <div v-else class="boards-grid">
@@ -92,6 +96,7 @@ import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useUserStore } from '@/stores/user'
 import { useNotificationsStore } from '@/stores/notifications'
+import FeatureGate from '@/components/FeatureGate.vue'
 import UsageLimitBar from '@/components/UsageLimitBar.vue'
 
 const props = defineProps({
