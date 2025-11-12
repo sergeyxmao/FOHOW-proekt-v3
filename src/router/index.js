@@ -41,7 +41,7 @@ const router = createRouter({
 })
 
 // Защита авторизации
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   console.log('Навигация из:', from.path, '-> в:', to.path);
   const token = localStorage.getItem('token')
 
@@ -55,19 +55,20 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAdmin) {
     const authStore = useAuthStore()
 
-    // ВАЖНО: Загружаем пользователя из токена, если еще не загружен
-    if (!authStore.user) {
-      authStore.loadUser()
-    }
+    // ОБЯЗАТЕЛЬНО вызвать loadUser и дождаться загрузки!
+    await authStore.loadUser()
+
+    console.log('[ROUTER] User after loadUser:', authStore.user)
+    console.log('[ROUTER] User role:', authStore.user?.role)
 
     // Проверяем роль
-    if (!authStore.user || authStore.user.role !== 'admin') {
-      console.warn('[ROUTER] Доступ запрещен: требуются права администратора. User role:', authStore.user?.role)
+    if (authStore.user?.role !== 'admin') {
+      console.error('[ROUTER] Access denied. Role:', authStore.user?.role)
       next('/boards')   // редирект на доски если не админ
       return
     }
 
-    console.log('[ROUTER] Доступ разрешен для администратора:', authStore.user.email)
+    console.log('[ROUTER] Admin access granted!')
   }
 
   next()
