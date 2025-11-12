@@ -70,7 +70,7 @@
               <li
                 v-for="feature in getDisplayFeatures(plan.features)"
                 :key="feature.key"
-                :class="['feature-item', { unavailable: !feature.available }]"
+                class="feature-item"
               >
                 <svg
                   v-if="feature.available"
@@ -88,7 +88,9 @@
                 >
                   <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
                 </svg>
-                <span>{{ feature.label }}</span>
+                <span :class="{ 'line-through text-gray-400': !feature.available }">
+                  {{ feature.label }}
+                </span>
               </li>
             </ul>
 
@@ -147,6 +149,7 @@ const featureLabels = {
   'can_duplicate_boards': '📋 Дублирование досок',
   'can_use_templates': '📑 Готовые шаблоны',
   'can_invite_members': '👥 Приглашение участников',
+  'can_use_shared_structures': '🏢 Совместные структуры',
 
   // Поддержка
   'support_level': (value) => {
@@ -170,6 +173,7 @@ const importantFeatures = [
   'can_duplicate_boards',
   'can_use_templates',
   'can_invite_members',
+  'can_use_shared_structures',
   'max_team_members',
   'support_level'
 ]
@@ -357,9 +361,16 @@ html {
 /* Сетка тарифов */
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
-  margin-top: 40px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  max-width: 1400px;
+  margin: 40px auto 0;
+}
+
+@media (min-width: 1200px) {
+  .pricing-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 /* Карточка тарифа */
@@ -499,8 +510,12 @@ html {
 }
 
 /* Недоступная функция */
-.feature-item.unavailable {
-  opacity: 0.5;
+.line-through {
+  text-decoration: line-through;
+}
+
+.text-gray-400 {
+  color: #9ca3af;
 }
 
 .feature-icon.unavailable-icon {
@@ -552,7 +567,7 @@ html {
   }
 
   .pricing-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 
   .toggle-btn {
