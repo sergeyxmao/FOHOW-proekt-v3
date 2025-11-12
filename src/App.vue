@@ -848,7 +848,9 @@ onBeforeUnmount(() => {
 
     <!-- Для публичных страниц показываем только компонент маршрута -->
     <template v-if="layout === 'public'">
-      <router-view />
+      <transition name="page" mode="out-in">
+        <router-view />
+      </transition>
     </template>
 
     <!-- Для основного приложения показываем полный интерфейс -->
@@ -1445,6 +1447,22 @@ html,body{
 .side-panel-slide-leave-to {
   transform: translateX(-100%);
   opacity: 0;
+}
+
+/* Page Transitions */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
 }
 
 /* Print Styles - Печать только холста с карточками */

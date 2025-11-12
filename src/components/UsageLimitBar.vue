@@ -17,7 +17,9 @@
     <div v-if="!isUnlimited" class="progress-bar-container">
       <div
         class="progress-bar-fill"
+        :class="{ pulse: isLimitReached }"
         :style="{
+          '--progress': cappedPercentage + '%',
           width: `${cappedPercentage}%`,
           backgroundColor: progressColor
         }"
@@ -178,6 +180,7 @@ const isLimitReached = computed(() => {
   height: 100%;
   border-radius: 5px;
   transition: width 0.5s ease, background-color 0.3s ease;
+  animation: fillBar 1s ease-out;
 }
 
 .unlimited-indicator {

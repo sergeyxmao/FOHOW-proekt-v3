@@ -74,17 +74,19 @@
                 
                 <div class="board-actions" @click.stop>
                   <button class="btn-menu" @click="toggleMenu(board.id)">⋯</button>
-                  <div v-if="activeMenu === board.id" class="dropdown-menu">
-                    <button @click="openBoard(board.id)">📂 Открыть</button>
-                    <button @click="renameBoard(board)">✏️ Переименовать</button>
-                    <FeatureGate feature="can_duplicate_boards" displayMode="hide" :showUpgrade="false">
-                      <button @click="duplicateBoard(board.id)">📋 Дублировать</button>
-                    </FeatureGate>
-                    <FeatureGate feature="can_export_pdf" displayMode="hide" :showUpgrade="false">
-                      <button @click="exportBoardToPDF(board.id)">📄 Экспорт PDF</button>
-                    </FeatureGate>
-                    <button @click="deleteBoard(board.id)" class="danger">🗑️ Удалить</button>
-                  </div>
+                  <transition name="dropdown">
+                    <div v-if="activeMenu === board.id" class="dropdown-menu">
+                      <button @click="openBoard(board.id)">📂 Открыть</button>
+                      <button @click="renameBoard(board)">✏️ Переименовать</button>
+                      <FeatureGate feature="can_duplicate_boards" displayMode="hide" :showUpgrade="false">
+                        <button @click="duplicateBoard(board.id)">📋 Дублировать</button>
+                      </FeatureGate>
+                      <FeatureGate feature="can_export_pdf" displayMode="hide" :showUpgrade="false">
+                        <button @click="exportBoardToPDF(board.id)">📄 Экспорт PDF</button>
+                      </FeatureGate>
+                      <button @click="deleteBoard(board.id)" class="danger">🗑️ Удалить</button>
+                    </div>
+                  </transition>
                 </div>
               </div>
             </div>
@@ -480,6 +482,26 @@ function formatDate(dateString) {
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-create::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-create:active::before {
+  width: 300px;
+  height: 300px;
 }
 
 .btn-create:hover {
@@ -673,11 +695,28 @@ function formatDate(dateString) {
 
 .modal-enter-active,
 .modal-leave-active {
-  transition: opacity 0.3s;
+  transition: opacity 0.3s ease;
 }
 
 .modal-enter-from,
 .modal-leave-to {
   opacity: 0;
+}
+
+.modal-enter-active .modal-content {
+  animation: scaleIn 0.3s ease;
+}
+
+.modal-leave-active .modal-content {
+  animation: scaleIn 0.3s ease reverse;
+}
+
+/* Анимация для dropdown */
+.dropdown-enter-active {
+  animation: slideDown 0.2s ease;
+}
+
+.dropdown-leave-active {
+  animation: slideDown 0.2s ease reverse;
 }
 </style>

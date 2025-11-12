@@ -14,7 +14,7 @@
 
       <!-- Вариант B: Показать с замком и кнопкой "Обновить" -->
       <div v-else-if="displayMode === 'lock'" class="feature-gate-locked">
-        <div class="locked-content">
+        <div class="locked-content" :class="{ shake: shakeElement }" @click="handleLockedClick">
           <!-- Слот в полупрозрачном виде -->
           <div class="locked-overlay">
             <slot></slot>
@@ -27,7 +27,7 @@
             <button
               v-if="showUpgrade"
               class="upgrade-button"
-              @click="handleUpgrade"
+              @click.stop="handleUpgrade"
             >
               Обновить тариф
             </button>
@@ -38,7 +38,7 @@
       <!-- Вариант C: Показать неактивным (disabled) -->
       <div v-else-if="displayMode === 'disabled'" class="feature-gate-disabled">
         <!-- Делаем контент неактивным через CSS -->
-        <div class="disabled-content" :title="upgradeMessageText">
+        <div class="disabled-content" :class="{ shake: shakeElement }" :title="upgradeMessageText" @click="handleLockedClick">
           <slot></slot>
         </div>
 
@@ -46,7 +46,7 @@
         <button
           v-if="showUpgrade"
           class="upgrade-button-inline"
-          @click="handleUpgrade"
+          @click.stop="handleUpgrade"
         >
           🔒 Обновить тариф
         </button>
@@ -56,9 +56,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useSubscriptionStore } from '@/stores/subscription'
 import { useRouter } from 'vue-router'
+
+const shakeElement = ref(false)
 
 const props = defineProps({
   /**
@@ -136,6 +138,20 @@ const handleUpgrade = () => {
 
   // Временно выводим alert
   alert('Перенаправление на страницу тарифов')
+}
+
+/**
+ * Обработчик клика по заблокированному элементу
+ */
+const handleLockedClick = () => {
+  if (!isAvailable.value) {
+    // Добавить класс shake
+    shakeElement.value = true
+    setTimeout(() => {
+      shakeElement.value = false
+    }, 300)
+  }
+  emit('upgrade', props.feature)
 }
 </script>
 
