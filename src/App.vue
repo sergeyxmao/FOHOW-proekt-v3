@@ -27,6 +27,7 @@ import { useViewSettingsStore } from './stores/viewSettings'
 import { useNotesStore } from './stores/notes'
 import { useHistoryStore } from './stores/history'
 import { useUserStore } from './stores/user'
+import { useSubscriptionStore } from './stores/subscription'
 import { useMobileUIScaleGesture } from './composables/useMobileUIScaleGesture'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
@@ -56,6 +57,7 @@ const viewSettingsStore = useViewSettingsStore()
 const notesStore = useNotesStore()
 const sidePanelsStore = useSidePanelsStore()
 const userStore = useUserStore()
+const subscriptionStore = useSubscriptionStore()
 const { isAuthenticated } = storeToRefs(authStore)
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMobileMode } = storeToRefs(mobileStore)
@@ -821,6 +823,8 @@ onMounted(async () => {
   if (localStorage.getItem('token')) {
     try {
       await userStore.fetchUserPlan()
+      // Загружаем план подписки через subscription store
+      await subscriptionStore.loadPlan()
     } catch (error) {
       console.error('⚠️ Ошибка загрузки данных о подписке:', error)
     }
