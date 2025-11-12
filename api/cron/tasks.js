@@ -10,8 +10,8 @@
 
 import cron from 'node-cron';
 import { pool } from '../db.js';
-import { sendEmail } from '../utils/emailService.js';
-import { getSubscriptionExpiringTemplate, getSubscriptionExpiredTemplate } from '../templates/emailTemplates.js';
+import { sendTelegramMessage } from '../utils/telegramService.js';
+import { getSubscriptionExpiringMessage, getSubscriptionExpiredMessage } from '../templates/telegramTemplates.js';
 
 // ============================================
 // Вспомогательные функции для логирования
@@ -64,7 +64,7 @@ function formatDate(date) {
  * Запускается ежедневно в 09:00
  */
 async function notifyExpiringSubscriptions() {
-  console.log('\n📧 Крон-задача: Уведомления о истечении подписок');
+  console.log('\n📱 Крон-задача: Уведомления о истечении подписок');
 
   try {
     // Находим пользователей, у которых подписка истекает через 7, 3 или 1 день
@@ -72,6 +72,7 @@ async function notifyExpiringSubscriptions() {
       SELECT
         u.id,
         u.email,
+        u.telegram_chat_id,
         u.subscription_expires_at,
         EXTRACT(DAY FROM (u.subscription_expires_at - NOW())) AS days_left,
         sp.name as plan_name
@@ -79,6 +80,7 @@ async function notifyExpiringSubscriptions() {
       LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
       WHERE
         u.subscription_expires_at IS NOT NULL
+        AND u.telegram_chat_id IS NOT NULL
         AND (
           u.subscription_expires_at BETWEEN NOW() + INTERVAL '6 days 23 hours' AND NOW() + INTERVAL '7 days 1 hour'
           OR u.subscription_expires_at BETWEEN NOW() + INTERVAL '2 days 23 hours' AND NOW() + INTERVAL '3 days 1 hour'
@@ -96,40 +98,44 @@ async function notifyExpiringSubscriptions() {
     let successCount = 0;
     let errorCount = 0;
 
-    // Отправляем email каждому пользователю
+    // Отправляем Telegram сообщение каждому пользователю
     for (const user of users) {
       try {
         const daysLeft = Math.ceil(user.days_left);
         const expirationDate = formatDate(user.subscription_expires_at);
 
-        // Формируем HTML письма из шаблона
-        const emailHtml = getSubscriptionExpiringTemplate({
-          userName: user.email.split('@')[0], // Используем имя из email
-          daysLeft: daysLeft,
-          expirationDate: expirationDate,
-          renewUrl: process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/pricing` : '#'
-        });
-
-        // Отправляем email
-        await sendEmail(
-          user.email,
-          `⏰ Ваша подписка истекает через ${daysLeft} ${getDaysWord(daysLeft)}`,
-          emailHtml
+        // Формируем Telegram сообщение из шаблона
+        const telegramMessage = getSubscriptionExpiringMessage(
+          user.email.split('@')[0], // Используем имя из email
+          daysLeft,
+          expirationDate,
+          process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/pricing` : 'https://fohow.ru/subscription'
         );
 
-        console.log(`  ✅ Email отправлен: ${user.email} (осталось ${daysLeft} дней)`);
+        // Отправляем Telegram сообщение
+        await sendTelegramMessage(
+          user.telegram_chat_id,
+          telegramMessage.text,
+          {
+            parse_mode: telegramMessage.parse_mode,
+            reply_markup: telegramMessage.reply_markup
+          }
+        );
+
+        console.log(`  ✅ Telegram уведомление отправлено: ${user.email} (осталось ${daysLeft} дней)`);
         successCount++;
 
         // Логируем успешную отправку
         await logToSystem('info', 'subscription_expiry_warning', {
           userId: user.id,
           email: user.email,
+          telegramChatId: user.telegram_chat_id,
           daysLeft: daysLeft,
           expirationDate: expirationDate
         });
 
       } catch (error) {
-        console.error(`  ❌ Ошибка отправки email для ${user.email}:`, error.message);
+        console.error(`  ❌ Ошибка отправки Telegram уведомления для ${user.email}:`, error.message);
         errorCount++;
       }
     }
@@ -175,6 +181,7 @@ async function blockExpiredSubscriptions() {
       SELECT
         u.id,
         u.email,
+        u.telegram_chat_id,
         u.plan_id,
         u.subscription_expires_at,
         sp.name as current_plan_name
@@ -211,17 +218,22 @@ async function blockExpiredSubscriptions() {
           [user.id, demoPlanId]
         );
 
-        // Отправляем email о истечении подписки
-        const emailHtml = getSubscriptionExpiredTemplate({
-          userName: user.email.split('@')[0],
-          pricingUrl: process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/pricing` : '#'
-        });
+        // Отправляем Telegram уведомление о истечении подписки (только если есть telegram_chat_id)
+        if (user.telegram_chat_id) {
+          const telegramMessage = getSubscriptionExpiredMessage(
+            user.email.split('@')[0],
+            process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/pricing` : 'https://fohow.ru/pricing'
+          );
 
-        await sendEmail(
-          user.email,
-          '📋 Ваша подписка истекла',
-          emailHtml
-        );
+          await sendTelegramMessage(
+            user.telegram_chat_id,
+            telegramMessage.text,
+            {
+              parse_mode: telegramMessage.parse_mode,
+              reply_markup: telegramMessage.reply_markup
+            }
+          );
+        }
 
         console.log(`  ✅ Пользователь ${user.email} переведен на демо-план`);
         successCount++;
@@ -230,6 +242,7 @@ async function blockExpiredSubscriptions() {
         await logToSystem('warning', 'subscription_expired', {
           userId: user.id,
           email: user.email,
+          telegramChatId: user.telegram_chat_id,
           oldPlanId: user.plan_id,
           newPlanId: demoPlanId,
           expiredAt: user.subscription_expires_at
