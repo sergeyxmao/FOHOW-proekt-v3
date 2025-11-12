@@ -44,6 +44,7 @@ const isAppInitialized = ref(false)
 // Определяем layout для текущего маршрута
 const route = useRoute()
 const layout = computed(() => route.meta.layout)
+const isSimpleLayout = computed(() => layout.value === 'public' || layout.value === 'admin')
 
 const authStore = useAuthStore()
 const canvasStore = useCanvasStore()
@@ -844,10 +845,16 @@ onBeforeUnmount(() => {
 
 <template>
   <!-- Показываем основной интерфейс только ПОСЛЕ полной инициализации -->
-  <div v-if="isAppInitialized" id="app" :class="{ 'app--mobile': isMobileMode }">
-
+  <div
+    v-if="isAppInitialized"
+    id="app"
+    :class="{
+      'app--mobile': isMobileMode,
+      'app--admin': layout === 'admin'
+    }"
+  >
     <!-- Для публичных страниц показываем только компонент маршрута -->
-    <template v-if="layout === 'public'">
+    <template v-if="isSimpleLayout">
       <transition name="page" mode="out-in">
         <router-view />
       </transition>
