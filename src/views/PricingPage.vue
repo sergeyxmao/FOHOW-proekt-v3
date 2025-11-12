@@ -1,10 +1,13 @@
 <template>
   <div class="pricing-page">
     <div class="pricing-container">
-      <h1 class="pricing-title">Выберите подходящий тариф</h1>
+      <!-- Заголовок с анимацией -->
+      <section class="pricing-hero fade-in">
+        <h1 class="pricing-title">Выберите подходящий тариф</h1>
+      </section>
 
       <!-- Переключатель периода оплаты -->
-      <div class="billing-toggle">
+      <div class="billing-toggle fade-in" style="animation-delay: 0.1s">
         <button
           :class="['toggle-btn', { active: billingPeriod === 'monthly' }]"
           @click="billingPeriod = 'monthly'"
@@ -32,12 +35,13 @@
       <!-- Сетка с карточками тарифов -->
       <div v-if="!loading && !error" class="pricing-grid">
         <div
-          v-for="plan in plans"
+          v-for="(plan, index) in plans"
           :key="plan.id"
-          :class="['pricing-card', {
+          :class="['pricing-card', 'fade-in-stagger', {
             featured: plan.is_featured,
             'is-current': isCurrentPlan(plan)
           }]"
+          :style="{ animationDelay: `${index * 0.1}s` }"
         >
           <!-- Плашка "Рекомендуем" -->
           <div v-if="plan.is_featured" class="featured-badge">
