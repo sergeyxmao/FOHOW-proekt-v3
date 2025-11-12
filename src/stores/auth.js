@@ -2,6 +2,20 @@ import { defineStore } from 'pinia'
 
 // API_URL лучше вынести в константу
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+function mergeUserData(existingUser, incomingUser) {
+  const merged = {
+    ...(existingUser ?? {}),
+    ...(incomingUser ?? {}),
+  }
+
+  if (incomingUser && Object.prototype.hasOwnProperty.call(incomingUser, 'role')) {
+    merged.role = incomingUser.role
+  } else if (existingUser?.role && !merged.role) {
+    merged.role = existingUser.role
+  }
+
+  return merged
+}
 
 function decodeJwtPayload(token) {
   const parts = token.split('.')
@@ -65,11 +79,11 @@ export const useAuthStore = defineStore('auth', {
       try {
         const payload = decodeJwtPayload(token)
 
-        this.user = {
+        this.user = mergeUserData(this.user, {
           id: payload.userId,
           email: payload.email,
           role: payload.role  // ВАЖНО: извлекаем роль из токена
-        }
+        })
 
         this.token = token
         this.isAuthenticated = true
@@ -89,11 +103,13 @@ export const useAuthStore = defineStore('auth', {
 
       if (token) {
         this.token = token;
+        // Сразу извлекаем базовую информацию из токена, чтобы не потерять роль
+        this.loadUser();
 
         // Если есть кэшированные данные пользователя, показываем их немедленно
         if (cachedUser) {
           try {
-            this.user = JSON.parse(cachedUser);
+            this.user = mergeUserData(this.user, JSON.parse(cachedUser));
           } catch (e) {
             console.error("Ошибка парсинга кэшированного пользователя:", e);
             localStorage.removeItem('user'); // Удаляем некорректные данные
@@ -108,8 +124,8 @@ export const useAuthStore = defineStore('auth', {
 
           if (response.ok) {
             const data = await response.json();
-            this.user = data.user; // Обновляем на свежие данные
-            localStorage.setItem('user', JSON.stringify(data.user)); // Обновляем кэш
+            this.user = mergeUserData(this.user, data.user); // Обновляем, сохраняя роль
+            localStorage.setItem('user', JSON.stringify(this.user)); // Обновляем кэш
             this.isAuthenticated = true; // Токен валиден, пользователь авторизован
           } else {
             // Токен невалидный - вызываем logout для полного сброса
@@ -177,15 +193,15 @@ export const useAuthStore = defineStore('auth', {
 
         if (profileResponse.ok) {
           const profileData = await profileResponse.json()
-          this.user = profileData.user
+          this.user = mergeUserData(this.user, profileData.user)
         } else {
           // Если данные профиля не удалось получить, используем fallbackUser
-          this.user = fallbackUser
+          this.user = mergeUserData(this.user, fallbackUser)
         }
       } catch (err) {
         console.error('Ошибка загрузки профиля после входа:', err)
         // Если была ошибка сети, используем fallbackUser
-        this.user = fallbackUser
+        this.user = mergeUserData(this.user, fallbackUser)
       } finally {
         this.isLoadingProfile = false // Завершаем загрузку профиля
       }
@@ -255,8 +271,8 @@ export const useAuthStore = defineStore('auth', {
         }
 
         const data = await response.json()
-        this.user = data.user
-        localStorage.setItem('user', JSON.stringify(data.user))
+        this.user = mergeUserData(this.user, data.user)
+        localStorage.setItem('user', JSON.stringify(this.user))
 
         return data.user
       } finally {
@@ -284,8 +300,8 @@ export const useAuthStore = defineStore('auth', {
       }
 
       const data = await response.json()
-      this.user = data.user
-      localStorage.setItem('user', JSON.stringify(data.user))
+      this.user = mergeUserData(this.user, data.user)
+      localStorage.setItem('user', JSON.stringify(this.user))
 
       return data.user
     },
