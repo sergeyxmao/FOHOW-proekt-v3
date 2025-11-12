@@ -355,8 +355,11 @@ app.post('/api/login', async (req, reply) => {
     const sessionLimit = planResult.rows[0].session_limit;
     console.log(`[LOGIN] Тариф получен. Лимит сессий: ${sessionLimit}`);
 
-    // Если установлен лимит сессий, управляем ими
-    if (sessionLimit && !isNaN(sessionLimit) && sessionLimit > 0) {
+    // Администраторы имеют неограниченное количество сессий
+    const isAdmin = user.role === 'admin';
+
+    // Если установлен лимит сессий и пользователь не админ, управляем ими
+    if (!isAdmin && sessionLimit && !isNaN(sessionLimit) && sessionLimit > 0) {
       // Подсчитываем активные сессии
       const sessionsCountResult = await pool.query(
         'SELECT COUNT(*) as count FROM active_sessions WHERE user_id = $1',
@@ -381,6 +384,8 @@ app.post('/api/login', async (req, reply) => {
           [user.id]
         );
       }
+    } else if (isAdmin) {
+      console.log(`[LOGIN] Администратор - лимит сессий не применяется`);
     }
 
     // Удаляем хэш пароля перед отправкой на клиент
@@ -817,11 +822,14 @@ app.get('/api/boards/:id', {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `SELECT * FROM boards 
-       WHERE id = $1 AND owner_id = $2`,
-      [id, req.user.id]
-    );
+    // Администраторы могут получить любую доску
+    const isAdmin = req.user.role === 'admin';
+    const query = isAdmin
+      ? 'SELECT * FROM boards WHERE id = $1'
+      : 'SELECT * FROM boards WHERE id = $1 AND owner_id = $2';
+    const params = isAdmin ? [id] : [id, req.user.id];
+
+    const result = await pool.query(query, params);
 
     if (result.rows.length === 0) {
       return reply.code(404).send({ error: 'Доска не найдена' });
@@ -875,24 +883,30 @@ app.get('/api/boards/:id', {
           objectCount = content.objects.length;
         }
 
-        const result = await pool.query(
-          `UPDATE boards 
-           SET name = COALESCE($1, name),
-               description = COALESCE($2, description),
-               content = COALESCE($3, content),
-               object_count = $4,
-               updated_at = CURRENT_TIMESTAMP
-           WHERE id = $5 AND owner_id = $6
-           RETURNING *`,
-          [
-            name || null,
-            description || null,
-            content ? JSON.stringify(content) : null,
-            objectCount,
-            id,
-            userId // Используем userId, полученный из req.user
-          ]
-        );
+        // Администраторы могут обновить любую доску
+        const isAdmin = req.user.role === 'admin';
+        const query = isAdmin
+          ? `UPDATE boards
+             SET name = COALESCE($1, name),
+                 description = COALESCE($2, description),
+                 content = COALESCE($3, content),
+                 object_count = $4,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $5
+             RETURNING *`
+          : `UPDATE boards
+             SET name = COALESCE($1, name),
+                 description = COALESCE($2, description),
+                 content = COALESCE($3, content),
+                 object_count = $4,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $5 AND owner_id = $6
+             RETURNING *`;
+        const params = isAdmin
+          ? [name || null, description || null, content ? JSON.stringify(content) : null, objectCount, id]
+          : [name || null, description || null, content ? JSON.stringify(content) : null, objectCount, id, userId];
+
+        const result = await pool.query(query, params);
 
         if (result.rows.length === 0) {
           return reply.code(404).send({ error: 'Доска не найдена' });
@@ -912,10 +926,14 @@ app.delete('/api/boards/:id', {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      'DELETE FROM boards WHERE id = $1 AND owner_id = $2 RETURNING id',
-      [id, req.user.id]
-    );
+    // Администраторы могут удалить любую доску
+    const isAdmin = req.user.role === 'admin';
+    const query = isAdmin
+      ? 'DELETE FROM boards WHERE id = $1 RETURNING id'
+      : 'DELETE FROM boards WHERE id = $1 AND owner_id = $2 RETURNING id';
+    const params = isAdmin ? [id] : [id, req.user.id];
+
+    const result = await pool.query(query, params);
 
     if (result.rows.length === 0) {
       return reply.code(404).send({ error: 'Доска не найдена' });
@@ -935,10 +953,14 @@ app.post('/api/boards/:id/duplicate', {
   try {
     const { id } = req.params;
 
-    const original = await pool.query(
-      'SELECT * FROM boards WHERE id = $1 AND owner_id = $2',
-      [id, req.user.id]
-    );
+    // Администраторы могут дублировать любую доску
+    const isAdmin = req.user.role === 'admin';
+    const query = isAdmin
+      ? 'SELECT * FROM boards WHERE id = $1'
+      : 'SELECT * FROM boards WHERE id = $1 AND owner_id = $2';
+    const params = isAdmin ? [id] : [id, req.user.id];
+
+    const original = await pool.query(query, params);
 
     if (original.rows.length === 0) {
       return reply.code(404).send({ error: 'Доска не найдена' });
@@ -1000,7 +1022,9 @@ app.post('/api/boards/:id/thumbnail', {
       return reply.code(404).send({ error: 'Доска не найдена' });
     }
 
-    if (boardResult.rows[0].owner_id !== req.user.id) {
+    // Администраторы могут обновить миниатюру любой доски
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && boardResult.rows[0].owner_id !== req.user.id) {
       return reply.code(403).send({ error: 'Нет доступа' });
     }
 
@@ -1012,10 +1036,15 @@ app.post('/api/boards/:id/thumbnail', {
 
     const thumbnailUrl = `/uploads/boards/${boardId}.png`;
 
-    await pool.query(
-      'UPDATE boards SET thumbnail_url = $1 WHERE id = $2 AND owner_id = $3',
-      [thumbnailUrl, boardId, req.user.id]
-    );
+    // Администраторы могут обновить миниатюру любой доски
+    const query = isAdmin
+      ? 'UPDATE boards SET thumbnail_url = $1 WHERE id = $2'
+      : 'UPDATE boards SET thumbnail_url = $1 WHERE id = $2 AND owner_id = $3';
+    const params = isAdmin
+      ? [thumbnailUrl, boardId]
+      : [thumbnailUrl, boardId, req.user.id];
+
+    await pool.query(query, params);
 
     return reply.send({ thumbnail_url: thumbnailUrl });
   } catch (err) {
@@ -1441,7 +1470,9 @@ app.put('/api/stickers/:stickerId', {
       return reply.code(404).send({ error: 'Стикер не найден' });
     }
 
-    if (ownerCheck.rows[0].user_id !== req.user.id) {
+    // Администраторы могут редактировать любые стикеры
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && ownerCheck.rows[0].user_id !== req.user.id) {
       return reply.code(403).send({ error: 'Нет доступа к редактированию этого стикера' });
     }
 
@@ -1520,10 +1551,14 @@ app.delete('/api/stickers/:stickerId', {
     }
 
     // Выполняем ОДИН безопасный запрос на удаление
-    const result = await pool.query(
-      'DELETE FROM stickers WHERE id = $1 AND user_id = $2',
-      [stickerIdNum, userId]
-    );
+    // Администраторы могут удалить любой стикер
+    const isAdmin = req.user.role === 'admin';
+    const query = isAdmin
+      ? 'DELETE FROM stickers WHERE id = $1'
+      : 'DELETE FROM stickers WHERE id = $1 AND user_id = $2';
+    const params = isAdmin ? [stickerIdNum] : [stickerIdNum, userId];
+
+    const result = await pool.query(query, params);
 
     // Проверяем, была ли удалена строка.
     // Если rowCount === 0, значит стикер либо не найден, либо не принадлежит пользователю.
@@ -1553,10 +1588,14 @@ app.get('/api/boards/:boardId/notes', {
     const { boardId } = req.params;
 
     // Проверяем, что пользователь является владельцем доски
-    const boardCheck = await pool.query(
-      'SELECT id FROM boards WHERE id = $1 AND owner_id = $2',
-      [boardId, req.user.id]
-    );
+    // Администраторы могут получить заметки любой доски
+    const isAdmin = req.user.role === 'admin';
+    const query = isAdmin
+      ? 'SELECT id FROM boards WHERE id = $1'
+      : 'SELECT id FROM boards WHERE id = $1 AND owner_id = $2';
+    const params = isAdmin ? [boardId] : [boardId, req.user.id];
+
+    const boardCheck = await pool.query(query, params);
 
     if (boardCheck.rows.length === 0) {
       return reply.code(404).send({ error: 'Доска не найдена или нет доступа' });
@@ -1593,10 +1632,14 @@ app.get('/api/boards/:boardId/notes', {
     }
 
     // Проверяем, что пользователь является владельцем доски
-    const boardCheck = await pool.query(
-      'SELECT id FROM boards WHERE id = $1 AND owner_id = $2',
-      [boardId, req.user.id]
-    );
+    // Администраторы могут создать/обновить заметку для любой доски
+    const isAdmin = req.user.role === 'admin';
+    const query = isAdmin
+      ? 'SELECT id FROM boards WHERE id = $1'
+      : 'SELECT id FROM boards WHERE id = $1 AND owner_id = $2';
+    const params = isAdmin ? [boardId] : [boardId, req.user.id];
+
+    const boardCheck = await pool.query(query, params);
 
     if (boardCheck.rows.length === 0) {
       return reply.code(404).send({ error: 'Доска не найдена или нет доступа' });
@@ -1747,20 +1790,31 @@ app.put('/api/comments/:commentId', {
       return reply.code(404).send({ error: 'Комментарий не найден' });
     }
 
-    if (ownerCheck.rows[0].user_id !== req.user.id) {
+    // Администраторы могут редактировать любые комментарии
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && ownerCheck.rows[0].user_id !== req.user.id) {
       return reply.code(403).send({ error: 'Нет доступа к редактированию этого комментария' });
     }
 
     // Обновляем комментарий
-    const result = await pool.query(
-      `UPDATE user_comments
-       SET content = $1,
-           color = $2,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $3 AND user_id = $4
-       RETURNING id, user_id, content, color, created_at, updated_at`,
-      [content.trim(), color || null, commentIdNum, req.user.id]
-    );
+    const query = isAdmin
+      ? `UPDATE user_comments
+         SET content = $1,
+             color = $2,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3
+         RETURNING id, user_id, content, color, created_at, updated_at`
+      : `UPDATE user_comments
+         SET content = $1,
+             color = $2,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3 AND user_id = $4
+         RETURNING id, user_id, content, color, created_at, updated_at`;
+    const params = isAdmin
+      ? [content.trim(), color || null, commentIdNum]
+      : [content.trim(), color || null, commentIdNum, req.user.id];
+
+    const result = await pool.query(query, params);
 
     return reply.send({
       success: true,
@@ -1802,15 +1856,19 @@ app.delete('/api/comments/:commentId', {
       return reply.code(404).send({ error: 'Комментарий не найден' });
     }
 
-    if (ownerCheck.rows[0].user_id !== req.user.id) {
+    // Администраторы могут удалить любой комментарий
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && ownerCheck.rows[0].user_id !== req.user.id) {
       return reply.code(403).send({ error: 'Нет доступа к удалению этого комментария' });
     }
 
     // Удаляем комментарий
-    await pool.query(
-      'DELETE FROM user_comments WHERE id = $1 AND user_id = $2',
-      [commentIdNum, req.user.id]
-    );
+    const query = isAdmin
+      ? 'DELETE FROM user_comments WHERE id = $1'
+      : 'DELETE FROM user_comments WHERE id = $1 AND user_id = $2';
+    const params = isAdmin ? [commentIdNum] : [commentIdNum, req.user.id];
+
+    await pool.query(query, params);
 
     return reply.send({ success: true });
   } catch (err) {
