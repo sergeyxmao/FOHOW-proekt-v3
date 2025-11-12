@@ -3,6 +3,24 @@ import { defineStore } from 'pinia'
 // API_URL лучше вынести в константу
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
+function decodeJwtPayload(token) {
+  const parts = token.split('.')
+
+  if (parts.length < 2) {
+    throw new Error('Некорректный формат токена')
+  }
+
+  const base64Url = parts[1]
+  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+  const paddingLength = (4 - (base64.length % 4)) % 4
+  const padded = base64 + '='.repeat(paddingLength)
+
+  const decoded = atob(padded)
+
+  return JSON.parse(decoded)
+}
+
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
@@ -45,8 +63,7 @@ export const useAuthStore = defineStore('auth', {
       }
 
       try {
-        // Декодируем JWT токен (payload - вторая часть токена между точками)
-        const payload = JSON.parse(atob(token.split('.')[1]))
+        const payload = decodeJwtPayload(token)
 
         this.user = {
           id: payload.userId,
