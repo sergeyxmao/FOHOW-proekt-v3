@@ -34,6 +34,36 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
+    // Метод для быстрой загрузки данных пользователя из JWT токена (без запроса к серверу)
+    loadUser() {
+      const token = localStorage.getItem('token')
+
+      if (!token) {
+        this.user = null
+        this.isAuthenticated = false
+        return
+      }
+
+      try {
+        // Декодируем JWT токен (payload - вторая часть токена между точками)
+        const payload = JSON.parse(atob(token.split('.')[1]))
+
+        this.user = {
+          id: payload.userId,
+          email: payload.email,
+          role: payload.role  // ВАЖНО: извлекаем роль из токена
+        }
+
+        this.token = token
+        this.isAuthenticated = true
+
+        console.log('[AUTH] User loaded from token:', { email: this.user.email, role: this.user.role })
+      } catch (error) {
+        console.error('[AUTH] Error decoding token:', error)
+        this.logout()
+      }
+    },
+
     async init() {
       const token = localStorage.getItem('token');
       const cachedUser = localStorage.getItem('user');
@@ -42,7 +72,7 @@ export const useAuthStore = defineStore('auth', {
 
       if (token) {
         this.token = token;
-        
+
         // Если есть кэшированные данные пользователя, показываем их немедленно
         if (cachedUser) {
           try {
@@ -66,12 +96,12 @@ export const useAuthStore = defineStore('auth', {
             this.isAuthenticated = true; // Токен валиден, пользователь авторизован
           } else {
             // Токен невалидный - вызываем logout для полного сброса
-            await this.logout(); 
+            await this.logout();
           }
         } catch (err) {
           console.error('Ошибка фоновой загрузки профиля:', err);
           // Если нет сети или другая ошибка, считаем, что токен невалиден
-          await this.logout(); 
+          await this.logout();
         } finally {
           this.isLoadingProfile = false; // Завершаем загрузку в любом случае
         }
