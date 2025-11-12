@@ -12,6 +12,71 @@ export default {
     error: 'Error',
     success: 'Success'
   },
+  topMenu: {
+    project: 'Project',
+    tools: 'Tools',
+    view: 'View',
+    discussions: 'Discussions',
+    toggleTheme: 'Toggle theme',
+    lightTheme: 'Switch to light menu',
+    darkTheme: 'Switch to dark menu',
+    undo: 'Undo (Ctrl+Z)',
+    redo: 'Redo (Ctrl+Shift+Z)'
+  },
+  viewMenu: {
+    title: 'View',
+    showGrid: 'Show Grid',
+    gridStep: 'Step',
+    gridBackground: 'Grid Background',
+    lines: 'Lines',
+    lineThickness: 'Thickness',
+    applyToAllLines: 'Apply to all lines',
+    selectLineColor: 'Select line color',
+    animation: 'Animation',
+    duration: 'Duration',
+    seconds: 'sec',
+    background: 'Background',
+    lightBackground: 'Light background',
+    darkBackground: 'Dark background',
+    selectBackgroundColor: 'Select background color',
+    headerColor: 'Header Color',
+    selectHeaderColor: 'Select header color',
+    changeColor: 'Change color',
+    currentIndex: 'Current index',
+    language: 'Language'
+  },
+  projectMenu: {
+    saveJson: 'Save Project JSON',
+    loadJson: 'Load Project JSON',
+    exportHtml: 'Export to HTML',
+    exportSvg: 'Export to SVG',
+    exportPng: 'Export to PNG',
+    print: 'Print'
+  },
+  toolsMenu: {
+    title: 'Tools',
+    selectionMode: 'Selection Mode',
+    hierarchyMode: 'Hierarchy Mode',
+    drawingMode: 'Drawing Mode',
+    showGuides: 'Show Guides',
+    clearCanvas: 'Clear Canvas',
+    newStructure: 'New Structure',
+    clearConfirmTitle: 'Confirm Clear',
+    clearConfirmMessage: 'Are you sure you want to clear the canvas? All objects will be deleted.',
+    continueAction: 'Continue',
+    newStructureTitle: 'New Structure',
+    newStructureMessage: 'Do you want to save the current structure before creating a new one?',
+    dontSave: "Don't Save",
+    saveAndCreate: 'Save and Create New'
+  },
+  discussionMenu: {
+    title: 'Discussion',
+    notesList: 'Notes List',
+    boardComments: 'Board Comments',
+    stickerMessages: 'Sticker Messages',
+    addSticker: 'Add Sticker',
+    createStructureAlert: 'Please create a new structure or enter an existing one to add a sticker.'
+  },
   board: {
     saveStructure: 'Save Structure',
     savePrompt: 'Set structure name to save',
@@ -27,7 +92,8 @@ export default {
     saving: 'Saving...',
     savedAt: 'Saved at',
     noSaves: 'No saves',
-    renameStructure: 'Rename structure'
+    renameStructure: 'Rename structure',
+    untitled: 'Untitled'
   },
   auth: {
     login: 'Login',
@@ -74,5 +140,8 @@ export default {
     saveError: 'Save error',
     copied: 'Copied to clipboard',
     limitReached: 'Limit reached'
+  },
+  editor: {
+    zoom: 'Zoom'
   }
 }

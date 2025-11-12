@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import DiscussionMenu from './DiscussionMenu.vue'
 import ToolsMenu from './ToolsMenu.vue'
 import ViewMenu from './ViewMenu.vue'
@@ -16,15 +17,16 @@ const props = defineProps({
 
 const emit = defineEmits(['activate-pencil', 'toggle-theme', 'clear-canvas', 'new-structure'])
 
+const { t } = useI18n()
 const historyStore = useHistoryStore()
 const { canUndo, canRedo } = storeToRefs(historyStore)
-  
-const menuItems = [
-  { id: 'project', label: 'Проект' },
-  { id: 'tools', label: 'Инструменты' },
-  { id: 'view', label: 'Вид' },
-  { id: 'discussion', label: 'Обсуждения' }
-]
+
+const menuItems = computed(() => [
+  { id: 'project', label: t('topMenu.project') },
+  { id: 'tools', label: t('topMenu.tools') },
+  { id: 'view', label: t('topMenu.view') },
+  { id: 'discussion', label: t('topMenu.discussions') }
+])
 
 const openMenuId = ref(null)
 const menuWrapperRef = ref(null)
@@ -35,7 +37,7 @@ const menuComponents = {
   view: ViewMenu
 }
 const themeTitle = computed(() =>
-  props.isModernTheme ? 'Вернуть светлое меню' : 'Включить тёмное меню'
+  props.isModernTheme ? t('topMenu.lightTheme') : t('topMenu.darkTheme')
 )
 function getMenuComponent(id) {
   return menuComponents[id] || null
@@ -110,7 +112,7 @@ onBeforeUnmount(() => {
     <button
       class="top-menu__action-button"
       type="button"
-      title="Отменить (Ctrl+Z)"
+      :title="t('topMenu.undo')"
       :disabled="!canUndo"
       @click.stop="handleUndo"
     >
@@ -119,7 +121,7 @@ onBeforeUnmount(() => {
     <button
       class="top-menu__action-button"
       type="button"
-      title="Повторить (Ctrl+Shift+Z)"
+      :title="t('topMenu.redo')"
       :disabled="!canRedo"
       @click.stop="handleRedo"
     >
