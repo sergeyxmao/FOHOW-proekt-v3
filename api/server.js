@@ -225,7 +225,7 @@ app.post('/api/register', async (req, reply) => {
     const insertResult = await client.query(
       `INSERT INTO users (email, password, plan_id, subscription_expires_at, subscription_started_at)
        VALUES ($1, $2, $3, NOW() + INTERVAL '3 days', NOW())
-       RETURNING id, email`,
+       RETURNING id, email, role`,
       [email, hash, demoPlanId]
     );
 
@@ -250,7 +250,7 @@ app.post('/api/register', async (req, reply) => {
 
     // Создаем JWT токен
     const token = jwt.sign(
-      { userId: newUser.id, email: newUser.email },
+      { userId: newUser.id, email: newUser.email, role: newUser.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -387,7 +387,7 @@ app.post('/api/login', async (req, reply) => {
     delete user.password;
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
