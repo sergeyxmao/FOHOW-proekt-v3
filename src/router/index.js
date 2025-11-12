@@ -31,7 +31,7 @@ const routes = [
     path: '/admin',
     name: 'admin',
     component: () => import('../views/AdminPanel.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true }
+    meta: { requiresAuth: true, requiresAdmin: true, layout: 'admin' }
   }
 ]
 
