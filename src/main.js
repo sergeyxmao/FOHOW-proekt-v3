@@ -5,6 +5,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
+import i18n from './i18n'
 import { useAuthStore } from './stores/auth'
 
 // Эта функция будет запускать наше приложение
@@ -17,6 +18,7 @@ async function startApp() {
 
   app.use(pinia)
   app.use(router)
+  app.use(i18n)
 
   // --- Логика инициализации ДО монтирования ---
   // Получаем доступ к store ДО того, как приложение отрисуется
