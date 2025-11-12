@@ -1,10 +1,12 @@
+import { pool } from '../db.js'
+
 /**
  * Middleware для проверки прав администратора
  */
 export async function checkAdmin(req, reply) {
   try {
     // Получаем пользователя из authenticateToken middleware
-    const userId = req.user?.userId
+    const userId = req.user?.userId || req.user?.id
 
     if (!userId) {
       return reply.code(401).send({
@@ -14,7 +16,7 @@ export async function checkAdmin(req, reply) {
     }
 
     // Проверяем роль в БД
-    const result = await req.server.pg.query(
+    const result = await pool.query(
       'SELECT role FROM users WHERE id = $1',
       [userId]
     )
