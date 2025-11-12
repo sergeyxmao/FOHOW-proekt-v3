@@ -1,5 +1,6 @@
 <script setup>
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useBoardCommentsStore } from '../Panels/boardComments.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
@@ -12,6 +13,7 @@ const props = defineProps({
   }
 })
 const emit = defineEmits(['request-close'])
+const { t } = useI18n()
 
 const boardCommentsStore = useBoardCommentsStore()
 const sidePanelsStore = useSidePanelsStore()
@@ -39,7 +41,7 @@ const handleStickerMessagesToggle = () => {
 
 const handleAddSticker = () => {
   if (!currentBoardId.value) {
-    alert('Пожалуйста, создайте новую структуру или войдите в существующую, чтобы добавить стикер.')
+    alert(t('discussionMenu.createStructureAlert'))
     emit('request-close')
     return
   }
@@ -53,7 +55,7 @@ const handleAddSticker = () => {
     class="discussion-menu"
     :class="{ 'discussion-menu--modern': props.isModernTheme }"
   >
-    <div class="discussion-menu__title">Обсуждение</div>
+    <div class="discussion-menu__title">{{ t('discussionMenu.title') }}</div>
 
     <div class="discussion-menu__item">
       <span class="discussion-menu__icon" aria-hidden="true">🗒️</span>
@@ -63,7 +65,7 @@ const handleAddSticker = () => {
         :class="{ 'discussion-menu__action--active': isNotesOpen }"
         @click="handleNotesToggle"
       >
-        Список заметок
+        {{ t('discussionMenu.notesList') }}
       </button>
     </div>
 
@@ -75,7 +77,7 @@ const handleAddSticker = () => {
         :class="{ 'discussion-menu__action--active': isCommentsOpen }"
         @click="handleCommentsToggle"
       >
-        Комментарии доски
+        {{ t('discussionMenu.boardComments') }}
       </button>
       <span
         v-if="hasBoardComments"
@@ -92,7 +94,7 @@ const handleAddSticker = () => {
         :class="{ 'discussion-menu__action--active': isStickerMessagesOpen }"
         @click="handleStickerMessagesToggle"
       >
-        Сообщения стикеров
+        {{ t('discussionMenu.stickerMessages') }}
       </button>
     </div>
 
@@ -103,7 +105,7 @@ const handleAddSticker = () => {
         class="discussion-menu__action"
         @click="handleAddSticker"
       >
-        Добавить стикер
+        {{ t('discussionMenu.addSticker') }}
       </button>
     </div>
   </div>

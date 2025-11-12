@@ -12,6 +12,71 @@ export default {
     error: 'Ошибка',
     success: 'Успешно'
   },
+  topMenu: {
+    project: 'Проект',
+    tools: 'Инструменты',
+    view: 'Вид',
+    discussions: 'Обсуждения',
+    toggleTheme: 'Переключить тему',
+    lightTheme: 'Вернуть светлое меню',
+    darkTheme: 'Включить тёмное меню',
+    undo: 'Отменить (Ctrl+Z)',
+    redo: 'Повторить (Ctrl+Shift+Z)'
+  },
+  viewMenu: {
+    title: 'Вид',
+    showGrid: 'Показать сетку',
+    gridStep: 'Шаг',
+    gridBackground: 'Фон сетки',
+    lines: 'Линии',
+    lineThickness: 'Толщина',
+    applyToAllLines: 'Ко всем линиям',
+    selectLineColor: 'Выбрать цвет линий',
+    animation: 'Анимация',
+    duration: 'Длительность',
+    seconds: 'сек',
+    background: 'Фон',
+    lightBackground: 'Светлый фон',
+    darkBackground: 'Темный фон',
+    selectBackgroundColor: 'Выбрать цвет фона',
+    headerColor: 'Цвет заголовка',
+    selectHeaderColor: 'Выбрать цвет заголовка',
+    changeColor: 'Сменить цвет',
+    currentIndex: 'Текущий индекс',
+    language: 'Язык'
+  },
+  projectMenu: {
+    saveJson: 'Сохранить проект JSON',
+    loadJson: 'Загрузить проект JSON',
+    exportHtml: 'Экспорт в HTML',
+    exportSvg: 'Экспорт в SVG',
+    exportPng: 'Экспорт в PNG',
+    print: 'Печать'
+  },
+  toolsMenu: {
+    title: 'Инструменты',
+    selectionMode: 'Режим выделения',
+    hierarchyMode: 'Режим иерархии',
+    drawingMode: 'Режим рисования',
+    showGuides: 'Показать направляющие',
+    clearCanvas: 'Очистить холст',
+    newStructure: 'Новая структура',
+    clearConfirmTitle: 'Подтверждение очистки',
+    clearConfirmMessage: 'Вы уверены, что хотите очистить холст? Все объекты будут удалены.',
+    continueAction: 'Продолжить',
+    newStructureTitle: 'Новая структура',
+    newStructureMessage: 'Хотите сохранить текущую структуру перед созданием новой?',
+    dontSave: 'Не сохранять',
+    saveAndCreate: 'Сохранить и создать новую'
+  },
+  discussionMenu: {
+    title: 'Обсуждение',
+    notesList: 'Список заметок',
+    boardComments: 'Комментарии доски',
+    stickerMessages: 'Сообщения стикеров',
+    addSticker: 'Добавить стикер',
+    createStructureAlert: 'Пожалуйста, создайте новую структуру или войдите в существующую, чтобы добавить стикер.'
+  },
   board: {
     saveStructure: 'Сохранить структуру',
     savePrompt: 'Задайте название структуры, чтобы сохранить',
@@ -27,7 +92,8 @@ export default {
     saving: 'Сохранение...',
     savedAt: 'Сохранено в',
     noSaves: 'Нет сохранений',
-    renameStructure: 'Переименовать структуру'
+    renameStructure: 'Переименовать структуру',
+    untitled: 'Без названия'
   },
   auth: {
     login: 'Войти',
@@ -74,5 +140,8 @@ export default {
     saveError: 'Ошибка при сохранении',
     copied: 'Скопировано в буфер обмена',
     limitReached: 'Достигнут лимит'
+  },
+  editor: {
+    zoom: 'Масштаб'
   }
 }

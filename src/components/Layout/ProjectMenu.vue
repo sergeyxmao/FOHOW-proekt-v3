@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useProjectActions } from '../../composables/useProjectActions.js'
 import ExportSettingsModal from '../ExportSettingsModal.vue'
 
@@ -11,6 +12,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['request-close'])
+const { t } = useI18n()
 
 const {
   handleSaveProject,
@@ -44,37 +46,37 @@ const items = computed(() => [
   {
     id: 'save-json',
     icon: '💾',
-    label: 'Сохранить проект JSON',
+    label: t('projectMenu.saveJson'),
     action: handleSaveProject
   },
   {
     id: 'load-json',
     icon: '📂',
-    label: 'Загрузить проект JSON',
+    label: t('projectMenu.loadJson'),
     action: handleLoadProject
   },
   {
     id: 'export-html',
     icon: '📄',
-    label: 'Экспорт в HTML',
+    label: t('projectMenu.exportHtml'),
     action: handleExportHTML
   },
   {
     id: 'export-svg',
     icon: '🖋️',
-    label: 'Экспорт в SVG',
+    label: t('projectMenu.exportSvg'),
     action: handleExportSVG
   },
   {
     id: 'export-png',
     icon: '🖼️',
-    label: 'Экспорт в PNG',
+    label: t('projectMenu.exportPng'),
     action: openExportModal
   },
   {
     id: 'print',
     icon: '🖨️',
-    label: 'Печать',
+    label: t('projectMenu.print'),
     action: handlePrint
   }
 ])

@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useCanvasStore } from '../../stores/canvas.js'
 import { useHistoryStore } from '../../stores/history.js'
 const props = defineProps({
@@ -12,6 +13,7 @@ const props = defineProps({
 
 const emit = defineEmits(['request-close', 'activate-pencil', 'clear-canvas', 'new-structure'])
 
+const { t } = useI18n()
 const canvasStore = useCanvasStore()
 const historyStore = useHistoryStore()
 const { isSelectionMode, isHierarchicalDragMode, guidesEnabled } = storeToRefs(canvasStore)
@@ -93,7 +95,7 @@ const cancelNewStructure = () => {
     :class="{ 'tools-menu--modern': props.isModernTheme }"
     role="menu"
   >
-    <h3 class="tools-menu__title">Инструменты</h3>
+    <h3 class="tools-menu__title">{{ t('toolsMenu.title') }}</h3>
     <div class="tools-menu__list">
       <div class="tools-menu__item">
         <span class="tools-menu__icon" aria-hidden="true">⬚</span>
@@ -103,7 +105,7 @@ const cancelNewStructure = () => {
           :class="{ 'tools-menu__action--active': isSelectionMode }"
           @click="handleSelectionMode"
         >
-          Режим выделения
+          {{ t('toolsMenu.selectionMode') }}
         </button>
       </div>
       <div class="tools-menu__item">
@@ -114,7 +116,7 @@ const cancelNewStructure = () => {
           :class="{ 'tools-menu__action--active': isHierarchicalDragMode }"
           @click="handleHierarchicalMode"
         >
-          Режим иерархии
+          {{ t('toolsMenu.hierarchyMode') }}
         </button>
       </div>
       <div class="tools-menu__item">
@@ -124,7 +126,7 @@ const cancelNewStructure = () => {
           class="tools-menu__action"
           @click="handleActivatePencil"
         >
-          Режим рисования
+          {{ t('toolsMenu.drawingMode') }}
         </button>
       </div>
       <div class="tools-menu__item">
@@ -135,7 +137,7 @@ const cancelNewStructure = () => {
           :class="{ 'tools-menu__action--active': guidesEnabled }"
           @click="toggleGuides"
         >
-          Показать направляющие
+          {{ t('toolsMenu.showGuides') }}
         </button>
       </div>
       <div class="tools-menu__item">
@@ -145,7 +147,7 @@ const cancelNewStructure = () => {
           class="tools-menu__action"
           @click="handleClearCanvas"
         >
-          Очистить холст
+          {{ t('toolsMenu.clearCanvas') }}
         </button>
       </div>
       <div class="tools-menu__item">
@@ -155,7 +157,7 @@ const cancelNewStructure = () => {
           class="tools-menu__action"
           @click="handleNewStructure"
         >
-          Новая структура
+          {{ t('toolsMenu.newStructure') }}
         </button>
       </div>
     </div>
@@ -164,14 +166,14 @@ const cancelNewStructure = () => {
     <Teleport to="body">
       <div v-if="showClearCanvasDialog" class="dialog-overlay" @click="cancelClearCanvas">
         <div class="dialog-content" @click.stop>
-          <h3 class="dialog-title">Подтверждение очистки</h3>
-          <p class="dialog-message">Вы уверены, что хотите очистить холст? Все объекты будут удалены.</p>
+          <h3 class="dialog-title">{{ t('toolsMenu.clearConfirmTitle') }}</h3>
+          <p class="dialog-message">{{ t('toolsMenu.clearConfirmMessage') }}</p>
           <div class="dialog-actions">
             <button class="dialog-button dialog-button--cancel" @click="cancelClearCanvas">
-              Отмена
+              {{ t('common.cancel') }}
             </button>
             <button class="dialog-button dialog-button--confirm" @click="confirmClearCanvas">
-              Продолжить
+              {{ t('toolsMenu.continueAction') }}
             </button>
           </div>
         </div>
@@ -182,17 +184,17 @@ const cancelNewStructure = () => {
     <Teleport to="body">
       <div v-if="showNewStructureDialog" class="dialog-overlay" @click="cancelNewStructure">
         <div class="dialog-content" @click.stop>
-          <h3 class="dialog-title">Новая структура</h3>
-          <p class="dialog-message">Хотите сохранить текущую структуру перед созданием новой?</p>
+          <h3 class="dialog-title">{{ t('toolsMenu.newStructureTitle') }}</h3>
+          <p class="dialog-message">{{ t('toolsMenu.newStructureMessage') }}</p>
           <div class="dialog-actions">
             <button class="dialog-button dialog-button--cancel" @click="cancelNewStructure">
-              Отмена
+              {{ t('common.cancel') }}
             </button>
             <button class="dialog-button dialog-button--secondary" @click="confirmNewStructure(false)">
-              Не сохранять
+              {{ t('toolsMenu.dontSave') }}
             </button>
             <button class="dialog-button dialog-button--confirm" @click="confirmNewStructure(true)">
-              Сохранить и создать новую
+              {{ t('toolsMenu.saveAndCreate') }}
             </button>
           </div>
         </div>
