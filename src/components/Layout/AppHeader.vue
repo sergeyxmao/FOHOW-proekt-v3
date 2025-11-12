@@ -7,7 +7,6 @@ import { useBoardStore } from '../../stores/board.js'
 import AuthModal from '../AuthModal.vue'
 import UserProfile from '../UserProfile.vue'
 import BoardsModal from '../Board/BoardsModal.vue'
-import LanguageSwitcher from '../LanguageSwitcher.vue'
 
 const { t } = useI18n()
 
@@ -169,7 +168,6 @@ onBeforeUnmount(() => {
   >
     <div class="app-header__inner">
       <div class="app-header__user-block">
-        <LanguageSwitcher />
         <div class="app-header__auth">
           <template v-if="isAuthenticated && !isLoadingProfile">
             <div class="app-header__user-column">

@@ -283,18 +283,22 @@ function changeLocale(newLocale) {
       </div>
 
       <!-- Language Switcher -->
-      <div class="view-menu__item view-menu__item--language">
-        <div class="view-menu__language-label">
+      <div
+        class="view-menu__item view-menu__item--submenu"
+        :class="{ 'view-menu__item--open': openSubmenuId === 'language' }"
+      >
+        <button type="button" class="view-menu__main" @click="toggleSubmenu('language')">
           <span class="view-menu__icon" aria-hidden="true">🌐</span>
           <span class="view-menu__label">{{ t('viewMenu.language') }}</span>
-        </div>
-        <div class="view-menu__language-buttons">
+          <span class="view-menu__caret" aria-hidden="true">›</span>
+        </button>
+        <div v-if="openSubmenuId === 'language'" class="view-menu__submenu">
           <button
             v-for="lang in availableLocales"
             :key="lang.code"
             type="button"
-            class="view-menu__lang-btn"
-            :class="{ 'view-menu__lang-btn--active': locale === lang.code }"
+            class="view-menu__control view-menu__lang-option"
+            :class="{ 'view-menu__control--active': locale === lang.code }"
             @click="changeLocale(lang.code)"
             :title="lang.name"
           >
@@ -637,76 +641,8 @@ function changeLocale(newLocale) {
 }
 
 /* Language Switcher Styles */
-.view-menu__item--language {
-  border-top: 1px solid rgba(148, 163, 184, 0.2);
-  padding-top: 12px;
-  margin-top: 8px;
-}
-
-.view-menu__language-label {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.view-menu__language-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.view-menu__lang-btn {
-  padding: 10px 12px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.95);
-  color: #0f172a;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.view-menu__lang-btn:hover {
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
-  transform: translateY(-1px);
-}
-
-.view-menu__lang-btn--active {
-  background: linear-gradient(120deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
-  border-color: transparent;
-}
-
-.view-menu--modern .view-menu__item--language {
-  border-top-color: rgba(96, 164, 255, 0.25);
-}
-
-.view-menu--modern .view-menu__lang-btn {
-  border-color: rgba(96, 164, 255, 0.32);
-  background: rgba(24, 34, 58, 0.92);
-  color: #e5f3ff;
-  box-shadow: 0 12px 22px rgba(6, 11, 21, 0.55);
-}
-
-.view-menu--modern .view-menu__lang-btn:hover {
-  background: rgba(96, 164, 255, 0.22);
-  color: #0b1324;
-  box-shadow: 0 18px 28px rgba(6, 11, 21, 0.68);
-}
-
-.view-menu--modern .view-menu__lang-btn--active {
-  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
-  color: #051125;
-  box-shadow: 0 20px 32px rgba(6, 11, 21, 0.75);
-  border-color: transparent;
+.view-menu__lang-option {
+  width: 100%;
+  justify-content: flex-start;
 }
 </style>
