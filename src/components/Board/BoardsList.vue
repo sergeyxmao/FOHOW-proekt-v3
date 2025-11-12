@@ -68,6 +68,7 @@
         <div class="board-actions" @click.stop>
           <button class="btn-menu" @click="toggleMenu(board.id)">⋯</button>
           <div v-if="activeMenu === board.id" class="dropdown-menu">
+            <button @click="openBoard(board.id)">📂 Открыть</button>
             <button @click="renameBoard(board)">✏️ Переименовать</button>
             <FeatureGate feature="can_duplicate_boards">
               <button @click="duplicateBoard(board.id)">📋 Дублировать</button>
