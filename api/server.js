@@ -19,6 +19,7 @@ import { checkFeature } from './middleware/checkFeature.js';
 import { checkUsageLimit } from './middleware/checkUsageLimit.js';
 import { registerPromoRoutes } from './routes/promo.js';
 import { initializeCronTasks } from './cron/tasks.js';
+import { initializeTelegramBot } from './bot/telegramBot.js';
 
 
 
@@ -1127,7 +1128,81 @@ app.get('/api/plans', async (req, reply) => {
 // TELEGRAM ИНТЕГРАЦИЯ
 // ============================================
 
-// === ПРИВЯЗКА TELEGRAM К АККАУНТУ ===
+// === ГЕНЕРАЦИЯ КОДА ДЛЯ ПРИВЯЗКИ TELEGRAM ===
+app.post('/api/user/telegram/generate-code', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
+  try {
+    const userId = req.user.id;
+
+    // Генерируем уникальный код (6 символов, буквы и цифры)
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    // Код действителен 15 минут
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    // Удаляем старые неиспользованные коды этого пользователя
+    await pool.query(
+      'DELETE FROM telegram_link_codes WHERE user_id = $1 AND used = false',
+      [userId]
+    );
+
+    // Создаем новый код
+    await pool.query(
+      `INSERT INTO telegram_link_codes (user_id, code, expires_at)
+       VALUES ($1, $2, $3)`,
+      [userId, code, expiresAt]
+    );
+
+    console.log(`✅ Код для привязки Telegram сгенерирован: пользователь ID=${userId}, код=${code}`);
+
+    return reply.send({
+      success: true,
+      code: code,
+      expiresAt: expiresAt,
+      botUsername: process.env.TELEGRAM_BOT_USERNAME || 'fohow_bot'
+    });
+  } catch (err) {
+    console.error('❌ Ошибка генерации кода привязки Telegram:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// === ПРОВЕРКА СТАТУСА ПРИВЯЗКИ TELEGRAM (POLLING) ===
+app.get('/api/user/telegram/check-link-status', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
+  try {
+    const userId = req.user.id;
+
+    // Получаем информацию о пользователе
+    const result = await pool.query(
+      'SELECT telegram_chat_id, telegram_user FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return reply.code(404).send({ error: 'Пользователь не найден' });
+    }
+
+    const user = result.rows[0];
+    const isLinked = !!user.telegram_chat_id;
+
+    return reply.send({
+      success: true,
+      linked: isLinked,
+      telegram: isLinked ? {
+        chat_id: user.telegram_chat_id,
+        username: user.telegram_user
+      } : null
+    });
+  } catch (err) {
+    console.error('❌ Ошибка проверки статуса привязки Telegram:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// === ПРИВЯЗКА TELEGRAM К АККАУНТУ (используется ботом) ===
 app.post('/api/user/connect-telegram', {
   preHandler: [authenticateToken]
 }, async (req, reply) => {
@@ -1747,6 +1822,10 @@ try {
   // Инициализируем крон-задачи после успешного запуска сервера
   initializeCronTasks();
   console.log('✅ Cron jobs initialized');
+
+  // Инициализируем Telegram бота
+  initializeTelegramBot();
+  console.log('✅ Telegram bot initialized');
 } catch (err) {
   app.log.error(err);
   process.exit(1);

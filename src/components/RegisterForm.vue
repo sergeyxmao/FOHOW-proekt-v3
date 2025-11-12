@@ -61,6 +61,24 @@
         </button>
       </div>
 
+      <div class="auth-card__group">
+        <label class="auth-card__checkbox">
+          <input
+            type="checkbox"
+            v-model="enableTelegramNotifications"
+          />
+          <span class="auth-card__checkbox-text">
+            <svg class="auth-card__checkbox-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18.717-3.146 14.338-3.146 14.338s-.194.764-.897.764c-.36 0-.668-.234-.668-.234l-3.478-2.702L6.3 18.918l-.6-2.04-2.897-1.11s-.896-.36-.896-1.08c0-.54.717-.897.717-.897l13.778-5.378s.897-.36.897 0z"/>
+            </svg>
+            Получать уведомления в Telegram
+          </span>
+        </label>
+        <p class="auth-card__hint">
+          После регистрации вы сможете подключить Telegram уведомления
+        </p>
+      </div>
+
       <div v-if="error" class="auth-card__message auth-card__message--error">{{ error }}</div>
       <div v-if="success" class="auth-card__message auth-card__message--success">{{ success }}</div>
 
@@ -97,9 +115,10 @@ const error = ref('')
 const success = ref('')
 const loading = ref(false)
 const verificationCode = ref('')
-const verificationToken = ref('')  
+const verificationToken = ref('')
 const verificationInput = ref('')
 const verificationLoading = ref(false)
+const enableTelegramNotifications = ref(false)
 
 async function fetchVerificationCode(showError = true) {
   try {
@@ -159,11 +178,12 @@ async function handleRegister() {
       verificationToken.value
     )
       success.value = 'Регистрация успешна! Сейчас выполним вход...'
-    
+
     // Автоматический вход после регистрации
     setTimeout(() => {
-
-      emit('register-success')
+      emit('register-success', {
+        showTelegramSetup: enableTelegramNotifications.value
+      })
     }, 1500)
   } catch (err) {
     error.value = err.message
@@ -343,5 +363,40 @@ input:focus {
 .auth-card__verification-refresh:disabled {
   cursor: not-allowed;
   opacity: 0.6;
-}  
+}
+
+.auth-card__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-card__checkbox input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+
+.auth-card__checkbox-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--auth-text);
+}
+
+.auth-card__checkbox-icon {
+  width: 18px;
+  height: 18px;
+  color: #0088cc;
+}
+
+.auth-card__hint {
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  color: var(--auth-muted);
+  font-style: italic;
+}
 </style>
