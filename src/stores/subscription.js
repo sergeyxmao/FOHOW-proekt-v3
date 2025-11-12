@@ -159,17 +159,6 @@ export const useSubscriptionStore = defineStore('subscription', {
      * @returns {Object} { current, max, canCreate, percentage }
      */
     checkLimit(resourceType) {
-      const authStore = useAuthStore()
-
-      // Администраторы имеют неограниченный доступ
-      if (authStore.user?.role === 'admin') {
-        return {
-          current: 0,
-          max: -1,
-          canCreate: true,
-          percentage: 0
-        }
-      }
 
       const usageData = this.usage[resourceType]
       const limit = this.limits[resourceType]
