@@ -9,6 +9,11 @@
         }
 
         try {
+          // Администраторы имеют доступ ко всем функциям
+          if (req.user.role === 'admin') {
+            return; // Пропускаем проверку функций для админов
+          }
+
           const planResult = await pool.query(
             `SELECT
                sp.features,

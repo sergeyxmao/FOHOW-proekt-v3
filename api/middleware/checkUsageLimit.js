@@ -11,6 +11,11 @@
         const boardId = req.params.boardId || req.params.id || req.body.boardId;
 
         try {
+          // Администраторы имеют неограниченный доступ
+          if (req.user.role === 'admin') {
+            return; // Пропускаем проверку лимитов для админов
+          }
+
           // 1. Получаем лимит из тарифного плана пользователя
           const planResult = await pool.query(
             `SELECT sp.features->'${limitFeatureName}' as limit, sp.name as plan_name

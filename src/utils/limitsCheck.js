@@ -17,6 +17,16 @@ export function checkCardLimit(cardsToAdd = 1) {
   const currentCount = cardsStore.cards.length
   const limit = authStore.maxCardsPerBoard
 
+  // Администраторы имеют неограниченный доступ
+  if (authStore.user?.role === 'admin') {
+    return {
+      allowed: true,
+      currentCount,
+      limit: -1,
+      message: null
+    }
+  }
+
   // Если лимит -1, значит безлимитный план
   if (limit === -1) {
     return {
