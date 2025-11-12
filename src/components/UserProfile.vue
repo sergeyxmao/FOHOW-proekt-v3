@@ -132,6 +132,12 @@
         </div>
 
         <div class="form-divider">
+          <span>Уведомления Telegram</span>
+        </div>
+
+        <TelegramLinkWidget />
+
+        <div class="form-divider">
           <span>Промокод</span>
         </div>
 
@@ -504,6 +510,7 @@ import { storeToRefs } from 'pinia'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 import { useAuthStore } from '@/stores/auth'
+import TelegramLinkWidget from '@/components/TelegramLinkWidget.vue'
 
 const props = defineProps({
   isModernTheme: {
