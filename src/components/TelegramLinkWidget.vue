@@ -148,7 +148,8 @@ async function generateCode() {
       headers: {
         'Authorization': `Bearer ${authStore.token}`,
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({})
     })
 
     if (!response.ok) {
