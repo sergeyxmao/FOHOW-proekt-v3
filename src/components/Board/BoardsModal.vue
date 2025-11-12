@@ -79,6 +79,9 @@
                     <FeatureGate feature="can_duplicate_boards">
                       <button @click="duplicateBoard(board.id)">📋 Дублировать</button>
                     </FeatureGate>
+                    <FeatureGate feature="can_export_pdf">
+                      <button @click="exportBoardToPDF(board.id)">📄 Экспорт PDF</button>
+                    </FeatureGate>
                     <button @click="deleteBoard(board.id)" class="danger">🗑️ Удалить</button>
                   </div>
                 </div>
@@ -338,7 +341,7 @@ async function duplicateBoard(id) {
 
 async function deleteBoard(id) {
   if (!confirm('Удалить структуру? Это действие нельзя отменить.')) return
-  
+
   try {
     const response = await fetch(`${API_URL}/boards/${id}`, {
       method: 'DELETE',
@@ -346,12 +349,33 @@ async function deleteBoard(id) {
         'Authorization': `Bearer ${authStore.token}`
       }
     })
-    
+
     if (!response.ok) throw new Error('Ошибка удаления')
 
     // Обновляем статистику использования
     await subscriptionStore.refreshUsage()
     await loadBoards()
+    activeMenu.value = null
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+async function exportBoardToPDF(id) {
+  try {
+    // Открываем доску для печати/экспорта в PDF
+    const board = boards.value.find(b => b.id === id)
+    if (!board) return
+
+    // Открываем доску и затем вызываем печать
+    emit('open-board', id)
+    close()
+
+    // Даем время загрузиться доске, затем вызываем печать
+    setTimeout(() => {
+      window.print()
+    }, 1000)
+
     activeMenu.value = null
   } catch (err) {
     error.value = err.message
