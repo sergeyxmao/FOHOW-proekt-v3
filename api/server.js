@@ -1123,6 +1123,112 @@ app.get('/api/plans', async (req, reply) => {
   }
 });
 
+// ============================================
+// TELEGRAM ИНТЕГРАЦИЯ
+// ============================================
+
+// === ПРИВЯЗКА TELEGRAM К АККАУНТУ ===
+app.post('/api/user/connect-telegram', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
+  try {
+    const userId = req.user.id;
+    const { telegram_chat_id, telegram_username } = req.body;
+
+    // Валидация входных данных
+    if (!telegram_chat_id) {
+      return reply.code(400).send({
+        error: 'Обязательное поле: telegram_chat_id'
+      });
+    }
+
+    // Проверяем, что chat_id является числом или строкой с числом
+    const chatId = String(telegram_chat_id).trim();
+    if (chatId.length === 0) {
+      return reply.code(400).send({
+        error: 'telegram_chat_id не может быть пустым'
+      });
+    }
+
+    // Проверяем, не привязан ли уже этот Telegram к другому пользователю
+    const existingConnection = await pool.query(
+      'SELECT id, email FROM users WHERE telegram_chat_id = $1 AND id != $2',
+      [chatId, userId]
+    );
+
+    if (existingConnection.rows.length > 0) {
+      return reply.code(409).send({
+        error: 'Этот Telegram аккаунт уже привязан к другому пользователю'
+      });
+    }
+
+    // Обновляем данные пользователя
+    const result = await pool.query(
+      `UPDATE users
+       SET telegram_chat_id = $1,
+           telegram_user = $2,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3
+       RETURNING id, email, telegram_chat_id, telegram_user`,
+      [chatId, telegram_username || null, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return reply.code(404).send({ error: 'Пользователь не найден' });
+    }
+
+    console.log(`✅ Telegram привязан к пользователю ID=${userId}, chat_id=${chatId}`);
+
+    return reply.send({
+      success: true,
+      message: 'Telegram успешно привязан к аккаунту',
+      telegram: {
+        chat_id: result.rows[0].telegram_chat_id,
+        username: result.rows[0].telegram_user
+      }
+    });
+  } catch (err) {
+    console.error('❌ Ошибка привязки Telegram:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// === ПРОВЕРКА СТАТУСА ПРИВЯЗКИ TELEGRAM ===
+app.get('/api/user/telegram-status', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
+  try {
+    const userId = req.user.id;
+
+    // Получаем информацию о Telegram-привязке пользователя
+    const result = await pool.query(
+      `SELECT id, email, telegram_chat_id, telegram_user, telegram_channel
+       FROM users
+       WHERE id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return reply.code(404).send({ error: 'Пользователь не найден' });
+    }
+
+    const user = result.rows[0];
+    const isConnected = !!user.telegram_chat_id;
+
+    return reply.send({
+      connected: isConnected,
+      telegram: isConnected ? {
+        chat_id: user.telegram_chat_id,
+        username: user.telegram_user,
+        channel: user.telegram_channel
+      } : null
+    });
+  } catch (err) {
+    console.error('❌ Ошибка получения статуса Telegram:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
 // Проверка живости API
 app.get('/api/health', async () => ({ ok: true }));
 
