@@ -31,6 +31,7 @@ const canvasStore = useCanvasStore()
 const boardStore = useBoardStore()
 const mobileStore = useMobileStore()
 
+const { isAuthenticated, user, isLoadingProfile } = storeToRefs(authStore)
 const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
 const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
  
@@ -40,8 +41,8 @@ const lastSavedFormatter = new Intl.DateTimeFormat('ru-RU', {
   minute: '2-digit'
 })
 const userInitials = computed(() => {
-  if (!authStore.user?.name) return '?'
-  const names = authStore.user.name.trim().split(/\s+/)
+  if (!user.value?.name) return '?'
+  const names = user.value.name.trim().split(/\s+/)
   if (names.length === 1) {
     return names[0].charAt(0).toUpperCase()
   }
@@ -83,8 +84,8 @@ const toggleUserMenu = () => {
 }
 
 const handleAvatarClick = () => {
-  if (!authStore.isAuthenticated) {
-    emit('request-auth')   
+  if (!isAuthenticated.value) {
+    emit('request-auth')
     return
   }
   toggleUserMenu()
@@ -169,7 +170,7 @@ onBeforeUnmount(() => {
 })
 
 watch(
-  () => authStore.isAuthenticated,
+  isAuthenticated,
   (value) => {
     if (!value) {
       closeUserMenu()
@@ -188,7 +189,7 @@ watch(
       <div class="mobile-header-section mobile-header-section--left">
         <!-- Отмена -->
         <button
-          v-if="authStore.isAuthenticated"
+          v-if="isAuthenticated"
           class="mobile-header-button"
           type="button"
           :disabled="!historyStore.canUndo"
@@ -200,7 +201,7 @@ watch(
 
         <!-- Повтор -->
         <button
-          v-if="authStore.isAuthenticated"
+          v-if="isAuthenticated"
           class="mobile-header-button"
           type="button"
           :disabled="!historyStore.canRedo"
@@ -214,7 +215,7 @@ watch(
       <div class="mobile-header-section mobile-header-section--center">
         <!-- Режим иерархии -->
         <button
-          v-if="authStore.isAuthenticated"
+          v-if="isAuthenticated"
           class="mobile-header-button"
           :class="{ 'mobile-header-button--active': isHierarchyMode }"
           type="button"
@@ -226,7 +227,7 @@ watch(
 
         <!-- Загрузить JSON -->
         <button
-          v-if="authStore.isAuthenticated"
+          v-if="isAuthenticated"
           class="mobile-header-button"
           type="button"
           @click="handleLoadJSON"
@@ -237,7 +238,7 @@ watch(
 
         <!-- Экспортировать HTML -->
         <button
-          v-if="authStore.isAuthenticated"
+          v-if="isAuthenticated"
           class="mobile-header-button"
           type="button"
           @click="handleExportHTML"
@@ -250,23 +251,23 @@ watch(
       <div class="mobile-header-section mobile-header-section--right">
         <!-- Аватар -->
         <button
-          v-if="authStore.isAuthenticated && !authStore.isLoadingProfile"
+          v-if="isAuthenticated && !isLoadingProfile"
           class="mobile-header-avatar"
           ref="userMenuTriggerRef"
           type="button"
           @click="handleAvatarClick"
-          :title="authStore.user?.name || 'Профиль'"
+          :title="user?.name || 'Профиль'"
         >
           <img
-            v-if="authStore.user?.avatar_url"
-            :src="getAvatarUrl(authStore.user.avatar_url)"
+            v-if="user?.avatar_url"
+            :src="getAvatarUrl(user.avatar_url)"
             alt="Аватар"
             class="avatar-image"
           >
           <span v-else class="avatar-initials">{{ userInitials }}</span>
         </button>
         <button
-          v-else-if="!authStore.isLoadingProfile"
+          v-else-if="!isLoadingProfile"
           class="mobile-header-button"
           type="button"
           @click="handleAuthButtonClick"
@@ -339,7 +340,7 @@ watch(
                 👤 Профиль
               </button>
               <button
-                v-if="authStore.user?.role === 'admin'"
+                v-if="user?.role === 'admin'"
                 class="mobile-user-menu__item mobile-user-menu__item--admin"
                 type="button"
                 @click="handleMenuAdmin"
