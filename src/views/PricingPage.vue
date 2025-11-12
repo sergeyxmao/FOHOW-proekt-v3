@@ -34,11 +34,19 @@
         <div
           v-for="plan in plans"
           :key="plan.id"
-          :class="['pricing-card', { featured: plan.is_featured }]"
+          :class="['pricing-card', {
+            featured: plan.is_featured,
+            'is-current': isCurrentPlan(plan)
+          }]"
         >
           <!-- Плашка "Рекомендуем" -->
           <div v-if="plan.is_featured" class="featured-badge">
             Рекомендуем
+          </div>
+
+          <!-- Бейдж "Текущий план" -->
+          <div v-if="isCurrentPlan(plan)" class="badge-current">
+            ✓ Ваш текущий план
           </div>
 
           <div class="card-content">
@@ -59,15 +67,43 @@
 
             <!-- Список возможностей -->
             <ul class="features-list">
-              <li v-for="(value, key) in plan.features" :key="key" class="feature-item">
-                <svg class="feature-icon" viewBox="0 0 20 20" fill="currentColor">
+              <li
+                v-for="feature in getDisplayFeatures(plan.features)"
+                :key="feature.key"
+                :class="['feature-item', { unavailable: !feature.available }]"
+              >
+                <svg
+                  v-if="feature.available"
+                  class="feature-icon"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
                   <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                 </svg>
-                <span>{{ formatFeature(key, value) }}</span>
+                <svg
+                  v-else
+                  class="feature-icon unavailable-icon"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                <span>{{ feature.label }}</span>
               </li>
             </ul>
 
-            <button class="select-plan-btn">
+            <!-- Кнопка -->
+            <button
+              v-if="isCurrentPlan(plan)"
+              class="select-plan-btn btn-current"
+              disabled
+            >
+              Текущий план
+            </button>
+            <button
+              v-else
+              class="select-plan-btn"
+            >
               Выбрать тариф
             </button>
           </div>
@@ -78,44 +114,115 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useSubscriptionStore } from '@/stores/subscription'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+
+const subscriptionStore = useSubscriptionStore()
 
 const plans = ref([])
 const billingPeriod = ref('monthly')
 const loading = ref(true)
 const error = ref(null)
 
-// Функция для форматирования возможностей тарифа
-const formatFeature = (key, value) => {
-  const featureNames = {
-    max_cards_per_board: 'Карточек на доске',
-    max_boards: 'Досок',
-    session_limit: 'Активных сессий',
-    storage_mb: 'Хранилище (МБ)',
-    support_priority: 'Приоритет поддержки',
-    custom_branding: 'Кастомный брендинг',
-    api_access: 'Доступ к API',
-    analytics: 'Аналитика'
+// Маппинг для человекочитаемых названий функций
+const featureLabels = {
+  // Лимиты
+  'max_boards': (value) => value === -1 ? '∞ Безлимитные доски' : `📊 До ${value} досок`,
+  'max_notes': (value) => value === -1 ? '∞ Безлимитные заметки' : `📝 До ${value} заметок`,
+  'max_notes_per_board': (value) => value === -1 ? '∞ Безлимитные заметки' : `📝 До ${value} заметок на доске`,
+  'max_stickers': (value) => value === -1 ? '∞ Безлимитные стикеры' : `🎨 До ${value} стикеров`,
+  'max_stickers_per_board': (value) => value === -1 ? '∞ Безлимитные стикеры' : `🎨 До ${value} стикеров на доске`,
+  'max_cards': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек`,
+  'max_cards_per_board': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек на доске`,
+  'max_comments': (value) => value === -1 ? '∞ Безлимитные комментарии' : `💬 До ${value} комментариев`,
+  'max_team_members': (value) => `👥 До ${value} участников`,
+
+  // Булевы функции
+  'can_export_pdf': '📄 Экспорт в PDF',
+  'can_export_png': '🖼️ Экспорт в PNG',
+  'can_export_svg': '📐 Экспорт в SVG',
+  'can_export_html': '🌐 Экспорт в HTML',
+  'can_duplicate_boards': '📋 Дублирование досок',
+  'can_use_templates': '📑 Готовые шаблоны',
+  'can_invite_members': '👥 Приглашение участников',
+
+  // Поддержка
+  'support_level': (value) => {
+    const levels = {
+      'basic': '📧 Базовая поддержка',
+      'priority': '⚡ Приоритетная поддержка',
+      'dedicated': '🎯 Персональный менеджер'
+    }
+    return levels[value] || value
+  }
+}
+
+// Список важных функций для отображения (в порядке приоритета)
+const importantFeatures = [
+  'max_boards',
+  'max_cards_per_board',
+  'max_notes_per_board',
+  'max_stickers_per_board',
+  'can_export_pdf',
+  'can_export_png',
+  'can_duplicate_boards',
+  'can_use_templates',
+  'can_invite_members',
+  'max_team_members',
+  'support_level'
+]
+
+// Функция форматирования
+function formatFeature(key, value) {
+  if (key in featureLabels) {
+    const formatter = featureLabels[key]
+    if (typeof formatter === 'function') {
+      return formatter(value)
+    }
+    return formatter
   }
 
-  const featureName = featureNames[key] || key
+  // Если нет в маппинге, пропускаем
+  return null
+}
 
-  if (typeof value === 'boolean') {
-    return value ? featureName : `Нет: ${featureName}`
-  }
+// Функция для получения отфильтрованных функций
+function getDisplayFeatures(features) {
+  return Object.entries(features)
+    .filter(([key]) => importantFeatures.includes(key))
+    .map(([key, value]) => ({
+      key,
+      label: formatFeature(key, value),
+      available: typeof value === 'boolean' ? value : true
+    }))
+    .filter(f => f.label !== null) // Убрать null
+    .sort((a, b) => {
+      // Сортируем по порядку в importantFeatures
+      return importantFeatures.indexOf(a.key) - importantFeatures.indexOf(b.key)
+    })
+}
 
-  if (value === -1 || value === 'unlimited') {
-    return `${featureName}: безлимит`
-  }
-
-  return `${featureName}: ${value}`
+// Проверка текущего плана
+function isCurrentPlan(plan) {
+  return subscriptionStore.currentPlan?.code_name === plan.code_name
 }
 
 // Загрузка тарифов при монтировании компонента
 onMounted(async () => {
   try {
+    // Загружаем текущий план пользователя (если авторизован)
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        await subscriptionStore.loadPlan()
+      } catch (err) {
+        // Игнорируем ошибки загрузки плана пользователя
+        console.warn('Не удалось загрузить текущий план:', err)
+      }
+    }
+
     const response = await fetch(`${API_URL}/plans`)
 
     if (!response.ok) {
@@ -123,7 +230,37 @@ onMounted(async () => {
     }
 
     const data = await response.json()
-    plans.value = data.plans || []
+    let loadedPlans = data.plans || []
+
+    // Добавляем демо-план, если его нет в API
+    const hasDemoPlan = loadedPlans.some(plan => plan.code_name === 'demo')
+
+    if (!hasDemoPlan) {
+      const demoPlan = {
+        id: 0,
+        name: 'Демо',
+        code_name: 'demo',
+        description: 'Попробуйте все возможности бесплатно',
+        price_monthly: 0,
+        price_yearly: 0,
+        features: {
+          max_boards: 2,
+          max_notes_per_board: -1,
+          max_stickers_per_board: -1,
+          max_cards_per_board: -1,
+          max_comments: -1,
+          can_export_pdf: false,
+          can_export_png: false,
+          can_duplicate_boards: false,
+          support_level: 'basic'
+        },
+        is_featured: false
+      }
+
+      loadedPlans = [demoPlan, ...loadedPlans]
+    }
+
+    plans.value = loadedPlans
   } catch (err) {
     console.error('Ошибка загрузки тарифов:', err)
     error.value = 'Не удалось загрузить тарифы. Пожалуйста, попробуйте позже.'
@@ -248,6 +385,12 @@ html {
   border-width: 3px;
 }
 
+/* Текущий план пользователя */
+.pricing-card.is-current {
+  border: 3px solid #10b981;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+}
+
 /* Плашка "Рекомендуем" */
 .featured-badge {
   position: absolute;
@@ -261,6 +404,21 @@ html {
   font-size: 14px;
   font-weight: 600;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Бейдж текущего плана */
+.badge-current {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #10b981;
+  color: white;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 /* Содержимое карточки */
@@ -340,6 +498,15 @@ html {
   margin-top: 2px;
 }
 
+/* Недоступная функция */
+.feature-item.unavailable {
+  opacity: 0.5;
+}
+
+.feature-icon.unavailable-icon {
+  color: #ef4444;
+}
+
 /* Кнопка выбора тарифа */
 .select-plan-btn {
   width: 100%;
@@ -363,6 +530,19 @@ html {
 
 .select-plan-btn:active {
   transform: translateY(0);
+}
+
+/* Кнопка текущего плана */
+.btn-current {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.btn-current:hover {
+  background: #9ca3af;
+  transform: none;
+  box-shadow: none;
 }
 
 /* Адаптивность */
