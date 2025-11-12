@@ -1,10 +1,11 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useHistoryStore } from '@/stores/history'
 import { useCanvasStore } from '@/stores/canvas'
 import { useBoardStore } from '@/stores/board'
-import { useMobileStore } from '@/stores/mobile' 
+import { useMobileStore } from '@/stores/mobile'
 import { storeToRefs } from 'pinia'
  
 const props = defineProps({
@@ -23,6 +24,7 @@ const emit = defineEmits([
   'load-json'
 ])
 
+const router = useRouter()
 const authStore = useAuthStore()
 const historyStore = useHistoryStore()
 const canvasStore = useCanvasStore()
@@ -99,6 +101,11 @@ const handleMenuProjects = () => {
 const handleMenuProfile = () => {
   closeUserMenu()
   emit('open-profile')
+}
+
+const handleMenuAdmin = () => {
+  closeUserMenu()
+  router.push('/admin')
 }
 
 const handleMenuLogout = () => {
@@ -330,6 +337,14 @@ watch(
             <div class="mobile-user-menu__section">
               <button class="mobile-user-menu__item" type="button" @click="handleMenuProfile">
                 👤 Профиль
+              </button>
+              <button
+                v-if="authStore.user?.role === 'admin'"
+                class="mobile-user-menu__item mobile-user-menu__item--admin"
+                type="button"
+                @click="handleMenuAdmin"
+              >
+                ⚙️ Админ панель
               </button>
               <button
                 class="mobile-user-menu__item mobile-user-menu__item--danger"
@@ -698,6 +713,14 @@ watch(
 
 .mobile-user-menu__item--danger:hover {
   background: rgba(244, 67, 54, 0.15);
+}
+
+.mobile-user-menu__item--admin {
+  background: rgba(33, 150, 243, 0.08);
+}
+
+.mobile-user-menu__item--admin:hover {
+  background: rgba(33, 150, 243, 0.15);
 }
 
 .mobile-user-menu__divider {
