@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import AppHeader from './components/Layout/AppHeader.vue'
 import TopMenuButtons from './components/Layout/TopMenuButtons.vue'
@@ -46,6 +47,9 @@ const route = useRoute()
 const layout = computed(() => route.meta.layout)
 const isSimpleLayout = computed(() => layout.value === 'public' || layout.value === 'admin')
 
+// Подключаем i18n для мультиязычности
+const { t } = useI18n()
+
 const authStore = useAuthStore()
 const canvasStore = useCanvasStore()
 const boardStore = useBoardStore()
@@ -74,8 +78,8 @@ const isSaveAvailable = computed(() => {
 
 const saveTooltip = computed(() =>
   isSaveAvailable.value
-    ? 'Сохранить структуру'
-    : 'Задайте название структуры, чтобы сохранить'
+    ? t('board.saveStructure')
+    : t('board.savePrompt')
 )
 
 const isModernTheme = ref(false)
@@ -257,7 +261,7 @@ async function createStructureWithName(name, action = null) {
           const errorData = await createResponse.json()
           if (errorData.code === 'USAGE_LIMIT_REACHED') {
             // Показываем специфичное сообщение о превышении лимита
-            alert(errorData.error || 'Достигнут лимит создания досок')
+            alert(errorData.error || t('board.createError'))
             boardStore.isSaving = false
             return false
           }
@@ -288,7 +292,7 @@ async function createStructureWithName(name, action = null) {
   } catch (err) {
     console.error('❌ Ошибка создания структуры:', err)
     if (!isMobileMode.value) {
-      alert('Не удалось создать структуру')
+      alert(t('board.createFailed'))
     }
     boardStore.isSaving = false
     return false
@@ -409,7 +413,7 @@ async function loadBoard(boardId) {
 
   } catch (err) {
     console.error('❌ Ошибка загрузки структуры:', err)
-    alert('Не удалось загрузить структуру')
+    alert(t('board.loadError'))
     boardStore.isSaving = false
   }
 }
@@ -452,7 +456,7 @@ async function saveCurrentBoard() {
           const errorData = await response.json()
           if (errorData.code === 'USAGE_LIMIT_REACHED') {
             // Показываем специфичное сообщение о превышении лимита
-            alert(errorData.error || 'Достигнут лимит на вашем тарифе')
+            alert(errorData.error || t('board.limitReached'))
             boardStore.isSaving = false
             return
           }

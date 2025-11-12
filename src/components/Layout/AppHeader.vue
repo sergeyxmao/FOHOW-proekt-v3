@@ -1,11 +1,15 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../../stores/auth.js'
 import { useBoardStore } from '../../stores/board.js'
 import AuthModal from '../AuthModal.vue'
 import UserProfile from '../UserProfile.vue'
 import BoardsModal from '../Board/BoardsModal.vue'
+import LanguageSwitcher from '../LanguageSwitcher.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   isModernTheme: {
@@ -94,7 +98,7 @@ function handleOpenBoard(boardId) {
 
 function handleLogout() {
   closeUserMenu()
-  if (confirm('Вы уверены, что хотите выйти?')) {
+  if (confirm(t('auth.confirmLogout'))) {
     authStore.logout()
   }
 }
@@ -165,6 +169,7 @@ onBeforeUnmount(() => {
   >
     <div class="app-header__inner">
       <div class="app-header__user-block">
+        <LanguageSwitcher />
         <div class="app-header__auth">
           <template v-if="isAuthenticated && !isLoadingProfile">
             <div class="app-header__user-column">
@@ -206,7 +211,7 @@ onBeforeUnmount(() => {
                 <button
                   class="user-menu__project-name-button"
                   type="button"
-                  title="Переименовать структуру"
+                  :title="t('board.renameStructure')"
                   @click="handleRenameCurrentBoard"
                 >
                   <span class="user-menu__project-name">{{ currentBoardName }}</span>
@@ -215,33 +220,33 @@ onBeforeUnmount(() => {
                 <div class="user-menu__status">
                   <template v-if="isSaving">
                     <span class="status-spinner">⏳</span>
-                    <span>Сохранение...</span>
+                    <span>{{ t('board.saving') }}</span>
                   </template>
                   <template v-else-if="formattedLastSaved">
                     <span class="status-icon">✓</span>
-                    <span>Сохранено в {{ formattedLastSaved }}</span>
+                    <span>{{ t('board.savedAt') }} {{ formattedLastSaved }}</span>
                   </template>
                   <template v-else>
-                    <span>Нет сохранений</span>
+                    <span>{{ t('board.noSaves') }}</span>
                   </template>
                 </div>
               </div>
 
               <div class="user-menu__section">
                 <button class="user-menu__item" type="button" @click="openBoards">
-                  📁 Мои структуры
+                  📁 {{ t('board.myStructures') }}
                 </button>
                 <div class="user-menu__item user-menu__item--static">
-                  🤝 Совместные структуры
+                  🤝 {{ t('board.sharedStructures') }}
                 </div>
               </div>
               <div class="user-menu__divider" />
               <div class="user-menu__section">
                 <button class="user-menu__item" type="button" @click="handleProfileClick">
-                  👤 Профиль
+                  👤 {{ t('profile.title') }}
                 </button>
                 <button class="user-menu__item user-menu__item--danger" type="button" @click="handleLogout">
-                  🚪 Выйти
+                  🚪 {{ t('auth.logout') }}
                 </button>
               </div>
             </div>
@@ -249,10 +254,10 @@ onBeforeUnmount(() => {
         </template>
         <template v-else>
           <button class="app-header__btn app-header__btn--login" @click="openLogin">
-            Войти
+            {{ t('auth.login') }}
           </button>
           <button class="app-header__btn app-header__btn--register" @click="openRegister">
-            Регистрация
+            {{ t('auth.register') }}
           </button>
         </template>
       </div>
