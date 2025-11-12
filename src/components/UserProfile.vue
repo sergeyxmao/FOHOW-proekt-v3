@@ -163,6 +163,17 @@
           <div v-if="promoSuccess" class="success-message">{{ promoSuccess }}</div>
         </div>
 
+        <div class="form-divider">
+          <span>📊 Использование ресурсов</span>
+        </div>
+
+        <div class="usage-stats">
+          <UsageLimitBar resourceType="boards" label="Доски" />
+          <UsageLimitBar resourceType="notes" label="Заметки" />
+          <UsageLimitBar resourceType="stickers" label="Стикеры" />
+          <UsageLimitBar resourceType="comments" label="Комментарии" />
+        </div>
+
         <div class="profile-actions">
           <button class="btn-primary" @click="startEdit">
             Редактировать профиль
@@ -511,6 +522,7 @@ import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 import { useAuthStore } from '@/stores/auth'
 import TelegramLinkWidget from '@/components/TelegramLinkWidget.vue'
+import UsageLimitBar from '@/components/UsageLimitBar.vue'
 
 const props = defineProps({
   isModernTheme: {
@@ -1463,5 +1475,11 @@ onBeforeUnmount(() => {
   .btn-promo {
     width: 100%;
   }
+}
+
+.usage-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 </style>
