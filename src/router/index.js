@@ -54,11 +54,20 @@ router.beforeEach((to, from, next) => {
   // Проверка роли администратора
   if (to.meta.requiresAdmin) {
     const authStore = useAuthStore()
+
+    // ВАЖНО: Загружаем пользователя из токена, если еще не загружен
+    if (!authStore.user) {
+      authStore.loadUser()
+    }
+
+    // Проверяем роль
     if (!authStore.user || authStore.user.role !== 'admin') {
-      console.warn('[ROUTER] Доступ запрещен: требуются права администратора')
+      console.warn('[ROUTER] Доступ запрещен: требуются права администратора. User role:', authStore.user?.role)
       next('/boards')   // редирект на доски если не админ
       return
     }
+
+    console.log('[ROUTER] Доступ разрешен для администратора:', authStore.user.email)
   }
 
   next()
