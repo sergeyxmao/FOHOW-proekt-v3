@@ -1640,6 +1640,7 @@ try {
 
   // Инициализируем крон-задачи после успешного запуска сервера
   initializeCronTasks();
+  console.log('✅ Cron jobs initialized');
 } catch (err) {
   app.log.error(err);
   process.exit(1);
