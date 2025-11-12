@@ -1,0 +1,306 @@
+/* ========================================
+   БАЗОВЫЕ TRANSITIONS
+   ======================================== */
+
+/* Плавность для всех интерактивных элементов */
+button,
+a,
+.card,
+.pricing-card,
+.board-card,
+input,
+textarea {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Быстрые transitions для мелких элементов */
+.icon,
+.badge,
+.tag {
+  transition: all 0.2s ease;
+}
+
+/* ========================================
+   HOVER ЭФФЕКТЫ
+   ======================================== */
+
+/* Кнопки - поднятие и тень */
+button:not(:disabled):hover,
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+button:not(:disabled):active,
+.btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Карточки - увеличение */
+.pricing-card:hover,
+.board-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 12px 24px rgba(139, 92, 246, 0.2);
+}
+
+/* Ссылки - подчеркивание */
+a:not(.btn):hover {
+  text-decoration: underline;
+}
+
+/* ========================================
+   АНИМАЦИИ ПОЯВЛЕНИЯ
+   ======================================== */
+
+/* Fade In - плавное появление */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Fade In с задержкой для списков */
+.fade-in-stagger:nth-child(1) { animation-delay: 0.1s; }
+.fade-in-stagger:nth-child(2) { animation-delay: 0.2s; }
+.fade-in-stagger:nth-child(3) { animation-delay: 0.3s; }
+.fade-in-stagger:nth-child(4) { animation-delay: 0.4s; }
+
+/* Slide In снизу */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
+/* Slide In справа (для уведомлений) */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
+/* ========================================
+   ПРОГРЕСС-БАРЫ
+   ======================================== */
+
+/* Заполнение прогресс-бара */
+@keyframes fillBar {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--progress);
+  }
+}
+
+.progress-bar-fill {
+  animation: fillBar 1s ease-out;
+}
+
+/* Пульсация при достижении лимита */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* ========================================
+   МОДАЛЬНЫЕ ОКНА
+   ======================================== */
+
+/* Overlay затемнение */
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-overlay {
+  animation: fadeInOverlay 0.3s ease;
+}
+
+/* Модалка - выезжание из центра */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-content {
+  animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================================
+   DROPDOWN МЕНЮ
+   ======================================== */
+
+/* Выпадающее меню */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-menu {
+  animation: slideDown 0.2s ease-out;
+}
+
+/* ========================================
+   ЭФФЕКТЫ ДЛЯ ЗАБЛОКИРОВАННЫХ ЭЛЕМЕНТОВ
+   ======================================== */
+
+/* Покачивание при клике на заблокированный элемент */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Замок - пульсация */
+.lock-icon {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* ========================================
+   SKELETON LOADING
+   ======================================== */
+
+/* Мерцающий эффект загрузки */
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0px,
+    #e0e0e0 40px,
+    #f0f0f0 80px
+  );
+  background-size: 468px 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* ========================================
+   СЧЁТЧИКИ - ПЛАВНОЕ ИЗМЕНЕНИЕ
+   ======================================== */
+
+@keyframes countUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.counter {
+  animation: countUp 0.5s ease-out;
+}
+
+/* ========================================
+   СПИННЕРЫ ЗАГРУЗКИ
+   ======================================== */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* ========================================
+   МИКРО-АНИМАЦИИ
+   ======================================== */
+
+/* Иконка плюс - вращение при hover */
+.icon-plus:hover {
+  transform: rotate(90deg);
+}
+
+/* Checkbox - увеличение при клике */
+input[type="checkbox"]:checked {
+  animation: scaleIn 0.2s ease;
+}
+
+/* Tooltip - появление */
+.tooltip {
+  animation: fadeIn 0.2s ease;
+}
+
+/* ========================================
+   УТИЛИТЫ
+   ======================================== */
+
+/* Отключить анимации для пользователей с настройкой prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
