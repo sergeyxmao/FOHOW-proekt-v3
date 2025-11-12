@@ -2,10 +2,17 @@
   <div class="boards-container">
     <div class="boards-header">
       <h1>📋 Мои структуры</h1>
-      <button class="btn-create" @click="createNewBoard">
-        ➕ Создать структуру
-      </button>
+      <FeatureGate feature="max_boards">
+        <button class="btn-create" @click="createNewBoard">
+          ➕ Создать структуру
+        </button>
+      </FeatureGate>
     </div>
+
+    <UsageLimitBar
+      resourceType="boards"
+      label="Мои доски"
+    />
 
     <div v-if="loading" class="loading">
       <div class="spinner"></div>
@@ -20,9 +27,11 @@
       <div class="empty-icon">🎨</div>
       <h2>У вас пока нет структур</h2>
       <p>Создайте первую структуру, чтобы начать работу</p>
-      <button class="btn-create-big" @click="createNewBoard">
-        ➕ Создать первую структуру
-      </button>
+      <FeatureGate feature="max_boards">
+        <button class="btn-create-big" @click="createNewBoard">
+          ➕ Создать первую структуру
+        </button>
+      </FeatureGate>
     </div>
 
     <div v-else class="boards-grid">
@@ -73,9 +82,13 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useUserStore } from '@/stores/user'
+import FeatureGate from '@/components/FeatureGate.vue'
+import UsageLimitBar from '@/components/UsageLimitBar.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const userStore = useUserStore()
 
 const boards = ref([])
 const loading = ref(true)
@@ -284,7 +297,9 @@ function handleBoardsRefresh() {
 
 onMounted(() => {
   loadBoards()
-  
+  // Загружаем информацию о тарифе пользователя
+  userStore.fetchUserPlan().catch(console.error)
+
   // Закрываем меню при клике вне его
   document.addEventListener('click', handleDocumentClick)
   window.addEventListener('boards:refresh', handleBoardsRefresh)
