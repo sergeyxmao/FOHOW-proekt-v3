@@ -15,10 +15,21 @@ export async function authenticateToken(request, reply) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Используем userId из токена
+    // Получаем роль пользователя из БД
+    const userResult = await pool.query(
+      'SELECT id, email, role FROM users WHERE id = $1',
+      [decoded.userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return reply.code(401).send({ error: 'Пользователь не найден' });
+    }
+
+    // Используем userId из токена и роль из БД
     request.user = {
       id: decoded.userId,
-      email: decoded.email
+      email: decoded.email,
+      role: userResult.rows[0].role || 'user'
     };
 
     // Асинхронное обновление last_seen для отслеживания активности пользователя

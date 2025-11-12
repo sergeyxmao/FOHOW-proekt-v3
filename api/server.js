@@ -18,6 +18,7 @@ import Redis from 'ioredis'; // <-- Добавлен импорт Redis
 import { checkFeature } from './middleware/checkFeature.js';
 import { checkUsageLimit } from './middleware/checkUsageLimit.js';
 import { registerPromoRoutes } from './routes/promo.js';
+import { registerAdminRoutes } from './routes/admin.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
 
@@ -1311,6 +1312,11 @@ app.get('/api/health', async () => ({ ok: true }));
 // ПРОМОКОДЫ (PROMO CODES)
 // ============================================
 registerPromoRoutes(app);
+
+// ============================================
+// АДМИН-ПАНЕЛЬ (ADMIN PANEL)
+// ============================================
+registerAdminRoutes(app);
 
 // ============================================
 // СТИКЕРЫ (STICKERS)

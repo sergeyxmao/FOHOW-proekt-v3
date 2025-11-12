@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import PricingPage from '../views/PricingPage.vue'
+import { useAuthStore } from '../stores/auth'
 
 const routes = [
   {
@@ -25,6 +26,12 @@ const routes = [
     name: 'pricing',
     component: PricingPage,
     meta: { layout: 'public' } // Публичная страница без интерфейса приложения
+  },
+  {
+    path: '/admin',
+    name: 'admin',
+    component: () => import('../views/AdminPanel.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
   }
 ]
 
@@ -36,13 +43,25 @@ const router = createRouter({
 // Защита авторизации
 router.beforeEach((to, from, next) => {
   console.log('Навигация из:', from.path, '-> в:', to.path);
-  // debugger; // Только для отладки! На проде убирай!
   const token = localStorage.getItem('token')
+
+  // Проверка авторизации
   if (to.meta.requiresAuth && !token) {
     next('/')     // возвращаем на главную если нет токена
-  } else {
-    next()
+    return
   }
+
+  // Проверка роли администратора
+  if (to.meta.requiresAdmin) {
+    const authStore = useAuthStore()
+    if (!authStore.user || authStore.user.role !== 'admin') {
+      console.warn('[ROUTER] Доступ запрещен: требуются права администратора')
+      next('/boards')   // редирект на доски если не админ
+      return
+    }
+  }
+
+  next()
 })
 
 export default router
