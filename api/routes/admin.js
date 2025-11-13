@@ -247,6 +247,42 @@ export function registerAdminRoutes(app) {
           return reply.code(404).send({ error: 'Пользователь не найден' });
         }
 
+        // ============================================
+        // РАЗБЛОКИРОВКА ДОСОК ПРИ ПРОДЛЕНИИ ТАРИФА
+        // ============================================
+        // Проверяем, были ли доски заблокированы, и разблокируем их
+        const userCheck = await client.query(
+          'SELECT boards_locked FROM users WHERE id = $1',
+          [userId]
+        );
+
+        let unlockedBoardsCount = 0;
+
+        if (userCheck.rows.length > 0 && userCheck.rows[0].boards_locked) {
+          console.log(`[ADMIN] Обнаружены заблокированные доски для пользователя ID=${userId}, разблокировка...`);
+
+          // Разблокируем доски на уровне пользователя
+          await client.query(
+            `UPDATE users
+             SET boards_locked = FALSE,
+                 boards_locked_at = NULL
+             WHERE id = $1`,
+            [userId]
+          );
+
+          // Разблокируем все доски пользователя
+          const unlockedBoardsResult = await client.query(
+            `UPDATE boards
+             SET is_locked = FALSE
+             WHERE owner_id = $1`,
+            [userId]
+          );
+
+          unlockedBoardsCount = unlockedBoardsResult.rowCount;
+
+          console.log(`[ADMIN] ✅ Разблокировано досок для пользователя ID=${userId}: ${unlockedBoardsCount}`);
+        }
+
         // Создаем запись в истории подписок
         await client.query(
           `INSERT INTO subscription_history
@@ -259,7 +295,8 @@ export function registerAdminRoutes(app) {
 
         console.log(`[ADMIN] Тарифный план изменен: user_id=${userId}, plan=${plan.name}, duration=${duration} дней, admin_id=${req.user.id}`);
 
-        return reply.send({
+        // Формируем ответ с информацией о разблокировке
+        const response = {
           success: true,
           message: `Тарифный план изменен на "${plan.name}"`,
           user: updateResult.rows[0],
@@ -273,7 +310,17 @@ export function registerAdminRoutes(app) {
             endDate,
             duration
           }
-        });
+        };
+
+        // Добавляем информацию о разблокировке досок, если они были разблокированы
+        if (unlockedBoardsCount > 0) {
+          response.boardsUnlocked = {
+            count: unlockedBoardsCount,
+            message: `Разблокировано досок: ${unlockedBoardsCount}`
+          };
+        }
+
+        return reply.send(response);
       } catch (err) {
         await client.query('ROLLBACK');
         throw err;
