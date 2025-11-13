@@ -7,6 +7,7 @@
  * 3. Очистка старых сессий (каждый час)
  * 4. Закрытие демо-периодов (ежедневно 02:00)
  * 5. Автоматическая смена тарифа с Демо на Гостевой (ежедневно 02:30)
+ * 6. Блокировка досок при окончании платной подписки (ежедневно 01:00)
  */
 
 import cron from 'node-cron';
@@ -490,6 +491,129 @@ async function switchDemoToGuest() {
 }
 
 // ============================================
+// 6. Блокировка досок при окончании платной подписки
+// ============================================
+
+/**
+ * Блокирует доски пользователей с истекшей платной подпиской
+ * Переводит их на тариф "guest" и устанавливает флаг boards_locked
+ * Запускается ежедневно в 01:00 (вместе с блокировкой подписок)
+ */
+async function lockBoardsAfterExpiry() {
+  console.log('\n🔒 Крон-задача: Блокировка досок при окончании платной подписки');
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Находим тариф "guest"
+    const guestPlanResult = await client.query(
+      `SELECT id, name FROM subscription_plans WHERE code_name = 'guest' LIMIT 1`
+    );
+
+    if (guestPlanResult.rows.length === 0) {
+      throw new Error('Гостевой тариф не найден в базе данных');
+    }
+
+    const guestPlan = guestPlanResult.rows[0];
+    console.log(`✅ Найден гостевой тариф: ${guestPlan.name} (ID: ${guestPlan.id})`);
+
+    // 2. Находим пользователей с истекшей платной подпиской (individual или premium)
+    const expiredUsersQuery = `
+      SELECT
+        u.id,
+        u.email,
+        u.plan_id,
+        u.subscription_expires_at,
+        u.telegram_chat_id,
+        sp.name as current_plan_name,
+        sp.code_name as current_plan_code
+      FROM users u
+      JOIN subscription_plans sp ON u.plan_id = sp.id
+      WHERE
+        sp.code_name IN ('individual', 'premium')
+        AND u.subscription_expires_at < NOW()
+        AND u.boards_locked = FALSE
+    `;
+
+    const expiredUsers = await client.query(expiredUsersQuery);
+
+    console.log(`✅ Найдено пользователей с истекшей платной подпиской: ${expiredUsers.rows.length}`);
+
+    let successCount = 0;
+
+    // 3. Для каждого пользователя заблокировать доски
+    for (const user of expiredUsers.rows) {
+      try {
+        // Обновляем план пользователя на guest и устанавливаем флаги блокировки
+        await client.query(
+          `UPDATE users
+           SET plan_id = $1,
+               boards_locked = TRUE,
+               boards_locked_at = NOW(),
+               subscription_expires_at = NULL,
+               subscription_started_at = NOW()
+           WHERE id = $2`,
+          [guestPlan.id, user.id]
+        );
+
+        // Блокируем все доски пользователя
+        const boardsResult = await client.query(
+          `UPDATE boards
+           SET is_locked = TRUE
+           WHERE owner_id = $1`,
+          [user.id]
+        );
+
+        const lockedBoardsCount = boardsResult.rowCount;
+
+        // Записываем в историю подписок
+        await client.query(
+          `INSERT INTO subscription_history
+             (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
+           VALUES ($1, $2, NOW(), NULL, 'auto_subscription_expired', 0.00, 'RUB')`,
+          [user.id, guestPlan.id]
+        );
+
+        console.log(`  ✅ Пользователь ${user.email}: переведен на гостевой тариф, заблокировано досок: ${lockedBoardsCount}`);
+        successCount++;
+
+        // Логируем блокировку досок
+        await logToSystem('warning', 'boards_locked_after_subscription_expiry', {
+          userId: user.id,
+          email: user.email,
+          oldPlanId: user.plan_id,
+          oldPlanName: user.current_plan_name,
+          newPlanId: guestPlan.id,
+          newPlanName: guestPlan.name,
+          lockedBoardsCount: lockedBoardsCount,
+          expiredAt: user.subscription_expires_at
+        });
+
+      } catch (error) {
+        console.error(`  ❌ Ошибка обработки пользователя ${user.email}:`, error.message);
+        await logToSystem('error', 'boards_lock_failed', {
+          userId: user.id,
+          email: user.email,
+          error: error.message
+        });
+      }
+    }
+
+    await client.query('COMMIT');
+    console.log(`\n📊 Результаты: успешно заблокировано досок для ${successCount} пользователей`);
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка в задаче lockBoardsAfterExpiry:', error);
+    await logToSystem('error', 'lock_boards_after_expiry_failed', { error: error.message });
+  } finally {
+    client.release();
+  }
+}
+
+// ============================================
 // Вспомогательные функции
 // ============================================
 
@@ -563,6 +687,14 @@ export function initializeCronTasks() {
   });
   console.log('✅ Задача 5: Смена тарифа с Демо на Гостевой (ежедневно 02:30 МСК)');
 
+  // 6. Блокировка досок при окончании платной подписки - каждый день в 01:00
+  cron.schedule('0 1 * * *', () => {
+    lockBoardsAfterExpiry();
+  }, {
+    timezone: 'Europe/Moscow'
+  });
+  console.log('✅ Задача 6: Блокировка досок при окончании платной подписки (ежедневно 01:00 МСК)');
+
   console.log('\n✅ Все крон-задачи успешно инициализированы!\n');
 }
 
@@ -572,5 +704,6 @@ export {
   blockExpiredSubscriptions,
   cleanupOldSessions,
   closeDemoPeriods,
-  switchDemoToGuest
+  switchDemoToGuest,
+  lockBoardsAfterExpiry
 };
