@@ -2,7 +2,7 @@
 
     /**
      * Middleware для проверки лимитов использования.
-     * @param {'boards' | 'notes' | 'comments' | 'stickers' | 'cards'} resourceType - Тип ресурса, который мы проверяем.
+     * @param {'boards' | 'notes' | 'comments' | 'stickers' | 'cards' | 'licenses'} resourceType - Тип ресурса, который мы проверяем.
      * @param {string} limitFeatureName - Название фичи в JSON, где хранится лимит (например, 'max_boards').
      */
     export function checkUsageLimit(resourceType, limitFeatureName) {
@@ -78,6 +78,20 @@
                 // Если content не передан, считаем что это обновление без изменения карточек
                 currentUsage = 0;
               }
+              break;
+            case 'licenses':
+              // Лицензии - это карточки типа "Малая" (small), "Большая" (large), "Gold" (gold)
+              // Считаем количество таких карточек во всех досках пользователя
+              query = {
+                text: `
+                  SELECT COUNT(*)
+                  FROM boards b,
+                       jsonb_array_elements(COALESCE(b.content->'objects', '[]'::jsonb)) obj
+                  WHERE b.owner_id = $1
+                    AND obj->>'type' IN ('small', 'large', 'gold')
+                `,
+                values: [userId]
+              };
               break;
             default:
               return reply.code(500).send({ error: 'Неизвестный тип ресурса' });
