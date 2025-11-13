@@ -438,6 +438,22 @@ export function useProjectActions() {
       if (!blob) return
 
       const fileName = `project-${Date.now()}.html`
+      const projectFile = new File([blob], fileName, { type: 'text/html' })
+
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        const shareData = {
+          files: [projectFile],
+          title: 'Проект FOHOW',
+          text: 'Сохраненный проект в формате HTML'
+        }
+        const canShareFiles =
+          typeof navigator.canShare !== 'function' || navigator.canShare({ files: [projectFile] })
+
+        if (canShareFiles) {
+          await navigator.share(shareData)
+          return
+        }
+      }      
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
