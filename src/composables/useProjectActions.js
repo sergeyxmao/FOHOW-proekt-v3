@@ -433,14 +433,16 @@ export function useProjectActions() {
         link.click()
         URL.revokeObjectURL(url)
 
-        // Показываем инструкцию
-        if (platform === 'telegram') {
-          alert('Файл загружен. Откройте Telegram и отправьте файл вручную:\n\nДля десктопа: https://web.telegram.org\nДля мобильного: откройте приложение Telegram')
-        } else if (platform === 'vk') {
-          alert('Файл загружен. Откройте ВКонтакте и отправьте файл вручную:\n\nhttps://vk.com')
-        } else {
-          alert('Файл загружен. Откройте мессенджер и отправьте файл вручную.')
-        }
+        // Открываем соответствующий сервис в новом окне
+        setTimeout(() => {
+          if (platform === 'telegram') {
+            // Открываем веб-версию Telegram
+            window.open('https://web.telegram.org', '_blank')
+          } else if (platform === 'vk') {
+            // Открываем ВКонтакте
+            window.open('https://vk.com', '_blank')
+          }
+        }, 100)
       }
     } catch (error) {
       if (error.name === 'AbortError') {
