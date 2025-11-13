@@ -6,6 +6,7 @@
  * 2. Блокировка истекших подписок (ежедневно 01:00)
  * 3. Очистка старых сессий (каждый час)
  * 4. Закрытие демо-периодов (ежедневно 02:00)
+ * 5. Автоматическая смена тарифа с Демо на Гостевой (ежедневно 02:30)
  */
 
 import cron from 'node-cron';
@@ -380,6 +381,115 @@ async function closeDemoPeriods() {
 }
 
 // ============================================
+// 5. Автоматическая смена тарифа с Демо на Гостевой
+// ============================================
+
+/**
+ * Автоматически переводит пользователей с истекшего демо-тарифа на гостевой тариф
+ * Запускается ежедневно в 02:30
+ */
+async function switchDemoToGuest() {
+  console.log('\n🔄 Крон-задача: Смена тарифа с Демо на Гостевой');
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Находим тариф "guest"
+    const guestPlanResult = await client.query(
+      `SELECT id, name FROM subscription_plans WHERE code_name = 'guest' LIMIT 1`
+    );
+
+    if (guestPlanResult.rows.length === 0) {
+      throw new Error('Гостевой тариф не найден в базе данных');
+    }
+
+    const guestPlan = guestPlanResult.rows[0];
+    console.log(`✅ Найден гостевой тариф: ${guestPlan.name} (ID: ${guestPlan.id})`);
+
+    // 2. Находим всех пользователей с истекшим демо-тарифом
+    const expiredDemoUsersQuery = `
+      SELECT
+        u.id,
+        u.email,
+        u.plan_id,
+        u.subscription_expires_at,
+        u.telegram_chat_id,
+        sp.name as current_plan_name,
+        sp.code_name as current_plan_code
+      FROM users u
+      JOIN subscription_plans sp ON u.plan_id = sp.id
+      WHERE
+        sp.code_name = 'demo'
+        AND u.subscription_expires_at IS NOT NULL
+        AND u.subscription_expires_at < NOW()
+    `;
+
+    const expiredDemoUsers = await client.query(expiredDemoUsersQuery);
+
+    console.log(`✅ Найдено пользователей с истекшим демо-тарифом: ${expiredDemoUsers.rows.length}`);
+
+    let successCount = 0;
+
+    // 3. Переводим каждого пользователя на гостевой тариф
+    for (const user of expiredDemoUsers.rows) {
+      try {
+        // Обновляем план пользователя на guest
+        await client.query(
+          `UPDATE users
+           SET plan_id = $1,
+               subscription_expires_at = NULL,
+               subscription_started_at = NOW()
+           WHERE id = $2`,
+          [guestPlan.id, user.id]
+        );
+
+        // Записываем в историю подписок
+        await client.query(
+          `INSERT INTO subscription_history
+             (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
+           VALUES ($1, $2, NOW(), NULL, 'auto_demo_expired', 0.00, 'RUB')`,
+          [user.id, guestPlan.id]
+        );
+
+        console.log(`  ✅ Пользователь ${user.email} переведен на гостевой тариф`);
+        successCount++;
+
+        // Логируем смену тарифа
+        await logToSystem('info', 'demo_to_guest_switch', {
+          userId: user.id,
+          email: user.email,
+          oldPlanId: user.plan_id,
+          oldPlanName: user.current_plan_name,
+          newPlanId: guestPlan.id,
+          newPlanName: guestPlan.name,
+          expiredAt: user.subscription_expires_at
+        });
+
+      } catch (error) {
+        console.error(`  ❌ Ошибка обработки пользователя ${user.email}:`, error.message);
+        await logToSystem('error', 'demo_to_guest_switch_failed', {
+          userId: user.id,
+          email: user.email,
+          error: error.message
+        });
+      }
+    }
+
+    await client.query('COMMIT');
+    console.log(`\n📊 Результаты: успешно переведено ${successCount} пользователей на гостевой тариф`);
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка в задаче switchDemoToGuest:', error);
+    await logToSystem('error', 'switch_demo_to_guest_failed', { error: error.message });
+  } finally {
+    client.release();
+  }
+}
+
+// ============================================
 // Вспомогательные функции
 // ============================================
 
@@ -445,6 +555,14 @@ export function initializeCronTasks() {
   });
   console.log('✅ Задача 4: Закрытие демо-периодов (ежедневно 02:00 МСК)');
 
+  // 5. Автоматическая смена тарифа с Демо на Гостевой - каждый день в 02:30
+  cron.schedule('30 2 * * *', () => {
+    switchDemoToGuest();
+  }, {
+    timezone: 'Europe/Moscow'
+  });
+  console.log('✅ Задача 5: Смена тарифа с Демо на Гостевой (ежедневно 02:30 МСК)');
+
   console.log('\n✅ Все крон-задачи успешно инициализированы!\n');
 }
 
@@ -453,5 +571,6 @@ export {
   notifyExpiringSubscriptions,
   blockExpiredSubscriptions,
   cleanupOldSessions,
-  closeDemoPeriods
+  closeDemoPeriods,
+  switchDemoToGuest
 };
