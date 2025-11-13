@@ -18,7 +18,6 @@ const {
   handleSaveProject,
   handleLoadProject,
   handleExportHTML,
-  handleSaveAsHTML,
   handleExportSVG,
   handleExportPNG,
   handlePrint
@@ -72,19 +71,10 @@ const items = computed(() => [
     action: handleLoadProject
   },
   {
-    id: 'share-project',
-    icon: '📄',
-    label: t('projectMenu.shareProject'),
-    hasSubmenu: true,
-    submenu: [
-      {
-        id: 'save-as',
-        icon: '💾',
-        label: t('projectMenu.saveAs'),
-        action: handleSaveAsHTML
-  
-      }
-    ]
+    id: 'export-html',
+    icon: '🌐',
+    label: t('projectMenu.exportHtml'),
+    action: handleExportHTML
   },
   {
     id: 'export-svg',
