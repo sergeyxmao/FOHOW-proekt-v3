@@ -204,47 +204,72 @@ app.post('/api/register', async (req, reply) => {
       return reply.code(400).send({ error: 'Пользователь с таким email уже существует' });
     }
 
-    // Получаем ID демо-тарифа
-    const demoPlanResult = await client.query(
+    // ============================================
+    // ПРОВЕРКА НА АДМИНИСТРАТОРСКИЙ EMAIL
+    // ============================================
+    // Список администраторских email (можно вынести в переменные окружения)
+    const adminEmails = ['sergeixmao@gmail.com'];
+    const isAdminEmail = adminEmails.includes(email.toLowerCase());
+
+    // Определяем роль и тариф в зависимости от email
+    let userRole = 'user';
+    let planCodeName = 'demo';
+    let subscriptionExpiresAt = 'NOW() + INTERVAL \'3 days\'';
+    let subscriptionStartedAt = 'NOW()';
+
+    if (isAdminEmail) {
+      userRole = 'admin';
+      planCodeName = 'premium';
+      subscriptionExpiresAt = 'NULL'; // Премиум без ограничения
+      console.log(`✅ [REGISTER] Обнаружен администраторский email: ${email}, назначение роли admin и тарифа premium`);
+    }
+
+    // Получаем ID тарифа
+    const planResult = await client.query(
       'SELECT id FROM subscription_plans WHERE code_name = $1',
-      ['demo']
+      [planCodeName]
     );
 
-    if (demoPlanResult.rows.length === 0) {
-      console.error('❌ Демо-тариф не найден в базе данных');
+    if (planResult.rows.length === 0) {
+      console.error(`❌ Тариф "${planCodeName}" не найден в базе данных`);
       await client.query('ROLLBACK');
       return reply.code(500).send({ error: 'Ошибка настройки тарифного плана' });
     }
 
-    const demoPlanId = demoPlanResult.rows[0].id;
+    const planId = planResult.rows[0].id;
 
     // Хешируем пароль
     const hash = await bcrypt.hash(password, 10);
 
-    // Создаем пользователя с полем subscription_started_at
+    // Создаем пользователя с полем subscription_started_at и role
     const insertResult = await client.query(
-      `INSERT INTO users (email, password, plan_id, subscription_expires_at, subscription_started_at)
-       VALUES ($1, $2, $3, NOW() + INTERVAL '3 days', NOW())
+      `INSERT INTO users (email, password, role, plan_id, subscription_expires_at, subscription_started_at)
+       VALUES ($1, $2, $3, $4, ${subscriptionExpiresAt}, ${subscriptionStartedAt})
        RETURNING id, email, role`,
-      [email, hash, demoPlanId]
+      [email, hash, userRole, planId]
     );
 
     const newUser = insertResult.rows[0];
-    console.log(`✅ [REGISTER] Пользователь создан: ID=${newUser.id}, email=${newUser.email}`);
+    console.log(`✅ [REGISTER] Пользователь создан: ID=${newUser.id}, email=${newUser.email}, role=${newUser.role}`);
 
-    // Создаем запись в demo_trials
-    await client.query(
-      `INSERT INTO demo_trials (user_id, started_at, converted_to_paid)
-       VALUES ($1, NOW(), false)`,
-      [newUser.id]
-    );
-    console.log(`✅ [REGISTER] Запись в demo_trials создана для пользователя ID=${newUser.id}`);
+    // Создаем запись в demo_trials только для обычных пользователей
+    if (!isAdminEmail) {
+      await client.query(
+        `INSERT INTO demo_trials (user_id, started_at, converted_to_paid)
+         VALUES ($1, NOW(), false)`,
+        [newUser.id]
+      );
+      console.log(`✅ [REGISTER] Запись в demo_trials создана для пользователя ID=${newUser.id}`);
+    }
 
     // Создаем запись в subscription_history
+    const historyEndDate = isAdminEmail ? 'NULL' : 'NOW() + INTERVAL \'3 days\'';
+    const historySource = isAdminEmail ? 'admin_auto' : 'регистрация';
+
     await client.query(
       `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
-       VALUES ($1, $2, NOW(), NOW() + INTERVAL '3 days', 'регистрация', 0.00, 'RUB')`,
-      [newUser.id, demoPlanId]
+       VALUES ($1, $2, NOW(), ${historyEndDate}, $3, 0.00, 'RUB')`,
+      [newUser.id, planId, historySource]
     );
     console.log(`✅ [REGISTER] Запись в subscription_history создана для пользователя ID=${newUser.id}`);
 

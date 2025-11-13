@@ -150,6 +150,9 @@ export function registerAdminRoutes(app) {
   app.patch('/api/admin/users/:userId/role', {
     preHandler: [authenticateToken, requireAdmin]
   }, async (req, reply) => {
+    // Получаем клиент для транзакции
+    const client = await pool.connect();
+
     try {
       const { userId } = req.params;
       const { role } = req.body;
@@ -169,7 +172,9 @@ export function registerAdminRoutes(app) {
         });
       }
 
-      const result = await pool.query(
+      await client.query('BEGIN');
+
+      const result = await client.query(
         `UPDATE users SET role = $1, updated_at = CURRENT_TIMESTAMP
          WHERE id = $2
          RETURNING id, email, username, role`,
@@ -177,19 +182,73 @@ export function registerAdminRoutes(app) {
       );
 
       if (result.rows.length === 0) {
+        await client.query('ROLLBACK');
         return reply.code(404).send({ error: 'Пользователь не найден' });
       }
 
       console.log(`[ADMIN] Роль пользователя изменена: user_id=${userId}, new_role=${role}, admin_id=${req.user.id}`);
 
+      // ============================================
+      // АВТОМАТИЧЕСКОЕ НАЗНАЧЕНИЕ ПРЕМИУМ ТАРИФА
+      // ============================================
+      // Если роль 'admin', устанавливаем Премиум тариф
+      if (role === 'admin') {
+        console.log(`[ADMIN] Назначение Премиум тарифа администратору ID=${userId}...`);
+
+        // Получаем ID премиум-тарифа
+        const premiumPlanResult = await client.query(
+          `SELECT id FROM subscription_plans WHERE code_name = 'premium'`
+        );
+
+        if (premiumPlanResult.rows.length === 0) {
+          console.error('❌ Премиум-тариф не найден в базе данных');
+          await client.query('ROLLBACK');
+          return reply.code(500).send({ error: 'Ошибка настройки тарифного плана' });
+        }
+
+        const premiumPlanId = premiumPlanResult.rows[0].id;
+
+        // Обновляем тариф пользователя
+        await client.query(
+          `UPDATE users
+           SET plan_id = $1,
+               subscription_started_at = NOW(),
+               subscription_expires_at = NULL,
+               boards_locked = FALSE,
+               boards_locked_at = NULL
+           WHERE id = $2`,
+          [premiumPlanId, userId]
+        );
+
+        // Разблокируем все доски (если были заблокированы)
+        const unlockedBoardsResult = await client.query(
+          `UPDATE boards SET is_locked = FALSE WHERE owner_id = $1`,
+          [userId]
+        );
+
+        const unlockedBoardsCount = unlockedBoardsResult.rowCount;
+
+        console.log(`[ADMIN] ✅ Администратору ${userId} назначен Премиум тариф`);
+        if (unlockedBoardsCount > 0) {
+          console.log(`[ADMIN] ✅ Разблокировано досок: ${unlockedBoardsCount}`);
+        }
+      }
+
+      await client.query('COMMIT');
+
       return reply.send({
         success: true,
-        message: `Роль пользователя изменена на "${role}"`,
+        message: role === 'admin'
+          ? `Роль пользователя изменена на "${role}" и назначен Премиум тариф`
+          : `Роль пользователя изменена на "${role}"`,
         user: result.rows[0]
       });
     } catch (err) {
+      await client.query('ROLLBACK');
       console.error('[ADMIN] Ошибка изменения роли пользователя:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
+    } finally {
+      client.release();
     }
   });
 
