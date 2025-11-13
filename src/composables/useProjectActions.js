@@ -317,22 +317,23 @@ export function useProjectActions() {
     URL.revokeObjectURL(url)
   }
 
-  const handleExportHTML = async () => {
+  // Генерация HTML-контента как blob (для экспорта и шеринга)
+  const generateHTMLBlob = async () => {
     const canvasRoot = document.getElementById('canvas')
     if (!canvasRoot) {
       console.warn('Элемент #canvas не найден, экспорт невозможен')
-      return
+      return null
     }
 
     const canvasContent = canvasRoot.querySelector('.canvas-content')
     if (!canvasContent) {
       alert('Не удалось найти содержимое холста для экспорта.')
-      return
+      return null
     }
 
     if (cardsStore.cards.length === 0 && connectionsStore.connections.length === 0) {
       alert('На доске нет элементов для экспорта.')
-      return
+      return null
     }
 
     const clone = canvasRoot.cloneNode(true)
@@ -382,13 +383,73 @@ export function useProjectActions() {
 
     const htmlContent = `<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Просмотр схемы</title><style>${cssText}<\/style></head><body style="background:${bodyBackground};">${clone.outerHTML}${viewOnlyScript}</body></html>`
 
-    const blob = new Blob([htmlContent], { type: 'text/html' })
+    return new Blob([htmlContent], { type: 'text/html' })
+  }
+
+  // Старая функция экспорта (сохранить как)
+  const handleExportHTML = async () => {
+    const blob = await generateHTMLBlob()
+    if (!blob) return
+
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     link.download = `scheme-${Date.now()}.html`
     link.click()
     URL.revokeObjectURL(url)
+  }
+
+  // Новая функция: Сохранить как
+  const handleSaveAsHTML = async () => {
+    await handleExportHTML()
+  }
+
+  // Новая функция: Поделиться через Web Share API
+  const handleShareProject = async (platform = null) => {
+    try {
+      const blob = await generateHTMLBlob()
+      if (!blob) return
+
+      const fileName = `project-${Date.now()}.html`
+      const file = new File([blob], fileName, { type: 'text/html' })
+
+      // Проверяем поддержку Web Share API
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: 'Мой проект',
+          text: 'Делюсь проектом с вами',
+          files: [file]
+        })
+        console.log('Успешно отправлено')
+      } else {
+        // Fallback для десктопа
+        console.log('Web Share API не поддерживается, используем fallback')
+
+        // Скачиваем файл
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = fileName
+        link.click()
+        URL.revokeObjectURL(url)
+
+        // Показываем инструкцию
+        if (platform === 'telegram') {
+          alert('Файл загружен. Откройте Telegram и отправьте файл вручную:\n\nДля десктопа: https://web.telegram.org\nДля мобильного: откройте приложение Telegram')
+        } else if (platform === 'vk') {
+          alert('Файл загружен. Откройте ВКонтакте и отправьте файл вручную:\n\nhttps://vk.com')
+        } else {
+          alert('Файл загружен. Откройте мессенджер и отправьте файл вручную.')
+        }
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('Пользователь отменил шеринг')
+      } else {
+        console.error('Ошибка при шеринге:', error)
+        alert('Не удалось поделиться проектом. Попробуйте скачать файл вручную.')
+      }
+    }
   }
 
   const handleExportSVG = async () => {
@@ -986,6 +1047,8 @@ export function useProjectActions() {
   return {
     handleSaveProject,
     handleExportHTML,
+    handleSaveAsHTML,
+    handleShareProject,
     handleExportSVG,
     handleExportPNG,
     handlePrint,

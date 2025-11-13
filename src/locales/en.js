@@ -48,6 +48,11 @@ export default {
   projectMenu: {
     saveJson: 'Save Project JSON',
     loadJson: 'Load Project JSON',
+    shareProject: 'Share Project',
+    saveAs: 'Save As',
+    share: 'Share',
+    shareTelegram: 'Telegram',
+    shareVk: 'VKontakte',
     exportHtml: 'Export to HTML',
     exportSvg: 'Export to SVG',
     exportPng: 'Export to PNG',
