@@ -835,7 +835,32 @@ app.get('/api/boards/:id', {
       return reply.code(404).send({ error: 'Доска не найдена' });
     }
 
-    return reply.send({ board: result.rows[0] });
+    const board = result.rows[0];
+
+    // Проверяем, заблокирована ли доска (только для не-администраторов)
+    if (!isAdmin && board.is_locked) {
+      // Получаем дату блокировки из таблицы users
+      const userResult = await pool.query(
+        'SELECT boards_locked_at FROM users WHERE id = $1',
+        [req.user.id]
+      );
+
+      if (userResult.rows.length > 0 && userResult.rows[0].boards_locked_at) {
+        const lockedAt = new Date(userResult.rows[0].boards_locked_at);
+        const now = new Date();
+        const daysPassed = Math.floor((now - lockedAt) / (1000 * 60 * 60 * 24));
+        const daysLeft = Math.max(0, 14 - daysPassed);
+
+        return reply.code(403).send({
+          error: 'Доска заблокирована',
+          message: `Эта доска заблокирована. Если в течение ${daysLeft} дней не произойдёт продление тарифа минимум на «Индивидуальный», доска будет автоматически удалена.`,
+          daysLeft: daysLeft,
+          locked: true
+        });
+      }
+    }
+
+    return reply.send({ board: board });
   } catch (err) {
     console.error('❌ Ошибка получения доски:', err);
     return reply.code(500).send({ error: 'Ошибка сервера' });
@@ -877,14 +902,49 @@ app.get('/api/boards/:id', {
         const { id } = req.params;
         const { name, description, content } = req.body;
 
+        // Администраторы могут обновить любую доску
+        const isAdmin = req.user.role === 'admin';
+
+        // Проверяем, не заблокирована ли доска (только для не-администраторов)
+        if (!isAdmin) {
+          const boardCheck = await pool.query(
+            'SELECT is_locked FROM boards WHERE id = $1 AND owner_id = $2',
+            [id, userId]
+          );
+
+          if (boardCheck.rows.length === 0) {
+            return reply.code(404).send({ error: 'Доска не найдена' });
+          }
+
+          if (boardCheck.rows[0].is_locked) {
+            // Получаем дату блокировки из таблицы users
+            const userResult = await pool.query(
+              'SELECT boards_locked_at FROM users WHERE id = $1',
+              [userId]
+            );
+
+            if (userResult.rows.length > 0 && userResult.rows[0].boards_locked_at) {
+              const lockedAt = new Date(userResult.rows[0].boards_locked_at);
+              const now = new Date();
+              const daysPassed = Math.floor((now - lockedAt) / (1000 * 60 * 60 * 24));
+              const daysLeft = Math.max(0, 14 - daysPassed);
+
+              return reply.code(403).send({
+                error: 'Доска заблокирована',
+                message: `Эта доска заблокирована. Если в течение ${daysLeft} дней не произойдёт продление тарифа минимум на «Индивидуальный», доска будет автоматически удалена.`,
+                daysLeft: daysLeft,
+                locked: true
+              });
+            }
+          }
+        }
+
         // Основная логика обновления доски
         let objectCount = 0;
         if (content && content.objects) {
           objectCount = content.objects.length;
         }
 
-        // Администраторы могут обновить любую доску
-        const isAdmin = req.user.role === 'admin';
         const query = isAdmin
           ? `UPDATE boards
              SET name = COALESCE($1, name),
@@ -928,6 +988,41 @@ app.delete('/api/boards/:id', {
 
     // Администраторы могут удалить любую доску
     const isAdmin = req.user.role === 'admin';
+
+    // Проверяем, не заблокирована ли доска (только для не-администраторов)
+    if (!isAdmin) {
+      const boardCheck = await pool.query(
+        'SELECT is_locked FROM boards WHERE id = $1 AND owner_id = $2',
+        [id, req.user.id]
+      );
+
+      if (boardCheck.rows.length === 0) {
+        return reply.code(404).send({ error: 'Доска не найдена' });
+      }
+
+      if (boardCheck.rows[0].is_locked) {
+        // Получаем дату блокировки из таблицы users
+        const userResult = await pool.query(
+          'SELECT boards_locked_at FROM users WHERE id = $1',
+          [req.user.id]
+        );
+
+        if (userResult.rows.length > 0 && userResult.rows[0].boards_locked_at) {
+          const lockedAt = new Date(userResult.rows[0].boards_locked_at);
+          const now = new Date();
+          const daysPassed = Math.floor((now - lockedAt) / (1000 * 60 * 60 * 24));
+          const daysLeft = Math.max(0, 14 - daysPassed);
+
+          return reply.code(403).send({
+            error: 'Доска заблокирована',
+            message: `Эта доска заблокирована. Если в течение ${daysLeft} дней не произойдёт продление тарифа минимум на «Индивидуальный», доска будет автоматически удалена.`,
+            daysLeft: daysLeft,
+            locked: true
+          });
+        }
+      }
+    }
+
     const query = isAdmin
       ? 'DELETE FROM boards WHERE id = $1 RETURNING id'
       : 'DELETE FROM boards WHERE id = $1 AND owner_id = $2 RETURNING id';
@@ -967,6 +1062,30 @@ app.post('/api/boards/:id/duplicate', {
     }
 
     const board = original.rows[0];
+
+    // Проверяем, не заблокирована ли доска (только для не-администраторов)
+    if (!isAdmin && board.is_locked) {
+      // Получаем дату блокировки из таблицы users
+      const userResult = await pool.query(
+        'SELECT boards_locked_at FROM users WHERE id = $1',
+        [req.user.id]
+      );
+
+      if (userResult.rows.length > 0 && userResult.rows[0].boards_locked_at) {
+        const lockedAt = new Date(userResult.rows[0].boards_locked_at);
+        const now = new Date();
+        const daysPassed = Math.floor((now - lockedAt) / (1000 * 60 * 60 * 24));
+        const daysLeft = Math.max(0, 14 - daysPassed);
+
+        return reply.code(403).send({
+          error: 'Доска заблокирована',
+          message: `Эта доска заблокирована. Если в течение ${daysLeft} дней не произойдёт продление тарифа минимум на «Индивидуальный», доска будет автоматически удалена.`,
+          daysLeft: daysLeft,
+          locked: true
+        });
+      }
+    }
+
     const result = await pool.query(
       `INSERT INTO boards (owner_id, name, description, content, object_count)
        VALUES ($1, $2, $3, $4, $5)
@@ -1014,7 +1133,7 @@ app.post('/api/boards/:id/thumbnail', {
     }
 
     const boardResult = await pool.query(
-      'SELECT owner_id FROM boards WHERE id = $1',
+      'SELECT owner_id, is_locked FROM boards WHERE id = $1',
       [boardId]
     );
 
@@ -1026,6 +1145,29 @@ app.post('/api/boards/:id/thumbnail', {
     const isAdmin = req.user.role === 'admin';
     if (!isAdmin && boardResult.rows[0].owner_id !== req.user.id) {
       return reply.code(403).send({ error: 'Нет доступа' });
+    }
+
+    // Проверяем, не заблокирована ли доска (только для не-администраторов)
+    if (!isAdmin && boardResult.rows[0].is_locked) {
+      // Получаем дату блокировки из таблицы users
+      const userResult = await pool.query(
+        'SELECT boards_locked_at FROM users WHERE id = $1',
+        [req.user.id]
+      );
+
+      if (userResult.rows.length > 0 && userResult.rows[0].boards_locked_at) {
+        const lockedAt = new Date(userResult.rows[0].boards_locked_at);
+        const now = new Date();
+        const daysPassed = Math.floor((now - lockedAt) / (1000 * 60 * 60 * 24));
+        const daysLeft = Math.max(0, 14 - daysPassed);
+
+        return reply.code(403).send({
+          error: 'Доска заблокирована',
+          message: `Эта доска заблокирована. Если в течение ${daysLeft} дней не произойдёт продление тарифа минимум на «Индивидуальный», доска будет автоматически удалена.`,
+          daysLeft: daysLeft,
+          locked: true
+        });
+      }
     }
 
     const boardsDir = path.join(__dirname, 'uploads', 'boards');
