@@ -8,6 +8,7 @@
  * 4. Закрытие демо-периодов (ежедневно 02:00)
  * 5. Автоматическая смена тарифа с Демо на Гостевой (ежедневно 02:30)
  * 6. Блокировка досок при окончании платной подписки (ежедневно 01:00)
+ * 7. Удаление заблокированных досок через 14 дней (ежедневно 03:00)
  */
 
 import cron from 'node-cron';
@@ -614,6 +615,100 @@ async function lockBoardsAfterExpiry() {
 }
 
 // ============================================
+// 7. Удаление заблокированных досок через 14 дней
+// ============================================
+
+/**
+ * Удаляет заблокированные доски через 14 дней после блокировки
+ * Сбрасывает флаги boards_locked и boards_locked_at
+ * Запускается ежедневно в 03:00
+ */
+async function deleteLockedBoardsAfter14Days() {
+  console.log('\n🗑️  Крон-задача: Удаление заблокированных досок через 14 дней');
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Находим пользователей, у которых доски заблокированы более 14 дней
+    const usersToDeleteQuery = `
+      SELECT
+        u.id,
+        u.email,
+        u.boards_locked_at,
+        u.telegram_chat_id
+      FROM users u
+      WHERE
+        u.boards_locked = TRUE
+        AND u.boards_locked_at < NOW() - INTERVAL '14 days'
+    `;
+
+    const usersToDelete = await client.query(usersToDeleteQuery);
+
+    console.log(`✅ Найдено пользователей с досками, заблокированными более 14 дней: ${usersToDelete.rows.length}`);
+
+    let successCount = 0;
+    let totalDeletedBoards = 0;
+
+    // 2. Для каждого пользователя удалить заблокированные доски
+    for (const user of usersToDelete.rows) {
+      try {
+        // Удаляем заблокированные доски пользователя
+        const deleteBoardsResult = await client.query(
+          `DELETE FROM boards
+           WHERE owner_id = $1 AND is_locked = TRUE
+           RETURNING id`,
+          [user.id]
+        );
+
+        const deletedCount = deleteBoardsResult.rowCount;
+        totalDeletedBoards += deletedCount;
+
+        // Обновляем статус пользователя - сбрасываем флаги блокировки
+        await client.query(
+          `UPDATE users
+           SET boards_locked = FALSE,
+               boards_locked_at = NULL
+           WHERE id = $1`,
+          [user.id]
+        );
+
+        console.log(`  ✅ Пользователь ${user.email}: удалено досок ${deletedCount}, флаги блокировки сброшены`);
+        successCount++;
+
+        // Логируем удаление досок
+        await logToSystem('info', 'locked_boards_deleted_after_14_days', {
+          userId: user.id,
+          email: user.email,
+          deletedBoardsCount: deletedCount,
+          lockedAt: user.boards_locked_at,
+          deletedAt: new Date().toISOString()
+        });
+
+      } catch (error) {
+        console.error(`  ❌ Ошибка обработки пользователя ${user.email}:`, error.message);
+        await logToSystem('error', 'locked_boards_deletion_failed', {
+          userId: user.id,
+          email: user.email,
+          error: error.message
+        });
+      }
+    }
+
+    await client.query('COMMIT');
+    console.log(`\n📊 Результаты: обработано пользователей ${successCount}, удалено досок ${totalDeletedBoards}`);
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка в задаче deleteLockedBoardsAfter14Days:', error);
+    await logToSystem('error', 'delete_locked_boards_after_14_days_failed', { error: error.message });
+  } finally {
+    client.release();
+  }
+}
+
+// ============================================
 // Вспомогательные функции
 // ============================================
 
@@ -695,6 +790,14 @@ export function initializeCronTasks() {
   });
   console.log('✅ Задача 6: Блокировка досок при окончании платной подписки (ежедневно 01:00 МСК)');
 
+  // 7. Удаление заблокированных досок через 14 дней - каждый день в 03:00
+  cron.schedule('0 3 * * *', () => {
+    deleteLockedBoardsAfter14Days();
+  }, {
+    timezone: 'Europe/Moscow'
+  });
+  console.log('✅ Задача 7: Удаление заблокированных досок через 14 дней (ежедневно 03:00 МСК)');
+
   console.log('\n✅ Все крон-задачи успешно инициализированы!\n');
 }
 
@@ -705,5 +808,6 @@ export {
   cleanupOldSessions,
   closeDemoPeriods,
   switchDemoToGuest,
-  lockBoardsAfterExpiry
+  lockBoardsAfterExpiry,
+  deleteLockedBoardsAfter14Days
 };
