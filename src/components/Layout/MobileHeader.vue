@@ -412,7 +412,7 @@ watch(
                   class="mobile-share-menu__item"
                   :class="{ 'mobile-share-menu__item--active': showShareSubmenu }"
                   type="button"
-                  @click="toggleShareSubmenu"
+                  @click.stop="toggleShareSubmenu"
                 >
                   📤 Поделиться
                   <span class="mobile-share-menu__arrow" :class="{ 'mobile-share-menu__arrow--rotated': showShareSubmenu }">▸</span>
@@ -983,6 +983,7 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow: hidden;
 }
 
 .mobile-share-menu__submenu-item {
@@ -1018,10 +1019,19 @@ watch(
 .submenu-slide-leave-active {
   transition: opacity 0.2s ease, max-height 0.3s ease;
   overflow: hidden;
-  max-height: 300px;
 }
 
-.submenu-slide-enter-from,
+.submenu-slide-enter-from {
+  opacity: 0;
+  max-height: 0;
+}
+
+.submenu-slide-enter-to,
+.submenu-slide-leave-from {
+  opacity: 1;
+  max-height: 200px;
+}
+
 .submenu-slide-leave-to {
   opacity: 0;
   max-height: 0;
