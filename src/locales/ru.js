@@ -46,8 +46,8 @@ export default {
     language: 'Язык'
   },
   projectMenu: {
-    saveJson: 'Сохранить проект JSON',
-    loadJson: 'Загрузить проект JSON',
+    saveJson: 'Сохранить проект',
+    loadJson: 'Загрузить проект',
     exportHtml: 'Экспорт в HTML',
     exportSvg: 'Экспорт в SVG',
     exportPng: 'Экспорт в PNG',
