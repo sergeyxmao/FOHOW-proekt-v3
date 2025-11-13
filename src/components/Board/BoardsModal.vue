@@ -48,12 +48,17 @@
             </div>
 
             <div v-else class="boards-grid">
-              <div 
-                v-for="board in boards" 
+              <div
+                v-for="board in boards"
                 :key="board.id"
                 class="board-card"
-                @click="openBoard(board.id)"
+                :class="{ 'locked': board.is_locked }"
+                @click="openBoard(board)"
               >
+                <div v-if="board.is_locked" class="lock-indicator">
+                  <span class="lock-icon">🔒</span>
+                </div>
+
                 <div class="board-thumbnail">
                   <img
                     v-if="board.thumbnail_url"
@@ -63,7 +68,7 @@
                   >
                   <div v-else class="board-placeholder">🎨</div>
                 </div>
-                
+
                 <div class="board-info">
                   <h3>{{ board.name }}</h3>
                   <p class="board-meta">📅 {{ formatDate(board.updated_at) }}</p>
@@ -71,12 +76,12 @@
                     <span class="stat">📦 {{ board.object_count }} объектов</span>
                   </div>
                 </div>
-                
+
                 <div class="board-actions" @click.stop>
                   <button class="btn-menu" @click="toggleMenu(board.id)">⋯</button>
                   <transition name="dropdown">
                     <div v-if="activeMenu === board.id" class="dropdown-menu">
-                      <button @click="openBoard(board.id)">📂 Открыть</button>
+                      <button @click="openBoard(board)">📂 Открыть</button>
                       <button @click="renameBoard(board)">✏️ Переименовать</button>
                       <FeatureGate feature="can_duplicate_boards" displayMode="hide" :showUpgrade="false">
                         <button @click="duplicateBoard(board.id)">📋 Дублировать</button>
@@ -90,6 +95,28 @@
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Модальное окно для заблокированной доски -->
+    <Transition name="modal-fade">
+      <div v-if="showLockedModal" class="locked-modal-overlay" @click="showLockedModal = false">
+        <div class="locked-modal-content" @click.stop>
+          <button class="locked-modal-close" @click="showLockedModal = false">✕</button>
+
+          <div class="locked-modal-icon">🔒</div>
+          <h2>Доска заблокирована</h2>
+          <p class="locked-modal-message">{{ lockedMessage }}</p>
+
+          <div class="locked-modal-actions">
+            <button class="btn-upgrade" @click="goToPayment">
+              Продлить тариф
+            </button>
+            <button class="btn-cancel" @click="showLockedModal = false">
+              Закрыть
+            </button>
           </div>
         </div>
       </div>
@@ -123,6 +150,8 @@ const boards = ref([])
 const loading = ref(false)
 const error = ref('')
 const activeMenu = ref(null)
+const showLockedModal = ref(false)
+const lockedMessage = ref('')
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
@@ -235,9 +264,47 @@ async function createNewBoard() {
   }
 }
 
-function openBoard(id) {
-  emit('open-board', id)
+function openBoard(board) {
+  // Если передан только ID (из меню), найдем доску
+  const boardData = typeof board === 'object' ? board : boards.value.find(b => b.id === board)
+
+  if (!boardData) {
+    return
+  }
+
+  // Проверяем, заблокирована ли доска
+  if (boardData.is_locked) {
+    // Вычисляем количество дней до удаления
+    const daysUntilDeletion = calculateDaysUntilDeletion(boardData.locked_at)
+
+    lockedMessage.value = `Эта доска заблокирована. Если в течение ${daysUntilDeletion} дней не произойдет продление тарифа минимум на «Индивидуальный», доска будет автоматически удалена.`
+    showLockedModal.value = true
+    return
+  }
+
+  // Если доска не заблокирована, открываем ее
+  emit('open-board', boardData.id)
   close()
+}
+
+function calculateDaysUntilDeletion(lockedAt) {
+  if (!lockedAt) return 14 // По умолчанию 14 дней
+
+  const lockDate = new Date(lockedAt)
+  const deletionDate = new Date(lockDate)
+  deletionDate.setDate(deletionDate.getDate() + 14) // 14 дней с момента блокировки
+
+  const now = new Date()
+  const diffTime = deletionDate - now
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  return Math.max(0, diffDays)
+}
+
+function goToPayment() {
+  showLockedModal.value = false
+  close()
+  window.location.href = '/pricing'
 }
 
 function close() {
@@ -693,6 +760,148 @@ function formatDate(dateString) {
   color: #f44336;
 }
 
+/* Стили для заблокированных досок */
+.board-card.locked {
+  opacity: 0.6;
+  filter: grayscale(50%);
+  position: relative;
+}
+
+.board-card.locked::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  border-radius: 16px;
+  z-index: 1;
+}
+
+.board-card.locked:hover {
+  opacity: 0.7;
+}
+
+.lock-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.lock-icon {
+  font-size: 48px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+}
+
+/* Стили для модального окна заблокированной доски */
+.locked-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001; /* Выше чем основное модальное окно досок */
+}
+
+.locked-modal-content {
+  background: white;
+  border-radius: 24px;
+  padding: 40px;
+  max-width: 500px;
+  width: 90%;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.locked-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f5f5f5;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.locked-modal-close:hover {
+  background: #e0e0e0;
+  transform: rotate(90deg);
+}
+
+.locked-modal-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.locked-modal-content h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: #333;
+}
+
+.locked-modal-message {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #666;
+  margin: 0 0 32px 0;
+}
+
+.locked-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-upgrade {
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-upgrade:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-cancel {
+  padding: 14px 28px;
+  background: #f5f5f5;
+  color: #666;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancel:hover {
+  background: #e0e0e0;
+}
+
 .modal-enter-active,
 .modal-leave-active {
   transition: opacity 0.3s ease;
@@ -709,6 +918,36 @@ function formatDate(dateString) {
 
 .modal-leave-active .modal-content {
   animation: scaleIn 0.3s ease reverse;
+}
+
+/* Анимация для модального окна заблокированной доски */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-active .locked-modal-content {
+  animation: scaleIn 0.3s ease;
+}
+
+.modal-fade-leave-active .locked-modal-content {
+  animation: scaleIn 0.3s ease reverse;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* Анимация для dropdown */
