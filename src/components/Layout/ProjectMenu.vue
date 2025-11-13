@@ -26,7 +26,7 @@ const {
 } = useProjectActions()
 
 const showExportModal = ref(false)
-const activeSubmenu = ref(null)
+const activeSubmenus = ref(new Set())
 
 const openExportModal = () => {
   showExportModal.value = true
@@ -37,11 +37,17 @@ const closeExportModal = () => {
 }
 
 const toggleSubmenu = (itemId) => {
-  if (activeSubmenu.value === itemId) {
-    activeSubmenu.value = null
+  if (activeSubmenus.value.has(itemId)) {
+    activeSubmenus.value.delete(itemId)
   } else {
-    activeSubmenu.value = itemId
+    activeSubmenus.value.add(itemId)
   }
+  // Принудительно обновляем reactive ссылку
+  activeSubmenus.value = new Set(activeSubmenus.value)
+}
+
+const isSubmenuActive = (itemId) => {
+  return activeSubmenus.value.has(itemId)
 }
 
 const handleExport = async (settings) => {
@@ -158,7 +164,7 @@ const handleItemClick = async (item) => {
           <button
             type="button"
             class="project-menu__item"
-            :class="{ 'project-menu__item--has-submenu': item.hasSubmenu, 'project-menu__item--active': activeSubmenu === item.id }"
+            :class="{ 'project-menu__item--has-submenu': item.hasSubmenu, 'project-menu__item--active': isSubmenuActive(item.id) }"
             role="menuitem"
             @click="handleItemClick(item)"
           >
@@ -168,13 +174,13 @@ const handleItemClick = async (item) => {
           </button>
 
           <transition name="submenu-slide">
-            <div v-if="item.hasSubmenu && activeSubmenu === item.id" class="project-menu__submenu">
+            <div v-if="item.hasSubmenu && isSubmenuActive(item.id)" class="project-menu__submenu">
               <template v-for="subitem in item.submenu" :key="subitem.id">
                 <div class="project-menu__submenu-item-wrapper">
                   <button
                     type="button"
                     class="project-menu__submenu-item"
-                    :class="{ 'project-menu__submenu-item--has-submenu': subitem.hasSubmenu, 'project-menu__submenu-item--active': activeSubmenu === subitem.id }"
+                    :class="{ 'project-menu__submenu-item--has-submenu': subitem.hasSubmenu, 'project-menu__submenu-item--active': isSubmenuActive(subitem.id) }"
                     @click="handleItemClick(subitem)"
                   >
                     <span class="project-menu__icon" aria-hidden="true">{{ subitem.icon }}</span>
@@ -183,7 +189,7 @@ const handleItemClick = async (item) => {
                   </button>
 
                   <transition name="submenu-slide">
-                    <div v-if="subitem.hasSubmenu && activeSubmenu === subitem.id" class="project-menu__submenu project-menu__submenu--nested">
+                    <div v-if="subitem.hasSubmenu && isSubmenuActive(subitem.id)" class="project-menu__submenu project-menu__submenu--nested">
                       <button
                         v-for="nestedItem in subitem.submenu"
                         :key="nestedItem.id"
