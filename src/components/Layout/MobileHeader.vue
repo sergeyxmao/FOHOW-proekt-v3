@@ -6,8 +6,9 @@ import { useHistoryStore } from '@/stores/history'
 import { useCanvasStore } from '@/stores/canvas'
 import { useBoardStore } from '@/stores/board'
 import { useMobileStore } from '@/stores/mobile'
+import { useProjectActions } from '@/composables/useProjectActions'
 import { storeToRefs } from 'pinia'
- 
+
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -34,7 +35,9 @@ const mobileStore = useMobileStore()
 const { isAuthenticated, user, isLoadingProfile } = storeToRefs(authStore)
 const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
 const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
- 
+
+const { handleSaveAsHTML, handleShareProject } = useProjectActions()
+
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 const lastSavedFormatter = new Intl.DateTimeFormat('ru-RU', {
   hour: '2-digit',
@@ -51,6 +54,8 @@ const userInitials = computed(() => {
 
 const isHierarchyMode = computed(() => canvasStore.isHierarchicalDragMode)
 const showUserMenu = ref(false)
+const showShareMenu = ref(false)
+const showShareSubmenu = ref(false)
 const userMenuRef = ref(null)
 const userMenuTriggerRef = ref(null)
 const formattedLastSaved = computed(() => {
@@ -147,7 +152,26 @@ const handleLoadJSON = () => {
 }
 
 const handleExportHTML = () => {
-  emit('export-html')
+  showShareMenu.value = true
+}
+
+const closeShareMenu = () => {
+  showShareMenu.value = false
+  showShareSubmenu.value = false
+}
+
+const toggleShareSubmenu = () => {
+  showShareSubmenu.value = !showShareSubmenu.value
+}
+
+const handleSaveAs = async () => {
+  await handleSaveAsHTML()
+  closeShareMenu()
+}
+
+const handleShare = async (platform) => {
+  await handleShareProject(platform)
+  closeShareMenu()
 }
 
 function getAvatarUrl(url) {
@@ -236,13 +260,13 @@ watch(
           <span class="button-icon">📂</span>
         </button>
 
-        <!-- Экспортировать HTML -->
+        <!-- Поделиться проектом -->
         <button
           v-if="isAuthenticated"
           class="mobile-header-button"
           type="button"
           @click="handleExportHTML"
-          title="Экспортировать HTML"
+          title="Поделиться проектом"
         >
           <span class="button-icon">📄</span>
         </button>
@@ -358,7 +382,58 @@ watch(
           </div>
         </div>
       </transition>
-    </Teleport>   
+    </Teleport>
+
+    <!-- Модальное окно для меню "Поделиться" -->
+    <Teleport to="body">
+      <transition name="fade">
+        <div
+          v-if="showShareMenu"
+          class="mobile-share-menu-overlay"
+          :class="{ 'mobile-share-menu-overlay--dark': isModernTheme }"
+          @click.self="closeShareMenu"
+        >
+          <div
+            :class="['mobile-share-menu', { 'mobile-share-menu--dark': isModernTheme }]"
+          >
+            <button class="mobile-share-menu__close" type="button" @click="closeShareMenu">✕</button>
+
+            <div class="mobile-share-menu__title">
+              Поделиться проектом
+            </div>
+
+            <div class="mobile-share-menu__section">
+              <button class="mobile-share-menu__item" type="button" @click="handleSaveAs">
+                💾 Сохранить как
+              </button>
+
+              <div class="mobile-share-menu__item-wrapper">
+                <button
+                  class="mobile-share-menu__item"
+                  :class="{ 'mobile-share-menu__item--active': showShareSubmenu }"
+                  type="button"
+                  @click="toggleShareSubmenu"
+                >
+                  📤 Поделиться
+                  <span class="mobile-share-menu__arrow" :class="{ 'mobile-share-menu__arrow--rotated': showShareSubmenu }">▸</span>
+                </button>
+
+                <transition name="submenu-slide">
+                  <div v-if="showShareSubmenu" class="mobile-share-menu__submenu">
+                    <button class="mobile-share-menu__submenu-item" type="button" @click="handleShare('telegram')">
+                      ✈️ Telegram
+                    </button>
+                    <button class="mobile-share-menu__submenu-item" type="button" @click="handleShare('vk')">
+                      🔵 ВКонтакте
+                    </button>
+                  </div>
+                </transition>
+              </div>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
@@ -771,6 +846,194 @@ watch(
   .mobile-user-menu__item {
     font-size: 14px;
     padding: 10px 12px;
-  } 
+  }
+}
+
+/* Стили для модального окна "Поделиться" */
+.mobile-share-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 2500;
+  backdrop-filter: blur(6px);
+}
+
+.mobile-share-menu-overlay--dark {
+  background: rgba(11, 16, 28, 0.6);
+}
+
+.mobile-share-menu {
+  position: relative;
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.98);
+  color: #0f172a;
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.mobile-share-menu--dark {
+  background: rgba(28, 38, 58, 0.96);
+  color: #e5f3ff;
+  box-shadow: 0 24px 48px rgba(5, 10, 18, 0.45);
+  border: 1px solid rgba(229, 243, 255, 0.1);
+}
+
+.mobile-share-menu__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(15, 23, 42, 0.08);
+  color: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.mobile-share-menu--dark .mobile-share-menu__close {
+  background: rgba(229, 243, 255, 0.12);
+}
+
+.mobile-share-menu__close:hover {
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.mobile-share-menu--dark .mobile-share-menu__close:hover {
+  background: rgba(229, 243, 255, 0.2);
+}
+
+.mobile-share-menu__title {
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  padding-right: 34px;
+  color: inherit;
+}
+
+.mobile-share-menu__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-share-menu__item-wrapper {
+  position: relative;
+}
+
+.mobile-share-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: none;
+  background: rgba(15, 23, 42, 0.04);
+  color: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+  width: 100%;
+}
+
+.mobile-share-menu__item:hover {
+  background: rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.mobile-share-menu__item--active {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.mobile-share-menu--dark .mobile-share-menu__item {
+  background: rgba(229, 243, 255, 0.05);
+}
+
+.mobile-share-menu--dark .mobile-share-menu__item:hover {
+  background: rgba(229, 243, 255, 0.12);
+}
+
+.mobile-share-menu__arrow {
+  margin-left: auto;
+  font-size: 14px;
+  transition: transform 0.2s ease;
+}
+
+.mobile-share-menu__arrow--rotated {
+  transform: rotate(90deg);
+}
+
+.mobile-share-menu__submenu {
+  margin-top: 8px;
+  margin-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-share-menu__submenu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(15, 23, 42, 0.03);
+  color: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+  width: 100%;
+}
+
+.mobile-share-menu__submenu-item:hover {
+  background: rgba(59, 130, 246, 0.08);
+  transform: translateX(2px);
+}
+
+.mobile-share-menu--dark .mobile-share-menu__submenu-item {
+  background: rgba(229, 243, 255, 0.04);
+}
+
+.mobile-share-menu--dark .mobile-share-menu__submenu-item:hover {
+  background: rgba(229, 243, 255, 0.1);
+}
+
+.submenu-slide-enter-active,
+.submenu-slide-leave-active {
+  transition: opacity 0.2s ease, max-height 0.3s ease;
+  overflow: hidden;
+  max-height: 300px;
+}
+
+.submenu-slide-enter-from,
+.submenu-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

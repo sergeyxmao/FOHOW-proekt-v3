@@ -18,12 +18,15 @@ const {
   handleSaveProject,
   handleLoadProject,
   handleExportHTML,
+  handleSaveAsHTML,
+  handleShareProject,
   handleExportSVG,
   handleExportPNG,
   handlePrint
 } = useProjectActions()
 
 const showExportModal = ref(false)
+const activeSubmenu = ref(null)
 
 const openExportModal = () => {
   showExportModal.value = true
@@ -31,6 +34,14 @@ const openExportModal = () => {
 
 const closeExportModal = () => {
   showExportModal.value = false
+}
+
+const toggleSubmenu = (itemId) => {
+  if (activeSubmenu.value === itemId) {
+    activeSubmenu.value = null
+  } else {
+    activeSubmenu.value = itemId
+  }
 }
 
 const handleExport = async (settings) => {
@@ -56,10 +67,38 @@ const items = computed(() => [
     action: handleLoadProject
   },
   {
-    id: 'export-html',
+    id: 'share-project',
     icon: '📄',
-    label: t('projectMenu.exportHtml'),
-    action: handleExportHTML
+    label: t('projectMenu.shareProject'),
+    hasSubmenu: true,
+    submenu: [
+      {
+        id: 'save-as',
+        icon: '💾',
+        label: t('projectMenu.saveAs'),
+        action: handleSaveAsHTML
+      },
+      {
+        id: 'share',
+        icon: '📤',
+        label: t('projectMenu.share'),
+        hasSubmenu: true,
+        submenu: [
+          {
+            id: 'share-telegram',
+            icon: '✈️',
+            label: t('projectMenu.shareTelegram'),
+            action: () => handleShareProject('telegram')
+          },
+          {
+            id: 'share-vk',
+            icon: '🔵',
+            label: t('projectMenu.shareVk'),
+            action: () => handleShareProject('vk')
+          }
+        ]
+      }
+    ]
   },
   {
     id: 'export-svg',
@@ -82,6 +121,11 @@ const items = computed(() => [
 ])
 
 const handleItemClick = async (item) => {
+  if (item.hasSubmenu) {
+    toggleSubmenu(item.id)
+    return
+  }
+
   if (typeof item.action === 'function') {
     // Для экспорта PNG не закрываем меню сразу - модальное окно само закроет
     if (item.id === 'export-png') {
@@ -109,17 +153,55 @@ const handleItemClick = async (item) => {
       :class="{ 'project-menu--modern': props.isModernTheme }"
       role="menu"
     >
-      <button
-        v-for="item in items"
-        :key="item.id"
-        type="button"
-        class="project-menu__item"
-        role="menuitem"
-        @click="handleItemClick(item)"
-      >
-        <span class="project-menu__icon" aria-hidden="true">{{ item.icon }}</span>
-        <span class="project-menu__label">{{ item.label }}</span>
-      </button>
+      <template v-for="item in items" :key="item.id">
+        <div class="project-menu__item-wrapper">
+          <button
+            type="button"
+            class="project-menu__item"
+            :class="{ 'project-menu__item--has-submenu': item.hasSubmenu, 'project-menu__item--active': activeSubmenu === item.id }"
+            role="menuitem"
+            @click="handleItemClick(item)"
+          >
+            <span class="project-menu__icon" aria-hidden="true">{{ item.icon }}</span>
+            <span class="project-menu__label">{{ item.label }}</span>
+            <span v-if="item.hasSubmenu" class="project-menu__arrow">▸</span>
+          </button>
+
+          <transition name="submenu-slide">
+            <div v-if="item.hasSubmenu && activeSubmenu === item.id" class="project-menu__submenu">
+              <template v-for="subitem in item.submenu" :key="subitem.id">
+                <div class="project-menu__submenu-item-wrapper">
+                  <button
+                    type="button"
+                    class="project-menu__submenu-item"
+                    :class="{ 'project-menu__submenu-item--has-submenu': subitem.hasSubmenu, 'project-menu__submenu-item--active': activeSubmenu === subitem.id }"
+                    @click="handleItemClick(subitem)"
+                  >
+                    <span class="project-menu__icon" aria-hidden="true">{{ subitem.icon }}</span>
+                    <span class="project-menu__label">{{ subitem.label }}</span>
+                    <span v-if="subitem.hasSubmenu" class="project-menu__arrow">▸</span>
+                  </button>
+
+                  <transition name="submenu-slide">
+                    <div v-if="subitem.hasSubmenu && activeSubmenu === subitem.id" class="project-menu__submenu project-menu__submenu--nested">
+                      <button
+                        v-for="nestedItem in subitem.submenu"
+                        :key="nestedItem.id"
+                        type="button"
+                        class="project-menu__submenu-item"
+                        @click="handleItemClick(nestedItem)"
+                      >
+                        <span class="project-menu__icon" aria-hidden="true">{{ nestedItem.icon }}</span>
+                        <span class="project-menu__label">{{ nestedItem.label }}</span>
+                      </button>
+                    </div>
+                  </transition>
+                </div>
+              </template>
+            </div>
+          </transition>
+        </div>
+      </template>
     </div>
 
     <transition name="export-panel-fade">
@@ -144,6 +226,10 @@ const handleItemClick = async (item) => {
   gap: 8px;
 }
 
+.project-menu__item-wrapper {
+  position: relative;
+}
+
 .project-menu__item {
   display: flex;
   align-items: center;
@@ -157,6 +243,7 @@ const handleItemClick = async (item) => {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
 }
 
 .project-menu__item:hover {
@@ -171,7 +258,13 @@ const handleItemClick = async (item) => {
   background: rgba(37, 99, 235, 0.16);
   color: #1e3a8a;
 }
-.project-menu--modern .project-menu__item {  
+
+.project-menu__item--active {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+}
+
+.project-menu--modern .project-menu__item {
   border-color: rgba(96, 164, 255, 0.32);
   background: rgba(24, 34, 58, 0.92);
   color: #e5f3ff;
@@ -201,6 +294,83 @@ const handleItemClick = async (item) => {
   flex: 1;
   text-align: left;
   white-space: nowrap;
+}
+
+.project-menu__arrow {
+  font-size: 14px;
+  transition: transform 0.2s ease;
+  margin-left: auto;
+}
+
+.project-menu__item--active .project-menu__arrow {
+  transform: rotate(90deg);
+}
+
+.project-menu__submenu {
+  margin-top: 8px;
+  margin-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.project-menu__submenu--nested {
+  margin-left: 20px;
+}
+
+.project-menu__submenu-item-wrapper {
+  position: relative;
+}
+
+.project-menu__submenu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.8);
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  width: 100%;
+}
+
+.project-menu__submenu-item:hover {
+  transform: translateX(2px);
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+}
+
+.project-menu__submenu-item--active {
+  background: rgba(59, 130, 246, 0.1);
+  color: #1d4ed8;
+}
+
+.project-menu--modern .project-menu__submenu-item {
+  border-color: rgba(96, 164, 255, 0.2);
+  background: rgba(24, 34, 58, 0.85);
+  color: #e5f3ff;
+}
+
+.project-menu--modern .project-menu__submenu-item:hover {
+  background: rgba(96, 164, 255, 0.22);
+  color: #0b1324;
+}
+
+.submenu-slide-enter-active,
+.submenu-slide-leave-active {
+  transition: opacity 0.2s ease, max-height 0.3s ease;
+  overflow: hidden;
+  max-height: 500px;
+}
+
+.submenu-slide-enter-from,
+.submenu-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
 }
 
 .project-menu-wrapper {
