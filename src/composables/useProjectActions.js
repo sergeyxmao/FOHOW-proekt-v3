@@ -405,16 +405,6 @@ export function useProjectActions() {
   }
 
   // Новая функция: Поделиться через Web Share API
-   const isDesktopDevice = () => {
-    if (typeof navigator === 'undefined') {
-      return false
-    }
-
-    return !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-    )
-  }
- 
   const handleShareProject = async (platform = null) => {
     try {
       const blob = await generateHTMLBlob()
@@ -446,18 +436,8 @@ export function useProjectActions() {
         // Открываем соответствующий сервис в новом окне
         setTimeout(() => {
           if (platform === 'telegram') {
-            const shareText = `Делюсь проектом. Прикрепите файл ${fileName}`
-
-            if (isDesktopDevice()) {
-              // Открываем десктопную версию Telegram
-              window.open(`tg://msg?text=${encodeURIComponent(shareText)}`, '_blank')
-            } else {
-              // Открываем веб-версию Telegram для мобильных устройств
-              window.open(
-                `https://t.me/share/url?text=${encodeURIComponent(shareText)}`,
-                '_blank'
-              )
-            }
+            // Открываем веб-версию Telegram
+            window.open('https://web.telegram.org', '_blank')
           } else if (platform === 'vk') {
             // Открываем ВКонтакте
             window.open('https://vk.com', '_blank')
