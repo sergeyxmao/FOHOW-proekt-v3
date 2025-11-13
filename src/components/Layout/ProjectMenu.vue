@@ -19,7 +19,6 @@ const {
   handleLoadProject,
   handleExportHTML,
   handleSaveAsHTML,
-  handleShareProject,
   handleExportSVG,
   handleExportPNG,
   handlePrint
@@ -83,26 +82,7 @@ const items = computed(() => [
         icon: '💾',
         label: t('projectMenu.saveAs'),
         action: handleSaveAsHTML
-      },
-      {
-        id: 'share',
-        icon: '📤',
-        label: t('projectMenu.share'),
-        hasSubmenu: true,
-        submenu: [
-          {
-            id: 'share-telegram',
-            icon: '✈️',
-            label: t('projectMenu.shareTelegram'),
-            action: () => handleShareProject('telegram')
-          },
-          {
-            id: 'share-vk',
-            icon: '🔵',
-            label: t('projectMenu.shareVk'),
-            action: () => handleShareProject('vk')
-          }
-        ]
+  
       }
     ]
   },
