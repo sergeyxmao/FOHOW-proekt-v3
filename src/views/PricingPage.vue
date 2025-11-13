@@ -142,10 +142,8 @@ const featureLabels = {
   // Лимиты
   'max_boards': (value) => value === -1 ? '∞ Безлимитные доски' : `📊 До ${value} досок`,
   'max_notes': (value) => value === -1 ? '∞ Безлимитные заметки' : `📝 До ${value} заметок`,
-  'max_notes_per_board': (value) => value === -1 ? '∞ Безлимитные заметки' : `📝 До ${value} заметок на доске`,
   'max_stickers': (value) => value === -1 ? '∞ Безлимитные стикеры' : `🎨 До ${value} стикеров`,
-  'max_stickers_per_board': (value) => value === -1 ? '∞ Безлимитные стикеры' : `🎨 До ${value} стикеров на доске`,
-  'max_cards': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек`,
+  'max_licenses': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек`,
   'max_cards_per_board': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек на доске`,
   'max_comments': (value) => value === -1 ? '∞ Безлимитные комментарии' : `💬 До ${value} комментариев`,
   'max_team_members': (value) => `👥 До ${value} участников`,
@@ -153,8 +151,20 @@ const featureLabels = {
   // Булевы функции
   'can_export_pdf': '📄 Экспорт в PDF',
   'can_export_png': '🖼️ Экспорт в PNG',
+  'can_export_png_bw': '⬛ Экспорт PNG (Ч/Б)',
+  'can_export_png_formats': (value) => {
+    if (Array.isArray(value) && value.length > 0) {
+      return `📏 Форматы PNG: ${value.join(', ')}`
+    }
+    return '📏 Экспорт в разных форматах'
+  },
   'can_export_svg': '📐 Экспорт в SVG',
   'can_export_html': '🌐 Экспорт в HTML',
+  'can_save_project': '💾 Сохранение проекта',
+  'can_load_project': '📂 Загрузка проекта',
+  'can_share_project': '🔗 Поделиться проектом',
+  'can_share_boards': '🔗 Поделиться досками',
+  'can_invite_drawing': '✏️ Приглашение к рисованию',
   'can_duplicate_boards': '📋 Дублирование досок',
   'can_use_templates': '📑 Готовые шаблоны',
   'can_invite_members': '👥 Приглашение участников',
@@ -174,11 +184,20 @@ const featureLabels = {
 // Список важных функций для отображения (в порядке приоритета)
 const importantFeatures = [
   'max_boards',
-  'max_cards_per_board',
-  'max_notes_per_board',
-  'max_stickers_per_board',
+  'max_licenses',
+  'max_notes',
+  'max_stickers',
+  'max_comments',
   'can_export_pdf',
   'can_export_png',
+  'can_export_png_formats',
+  'can_export_png_bw',
+  'can_export_svg',
+  'can_save_project',
+  'can_load_project',
+  'can_share_project',
+  'can_share_boards',
+  'can_invite_drawing',
   'can_duplicate_boards',
   'can_use_templates',
   'can_invite_members',
@@ -280,9 +299,9 @@ onMounted(async () => {
         price_yearly: 0,
         features: {
           max_boards: 2,
-          max_notes_per_board: -1,
-          max_stickers_per_board: -1,
-          max_cards_per_board: -1,
+          max_notes: -1,
+          max_stickers: -1,
+          max_licenses: -1,
           max_comments: -1,
           can_export_pdf: false,
           can_export_png: false,

@@ -45,10 +45,10 @@ export const useUserStore = defineStore('user', {
     },
 
     // Максимальное количество заметок на доске
-    maxNotesPerBoard: (state) => state.features?.max_notes_per_board ?? 0,
+    maxNotesPerBoard: (state) => state.features?.max_notes ?? 0,
 
     // Максимальное количество стикеров на доске
-    maxStickersPerBoard: (state) => state.features?.max_stickers_per_board ?? 0,
+    maxStickersPerBoard: (state) => state.features?.max_stickers ?? 0,
 
     // Максимальное количество комментариев
     maxComments: (state) => state.features?.max_comments ?? 0,

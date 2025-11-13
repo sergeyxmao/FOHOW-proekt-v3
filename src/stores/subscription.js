@@ -111,10 +111,10 @@ export const useSubscriptionStore = defineStore('subscription', {
         // Формируем лимиты из features
         this.limits = {
           boards: data.features?.max_boards ?? -1,
-          notes: data.features?.max_notes_per_board ?? -1,
-          stickers: data.features?.max_stickers_per_board ?? -1,
+          notes: data.features?.max_notes ?? -1,
+          stickers: data.features?.max_stickers ?? -1,
           comments: data.features?.max_comments ?? -1,
-          cards: data.features?.max_cards_per_board ?? -1
+          cards: data.features?.max_licenses ?? -1
         }
 
         return data
