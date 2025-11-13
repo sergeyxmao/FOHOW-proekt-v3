@@ -407,9 +407,29 @@ export function useProjectActions() {
   // Новая функция: Поделиться проектом через Telegram
   const openTelegramShare = (message) => {
     const encodedMessage = encodeURIComponent(message)
+    const telegramAppUrl = `tg://msg_url?text=${encodedMessage}`    
     const telegramShareUrl = `https://t.me/share/url?text=${encodedMessage}`
 
-    window.open(telegramShareUrl, '_blank')
+    const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '')
+
+    if (isMobileDevice) {
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          clearTimeout(fallbackTimeout)
+          document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
+      }
+
+      const fallbackTimeout = setTimeout(() => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+        window.location.href = telegramShareUrl
+      }, 700)
+
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+      window.location.href = telegramAppUrl
+    } else {
+      window.open(telegramShareUrl, '_blank')
+    }
   }
 
   const handleShareProject = async () => {
