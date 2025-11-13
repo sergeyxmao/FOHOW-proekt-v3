@@ -404,46 +404,31 @@ export function useProjectActions() {
     await handleExportHTML()
   }
 
-  // Новая функция: Поделиться через Web Share API
-  const handleShareProject = async (platform = null) => {
+  // Новая функция: Поделиться проектом через Telegram
+  const openTelegramShare = (message) => {
+    const encodedMessage = encodeURIComponent(message)
+    const telegramShareUrl = `https://t.me/share/url?text=${encodedMessage}`
+
+    window.open(telegramShareUrl, '_blank')
+  }
+
+  const handleShareProject = async () => {
     try {
       const blob = await generateHTMLBlob()
       if (!blob) return
 
       const fileName = `project-${Date.now()}.html`
-      const file = new File([blob], fileName, { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
 
-      // Проверяем поддержку Web Share API
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: 'Мой проект',
-          text: 'Делюсь проектом с вами',
-          files: [file]
-        })
-        console.log('Успешно отправлено')
-      } else {
-        // Fallback для десктопа
-        console.log('Web Share API не поддерживается, используем fallback')
-
-        // Скачиваем файл
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = fileName
-        link.click()
-        URL.revokeObjectURL(url)
-
-        // Открываем соответствующий сервис в новом окне
-        setTimeout(() => {
-          if (platform === 'telegram') {
-            // Открываем веб-версию Telegram
-            window.open('https://web.telegram.org', '_blank')
-          } else if (platform === 'vk') {
-            // Открываем ВКонтакте
-            window.open('https://vk.com', '_blank')
-          }
-        }, 100)
-      }
+      const shareMessage = `Файл проекта «${fileName}» сохранен на вашем устройстве. Отправьте его в Telegram.`
+      openTelegramShare(shareMessage)
     } catch (error) {
       if (error.name === 'AbortError') {
         console.log('Пользователь отменил шеринг')
