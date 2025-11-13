@@ -55,7 +55,6 @@ const userInitials = computed(() => {
 const isHierarchyMode = computed(() => canvasStore.isHierarchicalDragMode)
 const showUserMenu = ref(false)
 const showShareMenu = ref(false)
-const showShareSubmenu = ref(false)
 const userMenuRef = ref(null)
 const userMenuTriggerRef = ref(null)
 const formattedLastSaved = computed(() => {
@@ -157,11 +156,7 @@ const handleExportHTML = () => {
 
 const closeShareMenu = () => {
   showShareMenu.value = false
-  showShareSubmenu.value = false
-}
 
-const toggleShareSubmenu = () => {
-  showShareSubmenu.value = !showShareSubmenu.value
 }
 
 const handleSaveAs = async () => {
@@ -169,8 +164,8 @@ const handleSaveAs = async () => {
   closeShareMenu()
 }
 
-const handleShare = async (platform) => {
-  await handleShareProject(platform)
+const handleShare = async () => {
+  await handleShareProject()
   closeShareMenu()
 }
 
@@ -407,28 +402,9 @@ watch(
                 💾 Сохранить как
               </button>
 
-              <div class="mobile-share-menu__item-wrapper">
-                <button
-                  class="mobile-share-menu__item"
-                  :class="{ 'mobile-share-menu__item--active': showShareSubmenu }"
-                  type="button"
-                  @click.stop="toggleShareSubmenu"
-                >
-                  📤 Поделиться
-                  <span class="mobile-share-menu__arrow" :class="{ 'mobile-share-menu__arrow--rotated': showShareSubmenu }">▸</span>
-                </button>
-
-                <transition name="submenu-slide">
-                  <div v-if="showShareSubmenu" class="mobile-share-menu__submenu">
-                    <button class="mobile-share-menu__submenu-item" type="button" @click="handleShare('telegram')">
-                      ✈️ Telegram
-                    </button>
-                    <button class="mobile-share-menu__submenu-item" type="button" @click="handleShare('vk')">
-                      🔵 ВКонтакте
-                    </button>
-                  </div>
-                </transition>
-              </div>
+              <button class="mobile-share-menu__item" type="button" @click="handleShare">
+                📤 Поделиться
+              </button>
             </div>
           </div>
         </div>
