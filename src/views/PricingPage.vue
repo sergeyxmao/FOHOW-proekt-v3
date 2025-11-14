@@ -15,10 +15,10 @@
           Помесячно
         </button>
         <button
-          :class="['toggle-btn', { active: billingPeriod === 'yearly' }]"
-          @click="billingPeriod = 'yearly'"
+          :class="['toggle-btn', { active: billingPeriod === '3-months' }]"
+          @click="billingPeriod = '3-months'"
         >
-          Годовая оплата
+          3 месяца
         </button>
       </div>
 
@@ -65,12 +65,12 @@
                 <span class="price-currency">₽</span>
               </div>
               <div class="price-period">
-                {{ billingPeriod === 'monthly' ? '/ месяц' : '/ год' }}
+                {{ billingPeriod === 'monthly' ? '/ месяц' : '/ 3 месяца' }}
               </div>
 
-              <!-- Показать экономию при годовой оплате -->
-              <div v-if="billingPeriod === 'yearly' && getMonthlySavings(plan) > 0" class="savings-badge">
-                Экономия {{ getMonthlySavings(plan) }}₽ в год
+              <!-- Показать экономию при оплате за 3 месяца -->
+              <div v-if="billingPeriod === '3-months' && getMonthlySavings(plan) > 0" class="savings-badge">
+                Экономия {{ getMonthlySavings(plan) }}₽ за 3 месяца
               </div>
             </div>
 
@@ -112,7 +112,7 @@
               Текущий план
             </button>
             <button
-              v-else
+              v-else-if="plan.code_name !== 'guest'"
               class="select-plan-btn"
             >
               Выбрать тариф
@@ -241,24 +241,24 @@ function isCurrentPlan(plan) {
   return subscriptionStore.currentPlan?.code_name === plan.code_name
 }
 
-// Вычисление отображаемой цены (с учетом скидки для годовой оплаты)
+// Вычисление отображаемой цены (с учетом скидки для оплаты за 3 месяца)
 function getDisplayPrice(plan) {
-  if (billingPeriod.value === 'yearly') {
-    // Годовая цена с 20% скидкой
+  if (billingPeriod.value === '3-months') {
+    // Цена за 3 месяца с 10% скидкой
     const basePrice = plan.price_monthly || 0
-    const yearlyPrice = basePrice * 12 * 0.8
-    return Math.round(yearlyPrice)
+    const threeMonthsPrice = basePrice * 3 * 0.9
+    return Math.round(threeMonthsPrice)
   }
   return plan.price_monthly || 0
 }
 
-// Вычисление экономии при годовой оплате
+// Вычисление экономии при оплате за 3 месяца
 function getMonthlySavings(plan) {
-  if (billingPeriod.value === 'yearly') {
+  if (billingPeriod.value === '3-months') {
     const basePrice = plan.price_monthly || 0
-    const fullYearly = basePrice * 12
-    const discountedYearly = getDisplayPrice(plan)
-    return fullYearly - discountedYearly
+    const fullThreeMonths = basePrice * 3
+    const discountedThreeMonths = getDisplayPrice(plan)
+    return fullThreeMonths - discountedThreeMonths
   }
   return 0
 }
@@ -305,8 +305,7 @@ onMounted(async () => {
           max_comments: -1,
           can_export_pdf: false,
           can_export_png: false,
-          can_duplicate_boards: false,
-          support_level: 'basic'
+          can_duplicate_boards: false
         },
         is_featured: false
       }
