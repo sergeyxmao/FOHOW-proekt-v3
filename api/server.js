@@ -481,6 +481,66 @@ app.post('/api/login', async (req, reply) => {
   }
 });
 
+// === ПОВТОРНАЯ ОТПРАВКА КОДА ПОДТВЕРЖДЕНИЯ ===
+app.post('/api/resend-verification-code', async (req, reply) => {
+  const { email } = req.body;
+
+  try {
+    // Валидация входных данных
+    if (!email) {
+      return reply.code(400).send({ error: 'Email обязателен' });
+    }
+
+    // 1. Проверить, прошло ли 30 секунд с последней отправки
+    const lastCode = await pool.query(
+      `SELECT created_at FROM email_verification_codes
+       WHERE email = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [email]
+    );
+
+    if (lastCode.rows.length > 0) {
+      const lastSent = new Date(lastCode.rows[0].created_at);
+      const now = new Date();
+      const secondsSinceLastSent = (now - lastSent) / 1000;
+
+      if (secondsSinceLastSent < 30) {
+        const waitTime = Math.ceil(30 - secondsSinceLastSent);
+        return reply.code(429).send({
+          error: `Пожалуйста, подождите ${waitTime} секунд перед повторной отправкой кода`,
+          waitTime: waitTime
+        });
+      }
+    }
+
+    // 2. Генерировать новый 6-значный код
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 3. Сохранить код в БД (действителен 10 минут)
+    await pool.query(
+      `INSERT INTO email_verification_codes (email, code, expires_at, ip_address)
+       VALUES ($1, $2, NOW() + INTERVAL '10 minutes', $3)`,
+      [email, code, req.ip]
+    );
+
+    // 4. Отправить код на email
+    const { sendVerificationEmail } = await import('./utils/email.js');
+    await sendVerificationEmail(email, code);
+
+    console.log(`📧 Повторная отправка кода на ${email}: ${code}`);
+
+    return reply.send({
+      success: true,
+      message: 'Новый код подтверждения отправлен на ваш email'
+    });
+
+  } catch (error) {
+    console.error('❌ Ошибка повторной отправки кода:', error);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
 // === ВЫХОД (LOGOUT) ===
 app.post('/api/logout', {
   preHandler: [authenticateToken]
