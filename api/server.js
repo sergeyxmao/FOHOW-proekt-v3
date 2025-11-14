@@ -366,7 +366,7 @@ app.post('/api/login', async (req, reply) => {
 
       console.log(`📧 Код подтверждения отправлен на ${email}: ${code}`);
 
-      return reply.json({
+      return reply.send({
         requiresVerification: true,
         email: email,
         message: 'На ваш email отправлен код подтверждения. Введите его для завершения входа.'
