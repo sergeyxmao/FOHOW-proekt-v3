@@ -521,6 +521,7 @@ app.get('/api/profile', {
             u.telegram_user, u.telegram_channel, u.vk_profile, u.ok_profile,
             u.instagram_profile, u.whatsapp_contact,
             u.visibility_settings, u.search_settings,
+            u.subscription_started_at, u.subscription_expires_at,
             sp.id as plan_id, sp.name as plan_name, sp.features
      FROM users u
      LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
@@ -556,6 +557,8 @@ app.get('/api/profile', {
       whatsapp_contact: userData.whatsapp_contact,
       visibility_settings: userData.visibility_settings,
       search_settings: userData.search_settings,
+      subscription_started_at: userData.subscription_started_at,
+      subscription_expires_at: userData.subscription_expires_at,
       plan: userData.plan_id ? {
         id: userData.plan_id,
         name: userData.plan_name,
@@ -1251,6 +1254,7 @@ app.get('/api/user/plan', {
         u.id,
         u.username,
         u.email,
+        u.subscription_started_at,
         u.subscription_expires_at,
         sp.id as plan_id,
         sp.name as plan_name,
@@ -1286,6 +1290,7 @@ app.get('/api/user/plan', {
         id: data.id,
         username: data.username,
         email: data.email,
+        subscriptionStartedAt: data.subscription_started_at,
         subscriptionExpiresAt: data.subscription_expires_at
       },
       plan: {
