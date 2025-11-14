@@ -13,134 +13,325 @@
     <!-- Показываем основной контент ТОЛЬКО ЕСЛИ объект user существует и загружен -->
     <div v-if="user" class="profile-content">
       <!-- ============================================ -->
-      <!-- Режим просмотра профиля (когда editMode = false) -->
+      <!-- Блок 1: Аватарка (верх страницы, по центру) -->
       <!-- ============================================ -->
-      <div v-if="!editMode" class="profile-view">
-        <!-- Аватар -->
-        <div class="profile-avatar-section">
-          <div class="avatar-wrapper">
-            <img
-              v-if="user.avatar_url"
-              :src="getAvatarUrl(user.avatar_url)"
-              alt="Аватар"
-              class="profile-avatar"
+      <div class="profile-avatar-section">
+        <div class="avatar-wrapper">
+          <img
+            v-if="user.avatar_url"
+            :key="avatarKey"
+            :src="getAvatarUrl(user.avatar_url)"
+            alt="Аватар"
+            class="profile-avatar"
+          >
+          <div v-else class="profile-avatar-placeholder">
+            {{ getInitials(user.username || user.email) }}
+          </div>
+        </div>
+        <div class="avatar-actions">
+          <label class="btn-upload">
+            <input
+              type="file"
+              accept="image/*"
+              @change="handleAvatarChange"
+              style="display: none"
             >
-            <div v-else class="profile-avatar-placeholder">
-              {{ getInitials(user.username || user.email) }}
+            📷 Загрузить фото
+          </label>
+          <button
+            v-if="user.avatar_url"
+            class="btn-remove"
+            @click="handleAvatarDelete"
+          >
+            🗑️ Удалить фото
+          </button>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- Блок 2: Табы с информацией (4 кнопки в ряд) -->
+      <!-- ============================================ -->
+      <div class="tabs-container">
+        <div class="tabs-buttons">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            :class="['tab-button', { active: activeTab === tab.id }]"
+            @click="activeTab = tab.id"
+          >
+            <span class="tab-icon">{{ tab.icon }}</span>
+            <span class="tab-label">{{ tab.label }}</span>
+          </button>
+        </div>
+
+        <div class="tab-content">
+          <!-- ===== TAB 1: Основная информация ===== -->
+          <div v-if="activeTab === 'basic'" class="tab-panel">
+            <div class="info-grid">
+              <div class="info-item">
+                <label>Email:</label>
+                <span>{{ user.email }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Имя пользователя:</label>
+                <span>{{ user.username || 'Не указано' }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Дата регистрации:</label>
+                <span>{{ formatDate(user.created_at) }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Текущий тариф:</label>
+                <span class="plan-badge" :style="getPlanBadgeStyle()">
+                  {{ subscriptionStore.currentPlan?.name || 'Не определен' }}
+                </span>
+              </div>
+
+              <div class="info-item">
+                <label>Начало подписки:</label>
+                <span>{{ formatDate(user.subscription_started_at) }}</span>
+              </div>
+
+              <div class="info-item">
+                <label>Окончание подписки:</label>
+                <span :class="getExpiryClass()">
+                  {{ getExpiryDate() }}
+                </span>
+              </div>
             </div>
           </div>
-          <div class="avatar-actions">
-            <label class="btn-upload">
-              <input
-                type="file"
-                accept="image/*"
-                @change="handleAvatarChange"
-                style="display: none"
-              >
-              📷 Загрузить фото
-            </label>
-            <button
-              v-if="user.avatar_url"
-              class="btn-remove"
-              @click="handleAvatarDelete"
-            >
-              🗑️ Удалить
-            </button>
+
+          <!-- ===== TAB 2: Личная информация ===== -->
+          <div v-if="activeTab === 'personal'" class="tab-panel">
+            <form @submit.prevent="savePersonalInfo" class="info-form">
+              <div class="form-group">
+                <label for="full-name">Полное имя:</label>
+                <input
+                  id="full-name"
+                  v-model="personalForm.full_name"
+                  type="text"
+                  placeholder="Введите полное имя"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="phone">Телефон:</label>
+                <input
+                  id="phone"
+                  v-model="personalForm.phone"
+                  type="tel"
+                  placeholder="+7 (XXX) XXX-XX-XX"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="city">Город:</label>
+                <input
+                  id="city"
+                  v-model="personalForm.city"
+                  type="text"
+                  placeholder="Введите город"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="country">Страна:</label>
+                <input
+                  id="country"
+                  v-model="personalForm.country"
+                  type="text"
+                  placeholder="Введите страну"
+                />
+              </div>
+
+              <div v-if="personalError" class="error-message">{{ personalError }}</div>
+              <div v-if="personalSuccess" class="success-message">{{ personalSuccess }}</div>
+
+              <button type="submit" class="btn-save" :disabled="savingPersonal">
+                {{ savingPersonal ? 'Сохранение...' : '💾 Сохранить изменения' }}
+              </button>
+            </form>
+          </div>
+
+          <!-- ===== TAB 3: Соц. сети ===== -->
+          <div v-if="activeTab === 'social'" class="tab-panel">
+            <form @submit.prevent="saveSocialInfo" class="info-form">
+              <div class="form-group">
+                <label for="telegram">Telegram (@username):</label>
+                <input
+                  id="telegram"
+                  v-model="socialForm.telegram_user"
+                  type="text"
+                  placeholder="@username"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="vk">VK (ссылка):</label>
+                <input
+                  id="vk"
+                  v-model="socialForm.vk_profile"
+                  type="text"
+                  placeholder="vk.com/username"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="instagram">Instagram (@username):</label>
+                <input
+                  id="instagram"
+                  v-model="socialForm.instagram_profile"
+                  type="text"
+                  placeholder="@username"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="website">Сайт (URL):</label>
+                <input
+                  id="website"
+                  v-model="socialForm.website"
+                  type="url"
+                  placeholder="https://example.com"
+                />
+              </div>
+
+              <div v-if="socialError" class="error-message">{{ socialError }}</div>
+              <div v-if="socialSuccess" class="success-message">{{ socialSuccess }}</div>
+
+              <button type="submit" class="btn-save" :disabled="savingSocial">
+                {{ savingSocial ? 'Сохранение...' : '💾 Сохранить изменения' }}
+              </button>
+            </form>
+          </div>
+
+          <!-- ===== TAB 4: Лимиты / Используемые ресурсы ===== -->
+          <div v-if="activeTab === 'limits'" class="tab-panel">
+            <div class="limits-grid">
+              <div class="limit-card">
+                <div class="limit-card-header">
+                  <span class="limit-icon">📋</span>
+                  <span class="limit-title">Доски</span>
+                </div>
+                <div class="limit-card-body">
+                  <div class="limit-stats">
+                    <span class="limit-current">{{ getLimitInfo('boards').current }}</span>
+                    <span class="limit-separator">/</span>
+                    <span class="limit-max">{{ getLimitInfo('boards').maxDisplay }}</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div
+                      class="progress-fill"
+                      :style="{ width: getLimitInfo('boards').percentage + '%', backgroundColor: getLimitColor(getLimitInfo('boards').percentage) }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="limit-card">
+                <div class="limit-card-header">
+                  <span class="limit-icon">📝</span>
+                  <span class="limit-title">Заметки</span>
+                </div>
+                <div class="limit-card-body">
+                  <div class="limit-stats">
+                    <span class="limit-current">{{ getLimitInfo('notes').current }}</span>
+                    <span class="limit-separator">/</span>
+                    <span class="limit-max">{{ getLimitInfo('notes').maxDisplay }}</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div
+                      class="progress-fill"
+                      :style="{ width: getLimitInfo('notes').percentage + '%', backgroundColor: getLimitColor(getLimitInfo('notes').percentage) }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="limit-card">
+                <div class="limit-card-header">
+                  <span class="limit-icon">💬</span>
+                  <span class="limit-title">Комментарии</span>
+                </div>
+                <div class="limit-card-body">
+                  <div class="limit-stats">
+                    <span class="limit-current">{{ getLimitInfo('comments').current }}</span>
+                    <span class="limit-separator">/</span>
+                    <span class="limit-max">{{ getLimitInfo('comments').maxDisplay }}</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div
+                      class="progress-fill"
+                      :style="{ width: getLimitInfo('comments').percentage + '%', backgroundColor: getLimitColor(getLimitInfo('comments').percentage) }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="limit-card">
+                <div class="limit-card-header">
+                  <span class="limit-icon">🎨</span>
+                  <span class="limit-title">Стикеры</span>
+                </div>
+                <div class="limit-card-body">
+                  <div class="limit-stats">
+                    <span class="limit-current">{{ getLimitInfo('stickers').current }}</span>
+                    <span class="limit-separator">/</span>
+                    <span class="limit-max">{{ getLimitInfo('stickers').maxDisplay }}</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div
+                      class="progress-fill"
+                      :style="{ width: getLimitInfo('stickers').percentage + '%', backgroundColor: getLimitColor(getLimitInfo('stickers').percentage) }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="limit-card">
+                <div class="limit-card-header">
+                  <span class="limit-icon">🎫</span>
+                  <span class="limit-title">Карточки</span>
+                </div>
+                <div class="limit-card-body">
+                  <div class="limit-stats">
+                    <span class="limit-current">{{ getLimitInfo('cards').current }}</span>
+                    <span class="limit-separator">/</span>
+                    <span class="limit-max">{{ getLimitInfo('cards').maxDisplay }}</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div
+                      class="progress-fill"
+                      :style="{ width: getLimitInfo('cards').percentage + '%', backgroundColor: getLimitColor(getLimitInfo('cards').percentage) }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="profile-field">
-          <label>Email:</label>
-          <span>{{ user.email }}</span>
-        </div>
+      </div>
 
-        <div class="profile-field">
-          <label>Имя пользователя:</label>
-          <span>{{ user.username || 'Не указано' }}</span>
+      <!-- ============================================ -->
+      <!-- Блок 3: Telegram интеграция -->
+      <!-- ============================================ -->
+      <div class="extra-section">
+        <div class="section-header">
+          <h3>Уведомления Telegram</h3>
         </div>
-
-        <div class="profile-field">
-          <label>Дата регистрации:</label>
-          <span>{{ formatDate(user.created_at) }}</span>
-        </div>
-
-        <div class="form-divider">
-          <span>Личная информация</span>
-        </div>
-
-        <div class="profile-field">
-          <label>Полное имя:</label>
-          <span>{{ user.full_name || 'Не указано' }}</span>
-        </div>
-
-        <div class="profile-field">
-          <label>Комп. номер:</label>
-          <span>{{ user.personal_id || 'Не указано' }}</span>
-        </div>
-
-        <div class="profile-field">
-          <label>Телефон:</label>
-          <span>{{ user.phone || 'Не указано' }}</span>
-        </div>
-
-        <div class="profile-field">
-          <label>Страна:</label>
-          <span>{{ user.country || 'Не указано' }}</span>
-        </div>
-
-        <div class="profile-field">
-          <label>Город:</label>
-          <span>{{ user.city || 'Не указано' }}</span>
-        </div>
-
-        <div class="profile-field">
-          <label>Представительство:</label>
-          <span>{{ user.office || 'Не указано' }}</span>
-        </div>
-
-        <div class="form-divider">
-          <span>Социальные сети и контакты</span>
-        </div>
-
-        <div class="profile-field">
-          <label>Telegram (пользователь):</label>
-          <span>{{ user.telegram_user || 'Не указано' }}</span>
-        </div>
-
-        <div class="profile-field">
-          <label>Telegram (канал):</label>
-          <span>{{ user.telegram_channel || 'Не указано' }}</span>
-        </div>
-
-        <div class="profile-field">
-          <label>WhatsApp:</label>
-          <span>{{ user.whatsapp_contact || 'Не указано' }}</span>
-        </div>
-
-        <div class="profile-field">
-          <label>ВКонтакте:</label>
-          <span>{{ user.vk_profile || 'Не указано' }}</span>
-        </div>
-
-        <div class="profile-field">
-          <label>Одноклассники:</label>
-          <span>{{ user.ok_profile || 'Не указано' }}</span>
-        </div>
-
-        <div class="profile-field">
-          <label>Instagram:</label>
-          <span>{{ user.instagram_profile || 'Не указано' }}</span>
-        </div>
-
-        <div class="form-divider">
-          <span>Уведомления Telegram</span>
-        </div>
-
         <TelegramLinkWidget />
+      </div>
 
-        <div class="form-divider">
-          <span>Промокод</span>
+      <!-- ============================================ -->
+      <!-- Блок 4: Промокоды -->
+      <!-- ============================================ -->
+      <div class="extra-section">
+        <div class="section-header">
+          <h3>Промокод</h3>
         </div>
-
         <div class="promo-section">
           <div class="promo-input-group">
             <input
@@ -162,319 +353,11 @@
           <div v-if="promoError" class="error-message">{{ promoError }}</div>
           <div v-if="promoSuccess" class="success-message">{{ promoSuccess }}</div>
         </div>
-
-        <div class="form-divider">
-          <span>📊 Использование ресурсов</span>
-        </div>
-
-        <div class="usage-stats">
-          <UsageLimitBar resourceType="boards" label="Доски" />
-          <UsageLimitBar resourceType="notes" label="Заметки" />
-          <UsageLimitBar resourceType="stickers" label="Стикеры" />
-          <UsageLimitBar resourceType="comments" label="Комментарии" />
-        </div>
-
-        <div class="profile-actions">
-          <button class="btn-primary" @click="startEdit">
-            Редактировать профиль
-          </button>
-          <button class="btn-danger" @click="showDeleteConfirm = true">
-            Удалить аккаунт
-          </button>
-        </div>
       </div>
-
-      <!-- ============================================ -->
-      <!-- Форма редактирования (когда editMode = true) -->
-      <!-- ============================================ -->
-      <form v-else class="profile-edit" @submit.prevent="saveProfile">
-        <div class="form-group">
-          <label>Имя пользователя:</label>
-          <input
-            v-model="editForm.username"
-            type="text"
-            placeholder="Введите имя пользователя"
-          />
-        </div>
-
-        <div class="form-group">
-          <label>Email:</label>
-          <input
-            v-model="editForm.email"
-            type="email"
-            required
-          />
-        </div>
-
-        <div class="form-divider">
-          <span>Изменить пароль (необязательно)</span>
-        </div>
-
-        <div class="form-group">
-          <label>Текущий пароль:</label>
-          <div class="password-input">
-            <input
-              v-model="editForm.currentPassword"
-              :type="passwordVisibility.current ? 'text' : 'password'"
-              placeholder="Оставьте пустым, если не меняете пароль"
-              autocomplete="new-password"
-              readonly
-              @focus="$event.target.removeAttribute('readonly')"
-              @paste.prevent
-              @drop.prevent
-            />
-            <button
-              v-if="editForm.currentPassword"
-              type="button"
-              class="password-toggle"
-              @click="togglePasswordVisibility('current')"
-            >
-              {{ passwordVisibility.current ? 'Скрыть' : 'Показать' }}
-            </button>
-          </div>
-          <small class="field-hint">Требуется только если меняете пароль</small>
-        </div>
-
-        <div class="form-group">
-          <label>Новый пароль:</label>
-          <div class="password-input">
-            <input
-              v-model="editForm.newPassword"
-              :type="passwordVisibility.new ? 'text' : 'password'"
-              placeholder="Оставьте пустым, если не меняете"
-              minlength="6"
-              autocomplete="new-password"
-              readonly
-              @focus="$event.target.removeAttribute('readonly')"
-              @paste.prevent
-              @drop.prevent
-            />
-            <button
-              v-if="editForm.newPassword"
-              type="button"
-              class="password-toggle"
-              @click="togglePasswordVisibility('new')"
-            >
-              {{ passwordVisibility.new ? 'Скрыть' : 'Показать' }}
-            </button>
-          </div>
-          <small class="field-hint">Минимум 6 символов</small>
-        </div>
-
-        <div class="form-group">
-          <label>Повторите новый пароль:</label>
-          <div class="password-input">
-            <input
-              v-model="editForm.confirmPassword"
-              :type="passwordVisibility.confirm ? 'text' : 'password'"
-              placeholder="Повторите новый пароль"
-              minlength="6"
-              autocomplete="new-password"
-              readonly
-              @focus="$event.target.removeAttribute('readonly')"
-              @paste.prevent
-              @drop.prevent
-            />
-            <button
-              v-if="editForm.confirmPassword"
-              type="button"
-              class="password-toggle"
-              @click="togglePasswordVisibility('confirm')"
-            >
-              {{ passwordVisibility.confirm ? 'Скрыть' : 'Показать' }}
-            </button>
-          </div>
-        </div>
-
-        <div class="form-divider">
-          <span>Личная информация</span>
-        </div>
-
-        <div class="form-group">
-          <label for="profile-full-name">Полное имя:</label>
-          <input
-            id="profile-full-name"
-            v-model="editForm.full_name"
-            type="text"
-            placeholder="Введите полное имя"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="profile-personal-id">Комп. номер:</label>
-          <input
-            id="profile-personal-id"
-            v-model="editForm.personal_id"
-            type="text"
-            placeholder="Введите компьютерный номер"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="profile-phone">Телефон:</label>
-          <input
-            id="profile-phone"
-            v-model="editForm.phone"
-            type="tel"
-            placeholder="Введите телефон"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="profile-country">Страна:</label>
-          <input
-            id="profile-country"
-            v-model="editForm.country"
-            type="text"
-            placeholder="Введите страну"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="profile-city">Город:</label>
-          <input
-            id="profile-city"
-            v-model="editForm.city"
-            type="text"
-            placeholder="Введите город"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="profile-office">Представительство:</label>
-          <input
-            id="profile-office"
-            v-model="editForm.office"
-            type="text"
-            placeholder="Введите представительство"
-          />
-        </div>
-
-        <div class="form-divider">
-          <span>Социальные сети и контакты</span>
-        </div>
-
-        <div class="form-group">
-          <label for="profile-telegram-user">Telegram (пользователь):</label>
-          <input
-            id="profile-telegram-user"
-            v-model="editForm.telegram_user"
-            type="text"
-            placeholder="@username"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="profile-telegram-channel">Telegram (канал):</label>
-          <input
-            id="profile-telegram-channel"
-            v-model="editForm.telegram_channel"
-            type="text"
-            placeholder="@channel"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="profile-whatsapp">WhatsApp:</label>
-          <input
-            id="profile-whatsapp"
-            v-model="editForm.whatsapp_contact"
-            type="text"
-            placeholder="+7 (XXX) XXX-XX-XX"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="profile-vk">ВКонтакте:</label>
-          <input
-            id="profile-vk"
-            v-model="editForm.vk_profile"
-            type="text"
-            placeholder="vk.com/username"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="profile-ok">Одноклассники:</label>
-          <input
-            id="profile-ok"
-            v-model="editForm.ok_profile"
-            type="text"
-            placeholder="ok.ru/profile"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="profile-instagram">Instagram:</label>
-          <input
-            id="profile-instagram"
-            v-model="editForm.instagram_profile"
-            type="text"
-            placeholder="@username"
-          />
-        </div>
-
-        <div v-if="error" class="error-message">{{ error }}</div>
-        <div v-if="success" class="success-message">{{ success }}</div>
-
-        <div class="form-actions">
-          <button type="submit" class="btn-primary" :disabled="updating">
-            {{ updating ? 'Сохранение...' : 'Сохранить изменения' }}
-          </button>
-          <button type="button" class="btn-secondary" @click="cancelEdit">
-            Отмена
-          </button>
-        </div>
-      </form>
     </div>
 
     <!-- Показываем заглушку, если user еще не загружен -->
     <div v-else class="loading">Загрузка профиля...</div>
-    
-    <!-- ============================================ -->
-    <!-- Модальные окна (остаются снаружи v-if="user") -->
-    <!-- ============================================ -->
-    
-    <!-- Подтверждение удаления -->
-    <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="showDeleteConfirm = false">
-      <div class="delete-confirm">
-        <button class="delete-confirm__close" @click="showDeleteConfirm = false">×</button>
-        <h3>⚠️ Удаление аккаунта</h3>
-        <p>Вы уверены? Это действие необратимо!</p>
-
-        <div class="form-group">
-          <label>Введите пароль для подтверждения:</label>
-          <div class="password-input">
-            <input
-              v-model="deletePassword"
-              :type="passwordVisibility.delete ? 'text' : 'password'"
-              placeholder="Ваш пароль"
-              autocomplete="current-password"
-              @paste.prevent
-              @drop.prevent
-            />
-            <button
-              type="button"
-              class="password-toggle"
-              @click="togglePasswordVisibility('delete')"
-            >
-              {{ passwordVisibility.delete ? 'Скрыть' : 'Показать' }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="deleteError" class="error-message">{{ deleteError }}</div>
-
-        <div class="form-actions">
-          <button class="btn-danger" :disabled="deleting" @click="handleDelete">
-            {{ deleting ? 'Удаление...' : 'Удалить аккаунт' }}
-          </button>
-          <button class="btn-secondary" @click="showDeleteConfirm = false">
-            Отмена
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <!-- Cropper -->
@@ -516,13 +399,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
+import { ref, reactive, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 import { useAuthStore } from '@/stores/auth'
+import { useSubscriptionStore } from '@/stores/subscription'
 import TelegramLinkWidget from '@/components/TelegramLinkWidget.vue'
-import UsageLimitBar from '@/components/UsageLimitBar.vue'
 
 const props = defineProps({
   isModernTheme: {
@@ -534,57 +417,50 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const authStore = useAuthStore()
-// Используем только user, так как его наличие - главный индикатор
-const { user } = storeToRefs(authStore) 
+const subscriptionStore = useSubscriptionStore()
+const { user } = storeToRefs(authStore)
 
-const loading = ref(false) // Локальное состояние загрузки для аватара и т.д.
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
-// Cropper.js
+// Аватарка
+const avatarKey = ref(0) // Ключ для принудительной перерисовки аватарки
 const showCropper = ref(false)
 const selectedImageUrl = ref('')
 const cropperImage = ref(null)
 let cropper = null
-const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
-
-const editMode = ref(false)
-const editForm = ref({
-  username: '',
-  email: '',
-  currentPassword: '',
-  newPassword: '',
-  confirmPassword: '',
-  // Новые поля профиля
-  country: '',
-  city: '',
-  office: '',
-  personal_id: '',
-  phone: '',
-  full_name: '',
-  telegram_user: '',
-  telegram_channel: '',
-  vk_profile: '',
-  ok_profile: '',
-  instagram_profile: '',
-  whatsapp_contact: ''
-})
-
-const error = ref('')
-const success = ref('')
-const updating = ref(false)
-
-const showDeleteConfirm = ref(false)
-const deletePassword = ref('')
-const deleteError = ref('')
-const deleting = ref(false)
 const uploadingAvatar = ref(false)
-const originalAvatarType = ref('')
-const originalAvatarName = ref('')
-const passwordVisibility = reactive({
-  current: false,
-  new: false,
-  confirm: false,
-  delete: false
+
+// Табы
+const activeTab = ref('basic')
+const tabs = [
+  { id: 'basic', label: 'Основная информация', icon: 'ℹ️' },
+  { id: 'personal', label: 'Личная информация', icon: '👤' },
+  { id: 'social', label: 'Соц. сети', icon: '🌐' },
+  { id: 'limits', label: 'Лимиты', icon: '📊' }
+]
+
+// Формы
+const personalForm = reactive({
+  full_name: '',
+  phone: '',
+  city: '',
+  country: ''
 })
+
+const socialForm = reactive({
+  telegram_user: '',
+  vk_profile: '',
+  instagram_profile: '',
+  website: ''
+})
+
+const personalError = ref('')
+const personalSuccess = ref('')
+const savingPersonal = ref(false)
+
+const socialError = ref('')
+const socialSuccess = ref('')
+const savingSocial = ref(false)
 
 // Промокод
 const promoCodeInput = ref('')
@@ -592,196 +468,172 @@ const promoError = ref('')
 const promoSuccess = ref('')
 const applyingPromo = ref(false)
 
-function togglePasswordVisibility(field) {
-  passwordVisibility[field] = !passwordVisibility[field]
-}
+// Инициализация
+onMounted(async () => {
+  // Загружаем план подписки
+  if (!subscriptionStore.currentPlan) {
+    try {
+      await subscriptionStore.loadPlan()
+    } catch (error) {
+      console.error('Ошибка при загрузке плана подписки:', error)
+    }
+  }
 
-watch(showDeleteConfirm, (visible) => {
-  if (!visible) {
-    deletePassword.value = ''
-    deleteError.value = ''
-    passwordVisibility.delete = false
+  // Заполняем формы текущими данными
+  if (user.value) {
+    personalForm.full_name = user.value.full_name || ''
+    personalForm.phone = user.value.phone || ''
+    personalForm.city = user.value.city || ''
+    personalForm.country = user.value.country || ''
+
+    socialForm.telegram_user = user.value.telegram_user || ''
+    socialForm.vk_profile = user.value.vk_profile || ''
+    socialForm.instagram_profile = user.value.instagram_profile || ''
+    socialForm.website = user.value.website || ''
   }
 })
 
-async function saveProfile() {
-  error.value = ''
-  success.value = ''
-  updating.value = true
+onBeforeUnmount(() => {
+  cancelCrop()
+})
+
+// Форматирование даты
+function formatDate(dateString) {
+  if (!dateString) return 'Не указано'
+  const date = new Date(dateString)
+  return date.toLocaleDateString('ru-RU', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+// Получить URL аватара
+function getAvatarUrl(url) {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  return `${API_URL.replace('/api', '')}${url}`
+}
+
+// Получить инициалы
+function getInitials(name) {
+  if (!name) return '?'
+  const parts = name.split(' ')
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase()
+  }
+  return name.substring(0, 2).toUpperCase()
+}
+
+// Стиль бейджа плана
+function getPlanBadgeStyle() {
+  return {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    padding: '4px 12px',
+    borderRadius: '12px',
+    fontWeight: '600',
+    fontSize: '14px',
+    display: 'inline-block'
+  }
+}
+
+// Класс для даты окончания подписки
+function getExpiryClass() {
+  const expiresAt = subscriptionStore.currentPlan?.expiresAt
+  if (!expiresAt) return 'expiry-unlimited'
+
+  const daysLeft = subscriptionStore.daysLeft
+
+  if (daysLeft === null) return 'expiry-unlimited'
+  if (daysLeft <= 0) return 'expiry-expired'
+  if (daysLeft < 7) return 'expiry-warning'
+  return 'expiry-active'
+}
+
+// Дата окончания подписки
+function getExpiryDate() {
+  const expiresAt = subscriptionStore.currentPlan?.expiresAt
+  if (!expiresAt) return 'Бессрочно'
+  return formatDate(expiresAt)
+}
+
+// Информация о лимитах
+function getLimitInfo(resourceType) {
+  const limitData = subscriptionStore.checkLimit(resourceType)
+  const maxDisplay = limitData.max === -1 ? '∞' : limitData.max
+  const percentage = limitData.max === -1 ? 0 : Math.min(100, Math.round((limitData.current / limitData.max) * 100))
+
+  return {
+    current: limitData.current,
+    max: limitData.max,
+    maxDisplay,
+    percentage
+  }
+}
+
+// Цвет прогресс-бара
+function getLimitColor(percentage) {
+  if (percentage < 70) return '#4caf50' // Зелёный
+  if (percentage < 90) return '#ffc107' // Оранжевый
+  return '#f44336' // Красный
+}
+
+// Сохранить личную информацию
+async function savePersonalInfo() {
+  personalError.value = ''
+  personalSuccess.value = ''
+  savingPersonal.value = true
 
   try {
-    const trimmedUsername = editForm.value.username?.trim() || ''
-    const trimmedEmail = editForm.value.email?.trim() || ''
-
-    if (!trimmedEmail) {
-      throw new Error('Укажите корректный email')
-    }
-
-    // Проверяем, нужно ли менять пароль
-    const isChangingPassword = editForm.value.newPassword || editForm.value.confirmPassword || editForm.value.currentPassword
-
-    if (isChangingPassword) {
-      // Если хотя бы одно поле пароля заполнено - требуем все
-      if (!editForm.value.currentPassword) {
-        throw new Error('Введите текущий пароль')
-      }
-      if (!editForm.value.newPassword) {
-        throw new Error('Введите новый пароль')
-      }
-      if (!editForm.value.confirmPassword) {
-        throw new Error('Повторите новый пароль')
-      }
-      if (editForm.value.newPassword !== editForm.value.confirmPassword) {
-        throw new Error('Новые пароли не совпадают')
-      }
-    }
-
-    // Формируем данные профиля для отправки
     const profileData = {
-      email: trimmedEmail
+      full_name: personalForm.full_name?.trim() || '',
+      phone: personalForm.phone?.trim() || '',
+      city: personalForm.city?.trim() || '',
+      country: personalForm.country?.trim() || ''
     }
 
-    if (trimmedUsername) {
-      profileData.username = trimmedUsername
-    }
+    await authStore.updateProfile(profileData)
+    personalSuccess.value = 'Личная информация успешно обновлена!'
 
-    // Добавляем новые поля профиля
-    profileData.country = editForm.value.country?.trim() || ''
-    profileData.city = editForm.value.city?.trim() || ''
-    profileData.office = editForm.value.office?.trim() || ''
-    profileData.personal_id = editForm.value.personal_id?.trim() || ''
-    profileData.phone = editForm.value.phone?.trim() || ''
-    profileData.full_name = editForm.value.full_name?.trim() || ''
-    profileData.telegram_user = editForm.value.telegram_user?.trim() || ''
-    profileData.telegram_channel = editForm.value.telegram_channel?.trim() || ''
-    profileData.vk_profile = editForm.value.vk_profile?.trim() || ''
-    profileData.ok_profile = editForm.value.ok_profile?.trim() || ''
-    profileData.instagram_profile = editForm.value.instagram_profile?.trim() || ''
-    profileData.whatsapp_contact = editForm.value.whatsapp_contact?.trim() || ''
-
-    // Добавляем пароли ТОЛЬКО если реально меняем пароль
-    if (isChangingPassword && editForm.value.newPassword && editForm.value.currentPassword) {
-      profileData.currentPassword = editForm.value.currentPassword
-      profileData.newPassword = editForm.value.newPassword
-    }
-
-    // Вызываем экшен authStore.updateProfile
-    const updatedUser = await authStore.updateProfile(profileData)
-
-    // Обновляем локальные данные
-    user.value = updatedUser
-    editForm.value.username = updatedUser.username || ''
-    editForm.value.email = updatedUser.email || ''
-
-    success.value = 'Профиль успешно обновлён!'
-
-    // Переключаем обратно в режим просмотра после успешного сохранения
     setTimeout(() => {
-      editMode.value = false
-      editForm.value.currentPassword = ''
-      editForm.value.newPassword = ''
-      editForm.value.confirmPassword = ''
-      passwordVisibility.current = false
-      passwordVisibility.new = false
-      passwordVisibility.confirm = false
-    }, 1500)
+      personalSuccess.value = ''
+    }, 3000)
   } catch (err) {
-    // Обработка ошибок, включая "Личный номер уже используется" и другие
-    error.value = err.message || 'Произошла ошибка при сохранении профиля'
+    personalError.value = err.message || 'Произошла ошибка при сохранении'
   } finally {
-    updating.value = false
+    savingPersonal.value = false
   }
 }
 
-function cancelEdit() {
-  editMode.value = false
-  editForm.value.username = user.value?.username || ''
-  editForm.value.email = user.value?.email
-  editForm.value.currentPassword = ''
-  editForm.value.newPassword = ''
-  editForm.value.confirmPassword = ''
-  // Восстанавливаем новые поля профиля
-  editForm.value.country = user.value?.country || ''
-  editForm.value.city = user.value?.city || ''
-  editForm.value.office = user.value?.office || ''
-  editForm.value.personal_id = user.value?.personal_id || ''
-  editForm.value.phone = user.value?.phone || ''
-  editForm.value.full_name = user.value?.full_name || ''
-  editForm.value.telegram_user = user.value?.telegram_user || ''
-  editForm.value.telegram_channel = user.value?.telegram_channel || ''
-  editForm.value.vk_profile = user.value?.vk_profile || ''
-  editForm.value.ok_profile = user.value?.ok_profile || ''
-  editForm.value.instagram_profile = user.value?.instagram_profile || ''
-  editForm.value.whatsapp_contact = user.value?.whatsapp_contact || ''
-  error.value = ''
-  success.value = ''
-  passwordVisibility.current = false
-  passwordVisibility.new = false
-  passwordVisibility.confirm = false
-}
-function startEdit() {
-  editMode.value = true
-  editForm.value.username = user.value?.username || ''
-  editForm.value.email = user.value?.email
-  editForm.value.currentPassword = ''
-  editForm.value.newPassword = ''
-  editForm.value.confirmPassword = ''
-  // Копируем новые поля профиля
-  editForm.value.country = user.value?.country || ''
-  editForm.value.city = user.value?.city || ''
-  editForm.value.office = user.value?.office || ''
-  editForm.value.personal_id = user.value?.personal_id || ''
-  editForm.value.phone = user.value?.phone || ''
-  editForm.value.full_name = user.value?.full_name || ''
-  editForm.value.telegram_user = user.value?.telegram_user || ''
-  editForm.value.telegram_channel = user.value?.telegram_channel || ''
-  editForm.value.vk_profile = user.value?.vk_profile || ''
-  editForm.value.ok_profile = user.value?.ok_profile || ''
-  editForm.value.instagram_profile = user.value?.instagram_profile || ''
-  editForm.value.whatsapp_contact = user.value?.whatsapp_contact || ''
-  passwordVisibility.current = false
-  passwordVisibility.new = false
-  passwordVisibility.confirm = false
-  error.value = ''
-  success.value = ''
-}
-
-async function handleDelete() {
-  deleteError.value = ''
-
-  if (!deletePassword.value) {
-    deleteError.value = 'Введите пароль'
-    return
-  }
-
-  deleting.value = true
+// Сохранить соц. сети
+async function saveSocialInfo() {
+  socialError.value = ''
+  socialSuccess.value = ''
+  savingSocial.value = true
 
   try {
-    const response = await fetch(`${API_URL}/profile`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${authStore.token}`
-      },
-      body: JSON.stringify({ password: deletePassword.value })
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Ошибка удаления аккаунта')
+    const profileData = {
+      telegram_user: socialForm.telegram_user?.trim() || '',
+      vk_profile: socialForm.vk_profile?.trim() || '',
+      instagram_profile: socialForm.instagram_profile?.trim() || '',
+      website: socialForm.website?.trim() || ''
     }
-    showDeleteConfirm.value = false
-    alert('Аккаунт успешно удалён')
-    authStore.logout()
-    emit('close')
+
+    await authStore.updateProfile(profileData)
+    socialSuccess.value = 'Социальные сети успешно обновлены!'
+
+    setTimeout(() => {
+      socialSuccess.value = ''
+    }, 3000)
   } catch (err) {
-    deleteError.value = err.message
+    socialError.value = err.message || 'Произошла ошибка при сохранении'
   } finally {
-    deleting.value = false
+    savingSocial.value = false
   }
 }
 
+// Применить промокод
 async function handleApplyPromo() {
   promoError.value = ''
   promoSuccess.value = ''
@@ -800,7 +652,9 @@ async function handleApplyPromo() {
     promoSuccess.value = 'Промокод успешно применен!'
     promoCodeInput.value = ''
 
-    // Скрыть сообщение об успехе через 5 секунд
+    // Обновляем план подписки
+    await subscriptionStore.loadPlan()
+
     setTimeout(() => {
       promoSuccess.value = ''
     }, 5000)
@@ -811,48 +665,22 @@ async function handleApplyPromo() {
   }
 }
 
-function formatDate(dateString) {
-  if (!dateString) return 'Неизвестно'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('ru-RU', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
-
-function getAvatarUrl(url) {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return `${API_URL.replace('/api', '')}${url}`
-}
-
-function getInitials(name) {
-  if (!name) return '?'
-  const parts = name.split(' ')
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
-  }
-  return name.substring(0, 2).toUpperCase()
-}
-
+// Загрузка аватара
 async function handleAvatarChange(event) {
   const file = event.target.files[0]
   if (!file) return
 
-  // Показываем cropper вместо прямой загрузки
   selectedImageUrl.value = URL.createObjectURL(file)
   showCropper.value = true
 
-  // Ждём рендеринга и инициализируем cropper
   await nextTick()
-  
+
   if (cropper) {
     cropper.destroy()
   }
-  
+
   cropper = new Cropper(cropperImage.value, {
-    aspectRatio: 1, // квадрат
+    aspectRatio: 1,
     viewMode: 1,
     autoCropArea: 1,
     responsive: true,
@@ -860,6 +688,7 @@ async function handleAvatarChange(event) {
   })
 }
 
+// Отмена обрезки
 function cancelCrop() {
   if (cropper) {
     cropper.destroy()
@@ -872,13 +701,13 @@ function cancelCrop() {
   showCropper.value = false
 }
 
+// Подтверждение обрезки и загрузка
 async function confirmCrop() {
   if (!cropper) return
 
   uploadingAvatar.value = true
 
   try {
-    // Получаем обрезанное изображение как Blob
     const canvas = cropper.getCroppedCanvas({
       width: 400,
       height: 400,
@@ -907,38 +736,63 @@ async function confirmCrop() {
         throw new Error(data.error || 'Ошибка загрузки')
       }
 
-      // Обновляем аватар
+      // ИСПРАВЛЕНИЕ БАГА: Обновляем аватар и увеличиваем ключ для перерисовки
       user.value.avatar_url = data.avatar_url
       authStore.user.avatar_url = data.avatar_url
       localStorage.setItem('user', JSON.stringify(authStore.user))
 
-      success.value = 'Аватар обновлён!'
-      setTimeout(() => success.value = '', 3000)
+      // Увеличиваем ключ для принудительной перерисовки аватарки
+      avatarKey.value++
 
+      alert('Аватар успешно обновлен!')
       cancelCrop()
     }, 'image/jpeg', 0.95)
   } catch (err) {
-    error.value = err.message
+    alert(err.message || 'Ошибка загрузки аватара')
   } finally {
     uploadingAvatar.value = false
   }
 }
 
-onMounted(() => {
-  // Данные для просмотра берутся напрямую из authStore.user,
-  // который уже должен быть загружен к моменту открытия этого модального окна.
-})
+// Удаление аватара
+async function handleAvatarDelete() {
+  if (!confirm('Вы уверены, что хотите удалить аватар?')) return
 
-onBeforeUnmount(() => {
-  cancelCrop()
-})
+  try {
+    const response = await fetch(`${API_URL}/profile/avatar`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
+
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.error || 'Ошибка удаления аватара')
+    }
+
+    // Обновляем аватар и увеличиваем ключ для перерисовки
+    user.value.avatar_url = null
+    authStore.user.avatar_url = null
+    localStorage.setItem('user', JSON.stringify(authStore.user))
+
+    avatarKey.value++
+
+    alert('Аватар успешно удален!')
+  } catch (err) {
+    alert(err.message || 'Ошибка удаления аватара')
+  }
+}
 </script>
 
 <style scoped>
+/* ========================================== */
+/* ОСНОВНЫЕ ПЕРЕМЕННЫЕ */
+/* ========================================== */
 .user-profile {
   position: relative;
-  max-width: 600px;
-  width: min(600px, calc(100vw - 48px));
+  max-width: 800px;
+  width: min(800px, calc(100vw - 48px));
   max-height: min(92vh, 720px);
   overflow-y: auto;
   border-radius: 24px;
@@ -948,6 +802,7 @@ onBeforeUnmount(() => {
   color: var(--profile-text);
   box-shadow: var(--profile-shadow);
   transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+
   --profile-bg: #ffffff;
   --profile-shadow: 0 32px 64px rgba(15, 23, 42, 0.18);
   --profile-text: #111827;
@@ -1002,6 +857,516 @@ onBeforeUnmount(() => {
   --profile-close-color: rgba(226, 232, 240, 0.6);
   --profile-close-color-hover: #e2e8f0;
 }
+
+/* ========================================== */
+/* HEADER */
+/* ========================================== */
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.profile-header h2 {
+  margin: 0;
+  color: var(--profile-text);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 30px;
+  cursor: pointer;
+  color: var(--profile-close-color);
+  transition: color 0.2s ease;
+}
+
+.close-btn:hover {
+  color: var(--profile-close-color-hover);
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--profile-muted);
+}
+
+/* ========================================== */
+/* БЛОК 1: АВАТАРКА */
+/* ========================================== */
+.profile-avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 30px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  border-radius: 20px;
+  margin-bottom: 30px;
+  border: 2px solid var(--profile-border);
+}
+
+.avatar-wrapper {
+  flex-shrink: 0;
+}
+
+.profile-avatar,
+.profile-avatar-placeholder {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid transparent;
+  background: linear-gradient(white, white) padding-box,
+              linear-gradient(135deg, #667eea 0%, #764ba2 100%) border-box;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.profile-avatar:hover,
+.profile-avatar-placeholder:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+}
+
+.profile-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 48px;
+  font-weight: 700;
+}
+
+.avatar-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-upload,
+.btn-remove {
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-upload {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: inline-block;
+}
+
+.btn-upload:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.btn-remove {
+  background: #f44336;
+  color: white;
+}
+
+.btn-remove:hover {
+  background: #da190b;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(244, 67, 54, 0.4);
+}
+
+/* ========================================== */
+/* БЛОК 2: ТАБЫ */
+/* ========================================== */
+.tabs-container {
+  margin-bottom: 30px;
+}
+
+.tabs-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.tab-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border: 2px solid var(--profile-border);
+  border-radius: 16px;
+  background: var(--profile-input-bg);
+  color: var(--profile-text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tab-button:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.tab-button.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.tab-icon {
+  font-size: 24px;
+}
+
+.tab-label {
+  text-align: center;
+  line-height: 1.3;
+}
+
+.tab-content {
+  background: var(--profile-control-bg);
+  border-radius: 16px;
+  padding: 24px;
+  min-height: 300px;
+}
+
+.tab-panel {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========================================== */
+/* TAB 1: ОСНОВНАЯ ИНФОРМАЦИЯ */
+/* ========================================== */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.info-item label {
+  font-weight: 600;
+  color: var(--profile-muted);
+  font-size: 14px;
+}
+
+.info-item span {
+  font-size: 16px;
+  color: var(--profile-text);
+  font-weight: 500;
+}
+
+.plan-badge {
+  display: inline-block !important;
+}
+
+.expiry-unlimited {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+.expiry-active {
+  color: #4caf50;
+}
+
+.expiry-warning {
+  color: #ff9800;
+  font-weight: 600;
+}
+
+.expiry-expired {
+  color: #f44336;
+  font-weight: 600;
+}
+
+/* ========================================== */
+/* TAB 2 & 3: ФОРМЫ */
+/* ========================================== */
+.info-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--profile-muted);
+}
+
+.form-group input {
+  padding: 12px 16px;
+  border: 2px solid var(--profile-input-border);
+  border-radius: 12px;
+  font-size: 15px;
+  background: var(--profile-input-bg);
+  color: var(--profile-text);
+  transition: all 0.3s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.form-group input::placeholder {
+  color: var(--profile-input-placeholder);
+}
+
+.btn-save {
+  padding: 14px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-save:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.btn-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ========================================== */
+/* TAB 4: ЛИМИТЫ */
+/* ========================================== */
+.limits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.limit-card {
+  background: var(--profile-input-bg);
+  border: 2px solid var(--profile-border);
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.limit-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  border-color: #667eea;
+}
+
+.limit-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.limit-icon {
+  font-size: 28px;
+}
+
+.limit-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--profile-text);
+}
+
+.limit-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.limit-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.limit-current {
+  color: #667eea;
+}
+
+.limit-separator {
+  color: var(--profile-muted);
+  font-size: 18px;
+}
+
+.limit-max {
+  color: var(--profile-muted);
+  font-size: 18px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 12px;
+  background: var(--profile-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease, background-color 0.3s ease;
+  animation: fillBar 1s ease-out;
+}
+
+@keyframes fillBar {
+  from {
+    width: 0;
+  }
+}
+
+/* ========================================== */
+/* БЛОК 3 & 4: ДОПОЛНИТЕЛЬНЫЕ СЕКЦИИ */
+/* ========================================== */
+.extra-section {
+  margin-bottom: 24px;
+  padding: 24px;
+  background: var(--profile-control-bg);
+  border-radius: 16px;
+  border: 2px solid var(--profile-border);
+}
+
+.section-header h3 {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--profile-text);
+}
+
+.promo-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.promo-input-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.promo-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid var(--profile-input-border);
+  border-radius: 12px;
+  font-size: 15px;
+  background: var(--profile-input-bg);
+  color: var(--profile-text);
+  transition: all 0.3s ease;
+}
+
+.promo-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.promo-input::placeholder {
+  color: var(--profile-input-placeholder);
+}
+
+.promo-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-promo {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-promo:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.btn-promo:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ========================================== */
+/* СООБЩЕНИЯ */
+/* ========================================== */
+.error-message {
+  color: var(--profile-error-text);
+  font-size: 14px;
+  padding: 12px 16px;
+  background: var(--profile-error-bg);
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.success-message {
+  color: var(--profile-success-text);
+  font-size: 14px;
+  padding: 12px 16px;
+  background: var(--profile-success-bg);
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+/* ========================================== */
+/* CROPPER MODAL */
+/* ========================================== */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
@@ -1084,7 +1449,111 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.btn-primary,
+.btn-secondary {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: var(--profile-secondary-bg);
+  color: var(--profile-secondary-text);
+}
+
+.btn-secondary:hover {
+  background: var(--profile-secondary-bg-hover);
+}
+
+/* ========================================== */
+/* RESPONSIVE */
+/* ========================================== */
+@media (max-width: 768px) {
+  .user-profile {
+    padding: 24px 20px;
+  }
+
+  .profile-header h2 {
+    font-size: 24px;
+  }
+
+  .tabs-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tab-button {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+
+  .tab-icon {
+    font-size: 20px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .limits-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .promo-input-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-promo {
+    width: 100%;
+  }
+}
+
 @media (max-width: 480px) {
+  .profile-avatar,
+  .profile-avatar-placeholder {
+    width: 120px;
+    height: 120px;
+  }
+
+  .profile-avatar-placeholder {
+    font-size: 36px;
+  }
+
+  .avatar-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn-upload,
+  .btn-remove {
+    width: 100%;
+  }
+
+  .tab-content {
+    padding: 16px;
+  }
+
   .cropper-modal {
     padding: 20px;
     gap: 12px;
@@ -1097,389 +1566,5 @@ onBeforeUnmount(() => {
   .cropper-body {
     max-height: 320px;
   }
-}
-
-.profile-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-}
-
-.profile-header h2 {
-  margin: 0;
-  color: var(--profile-text);
-}
-
-.close-btn,
-.delete-confirm__close {
-  background: none;
-  border: none;
-  font-size: 30px;
-  cursor: pointer;
-  color: var(--profile-close-color);
-  transition: color 0.2s ease;
-}
-
-.close-btn:hover,
-.delete-confirm__close:hover {
-  color: var(--profile-close-color-hover);
-}
-
-.loading {
-  text-align: center;
-  padding: 40px;
-  color: var(--profile-muted);
-}
-
-.profile-view {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.profile-field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.profile-field label {
-  font-weight: 600;
-  color: var(--profile-muted);
-  font-size: 14px;
-}
-
-.profile-field span {
-  font-size: 16px;
-  color: var(--profile-text);
-}
-
-.profile-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.profile-edit {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.form-group label {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--profile-muted);
-}
-
-.form-group input {
-  padding: 10px;
-  border: 1px solid var(--profile-input-border);
-  border-radius: 5px;
-  font-size: 14px;
-  background: var(--profile-input-bg);
-  color: var(--profile-text);
-  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
-}
-
-.form-group input::placeholder {
-  color: var(--profile-input-placeholder);
-}
-.password-input {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.password-input input {
-  flex: 1;
-}
-
-.password-toggle {
-  border: none;
-  background: var(--profile-control-bg);
-  color: var(--profile-control-text);
-  padding: 8px 12px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-
-.password-toggle:hover {
-  background: var(--profile-control-bg-hover);
-  color: var(--profile-control-text-hover);
-}
-
-.form-divider {
-  margin: 10px 0;
-  padding: 10px 0;
-  border-top: 1px solid var(--profile-divider);
-  color: var(--profile-muted);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.form-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.btn-primary,
-.btn-secondary,
-.btn-danger {
-  padding: 12px 20px;
-  border: none;
-  border-radius: 5px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-
-.btn-primary {
-  background: #4caf50;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #45a049;
-}
-
-.btn-primary:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: var(--profile-secondary-bg);
-  color: var(--profile-secondary-text);
-}
-
-.btn-secondary:hover {
-  background: var(--profile-secondary-bg-hover);
-}
-
-.btn-danger {
-  background: #f44336;
-  color: white;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: #da190b;
-}
-
-.error-message {
-  color: #f44336;
-  font-size: 14px;
-  padding: 10px;
-  background: var(--profile-error-bg);
-  border-radius: 5px;
-}
-
-.success-message {
-  color: var(--profile-success-text);
-  font-size: 14px;
-  padding: 10px;
-  background: var(--profile-success-bg);
-  border-radius: 5px;
-}
-
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--profile-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10001;
-  padding: 24px;
-}
-
-.delete-confirm {
-  position: relative;
-  background: var(--profile-modal-bg);
-  padding: 36px 30px 30px;
-  border-radius: 18px;
-  max-width: 400px;
-  width: min(400px, calc(100vw - 48px));
-  box-shadow: var(--profile-modal-shadow);
-  color: var(--profile-text);
-}
-
-.delete-confirm__close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  line-height: 1;
-}
-
-.delete-confirm h3 {
-  margin: 0 0 15px 0;
-  color: #f44336;
-}
-
-.delete-confirm p {
-  margin: 0 0 20px 0;
-  color: var(--profile-muted);
-}
-.field-hint {
-  display: block;
-  font-size: 12px;
-  color: var(--profile-muted);
-  margin-top: 3px;
-}
-
-.profile-avatar-section {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 20px;
-  background: var(--profile-control-bg);
-  border-radius: 12px;
-  margin-bottom: 20px;
-}
-
-.avatar-wrapper {
-  flex-shrink: 0;
-}
-
-.profile-avatar,
-.profile-avatar-placeholder {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid var(--profile-border);
-}
-
-.profile-avatar-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  font-size: 36px;
-  font-weight: 700;
-}
-
-.avatar-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.btn-upload,
-.btn-remove {
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-  text-align: center;
-}
-
-.btn-upload {
-  background: #2196F3;
-  color: white;
-  display: inline-block;
-}
-
-.btn-upload:hover {
-  background: #1976D2;
-}
-
-.btn-remove {
-  background: var(--profile-secondary-bg);
-  color: var(--profile-secondary-text);
-}
-
-.btn-remove:hover {
-  background: #f44336;
-  color: white;
-}
-
-.promo-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.promo-input-group {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.promo-input {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid var(--profile-input-border);
-  border-radius: 5px;
-  font-size: 14px;
-  background: var(--profile-input-bg);
-  color: var(--profile-text);
-  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
-}
-
-.promo-input::placeholder {
-  color: var(--profile-input-placeholder);
-}
-
-.promo-input:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-promo {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  background: #2196F3;
-  color: white;
-  transition: background 0.2s ease;
-  white-space: nowrap;
-}
-
-.btn-promo:hover:not(:disabled) {
-  background: #1976D2;
-}
-
-.btn-promo:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-@media (max-width: 480px) {
-  .promo-input-group {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .btn-promo {
-    width: 100%;
-  }
-}
-
-.usage-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 </style>
