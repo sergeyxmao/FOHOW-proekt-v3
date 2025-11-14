@@ -6,6 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 export const useSubscriptionStore = defineStore('subscription', {
   state: () => ({
     currentPlan: null,      // Текущий тарифный план
+    plans: [],              // Список всех доступных тарифных планов
     features: {},           // Возможности плана
     usage: {},              // Использование ресурсов
     limits: {},             // Лимиты
@@ -227,10 +228,40 @@ export const useSubscriptionStore = defineStore('subscription', {
     },
 
     /**
+     * Загрузка списка всех доступных тарифных планов
+     * @returns {Promise<Array>} Массив тарифных планов
+     */
+    async fetchPlans() {
+      try {
+        const response = await fetch(`${API_URL}/plans`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || 'Ошибка загрузки списка тарифных планов')
+        }
+
+        const data = await response.json()
+        this.plans = data.plans || []
+
+        return this.plans
+      } catch (error) {
+        console.error('Ошибка при загрузке списка планов:', error)
+        this.error = error.message
+        throw error
+      }
+    },
+
+    /**
      * Очистить данные хранилища
      */
     clear() {
       this.currentPlan = null
+      this.plans = []
       this.features = {}
       this.usage = {}
       this.limits = {}
