@@ -5,8 +5,8 @@ dotenv.config();
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  secure: false, // true для 465, false для других портов
+  port: parseInt(process.env.EMAIL_PORT),
+  secure: process.env.EMAIL_PORT === '465', // true для 465, false для других портов
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
