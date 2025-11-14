@@ -541,6 +541,134 @@ app.post('/api/resend-verification-code', async (req, reply) => {
   }
 });
 
+// === ПРОВЕРКА КОДА И АКТИВАЦИЯ АККАУНТА ===
+app.post('/api/verify-email', async (req, reply) => {
+  const { email, code } = req.body;
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Проверить код
+    const codeResult = await client.query(
+      `SELECT * FROM email_verification_codes
+       WHERE email = $1
+         AND code = $2
+         AND expires_at > NOW()
+         AND used = FALSE
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [email, code]
+    );
+
+    if (codeResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return reply.code(400).send({
+        error: 'Неверный или истёкший код подтверждения',
+        field: 'code'
+      });
+    }
+
+    // 2. Отметить код как использованный
+    await client.query(
+      'UPDATE email_verification_codes SET used = TRUE, used_at = NOW() WHERE id = $1',
+      [codeResult.rows[0].id]
+    );
+
+    // 3. Получить пользователя
+    const userResult = await client.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (userResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return reply.code(404).send({ error: 'Пользователь не найден' });
+    }
+
+    const user = userResult.rows[0];
+
+    // 4. Получить Демо-тариф
+    const demoPlanResult = await client.query(
+      "SELECT id FROM subscription_plans WHERE code_name = 'demo'"
+    );
+
+    if (demoPlanResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return reply.code(500).send({ error: 'Демо-тариф не найден в системе' });
+    }
+
+    const demoPlanId = demoPlanResult.rows[0].id;
+
+    // 5. Генерировать personal_id
+    const personalId = await generateUniquePersonalId(client);
+
+    // 6. Активировать аккаунт
+    await client.query(`
+      UPDATE users
+      SET email_verified = TRUE,
+          plan_id = $1,
+          subscription_started_at = NOW(),
+          subscription_expires_at = NOW() + INTERVAL '7 days',
+          personal_id = $2
+      WHERE id = $3
+    `, [demoPlanId, personalId, user.id]);
+
+    // 7. Создать запись в demo_trials
+    await client.query(
+      `INSERT INTO demo_trials (user_id, started_at, converted_to_paid)
+       VALUES ($1, NOW(), false)`,
+      [user.id]
+    );
+
+    // 8. Создать запись в subscription_history
+    await client.query(
+      `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
+       VALUES ($1, $2, NOW(), NOW() + INTERVAL '7 days', 'email_verification', 0.00, 'RUB')`,
+      [user.id, demoPlanId]
+    );
+
+    // 9. Добавить email в постоянное хранилище
+    await client.query(
+      `INSERT INTO verified_emails (email, user_id, notes)
+       VALUES ($1, $2, 'Verified via email confirmation')
+       ON CONFLICT (email) DO NOTHING`,
+      [email, user.id]
+    );
+
+    console.log(`✅ Email подтверждён для ${email}, присвоен Демо-тариф и номер ${personalId}`);
+
+    // 10. Создать JWT токен
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    await client.query('COMMIT');
+
+    return reply.send({
+      success: true,
+      token: token,
+      message: 'Email успешно подтверждён! Добро пожаловать!',
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        personal_id: personalId
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Ошибка верификации email:', error);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  } finally {
+    client.release();
+  }
+});
+
 // === ВЫХОД (LOGOUT) ===
 app.post('/api/logout', {
   preHandler: [authenticateToken]
