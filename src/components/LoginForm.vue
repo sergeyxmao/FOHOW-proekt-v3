@@ -67,6 +67,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const emit = defineEmits(['login-success', 'switch-to-register', 'switch-to-forgot'])
@@ -76,6 +77,7 @@ const props = defineProps({
     default: false
   }
 })
+const router = useRouter()
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
 const authStore = useAuthStore()
@@ -125,21 +127,29 @@ onMounted(() => {
 async function handleLogin() {
   error.value = ''
   loading.value = true
-  
+
   try {
     if (!verificationToken.value) {
       await fetchVerificationCode(false)
       throw new Error('Проверочный код недоступен. Попробуйте обновить код и повторить попытку.')
     }
-  
 
-    await authStore.login(
+    const result = await authStore.login(
       email.value,
       password.value,
       verificationInput.value,
       verificationToken.value
     )
-      emit('login-success')
+
+    // Проверить, требуется ли верификация email
+    if (result && result.requiresVerification) {
+      // Перенаправить на страницу верификации
+      router.push('/verify-email')
+      return
+    }
+
+    // Обычный вход - emit успешного входа
+    emit('login-success')
   } catch (err) {
     error.value = err.message
     await fetchVerificationCode(false)
