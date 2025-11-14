@@ -18,7 +18,7 @@ import { useViewportStore } from '../../stores/viewport.js';
 import { useNotesStore } from '../../stores/notes.js';
 import { useMobileStore } from '../../stores/mobile.js';
 import { useStickersStore } from '../../stores/stickers.js';
-import { useBoardStore } from '../../stores/board.js';  
+import { useBoardStore } from '../../stores/board.js';
 import { Engine } from '../../utils/calculationEngine';
 import {
   propagateActivePvUp,
@@ -32,6 +32,12 @@ import {
   DEFAULT_NOTE_WIDTH,
   DEFAULT_NOTE_HEIGHT
 } from '../../utils/noteUtils';
+import {
+  buildConnectionGeometry,
+  buildOrthogonalConnectionPath,
+  getCardConnectorPoint,
+  resolveConnectionSides
+} from '../../utils/canvasGeometry';  
 const historyStore = useHistoryStore();
 const notesStore = useNotesStore();
 const mobileStore = useMobileStore();
@@ -855,117 +861,7 @@ const selectionBoxStyle = computed(() => {
     height: `${height}px`
   };
 });
-const MARKER_OFFSET = 12;
 
-const getPointCoords = (card, side) => {
-  const halfWidth = card.width / 2;
-  const halfHeight = card.height / 2;
-  switch (side) {
-    case 'top':
-      return { x: card.x + halfWidth, y: card.y };
-    case 'bottom':
-      return { x: card.x + halfWidth, y: card.y + card.height };
-    case 'left':
-      return { x: card.x, y: card.y + halfHeight };
-    case 'right':
-      return { x: card.x + card.width, y: card.y + halfHeight };
-    default:
-      return { x: card.x + halfWidth, y: card.y + halfHeight };
-  }
-};
-
-const resolveConnectionSides = (fromCard, toCard, preferredFromSide, preferredToSide) => {
-  if (preferredFromSide && preferredToSide) {
-    return { fromSide: preferredFromSide, toSide: preferredToSide };
-  }
-
-  let fromSide = 'right';
-  let toSide = 'left';
-
-  if (fromCard.x > toCard.x) {
-    fromSide = 'left';
-    toSide = 'right';
-  } else if (fromCard.y > toCard.y) {
-    fromSide = 'top';
-    toSide = 'bottom';
-  } else if (fromCard.y < toCard.y) {
-    fromSide = 'bottom';
-    toSide = 'top';
-  }
-
-  return { fromSide, toSide };
-};
-  
-const updateLinePath = (p1, p2, side1, side2) => {
-  const startAnchor = { ...p1 };
-  const endAnchor = { ...p2 };
-  const startPoint = { ...startAnchor };
-  const endPoint = { ...endAnchor };
-  let midPoint = {}; // Точка "колена"
-
-  // 1. Определяем базовое положение "колена"
-  if (side1 === 'left' || side1 === 'right') {
-    // Линия начинается горизонтально
-    midPoint = { x: p2.x, y: p1.y };
-  } else {
-    // Линия начинается вертикально
-    midPoint = { x: p1.x, y: p2.y };
-  }
-
-  // 2. Применяем отступы к начальной и конечной точкам
-  switch (side1) {
-    case 'top':    startPoint.y -= MARKER_OFFSET; break;
-    case 'bottom': startPoint.y += MARKER_OFFSET; break;
-    case 'left':   startPoint.x -= MARKER_OFFSET; break;
-    case 'right':  startPoint.x += MARKER_OFFSET; break;
-  }
-  
-  if (side2) {
-    switch (side2) {
-      case 'top':    endPoint.y -= MARKER_OFFSET; break;
-      case 'bottom': endPoint.y += MARKER_OFFSET; break;
-      case 'left':   endPoint.x -= MARKER_OFFSET; break;
-      case 'right':  endPoint.x += MARKER_OFFSET; break;
-    }
-  }
-
-  // 3. Корректируем положение "колена", чтобы оно совпадало со смещенными точками
-  if (side1 === 'left' || side1 === 'right') {
-    midPoint.y = startPoint.y; // Y "колена" = Y смещенного старта
-    midPoint.x = endPoint.x;   // X "колена" = X смещенного конца
-  } else {
-    midPoint.x = startPoint.x; // X "колена" = X смещенного старта
-    midPoint.y = endPoint.y;   // Y "колена" = Y смещенного конца
-  }
-  
-
-  const pathPoints = [
-    startAnchor,
-    startPoint,
-    midPoint,
-    endPoint,
-    endAnchor
-  ].filter(Boolean);
-
-  const dedupedPoints = pathPoints.filter((point, index, array) => {
-    if (!point) return false;
-    if (index === 0) return true;
-    const prevPoint = array[index - 1];
-    return !(prevPoint && prevPoint.x === point.x && prevPoint.y === point.y);
-  });
-
-  if (!dedupedPoints.length) {
-    return '';
-  }
-
-  const [firstPoint, ...otherPoints] = dedupedPoints;
-  const commands = [`M ${firstPoint.x} ${firstPoint.y}`];
-  otherPoints.forEach(point => {
-    commands.push(`L ${point.x} ${point.y}`);
-  });
-
-  return commands.join(' ');
-};
 const connectionPaths = computed(() => {
   return connections.value
     .map(connection => {
@@ -974,20 +870,17 @@ const connectionPaths = computed(() => {
 
       if (!fromCard || !toCard) return null;
 
-      const { fromSide, toSide } = resolveConnectionSides(
-        fromCard,
-        toCard,
-        connection.fromSide,
-        connection.toSide
-      );
+      const geometry = buildConnectionGeometry(connection, fromCard, toCard);
 
-      const startPoint = getPointCoords(fromCard, fromSide);
-      const endPoint = getPointCoords(toCard, toSide);
-      const pathData = updateLinePath(startPoint, endPoint, fromSide, toSide);
+
+       if (!geometry || !geometry.d) {
+        return null;
+      }
+
 
       return {
         id: connection.id,
-        d: pathData,
+        d: geometry.d,
         color: connection.color || connectionsStore.defaultLineColor,
         strokeWidth: connection.thickness || connectionsStore.defaultLineThickness,
         highlightType: connection.highlightType || null,
@@ -1002,12 +895,12 @@ const previewLinePath = computed(() => {
   
   const fromCard = cards.value.find(card => card.id === connectionStart.value.cardId);
   if (!fromCard) return null;
-  
-  const startPoint = getPointCoords(fromCard, connectionStart.value.side);
-  const pathData = updateLinePath(startPoint, mousePosition.value, connectionStart.value.side, null);
-  
+
+  const startPoint = getCardConnectorPoint(fromCard, connectionStart.value.side);
+  const { d } = buildOrthogonalConnectionPath(startPoint, mousePosition.value, connectionStart.value.side, null);
+
   return {
-    d: pathData,
+    d,
     color: '#ff9800',
     strokeWidth: previewLineWidth.value,
     strokeDasharray: '5,5'
@@ -2309,16 +2202,71 @@ const fitToContent = (options = {}) => {
 
   const padding = Number.isFinite(options.padding) ? Math.max(0, options.padding) : 120;
   const cardsList = cards.value;
+  const connectionsList = connections.value;
 
-  if (!cardsList.length) {
-    resetZoomTransform();
-    return;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let hasContent = false;
+
+  cardsList.forEach(card => {
+    if (!card) {
+      return;
+    }
+
+    const left = Number.isFinite(card.x) ? card.x : 0;
+    const top = Number.isFinite(card.y) ? card.y : 0;
+    const width = Number.isFinite(card.width) ? card.width : 0;
+    const height = Number.isFinite(card.height) ? card.height : 0;
+
+    minX = Math.min(minX, left);
+    minY = Math.min(minY, top);
+    maxX = Math.max(maxX, left + width);
+    maxY = Math.max(maxY, top + height);
+    hasContent = true;
+  });
+
+  if (Array.isArray(connectionsList) && connectionsList.length > 0) {
+    const cardMap = new Map(cardsList.map(card => [card.id, card]));
+    const defaultThickness = connectionsStore.defaultLineThickness || 0;
+
+    connectionsList.forEach(connection => {
+      const fromCard = cardMap.get(connection.from);
+      const toCard = cardMap.get(connection.to);
+
+      if (!fromCard || !toCard) {
+        return;
+      }
+
+      const geometry = buildConnectionGeometry(connection, fromCard, toCard);
+
+      if (!geometry || !geometry.points || geometry.points.length === 0) {
+        return;
+      }
+
+      const strokeWidth = Number.isFinite(connection.thickness)
+        ? connection.thickness
+        : defaultThickness;
+      const markerRadius = Math.max(strokeWidth, 8) / 2;
+      geometry.points.forEach(point => {
+        if (!point) {
+          return;
+        }
+
+        minX = Math.min(minX, point.x - markerRadius);
+        minY = Math.min(minY, point.y - markerRadius);
+        maxX = Math.max(maxX, point.x + markerRadius);
+        maxY = Math.max(maxY, point.y + markerRadius);
+      });
+
+      hasContent = true;
+    });
   }
 
-  const minX = Math.min(...cardsList.map(card => card.x));
-  const minY = Math.min(...cardsList.map(card => card.y));
-  const maxX = Math.max(...cardsList.map(card => card.x + card.width));
-  const maxY = Math.max(...cardsList.map(card => card.y + card.height));
+  if (!hasContent || !Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {    resetZoomTransform();
+    return;
+  }
 
   const containerRect = canvasContainerRef.value.getBoundingClientRect();
   const containerWidth = containerRect.width || canvasContainerRef.value.clientWidth || 1;
