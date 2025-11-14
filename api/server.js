@@ -232,8 +232,11 @@ app.post('/api/register', async (req, reply) => {
     const newUser = insertResult.rows[0];
     console.log(`✅ [REGISTER] Пользователь создан: ID=${newUser.id}, email=${newUser.email}`);
 
+    // Список email администраторов
+    const adminEmails = ['sergeixmao@gmail.com'];
+
     // Проверить, является ли email администратором
-    const isAdmin = email === 'sergeixmao@gmail.com';
+    const isAdmin = adminEmails.includes(email);
 
     if (isAdmin) {
       // Получаем ID премиум-тарифа
