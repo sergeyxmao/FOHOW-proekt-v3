@@ -663,11 +663,16 @@ export function useProjectActions() {
 
       const svgLayerClone = containerClone.querySelector('.svg-layer')
       if (svgLayerClone) {
-        svgLayerClone.setAttribute('width', String(normalizedContentWidth))
-        svgLayerClone.setAttribute('height', String(normalizedContentHeight))
-        svgLayerClone.setAttribute('viewBox', `0 0 ${normalizedContentWidth} ${normalizedContentHeight}`)
-        svgLayerClone.style.width = `${normalizedContentWidth}px`
-        svgLayerClone.style.height = `${normalizedContentHeight}px`
+        // ИСПРАВЛЕНИЕ: Устанавливаем правильный viewBox с учетом границ контента
+        svgLayerClone.setAttribute('width', String(exportWidth))
+        svgLayerClone.setAttribute('height', String(exportHeight))
+        svgLayerClone.setAttribute('viewBox', `0 0 ${exportWidth} ${exportHeight}`)
+        svgLayerClone.setAttribute('preserveAspectRatio', 'xMidYMid meet')
+        svgLayerClone.style.width = `${exportWidth}px`
+        svgLayerClone.style.height = `${exportHeight}px`
+        svgLayerClone.style.position = 'absolute'
+        svgLayerClone.style.left = '0'
+        svgLayerClone.style.top = '0'
         svgLayerClone.style.pointerEvents = 'none'
         svgLayerClone.style.overflow = 'visible'
 
@@ -678,6 +683,10 @@ export function useProjectActions() {
           if (visibleLine) {
             // Удаляем классы анимации и выделения для экспорта
             visibleLine.classList.remove('selected', 'line--balance-highlight', 'line--pv-highlight', 'line--balance-flash')
+            // ИСПРАВЛЕНИЕ: Убеждаемся, что линии видимы
+            visibleLine.style.display = ''
+            visibleLine.style.visibility = 'visible'
+            visibleLine.style.opacity = '1'
           }
         })
       }
@@ -723,14 +732,91 @@ export function useProjectActions() {
       const cssText = getExportSvgCss()
       const background = backgroundColor.value || '#ffffff'
 
+      // ИСПРАВЛЕНИЕ: Добавляем JavaScript для зума и панорамирования
+      const interactiveScript = `
+<script><![CDATA[
+(function() {
+  var svg = document.querySelector('svg');
+  var foreignObject = svg.querySelector('foreignObject');
+  var canvas = foreignObject.querySelector('#canvas');
+
+  var scale = 1;
+  var translateX = 0;
+  var translateY = 0;
+  var isPanning = false;
+  var startX = 0;
+  var startY = 0;
+
+  var MIN_SCALE = 0.1;
+  var MAX_SCALE = 10;
+
+  function updateTransform() {
+    var transform = 'scale(' + scale + ') translate(' + translateX + 'px, ' + translateY + 'px)';
+    canvas.style.transform = transform;
+  }
+
+  svg.addEventListener('wheel', function(e) {
+    e.preventDefault();
+
+    var rect = svg.getBoundingClientRect();
+    var mouseX = e.clientX - rect.left;
+    var mouseY = e.clientY - rect.top;
+
+    var delta = e.deltaY > 0 ? 0.9 : 1.1;
+    var newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * delta));
+
+    // Масштабируем относительно позиции курсора
+    var scaleRatio = newScale / scale;
+    translateX = mouseX - (mouseX - translateX) * scaleRatio;
+    translateY = mouseY - (mouseY - translateY) * scaleRatio;
+    scale = newScale;
+
+    updateTransform();
+  });
+
+  svg.addEventListener('mousedown', function(e) {
+    if (e.button === 0) {
+      isPanning = true;
+      startX = e.clientX - translateX;
+      startY = e.clientY - translateY;
+      svg.style.cursor = 'grabbing';
+    }
+  });
+
+  svg.addEventListener('mousemove', function(e) {
+    if (isPanning) {
+      translateX = e.clientX - startX;
+      translateY = e.clientY - startY;
+      updateTransform();
+    }
+  });
+
+  svg.addEventListener('mouseup', function() {
+    isPanning = false;
+    svg.style.cursor = 'grab';
+  });
+
+  svg.addEventListener('mouseleave', function() {
+    isPanning = false;
+    svg.style.cursor = 'grab';
+  });
+
+  svg.style.cursor = 'grab';
+})();
+]]></script>
+`
+
       const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${exportWidth}" height="${exportHeight}" viewBox="0 0 ${exportWidth} ${exportHeight}">
+<svg xmlns="http://www.w3.org/2000/svg" width="${exportWidth}" height="${exportHeight}" viewBox="0 0 ${exportWidth} ${exportHeight}" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <style type="text/css">${cssText}</style>
+  </defs>
   <foreignObject x="0" y="0" width="${exportWidth}" height="${exportHeight}">
     <body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;height:100%;overflow:hidden;background:${background};">
-      <style>${cssText}</style>
       ${exportRoot.outerHTML}
     </body>
   </foreignObject>
+  ${interactiveScript}
 </svg>`
 
       const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
