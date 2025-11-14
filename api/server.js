@@ -678,7 +678,7 @@ app.post('/api/reset-password', async (req, reply) => {
         }
         const user = userResult.rows[0];
 
-        // Проверки уникальности... (оставляем без изменений)
+        // Проверки уникальности email и username
         if (email && email !== user.email) {
           const emailCheck = await pool.query('SELECT id FROM users WHERE email = $1 AND id != $2', [email, userId]);
           if (emailCheck.rows.length > 0) return reply.code(409).send({ error: 'Этот email уже используется' });
@@ -687,9 +687,28 @@ app.post('/api/reset-password', async (req, reply) => {
           const usernameCheck = await pool.query('SELECT id FROM users WHERE username = $1 AND id != $2', [username, userId]);
           if (usernameCheck.rows.length > 0) return reply.code(409).send({ error: 'Это имя пользователя уже занято' });
         }
+
+        // Проверки personal_id (формат и уникальность)
         if (personal_id && personal_id !== user.personal_id) {
+          // Проверяем формат (RUY00 + 9 цифр)
+          const formatRegex = /^RUY00\d{9}$/;
+          if (!formatRegex.test(personal_id)) {
+            return reply.code(400).send({
+              error: 'Неверный формат компьютерного номера. Формат: RUY00XXXXXXXXX (9 цифр)',
+              field: 'personal_id'
+            });
+          }
+
+          // Проверяем уникальность
           const personalIdCheck = await pool.query('SELECT id FROM users WHERE personal_id = $1 AND id != $2', [personal_id, userId]);
-          if (personalIdCheck.rows.length > 0) return reply.code(409).send({ error: 'Этот личный номер уже используется' });
+          if (personalIdCheck.rows.length > 0) {
+            return reply.code(400).send({
+              error: 'Этот компьютерный номер уже используется другим пользователем',
+              field: 'personal_id'
+            });
+          }
+
+          console.log(`✅ Пользователь ${userId} изменил personal_id на: ${personal_id}`);
         }
         
         // Логика смены пароля... (оставляем без изменений)
