@@ -174,6 +174,58 @@ app.post('/api/verification-code', async (req, reply) => {
   }
 });
 
+// === ФУНКЦИЯ ГЕНЕРАЦИИ УНИКАЛЬНОГО PERSONAL_ID ===
+async function generateUniquePersonalId(client) {
+  let attempts = 0;
+  const maxAttempts = 1000; // Защита от бесконечного цикла
+
+  while (attempts < maxAttempts) {
+    // 1. Получить текущий счётчик с блокировкой
+    const counterResult = await client.query(
+      'SELECT last_issued_number FROM personal_id_counter WHERE id = 1 FOR UPDATE'
+    );
+
+    if (counterResult.rows.length === 0) {
+      throw new Error('Счётчик personal_id не инициализирован в базе данных');
+    }
+
+    let nextNumber = counterResult.rows[0].last_issued_number + 1;
+
+    // 2. Сгенерировать номер в формате RUY00XXXXXXXXX
+    const personalId = `RUY00${String(nextNumber).padStart(9, '0')}`;
+
+    // 3. Проверить, свободен ли этот номер
+    const existingUser = await client.query(
+      'SELECT id FROM users WHERE personal_id = $1',
+      [personalId]
+    );
+
+    if (existingUser.rows.length === 0) {
+      // Номер свободен! Обновить счётчик и вернуть номер
+      await client.query(
+        'UPDATE personal_id_counter SET last_issued_number = $1, updated_at = NOW() WHERE id = 1',
+        [nextNumber]
+      );
+
+      console.log(`✅ Выдан свободный номер: ${personalId}`);
+      return personalId;
+    }
+
+    // Номер занят, пробуем следующий
+    console.log(`⚠️ Номер ${personalId} занят, пропускаем...`);
+
+    // Обновить счётчик, чтобы в следующий раз начать со следующего номера
+    await client.query(
+      'UPDATE personal_id_counter SET last_issued_number = $1, updated_at = NOW() WHERE id = 1',
+      [nextNumber]
+    );
+
+    attempts++;
+  }
+
+  throw new Error('Не удалось сгенерировать уникальный personal_id после ' + maxAttempts + ' попыток');
+}
+
 // === РЕГИСТРАЦИЯ ===
 app.post('/api/register', async (req, reply) => {
    const { email, password, verificationToken, verificationCode } = req.body;
@@ -231,6 +283,16 @@ app.post('/api/register', async (req, reply) => {
 
     const newUser = insertResult.rows[0];
     console.log(`✅ [REGISTER] Пользователь создан: ID=${newUser.id}, email=${newUser.email}`);
+
+    // Генерируем и присваиваем personal_id
+    const personalId = await generateUniquePersonalId(client);
+
+    await client.query(
+      'UPDATE users SET personal_id = $1 WHERE id = $2',
+      [personalId, newUser.id]
+    );
+
+    console.log(`✅ [REGISTER] Пользователю ${newUser.email} присвоен номер: ${personalId}`);
 
     // Список email администраторов
     const adminEmails = ['sergeixmao@gmail.com'];
