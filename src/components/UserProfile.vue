@@ -147,6 +147,26 @@
                 />
               </div>
 
+              <div class="form-group">
+                <label for="office">Представительство:</label>
+                <input
+                  id="office"
+                  v-model="personalForm.office"
+                  type="text"
+                  placeholder="Название представительства"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="personal-id">Компьютерный номер:</label>
+                <input
+                  id="personal-id"
+                  v-model="personalForm.personal_id"
+                  type="text"
+                  placeholder="Введите компьютерный номер"
+                />
+              </div>
+
               <div v-if="personalError" class="error-message">{{ personalError }}</div>
               <div v-if="personalSuccess" class="success-message">{{ personalSuccess }}</div>
 
@@ -444,7 +464,9 @@ const personalForm = reactive({
   full_name: '',
   phone: '',
   city: '',
-  country: ''
+  country: '',
+  office: '',
+  personal_id: ''
 })
 
 const socialForm = reactive({
@@ -486,6 +508,8 @@ onMounted(async () => {
     personalForm.phone = user.value.phone || ''
     personalForm.city = user.value.city || ''
     personalForm.country = user.value.country || ''
+    personalForm.office = user.value.office || ''
+    personalForm.personal_id = user.value.personal_id || ''
 
     socialForm.telegram_user = user.value.telegram_user || ''
     socialForm.vk_profile = user.value.vk_profile || ''
@@ -600,7 +624,9 @@ async function savePersonalInfo() {
       full_name: personalForm.full_name?.trim() || '',
       phone: personalForm.phone?.trim() || '',
       city: personalForm.city?.trim() || '',
-      country: personalForm.country?.trim() || ''
+      country: personalForm.country?.trim() || '',
+      office: personalForm.office?.trim() || '',
+      personal_id: personalForm.personal_id?.trim() || ''
     }
 
     await authStore.updateProfile(profileData)
