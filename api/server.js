@@ -228,185 +228,95 @@ async function generateUniquePersonalId(client) {
 
 // === РЕГИСТРАЦИЯ ===
 app.post('/api/register', async (req, reply) => {
-   const { email, password, verificationToken, verificationCode } = req.body;
+  const { email, password } = req.body;
 
   if (!email || !password) {
     return reply.code(400).send({ error: 'Email и пароль обязательны' });
   }
 
-  // Вызов асинхронной функции
-  const verificationResult = await validateVerificationCode(verificationToken, verificationCode);
-
-  if (!verificationResult.ok) {
-    return reply.code(verificationResult.status).send({ error: verificationResult.message });
-  }
-
-  // Получаем клиент для транзакции
   const client = await pool.connect();
 
   try {
-    // Начинаем транзакцию
     await client.query('BEGIN');
-    console.log('✅ [REGISTER] Транзакция начата');
 
-    // Проверяем существование пользователя
-    const existing = await client.query('SELECT id FROM users WHERE email = $1', [email]);
-    if (existing.rows.length > 0) {
-      await client.query('ROLLBACK');
-      return reply.code(400).send({ error: 'Пользователь с таким email уже существует' });
-    }
-
-    // Получаем ID демо-тарифа
-    const demoPlanResult = await client.query(
-      'SELECT id FROM subscription_plans WHERE code_name = $1',
-      ['demo']
+    // 1. Проверить, есть ли email в verified_emails (постоянное хранилище)
+    const verifiedEmailCheck = await client.query(
+      'SELECT email FROM verified_emails WHERE email = $1',
+      [email]
     );
 
-    if (demoPlanResult.rows.length === 0) {
-      console.error('❌ Демо-тариф не найден в базе данных');
+    if (verifiedEmailCheck.rows.length > 0) {
       await client.query('ROLLBACK');
-      return reply.code(500).send({ error: 'Ошибка настройки тарифного плана' });
+      return reply.code(400).send({
+        error: 'Данный аккаунт уже есть в системе. Войдите в него или, если вы забыли пароль, нажмите "Восстановить пароль".',
+        field: 'email',
+        accountExists: true
+      });
     }
 
-    const demoPlanId = demoPlanResult.rows[0].id;
+    // 2. Проверить, есть ли уже пользователь с таким email (на случай незавершённой регистрации)
+    const existingUser = await client.query(
+      'SELECT id, email_verified FROM users WHERE email = $1',
+      [email]
+    );
 
-    // Хешируем пароль
+    if (existingUser.rows.length > 0) {
+      const user = existingUser.rows[0];
+
+      if (user.email_verified) {
+        // Email уже верифицирован - значит аккаунт активен
+        await client.query('ROLLBACK');
+        return reply.code(400).send({
+          error: 'Данный аккаунт уже есть в системе. Войдите в него или, если вы забыли пароль, нажмите "Восстановить пароль".',
+          field: 'email',
+          accountExists: true
+        });
+      } else {
+        // Email НЕ верифицирован - разрешить повторную регистрацию (перезаписать данные)
+        const hash = await bcrypt.hash(password, 10);
+
+        await client.query(
+          'UPDATE users SET password = $1, updated_at = NOW() WHERE email = $2',
+          [hash, email]
+        );
+
+        await client.query('COMMIT');
+
+        return reply.send({
+          success: true,
+          message: 'Вы зарегистрировались. Войдите под своими данными.',
+          requiresLogin: true
+        });
+      }
+    }
+
+    // 3. Создать нового пользователя БЕЗ тарифа
     const hash = await bcrypt.hash(password, 10);
 
-    // Создаем пользователя с полем subscription_started_at
     const insertResult = await client.query(
-      `INSERT INTO users (email, password, plan_id, subscription_expires_at, subscription_started_at)
-       VALUES ($1, $2, $3, NOW() + INTERVAL '3 days', NOW())
-       RETURNING id, email, role`,
-      [email, hash, demoPlanId]
+      `INSERT INTO users (email, password, email_verified, created_at)
+       VALUES ($1, $2, FALSE, NOW())
+       RETURNING id, email`,
+      [email, hash]
     );
 
     const newUser = insertResult.rows[0];
-    console.log(`✅ [REGISTER] Пользователь создан: ID=${newUser.id}, email=${newUser.email}`);
 
-    // Генерируем и присваиваем personal_id
-    const personalId = await generateUniquePersonalId(client);
+    console.log(`✅ Пользователь создан (email не верифицирован): ${newUser.email}`);
 
-    await client.query(
-      'UPDATE users SET personal_id = $1 WHERE id = $2',
-      [personalId, newUser.id]
-    );
-
-    console.log(`✅ [REGISTER] Пользователю ${newUser.email} присвоен номер: ${personalId}`);
-
-    // Список email администраторов
-    const adminEmails = ['sergeixmao@gmail.com'];
-
-    // Проверить, является ли email администратором
-    const isAdmin = adminEmails.includes(email);
-
-    if (isAdmin) {
-      // Получаем ID премиум-тарифа
-      const premiumPlanResult = await client.query(
-        "SELECT id FROM subscription_plans WHERE code_name = 'premium'"
-      );
-
-      if (premiumPlanResult.rows.length === 0) {
-        console.error('❌ Премиум-тариф не найден в базе данных');
-        await client.query('ROLLBACK');
-        return reply.code(500).send({ error: 'Ошибка настройки тарифного плана' });
-      }
-
-      const premiumPlanId = premiumPlanResult.rows[0].id;
-
-      // Обновляем пользователя: устанавливаем роль admin и премиум-тариф
-      await client.query(`
-        UPDATE users
-        SET role = 'admin',
-            plan_id = $1,
-            subscription_expires_at = NULL
-        WHERE id = $2
-      `, [premiumPlanId, newUser.id]);
-
-      // Обновляем newUser.role для JWT токена
-      newUser.role = 'admin';
-
-      // Создаем запись в subscription_history для премиум-тарифа
-      await client.query(
-        `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
-         VALUES ($1, $2, NOW(), NULL, 'регистрация_администратора', 0.00, 'RUB')`,
-        [newUser.id, premiumPlanId]
-      );
-
-      console.log(`✅ Зарегистрирован администратор: ${email}`);
-      console.log(`✅ [REGISTER] Запись в subscription_history создана для администратора ID=${newUser.id}`);
-    } else {
-      // Обычный пользователь: создаем запись в demo_trials и subscription_history для демо-тарифа
-      await client.query(
-        `INSERT INTO demo_trials (user_id, started_at, converted_to_paid)
-         VALUES ($1, NOW(), false)`,
-        [newUser.id]
-      );
-      console.log(`✅ [REGISTER] Запись в demo_trials создана для пользователя ID=${newUser.id}`);
-
-      // Создаем запись в subscription_history
-      await client.query(
-        `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
-         VALUES ($1, $2, NOW(), NOW() + INTERVAL '3 days', 'регистрация', 0.00, 'RUB')`,
-        [newUser.id, demoPlanId]
-      );
-      console.log(`✅ [REGISTER] Запись в subscription_history создана для пользователя ID=${newUser.id}`);
-    }
-
-    // Создаем JWT токен
-    const token = jwt.sign(
-      { userId: newUser.id, email: newUser.email, role: newUser.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    // Извлекаем signature из токена (последняя часть после второй точки)
-    const tokenParts = token.split('.');
-    const tokenSignature = tokenParts.length === 3 ? tokenParts[2] : token;
-
-    // Декодируем токен, чтобы получить дату истечения
-    const decodedToken = jwt.decode(token);
-    const expiresAt = new Date(decodedToken.exp * 1000);
-
-    // Создаем запись в active_sessions
-    await client.query(
-      `INSERT INTO active_sessions (user_id, token_signature, ip_address, user_agent, expires_at)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [newUser.id, tokenSignature, req.ip, req.headers['user-agent'] || null, expiresAt]
-    );
-    console.log(`✅ [REGISTER] Сессия создана для пользователя ID=${newUser.id}`);
-
-    // Фиксируем транзакцию
     await client.query('COMMIT');
-    console.log(`✅ [REGISTER] Транзакция успешно завершена для пользователя ID=${newUser.id}`);
 
     return reply.send({
       success: true,
-      token,
-      user: { id: newUser.id, email: newUser.email }
+      message: 'Вы зарегистрировались. Войдите под своими данными.',
+      requiresLogin: true
     });
-  } catch (err) {
-    // Откатываем транзакцию при любой ошибке
+
+  } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ [REGISTER] Ошибка регистрации, транзакция откатана:', err);
-
-    if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
-      return reply.code(500).send({ error: 'Ошибка подключения к базе данных' });
-    }
-    if (err.name === 'JsonWebTokenError') {
-      return reply.code(500).send({ error: 'Ошибка создания токена авторизации' });
-    }
-    if (err.code === '23505') {
-      return reply.code(400).send({ error: 'Пользователь с таким email уже существует' });
-    }
-
-    const errorMessage = process.env.NODE_ENV === 'development'
-      ? `Ошибка сервера: ${err.message}`
-      : 'Ошибка сервера. Попробуйте позже';
-
-    return reply.code(500).send({ error: errorMessage });
+    console.error('Ошибка регистрации:', error);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
   } finally {
-    // Освобождаем клиент
     client.release();
   }
 });
