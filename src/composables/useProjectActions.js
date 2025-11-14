@@ -540,7 +540,14 @@ export function useProjectActions() {
       const cssText = getExportSvgCss()
       const background = backgroundColor.value || '#ffffff'
 
-      // 11. Создать SVG
+      // 11. Подготовить JS-код без тегов <script>
+      let viewOnlyScriptCode = buildViewOnlyScript(transformValues)
+      // убираем открывающий и закрывающий <script>
+      viewOnlyScriptCode = viewOnlyScriptCode
+        .replace(/<script[^>]*>/i, '')
+        .replace(/<\/script>/i, '')
+
+      // 12. Создать SVG
       const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
      width="100%" height="100%" viewBox="0 0 2000 2000">
@@ -552,9 +559,9 @@ export function useProjectActions() {
       ${clone.outerHTML}
     </body>
   </foreignObject>
-  <script type="text/javascript">
+  <script type="application/ecmascript">
     <![CDATA[
-      ${buildViewOnlyScript(transformValues)}
+      ${viewOnlyScriptCode}
     ]]>
   </script>
 </svg>`
