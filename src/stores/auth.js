@@ -176,7 +176,23 @@ export const useAuthStore = defineStore('auth', {
         throw new Error(data.error || 'Ошибка входа')
       }
 
+      // Проверить, требуется ли верификация email
+      if (data.requiresVerification) {
+        // Сохранить email для страницы верификации
+        localStorage.setItem('verificationEmail', data.email || email)
+        // Вернуть объект с флагом requiresVerification
+        return {
+          requiresVerification: true,
+          email: data.email || email
+        }
+      }
+
+      // Обычный вход - сохранить токен и данные пользователя
       await this.finalizeAuthentication(data.token, data.user)
+
+      return {
+        requiresVerification: false
+      }
     },
 
     async finalizeAuthentication(token, fallbackUser) {
