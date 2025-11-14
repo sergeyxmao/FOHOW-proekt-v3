@@ -92,7 +92,7 @@
 
               <div class="info-item">
                 <label>Начало подписки:</label>
-                <span>{{ formatDate(user.subscription_started_at) }}</span>
+                <span>{{ getStartDate() }}</span>
               </div>
 
               <div class="info-item">
@@ -470,13 +470,14 @@ const applyingPromo = ref(false)
 
 // Инициализация
 onMounted(async () => {
-  // Загружаем план подписки
-  if (!subscriptionStore.currentPlan) {
-    try {
-      await subscriptionStore.loadPlan()
-    } catch (error) {
-      console.error('Ошибка при загрузке плана подписки:', error)
-    }
+  // Принудительно загружаем свежие данные пользователя и план подписки
+  try {
+    // Загружаем профиль пользователя с актуальными данными
+    await authStore.fetchProfile()
+    // Загружаем план подписки
+    await subscriptionStore.loadPlan()
+  } catch (error) {
+    console.error('Ошибка при загрузке данных профиля:', error)
   }
 
   // Заполняем формы текущими данными
@@ -540,7 +541,8 @@ function getPlanBadgeStyle() {
 
 // Класс для даты окончания подписки
 function getExpiryClass() {
-  const expiresAt = subscriptionStore.currentPlan?.expiresAt
+  // Проверяем сначала user.subscription_expires_at, затем subscriptionStore
+  const expiresAt = user.value?.subscription_expires_at || subscriptionStore.currentPlan?.expiresAt
   if (!expiresAt) return 'expiry-unlimited'
 
   const daysLeft = subscriptionStore.daysLeft
@@ -551,9 +553,17 @@ function getExpiryClass() {
   return 'expiry-active'
 }
 
+// Дата начала подписки
+function getStartDate() {
+  // Используем subscription_started_at, если есть, иначе created_at
+  const startDate = user.value?.subscription_started_at || user.value?.created_at
+  return formatDate(startDate)
+}
+
 // Дата окончания подписки
 function getExpiryDate() {
-  const expiresAt = subscriptionStore.currentPlan?.expiresAt
+  // Проверяем сначала user.subscription_expires_at, затем subscriptionStore
+  const expiresAt = user.value?.subscription_expires_at || subscriptionStore.currentPlan?.expiresAt
   if (!expiresAt) return 'Бессрочно'
   return formatDate(expiresAt)
 }
