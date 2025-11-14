@@ -21,7 +21,7 @@
         <span>Telegram подключен</span>
       </div>
       <p class="telegram-widget__info">
-        Username: <strong>@{{ telegramUsername || 'не указан' }}</strong>
+        Username: <strong>@{{ displayUsername }}</strong>
       </p>
       <button class="telegram-widget__button telegram-widget__button--secondary" @click="unlinkTelegram">
         Отключить
@@ -92,7 +92,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
@@ -106,6 +106,18 @@ const loading = ref(false)
 const error = ref(null)
 const copied = ref(false)
 let pollInterval = null
+
+// Вычисляемое свойство для отображения username
+// Приоритет: данные из API > данные из профиля > 'не указан'
+const displayUsername = computed(() => {
+  if (telegramUsername.value) {
+    return telegramUsername.value
+  }
+  if (authStore.user?.telegram_user) {
+    return authStore.user.telegram_user.replace(/^@/, '') // Убираем @ в начале, если есть
+  }
+  return 'не указан'
+})
 
 // Проверка статуса при загрузке
 onMounted(async () => {
