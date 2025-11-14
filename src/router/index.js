@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import PricingPage from '../views/PricingPage.vue'
+import EmailVerification from '../views/EmailVerification.vue'
 import { useAuthStore } from '../stores/auth'
 
 const routes = [
@@ -26,6 +27,12 @@ const routes = [
     name: 'pricing',
     component: PricingPage,
     meta: { layout: 'public' } // Публичная страница без интерфейса приложения
+  },
+  {
+    path: '/verify-email',
+    name: 'verify-email',
+    component: EmailVerification,
+    meta: { layout: 'public' } // Публичная страница для подтверждения email
   },
   {
     path: '/admin',
