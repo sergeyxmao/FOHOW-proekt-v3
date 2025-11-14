@@ -4,6 +4,7 @@ import { useCardsStore } from '../stores/cards.js'
 import { useConnectionsStore } from '../stores/connections.js'
 import { useProjectStore, formatProjectFileName } from '../stores/project.js'
 import { useCanvasStore } from '../stores/canvas.js'
+import { buildConnectionGeometry } from '../utils/canvasGeometry.js'
 
 const imageDataUriCache = new Map()
 
@@ -477,23 +478,94 @@ export function useProjectActions() {
 
   const handleExportSVG = async () => {
     try {
-      // 1. Получить canvas
       const canvasRoot = document.getElementById('canvas')
       if (!canvasRoot) {
         alert('Не удалось найти холст для экспорта.')
         return
       }
 
-      // 2. Проверить наличие элементов
-      if (cardsStore.cards.length === 0 && connectionsStore.connections.length === 0) {
+      const cardsList = Array.isArray(cardsStore.cards) ? cardsStore.cards : []
+      const connectionsList = Array.isArray(connectionsStore.connections)
+        ? connectionsStore.connections
+        : []
+
+      if (cardsList.length === 0 && connectionsList.length === 0) {
         alert('На доске нет элементов для экспорта.')
         return
       }
 
-      // 3. Клонировать весь canvas
-      const clone = canvasRoot.cloneNode(true)
+      const cardMap = new Map(cardsList.map(card => [card.id, card]))
 
-      // 4. Удалить интерактивные элементы
+      let minX = Infinity
+      let minY = Infinity
+      let maxX = -Infinity
+      let maxY = -Infinity
+
+      cardsList.forEach(card => {
+        if (!card) return
+        const left = Number.isFinite(card.x) ? card.x : 0
+        const top = Number.isFinite(card.y) ? card.y : 0
+        const width = Number.isFinite(card.width) ? card.width : 0
+        const height = Number.isFinite(card.height) ? card.height : 0
+
+        minX = Math.min(minX, left)
+        minY = Math.min(minY, top)
+        maxX = Math.max(maxX, left + width)
+        maxY = Math.max(maxY, top + height)
+      })
+
+      const defaultLineColor = connectionsStore.defaultLineColor || '#4c79ff'
+      const defaultLineThickness = connectionsStore.defaultLineThickness || 5
+      const connectionGeometries = []
+
+      connectionsList.forEach(connection => {
+        const fromCard = cardMap.get(connection.from)
+        const toCard = cardMap.get(connection.to)
+        if (!fromCard || !toCard) {
+          return
+        }
+
+        const geometry = buildConnectionGeometry(connection, fromCard, toCard)
+        if (!geometry || !geometry.d || !geometry.points.length) {
+          return
+        }
+
+        const strokeWidth = Number.isFinite(connection.thickness)
+          ? connection.thickness
+          : defaultLineThickness
+        const markerRadius = Math.max(strokeWidth, 8) / 2
+
+        geometry.points.forEach(point => {
+          minX = Math.min(minX, point.x - markerRadius)
+          minY = Math.min(minY, point.y - markerRadius)
+          maxX = Math.max(maxX, point.x + markerRadius)
+          maxY = Math.max(maxY, point.y + markerRadius)
+        })
+
+        connectionGeometries.push({
+          id: connection.id,
+          d: geometry.d,
+          color: typeof connection.color === 'string' && connection.color.trim()
+            ? connection.color
+            : defaultLineColor,
+          strokeWidth,
+          highlightType: connection.highlightType || null
+        })
+      })
+
+      if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+        alert('Не удалось вычислить границы контента для экспорта.')
+        return
+      }
+
+      const padding = 80
+      const contentWidth = Math.max(1, maxX - minX)
+      const contentHeight = Math.max(1, maxY - minY)
+      const totalWidth = contentWidth + padding * 2
+      const totalHeight = contentHeight + padding * 2
+      const translateX = padding - minX
+      const translateY = padding - minY
+
       const selectorsToRemove = [
         '.card-close-btn',
         '.connection-point',
@@ -505,68 +577,116 @@ export function useProjectActions() {
         '.card-note-btn',
         '[data-role="active-pv-buttons"]'
       ]
-      clone.querySelectorAll(selectorsToRemove.join(', ')).forEach(el => el.remove())
+      
+      const exportCanvas = document.createElement('div')
+      exportCanvas.id = 'canvas'
+      exportCanvas.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml')
+      exportCanvas.style.position = 'relative'
+      exportCanvas.style.width = `${totalWidth}px`
+      exportCanvas.style.height = `${totalHeight}px`
+      exportCanvas.style.overflow = 'visible'
 
-      // 5. Обработать карточки
-      clone.querySelectorAll('.card').forEach(cardEl => {
-        cardEl.classList.remove('selected', 'connecting', 'editing')
-        cardEl.style.cursor = 'default'
+      const canvasContainer = document.createElement('div')
+      canvasContainer.className = 'canvas-container'
+      canvasContainer.style.position = 'absolute'
+      canvasContainer.style.inset = '0'
+      canvasContainer.style.overflow = 'visible'
+
+      const canvasContent = document.createElement('div')
+      canvasContent.className = 'canvas-content'
+      canvasContent.style.position = 'absolute'
+      canvasContent.style.left = '0'
+      canvasContent.style.top = '0'
+      canvasContent.style.width = `${totalWidth}px`
+      canvasContent.style.height = `${totalHeight}px`
+      canvasContent.style.transform = 'none'
+      canvasContent.style.transformOrigin = '0 0'
+
+      const cardsContainer = document.createElement('div')
+      cardsContainer.className = 'cards-container'
+      cardsContainer.style.width = `${totalWidth}px`
+      cardsContainer.style.height = `${totalHeight}px`
+      cardsContainer.style.position = 'relative'
+      cardsContainer.style.pointerEvents = 'none'
+
+      cardsList.forEach(card => {
+        const original = canvasRoot.querySelector(`[data-card-id="${card.id}"]`)
+        if (!original) {
+          return
+        }
+
+        const cardClone = original.cloneNode(true)
+        cardClone.classList.remove('selected', 'connecting', 'editing')
+        cardClone.style.cursor = 'default'
+        cardClone.style.pointerEvents = 'none'
+
+        selectorsToRemove.forEach(selector => {
+          cardClone.querySelectorAll(selector).forEach(el => el.remove())
+        })
+
+        cardClone.querySelectorAll('[contenteditable]').forEach(element => {
+          element.setAttribute('contenteditable', 'false')
+          element.style.pointerEvents = 'none'
+          element.style.userSelect = 'text'
+        })
+
+        cardClone.querySelectorAll('button').forEach(button => {
+          button.setAttribute('disabled', 'disabled')
+          button.style.pointerEvents = 'none'
+        })
+
+        cardClone.querySelectorAll('input, textarea').forEach(input => {
+          input.setAttribute('readonly', 'true')
+          input.style.pointerEvents = 'none'
+        })
+
+        cardsContainer.appendChild(cardClone)
       })
 
-      // 6. Обработать contenteditable
-      clone.querySelectorAll('[contenteditable]').forEach(element => {
-        element.setAttribute('contenteditable', 'false')
-        element.style.pointerEvents = 'none'
-        element.style.userSelect = 'text'
-      })
+      canvasContent.appendChild(cardsContainer)
+      canvasContainer.appendChild(canvasContent)
+      exportCanvas.appendChild(canvasContainer)
 
-      // 7. Инлайн изображений
-      await inlineImages(clone)
-
-      // 8. Добавить кнопку масштаба
-      const zoomButton = document.createElement('button')
-      zoomButton.id = 'zoom-btn'
-      zoomButton.className = 'zoom-button'
-      zoomButton.title = 'Автоподгонка масштаба'
-      zoomButton.innerHTML = 'Масштаб: <span class="zoom-value">100%</span>'
-      clone.appendChild(zoomButton)
-
-      // 9. Получить transform
-      const canvasContent = document.querySelector('.canvas-content')
-      const originalTransform = window.getComputedStyle(canvasContent).transform
-      const transformValues = parseTransform(originalTransform)
-
-      // 10. Получить CSS
+      await inlineImages(exportCanvas)
       const cssText = getExportSvgCss()
       const background = backgroundColor.value || '#ffffff'
 
-      // 11. Подготовить JS-код без тегов <script>
-      let viewOnlyScriptCode = buildViewOnlyScript(transformValues)
-      // убираем открывающий и закрывающий <script>
-      viewOnlyScriptCode = viewOnlyScriptCode
-        .replace(/<script[^>]*>/i, '')
-        .replace(/<\/script>/i, '')
+      const connectionPathsSvg = connectionGeometries.map(connection => {
+        const dashArray = connection.highlightType === 'balance'
+          ? '16 16'
+          : connection.highlightType === 'pv'
+            ? '14 14'
+            : null
 
-      // 12. Создать SVG
+        return `      <path d="${connection.d}" fill="none" stroke="${connection.color}" stroke-width="${connection.strokeWidth}"
+        stroke-linecap="round" stroke-linejoin="round" marker-start="url(#marker-dot)" marker-end="url(#marker-dot)" filter="url(#line-shadow)"${dashArray ? ` stroke-dasharray="${dashArray}"` : ''}/>`
+      }).join('\n')
+
       const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-     width="100%" height="100%" viewBox="0 0 2000 2000">
+<svg xmlns="http://www.w3.org/2000/svg" width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" version="1.1">
   <defs>
     <style>${cssText}</style>
+    <filter id="line-shadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <filter id="card-shadow" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.18"/>
+    </filter>
+    <marker id="marker-dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto" fill="currentColor">
+      <circle cx="5" cy="5" r="4"/>
+    </marker>    
   </defs>
-  <foreignObject x="0" y="0" width="100%" height="100%">
-    <body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;height:100%;overflow:hidden;background:${background};">
-      ${clone.outerHTML}
-    </body>
-  </foreignObject>
-  <script type="application/ecmascript">
-    <![CDATA[
-      ${viewOnlyScriptCode}
-    ]]>
-  </script>
+  <rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="${background}"/>
+  <g transform="translate(${translateX} ${translateY})">
+    <g class="connections-layer">
+${connectionPathsSvg}
+    </g>
+    <foreignObject x="0" y="0" width="${totalWidth}" height="${totalHeight}" filter="url(#card-shadow)">
+      ${exportCanvas.outerHTML}
+    </foreignObject>
+  </g>
 </svg>`
 
-      // 12. Сохранить файл
       const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
