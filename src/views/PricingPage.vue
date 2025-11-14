@@ -452,6 +452,19 @@ html {
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
 }
 
+/* Контрастный текст для карточки текущего тарифа */
+.pricing-card.is-current .plan-name {
+  color: #065f46;
+}
+
+.pricing-card.is-current .plan-description {
+  color: #047857;
+}
+
+.pricing-card.is-current .feature-item {
+  color: #047857;
+}
+
 /* Плашка "Рекомендуем" */
 .featured-badge {
   position: absolute;
