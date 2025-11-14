@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
 
 export async function sendPasswordResetEmail(email, token) {
   const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
-  
+
   const mailOptions = {
     from: process.env.EMAIL_FROM,
     to: email,
@@ -26,8 +26,8 @@ export async function sendPasswordResetEmail(email, token) {
         <p>Вы запросили сброс пароля для вашей учетной записи.</p>
         <p>Нажмите на кнопку ниже, чтобы установить новый пароль:</p>
         <div style="margin: 30px 0;">
-          <a href="${resetUrl}" 
-             style="background-color: #4CAF50; color: white; padding: 12px 30px; 
+          <a href="${resetUrl}"
+             style="background-color: #4CAF50; color: white; padding: 12px 30px;
                     text-decoration: none; border-radius: 5px; display: inline-block;">
             Сбросить пароль
           </a>
@@ -49,5 +49,37 @@ export async function sendPasswordResetEmail(email, token) {
   } catch (error) {
     console.error('❌ Ошибка отправки email:', error);
     throw new Error('Не удалось отправить email');
+  }
+}
+
+export async function sendVerificationEmail(email, code) {
+  const mailOptions = {
+    from: process.env.EMAIL_FROM,
+    to: email,
+    subject: 'Код подтверждения FOHOW',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Подтверждение email</h2>
+        <p>Ваш код подтверждения:</p>
+        <div style="margin: 30px 0; text-align: center;">
+          <h1 style="font-size: 48px; letter-spacing: 10px; color: #4CAF50; margin: 0;">
+            ${code}
+          </h1>
+        </div>
+        <p>Код действителен 10 минут.</p>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+        <p style="color: #999; font-size: 12px;">
+          Если вы не регистрировались на сайте FOHOW, проигнорируйте это письмо.
+        </p>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Код подтверждения отправлен на email:', email);
+  } catch (error) {
+    console.error('❌ Ошибка отправки кода подтверждения:', error);
+    throw new Error('Не удалось отправить код подтверждения');
   }
 }

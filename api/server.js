@@ -323,20 +323,14 @@ app.post('/api/register', async (req, reply) => {
 
 // === АВТОРИЗАЦИЯ (ИСПРАВЛЕННАЯ ВЕРСИЯ) ===
 app.post('/api/login', async (req, reply) => {
-  const { email, password, verificationToken, verificationCode } = req.body;
-  
+  const { email, password } = req.body;
+
   if (!email || !password) {
     return reply.code(400).send({ error: 'Email и пароль обязательны' });
   }
-  
-  const verificationResult = await validateVerificationCode(verificationToken, verificationCode);
-
-  if (!verificationResult.ok) {
-    return reply.code(verificationResult.status).send({ error: verificationResult.message });
-  }
 
   try {
-    // ЗАПРАШИВАЕМ ВСЕ ДАННЫЕ ПОЛЬЗОВАТЕЛЯ СРАЗУ
+    // 1. Найти пользователя
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
 
     if (result.rows.length === 0) {
@@ -344,11 +338,42 @@ app.post('/api/login', async (req, reply) => {
     }
 
     const user = result.rows[0];
+
+    // 2. Проверить пароль
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
       return reply.code(401).send({ error: 'Неверный email или пароль' });
     }
+
+    // 3. Проверить, верифицирован ли email
+    if (!user.email_verified) {
+      // Email НЕ верифицирован - отправить код подтверждения
+
+      // Генерировать 6-значный код
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // Сохранить код в БД (действителен 10 минут)
+      await pool.query(
+        `INSERT INTO email_verification_codes (email, code, expires_at, ip_address)
+         VALUES ($1, $2, NOW() + INTERVAL '10 minutes', $3)`,
+        [email, code, req.ip]
+      );
+
+      // Отправить код на email
+      const { sendVerificationEmail } = await import('./utils/email.js');
+      await sendVerificationEmail(email, code);
+
+      console.log(`📧 Код подтверждения отправлен на ${email}: ${code}`);
+
+      return reply.json({
+        requiresVerification: true,
+        email: email,
+        message: 'На ваш email отправлен код подтверждения. Введите его для завершения входа.'
+      });
+    }
+
+    // 4. Email верифицирован - продолжить с выдачей токена
 
     console.log(`[LOGIN] Успешная аутентификация для пользователя ID: ${user.id}. Начинаем управление сессиями.`);
 
