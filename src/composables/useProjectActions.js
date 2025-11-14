@@ -477,348 +477,89 @@ export function useProjectActions() {
 
   const handleExportSVG = async () => {
     try {
+      // 1. Получить canvas
       const canvasRoot = document.getElementById('canvas')
       if (!canvasRoot) {
         alert('Не удалось найти холст для экспорта.')
         return
       }
-      const canvasContainer = canvasRoot.querySelector('.canvas-container')
-      const canvasContent = canvasContainer?.querySelector('.canvas-content')
-      if (!canvasContainer || !canvasContent) {
-        alert('Не удалось найти содержимое холста для экспорта.')
-        return
-      }
 
-      const cards = Array.from(canvasContainer.querySelectorAll('.card'))
-      const svgLayer = canvasContainer.querySelector('.svg-layer')
-      const noteWindows = Array.from(document.querySelectorAll('.note-window'))
-
-      // Получаем все видимые линии (не hitbox)
-      const connectionLines = svgLayer
-        ? Array.from(svgLayer.querySelectorAll('.line-group')).map(group => {
-            const pathElement = group.querySelector('.line:not(.line-hitbox)')
-            return pathElement
-          }).filter(Boolean)
-        : []
-
-      const svgGraphics = svgLayer
-        ? Array.from(svgLayer.querySelectorAll('path, line, polyline, polygon, rect, circle, ellipse')).filter(
-          element => !element.classList.contains('line-hitbox') && !element.classList.contains('line--preview')
-        )
-        : []
-
-      if (cards.length === 0 && noteWindows.length === 0 && svgGraphics.length === 0) {
+      // 2. Проверить наличие элементов
+      if (cardsStore.cards.length === 0 && connectionsStore.connections.length === 0) {
         alert('На доске нет элементов для экспорта.')
         return
       }
 
-      const transformValues = parseTransform(window.getComputedStyle(canvasContent).transform)
-      const safeScale = transformValues.scale || 1
+      // 3. Клонировать весь canvas
+      const clone = canvasRoot.cloneNode(true)
 
-      const bounds = {
-        minX: Infinity,
-        minY: Infinity,
-        maxX: -Infinity,
-        maxY: -Infinity
-      }
-
-      const includeBounds = (left, top, right, bottom) => {
-        if ([left, top, right, bottom].some(value => !Number.isFinite(value))) {
-          return
-        }
-        bounds.minX = Math.min(bounds.minX, left)
-        bounds.minY = Math.min(bounds.minY, top)
-        bounds.maxX = Math.max(bounds.maxX, right)
-        bounds.maxY = Math.max(bounds.maxY, bottom)
-      }
-
-      // Включаем границы карточек на основе их CSS координат (не getBoundingClientRect)
-      cards.forEach((card) => {
-        const left = Number.parseFloat(card.style.left) || 0
-        const top = Number.parseFloat(card.style.top) || 0
-        const width = Number.parseFloat(card.style.width) || card.offsetWidth || 0
-        const explicitHeight = Number.parseFloat(card.style.height)
-        const minHeight = Number.parseFloat(card.style.minHeight)
-        const height = Number.isFinite(explicitHeight)
-          ? explicitHeight
-          : Number.isFinite(minHeight)
-            ? minHeight
-            : card.offsetHeight || 0
-        includeBounds(left, top, left + width, top + height)
-      })
-
-      // Включаем границы соединительных линий
-      svgGraphics.forEach((element) => {
-        if (!(element instanceof SVGGraphicsElement)) {
-          return
-        }
-        try {
-          const bbox = element.getBBox()
-          if (bbox && (bbox.width > 0 || bbox.height > 0)) {
-            includeBounds(bbox.x, bbox.y, bbox.x + bbox.width, bbox.y + bbox.height)
-          }
-        } catch (e) {
-          // Игнорируем ошибки getBBox для невалидных элементов
-        }
-      })
-
-      const noteMetrics = noteWindows.map((note) => {
-        const styleLeft = Number.parseFloat(note.style.left)
-        const styleTop = Number.parseFloat(note.style.top)
-        const styleWidth = Number.parseFloat(note.style.width)
-        const styleHeight = Number.parseFloat(note.style.height)
-
-        // Используем прямые координаты из стилей, если они заданы
-        const boardLeft = Number.isFinite(styleLeft) ? styleLeft : 0
-        const boardTop = Number.isFinite(styleTop) ? styleTop : 0
-        const baseWidth = Number.isFinite(styleWidth) ? styleWidth : 200
-        const baseHeight = Number.isFinite(styleHeight) ? styleHeight : 200
-
-        includeBounds(boardLeft, boardTop, boardLeft + baseWidth, boardTop + baseHeight)
-
-        return {
-          original: note,
-          boardLeft,
-          boardTop,
-          width: baseWidth,
-          height: baseHeight
-        }
-      })
-
-      if (!Number.isFinite(bounds.minX) || !Number.isFinite(bounds.minY) || !Number.isFinite(bounds.maxX) || !Number.isFinite(bounds.maxY)) {
-        alert('Не удалось определить границы для экспорта SVG.')
-        return
-      }
-
-      const PADDING = 24
-      const contentWidth = Math.max(0, bounds.maxX - bounds.minX)
-      const contentHeight = Math.max(0, bounds.maxY - bounds.minY)
-      const exportWidth = Math.max(1, Math.ceil(contentWidth + PADDING * 2))
-      const exportHeight = Math.max(1, Math.ceil(contentHeight + PADDING * 2))
-      const offsetX = PADDING - bounds.minX
-      const offsetY = PADDING - bounds.minY
-      const normalizedContentWidth = Math.max(1, Math.ceil(contentWidth))
-      const normalizedContentHeight = Math.max(1, Math.ceil(contentHeight))
-
-      const containerClone = canvasContainer.cloneNode(true)
-      const contentClone = containerClone.querySelector('.canvas-content')
-      if (!contentClone) {
-        alert('Не удалось подготовить содержимое для экспорта.')
-        return
-      }
-
+      // 4. Удалить интерактивные элементы
       const selectorsToRemove = [
-        '.selection-box',
-        '.guides-overlay',
-        '.guide-line',
+        '.card-close-btn',
+        '.connection-point',
         '.line-hitbox',
+        '.selection-box',
         '.card-active-controls',
         '.card-controls',
         '.active-pv-btn',
         '.card-note-btn',
-        '.card-close-btn',
-        '.connection-point',
         '[data-role="active-pv-buttons"]'
       ]
+      clone.querySelectorAll(selectorsToRemove.join(', ')).forEach(el => el.remove())
 
-      containerClone.querySelectorAll(selectorsToRemove.join(', ')).forEach((element) => {
-        element.remove()
-      })
-
-      containerClone.classList.remove(
-        'canvas-container--panning',
-        'canvas-container--selection-mode',
-        'canvas-container--capturing'
-      )
-      containerClone.style.position = 'absolute'
-      containerClone.style.left = '0'
-      containerClone.style.top = '0'
-      containerClone.style.width = `${exportWidth}px`
-      containerClone.style.height = `${exportHeight}px`
-      containerClone.style.overflow = 'visible'
-
-      contentClone.style.transform = 'matrix(1, 0, 0, 1, 0, 0)'
-      contentClone.style.left = `${offsetX}px`
-      contentClone.style.top = `${offsetY}px`
-      contentClone.style.width = `${normalizedContentWidth}px`
-      contentClone.style.height = `${normalizedContentHeight}px`
-
-      containerClone.querySelectorAll('.card').forEach((cardEl) => {
+      // 5. Обработать карточки
+      clone.querySelectorAll('.card').forEach(cardEl => {
         cardEl.classList.remove('selected', 'connecting', 'editing')
         cardEl.style.cursor = 'default'
       })
 
-      containerClone.querySelectorAll('[contenteditable]').forEach((element) => {
+      // 6. Обработать contenteditable
+      clone.querySelectorAll('[contenteditable]').forEach(element => {
         element.setAttribute('contenteditable', 'false')
         element.style.pointerEvents = 'none'
         element.style.userSelect = 'text'
       })
 
-      const cardsContainerClone = containerClone.querySelector('.cards-container')
-      if (cardsContainerClone) {
-        cardsContainerClone.style.width = `${normalizedContentWidth}px`
-        cardsContainerClone.style.height = `${normalizedContentHeight}px`
-        cardsContainerClone.style.pointerEvents = 'none'
-      }
+      // 7. Инлайн изображений
+      await inlineImages(clone)
 
-      const svgLayerClone = containerClone.querySelector('.svg-layer')
-      if (svgLayerClone) {
-        // ИСПРАВЛЕНИЕ: Устанавливаем правильный viewBox с учетом границ контента
-        svgLayerClone.setAttribute('width', String(exportWidth))
-        svgLayerClone.setAttribute('height', String(exportHeight))
-        svgLayerClone.setAttribute('viewBox', `0 0 ${exportWidth} ${exportHeight}`)
-        svgLayerClone.setAttribute('preserveAspectRatio', 'xMidYMid meet')
-        svgLayerClone.style.width = `${exportWidth}px`
-        svgLayerClone.style.height = `${exportHeight}px`
-        svgLayerClone.style.position = 'absolute'
-        svgLayerClone.style.left = '0'
-        svgLayerClone.style.top = '0'
-        svgLayerClone.style.pointerEvents = 'none'
-        svgLayerClone.style.overflow = 'visible'
+      // 8. Добавить кнопку масштаба
+      const zoomButton = document.createElement('button')
+      zoomButton.id = 'zoom-btn'
+      zoomButton.className = 'zoom-button'
+      zoomButton.title = 'Автоподгонка масштаба'
+      zoomButton.innerHTML = 'Масштаб: <span class="zoom-value">100%</span>'
+      clone.appendChild(zoomButton)
 
-        // Убедимся, что все линии видимы и правильно стилизованы для экспорта
-        const lineGroups = svgLayerClone.querySelectorAll('.line-group')
-        lineGroups.forEach(group => {
-          const visibleLine = group.querySelector('.line:not(.line-hitbox)')
-          if (visibleLine) {
-            // Удаляем классы анимации и выделения для экспорта
-            visibleLine.classList.remove('selected', 'line--balance-highlight', 'line--pv-highlight', 'line--balance-flash')
-            // ИСПРАВЛЕНИЕ: Убеждаемся, что линии видимы
-            visibleLine.style.display = ''
-            visibleLine.style.visibility = 'visible'
-            visibleLine.style.opacity = '1'
-          }
-        })
-      }
+      // 9. Получить transform
+      const canvasContent = document.querySelector('.canvas-content')
+      const originalTransform = window.getComputedStyle(canvasContent).transform
+      const transformValues = parseTransform(originalTransform)
 
-      const noteClones = noteMetrics.map(({ original, boardLeft, boardTop, width, height }) => {
-        const noteClone = original.cloneNode(true)
-        const originalTextareas = original.querySelectorAll('textarea')
-        const clonedTextareas = noteClone.querySelectorAll('textarea')
-        clonedTextareas.forEach((textarea, index) => {
-          const source = originalTextareas[index]
-          if (source) {
-            textarea.value = source.value
-            textarea.textContent = source.value
-          }
-          textarea.setAttribute('readonly', 'true')
-          textarea.setAttribute('aria-readonly', 'true')
-        })
-
-        noteClone.style.position = 'absolute'
-        noteClone.style.left = `${boardLeft + offsetX}px`
-        noteClone.style.top = `${boardTop + offsetY}px`
-        noteClone.style.transform = 'scale(1)'
-        noteClone.style.transformOrigin = 'top left'
-        noteClone.style.pointerEvents = 'none'
-        return noteClone
-      })
-
-      noteClones.forEach((noteClone) => {
-        containerClone.appendChild(noteClone)
-      })
-
-      const exportRoot = document.createElement('div')
-      exportRoot.id = 'canvas'
-      exportRoot.style.position = 'relative'
-      exportRoot.style.width = `${exportWidth}px`
-      exportRoot.style.height = `${exportHeight}px`
-      exportRoot.style.overflow = 'visible'
-      exportRoot.style.background = backgroundColor.value || '#ffffff'
-      exportRoot.appendChild(containerClone)
-
-      await inlineImages(exportRoot)
-
+      // 10. Получить CSS
       const cssText = getExportSvgCss()
       const background = backgroundColor.value || '#ffffff'
 
-      // ИСПРАВЛЕНИЕ: Добавляем JavaScript для зума и панорамирования
-      const interactiveScript = `
-<script><![CDATA[
-(function() {
-  var svg = document.querySelector('svg');
-  var foreignObject = svg.querySelector('foreignObject');
-  var canvas = foreignObject.querySelector('#canvas');
-
-  var scale = 1;
-  var translateX = 0;
-  var translateY = 0;
-  var isPanning = false;
-  var startX = 0;
-  var startY = 0;
-
-  var MIN_SCALE = 0.1;
-  var MAX_SCALE = 10;
-
-  function updateTransform() {
-    var transform = 'scale(' + scale + ') translate(' + translateX + 'px, ' + translateY + 'px)';
-    canvas.style.transform = transform;
-  }
-
-  svg.addEventListener('wheel', function(e) {
-    e.preventDefault();
-
-    var rect = svg.getBoundingClientRect();
-    var mouseX = e.clientX - rect.left;
-    var mouseY = e.clientY - rect.top;
-
-    var delta = e.deltaY > 0 ? 0.9 : 1.1;
-    var newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * delta));
-
-    // Масштабируем относительно позиции курсора
-    var scaleRatio = newScale / scale;
-    translateX = mouseX - (mouseX - translateX) * scaleRatio;
-    translateY = mouseY - (mouseY - translateY) * scaleRatio;
-    scale = newScale;
-
-    updateTransform();
-  });
-
-  svg.addEventListener('mousedown', function(e) {
-    if (e.button === 0) {
-      isPanning = true;
-      startX = e.clientX - translateX;
-      startY = e.clientY - translateY;
-      svg.style.cursor = 'grabbing';
-    }
-  });
-
-  svg.addEventListener('mousemove', function(e) {
-    if (isPanning) {
-      translateX = e.clientX - startX;
-      translateY = e.clientY - startY;
-      updateTransform();
-    }
-  });
-
-  svg.addEventListener('mouseup', function() {
-    isPanning = false;
-    svg.style.cursor = 'grab';
-  });
-
-  svg.addEventListener('mouseleave', function() {
-    isPanning = false;
-    svg.style.cursor = 'grab';
-  });
-
-  svg.style.cursor = 'grab';
-})();
-]]></script>
-`
-
+      // 11. Создать SVG
       const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${exportWidth}" height="${exportHeight}" viewBox="0 0 ${exportWidth} ${exportHeight}" preserveAspectRatio="xMidYMid meet">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="100%" height="100%" viewBox="0 0 2000 2000">
   <defs>
-    <style type="text/css">${cssText}</style>
+    <style>${cssText}</style>
   </defs>
-  <foreignObject x="0" y="0" width="${exportWidth}" height="${exportHeight}">
+  <foreignObject x="0" y="0" width="100%" height="100%">
     <body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;height:100%;overflow:hidden;background:${background};">
-      ${exportRoot.outerHTML}
+      ${clone.outerHTML}
     </body>
   </foreignObject>
-  ${interactiveScript}
+  <script type="text/javascript">
+    <![CDATA[
+      ${buildViewOnlyScript(transformValues)}
+    ]]>
+  </script>
 </svg>`
 
+      // 12. Сохранить файл
       const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -826,6 +567,7 @@ export function useProjectActions() {
       link.download = `scheme-${Date.now()}.svg`
       link.click()
       URL.revokeObjectURL(url)
+
     } catch (error) {
       console.error('Ошибка при экспорте в SVG:', error)
       alert('Экспорт в SVG завершился ошибкой. Подробности в консоли.')
