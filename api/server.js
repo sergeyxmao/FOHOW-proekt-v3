@@ -232,21 +232,61 @@ app.post('/api/register', async (req, reply) => {
     const newUser = insertResult.rows[0];
     console.log(`✅ [REGISTER] Пользователь создан: ID=${newUser.id}, email=${newUser.email}`);
 
-    // Создаем запись в demo_trials
-    await client.query(
-      `INSERT INTO demo_trials (user_id, started_at, converted_to_paid)
-       VALUES ($1, NOW(), false)`,
-      [newUser.id]
-    );
-    console.log(`✅ [REGISTER] Запись в demo_trials создана для пользователя ID=${newUser.id}`);
+    // Проверить, является ли email администратором
+    const isAdmin = email === 'sergeixmao@gmail.com';
 
-    // Создаем запись в subscription_history
-    await client.query(
-      `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
-       VALUES ($1, $2, NOW(), NOW() + INTERVAL '3 days', 'регистрация', 0.00, 'RUB')`,
-      [newUser.id, demoPlanId]
-    );
-    console.log(`✅ [REGISTER] Запись в subscription_history создана для пользователя ID=${newUser.id}`);
+    if (isAdmin) {
+      // Получаем ID премиум-тарифа
+      const premiumPlanResult = await client.query(
+        "SELECT id FROM subscription_plans WHERE code_name = 'premium'"
+      );
+
+      if (premiumPlanResult.rows.length === 0) {
+        console.error('❌ Премиум-тариф не найден в базе данных');
+        await client.query('ROLLBACK');
+        return reply.code(500).send({ error: 'Ошибка настройки тарифного плана' });
+      }
+
+      const premiumPlanId = premiumPlanResult.rows[0].id;
+
+      // Обновляем пользователя: устанавливаем роль admin и премиум-тариф
+      await client.query(`
+        UPDATE users
+        SET role = 'admin',
+            plan_id = $1,
+            subscription_expires_at = NULL
+        WHERE id = $2
+      `, [premiumPlanId, newUser.id]);
+
+      // Обновляем newUser.role для JWT токена
+      newUser.role = 'admin';
+
+      // Создаем запись в subscription_history для премиум-тарифа
+      await client.query(
+        `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
+         VALUES ($1, $2, NOW(), NULL, 'регистрация_администратора', 0.00, 'RUB')`,
+        [newUser.id, premiumPlanId]
+      );
+
+      console.log(`✅ Зарегистрирован администратор: ${email}`);
+      console.log(`✅ [REGISTER] Запись в subscription_history создана для администратора ID=${newUser.id}`);
+    } else {
+      // Обычный пользователь: создаем запись в demo_trials и subscription_history для демо-тарифа
+      await client.query(
+        `INSERT INTO demo_trials (user_id, started_at, converted_to_paid)
+         VALUES ($1, NOW(), false)`,
+        [newUser.id]
+      );
+      console.log(`✅ [REGISTER] Запись в demo_trials создана для пользователя ID=${newUser.id}`);
+
+      // Создаем запись в subscription_history
+      await client.query(
+        `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
+         VALUES ($1, $2, NOW(), NOW() + INTERVAL '3 days', 'регистрация', 0.00, 'RUB')`,
+        [newUser.id, demoPlanId]
+      );
+      console.log(`✅ [REGISTER] Запись в subscription_history создана для пользователя ID=${newUser.id}`);
+    }
 
     // Создаем JWT токен
     const token = jwt.sign(
