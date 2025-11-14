@@ -895,7 +895,7 @@ app.get('/api/boards/:id', {
 
     // Обновить доску (автосохранение) - С ПРОВЕРКОЙ ЛИМИТА КАРТОЧЕК
     app.put('/api/boards/:id', {
-      preHandler: [authenticateToken, checkUsageLimit('cards', 'max_cards_per_board')]
+      preHandler: [authenticateToken, checkUsageLimit('cards', 'max_licenses')]
     }, async (req, reply) => {
       try {
         const userId = req.user.id; // <-- ИСПРАВЛЕНО: берем ID из req.user
@@ -1259,11 +1259,11 @@ app.get('/api/user/plan', {
         },
         notes: {
           current: parseInt(data.notes_count, 10),
-          limit: parseInt(features.max_notes_per_board, 10) || -1
+          limit: parseInt(features.max_notes, 10) || -1
         },
         stickers: {
           current: parseInt(data.stickers_count, 10),
-          limit: parseInt(features.max_stickers_per_board, 10) || -1
+          limit: parseInt(features.max_stickers, 10) || -1
         },
         userComments: {
           current: parseInt(data.comments_count, 10),
@@ -1541,7 +1541,7 @@ app.get('/api/boards/:boardId/stickers', {
 
 // Создать новый стикер
     app.post('/api/boards/:boardId/stickers', {
-      preHandler: [authenticateToken, checkUsageLimit('stickers', 'max_stickers_per_board')] // Используем более точное имя фичи
+      preHandler: [authenticateToken, checkUsageLimit('stickers', 'max_stickers')]
     }, async (req, reply) => {
   try {
     const { boardId } = req.params;
@@ -1761,7 +1761,7 @@ app.get('/api/boards/:boardId/notes', {
 
 // Создать/обновить/удалить заметку (UPSERT + DELETE)
     app.post('/api/notes', {
-      preHandler: [authenticateToken, checkUsageLimit('notes', 'max_notes_per_board')] // Уточняем имя фичи
+      preHandler: [authenticateToken, checkUsageLimit('notes', 'max_notes')]
     }, async (req, reply) => {
   try {
     const { boardId, cardUid, noteDate, content, color } = req.body;

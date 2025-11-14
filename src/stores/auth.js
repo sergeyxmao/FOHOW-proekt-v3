@@ -49,7 +49,7 @@ export const useAuthStore = defineStore('auth', {
       if (!state.user?.plan?.features) {
         return -1 // -1 означает безлимит (на случай если план не определен)
       }
-      const limit = state.user.plan.features.max_cards_per_board
+      const limit = state.user.plan.features.max_licenses
       return typeof limit === 'number' ? limit : -1
     },
 
@@ -60,7 +60,7 @@ export const useAuthStore = defineStore('auth', {
 
     // Проверить, есть ли лимит на карточки
     hasCardsLimit: (state) => {
-      const limit = state.user?.plan?.features?.max_cards_per_board
+      const limit = state.user?.plan?.features?.max_licenses
       return typeof limit === 'number' && limit > 0
     }
   },
