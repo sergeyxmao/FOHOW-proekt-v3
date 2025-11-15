@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
+import FileBrowser from '../drawing/FileBrowser.vue'
 
 const props = defineProps({
   isModernTheme: {
@@ -24,6 +25,12 @@ const handleClose = () => {
 
 const openBrowser = () => {
   panelState.value = 'browser'
+}
+
+const handleFileSelected = (fileData) => {
+  console.log('Файл выбран:', fileData)
+  // TODO: Шаг 3 - Интеграция с Canvas
+  // Здесь будет добавлена логика для добавления изображения на холст
 }
 </script>
 
@@ -59,11 +66,9 @@ const openBrowser = () => {
         </button>
       </div>
 
-      <!-- Состояние браузера: здесь будет файловый браузер (Шаг 2) -->
+      <!-- Состояние браузера: файловый браузер -->
       <div v-if="panelState === 'browser'" class="panel-browser">
-        <p class="panel-browser__placeholder">
-          Файловый браузер будет добавлен на следующем этапе
-        </p>
+        <FileBrowser @file-selected="handleFileSelected" />
       </div>
     </div>
   </div>
@@ -173,18 +178,9 @@ const openBrowser = () => {
 /* Browser State */
 .panel-browser {
   flex: 1;
-  padding: 24px;
-}
-
-.panel-browser__placeholder {
-  margin: 0;
-  padding: 20px;
-  border-radius: 12px;
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px dashed rgba(59, 130, 246, 0.3);
-  color: #64748b;
-  font-size: 14px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Modern Theme */
@@ -224,12 +220,6 @@ const openBrowser = () => {
 .image-browser-panel--modern .panel-initial__button:hover {
   background: linear-gradient(135deg, rgba(96, 164, 255, 1) 0%, rgba(59, 130, 246, 1) 100%);
   box-shadow: 0 12px 28px rgba(6, 11, 21, 0.7);
-}
-
-.image-browser-panel--modern .panel-browser__placeholder {
-  background: rgba(96, 164, 255, 0.12);
-  border-color: rgba(96, 164, 255, 0.4);
-  color: #94a3b8;
 }
 
 /* Адаптивность для мобильных устройств */
