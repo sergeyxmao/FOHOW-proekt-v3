@@ -11,10 +11,42 @@ const isDragging = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
 
+// Константы для валидации
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB в байтах
+const ALLOWED_MIME_TYPE = 'image/png'
+const ALLOWED_EXTENSION = '.png'
+
 // Проверка поддержки File System Access API
 const supportsFileSystemAccess = computed(() => {
   return 'showDirectoryPicker' in window
 })
+
+// Валидация файла
+async function validateFile(file) {
+  const errors = []
+
+  // Проверка расширения (регистронезависимо)
+  if (!file.name.toLowerCase().endsWith(ALLOWED_EXTENSION)) {
+    errors.push(`Недопустимое расширение файла. Разрешены только ${ALLOWED_EXTENSION} файлы.`)
+  }
+
+  // Проверка MIME-type
+  if (file.type !== ALLOWED_MIME_TYPE) {
+    errors.push(`Недопустимый тип файла: ${file.type}. Ожидается ${ALLOWED_MIME_TYPE}.`)
+  }
+
+  // Проверка размера файла
+  if (file.size > MAX_FILE_SIZE) {
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(2)
+    const maxSizeMB = (MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)
+    errors.push(`Файл "${file.name}" слишком большой (${sizeMB} МБ). Максимальный размер: ${maxSizeMB} МБ.`)
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  }
+}
 
 // Режим A: File System Access API
 async function selectFolder() {
@@ -37,9 +69,18 @@ async function selectFolder() {
     if (error.name === 'AbortError') {
       // Пользователь отменил выбор
       console.log('Выбор папки отменен')
+      errorMessage.value = ''
+    } else if (error.name === 'NotAllowedError') {
+      // Нет разрешения на доступ
+      console.error('Доступ запрещен:', error)
+      errorMessage.value = 'Доступ к папке запрещен. Предоставьте разрешение в браузере.'
+    } else if (error.name === 'NotFoundError') {
+      // Файл или папка не найдены
+      console.error('Папка не найдена:', error)
+      errorMessage.value = 'Выбранная папка не найдена.'
     } else {
       console.error('Ошибка при выборе папки:', error)
-      errorMessage.value = 'Ошибка при доступе к папке'
+      errorMessage.value = `Ошибка при доступе к папке: ${error.message || 'неизвестная ошибка'}`
     }
   } finally {
     isLoading.value = false
@@ -57,13 +98,28 @@ async function scanDirectory(directoryHandle, path = '') {
       if (entry.kind === 'file') {
         // Проверяем расширение файла
         if (entry.name.toLowerCase().endsWith('.png')) {
-          nodes.push({
-            name: entry.name,
-            type: 'file',
-            path: fullPath,
-            handle: entry,
-            isExpanded: false
-          })
+          try {
+            // Получаем файл для валидации
+            const file = await entry.getFile()
+
+            // Валидируем файл
+            const validation = await validateFile(file)
+
+            if (validation.isValid) {
+              nodes.push({
+                name: entry.name,
+                type: 'file',
+                path: fullPath,
+                handle: entry,
+                isExpanded: false
+              })
+            } else {
+              // Логируем ошибки валидации
+              console.warn(`Файл ${entry.name} не прошел валидацию:`, validation.errors)
+            }
+          } catch (fileError) {
+            console.error(`Ошибка при обработке файла ${entry.name}:`, fileError)
+          }
         }
       } else if (entry.kind === 'directory') {
         // Рекурсивно сканируем подпапку
@@ -83,7 +139,16 @@ async function scanDirectory(directoryHandle, path = '') {
       }
     }
   } catch (error) {
-    console.error('Ошибка при сканировании директории:', error)
+    if (error.name === 'NotAllowedError') {
+      console.error('Доступ к директории запрещен:', error)
+      throw error
+    } else if (error.name === 'NotFoundError') {
+      console.error('Директория не найдена:', error)
+      throw error
+    } else {
+      console.error('Ошибка при сканировании директории:', error)
+      throw error
+    }
   }
 
   // Сортировка: сначала папки, потом файлы
@@ -101,22 +166,22 @@ function triggerFileInput() {
   fileInput.value?.click()
 }
 
-function handleFilesInput(event) {
+async function handleFilesInput(event) {
   isLoading.value = true
   errorMessage.value = ''
 
   try {
     const files = Array.from(event.target.files || [])
-    buildFileTree(files)
+    await buildFileTree(files)
   } catch (error) {
     console.error('Ошибка при обработке файлов:', error)
-    errorMessage.value = 'Ошибка при загрузке файлов'
+    errorMessage.value = `Ошибка при загрузке файлов: ${error.message || 'неизвестная ошибка'}`
   } finally {
     isLoading.value = false
   }
 }
 
-function buildFileTree(files) {
+async function buildFileTree(files) {
   // Фильтруем только PNG файлы
   const pngFiles = files.filter(file => file.name.toLowerCase().endsWith('.png'))
 
@@ -125,10 +190,42 @@ function buildFileTree(files) {
     return
   }
 
+  // Валидируем все файлы
+  const validatedFiles = []
+  const invalidFiles = []
+
+  for (const file of pngFiles) {
+    const validation = await validateFile(file)
+
+    if (validation.isValid) {
+      validatedFiles.push(file)
+    } else {
+      invalidFiles.push({ file, errors: validation.errors })
+      console.warn(`Файл ${file.name} не прошел валидацию:`, validation.errors)
+    }
+  }
+
+  // Показываем предупреждение о невалидных файлах
+  if (invalidFiles.length > 0) {
+    const errorMessages = invalidFiles
+      .map(({ file, errors }) => `${file.name}: ${errors.join(', ')}`)
+      .join('\n')
+
+    errorMessage.value = `Некоторые файлы не прошли валидацию:\n${errorMessages}`
+
+    // Если нет валидных файлов, выходим
+    if (validatedFiles.length === 0) {
+      return
+    }
+  }
+
+  // Работаем только с валидными файлами
+  const filesToProcess = validatedFiles
+
   // Строим виртуальное дерево из путей файлов
   const tree = {}
 
-  pngFiles.forEach(file => {
+  filesToProcess.forEach(file => {
     const path = file.webkitRelativePath || file.name
     const parts = path.split('/')
 
@@ -166,8 +263,8 @@ function buildFileTree(files) {
   fileTree.value = convertTreeToArray(tree)
 
   // Устанавливаем корневую папку
-  if (pngFiles.length > 0 && pngFiles[0].webkitRelativePath) {
-    const rootName = pngFiles[0].webkitRelativePath.split('/')[0]
+  if (filesToProcess.length > 0 && filesToProcess[0].webkitRelativePath) {
+    const rootName = filesToProcess[0].webkitRelativePath.split('/')[0]
     rootFolder.value = { name: rootName }
   }
 }
@@ -203,7 +300,7 @@ function onDragLeave() {
   isDragging.value = false
 }
 
-function handleDrop(event) {
+async function handleDrop(event) {
   event.preventDefault()
   isDragging.value = false
   isLoading.value = true
@@ -211,10 +308,10 @@ function handleDrop(event) {
 
   try {
     const files = Array.from(event.dataTransfer.files)
-    buildFileTree(files)
+    await buildFileTree(files)
   } catch (error) {
     console.error('Ошибка при обработке перетаскивания:', error)
-    errorMessage.value = 'Ошибка при загрузке файлов'
+    errorMessage.value = `Ошибка при загрузке файлов: ${error.message || 'неизвестная ошибка'}`
   } finally {
     isLoading.value = false
   }
@@ -227,6 +324,7 @@ function toggleFolder(node) {
 
 async function selectFile(node) {
   try {
+    errorMessage.value = ''
     let file
 
     // Для режима File System Access API
@@ -239,7 +337,17 @@ async function selectFile(node) {
     }
 
     if (!file) {
+      errorMessage.value = 'Не удалось получить файл'
       console.error('Не удалось получить файл')
+      return
+    }
+
+    // Валидация файла перед загрузкой
+    const validation = await validateFile(file)
+
+    if (!validation.isValid) {
+      errorMessage.value = validation.errors.join('; ')
+      console.warn('Файл не прошел валидацию:', validation.errors)
       return
     }
 
@@ -257,44 +365,62 @@ async function selectFile(node) {
       height: dimensions.height
     })
   } catch (error) {
-    console.error('Ошибка при выборе файла:', error)
-    errorMessage.value = 'Ошибка при загрузке изображения'
+    if (error.name === 'NotAllowedError') {
+      errorMessage.value = 'Доступ к файлу запрещен. Предоставьте разрешение в браузере.'
+      console.error('Доступ к файлу запрещен:', error)
+    } else if (error.name === 'NotFoundError') {
+      errorMessage.value = 'Файл не найден.'
+      console.error('Файл не найден:', error)
+    } else {
+      errorMessage.value = `Ошибка при загрузке изображения: ${error.message || 'неизвестная ошибка'}`
+      console.error('Ошибка при выборе файла:', error)
+    }
   }
 }
 
 // Вспомогательные функции
 function readFileAsDataURL(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
+    try {
+      const reader = new FileReader()
 
-    reader.onload = (e) => {
-      resolve(e.target.result)
+      reader.onload = (e) => {
+        resolve(e.target.result)
+      }
+
+      reader.onerror = (error) => {
+        console.error('FileReader error:', error)
+        reject(new Error(`Ошибка чтения файла: ${reader.error?.message || 'неизвестная ошибка'}`))
+      }
+
+      reader.readAsDataURL(file)
+    } catch (error) {
+      reject(new Error(`Не удалось прочитать файл: ${error.message}`))
     }
-
-    reader.onerror = () => {
-      reject(new Error('Ошибка чтения файла'))
-    }
-
-    reader.readAsDataURL(file)
   })
 }
 
 function getImageDimensions(dataUrl) {
   return new Promise((resolve, reject) => {
-    const img = new Image()
+    try {
+      const img = new Image()
 
-    img.onload = () => {
-      resolve({
-        width: img.width,
-        height: img.height
-      })
+      img.onload = () => {
+        resolve({
+          width: img.width,
+          height: img.height
+        })
+      }
+
+      img.onerror = (error) => {
+        console.error('Image loading error:', error)
+        reject(new Error('Не удалось загрузить изображение. Возможно, файл поврежден или не является корректным PNG изображением.'))
+      }
+
+      img.src = dataUrl
+    } catch (error) {
+      reject(new Error(`Ошибка при обработке изображения: ${error.message}`))
     }
-
-    img.onerror = () => {
-      reject(new Error('Ошибка загрузки изображения'))
-    }
-
-    img.src = dataUrl
   })
 }
 </script>
@@ -348,11 +474,11 @@ function getImageDimensions(dataUrl) {
 
     <!-- Сообщение об ошибке -->
     <div v-if="errorMessage" class="error-message">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="error-icon">
         <circle cx="8" cy="8" r="7" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.5"/>
         <path d="M8 4V8M8 10V10.5" stroke="#DC2626" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-      <span>{{ errorMessage }}</span>
+      <span class="error-text">{{ errorMessage }}</span>
     </div>
 
     <!-- Drag & Drop зона для fallback -->
@@ -475,7 +601,7 @@ function getImageDimensions(dataUrl) {
 
 .error-message {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   margin-bottom: 12px;
   padding: 10px 12px;
@@ -484,6 +610,17 @@ function getImageDimensions(dataUrl) {
   border: 1px solid #fcc;
   color: #c00;
   font-size: 13px;
+}
+
+.error-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.error-text {
+  flex: 1;
+  white-space: pre-line;
+  word-break: break-word;
 }
 
 .drop-zone {
