@@ -634,6 +634,144 @@ watch(stageConfig, () => {
 // Конец Canvas Rendering
 // ========================================
 
+// ========================================
+// Методы взаимодействия с объектами изображений
+// ========================================
+
+/**
+ * Проверка попадания курсора в объект изображения
+ * @param {number} x - Координата X курсора на canvas
+ * @param {number} y - Координата Y курсора на canvas
+ * @param {Object} object - Объект изображения
+ * @returns {boolean} - true если курсор внутри объекта, false если снаружи
+ */
+const isPointInObject = (x, y, object) => {
+  if (!object || object.type !== 'image') {
+    return false;
+  }
+
+  // Вычисляем центр объекта
+  const centerX = object.x + object.width / 2;
+  const centerY = object.y + object.height / 2;
+
+  // Преобразуем координаты курсора с учетом rotation объекта (инверсия поворота)
+  const angle = -(object.rotation || 0) * Math.PI / 180;
+  const dx = x - centerX;
+  const dy = y - centerY;
+  const rotatedX = dx * Math.cos(angle) - dy * Math.sin(angle);
+  const rotatedY = dx * Math.sin(angle) + dy * Math.cos(angle);
+  const localX = rotatedX + centerX;
+  const localY = rotatedY + centerY;
+
+  // Проверяем попадание в прямоугольник объекта
+  return localX >= object.x &&
+         localX <= object.x + object.width &&
+         localY >= object.y &&
+         localY <= object.y + object.height;
+};
+
+/**
+ * Определение типа взаимодействия с объектом изображения
+ * @param {number} x - Координата X курсора на canvas
+ * @param {number} y - Координата Y курсора на canvas
+ * @param {Object} object - Объект изображения
+ * @returns {string|null} - Тип взаимодействия или null
+ * Возможные значения: 'move', 'resize-nw', 'resize-n', 'resize-ne', 'resize-e',
+ * 'resize-se', 'resize-s', 'resize-sw', 'resize-w', 'rotate', null
+ */
+const getInteractionType = (x, y, object) => {
+  if (!object || object.type !== 'image' || !object.isSelected || object.isLocked) {
+    return null;
+  }
+
+  const centerX = object.x + object.width / 2;
+  const centerY = object.y + object.height / 2;
+  const rotation = object.rotation || 0;
+  const angle = rotation * Math.PI / 180;
+
+  // Вспомогательная функция для преобразования координат с учетом поворота
+  const rotatePoint = (px, py) => {
+    const dx = px - centerX;
+    const dy = py - centerY;
+    return {
+      x: centerX + dx * Math.cos(angle) - dy * Math.sin(angle),
+      y: centerY + dx * Math.sin(angle) + dy * Math.cos(angle)
+    };
+  };
+
+  // Вспомогательная функция для проверки расстояния до точки
+  const distanceToPoint = (px, py) => {
+    return Math.sqrt((x - px) ** 2 + (y - py) ** 2);
+  };
+
+  // 1. Проверка попадания в ручку поворота
+  const rotateHandlePos = rotatePoint(centerX, object.y - 20);
+  if (distanceToPoint(rotateHandlePos.x, rotateHandlePos.y) <= 10) {
+    return 'rotate';
+  }
+
+  // 2. Проверка попадания в ручки изменения размера
+  const handleSize = 8; // Размер области клика для ручки (8x8px)
+  const handleRadius = handleSize / 2;
+
+  // Позиции ручек (без учета поворота)
+  const handles = {
+    'resize-nw': { x: object.x, y: object.y },
+    'resize-n': { x: centerX, y: object.y },
+    'resize-ne': { x: object.x + object.width, y: object.y },
+    'resize-e': { x: object.x + object.width, y: centerY },
+    'resize-se': { x: object.x + object.width, y: object.y + object.height },
+    'resize-s': { x: centerX, y: object.y + object.height },
+    'resize-sw': { x: object.x, y: object.y + object.height },
+    'resize-w': { x: object.x, y: centerY }
+  };
+
+  // Проверяем каждую ручку с учетом поворота
+  for (const [type, pos] of Object.entries(handles)) {
+    const rotatedPos = rotatePoint(pos.x, pos.y);
+    if (distanceToPoint(rotatedPos.x, rotatedPos.y) <= handleRadius) {
+      return type;
+    }
+  }
+
+  // 3. Если попал в объект, но не в ручки - перемещение
+  if (isPointInObject(x, y, object)) {
+    return 'move';
+  }
+
+  // 4. Вне объекта
+  return null;
+};
+
+/**
+ * Нахождение объекта изображения под курсором
+ * @param {number} x - Координата X курсора на canvas
+ * @param {number} y - Координата Y курсора на canvas
+ * @returns {Object|null} - Объект изображения или null
+ */
+const getObjectAtPoint = (x, y) => {
+  // Получаем массив всех изображений, отсортированный по zIndex (от большего к меньшему)
+  const sortedImages = [...images.value].sort((a, b) => {
+    const zIndexA = a.zIndex !== undefined ? a.zIndex : 0;
+    const zIndexB = b.zIndex !== undefined ? b.zIndex : 0;
+    return zIndexB - zIndexA; // Обратный порядок - от верхних к нижним
+  });
+
+  // Перебираем объекты от верхних к нижним
+  for (const imageObj of sortedImages) {
+    if (isPointInObject(x, y, imageObj)) {
+      return imageObj;
+    }
+  }
+
+  // Ни один объект не найден
+  return null;
+};
+
+// ========================================
+// Конец методов взаимодействия с объектами
+// ========================================
+
 const getCardElement = (cardId) => {
   if (!cardId) {
     return null;
