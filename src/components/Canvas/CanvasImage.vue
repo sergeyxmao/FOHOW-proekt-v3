@@ -16,6 +16,26 @@ const emit = defineEmits(['image-click', 'start-drag'])
 
 const isDragging = ref(false)
 
+/**
+ * Определение типа взаимодействия с объектом изображения
+ * @param {MouseEvent} event - событие мыши
+ * @returns {string} - Тип взаимодействия: 'move', 'resize-nw', 'resize-n', etc.
+ */
+function getInteractionType(event) {
+  if (props.image.isLocked) return 'move'
+
+  const target = event.target
+
+  // Проверяем, клик по ручке изменения размера
+  if (target.classList.contains('resize-handle')) {
+    const handleType = target.dataset.handle
+    return `resize-${handleType}`
+  }
+
+  // По умолчанию - перемещение
+  return 'move'
+}
+
 const imageStyle = computed(() => ({
   position: 'absolute',
   left: `${props.image.x}px`,
@@ -50,10 +70,13 @@ function handleMouseDown(event) {
 
   isDragging.value = true
 
+  const interactionType = getInteractionType(event)
+
   emit('start-drag', {
     event,
     imageId: props.image.id,
-    type: 'image'
+    type: 'image',
+    interactionType
   })
 }
 
@@ -97,6 +120,18 @@ function handleDragStart(event) {
       v-if="isSelected && !image.isLocked"
       class="canvas-image__selection-border"
     />
+
+    <!-- Ручки изменения размера -->
+    <template v-if="isSelected && !image.isLocked">
+      <div class="resize-handle resize-handle--nw" data-handle="nw" @mousedown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--n" data-handle="n" @mousedown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--ne" data-handle="ne" @mousedown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--e" data-handle="e" @mousedown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--se" data-handle="se" @mousedown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--s" data-handle="s" @mousedown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--sw" data-handle="sw" @mousedown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--w" data-handle="w" @mousedown.stop="handleMouseDown"></div>
+    </template>
   </div>
 </template>
 
@@ -134,5 +169,68 @@ function handleDragStart(event) {
   -moz-user-drag: none;
   -o-user-drag: none;
   user-drag: none;
+}
+
+/* Resize handles */
+.resize-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: #3b82f6;
+  border: 1px solid white;
+  border-radius: 2px;
+  z-index: 10;
+}
+
+.resize-handle--nw {
+  top: -4px;
+  left: -4px;
+  cursor: nw-resize;
+}
+
+.resize-handle--n {
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: n-resize;
+}
+
+.resize-handle--ne {
+  top: -4px;
+  right: -4px;
+  cursor: ne-resize;
+}
+
+.resize-handle--e {
+  top: 50%;
+  right: -4px;
+  transform: translateY(-50%);
+  cursor: e-resize;
+}
+
+.resize-handle--se {
+  bottom: -4px;
+  right: -4px;
+  cursor: se-resize;
+}
+
+.resize-handle--s {
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: s-resize;
+}
+
+.resize-handle--sw {
+  bottom: -4px;
+  left: -4px;
+  cursor: sw-resize;
+}
+
+.resize-handle--w {
+  top: 50%;
+  left: -4px;
+  transform: translateY(-50%);
+  cursor: w-resize;
 }
 </style>

@@ -133,6 +133,10 @@ const previewLineWidth = computed(() => connectionsStore.defaultLineThickness ||
 const mousePosition = ref({ x: 0, y: 0 });
 const selectedConnectionIds = ref([]);
 const dragState = ref(null);
+
+// State для resize-операций изображений
+const resizeState = ref(null); // { imageId, initialWidth, initialHeight, aspectRatio, keepAspectRatio, interactionType, startX, startY }
+
 const activeGuides = ref({ vertical: null, horizontal: null });
 let activeDragPointerId = null;
 let dragPointerCaptureElement = null;
@@ -2380,7 +2384,7 @@ const startStickerDrag = (event, stickerId) => {
   event.preventDefault();
 };
 
-const startImageDrag = ({ event, imageId }) => {
+const startImageDrag = ({ event, imageId, interactionType = 'move' }) => {
   if (event.button !== 0) {
     return;
   }
@@ -2398,6 +2402,38 @@ const startImageDrag = ({ event, imageId }) => {
 
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
 
+  // Если это resize операция, сохраняем resize state
+  if (interactionType.startsWith('resize-')) {
+    resizeState.value = {
+      imageId: image.id,
+      initialWidth: image.width,
+      initialHeight: image.height,
+      aspectRatio: image.width / image.height,
+      keepAspectRatio: !event.shiftKey, // Shift отключает сохранение пропорций
+      interactionType: interactionType,
+      startX: image.x,
+      startY: image.y,
+      startPointer: canvasPos
+    };
+
+    const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent;
+
+    if (isPointerEvent) {
+      activeDragPointerId = event.pointerId;
+      dragPointerCaptureElement = event.target;
+      dragPointerCaptureElement?.setPointerCapture?.(activeDragPointerId);
+      window.addEventListener('pointermove', handleImageResize, { passive: false });
+      window.addEventListener('pointerup', endImageResize);
+      window.addEventListener('pointercancel', endImageResize);
+    } else {
+      window.addEventListener('mousemove', handleImageResize);
+      window.addEventListener('mouseup', endImageResize);
+    }
+    event.preventDefault();
+    return;
+  }
+
+  // Обычное перемещение изображения
   const imagesToDrag = [{
     id: image.id,
     type: 'image',
@@ -2626,6 +2662,243 @@ const endDrag = async (event) => {
   window.removeEventListener('pointercancel', endDrag);
   window.removeEventListener('mousemove', handleDrag);
   window.removeEventListener('mouseup', endDrag);
+};
+
+// Обработчик изменения размера изображения
+const handleImageResizeInternal = (event) => {
+  if (!resizeState.value) {
+    return;
+  }
+
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+  const deltaX = canvasPos.x - resizeState.value.startPointer.x;
+  const deltaY = canvasPos.y - resizeState.value.startPointer.y;
+
+  const image = imagesStore.images.find(img => img.id === resizeState.value.imageId);
+  if (!image) {
+    return;
+  }
+
+  let newWidth, newHeight, newX, newY;
+  const resizeType = resizeState.value.interactionType;
+  const initialWidth = resizeState.value.initialWidth;
+  const initialHeight = resizeState.value.initialHeight;
+  const aspectRatio = resizeState.value.aspectRatio;
+  const keepAspectRatio = resizeState.value.keepAspectRatio;
+  const startX = resizeState.value.startX;
+  const startY = resizeState.value.startY;
+
+  switch (resizeType) {
+    case 'resize-se': // юго-восток, правый нижний угол
+      newWidth = initialWidth + deltaX;
+      newHeight = initialHeight + deltaY;
+
+      if (keepAspectRatio) {
+        const scale = Math.max(newWidth / initialWidth, newHeight / initialHeight);
+        newWidth = initialWidth * scale;
+        newHeight = initialHeight * scale;
+      }
+
+      newWidth = Math.max(20, newWidth);
+      newHeight = Math.max(20, newHeight);
+
+      imagesStore.updateImage(image.id, {
+        width: newWidth,
+        height: newHeight
+      });
+      break;
+
+    case 'resize-nw': // северо-запад, левый верхний угол
+      newWidth = initialWidth - deltaX;
+      newHeight = initialHeight - deltaY;
+
+      if (keepAspectRatio) {
+        const scale = Math.max(newWidth / initialWidth, newHeight / initialHeight);
+        newWidth = initialWidth * scale;
+        newHeight = initialHeight * scale;
+      }
+
+      newWidth = Math.max(20, newWidth);
+      newHeight = Math.max(20, newHeight);
+
+      newX = startX + (initialWidth - newWidth);
+      newY = startY + (initialHeight - newHeight);
+
+      imagesStore.updateImage(image.id, {
+        width: newWidth,
+        height: newHeight,
+        x: newX,
+        y: newY
+      });
+      break;
+
+    case 'resize-ne': // северо-восток, правый верхний угол
+      newWidth = initialWidth + deltaX;
+      newHeight = initialHeight - deltaY;
+
+      if (keepAspectRatio) {
+        const scale = Math.max(newWidth / initialWidth, newHeight / initialHeight);
+        newWidth = initialWidth * scale;
+        newHeight = initialHeight * scale;
+      }
+
+      newWidth = Math.max(20, newWidth);
+      newHeight = Math.max(20, newHeight);
+
+      newY = startY + (initialHeight - newHeight);
+
+      imagesStore.updateImage(image.id, {
+        width: newWidth,
+        height: newHeight,
+        y: newY
+      });
+      break;
+
+    case 'resize-sw': // юго-запад, левый нижний угол
+      newWidth = initialWidth - deltaX;
+      newHeight = initialHeight + deltaY;
+
+      if (keepAspectRatio) {
+        const scale = Math.max(newWidth / initialWidth, newHeight / initialHeight);
+        newWidth = initialWidth * scale;
+        newHeight = initialHeight * scale;
+      }
+
+      newWidth = Math.max(20, newWidth);
+      newHeight = Math.max(20, newHeight);
+
+      newX = startX + (initialWidth - newWidth);
+
+      imagesStore.updateImage(image.id, {
+        width: newWidth,
+        height: newHeight,
+        x: newX
+      });
+      break;
+
+    case 'resize-n': // север, верхняя сторона
+      newHeight = initialHeight - deltaY;
+      newWidth = initialWidth;
+
+      if (keepAspectRatio) {
+        newWidth = newHeight * aspectRatio;
+      }
+
+      newWidth = Math.max(20, newWidth);
+      newHeight = Math.max(20, newHeight);
+
+      newY = startY + (initialHeight - newHeight);
+      newX = startX + (initialWidth - newWidth) / 2;
+
+      imagesStore.updateImage(image.id, {
+        width: newWidth,
+        height: newHeight,
+        x: newX,
+        y: newY
+      });
+      break;
+
+    case 'resize-s': // юг, нижняя сторона
+      newHeight = initialHeight + deltaY;
+      newWidth = initialWidth;
+
+      if (keepAspectRatio) {
+        newWidth = newHeight * aspectRatio;
+      }
+
+      newWidth = Math.max(20, newWidth);
+      newHeight = Math.max(20, newHeight);
+
+      newX = startX + (initialWidth - newWidth) / 2;
+
+      imagesStore.updateImage(image.id, {
+        width: newWidth,
+        height: newHeight,
+        x: newX
+      });
+      break;
+
+    case 'resize-e': // восток, правая сторона
+      newWidth = initialWidth + deltaX;
+      newHeight = initialHeight;
+
+      if (keepAspectRatio) {
+        newHeight = newWidth / aspectRatio;
+      }
+
+      newWidth = Math.max(20, newWidth);
+      newHeight = Math.max(20, newHeight);
+
+      newY = startY + (initialHeight - newHeight) / 2;
+
+      imagesStore.updateImage(image.id, {
+        width: newWidth,
+        height: newHeight,
+        y: newY
+      });
+      break;
+
+    case 'resize-w': // запад, левая сторона
+      newWidth = initialWidth - deltaX;
+      newHeight = initialHeight;
+
+      if (keepAspectRatio) {
+        newHeight = newWidth / aspectRatio;
+      }
+
+      newWidth = Math.max(20, newWidth);
+      newHeight = Math.max(20, newHeight);
+
+      newX = startX + (initialWidth - newWidth);
+      newY = startY + (initialHeight - newHeight) / 2;
+
+      imagesStore.updateImage(image.id, {
+        width: newWidth,
+        height: newHeight,
+        x: newX,
+        y: newY
+      });
+      break;
+  }
+
+  event.preventDefault();
+};
+
+// Throttle handleImageResize для оптимизации производительности
+const handleImageResize = useThrottleFn(handleImageResizeInternal, 16, true, false);
+
+// Завершение изменения размера изображения
+const endImageResize = (event) => {
+  if (
+    event &&
+    activeDragPointerId !== null &&
+    event.pointerId !== undefined &&
+    event.pointerId !== activeDragPointerId
+  ) {
+    return;
+  }
+
+  if (resizeState.value) {
+    const image = imagesStore.images.find(img => img.id === resizeState.value.imageId);
+    if (image) {
+      // Сохраняем в историю финальное состояние
+      historyStore.setActionMetadata('update', `Изменен размер изображения "${image.name}"`);
+      historyStore.saveState();
+    }
+  }
+
+  resizeState.value = null;
+
+  if (activeDragPointerId !== null) {
+    dragPointerCaptureElement?.releasePointerCapture?.(activeDragPointerId);
+  }
+  activeDragPointerId = null;
+  dragPointerCaptureElement = null;
+  window.removeEventListener('pointermove', handleImageResize);
+  window.removeEventListener('pointerup', endImageResize);
+  window.removeEventListener('pointercancel', endImageResize);
+  window.removeEventListener('mousemove', handleImageResize);
+  window.removeEventListener('mouseup', endImageResize);
 };
 
 const handleMouseMoveInternal = (event) => {
@@ -2941,6 +3214,12 @@ const handleKeydown = (event) => {
     tagName === 'select' ||
     target?.isContentEditable;
 
+  // Обработка Shift для изменения размера изображений
+  if (event.key === 'Shift' && resizeState.value) {
+    resizeState.value.keepAspectRatio = false;
+    return;
+  }
+
   if (event.key === 'Escape' || event.code === 'Escape') {
     if (!isEditableElement) {
       event.preventDefault();
@@ -2954,7 +3233,7 @@ const handleKeydown = (event) => {
       }
       if (isHierarchicalDragMode.value) {
         canvasStore.setHierarchicalDragMode(false);
-      }    
+      }
     }
     return;
   }
@@ -2971,10 +3250,17 @@ const handleKeydown = (event) => {
     deleteSelectedConnections();
     return;
   }
-  
+
   if (cardsStore.selectedCardIds.length > 0) {
     deleteSelectedCards();
     return;
+  }
+};
+
+const handleKeyup = (event) => {
+  // Обработка Shift для изменения размера изображений
+  if (event.key === 'Shift' && resizeState.value) {
+    resizeState.value.keepAspectRatio = true;
   }
 };
 
@@ -2988,6 +3274,7 @@ onMounted(() => {
   handleWindowResize();
   window.addEventListener('resize', handleWindowResize);
   window.addEventListener('keydown', handleKeydown);
+  window.addEventListener('keyup', handleKeyup);
   window.addEventListener('scroll', handleViewportChange, true);
 
   // Загружаем стикеры для текущей доски
@@ -3018,6 +3305,7 @@ onBeforeUnmount(() => {
 
   }
   window.removeEventListener('keydown', handleKeydown);
+  window.removeEventListener('keyup', handleKeyup);
   window.removeEventListener('resize', handleWindowResize);
   window.removeEventListener('scroll', handleViewportChange, true);
   window.removeEventListener('pointermove', handleMouseMove); // Управляем подпиской в watch
