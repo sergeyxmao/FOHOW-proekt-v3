@@ -1,4 +1,6 @@
+# package.json-GUIDE.md
 
+Полное руководство по файлу **package.json**
 Проект: **FOHOW Interactive Board**
 
 ---
