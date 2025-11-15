@@ -201,8 +201,9 @@ const getObjectAtPoint = (x, y) => {
 /**
  * Изменение курсора в зависимости от типа взаимодействия
  * @param {string|null} interactionType - тип взаимодействия
+ * @param {boolean} isActive - активно ли взаимодействие (перетаскивание)
  */
-const updateCursor = (interactionType) => {
+const updateCursor = (interactionType, isActive = false) => {
   const canvas = canvasRef.value;
   if (!canvas) return;
 
@@ -216,7 +217,7 @@ const updateCursor = (interactionType) => {
     'resize-s': 's-resize',
     'resize-sw': 'sw-resize',
     'resize-w': 'w-resize',
-    'rotate': 'grab',
+    'rotate': isActive ? 'grabbing' : 'grab',
     null: 'default'
   };
 
@@ -321,8 +322,8 @@ const handleMouseDown = (event) => {
 
       event.preventDefault();
 
-      // Изменяем курсор
-      updateCursor(interactionType);
+      // Изменяем курсор (активное состояние)
+      updateCursor(interactionType, true);
       return;
     }
   }
@@ -375,8 +376,8 @@ const handleMouseDown = (event) => {
 
     event.preventDefault();
 
-    // Изменяем курсор
-    updateCursor('move');
+    // Изменяем курсор (активное состояние для move не требуется, но для consistency)
+    updateCursor('move', true);
   } else {
     // Снимаем выделение
     imagesStore.deselectAllImages();
