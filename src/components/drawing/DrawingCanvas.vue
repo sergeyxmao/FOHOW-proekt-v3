@@ -36,6 +36,8 @@ const dragObjectId = ref(null);
 const dragInitialX = ref(0);
 const dragInitialY = ref(0);
 const currentInteractionType = ref(null);
+// Начальные позиции всех выделенных объектов для группового перемещения
+const dragInitialPositions = ref(new Map());
 
 // State для resize-операций
 const resizeInitialWidth = ref(0);    // начальная ширина объекта
@@ -56,9 +58,14 @@ const contextMenu = reactive({
   object: null
 });
 
-// Получаем выбранный объект
+// Получаем выбранный объект (первый из выделенных)
 const selectedObject = computed(() => {
   return imagesStore.images.find(img => img.isSelected);
+});
+
+// Получаем все выделенные объекты
+const selectedObjects = computed(() => {
+  return imagesStore.images.filter(img => img.isSelected);
 });
 
 /**
@@ -287,6 +294,16 @@ const handleMouseDown = (event) => {
       dragInitialX.value = selected.x;
       dragInitialY.value = selected.y;
 
+      // Если это перемещение, сохраняем начальные позиции всех выделенных объектов
+      if (interactionType === 'move') {
+        const selectedObjs = selectedObjects.value;
+        const initialPositions = new Map();
+        selectedObjs.forEach(obj => {
+          initialPositions.set(obj.id, { x: obj.x, y: obj.y });
+        });
+        dragInitialPositions.value = initialPositions;
+      }
+
       // Если это resize операция, сохраняем дополнительные параметры
       if (interactionType.startsWith('resize-')) {
         resizeInitialWidth.value = selected.width;
@@ -315,9 +332,22 @@ const handleMouseDown = (event) => {
   const objectAtPoint = getObjectAtPoint(x, y);
 
   if (objectAtPoint) {
-    // Выделяем объект
-    imagesStore.deselectAllImages();
-    imagesStore.selectImage(objectAtPoint.id);
+    // Проверяем, зажаты ли Ctrl/Cmd для множественного выделения
+    const isMultiSelectKey = event.ctrlKey || event.metaKey;
+
+    if (isMultiSelectKey) {
+      // Множественное выделение: переключаем выделение объекта
+      imagesStore.toggleImageSelection(objectAtPoint.id);
+      event.preventDefault();
+      return;
+    } else {
+      // Обычное выделение (снять все, выделить один)
+      // Но если объект уже в выделенной группе, не сбрасываем выделение
+      if (!objectAtPoint.isSelected) {
+        imagesStore.deselectAllImages();
+        imagesStore.selectImage(objectAtPoint.id);
+      }
+    }
 
     // Проверяем, заблокирован ли объект
     if (objectAtPoint.isLocked) {
@@ -334,6 +364,15 @@ const handleMouseDown = (event) => {
     dragObjectId.value = objectAtPoint.id;
     dragInitialX.value = objectAtPoint.x;
     dragInitialY.value = objectAtPoint.y;
+
+    // Сохраняем начальные позиции всех выделенных объектов для группового перемещения
+    const selectedObjs = selectedObjects.value;
+    const initialPositions = new Map();
+    selectedObjs.forEach(obj => {
+      initialPositions.set(obj.id, { x: obj.x, y: obj.y });
+    });
+    dragInitialPositions.value = initialPositions;
+
     event.preventDefault();
 
     // Изменяем курсор
@@ -386,12 +425,23 @@ const handleMouseMove = (event) => {
   }
 
   if (currentInteractionType.value === 'move') {
-    // Вычислить новую позицию объекта
-    const newX = dragInitialX.value + deltaX;
-    const newY = dragInitialY.value + deltaY;
+    // Групповое перемещение всех выделенных объектов
+    const selectedObjs = selectedObjects.value;
 
-    // Обновить позицию объекта через store (без сохранения в историю при перетаскивании)
-    imagesStore.updateImage(dragObjectId.value, { x: newX, y: newY }, { saveToHistory: false });
+    if (selectedObjs.length > 0) {
+      selectedObjs.forEach(obj => {
+        // Получаем начальную позицию этого объекта
+        const initialPos = dragInitialPositions.value.get(obj.id);
+        if (initialPos && !obj.isLocked) {
+          // Вычисляем новую позицию с тем же смещением
+          const newX = initialPos.x + deltaX;
+          const newY = initialPos.y + deltaY;
+
+          // Обновляем позицию объекта (без сохранения в историю при перетаскивании)
+          imagesStore.updateImage(obj.id, { x: newX, y: newY }, { saveToHistory: false });
+        }
+      });
+    }
 
     // Перерисовать canvas (если есть метод отрисовки)
     // TODO: вызвать метод перерисовки canvas
@@ -631,12 +681,20 @@ const handleMouseUp = (event) => {
     const draggingObject = imagesStore.getImageById(dragObjectId.value);
     if (draggingObject) {
       if (currentInteractionType.value === 'move') {
-        // Обновляем объект с сохранением в историю
-        imagesStore.updateImage(
-          dragObjectId.value,
-          { x: draggingObject.x, y: draggingObject.y },
-          { saveToHistory: true }
-        );
+        // Групповое перемещение: сохраняем позиции всех выделенных объектов
+        const selectedObjs = selectedObjects.value;
+        if (selectedObjs.length > 0) {
+          selectedObjs.forEach(obj => {
+            if (!obj.isLocked) {
+              // Обновляем позицию объекта с сохранением в историю
+              imagesStore.updateImage(
+                obj.id,
+                { x: obj.x, y: obj.y },
+                { saveToHistory: true }
+              );
+            }
+          });
+        }
       } else if (currentInteractionType.value?.startsWith('resize-')) {
         // Сохраняем финальные размеры и позицию после resize
         imagesStore.updateImage(
@@ -664,6 +722,7 @@ const handleMouseUp = (event) => {
   isDragging.value = false;
   dragObjectId.value = null;
   currentInteractionType.value = null;
+  dragInitialPositions.value.clear();
 
   // Вернуть курсор по умолчанию
   const canvas = canvasRef.value;
@@ -728,13 +787,17 @@ const handleDeleteKey = (event) => {
     return; // не удалять объекты
   }
 
-  // Получаем выделенный объект из store
-  const selected = selectedObject.value;
+  // Получаем все выделенные объекты
+  const selectedObjs = selectedObjects.value;
 
-  // Если объект выделен и не заблокирован (isLocked === false)
-  if (selected && !selected.isLocked) {
-    // Вызываем mutation removeImage с ID объекта
-    imagesStore.removeImage(selected.id);
+  // Если есть выделенные объекты
+  if (selectedObjs.length > 0) {
+    // Удаляем все выделенные незаблокированные объекты
+    selectedObjs.forEach(obj => {
+      if (!obj.isLocked) {
+        imagesStore.removeImage(obj.id);
+      }
+    });
 
     // Предотвращаем поведение по умолчанию (для Backspace - чтобы не возвращаться назад в истории браузера)
     event.preventDefault();
