@@ -17,6 +17,7 @@ const debouncedSearchQuery = ref('')
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB в байтах
 const ALLOWED_MIME_TYPE = 'image/png'
 const ALLOWED_EXTENSION = '.png'
+const MAX_IMAGE_DIMENSION = 2000 // Максимальный размер изображения в пикселях
 
 // Проверка поддержки File System Access API
 const supportsFileSystemAccess = computed(() => {
@@ -455,7 +456,10 @@ async function selectFile(node) {
       // Читаем файл как Data URL
       dataUrl = await readFileAsDataURL(file)
 
-      // Получаем размеры изображения
+      // Сжимаем изображение, если оно больше максимального размера
+      dataUrl = await compressImage(dataUrl)
+
+      // Получаем размеры изображения (после сжатия)
       dimensions = await getImageDimensions(dataUrl)
 
       // Сохраняем в кэш
@@ -528,6 +532,68 @@ function getImageDimensions(dataUrl) {
       reject(new Error(`Ошибка при обработке изображения: ${error.message}`))
     }
   })
+}
+
+// Загрузка изображения из dataUrl
+function loadImage(dataUrl) {
+  return new Promise((resolve, reject) => {
+    try {
+      const img = new Image()
+
+      img.onload = () => {
+        resolve(img)
+      }
+
+      img.onerror = (error) => {
+        console.error('Image loading error:', error)
+        reject(new Error('Не удалось загрузить изображение для сжатия'))
+      }
+
+      img.src = dataUrl
+    } catch (error) {
+      reject(new Error(`Ошибка при загрузке изображения: ${error.message}`))
+    }
+  })
+}
+
+// Сжатие изображения, если оно больше максимального размера
+async function compressImage(dataUrl, maxSize = MAX_IMAGE_DIMENSION) {
+  try {
+    const img = await loadImage(dataUrl)
+
+    // Если изображение не превышает максимальный размер, возвращаем оригинал
+    if (img.width <= maxSize && img.height <= maxSize) {
+      return dataUrl
+    }
+
+    // Создаем canvas для ресайза
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+
+    if (!ctx) {
+      console.warn('Не удалось получить контекст canvas, возвращаем оригинал')
+      return dataUrl
+    }
+
+    // Вычисляем масштаб с сохранением пропорций
+    const scale = Math.min(maxSize / img.width, maxSize / img.height)
+    canvas.width = Math.floor(img.width * scale)
+    canvas.height = Math.floor(img.height * scale)
+
+    // Рисуем масштабированное изображение
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+    // Конвертируем в dataURL с качеством 0.9
+    const compressedDataUrl = canvas.toDataURL('image/png', 0.9)
+
+    console.log(`Изображение сжато: ${img.width}x${img.height} -> ${canvas.width}x${canvas.height}`)
+
+    return compressedDataUrl
+  } catch (error) {
+    console.error('Ошибка при сжатии изображения:', error)
+    // В случае ошибки возвращаем оригинал
+    return dataUrl
+  }
 }
 </script>
 
