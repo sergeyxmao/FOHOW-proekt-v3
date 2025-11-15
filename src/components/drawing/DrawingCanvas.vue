@@ -217,6 +217,37 @@ const updateCursor = (interactionType) => {
 };
 
 /**
+ * Показ уведомления о том, что объект заблокирован
+ */
+const showLockedNotification = () => {
+  // Создаем временное уведомление
+  const notification = document.createElement('div');
+  notification.textContent = 'Объект заблокирован';
+  notification.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(128, 128, 128, 0.9);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10000;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  `;
+
+  document.body.appendChild(notification);
+
+  // Удаляем уведомление через 1.5 секунды
+  setTimeout(() => {
+    notification.remove();
+  }, 1500);
+};
+
+/**
  * Обработчик события mousedown
  * @param {MouseEvent} event
  */
@@ -233,6 +264,16 @@ const handleMouseDown = (event) => {
   const selected = selectedObject.value;
 
   if (selected) {
+    // Проверяем, заблокирован ли объект
+    if (selected.isLocked) {
+      // Проверяем, пытается ли пользователь взаимодействовать с объектом
+      if (isPointInObject(x, y, selected)) {
+        showLockedNotification();
+        event.preventDefault();
+        return;
+      }
+    }
+
     // Если есть выделенный объект, проверяем тип взаимодействия
     const interactionType = getInteractionType(x, y, selected);
     currentInteractionType.value = interactionType;
@@ -277,6 +318,13 @@ const handleMouseDown = (event) => {
     // Выделяем объект
     imagesStore.deselectAllImages();
     imagesStore.selectImage(objectAtPoint.id);
+
+    // Проверяем, заблокирован ли объект
+    if (objectAtPoint.isLocked) {
+      showLockedNotification();
+      event.preventDefault();
+      return;
+    }
 
     // Начинаем перетаскивание
     currentInteractionType.value = 'move';
@@ -331,6 +379,11 @@ const handleMouseMove = (event) => {
   // Получить перетаскиваемый объект
   const draggingObject = imagesStore.getImageById(dragObjectId.value);
   if (!draggingObject) return;
+
+  // Проверяем, не заблокирован ли объект
+  if (draggingObject.isLocked) {
+    return;
+  }
 
   if (currentInteractionType.value === 'move') {
     // Вычислить новую позицию объекта

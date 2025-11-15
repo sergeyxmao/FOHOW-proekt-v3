@@ -537,15 +537,130 @@ const drawRotationHandle = (ctx, imageObj) => {
 };
 
 /**
+ * Отрисовка серой рамки для заблокированного объекта
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ * @param {Object} imageObj - Объект изображения
+ */
+const drawLockedBorder = (ctx, imageObj) => {
+  ctx.save();
+
+  // Переместить точку отсчета в центр изображения
+  ctx.translate(
+    imageObj.x + imageObj.width / 2,
+    imageObj.y + imageObj.height / 2
+  );
+
+  // Применить поворот
+  ctx.rotate((imageObj.rotation || 0) * Math.PI / 180);
+
+  // Рисуем серую рамку для заблокированного объекта
+  ctx.strokeStyle = '#808080'; // Серый цвет
+  ctx.lineWidth = 2;
+  ctx.strokeRect(
+    -imageObj.width / 2,
+    -imageObj.height / 2,
+    imageObj.width,
+    imageObj.height
+  );
+
+  ctx.restore();
+};
+
+/**
+ * Отрисовка иконки замка для заблокированного объекта
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ * @param {Object} imageObj - Объект изображения
+ */
+const drawLockIcon = (ctx, imageObj) => {
+  ctx.save();
+
+  // Переместить точку отсчета в центр изображения
+  ctx.translate(
+    imageObj.x + imageObj.width / 2,
+    imageObj.y + imageObj.height / 2
+  );
+
+  // Применить поворот
+  ctx.rotate((imageObj.rotation || 0) * Math.PI / 180);
+
+  // Позиция иконки замка в правом верхнем углу
+  const iconX = imageObj.width / 2 - 20; // 20px от правого края
+  const iconY = -imageObj.height / 2 + 5; // 5px от верхнего края
+  const iconSize = 16;
+
+  // Рисуем фон для иконки (полупрозрачный белый)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.fillRect(iconX - 2, iconY - 2, iconSize + 4, iconSize + 4);
+
+  // Рисуем рамку вокруг фона
+  ctx.strokeStyle = '#808080';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(iconX - 2, iconY - 2, iconSize + 4, iconSize + 4);
+
+  // Рисуем иконку замка
+  ctx.fillStyle = '#808080'; // Серый цвет
+  ctx.strokeStyle = '#808080';
+  ctx.lineWidth = 1.5;
+
+  // Дужка замка (верхняя часть)
+  const lockCenterX = iconX + iconSize / 2;
+  const lockCenterY = iconY + iconSize / 2;
+  const lockWidth = iconSize * 0.6;
+  const lockHeight = iconSize * 0.7;
+  const shackleHeight = iconSize * 0.35;
+
+  ctx.beginPath();
+  ctx.arc(
+    lockCenterX,
+    lockCenterY - lockHeight / 2 + shackleHeight / 2,
+    lockWidth / 2,
+    Math.PI,
+    0,
+    false
+  );
+  ctx.stroke();
+
+  // Тело замка (нижняя часть)
+  ctx.fillRect(
+    lockCenterX - lockWidth / 2,
+    lockCenterY - lockHeight / 2 + shackleHeight,
+    lockWidth,
+    lockHeight - shackleHeight
+  );
+
+  // Замочная скважина
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(
+    lockCenterX,
+    lockCenterY + shackleHeight / 4,
+    iconSize * 0.12,
+    0,
+    2 * Math.PI
+  );
+  ctx.fill();
+
+  ctx.restore();
+};
+
+/**
  * Отрисовка выделения изображения (рамка + ручки)
  * @param {CanvasRenderingContext2D} ctx - Контекст canvas
  * @param {Object} imageObj - Объект изображения
  */
 const drawImageSelection = (ctx, imageObj) => {
-  if (!imageObj.isSelected || imageObj.isLocked) {
+  if (!imageObj.isSelected) {
     return;
   }
 
+  // Если объект заблокирован, показываем только серую рамку и иконку замка
+  if (imageObj.isLocked) {
+    drawLockedBorder(ctx, imageObj);
+    drawLockIcon(ctx, imageObj);
+    return;
+  }
+
+  // Обычное выделение с ручками
   drawSelectionBorder(ctx, imageObj);
   drawResizeHandles(ctx, imageObj);
   drawRotationHandle(ctx, imageObj);
