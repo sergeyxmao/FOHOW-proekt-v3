@@ -636,12 +636,49 @@ const handleKeyUp = (event) => {
   }
 };
 
+/**
+ * Обработчик удаления объекта по клавише Delete или Backspace
+ * @param {KeyboardEvent} event
+ */
+const handleDeleteKey = (event) => {
+  // Проверяем, что нажата клавиша Delete или Backspace
+  if (event.key !== 'Delete' && event.key !== 'Backspace') {
+    return;
+  }
+
+  // Проверяем, что нет активных input/textarea (не удалять объекты при вводе текста)
+  const activeElement = document.activeElement;
+  const isInputActive = activeElement.tagName === 'INPUT' ||
+                        activeElement.tagName === 'TEXTAREA' ||
+                        activeElement.isContentEditable;
+
+  if (isInputActive) {
+    return; // не удалять объекты
+  }
+
+  // Получаем выделенный объект из store
+  const selected = selectedObject.value;
+
+  // Если объект выделен и не заблокирован (isLocked === false)
+  if (selected && !selected.isLocked) {
+    // Вызываем mutation removeImage с ID объекта
+    imagesStore.removeImage(selected.id);
+
+    // Предотвращаем поведение по умолчанию (для Backspace - чтобы не возвращаться назад в истории браузера)
+    event.preventDefault();
+
+    // Перерисовка canvas происходит автоматически через реактивность
+    // TODO: вызвать метод перерисовки canvas если необходимо
+  }
+};
+
 // Lifecycle hooks
 onMounted(() => {
   // Привязываем обработчики к document
   document.addEventListener('mouseup', handleMouseUp);
   document.addEventListener('keydown', handleKeyDown);
   document.addEventListener('keyup', handleKeyUp);
+  document.addEventListener('keydown', handleDeleteKey);
 
   // Инициализация canvas
   const canvas = canvasRef.value;
@@ -657,6 +694,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('mouseup', handleMouseUp);
   document.removeEventListener('keydown', handleKeyDown);
   document.removeEventListener('keyup', handleKeyUp);
+  document.removeEventListener('keydown', handleDeleteKey);
 });
 </script>
 
