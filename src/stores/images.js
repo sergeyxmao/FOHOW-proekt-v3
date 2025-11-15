@@ -318,6 +318,128 @@ export const useImagesStore = defineStore('images', {
     clearImages() {
       this.images = []
       this.selectedImageIds = []
+    },
+
+    /**
+     * Переместить изображение на передний план
+     * @param {string} imageId - ID изображения
+     * @param {Object} options - дополнительные опции
+     * @param {boolean} options.saveToHistory - сохранить в историю (по умолчанию true)
+     * @returns {boolean} - true если операция успешна
+     */
+    bringToFront(imageId, options = {}) {
+      const { saveToHistory = true } = options
+
+      const image = this.images.find(img => img.id === imageId)
+      if (!image) {
+        console.warn(`bringToFront: image with id ${imageId} not found`)
+        return false
+      }
+
+      // Находим максимальный zIndex среди всех изображений
+      const maxZIndex = this.images.reduce((max, img) => {
+        const zIndex = img.zIndex ?? 0
+        return Math.max(max, zIndex)
+      }, 0)
+
+      // Устанавливаем zIndex = maxZIndex + 1
+      image.zIndex = maxZIndex + 1
+
+      if (saveToHistory) {
+        const historyStore = useHistoryStore()
+        historyStore.setActionMetadata('update', `Изображение "${image.name}" перемещено на передний план`)
+        historyStore.saveState()
+      }
+
+      return true
+    },
+
+    /**
+     * Переместить изображение на задний план
+     * @param {string} imageId - ID изображения
+     * @param {Object} options - дополнительные опции
+     * @param {boolean} options.saveToHistory - сохранить в историю (по умолчанию true)
+     * @returns {boolean} - true если операция успешна
+     */
+    sendToBack(imageId, options = {}) {
+      const { saveToHistory = true } = options
+
+      const image = this.images.find(img => img.id === imageId)
+      if (!image) {
+        console.warn(`sendToBack: image with id ${imageId} not found`)
+        return false
+      }
+
+      // Находим минимальный zIndex среди всех изображений
+      const minZIndex = this.images.reduce((min, img) => {
+        const zIndex = img.zIndex ?? 0
+        return Math.min(min, zIndex)
+      }, 0)
+
+      // Устанавливаем zIndex = minZIndex - 1
+      image.zIndex = minZIndex - 1
+
+      if (saveToHistory) {
+        const historyStore = useHistoryStore()
+        historyStore.setActionMetadata('update', `Изображение "${image.name}" перемещено на задний план`)
+        historyStore.saveState()
+      }
+
+      return true
+    },
+
+    /**
+     * Дублировать изображение
+     * @param {string} imageId - ID изображения для дублирования
+     * @param {Object} offset - смещение для нового изображения {x, y}
+     * @param {Object} options - дополнительные опции
+     * @param {boolean} options.saveToHistory - сохранить в историю (по умолчанию true)
+     * @returns {Object|null} - новое изображение или null
+     */
+    duplicateImage(imageId, offset = { x: 20, y: 20 }, options = {}) {
+      const { saveToHistory = true } = options
+
+      const image = this.images.find(img => img.id === imageId)
+      if (!image) {
+        console.warn(`duplicateImage: image with id ${imageId} not found`)
+        return null
+      }
+
+      // Генерируем новый ID
+      const newId = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+
+      // Вычисляем максимальный zIndex среди существующих изображений
+      const maxZIndex = this.images.length > 0
+        ? Math.max(...this.images.map(img => img.zIndex || 0))
+        : 0
+
+      // Создаем копию изображения
+      const newImage = {
+        ...image,
+        id: newId,
+        x: image.x + offset.x,
+        y: image.y + offset.y,
+        zIndex: maxZIndex + 1,
+        isSelected: false
+      }
+
+      // Снимаем выделение со всех изображений
+      this.deselectAllImages()
+
+      // Добавляем новое изображение
+      this.images.push(newImage)
+
+      // Выделяем новое изображение
+      newImage.isSelected = true
+      this.selectedImageIds = [newId]
+
+      if (saveToHistory) {
+        const historyStore = useHistoryStore()
+        historyStore.setActionMetadata('create', `Дублировано изображение "${image.name}"`)
+        historyStore.saveState()
+      }
+
+      return newImage
     }
   }
 })

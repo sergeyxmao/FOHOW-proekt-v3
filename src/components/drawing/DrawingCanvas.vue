@@ -6,13 +6,24 @@
       @mousedown="handleMouseDown"
       @mousemove="handleMouseMove"
       @mouseleave="handleMouseLeave"
+      @contextmenu="handleContextMenu"
     ></canvas>
+
+    <ObjectContextMenu
+      :is-visible="contextMenu.isVisible"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :object="contextMenu.object"
+      @close="closeContextMenu"
+      @redraw="handleRedraw"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, reactive } from 'vue';
 import { useImagesStore } from '../../stores/images';
+import ObjectContextMenu from './ObjectContextMenu.vue';
 
 const imagesStore = useImagesStore();
 const canvasRef = ref(null);
@@ -36,6 +47,14 @@ const resizeKeepAspectRatio = ref(true); // сохранять пропорци�
 const rotateInitialAngle = ref(0);    // начальный угол объекта
 const rotateCenterX = ref(0);         // X центра вращения
 const rotateCenterY = ref(0);         // Y центра вращения
+
+// State для контекстного меню
+const contextMenu = reactive({
+  isVisible: false,
+  x: 0,
+  y: 0,
+  object: null
+});
 
 // Получаем выбранный объект
 const selectedObject = computed(() => {
@@ -672,6 +691,69 @@ const handleDeleteKey = (event) => {
   }
 };
 
+/**
+ * Обработчик контекстного меню (правый клик)
+ * @param {MouseEvent} event
+ */
+const handleContextMenu = (event) => {
+  event.preventDefault();
+
+  const canvas = canvasRef.value;
+  if (!canvas) return;
+
+  // Получить координаты клика относительно canvas
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+
+  // Получить объект под курсором
+  const object = getObjectAtPoint(x, y);
+
+  if (object) {
+    // Открываем контекстное меню
+    contextMenu.isVisible = true;
+    contextMenu.x = event.clientX;
+    contextMenu.y = event.clientY;
+    contextMenu.object = object;
+
+    // Выделить объект если не выделен
+    if (!object.isSelected) {
+      imagesStore.deselectAllImages();
+      imagesStore.selectImage(object.id);
+    }
+  } else {
+    // Закрываем контекстное меню если клик не по объекту
+    closeContextMenu();
+  }
+};
+
+/**
+ * Закрыть контекстное меню
+ */
+const closeContextMenu = () => {
+  contextMenu.isVisible = false;
+  contextMenu.object = null;
+};
+
+/**
+ * Обработчик перерисовки canvas
+ */
+const handleRedraw = () => {
+  // TODO: вызвать метод перерисовки canvas
+  // Пока оставляем пустым, так как canvas рисуется автоматически
+};
+
+/**
+ * Обработчик клика вне контекстного меню
+ * @param {MouseEvent} event
+ */
+const handleDocumentClick = (event) => {
+  // Проверяем, что клик был не по контекстному меню
+  if (!event.target.closest('.context-menu')) {
+    closeContextMenu();
+  }
+};
+
 // Lifecycle hooks
 onMounted(() => {
   // Привязываем обработчики к document
@@ -679,6 +761,7 @@ onMounted(() => {
   document.addEventListener('keydown', handleKeyDown);
   document.addEventListener('keyup', handleKeyUp);
   document.addEventListener('keydown', handleDeleteKey);
+  document.addEventListener('click', handleDocumentClick);
 
   // Инициализация canvas
   const canvas = canvasRef.value;
@@ -695,6 +778,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleKeyDown);
   document.removeEventListener('keyup', handleKeyUp);
   document.removeEventListener('keydown', handleDeleteKey);
+  document.removeEventListener('click', handleDocumentClick);
 });
 </script>
 
