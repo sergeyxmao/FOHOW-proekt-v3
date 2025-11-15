@@ -26,6 +26,12 @@ const dragInitialX = ref(0);
 const dragInitialY = ref(0);
 const currentInteractionType = ref(null);
 
+// State для resize-операций
+const resizeInitialWidth = ref(0);    // начальная ширина объекта
+const resizeInitialHeight = ref(0);   // начальная высота объекта
+const resizeAspectRatio = ref(1);     // соотношение сторон
+const resizeKeepAspectRatio = ref(true); // сохранять пропорции (по умолчанию true)
+
 // Получаем выбранный объект
 const selectedObject = computed(() => {
   return imagesStore.images.find(img => img.isSelected);
@@ -215,6 +221,15 @@ const handleMouseDown = (event) => {
       dragObjectId.value = selected.id;
       dragInitialX.value = selected.x;
       dragInitialY.value = selected.y;
+
+      // Если это resize операция, сохраняем дополнительные параметры
+      if (interactionType.startsWith('resize-')) {
+        resizeInitialWidth.value = selected.width;
+        resizeInitialHeight.value = selected.height;
+        resizeAspectRatio.value = selected.width / selected.height;
+        resizeKeepAspectRatio.value = !event.shiftKey; // Shift отключает сохранение пропорций
+      }
+
       event.preventDefault();
 
       // Изменяем курсор
@@ -297,8 +312,187 @@ const handleMouseMove = (event) => {
     // Перерисовать canvas (если есть метод отрисовки)
     // TODO: вызвать метод перерисовки canvas
   } else if (currentInteractionType.value?.startsWith('resize-')) {
-    // Заглушка для resize
-    // TODO: реализовать в следующих пунктах
+    // Обработка изменения размера
+    let newWidth, newHeight, newX, newY;
+    const resizeType = currentInteractionType.value;
+
+    switch (resizeType) {
+      case 'resize-se': // юго-восток, правый нижний угол
+        newWidth = resizeInitialWidth.value + deltaX;
+        newHeight = resizeInitialHeight.value + deltaY;
+
+        if (resizeKeepAspectRatio.value) {
+          // Берем большее изменение и масштабируем пропорционально
+          const scale = Math.max(newWidth / resizeInitialWidth.value, newHeight / resizeInitialHeight.value);
+          newWidth = resizeInitialWidth.value * scale;
+          newHeight = resizeInitialHeight.value * scale;
+        }
+
+        newWidth = Math.max(20, newWidth);
+        newHeight = Math.max(20, newHeight);
+
+        imagesStore.updateImage(dragObjectId.value, {
+          width: newWidth,
+          height: newHeight
+        }, { saveToHistory: false });
+        break;
+
+      case 'resize-nw': // северо-запад, левый верхний угол
+        newWidth = resizeInitialWidth.value - deltaX;
+        newHeight = resizeInitialHeight.value - deltaY;
+
+        if (resizeKeepAspectRatio.value) {
+          const scale = Math.max(newWidth / resizeInitialWidth.value, newHeight / resizeInitialHeight.value);
+          newWidth = resizeInitialWidth.value * scale;
+          newHeight = resizeInitialHeight.value * scale;
+        }
+
+        newWidth = Math.max(20, newWidth);
+        newHeight = Math.max(20, newHeight);
+
+        // При изменении размера от верхнего левого угла нужно сдвинуть позицию
+        newX = dragInitialX.value + (resizeInitialWidth.value - newWidth);
+        newY = dragInitialY.value + (resizeInitialHeight.value - newHeight);
+
+        imagesStore.updateImage(dragObjectId.value, {
+          width: newWidth,
+          height: newHeight,
+          x: newX,
+          y: newY
+        }, { saveToHistory: false });
+        break;
+
+      case 'resize-ne': // северо-восток, правый верхний угол
+        newWidth = resizeInitialWidth.value + deltaX;
+        newHeight = resizeInitialHeight.value - deltaY;
+
+        if (resizeKeepAspectRatio.value) {
+          const scale = Math.max(newWidth / resizeInitialWidth.value, newHeight / resizeInitialHeight.value);
+          newWidth = resizeInitialWidth.value * scale;
+          newHeight = resizeInitialHeight.value * scale;
+        }
+
+        newWidth = Math.max(20, newWidth);
+        newHeight = Math.max(20, newHeight);
+
+        newY = dragInitialY.value + (resizeInitialHeight.value - newHeight);
+
+        imagesStore.updateImage(dragObjectId.value, {
+          width: newWidth,
+          height: newHeight,
+          y: newY
+        }, { saveToHistory: false });
+        break;
+
+      case 'resize-sw': // юго-запад, левый нижний угол
+        newWidth = resizeInitialWidth.value - deltaX;
+        newHeight = resizeInitialHeight.value + deltaY;
+
+        if (resizeKeepAspectRatio.value) {
+          const scale = Math.max(newWidth / resizeInitialWidth.value, newHeight / resizeInitialHeight.value);
+          newWidth = resizeInitialWidth.value * scale;
+          newHeight = resizeInitialHeight.value * scale;
+        }
+
+        newWidth = Math.max(20, newWidth);
+        newHeight = Math.max(20, newHeight);
+
+        newX = dragInitialX.value + (resizeInitialWidth.value - newWidth);
+
+        imagesStore.updateImage(dragObjectId.value, {
+          width: newWidth,
+          height: newHeight,
+          x: newX
+        }, { saveToHistory: false });
+        break;
+
+      case 'resize-n': // север, верхняя сторона
+        newHeight = resizeInitialHeight.value - deltaY;
+        newWidth = resizeInitialWidth.value;
+
+        if (resizeKeepAspectRatio.value) {
+          newWidth = newHeight * resizeAspectRatio.value;
+        }
+
+        newWidth = Math.max(20, newWidth);
+        newHeight = Math.max(20, newHeight);
+
+        newY = dragInitialY.value + (resizeInitialHeight.value - newHeight);
+        newX = dragInitialX.value + (resizeInitialWidth.value - newWidth) / 2; // центрировать по горизонтали
+
+        imagesStore.updateImage(dragObjectId.value, {
+          width: newWidth,
+          height: newHeight,
+          x: newX,
+          y: newY
+        }, { saveToHistory: false });
+        break;
+
+      case 'resize-s': // юг, нижняя сторона
+        newHeight = resizeInitialHeight.value + deltaY;
+        newWidth = resizeInitialWidth.value;
+
+        if (resizeKeepAspectRatio.value) {
+          newWidth = newHeight * resizeAspectRatio.value;
+        }
+
+        newWidth = Math.max(20, newWidth);
+        newHeight = Math.max(20, newHeight);
+
+        newX = dragInitialX.value + (resizeInitialWidth.value - newWidth) / 2;
+
+        imagesStore.updateImage(dragObjectId.value, {
+          width: newWidth,
+          height: newHeight,
+          x: newX
+        }, { saveToHistory: false });
+        break;
+
+      case 'resize-e': // восток, правая сторона
+        newWidth = resizeInitialWidth.value + deltaX;
+        newHeight = resizeInitialHeight.value;
+
+        if (resizeKeepAspectRatio.value) {
+          newHeight = newWidth / resizeAspectRatio.value;
+        }
+
+        newWidth = Math.max(20, newWidth);
+        newHeight = Math.max(20, newHeight);
+
+        newY = dragInitialY.value + (resizeInitialHeight.value - newHeight) / 2;
+
+        imagesStore.updateImage(dragObjectId.value, {
+          width: newWidth,
+          height: newHeight,
+          y: newY
+        }, { saveToHistory: false });
+        break;
+
+      case 'resize-w': // запад, левая сторона
+        newWidth = resizeInitialWidth.value - deltaX;
+        newHeight = resizeInitialHeight.value;
+
+        if (resizeKeepAspectRatio.value) {
+          newHeight = newWidth / resizeAspectRatio.value;
+        }
+
+        newWidth = Math.max(20, newWidth);
+        newHeight = Math.max(20, newHeight);
+
+        newX = dragInitialX.value + (resizeInitialWidth.value - newWidth);
+        newY = dragInitialY.value + (resizeInitialHeight.value - newHeight) / 2;
+
+        imagesStore.updateImage(dragObjectId.value, {
+          width: newWidth,
+          height: newHeight,
+          x: newX,
+          y: newY
+        }, { saveToHistory: false });
+        break;
+    }
+
+    // Перерисовать canvas (если есть метод отрисовки)
+    // TODO: вызвать метод перерисовки canvas
   } else if (currentInteractionType.value === 'rotate') {
     // Заглушка для rotate
     // TODO: реализовать в следующих пунктах
@@ -315,15 +509,29 @@ const handleMouseUp = (event) => {
   if (!isDragging.value) return;
 
   // Сохранить в историю финальное состояние
-  if (currentInteractionType.value === 'move' && dragObjectId.value) {
+  if (dragObjectId.value) {
     const draggingObject = imagesStore.getImageById(dragObjectId.value);
     if (draggingObject) {
-      // Обновляем объект с сохранением в историю
-      imagesStore.updateImage(
-        dragObjectId.value,
-        { x: draggingObject.x, y: draggingObject.y },
-        { saveToHistory: true }
-      );
+      if (currentInteractionType.value === 'move') {
+        // Обновляем объект с сохранением в историю
+        imagesStore.updateImage(
+          dragObjectId.value,
+          { x: draggingObject.x, y: draggingObject.y },
+          { saveToHistory: true }
+        );
+      } else if (currentInteractionType.value?.startsWith('resize-')) {
+        // Сохраняем финальные размеры и позицию после resize
+        imagesStore.updateImage(
+          dragObjectId.value,
+          {
+            width: draggingObject.width,
+            height: draggingObject.height,
+            x: draggingObject.x,
+            y: draggingObject.y
+          },
+          { saveToHistory: true }
+        );
+      }
     }
   }
 
@@ -355,10 +563,32 @@ const handleMouseLeave = (event) => {
   }
 };
 
+/**
+ * Обработчик события keydown для клавиши Shift
+ * @param {KeyboardEvent} event
+ */
+const handleKeyDown = (event) => {
+  if (event.key === 'Shift' && isDragging.value && currentInteractionType.value?.startsWith('resize-')) {
+    resizeKeepAspectRatio.value = false;
+  }
+};
+
+/**
+ * Обработчик события keyup для клавиши Shift
+ * @param {KeyboardEvent} event
+ */
+const handleKeyUp = (event) => {
+  if (event.key === 'Shift' && isDragging.value && currentInteractionType.value?.startsWith('resize-')) {
+    resizeKeepAspectRatio.value = true;
+  }
+};
+
 // Lifecycle hooks
 onMounted(() => {
-  // Привязываем обработчик mouseup к document
+  // Привязываем обработчики к document
   document.addEventListener('mouseup', handleMouseUp);
+  document.addEventListener('keydown', handleKeyDown);
+  document.addEventListener('keyup', handleKeyUp);
 
   // Инициализация canvas
   const canvas = canvasRef.value;
@@ -370,8 +600,10 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  // Удаляем обработчик mouseup из document
+  // Удаляем обработчики из document
   document.removeEventListener('mouseup', handleMouseUp);
+  document.removeEventListener('keydown', handleKeyDown);
+  document.removeEventListener('keyup', handleKeyUp);
 });
 </script>
 
