@@ -301,6 +301,162 @@ const drawImagePlaceholder = (ctx, imageObj) => {
 };
 
 /**
+ * Отрисовка рамки выделения для изображения
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ * @param {Object} imageObj - Объект изображения
+ */
+const drawSelectionBorder = (ctx, imageObj) => {
+  ctx.save();
+
+  // Переместить точку отсчета в центр изображения
+  ctx.translate(
+    imageObj.x + imageObj.width / 2,
+    imageObj.y + imageObj.height / 2
+  );
+
+  // Применить поворот
+  ctx.rotate((imageObj.rotation || 0) * Math.PI / 180);
+
+  // Рисуем рамку выделения
+  ctx.strokeStyle = '#007bff'; // Синий цвет
+  ctx.lineWidth = 2;
+  ctx.strokeRect(
+    -imageObj.width / 2,
+    -imageObj.height / 2,
+    imageObj.width,
+    imageObj.height
+  );
+
+  ctx.restore();
+};
+
+/**
+ * Отрисовка ручек изменения размера
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ * @param {Object} imageObj - Объект изображения
+ */
+const drawResizeHandles = (ctx, imageObj) => {
+  ctx.save();
+
+  // Переместить точку отсчета в центр изображения
+  ctx.translate(
+    imageObj.x + imageObj.width / 2,
+    imageObj.y + imageObj.height / 2
+  );
+
+  // Применить поворот
+  ctx.rotate((imageObj.rotation || 0) * Math.PI / 180);
+
+  const halfWidth = imageObj.width / 2;
+  const halfHeight = imageObj.height / 2;
+  const handleSize = 8;
+  const halfHandleSize = handleSize / 2;
+
+  // Позиции 8 ручек (относительно центра изображения)
+  const handles = [
+    // 4 угла
+    { x: -halfWidth, y: -halfHeight },           // Верхний левый
+    { x: halfWidth, y: -halfHeight },            // Верхний правый
+    { x: halfWidth, y: halfHeight },             // Нижний правый
+    { x: -halfWidth, y: halfHeight },            // Нижний левый
+    // 4 середины сторон
+    { x: 0, y: -halfHeight },                    // Середина верха
+    { x: 0, y: halfHeight },                     // Середина низа
+    { x: -halfWidth, y: 0 },                     // Середина слева
+    { x: halfWidth, y: 0 }                       // Середина справа
+  ];
+
+  // Рисуем каждую ручку
+  handles.forEach(handle => {
+    // Белый квадрат
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(
+      handle.x - halfHandleSize,
+      handle.y - halfHandleSize,
+      handleSize,
+      handleSize
+    );
+
+    // Синяя обводка
+    ctx.strokeStyle = '#007bff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(
+      handle.x - halfHandleSize,
+      handle.y - halfHandleSize,
+      handleSize,
+      handleSize
+    );
+  });
+
+  ctx.restore();
+};
+
+/**
+ * Отрисовка ручки поворота
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ * @param {Object} imageObj - Объект изображения
+ */
+const drawRotationHandle = (ctx, imageObj) => {
+  ctx.save();
+
+  // Переместить точку отсчета в центр изображения
+  ctx.translate(
+    imageObj.x + imageObj.width / 2,
+    imageObj.y + imageObj.height / 2
+  );
+
+  // Применить поворот
+  ctx.rotate((imageObj.rotation || 0) * Math.PI / 180);
+
+  const halfHeight = imageObj.height / 2;
+  const handleDistance = 20; // Расстояние от верхней стороны
+  const handleRadius = 5; // Радиус круга (диаметр 10px)
+
+  // Позиция ручки поворота (над центром верхней стороны)
+  const handleX = 0;
+  const handleY = -halfHeight - handleDistance;
+
+  // Рисуем линию, соединяющую ручку с верхней стороной
+  ctx.strokeStyle = '#007bff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, -halfHeight);
+  ctx.lineTo(handleX, handleY);
+  ctx.stroke();
+
+  // Рисуем круг (ручка поворота)
+  // Белый круг
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(handleX, handleY, handleRadius, 0, 2 * Math.PI);
+  ctx.fill();
+
+  // Синяя обводка
+  ctx.strokeStyle = '#007bff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(handleX, handleY, handleRadius, 0, 2 * Math.PI);
+  ctx.stroke();
+
+  ctx.restore();
+};
+
+/**
+ * Отрисовка выделения изображения (рамка + ручки)
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ * @param {Object} imageObj - Объект изображения
+ */
+const drawImageSelection = (ctx, imageObj) => {
+  if (!imageObj.isSelected || imageObj.isLocked) {
+    return;
+  }
+
+  drawSelectionBorder(ctx, imageObj);
+  drawResizeHandles(ctx, imageObj);
+  drawRotationHandle(ctx, imageObj);
+};
+
+/**
  * Рендеринг всех изображений на canvas
  */
 const renderAllImages = async () => {
@@ -332,6 +488,11 @@ const renderAllImages = async () => {
   // Отрисовываем изображения
   for (const image of sortedImages) {
     await drawImageObject(ctx, image);
+  }
+
+  // Отрисовываем выделение поверх всех изображений
+  for (const image of sortedImages) {
+    drawImageSelection(ctx, image);
   }
 };
 
@@ -2664,12 +2825,21 @@ const getViewportBounds = () => {
     height: rect.height
   };
 };
-  
+
+/**
+ * Снять выделение со всех объектов изображений
+ */
+const deselectAll = () => {
+  imagesStore.deselectAllImages();
+  renderAllImages();
+};
+
 defineExpose({
   resetView,
   fitToContent,
   captureViewportSnapshot,
-  getViewportBounds
+  getViewportBounds,
+  deselectAll
 });
 
 watch(isDrawingLine, (isDrawing) => {
