@@ -21,7 +21,7 @@ const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
 
 const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
-const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen } = storeToRefs(sidePanelsStore)
+const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen, isImageBrowserOpen } = storeToRefs(sidePanelsStore)
 const { currentBoardId } = storeToRefs(boardStore)
 
 const handleNotesToggle = () => {
@@ -36,6 +36,11 @@ const handleCommentsToggle = () => {
 
 const handleStickerMessagesToggle = () => {
   sidePanelsStore.toggleStickerMessages()
+  emit('request-close')
+}
+
+const handleImageBrowserToggle = () => {
+  sidePanelsStore.toggleImageBrowser()
   emit('request-close')
 }
 
@@ -66,6 +71,18 @@ const handleAddSticker = () => {
         @click="handleNotesToggle"
       >
         {{ t('discussionMenu.notesList') }}
+      </button>
+    </div>
+
+    <div class="discussion-menu__item">
+      <span class="discussion-menu__icon" aria-hidden="true">🖼️</span>
+      <button
+        type="button"
+        class="discussion-menu__action"
+        :class="{ 'discussion-menu__action--active': isImageBrowserOpen }"
+        @click="handleImageBrowserToggle"
+      >
+        Добавить изображение
       </button>
     </div>
 

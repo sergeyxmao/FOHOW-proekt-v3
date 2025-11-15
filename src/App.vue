@@ -36,6 +36,7 @@ import { checkAndAlertCardLimit } from './utils/limitsCheck'
 import NotesSidePanel from './components/Panels/NotesSidePanel.vue'
 import CommentsSidePanel from './components/Panels/CommentsSidePanel.vue'
 import StickerMessagesPanel from './components/Panels/StickerMessagesPanel.vue'
+import ImageBrowserPanel from './components/Panels/ImageBrowserPanel.vue'
 import TheNotifications from './components/TheNotifications.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
 
@@ -67,7 +68,7 @@ const { isAuthenticated } = storeToRefs(authStore)
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMobileMode } = storeToRefs(mobileStore)
 const { headerColor, headerColorIndex } = storeToRefs(viewSettingsStore)
-const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen } = storeToRefs(sidePanelsStore)
+const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen, isImageBrowserOpen } = storeToRefs(sidePanelsStore)
 
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
@@ -1082,6 +1083,14 @@ onBeforeUnmount(() => {
     <transition name="side-panel-slide">
       <StickerMessagesPanel
         v-if="isStickerMessagesOpen && !isMobileMode"
+        class="no-print"
+        :is-modern-theme="isModernTheme"
+      />
+    </transition>
+
+    <transition name="side-panel-slide">
+      <ImageBrowserPanel
+        v-if="isImageBrowserOpen && !isMobileMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
