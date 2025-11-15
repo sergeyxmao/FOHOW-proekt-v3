@@ -3194,15 +3194,34 @@ const deleteSelectedCards = () => {
 
 const deleteSelectedConnections = () => {
   if (selectedConnectionIds.value.length === 0) return;
-  
+
   console.log('Deleting connections:', selectedConnectionIds.value);
-  
+
   selectedConnectionIds.value.forEach(connectionId => {
     connectionsStore.removeConnection(connectionId);
   });
-  
+
   selectedConnectionIds.value = [];
   console.log('Connections deleted');
+};
+
+const deleteSelectedImages = () => {
+  if (imagesStore.selectedImageIds.length === 0) return;
+
+  console.log('Deleting images:', imagesStore.selectedImageIds);
+
+  // Создаем копию массива ID, так как он будет модифицироваться при удалении
+  const imageIdsToDelete = [...imagesStore.selectedImageIds];
+
+  imageIdsToDelete.forEach(imageId => {
+    const image = imagesStore.images.find(img => img.id === imageId);
+    // Проверяем что изображение не заблокировано
+    if (image && !image.isLocked) {
+      imagesStore.removeImage(imageId);
+    }
+  });
+
+  console.log('Images deleted');
 };
 
 const handleKeydown = (event) => {
@@ -3245,6 +3264,12 @@ const handleKeydown = (event) => {
   if (isEditableElement) return;
 
   event.preventDefault();
+
+  // Проверяем выбранные изображения (приоритет перед карточками)
+  if (imagesStore.selectedImageIds.length > 0) {
+    deleteSelectedImages();
+    return;
+  }
 
   if (selectedConnectionIds.value.length > 0) {
     deleteSelectedConnections();

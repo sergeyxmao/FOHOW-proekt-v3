@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import ObjectContextMenu from '../drawing/ObjectContextMenu.vue'
 
 const props = defineProps({
   image: {
@@ -12,9 +13,14 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['image-click', 'start-drag'])
+const emit = defineEmits(['image-click', 'start-drag', 'redraw'])
 
 const isDragging = ref(false)
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0
+})
 
 /**
  * Определение типа взаимодействия с объектом изображения
@@ -89,6 +95,47 @@ function handleDragStart(event) {
   event.preventDefault()
   return false
 }
+
+// Обработчик контекстного меню
+function handleContextMenu(event) {
+  if (props.image.isLocked) return
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  contextMenu.value = {
+    visible: true,
+    x: event.clientX,
+    y: event.clientY
+  }
+}
+
+// Закрыть контекстное меню
+function closeContextMenu() {
+  contextMenu.value.visible = false
+}
+
+// Обработчик перерисовки
+function handleRedraw() {
+  emit('redraw')
+}
+
+// Обработчик клика вне контекстного меню
+function handleClickOutside(event) {
+  if (contextMenu.value.visible && !event.target.closest('.context-menu')) {
+    closeContextMenu()
+  }
+}
+
+// Монтируем обработчик клика при создании компонента
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+// Удаляем обработчик при размонтировании
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
@@ -100,6 +147,7 @@ function handleDragStart(event) {
     @mousedown="handleMouseDown"
     @mouseup="handleMouseUp"
     @dragstart="handleDragStart"
+    @contextmenu="handleContextMenu"
   >
     <img
       :src="image.dataUrl"
@@ -133,6 +181,16 @@ function handleDragStart(event) {
       <div class="resize-handle resize-handle--w" data-handle="w" @mousedown.stop="handleMouseDown"></div>
     </template>
   </div>
+
+  <!-- Контекстное меню -->
+  <ObjectContextMenu
+    :is-visible="contextMenu.visible"
+    :x="contextMenu.x"
+    :y="contextMenu.y"
+    :object="image"
+    @close="closeContextMenu"
+    @redraw="handleRedraw"
+  />
 </template>
 
 <style scoped>
