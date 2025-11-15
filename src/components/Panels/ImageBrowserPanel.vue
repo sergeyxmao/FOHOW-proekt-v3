@@ -53,9 +53,11 @@ const handleFileSelected = (fileData) => {
   // Передаём все данные файла: name, dataUrl, width, height
   emit('add-image', fileData)
 
-  // Автоматически закрываем панель, если включена настройка
+  // Автоматически закрываем панель с задержкой 300мс для лучшего UX
   if (autoCloseEnabled.value) {
-    handleClose()
+    setTimeout(() => {
+      handleClose()
+    }, 300)
   }
 }
 </script>
