@@ -6,9 +6,11 @@ import { useCardsStore } from '../../stores/cards';
 import { useConnectionsStore } from '../../stores/connections';
 import { useCanvasStore } from '../../stores/canvas';
 import { useViewSettingsStore } from '../../stores/viewSettings';
+import { useImagesStore } from '../../stores/images';
 import Card from './Card.vue';
 import NoteWindow from './NoteWindow.vue';
 import Sticker from './Sticker.vue';
+import CanvasImage from './CanvasImage.vue';
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { getHeaderColorRgb } from '../../utils/constants';
 import { batchDeleteCards } from '../../utils/historyOperations';
@@ -42,7 +44,8 @@ const historyStore = useHistoryStore();
 const notesStore = useNotesStore();
 const mobileStore = useMobileStore();
 const stickersStore = useStickersStore();
-const boardStore = useBoardStore();  
+const boardStore = useBoardStore();
+const imagesStore = useImagesStore();  
 const emit = defineEmits(['update-connection-status']);
 const props = defineProps({
   isModernTheme: {
@@ -57,6 +60,7 @@ const viewSettingsStore = useViewSettingsStore();
 
 const { cards } = storeToRefs(cardsStore);
 const { connections } = storeToRefs(connectionsStore);
+const { images } = storeToRefs(imagesStore);
 const {
   backgroundColor,
   isHierarchicalDragMode,
@@ -1634,8 +1638,63 @@ const startStickerDrag = (event, stickerId) => {
   event.preventDefault();
 };
 
+const startImageDrag = ({ event, imageId }) => {
+  if (event.button !== 0) {
+    return;
+  }
+
+  if (isSelecting.value) {
+    return;
+  }
+
+  // Для изображений пока не поддерживаем групповое перетаскивание
+  // Просто берем выбранное изображение
+  const image = imagesStore.images.find(img => img.id === imageId);
+  if (!image || image.isLocked) {
+    return;
+  }
+
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+
+  const imagesToDrag = [{
+    id: image.id,
+    type: 'image',
+    startX: image.x,
+    startY: image.y
+  }];
+
+  dragState.value = {
+    cards: [],
+    stickers: [],
+    images: imagesToDrag,
+    items: imagesToDrag,
+    startPointer: canvasPos,
+    hasMoved: false,
+    movingIds: new Set([imageId]),
+    primaryCardId: null,
+    primaryCardStart: null,
+    axisLock: null
+  };
+  resetActiveGuides();
+
+  const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent;
+
+  if (isPointerEvent) {
+    activeDragPointerId = event.pointerId;
+    dragPointerCaptureElement = event.target;
+    dragPointerCaptureElement?.setPointerCapture?.(activeDragPointerId);
+    window.addEventListener('pointermove', handleDrag, { passive: false });
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+  } else {
+    window.addEventListener('mousemove', handleDrag);
+    window.addEventListener('mouseup', endDrag);
+  }
+  event.preventDefault();
+};
+
 const handleDrag = (event) => {
-  if (!dragState.value || (!dragState.value.cards.length && !dragState.value.stickers.length)) {
+  if (!dragState.value || (!dragState.value.cards.length && !dragState.value.stickers.length && !dragState.value.images?.length)) {
     return;
   }
 
@@ -1723,6 +1782,18 @@ const handleDrag = (event) => {
     }
   });
 
+  // Обновляем позиции изображений
+  if (dragState.value.images && dragState.value.images.length > 0) {
+    dragState.value.images.forEach(item => {
+      imagesStore.updateImagePosition(
+        item.id,
+        item.startX + finalDx,
+        item.startY + finalDy,
+        { saveToHistory: false }
+      );
+    });
+  }
+
   updateStageSize();
 
   if (dx !== 0 || dy !== 0) {
@@ -1742,15 +1813,19 @@ const endDrag = async (event) => {
   if (dragState.value && dragState.value.hasMoved) {
     const movedCardIds = dragState.value.cards.map(item => item.id);
     const movedStickerIds = dragState.value.stickers.map(item => item.id);
-    const totalCount = movedCardIds.length + movedStickerIds.length;
+    const movedImageIds = dragState.value.images?.map(item => item.id) || [];
+    const totalCount = movedCardIds.length + movedStickerIds.length + movedImageIds.length;
 
     let description = '';
     if (totalCount === 1) {
       if (movedCardIds.length === 1) {
         const card = findCardById(movedCardIds[0]);
         description = card ? `Перемещена карточка "${card.text}"` : 'Перемещена карточка';
-      } else {
+      } else if (movedStickerIds.length === 1) {
         description = 'Перемещен стикер';
+      } else if (movedImageIds.length === 1) {
+        const image = imagesStore.images.find(img => img.id === movedImageIds[0]);
+        description = image ? `Перемещено изображение "${image.name}"` : 'Перемещено изображение';
       }
     } else {
       const parts = [];
@@ -1759,6 +1834,9 @@ const endDrag = async (event) => {
       }
       if (movedStickerIds.length > 0) {
         parts.push(`${movedStickerIds.length} стикеров`);
+      }
+      if (movedImageIds.length > 0) {
+        parts.push(`${movedImageIds.length} изображений`);
       }
       description = `Перемещено ${parts.join(' и ')}`;
     }
@@ -1945,6 +2023,26 @@ const handleStickerClick = (event, stickerId) => {
       stickersStore.deselectAllStickers();
       cardsStore.deselectAllCards();
       stickersStore.selectSticker(stickerId);
+    }
+  }
+  selectedCardId.value = null;
+};
+
+const handleImageClick = ({ event, imageId }) => {
+  // Останавливаем всплытие события
+  event.stopPropagation();
+
+  const isCtrlPressed = event.ctrlKey || event.metaKey;
+  selectedConnectionIds.value = [];
+
+  if (isCtrlPressed) {
+    imagesStore.toggleImageSelection(imageId);
+  } else {
+    if (!imagesStore.selectedImageIds.includes(imageId) || imagesStore.selectedImageIds.length > 1) {
+      imagesStore.deselectAllImages();
+      cardsStore.deselectAllCards();
+      stickersStore.deselectAllStickers();
+      imagesStore.selectImage(imageId);
     }
   }
   selectedCardId.value = null;
@@ -2579,7 +2677,15 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         :sticker="sticker"
         @sticker-click="handleStickerClick"
         @start-drag="startStickerDrag"
-      /> 
+      />
+      <CanvasImage
+        v-for="image in images"
+        :key="`image-${image.id}`"
+        :image="image"
+        :is-selected="image.isSelected"
+        @image-click="handleImageClick"
+        @start-drag="startImageDrag"
+      />
     </div>
     <a
       v-if="!isMobileMode"      
