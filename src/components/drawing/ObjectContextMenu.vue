@@ -108,11 +108,11 @@ const toggleLock = () => {
 <style scoped>
 .context-menu {
   position: fixed;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  z-index: 9999;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  z-index: 10000;
   min-width: 180px;
   padding: 4px 0;
 }
@@ -127,31 +127,31 @@ const toggleLock = () => {
   padding: 8px 16px;
   cursor: pointer;
   font-size: 14px;
-  color: #374151;
-  transition: background-color 0.15s ease;
+  color: #333;
+  transition: background 0.2s;
 }
 
 .context-menu li:hover {
-  background-color: #f3f4f6;
+  background: #f5f5f5;
+}
+
+.context-menu li.danger {
+  color: #dc3545;
+}
+
+.context-menu li.danger:hover {
+  background: #ffebee;
 }
 
 .context-menu li.separator {
   height: 1px;
-  background-color: #e5e7eb;
+  background: #e0e0e0;
   margin: 4px 0;
   padding: 0;
   cursor: default;
 }
 
 .context-menu li.separator:hover {
-  background-color: #e5e7eb;
-}
-
-.context-menu li.danger {
-  color: #dc2626;
-}
-
-.context-menu li.danger:hover {
-  background-color: #fee2e2;
+  background: #e0e0e0;
 }
 </style>
