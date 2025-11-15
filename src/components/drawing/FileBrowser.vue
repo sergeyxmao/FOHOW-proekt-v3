@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, defineEmits } from 'vue'
+import { ref, computed, defineEmits, watch } from 'vue'
 import FileTreeNode from './FileTreeNode.vue'
 
 const emit = defineEmits(['file-selected'])
@@ -10,6 +10,8 @@ const rootFolder = ref(null)
 const isDragging = ref(false)
 const isLoading = ref(false)
 const errorMessage = ref('')
+const searchQuery = ref('')
+const debouncedSearchQuery = ref('')
 
 // Константы для валидации
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB в байтах
@@ -19,6 +21,57 @@ const ALLOWED_EXTENSION = '.png'
 // Проверка поддержки File System Access API
 const supportsFileSystemAccess = computed(() => {
   return 'showDirectoryPicker' in window
+})
+
+// Дебаунс для поиска (300ms)
+let debounceTimeout = null
+watch(searchQuery, (newValue) => {
+  if (debounceTimeout) {
+    clearTimeout(debounceTimeout)
+  }
+
+  debounceTimeout = setTimeout(() => {
+    debouncedSearchQuery.value = newValue.toLowerCase().trim()
+  }, 300)
+})
+
+// Фильтрация дерева файлов по поисковому запросу
+const filteredFileTree = computed(() => {
+  if (!debouncedSearchQuery.value) {
+    return fileTree.value
+  }
+
+  const filterNodes = (nodes) => {
+    const filtered = []
+
+    for (const node of nodes) {
+      if (node.type === 'file') {
+        // Для файлов проверяем совпадение с именем
+        if (node.name.toLowerCase().includes(debouncedSearchQuery.value)) {
+          filtered.push(node)
+        }
+      } else if (node.type === 'folder') {
+        // Для папок рекурсивно фильтруем детей
+        const filteredChildren = filterNodes(node.children || [])
+
+        if (filteredChildren.length > 0) {
+          // Если есть совпадения в детях, добавляем папку с отфильтрованными детьми
+          filtered.push({
+            ...node,
+            children: filteredChildren,
+            isExpanded: true // Автоматически раскрываем при поиске
+          })
+        } else if (node.name.toLowerCase().includes(debouncedSearchQuery.value)) {
+          // Если совпадает имя самой папки
+          filtered.push(node)
+        }
+      }
+    }
+
+    return filtered
+  }
+
+  return filterNodes(fileTree.value)
 })
 
 // Валидация файла
@@ -87,7 +140,7 @@ async function selectFolder() {
   }
 }
 
-async function scanDirectory(directoryHandle, path = '') {
+async function scanDirectory(directoryHandle, path = '', lazy = false) {
   const nodes = []
 
   try {
@@ -111,7 +164,8 @@ async function scanDirectory(directoryHandle, path = '') {
                 type: 'file',
                 path: fullPath,
                 handle: entry,
-                isExpanded: false
+                isExpanded: false,
+                cachedDataUrl: null // Кэш для dataUrl
               })
             } else {
               // Логируем ошибки валидации
@@ -122,19 +176,33 @@ async function scanDirectory(directoryHandle, path = '') {
           }
         }
       } else if (entry.kind === 'directory') {
-        // Рекурсивно сканируем подпапку
-        const children = await scanDirectory(entry, fullPath)
-
-        // Добавляем папку только если в ней есть PNG файлы
-        if (children.length > 0) {
+        // Ленивая загрузка: не сканируем подпапки сразу
+        if (lazy) {
           nodes.push({
             name: entry.name,
             type: 'folder',
             path: fullPath,
             handle: entry,
-            children,
-            isExpanded: false
+            children: [], // Пустой массив детей
+            isExpanded: false,
+            isLoaded: false // Флаг: содержимое не загружено
           })
+        } else {
+          // Рекурсивно сканируем подпапку (старое поведение для корневого уровня)
+          const children = await scanDirectory(entry, fullPath, true)
+
+          // Добавляем папку только если в ней есть содержимое или папки
+          if (children.length > 0 || true) { // Всегда добавляем папки для ленивой загрузки
+            nodes.push({
+              name: entry.name,
+              type: 'folder',
+              path: fullPath,
+              handle: entry,
+              children,
+              isExpanded: false,
+              isLoaded: children.length > 0 // Если дети загружены, значит isLoaded = true
+            })
+          }
         }
       }
     }
@@ -241,7 +309,8 @@ async function buildFileTree(files) {
           type: 'folder',
           path: parts.slice(0, i + 1).join('/'),
           children: {},
-          isExpanded: false
+          isExpanded: false,
+          isLoaded: true // В fallback режиме все папки уже загружены
         }
       }
 
@@ -255,7 +324,8 @@ async function buildFileTree(files) {
       type: 'file',
       path: path,
       file: file,
-      isExpanded: false
+      isExpanded: false,
+      cachedDataUrl: null // Кэш для dataUrl
     }
   })
 
@@ -318,44 +388,80 @@ async function handleDrop(event) {
 }
 
 // Работа с деревом
-function toggleFolder(node) {
-  node.isExpanded = !node.isExpanded
+async function toggleFolder(node) {
+  // Если папка закрыта, открываем её
+  if (!node.isExpanded) {
+    node.isExpanded = true
+
+    // Если содержимое не загружено, загружаем его
+    if (!node.isLoaded && node.handle) {
+      try {
+        isLoading.value = true
+        const children = await scanDirectory(node.handle, node.path, true)
+        node.children = children
+        node.isLoaded = true
+      } catch (error) {
+        console.error('Ошибка при загрузке содержимого папки:', error)
+        errorMessage.value = `Ошибка при загрузке папки: ${error.message || 'неизвестная ошибка'}`
+      } finally {
+        isLoading.value = false
+      }
+    }
+  } else {
+    // Если папка открыта, закрываем её
+    node.isExpanded = false
+  }
 }
 
 async function selectFile(node) {
   try {
     errorMessage.value = ''
-    let file
+    let dataUrl
+    let dimensions
 
-    // Для режима File System Access API
-    if (node.handle && node.handle.getFile) {
-      file = await node.handle.getFile()
+    // Проверяем кэш
+    if (node.cachedDataUrl) {
+      // Используем закэшированный dataUrl
+      dataUrl = node.cachedDataUrl
+      dimensions = node.cachedDimensions
+    } else {
+      // Загружаем файл впервые
+      let file
+
+      // Для режима File System Access API
+      if (node.handle && node.handle.getFile) {
+        file = await node.handle.getFile()
+      }
+      // Для fallback режима
+      else if (node.file) {
+        file = node.file
+      }
+
+      if (!file) {
+        errorMessage.value = 'Не удалось получить файл'
+        console.error('Не удалось получить файл')
+        return
+      }
+
+      // Валидация файла перед загрузкой
+      const validation = await validateFile(file)
+
+      if (!validation.isValid) {
+        errorMessage.value = validation.errors.join('; ')
+        console.warn('Файл не прошел валидацию:', validation.errors)
+        return
+      }
+
+      // Читаем файл как Data URL
+      dataUrl = await readFileAsDataURL(file)
+
+      // Получаем размеры изображения
+      dimensions = await getImageDimensions(dataUrl)
+
+      // Сохраняем в кэш
+      node.cachedDataUrl = dataUrl
+      node.cachedDimensions = dimensions
     }
-    // Для fallback режима
-    else if (node.file) {
-      file = node.file
-    }
-
-    if (!file) {
-      errorMessage.value = 'Не удалось получить файл'
-      console.error('Не удалось получить файл')
-      return
-    }
-
-    // Валидация файла перед загрузкой
-    const validation = await validateFile(file)
-
-    if (!validation.isValid) {
-      errorMessage.value = validation.errors.join('; ')
-      console.warn('Файл не прошел валидацию:', validation.errors)
-      return
-    }
-
-    // Читаем файл как Data URL
-    const dataUrl = await readFileAsDataURL(file)
-
-    // Получаем размеры изображения
-    const dimensions = await getImageDimensions(dataUrl)
 
     // Отправляем событие с данными файла
     emit('file-selected', {
@@ -464,6 +570,29 @@ function getImageDimensions(dataUrl) {
       />
     </div>
 
+    <!-- Поле поиска -->
+    <div v-if="fileTree.length && !isLoading" class="search-box">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="search-icon">
+        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <path d="M11 11L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input
+        v-model="searchQuery"
+        type="text"
+        class="search-input"
+        placeholder="Поиск файлов..."
+      />
+      <button
+        v-if="searchQuery"
+        class="search-clear"
+        @click="searchQuery = ''"
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
     <!-- Breadcrumbs -->
     <div v-if="rootFolder" class="breadcrumbs">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none" class="breadcrumbs-icon">
@@ -507,7 +636,7 @@ function getImageDimensions(dataUrl) {
     <!-- Дерево файлов -->
     <div v-if="fileTree.length && !isLoading" class="file-tree">
       <FileTreeNode
-        v-for="node in fileTree"
+        v-for="node in filteredFileTree"
         :key="node.path"
         :node="node"
         @toggle="toggleFolder"
@@ -569,6 +698,64 @@ function getImageDimensions(dataUrl) {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.search-box:focus-within {
+  border-color: #007bff;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.search-icon {
+  width: 16px;
+  height: 16px;
+  color: #999;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #333;
+  padding: 0;
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
+.search-clear {
+  padding: 4px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.search-clear:hover {
+  background: #e0e0e0;
+  color: #666;
 }
 
 .breadcrumbs {
