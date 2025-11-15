@@ -29,6 +29,7 @@ import { useNotesStore } from './stores/notes'
 import { useHistoryStore } from './stores/history'
 import { useUserStore } from './stores/user'
 import { useSubscriptionStore } from './stores/subscription'
+import { useImagesStore } from './stores/images'
 import { useMobileUIScaleGesture } from './composables/useMobileUIScaleGesture'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
@@ -64,6 +65,7 @@ const notesStore = useNotesStore()
 const sidePanelsStore = useSidePanelsStore()
 const userStore = useUserStore()
 const subscriptionStore = useSubscriptionStore()
+const imagesStore = useImagesStore()
 const { isAuthenticated } = storeToRefs(authStore)
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMobileMode } = storeToRefs(mobileStore)
@@ -175,7 +177,92 @@ function handleClearCanvas() {
   // Очищаем все заметки
   notesStore.notes = []
 
+  // Очищаем все изображения
+  imagesStore.clearImages()
+
   console.log('🧹 Холст очищен')
+}
+
+/**
+ * Вычислить центр видимой области viewport с учетом zoom и pan
+ * @returns {Object} - объект с координатами { x, y }
+ */
+function getViewportCenter() {
+  if (!canvasRef.value) {
+    return { x: 400, y: 300 } // Значения по умолчанию
+  }
+
+  // Получаем контейнер canvas
+  const container = document.querySelector('.canvas-container')
+  const content = container?.querySelector('.canvas-content')
+
+  if (!container || !content) {
+    return { x: 400, y: 300 }
+  }
+
+  // Получаем размеры видимой области
+  const containerRect = container.getBoundingClientRect()
+  const viewportWidth = containerRect.width
+  const viewportHeight = containerRect.height
+
+  // Получаем текущие значения zoom и pan из viewport store
+  const zoom = viewportStore.zoomScale || 1
+  const translateX = viewportStore.translateX || 0
+  const translateY = viewportStore.translateY || 0
+
+  // Вычисляем центр viewport в координатах canvas
+  const viewportCenterX = viewportWidth / 2
+  const viewportCenterY = viewportHeight / 2
+
+  // Преобразуем координаты с учетом zoom и pan
+  const canvasCenterX = (viewportCenterX - translateX) / zoom
+  const canvasCenterY = (viewportCenterY - translateY) / zoom
+
+  return {
+    x: Math.max(0, Math.round(canvasCenterX)),
+    y: Math.max(0, Math.round(canvasCenterY))
+  }
+}
+
+/**
+ * Обработчик добавления изображения на доску
+ * @param {Object} fileData - данные файла из FileBrowser
+ * @param {string} fileData.name - имя файла
+ * @param {string} fileData.dataUrl - base64 data URL изображения
+ * @param {number} fileData.width - оригинальная ширина изображения
+ * @param {number} fileData.height - оригинальная высота изображения
+ */
+function handleAddImage(fileData) {
+  console.log('🖼️ Добавление изображения на доску:', fileData.name)
+
+  // Получаем центр видимой области
+  const center = getViewportCenter()
+
+  // Вычисляем размеры изображения для отображения
+  const displaySize = imagesStore.calculateDisplaySize(
+    fileData.width,
+    fileData.height,
+    500
+  )
+
+  // Позиционируем изображение так, чтобы его центр был в центре viewport
+  const x = center.x - displaySize.width / 2
+  const y = center.y - displaySize.height / 2
+
+  // Добавляем изображение через store
+  const newImage = imagesStore.addImage({
+    name: fileData.name,
+    dataUrl: fileData.dataUrl,
+    width: fileData.width,
+    height: fileData.height,
+    x: Math.max(0, Math.round(x)),
+    y: Math.max(0, Math.round(y))
+  })
+
+  console.log('✅ Изображение добавлено:', newImage.id)
+
+  // Опционально: закрываем панель после добавления
+  // sidePanelsStore.closePanel()
 }
 
 async function handleNewStructure(shouldSave) {
@@ -375,10 +462,17 @@ async function loadBoard(boardId) {
       : []
     stickersStore.loadStickers(stickersData)
 
+    // Восстанавливаем изображения из сохраненных данных
+    const imagesData = Array.isArray(content.images)
+      ? content.images
+      : []
+    imagesStore.loadImages(imagesData)
+
     console.log('✅ Загружена структура:', data.board.name)
     console.log('  Карточек:', cardsData.length)
     console.log('  Соединений:', connectionsData.length)
     console.log('  Стикеров:', stickersData.length)
+    console.log('  Изображений:', imagesData.length)
 
     // Загружаем заметки для структуры
     try {
@@ -581,10 +675,14 @@ function getCanvasState() {
     content: sticker.content
   }))
 
+  // Сохраняем изображения
+  const imagesData = imagesStore.getImagesForExport()
+
   console.log('📤 Сохраняем состояние:', {
     cardsCount: cardsData.length,
     connectionsCount: connectionsData.length,
-    stickersCount: stickersData.length
+    stickersCount: stickersData.length,
+    imagesCount: imagesData.length
   })
 
   return {
@@ -593,7 +691,8 @@ function getCanvasState() {
     zoom: 1, // пока фиксированное значение
     objects: cardsData,
     connections: connectionsData,
-    stickers: stickersData
+    stickers: stickersData,
+    images: imagesData
   }
 }
 
@@ -1093,6 +1192,7 @@ onBeforeUnmount(() => {
         v-if="isImageBrowserOpen && !isMobileMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
+        @add-image="handleAddImage"
       />
     </transition>
 
