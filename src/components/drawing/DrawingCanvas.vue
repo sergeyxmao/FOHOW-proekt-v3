@@ -32,6 +32,11 @@ const resizeInitialHeight = ref(0);   // начальная высота объ�
 const resizeAspectRatio = ref(1);     // соотношение сторон
 const resizeKeepAspectRatio = ref(true); // сохранять пропорции (по умолчанию true)
 
+// State для rotate-операций
+const rotateInitialAngle = ref(0);    // начальный угол объекта
+const rotateCenterX = ref(0);         // X центра вращения
+const rotateCenterY = ref(0);         // Y центра вращения
+
 // Получаем выбранный объект
 const selectedObject = computed(() => {
   return imagesStore.images.find(img => img.isSelected);
@@ -228,6 +233,13 @@ const handleMouseDown = (event) => {
         resizeInitialHeight.value = selected.height;
         resizeAspectRatio.value = selected.width / selected.height;
         resizeKeepAspectRatio.value = !event.shiftKey; // Shift отключает сохранение пропорций
+      }
+
+      // Если это rotate операция, сохраняем дополнительные параметры
+      if (interactionType === 'rotate') {
+        rotateInitialAngle.value = selected.rotation || 0;
+        rotateCenterX.value = selected.x + selected.width / 2;
+        rotateCenterY.value = selected.y + selected.height / 2;
       }
 
       event.preventDefault();
@@ -494,8 +506,42 @@ const handleMouseMove = (event) => {
     // Перерисовать canvas (если есть метод отрисовки)
     // TODO: вызвать метод перерисовки canvas
   } else if (currentInteractionType.value === 'rotate') {
-    // Заглушка для rotate
-    // TODO: реализовать в следующих пунктах
+    // Обработка поворота объекта
+
+    // Вычислить угол между центром объекта и начальной позицией курсора
+    const startAngle = Math.atan2(
+      dragStartY.value - rotateCenterY.value,
+      dragStartX.value - rotateCenterX.value
+    ) * (180 / Math.PI);
+
+    // Вычислить угол между центром объекта и текущей позицией курсора
+    const currentAngle = Math.atan2(
+      currentY - rotateCenterY.value,
+      currentX - rotateCenterX.value
+    ) * (180 / Math.PI);
+
+    // Вычислить изменение угла
+    let angleDelta = currentAngle - startAngle;
+
+    // Вычислить новый угол поворота
+    let newRotation = rotateInitialAngle.value + angleDelta;
+
+    // Нормализовать угол в диапазон 0-360
+    newRotation = ((newRotation % 360) + 360) % 360;
+
+    // Опционально: привязка к углам (snap to angle) при зажатой клавише Shift
+    if (event.shiftKey) {
+      const snapAngle = 15; // привязка к углам кратным 15°
+      newRotation = Math.round(newRotation / snapAngle) * snapAngle;
+    }
+
+    // Обновить объект
+    imagesStore.updateImage(dragObjectId.value, {
+      rotation: newRotation
+    }, { saveToHistory: false });
+
+    // Перерисовать canvas (если есть метод отрисовки)
+    // TODO: вызвать метод перерисовки canvas
   }
 
   event.preventDefault();
@@ -529,6 +575,13 @@ const handleMouseUp = (event) => {
             x: draggingObject.x,
             y: draggingObject.y
           },
+          { saveToHistory: true }
+        );
+      } else if (currentInteractionType.value === 'rotate') {
+        // Сохраняем финальный угол поворота после rotate
+        imagesStore.updateImage(
+          dragObjectId.value,
+          { rotation: draggingObject.rotation },
           { saveToHistory: true }
         );
       }
