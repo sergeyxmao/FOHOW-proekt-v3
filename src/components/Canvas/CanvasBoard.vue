@@ -145,6 +145,210 @@ let suppressNextStageClick = false;
 const noteWindowRefs = new Map();
 const ACTIVE_PV_FLASH_MS = 650;
 
+// ========================================
+// Canvas Rendering для изображений
+// ========================================
+const imagesCanvasRef = ref(null);
+const imageCache = new Map(); // key: dataUrl, value: { img: HTMLImageElement, loading: Promise, error: boolean }
+
+/**
+ * Загрузка и кэширование изображения
+ * @param {string} dataUrl - URL изображения
+ * @returns {Promise<HTMLImageElement>}
+ */
+const loadImage = (dataUrl) => {
+  // Проверяем кэш
+  const cached = imageCache.get(dataUrl);
+
+  if (cached) {
+    // Если изображение загружено успешно
+    if (cached.img && !cached.error) {
+      return Promise.resolve(cached.img);
+    }
+
+    // Если идет загрузка
+    if (cached.loading) {
+      return cached.loading;
+    }
+
+    // Если была ошибка, пробуем загрузить снова
+    if (cached.error) {
+      imageCache.delete(dataUrl);
+    }
+  }
+
+  // Создаем новый Promise для загрузки
+  const loadingPromise = new Promise((resolve, reject) => {
+    const img = new Image();
+
+    img.onload = () => {
+      // Сохраняем загруженное изображение в кэш
+      imageCache.set(dataUrl, { img, loading: null, error: false });
+      console.log('✅ Изображение загружено:', dataUrl.substring(0, 50) + '...');
+      resolve(img);
+    };
+
+    img.onerror = (error) => {
+      // Помечаем ошибку в кэше
+      imageCache.set(dataUrl, { img: null, loading: null, error: true });
+      console.error('❌ Ошибка загрузки изображения:', error);
+      reject(new Error('Failed to load image'));
+    };
+
+    img.src = dataUrl;
+  });
+
+  // Сохраняем промис загрузки в кэш
+  imageCache.set(dataUrl, { img: null, loading: loadingPromise, error: false });
+
+  return loadingPromise;
+};
+
+/**
+ * Отрисовка одного изображения на canvas
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ * @param {Object} imageObj - Объект изображения
+ */
+const drawImageObject = async (ctx, imageObj) => {
+  try {
+    const img = await loadImage(imageObj.dataUrl);
+
+    ctx.save();
+
+    // Переместить точку отсчета в центр изображения
+    ctx.translate(
+      imageObj.x + imageObj.width / 2,
+      imageObj.y + imageObj.height / 2
+    );
+
+    // Применить поворот (конвертируем градусы в радианы)
+    ctx.rotate((imageObj.rotation || 0) * Math.PI / 180);
+
+    // Применить прозрачность
+    ctx.globalAlpha = imageObj.opacity !== undefined ? imageObj.opacity : 1;
+
+    // Нарисовать изображение (центрировано)
+    ctx.drawImage(
+      img,
+      -imageObj.width / 2,
+      -imageObj.height / 2,
+      imageObj.width,
+      imageObj.height
+    );
+
+    ctx.restore();
+  } catch (error) {
+    // Отрисовываем placeholder при ошибке
+    drawImagePlaceholder(ctx, imageObj);
+  }
+};
+
+/**
+ * Отрисовка placeholder для изображения с ошибкой
+ * @param {CanvasRenderingContext2D} ctx - Контекст canvas
+ * @param {Object} imageObj - Объект изображения
+ */
+const drawImagePlaceholder = (ctx, imageObj) => {
+  ctx.save();
+
+  ctx.translate(
+    imageObj.x + imageObj.width / 2,
+    imageObj.y + imageObj.height / 2
+  );
+
+  ctx.rotate((imageObj.rotation || 0) * Math.PI / 180);
+
+  // Рисуем прямоугольник с ошибкой
+  ctx.fillStyle = '#f3f4f6';
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 2;
+
+  ctx.fillRect(
+    -imageObj.width / 2,
+    -imageObj.height / 2,
+    imageObj.width,
+    imageObj.height
+  );
+
+  ctx.strokeRect(
+    -imageObj.width / 2,
+    -imageObj.height / 2,
+    imageObj.width,
+    imageObj.height
+  );
+
+  // Рисуем крестик
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+
+  const iconSize = Math.min(imageObj.width, imageObj.height) * 0.3;
+  ctx.moveTo(-iconSize / 2, -iconSize / 2);
+  ctx.lineTo(iconSize / 2, iconSize / 2);
+  ctx.moveTo(iconSize / 2, -iconSize / 2);
+  ctx.lineTo(-iconSize / 2, iconSize / 2);
+
+  ctx.stroke();
+
+  // Добавляем текст "Error"
+  ctx.fillStyle = '#ef4444';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Error', 0, iconSize / 2 + 20);
+
+  ctx.restore();
+};
+
+/**
+ * Рендеринг всех изображений на canvas
+ */
+const renderAllImages = async () => {
+  if (!imagesCanvasRef.value) {
+    return;
+  }
+
+  const canvas = imagesCanvasRef.value;
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    return;
+  }
+
+  // Устанавливаем размеры canvas
+  canvas.width = stageConfig.value.width;
+  canvas.height = stageConfig.value.height;
+
+  // Очищаем canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Сортируем изображения по zIndex (от меньшего к большему)
+  const sortedImages = [...images.value].sort((a, b) => {
+    const zIndexA = a.zIndex !== undefined ? a.zIndex : 0;
+    const zIndexB = b.zIndex !== undefined ? b.zIndex : 0;
+    return zIndexA - zIndexB;
+  });
+
+  // Отрисовываем изображения
+  for (const image of sortedImages) {
+    await drawImageObject(ctx, image);
+  }
+};
+
+// Следим за изменениями images и перерисовываем
+watch(images, () => {
+  renderAllImages();
+}, { deep: true });
+
+// Следим за изменениями размеров stage
+watch(stageConfig, () => {
+  renderAllImages();
+}, { deep: true });
+
+// ========================================
+// Конец Canvas Rendering
+// ========================================
+
 const getCardElement = (cardId) => {
   if (!cardId) {
     return null;
@@ -2251,6 +2455,8 @@ onMounted(() => {
 
   nextTick(() => {
     applyActivePvPropagation();
+    // Инициализируем рендеринг изображений на canvas
+    renderAllImages();
   });
 });
 
@@ -2258,11 +2464,14 @@ onBeforeUnmount(() => {
   // Очищаем стикеры при размонтировании
   stickersStore.clearStickers();
 
+  // Очищаем кэш изображений
+  imageCache.clear();
+
   if (canvasContainerRef.value) { // Добавляем проверку
     canvasContainerRef.value.removeEventListener('pointermove', handleMouseMove);
     canvasContainerRef.value.removeEventListener('pointerdown', handlePointerDown);
     canvasContainerRef.value.removeEventListener('click', handleActivePvButtonClick, true);
-    
+
   }
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('resize', handleWindowResize);
@@ -2274,7 +2483,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('mousemove', handleDrag);
   window.removeEventListener('mouseup', endDrag);
   removeSelectionListeners();
-  
+
 });
 
 watch(isDrawingLine, (isActive) => {
@@ -2567,7 +2776,17 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           class="guide-line guide-line--vertical"
           :style="{ left: `${activeGuides.vertical}px` }"
         ></div>
-      </div>      
+      </div>
+
+      <!-- Canvas слой для рендеринга изображений -->
+      <canvas
+        ref="imagesCanvasRef"
+        class="images-canvas-layer"
+        :width="stageConfig.width"
+        :height="stageConfig.height"
+        style="position: absolute; top: 0; left: 0; z-index: 0; pointer-events: none;"
+      ></canvas>
+
 <svg
         class="svg-layer"
         :width="stageConfig.width"
