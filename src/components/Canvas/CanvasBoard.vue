@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue';
-import html2canvas from 'html2canvas';  
+import html2canvas from 'html2canvas';
 import { storeToRefs } from 'pinia';
+import { useDebounceFn, useThrottleFn } from '@vueuse/core';
 import { useCardsStore } from '../../stores/cards';
 import { useConnectionsStore } from '../../stores/connections';
 import { useCanvasStore } from '../../stores/canvas';
@@ -151,6 +152,74 @@ const ACTIVE_PV_FLASH_MS = 650;
 const imagesCanvasRef = ref(null);
 const imageCache = new Map(); // key: dataUrl, value: { img: HTMLImageElement, loading: Promise, error: boolean }
 
+// Оптимизация производительности: Lazy rendering с requestAnimationFrame
+let needsRedraw = false;
+let renderScheduled = false;
+
+// Оффскрин рендеринг: кэш для отрисованных изображений
+const offscreenCache = new Map(); // key: imageId, value: { canvas: HTMLCanvasElement, version: number }
+const imageVersions = new Map(); // key: imageId, value: version (изменяется при изменении изображения)
+
+/**
+ * Получение версии изображения для проверки изменений
+ * @param {Object} imageObj - Объект изображения
+ * @returns {string} - Версия изображения
+ */
+const getImageVersion = (imageObj) => {
+  return `${imageObj.x}-${imageObj.y}-${imageObj.width}-${imageObj.height}-${imageObj.rotation || 0}-${imageObj.opacity || 1}-${imageObj.dataUrl.substring(0, 50)}`;
+};
+
+/**
+ * Инвалидация кэша изображения при изменении
+ * @param {string} imageId - ID изображения
+ */
+const invalidateImageCache = (imageId) => {
+  offscreenCache.delete(imageId);
+  console.log('🔄 Кэш изображения инвалидирован:', imageId);
+};
+
+/**
+ * Создание оффскрин canvas для изображения
+ * @param {Object} imageObj - Объект изображения
+ * @param {HTMLImageElement} img - Загруженное изображение
+ * @returns {HTMLCanvasElement} - Offscreen canvas с отрисованным изображением
+ */
+const createOffscreenCanvas = (imageObj, img) => {
+  const offscreenCanvas = document.createElement('canvas');
+  offscreenCanvas.width = imageObj.width;
+  offscreenCanvas.height = imageObj.height;
+
+  const ctx = offscreenCanvas.getContext('2d', { alpha: true, willReadFrequently: false });
+
+  if (!ctx) {
+    return null;
+  }
+
+  ctx.save();
+
+  // Переместить точку отсчета в центр
+  ctx.translate(offscreenCanvas.width / 2, offscreenCanvas.height / 2);
+
+  // Применить поворот
+  ctx.rotate((imageObj.rotation || 0) * Math.PI / 180);
+
+  // Применить прозрачность
+  ctx.globalAlpha = imageObj.opacity !== undefined ? imageObj.opacity : 1;
+
+  // Нарисовать изображение
+  ctx.drawImage(
+    img,
+    -offscreenCanvas.width / 2,
+    -offscreenCanvas.height / 2,
+    offscreenCanvas.width,
+    offscreenCanvas.height
+  );
+
+  ctx.restore();
+
+  return offscreenCanvas;
+};
+
 /**
  * Загрузка и кэширование изображения
  * @param {string} dataUrl - URL изображения
@@ -205,36 +274,62 @@ const loadImage = (dataUrl) => {
 };
 
 /**
- * Отрисовка одного изображения на canvas
+ * Отрисовка одного изображения на canvas с использованием оффскрин кэширования
  * @param {CanvasRenderingContext2D} ctx - Контекст canvas
  * @param {Object} imageObj - Объект изображения
  */
 const drawImageObject = async (ctx, imageObj) => {
   try {
     const img = await loadImage(imageObj.dataUrl);
+    const currentVersion = getImageVersion(imageObj);
+    const cachedVersion = imageVersions.get(imageObj.id);
+
+    let offscreenCanvas = null;
+
+    // Проверяем, нужно ли обновить кэш
+    if (cachedVersion !== currentVersion) {
+      // Версия изменилась - создаем новый offscreen canvas
+      offscreenCanvas = createOffscreenCanvas(imageObj, img);
+
+      if (offscreenCanvas) {
+        offscreenCache.set(imageObj.id, offscreenCanvas);
+        imageVersions.set(imageObj.id, currentVersion);
+        console.log('✨ Создан offscreen кэш для изображения:', imageObj.id);
+      }
+    } else {
+      // Версия не изменилась - используем кэш
+      offscreenCanvas = offscreenCache.get(imageObj.id);
+    }
 
     ctx.save();
 
-    // Переместить точку отсчета в центр изображения
-    ctx.translate(
-      imageObj.x + imageObj.width / 2,
-      imageObj.y + imageObj.height / 2
-    );
+    // Если есть offscreen canvas, копируем из него
+    if (offscreenCanvas) {
+      ctx.drawImage(
+        offscreenCanvas,
+        imageObj.x,
+        imageObj.y,
+        imageObj.width,
+        imageObj.height
+      );
+    } else {
+      // Fallback: рисуем напрямую без кэша (для старых браузеров или ошибок)
+      ctx.translate(
+        imageObj.x + imageObj.width / 2,
+        imageObj.y + imageObj.height / 2
+      );
 
-    // Применить поворот (конвертируем градусы в радианы)
-    ctx.rotate((imageObj.rotation || 0) * Math.PI / 180);
+      ctx.rotate((imageObj.rotation || 0) * Math.PI / 180);
+      ctx.globalAlpha = imageObj.opacity !== undefined ? imageObj.opacity : 1;
 
-    // Применить прозрачность
-    ctx.globalAlpha = imageObj.opacity !== undefined ? imageObj.opacity : 1;
-
-    // Нарисовать изображение (центрировано)
-    ctx.drawImage(
-      img,
-      -imageObj.width / 2,
-      -imageObj.height / 2,
-      imageObj.width,
-      imageObj.height
-    );
+      ctx.drawImage(
+        img,
+        -imageObj.width / 2,
+        -imageObj.height / 2,
+        imageObj.width,
+        imageObj.height
+      );
+    }
 
     ctx.restore();
   } catch (error) {
@@ -465,7 +560,7 @@ const renderAllImages = async () => {
   }
 
   const canvas = imagesCanvasRef.value;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { alpha: true, willReadFrequently: false });
 
   if (!ctx) {
     return;
@@ -494,16 +589,45 @@ const renderAllImages = async () => {
   for (const image of sortedImages) {
     drawImageSelection(ctx, image);
   }
+
+  // Сбрасываем флаг перерисовки
+  needsRedraw = false;
 };
 
-// Следим за изменениями images и перерисовываем
+/**
+ * Планирование рендеринга с использованием requestAnimationFrame (Lazy rendering)
+ * Гарантирует, что рендеринг будет выполнен только один раз за frame
+ */
+const scheduleRender = () => {
+  // Устанавливаем флаг необходимости перерисовки
+  needsRedraw = true;
+
+  // Если рендеринг уже запланирован, не планируем снова
+  if (renderScheduled) {
+    return;
+  }
+
+  renderScheduled = true;
+
+  // Планируем рендеринг на следующий frame
+  requestAnimationFrame(() => {
+    renderScheduled = false;
+
+    // Проверяем флаг перед рендерингом
+    if (needsRedraw) {
+      renderAllImages();
+    }
+  });
+};
+
+// Следим за изменениями images и планируем перерисовку (вместо прямого вызова)
 watch(images, () => {
-  renderAllImages();
+  scheduleRender();
 }, { deep: true });
 
-// Следим за изменениями размеров stage
+// Следим за изменениями размеров stage и планируем перерисовку
 watch(stageConfig, () => {
-  renderAllImages();
+  scheduleRender();
 }, { deep: true });
 
 // ========================================
@@ -2058,7 +2182,7 @@ const startImageDrag = ({ event, imageId }) => {
   event.preventDefault();
 };
 
-const handleDrag = (event) => {
+const handleDragInternal = (event) => {
   if (!dragState.value || (!dragState.value.cards.length && !dragState.value.stickers.length && !dragState.value.images?.length)) {
     return;
   }
@@ -2166,6 +2290,9 @@ const handleDrag = (event) => {
   }
 };
 
+// Throttle handleDrag с задержкой 16ms (60 FPS) для оптимизации производительности
+const handleDrag = useThrottleFn(handleDragInternal, 16, true, false);
+
 const endDrag = async (event) => {
   if (
     event &&
@@ -2248,7 +2375,7 @@ const endDrag = async (event) => {
   window.removeEventListener('mouseup', endDrag);
 };
 
-const handleMouseMove = (event) => {
+const handleMouseMoveInternal = (event) => {
   if (isDrawingLine.value) {
     const canvasPos = screenToCanvas(event.clientX, event.clientY);
     mousePosition.value = {
@@ -2257,6 +2384,9 @@ const handleMouseMove = (event) => {
     };
   }
 };
+
+// Throttle handleMouseMove с задержкой 16ms (60 FPS) для оптимизации производительности
+const handleMouseMove = useThrottleFn(handleMouseMoveInternal, 16, true, false);
 
 const handlePointerDown = (event) => {
   const connectionPoint = event.target.closest('.connection-point');
