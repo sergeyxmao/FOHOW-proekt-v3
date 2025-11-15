@@ -40,6 +40,7 @@ import StickerMessagesPanel from './components/Panels/StickerMessagesPanel.vue'
 import ImageBrowserPanel from './components/Panels/ImageBrowserPanel.vue'
 import TheNotifications from './components/TheNotifications.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
+import { useNotificationsStore } from './stores/notifications'
 
 // Флаг, который защищает от рендеринга до готовности
 const isAppInitialized = ref(false)
@@ -63,6 +64,7 @@ const mobileStore = useMobileStore()
 const viewSettingsStore = useViewSettingsStore()
 const notesStore = useNotesStore()
 const sidePanelsStore = useSidePanelsStore()
+const notificationsStore = useNotificationsStore()
 const userStore = useUserStore()
 const subscriptionStore = useSubscriptionStore()
 const imagesStore = useImagesStore()
@@ -261,8 +263,12 @@ function handleAddImage(fileData) {
 
   console.log('✅ Изображение добавлено:', newImage.id)
 
-  // Опционально: закрываем панель после добавления
-  // sidePanelsStore.closePanel()
+  // Показываем toast-уведомление об успешном добавлении
+  notificationsStore.addNotification({
+    message: 'Изображение добавлено',
+    type: 'success',
+    duration: 3000
+  })
 }
 
 async function handleNewStructure(shouldSave) {
