@@ -1,5 +1,5 @@
 <script setup>
-import { ref, defineEmits } from 'vue'
+import { ref, defineEmits, onMounted } from 'vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
 import FileBrowser from '../drawing/FileBrowser.vue'
@@ -19,6 +19,24 @@ const stickersStore = useStickersStore()
 // Состояние панели: 'initial' | 'browser'
 const panelState = ref('initial')
 
+// Автоматическое закрытие после добавления
+const autoCloseEnabled = ref(true)
+const STORAGE_KEY = 'imageBrowserPanel_autoClose'
+
+// Загрузка настройки из localStorage
+onMounted(() => {
+  const savedSetting = localStorage.getItem(STORAGE_KEY)
+  if (savedSetting !== null) {
+    autoCloseEnabled.value = savedSetting === 'true'
+  }
+})
+
+// Сохранение настройки в localStorage
+const toggleAutoClose = () => {
+  autoCloseEnabled.value = !autoCloseEnabled.value
+  localStorage.setItem(STORAGE_KEY, autoCloseEnabled.value.toString())
+}
+
 const handleClose = () => {
   sidePanelsStore.closePanel()
   // Сброс состояния при закрытии
@@ -34,6 +52,11 @@ const handleFileSelected = (fileData) => {
   // Emit события 'add-image' вверх к родительскому компоненту (DrawingBoard)
   // Передаём все данные файла: name, dataUrl, width, height
   emit('add-image', fileData)
+
+  // Автоматически закрываем панель, если включена настройка
+  if (autoCloseEnabled.value) {
+    handleClose()
+  }
 }
 </script>
 
@@ -71,6 +94,21 @@ const handleFileSelected = (fileData) => {
 
       <!-- Состояние браузера: файловый браузер -->
       <div v-if="panelState === 'browser'" class="panel-browser">
+        <!-- Чекбокс автозакрытия -->
+        <div class="auto-close-setting">
+          <label class="auto-close-setting__label">
+            <input
+              type="checkbox"
+              class="auto-close-setting__checkbox"
+              :checked="autoCloseEnabled"
+              @change="toggleAutoClose"
+            />
+            <span class="auto-close-setting__text">
+              Автоматически закрывать после добавления
+            </span>
+          </label>
+        </div>
+
         <FileBrowser @file-selected="handleFileSelected" />
       </div>
     </div>
@@ -186,6 +224,33 @@ const handleFileSelected = (fileData) => {
   overflow: hidden;
 }
 
+/* Auto-close Setting */
+.auto-close-setting {
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.auto-close-setting__label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.auto-close-setting__checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.auto-close-setting__text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
 /* Modern Theme */
 .image-browser-panel--modern {
   background: rgba(18, 28, 48, 0.96);
@@ -223,6 +288,18 @@ const handleFileSelected = (fileData) => {
 .image-browser-panel--modern .panel-initial__button:hover {
   background: linear-gradient(135deg, rgba(96, 164, 255, 1) 0%, rgba(59, 130, 246, 1) 100%);
   box-shadow: 0 12px 28px rgba(6, 11, 21, 0.7);
+}
+
+.image-browser-panel--modern .auto-close-setting {
+  border-bottom-color: rgba(96, 164, 255, 0.22);
+}
+
+.image-browser-panel--modern .auto-close-setting__text {
+  color: #e5f3ff;
+}
+
+.image-browser-panel--modern .auto-close-setting__checkbox {
+  accent-color: #60a4ff;
 }
 
 /* Адаптивность для мобильных устройств */
