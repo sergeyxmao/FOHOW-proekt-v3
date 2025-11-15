@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, defineEmits } from 'vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
 import FileBrowser from '../drawing/FileBrowser.vue'
@@ -10,6 +10,8 @@ const props = defineProps({
     default: false
   }
 })
+
+const emit = defineEmits(['add-image'])
 
 const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
@@ -29,8 +31,9 @@ const openBrowser = () => {
 
 const handleFileSelected = (fileData) => {
   console.log('Файл выбран:', fileData)
-  // TODO: Шаг 3 - Интеграция с Canvas
-  // Здесь будет добавлена логика для добавления изображения на холст
+  // Emit события 'add-image' вверх к родительскому компоненту (DrawingBoard)
+  // Передаём все данные файла: name, dataUrl, width, height
+  emit('add-image', fileData)
 }
 </script>
 

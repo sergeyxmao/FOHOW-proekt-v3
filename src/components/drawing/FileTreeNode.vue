@@ -6,7 +6,7 @@ const props = defineProps({
     type: Object,
     required: true
   },
-  level: {
+  depth: {
     type: Number,
     default: 0
   }
@@ -27,7 +27,7 @@ const handleSelect = () => {
 }
 
 const getPaddingLeft = () => {
-  return `${props.level * 20}px`
+  return `${props.depth * 20}px`
 }
 </script>
 
@@ -65,6 +65,9 @@ const getPaddingLeft = () => {
       <!-- Название -->
       <span class="file-tree-node__name">{{ node.name }}</span>
 
+      <!-- Количество элементов в папке -->
+      <span v-if="node.type === 'folder'" class="file-tree-node__count">({{ node.children?.length || 0 }})</span>
+
       <!-- Индикатор раскрытия для папок -->
       <span v-if="node.type === 'folder'" class="file-tree-node__expand">
         <svg
@@ -85,7 +88,7 @@ const getPaddingLeft = () => {
         v-for="child in node.children"
         :key="child.path"
         :node="child"
-        :level="level + 1"
+        :depth="depth + 1"
         @toggle="emit('toggle', $event)"
         @select="emit('select', $event)"
       />
@@ -139,6 +142,13 @@ const getPaddingLeft = () => {
   font-weight: 500;
 }
 
+.file-tree-node__count {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-left: 4px;
+}
+
 .file-tree-node__expand {
   flex-shrink: 0;
   display: flex;
@@ -188,6 +198,10 @@ const getPaddingLeft = () => {
 }
 
 :global(.image-browser-panel--modern) .file-tree-node__expand {
+  color: #94a3b8;
+}
+
+:global(.image-browser-panel--modern) .file-tree-node__count {
   color: #94a3b8;
 }
 </style>
