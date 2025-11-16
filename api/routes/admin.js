@@ -559,5 +559,56 @@ export function registerAdminRoutes(app) {
     }
   });
 
+  // ============================================
+  // МОДЕРАЦИЯ ИЗОБРАЖЕНИЙ
+  // ============================================
+
+  /**
+   * Получить список изображений на модерацию (pending)
+   * GET /api/admin/images/pending
+   */
+  app.get('/api/admin/images/pending', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      console.log('[ADMIN] Запрос списка изображений на модерацию, admin_id=' + req.user.id);
+
+      // Получаем список изображений, ожидающих модерации
+      const result = await pool.query(
+        `SELECT
+          il.id,
+          il.original_name,
+          il.public_url,
+          il.yandex_path,
+          il.user_id,
+          u.full_name as user_full_name,
+          u.personal_id as user_personal_id,
+          il.share_requested_at,
+          il.file_size,
+          il.width,
+          il.height
+         FROM image_library il
+         JOIN users u ON il.user_id = u.id
+         WHERE il.share_requested_at IS NOT NULL
+           AND il.is_shared = FALSE
+           AND il.share_approved_at IS NULL
+         ORDER BY il.share_requested_at DESC`
+      );
+
+      const total = result.rows.length;
+
+      console.log(`[ADMIN] Найдено изображений на модерацию: ${total}`);
+
+      return reply.send({
+        success: true,
+        items: result.rows,
+        total
+      });
+    } catch (err) {
+      console.error('[ADMIN] Ошибка получения списка изображений на модерацию:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
   console.log('✅ Маршруты админ-панели зарегистрированы');
 }
