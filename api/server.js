@@ -20,6 +20,7 @@ import { checkFeature } from './middleware/checkFeature.js';
 import { checkUsageLimit } from './middleware/checkUsageLimit.js';
 import { registerPromoRoutes } from './routes/promo.js';
 import { registerAdminRoutes } from './routes/admin.js';
+import { registerImageRoutes } from './routes/images.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
 
@@ -1741,6 +1742,11 @@ registerPromoRoutes(app);
 // АДМИН-ПАНЕЛЬ (ADMIN PANEL)
 // ============================================
 registerAdminRoutes(app);
+
+// ============================================
+// БИБЛИОТЕКА ИЗОБРАЖЕНИЙ (IMAGE LIBRARY)
+// ============================================
+registerImageRoutes(app);
 
 // ============================================
 // СТИКЕРЫ (STICKERS)
