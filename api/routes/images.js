@@ -125,6 +125,46 @@ export function registerImageRoutes(app) {
   });
 
   /**
+   * GET /api/images/my/folders - Получить список папок личной библиотеки
+   *
+   * Эндпоинт для получения списка уникальных папок, используемых в личной библиотеке пользователя.
+   * Фронтенд использует это для построения дерева папок.
+   */
+  app.get('/api/images/my/folders', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const userId = req.user.id;
+
+      // Получаем уникальные значения folder_name из image_library
+      const result = await pool.query(
+        `SELECT DISTINCT folder_name
+         FROM image_library
+         WHERE user_id = $1
+         ORDER BY folder_name ASC NULLS FIRST`,
+        [userId]
+      );
+
+      // Извлекаем массив названий папок, фильтруя null и пустые строки
+      const folders = result.rows
+        .map(row => row.folder_name)
+        .filter(name => name !== null && name.trim() !== '');
+
+      // Возвращаем список папок
+      return reply.code(200).send({ folders });
+
+    } catch (err) {
+      console.error('❌ Ошибка получения списка папок:', err);
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
+
+  /**
    * POST /api/images/upload - Загрузить изображение в личную библиотеку
    *
    * Эндпоинт для загрузки одного изображения в личную библиотеку текущего пользователя.
@@ -303,6 +343,11 @@ export function registerImageRoutes(app) {
 
     } catch (err) {
       console.error('❌ Ошибка загрузки изображения:', err);
+
+      // Логируем дополнительную информацию для ошибок Яндекс.Диска
+      if (err.status) {
+        console.error(`❌ Yandex.Disk API вернул статус: ${err.status}`);
+      }
 
       const errorMessage = process.env.NODE_ENV === 'development'
         ? `Ошибка сервера: ${err.message}`
