@@ -5,7 +5,8 @@ import {
   getSharedFolderPath,
   ensureFolderExists,
   moveFile,
-  publishFile
+  publishFile,
+  deleteFile
 } from '../services/yandexDiskService.js';
 
 /**
@@ -749,6 +750,113 @@ export function registerAdminRoutes(app) {
 
     } catch (err) {
       console.error('[ADMIN] Ошибка одобрения изображения:', err);
+
+      // Логируем дополнительную информацию для ошибок Яндекс.Диска
+      if (err.status) {
+        console.error(`[ADMIN] Yandex.Disk API вернул статус: ${err.status}`);
+      }
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
+
+  /**
+   * Отклонить изображение и удалить из папки pending
+   * POST /api/admin/images/:id/reject
+   */
+  app.post('/api/admin/images/:id/reject', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      const adminId = req.user.id;
+      const imageId = parseInt(req.params.id, 10);
+
+      console.log(`[ADMIN] Запрос на отклонение изображения: image_id=${imageId}, admin_id=${adminId}`);
+
+      // Валидация входных данных
+      if (!Number.isInteger(imageId) || imageId <= 0) {
+        return reply.code(400).send({
+          error: 'Некорректный ID изображения'
+        });
+      }
+
+      // Найти запись image_library по id
+      const imageResult = await pool.query(
+        `SELECT
+          il.id,
+          il.yandex_path,
+          il.share_requested_at,
+          il.is_shared
+         FROM image_library il
+         WHERE il.id = $1
+           AND il.share_requested_at IS NOT NULL
+           AND il.is_shared = FALSE`,
+        [imageId]
+      );
+
+      // Если изображение не найдено или не на модерации
+      if (imageResult.rows.length === 0) {
+        console.log(`[ADMIN] Изображение не найдено или не на модерации: image_id=${imageId}`);
+        return reply.code(404).send({
+          error: 'Изображение не найдено или не находится на модерации'
+        });
+      }
+
+      const image = imageResult.rows[0];
+      const { yandex_path } = image;
+
+      // Проверка наличия yandex_path
+      if (!yandex_path) {
+        console.error(`[ADMIN] Отсутствует yandex_path для изображения: image_id=${imageId}`);
+        return reply.code(500).send({
+          error: 'Не удалось определить путь к файлу на Яндекс.Диске'
+        });
+      }
+
+      console.log(`[ADMIN] Удаление файла из pending: ${yandex_path}`);
+
+      // Удалить файл из папки pending на Яндекс.Диске
+      try {
+        await deleteFile(yandex_path);
+        console.log(`[ADMIN] Файл успешно удалён с Яндекс.Диска`);
+      } catch (deleteError) {
+        console.error(`[ADMIN] Ошибка удаления файла с Яндекс.Диска:`, deleteError);
+
+        // Если файл не найден (404), продолжаем обновление БД
+        // В других случаях - выбрасываем ошибку
+        if (!deleteError.status || deleteError.status !== 404) {
+          throw deleteError;
+        }
+
+        console.log(`[ADMIN] Файл не найден на Яндекс.Диске (возможно, уже удалён), продолжаем обновление БД`);
+      }
+
+      // Обновить запись в image_library
+      const updateResult = await pool.query(
+        `UPDATE image_library
+         SET
+           moderation_status = 'rejected',
+           share_requested_at = NULL,
+           yandex_path = NULL,
+           public_url = NULL
+         WHERE id = $1
+         RETURNING id, moderation_status`,
+        [imageId]
+      );
+
+      const updatedImage = updateResult.rows[0];
+
+      console.log(`[ADMIN] ✅ Изображение успешно отклонено: image_id=${imageId}`);
+
+      // Возвращаем успешный ответ
+      return reply.code(200).send(updatedImage);
+
+    } catch (err) {
+      console.error('[ADMIN] Ошибка отклонения изображения:', err);
 
       // Логируем дополнительную информацию для ошибок Яндекс.Диска
       if (err.status) {
