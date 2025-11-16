@@ -336,7 +336,7 @@ async function renameUserRootFolder(userId, oldPersonalId, newPersonalId) {
 }
 
 // Экспорт всех функций и констант
-module.exports = {
+export {
   // Константы
   YANDEX_DISK_TOKEN,
   YANDEX_DISK_BASE_DIR,
