@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
+import MyLibraryTab from '../Images/MyLibraryTab.vue'
 
 const props = defineProps({
   isModernTheme: {
@@ -67,15 +68,8 @@ const setActiveTab = (tab) => {
 
     <div class="images-panel__content">
       <!-- Содержимое "Моя библиотека" -->
-      <div v-if="activeTab === 'my'" class="images-panel__tab-content">
-        <div class="images-panel__empty">
-          <p class="images-panel__empty-text">
-            Моя библиотека изображений
-          </p>
-          <p class="images-panel__empty-hint">
-            Здесь будут отображаться ваши загруженные изображения
-          </p>
-        </div>
+      <div v-if="activeTab === 'my'" class="images-panel__tab-content images-panel__tab-content--full">
+        <MyLibraryTab />
       </div>
 
       <!-- Содержимое "Общая" -->
@@ -201,6 +195,13 @@ const setActiveTab = (tab) => {
 
 .images-panel__tab-content {
   padding: 24px;
+}
+
+.images-panel__tab-content--full {
+  padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Empty state */

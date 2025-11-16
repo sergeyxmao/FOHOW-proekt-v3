@@ -3100,7 +3100,7 @@ const handleStageClick = async (event) => {
     return;
   }
 
-  // Если активен режим размещения стикера, создаем новый стикер
+  // Если активен режим размещения стикера/изображения
   if (stickersStore.isPlacementMode) {
     // Выключаем режим размещения СРАЗУ, чтобы предотвратить дублирование
     stickersStore.disablePlacementMode();
@@ -3108,11 +3108,38 @@ const handleStageClick = async (event) => {
     // Останавливаем всплытие события, чтобы предотвратить повторное срабатывание
     event.stopPropagation();
 
-    // Проверяем, что ID доски доступен
-    if (boardStore.currentBoardId) {
-      // Используем существующую вспомогательную функцию для получения корректных координат
-      const { x, y } = screenToCanvas(event.clientX, event.clientY);
+    // Используем существующую вспомогательную функцию для получения корректных координат
+    const { x, y } = screenToCanvas(event.clientX, event.clientY);
 
+    // Проверяем, есть ли данные изображения для размещения
+    if (stickersStore.pendingImageData) {
+      const imageData = stickersStore.pendingImageData;
+
+      try {
+        // Добавляем изображение на canvas через imagesStore
+        imagesStore.addImage({
+          name: 'Image from library',
+          dataUrl: imageData.url,
+          width: imageData.width || 200,
+          height: imageData.height || 150,
+          x: Math.round(x),
+          y: Math.round(y)
+        });
+
+        console.log('✅ Изображение добавлено на доску:', imageData);
+      } catch (error) {
+        console.error('Ошибка добавления изображения на доску:', error);
+        alert('Не удалось добавить изображение на доску');
+      } finally {
+        // Очищаем pendingImageData
+        stickersStore.pendingImageData = null;
+      }
+
+      return; // Завершаем выполнение функции
+    }
+
+    // Если нет данных изображения, создаем обычный стикер
+    if (boardStore.currentBoardId) {
       try {
         // Вызываем action для добавления стикера
         await stickersStore.addSticker(boardStore.currentBoardId, {

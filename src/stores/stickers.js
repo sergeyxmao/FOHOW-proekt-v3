@@ -26,6 +26,9 @@ export const useStickersStore = defineStore('stickers', () => {
   // ID стикера, на который нужно сфокусироваться
   const pendingFocusStickerId = ref(null);
 
+  // Данные изображения, ожидающего размещения на доске
+  const pendingImageData = ref(null);
+
   // ============================================
   // GETTERS
   // ============================================
@@ -389,6 +392,7 @@ export const useStickersStore = defineStore('stickers', () => {
     currentBoardId,
     selectedStickerIds,
     pendingFocusStickerId,
+    pendingImageData,
 
     // Getters
     hasStickers,
