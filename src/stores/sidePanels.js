@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 
 export const useSidePanelsStore = defineStore('sidePanels', {
   state: () => ({
-    activePanel: null // 'notes' | 'comments' | 'stickerMessages' | 'imageBrowser' | null
+    activePanel: null // 'notes' | 'comments' | 'stickerMessages' | 'imageBrowser' | 'images' | null
   }),
 
   getters: {
@@ -10,6 +10,7 @@ export const useSidePanelsStore = defineStore('sidePanels', {
     isCommentsOpen: (state) => state.activePanel === 'comments',
     isStickerMessagesOpen: (state) => state.activePanel === 'stickerMessages',
     isImageBrowserOpen: (state) => state.activePanel === 'imageBrowser',
+    isImagesOpen: (state) => state.activePanel === 'images',
     isPanelOpen: (state) => state.activePanel !== null
   },
 
@@ -63,6 +64,18 @@ export const useSidePanelsStore = defineStore('sidePanels', {
         this.activePanel = null
       } else {
         this.activePanel = 'imageBrowser'
+      }
+    },
+
+    openImages() {
+      this.activePanel = 'images'
+    },
+
+    toggleImages() {
+      if (this.activePanel === 'images') {
+        this.activePanel = null
+      } else {
+        this.activePanel = 'images'
       }
     }
   }
