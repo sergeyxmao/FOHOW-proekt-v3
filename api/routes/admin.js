@@ -1,6 +1,12 @@
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
+import {
+  getSharedFolderPath,
+  ensureFolderExists,
+  moveFile,
+  publishFile
+} from '../services/yandexDiskService.js';
 
 /**
  * Регистрация маршрутов для админ-панели
@@ -607,6 +613,151 @@ export function registerAdminRoutes(app) {
     } catch (err) {
       console.error('[ADMIN] Ошибка получения списка изображений на модерацию:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  /**
+   * Одобрить изображение и переместить в общую библиотеку
+   * POST /api/admin/images/:id/approve
+   */
+  app.post('/api/admin/images/:id/approve', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      const adminId = req.user.id;
+      const imageId = parseInt(req.params.id, 10);
+      const { shared_folder_id } = req.body;
+
+      console.log(`[ADMIN] Запрос на одобрение изображения: image_id=${imageId}, shared_folder_id=${shared_folder_id}, admin_id=${adminId}`);
+
+      // Валидация входных данных
+      if (!Number.isInteger(imageId) || imageId <= 0) {
+        return reply.code(400).send({
+          error: 'Некорректный ID изображения'
+        });
+      }
+
+      if (!shared_folder_id || !Number.isInteger(shared_folder_id) || shared_folder_id <= 0) {
+        return reply.code(400).send({
+          error: 'Поле shared_folder_id обязательно и должно быть положительным целым числом'
+        });
+      }
+
+      // Найти запись image_library по id
+      const imageResult = await pool.query(
+        `SELECT
+          il.id,
+          il.filename,
+          il.yandex_path,
+          il.share_requested_at,
+          il.is_shared
+         FROM image_library il
+         WHERE il.id = $1
+           AND il.share_requested_at IS NOT NULL
+           AND il.is_shared = FALSE`,
+        [imageId]
+      );
+
+      // Если изображение не найдено или не на модерации
+      if (imageResult.rows.length === 0) {
+        console.log(`[ADMIN] Изображение не найдено или не на модерации: image_id=${imageId}`);
+        return reply.code(404).send({
+          error: 'Изображение не найдено или не находится на модерации'
+        });
+      }
+
+      const image = imageResult.rows[0];
+      const { filename, yandex_path } = image;
+
+      // Найти запись в shared_folders по shared_folder_id
+      const folderResult = await pool.query(
+        'SELECT id, name FROM shared_folders WHERE id = $1',
+        [shared_folder_id]
+      );
+
+      // Если папка не найдена
+      if (folderResult.rows.length === 0) {
+        console.log(`[ADMIN] Папка общей библиотеки не найдена: folder_id=${shared_folder_id}`);
+        return reply.code(400).send({
+          error: 'Указанная папка общей библиотеки не найдена'
+        });
+      }
+
+      const sharedFolder = folderResult.rows[0];
+      const sharedFolderName = sharedFolder.name;
+
+      console.log(`[ADMIN] Перемещение изображения в папку: ${sharedFolderName}`);
+
+      // Определить текущий путь файла (должен быть в pending)
+      const currentPath = yandex_path;
+
+      if (!currentPath) {
+        console.error(`[ADMIN] Отсутствует yandex_path для изображения: image_id=${imageId}`);
+        return reply.code(500).send({
+          error: 'Не удалось определить текущий путь файла'
+        });
+      }
+
+      // Построить новый путь файла в общей библиотеке
+      const sharedFolderPath = getSharedFolderPath(sharedFolderName);
+      const newFilePath = `${sharedFolderPath}/${filename}`;
+
+      console.log(`[ADMIN] Перемещение файла: ${currentPath} -> ${newFilePath}`);
+
+      // Убедиться, что папка существует
+      await ensureFolderExists(sharedFolderPath);
+
+      // Переместить файл из pending в общую папку
+      await moveFile(currentPath, newFilePath);
+
+      console.log(`[ADMIN] Файл успешно перемещён в общую библиотеку`);
+
+      // Опубликовать файл и получить новую публичную ссылку
+      const publicUrl = await publishFile(newFilePath);
+
+      console.log(`[ADMIN] Файл опубликован, public_url: ${publicUrl}`);
+
+      // Обновить запись в image_library
+      const updateResult = await pool.query(
+        `UPDATE image_library
+         SET
+           yandex_path = $1,
+           public_url = $2,
+           is_shared = TRUE,
+           shared_folder_id = $3,
+           share_approved_at = NOW(),
+           share_approved_by = $4
+         WHERE id = $5
+         RETURNING
+           id,
+           is_shared,
+           shared_folder_id,
+           share_approved_at,
+           share_approved_by,
+           public_url`,
+        [newFilePath, publicUrl, shared_folder_id, adminId, imageId]
+      );
+
+      const updatedImage = updateResult.rows[0];
+
+      console.log(`[ADMIN] ✅ Изображение успешно одобрено: image_id=${imageId}, folder=${sharedFolderName}`);
+
+      // Возвращаем успешный ответ
+      return reply.code(200).send(updatedImage);
+
+    } catch (err) {
+      console.error('[ADMIN] Ошибка одобрения изображения:', err);
+
+      // Логируем дополнительную информацию для ошибок Яндекс.Диска
+      if (err.status) {
+        console.error(`[ADMIN] Yandex.Disk API вернул статус: ${err.status}`);
+      }
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
     }
   });
 
