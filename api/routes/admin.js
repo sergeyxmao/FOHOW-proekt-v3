@@ -726,7 +726,8 @@ export function registerAdminRoutes(app) {
            is_shared = TRUE,
            shared_folder_id = $3,
            share_approved_at = NOW(),
-           share_approved_by = $4
+           share_approved_by = $4,
+           moderation_status = 'approved'
          WHERE id = $5
          RETURNING
            id,
@@ -734,7 +735,8 @@ export function registerAdminRoutes(app) {
            shared_folder_id,
            share_approved_at,
            share_approved_by,
-           public_url`,
+           public_url,
+           moderation_status`,
         [newFilePath, publicUrl, shared_folder_id, adminId, imageId]
       );
 
