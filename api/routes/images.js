@@ -315,8 +315,9 @@ export function registerImageRoutes(app) {
           width,
           height,
           file_size,
-          yandex_path
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          yandex_path,
+          moderation_status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING
           id,
           original_name,
@@ -337,7 +338,8 @@ export function registerImageRoutes(app) {
           width,
           height,
           fileSize,
-          filePath
+          filePath,
+          'approved'
         ]
       );
 
