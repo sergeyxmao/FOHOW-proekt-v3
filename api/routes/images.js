@@ -4,10 +4,12 @@ import { randomBytes } from 'crypto';
 import {
   getUserLibraryFolderPath,
   getUserFilePath,
+  getSharedPendingFolderPath,
   ensureFolderExists,
   uploadFile,
   publishFile,
-  deleteFile
+  deleteFile,
+  moveFile
 } from '../services/yandexDiskService.js';
 
 /**
@@ -312,8 +314,9 @@ export function registerImageRoutes(app) {
           public_url,
           width,
           height,
-          file_size
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          file_size,
+          yandex_path
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING
           id,
           original_name,
@@ -323,7 +326,8 @@ export function registerImageRoutes(app) {
           width,
           height,
           file_size,
-          created_at`,
+          created_at,
+          yandex_path`,
         [
           userId,
           originalName,
@@ -332,7 +336,8 @@ export function registerImageRoutes(app) {
           publicUrl,
           width,
           height,
-          fileSize
+          fileSize,
+          filePath
         ]
       );
 
@@ -455,6 +460,150 @@ export function registerImageRoutes(app) {
 
     } catch (err) {
       console.error('❌ Ошибка удаления изображения:', err);
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
+
+  /**
+   * POST /api/images/:id/share-request - Отправить изображение на модерацию в общую библиотеку
+   *
+   * Эндпоинт для отправки изображения из личной библиотеки на модерацию
+   * для публикации в общей библиотеке. Перемещает файл в папку pending на Яндекс.Диске
+   * и обновляет запись в БД.
+   */
+  app.post('/api/images/:id/share-request', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.role;
+      const imageId = parseInt(req.params.id, 10);
+
+      // Валидация ID
+      if (!Number.isInteger(imageId) || imageId <= 0) {
+        return reply.code(400).send({
+          error: 'Некорректный ID изображения'
+        });
+      }
+
+      // Найти запись в image_library по id и user_id
+      const imageResult = await pool.query(
+        `SELECT
+          il.id,
+          il.filename,
+          il.folder_name,
+          il.yandex_path,
+          il.share_requested_at,
+          il.is_shared,
+          u.personal_id,
+          u.plan_id,
+          sp.features,
+          sp.name as plan_name
+         FROM image_library il
+         JOIN users u ON il.user_id = u.id
+         JOIN subscription_plans sp ON u.plan_id = sp.id
+         WHERE il.id = $1 AND il.user_id = $2`,
+        [imageId, userId]
+      );
+
+      // Если запись не найдена, возвращаем 404
+      if (imageResult.rows.length === 0) {
+        return reply.code(404).send({
+          error: 'Изображение не найдено'
+        });
+      }
+
+      const image = imageResult.rows[0];
+      const { filename, yandex_path, share_requested_at, is_shared, features, plan_name } = image;
+
+      // Проверка лимитов тарифа (пропускаем для администраторов)
+      if (userRole !== 'admin') {
+        // Проверяем право can_use_images
+        const canUseImages = features.can_use_images || false;
+
+        if (!canUseImages) {
+          return reply.code(403).send({
+            error: `Доступ к библиотеке изображений запрещён для вашего тарифа "${plan_name}".`,
+            code: 'IMAGE_LIBRARY_ACCESS_DENIED',
+            upgradeRequired: true
+          });
+        }
+      }
+
+      // Проверить, что картинка ещё не в процессе модерации и не в общей библиотеке
+      if (share_requested_at !== null) {
+        return reply.code(409).send({
+          error: 'Изображение уже отправлено на модерацию',
+          code: 'ALREADY_REQUESTED'
+        });
+      }
+
+      if (is_shared) {
+        return reply.code(409).send({
+          error: 'Изображение уже находится в общей библиотеке',
+          code: 'ALREADY_SHARED'
+        });
+      }
+
+      // Получить текущий путь файла
+      let currentPath = yandex_path;
+
+      // Если yandex_path не сохранён в БД (для старых записей), вычисляем его
+      if (!currentPath) {
+        const { folder_name, personal_id } = image;
+        currentPath = getUserFilePath(userId, personal_id, folder_name, filename);
+      }
+
+      // Построить путь папки pending
+      const pendingFolderPath = getSharedPendingFolderPath();
+
+      // Убедиться, что папка pending существует
+      await ensureFolderExists(pendingFolderPath);
+
+      // Построить путь к файлу в pending
+      const pendingFilePath = `${pendingFolderPath}/${filename}`;
+
+      // Переместить файл из личной библиотеки в pending
+      await moveFile(currentPath, pendingFilePath);
+
+      console.log(`✅ Файл перемещён из "${currentPath}" в "${pendingFilePath}"`);
+
+      // Обновить запись в БД
+      const updateResult = await pool.query(
+        `UPDATE image_library
+         SET
+           yandex_path = $1,
+           share_requested_at = NOW()
+         WHERE id = $2
+         RETURNING
+           id,
+           share_requested_at,
+           yandex_path`,
+        [pendingFilePath, imageId]
+      );
+
+      const updatedImage = updateResult.rows[0];
+
+      // Возвращаем успешный ответ
+      return reply.code(200).send({
+        id: updatedImage.id,
+        share_requested_at: updatedImage.share_requested_at,
+        yandex_path: updatedImage.yandex_path,
+        share_request_submitted: true
+      });
+
+    } catch (err) {
+      console.error('❌ Ошибка отправки изображения на модерацию:', err);
+
+      // Логируем дополнительную информацию для ошибок Яндекс.Диска
+      if (err.status) {
+        console.error(`❌ Yandex.Disk API вернул статус: ${err.status}`);
+      }
 
       const errorMessage = process.env.NODE_ENV === 'development'
         ? `Ошибка сервера: ${err.message}`
