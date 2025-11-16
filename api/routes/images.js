@@ -614,4 +614,110 @@ export function registerImageRoutes(app) {
       return reply.code(500).send({ error: errorMessage });
     }
   });
+
+  /**
+   * GET /api/images/shared - Получить структуру общей библиотеки изображений
+   *
+   * Эндпоинт для получения всех папок и изображений общей библиотеки.
+   * Возвращает структуру, готовую для отображения на фронтенде.
+   */
+  app.get('/api/images/shared', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.role;
+
+      // Получаем информацию о тарифе пользователя
+      const userResult = await pool.query(
+        `SELECT
+          u.plan_id,
+          sp.features,
+          sp.name as plan_name
+         FROM users u
+         JOIN subscription_plans sp ON u.plan_id = sp.id
+         WHERE u.id = $1`,
+        [userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        return reply.code(403).send({
+          error: 'Не удалось определить тарифный план пользователя.'
+        });
+      }
+
+      const user = userResult.rows[0];
+      const features = user.features;
+      const planName = user.plan_name;
+
+      // Проверка лимитов тарифа (пропускаем для администраторов)
+      if (userRole !== 'admin') {
+        // Проверяем право can_use_images
+        const canUseImages = features.can_use_images || false;
+
+        if (!canUseImages) {
+          return reply.code(403).send({
+            error: `Доступ к библиотеке изображений запрещён для вашего тарифа "${planName}".`,
+            code: 'IMAGE_LIBRARY_ACCESS_DENIED',
+            upgradeRequired: true
+          });
+        }
+      }
+
+      // Получаем все папки из shared_folders
+      const foldersResult = await pool.query(
+        `SELECT id, name
+         FROM shared_folders
+         ORDER BY name ASC`
+      );
+
+      const folders = [];
+
+      // Для каждой папки получаем изображения
+      for (const folder of foldersResult.rows) {
+        const imagesResult = await pool.query(
+          `SELECT
+            il.id,
+            il.original_name,
+            il.public_url,
+            il.width,
+            il.height,
+            il.file_size,
+            u.full_name as author_full_name,
+            u.personal_id as author_personal_id
+           FROM image_library il
+           JOIN users u ON il.user_id = u.id
+           WHERE il.is_shared = TRUE
+             AND il.shared_folder_id = $1
+           ORDER BY il.created_at DESC`,
+          [folder.id]
+        );
+
+        folders.push({
+          id: folder.id,
+          name: folder.name,
+          images: imagesResult.rows
+        });
+      }
+
+      // Возвращаем структуру
+      return reply.code(200).send({
+        folders
+      });
+
+    } catch (err) {
+      console.error('❌ Ошибка получения общей библиотеки:', err);
+
+      // Логируем дополнительную информацию для ошибок
+      if (err.status) {
+        console.error(`❌ Ошибка API: ${err.status}`);
+      }
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
 }
