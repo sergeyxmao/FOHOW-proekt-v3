@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
 import MyLibraryTab from '../Images/MyLibraryTab.vue'
+import SharedLibraryTab from '../Images/SharedLibraryTab.vue'
 
 const props = defineProps({
   isModernTheme: {
@@ -73,15 +74,8 @@ const setActiveTab = (tab) => {
       </div>
 
       <!-- Содержимое "Общая" -->
-      <div v-if="activeTab === 'shared'" class="images-panel__tab-content">
-        <div class="images-panel__empty">
-          <p class="images-panel__empty-text">
-            Общая библиотека изображений
-          </p>
-          <p class="images-panel__empty-hint">
-            Здесь будут отображаться изображения, доступные всем пользователям
-          </p>
-        </div>
+      <div v-if="activeTab === 'shared'" class="images-panel__tab-content images-panel__tab-content--full">
+        <SharedLibraryTab />
       </div>
     </div>
   </div>

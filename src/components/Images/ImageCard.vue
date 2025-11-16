@@ -91,6 +91,16 @@ const canShareRequest = computed(() => {
         {{ displayName }}
       </div>
 
+      <!-- Информация об авторе (для общей библиотеки) -->
+      <div v-if="!isMyLibrary && (image.author_full_name || image.author_personal_id)" class="image-card__author">
+        <span v-if="image.author_full_name" class="image-card__author-name">
+          {{ image.author_full_name }}
+        </span>
+        <span v-if="image.author_personal_id" class="image-card__author-id">
+          ID: {{ image.author_personal_id }}
+        </span>
+      </div>
+
       <!-- Действия -->
       <div v-if="isMyLibrary" class="image-card__actions">
         <!-- Кнопка "Предложить для общего доступа" -->
@@ -199,6 +209,24 @@ const canShareRequest = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.image-card__author {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.image-card__author-name {
+  font-weight: 500;
+  color: #475569;
+}
+
+.image-card__author-id {
+  font-size: 10px;
+  color: #94a3b8;
 }
 
 .image-card__actions {
