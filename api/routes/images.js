@@ -6,7 +6,8 @@ import {
   getUserFilePath,
   ensureFolderExists,
   uploadFile,
-  publishFile
+  publishFile,
+  deleteFile
 } from '../services/yandexDiskService.js';
 
 /**
@@ -302,6 +303,113 @@ export function registerImageRoutes(app) {
 
     } catch (err) {
       console.error('❌ Ошибка загрузки изображения:', err);
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
+
+  /**
+   * DELETE /api/images/:id - Удалить изображение из личной библиотеки
+   *
+   * Эндпоинт для удаления изображения из личной библиотеки пользователя.
+   * Проверяет, используется ли изображение на досках, удаляет файл с Яндекс.Диска
+   * и удаляет запись из БД.
+   */
+  app.delete('/api/images/:id', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const userId = req.user.id;
+      const imageId = parseInt(req.params.id, 10);
+
+      // Валидация ID
+      if (!Number.isInteger(imageId) || imageId <= 0) {
+        return reply.code(400).send({
+          error: 'Некорректный ID изображения'
+        });
+      }
+
+      // Получаем запись изображения по id и user_id
+      const imageResult = await pool.query(
+        `SELECT
+          il.id,
+          il.filename,
+          il.folder_name,
+          il.public_url,
+          u.personal_id
+         FROM image_library il
+         JOIN users u ON il.user_id = u.id
+         WHERE il.id = $1 AND il.user_id = $2`,
+        [imageId, userId]
+      );
+
+      // Если запись не найдена, возвращаем 404
+      if (imageResult.rows.length === 0) {
+        return reply.code(404).send({
+          error: 'Изображение не найдено'
+        });
+      }
+
+      const image = imageResult.rows[0];
+      const { filename, folder_name, public_url, personal_id } = image;
+
+      // Проверяем, используется ли это изображение на досках пользователя
+      // Ищем в content->images->dataUrl по public_url
+      const usageCheck = await pool.query(
+        `SELECT id, name
+         FROM boards
+         WHERE owner_id = $1
+         AND content::text LIKE $2
+         LIMIT 1`,
+        [userId, `%${public_url}%`]
+      );
+
+      // Если изображение используется на досках, возвращаем 409 Conflict
+      if (usageCheck.rows.length > 0) {
+        return reply.code(409).send({
+          error: 'Картинка используется в проектах. Удалите её с досок перед удалением.'
+        });
+      }
+
+      // Построить полный путь к файлу на Яндекс.Диске
+      const yandexPath = getUserFilePath(userId, personal_id, folder_name, filename);
+
+      // Удалить файл с Яндекс.Диска
+      try {
+        await deleteFile(yandexPath);
+      } catch (err) {
+        console.error('❌ Ошибка удаления файла с Яндекс.Диска:', err);
+
+        // Если файл не найден на Яндекс.Диске (404), продолжаем удаление записи из БД
+        // В противном случае возвращаем ошибку
+        if (!err.status || err.status !== 404) {
+          const errorMessage = process.env.NODE_ENV === 'development'
+            ? `Ошибка удаления файла с Яндекс.Диска: ${err.message}`
+            : 'Ошибка удаления файла. Попробуйте позже';
+
+          return reply.code(500).send({ error: errorMessage });
+        }
+
+        console.warn('⚠️ Файл не найден на Яндекс.Диске, продолжаем удаление записи из БД');
+      }
+
+      // Удалить запись из image_library
+      await pool.query(
+        'DELETE FROM image_library WHERE id = $1',
+        [imageId]
+      );
+
+      console.log(`✅ Изображение успешно удалено: id=${imageId}, path=${yandexPath}`);
+
+      // Возвращаем 204 No Content при успехе
+      return reply.code(204).send();
+
+    } catch (err) {
+      console.error('❌ Ошибка удаления изображения:', err);
 
       const errorMessage = process.env.NODE_ENV === 'development'
         ? `Ошибка сервера: ${err.message}`
