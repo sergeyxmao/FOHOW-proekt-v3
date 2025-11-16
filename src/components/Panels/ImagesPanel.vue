@@ -1,7 +1,8 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
+import { useSubscriptionStore } from '../../stores/subscription.js'
 import MyLibraryTab from '../Images/MyLibraryTab.vue'
 import SharedLibraryTab from '../Images/SharedLibraryTab.vue'
 
@@ -14,9 +15,13 @@ const props = defineProps({
 
 const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
+const subscriptionStore = useSubscriptionStore()
 
 // Активная вкладка: 'my' | 'shared'
 const activeTab = ref('my')
+
+// Проверка доступа к библиотеке изображений
+const canUseImages = computed(() => subscriptionStore.checkFeature('can_use_images'))
 
 const handleClose = () => {
   sidePanelsStore.closePanel()
@@ -47,8 +52,21 @@ const setActiveTab = (tab) => {
       </button>
     </div>
 
+    <!-- Сообщение об ограничении доступа -->
+    <div v-if="!canUseImages" class="images-panel__access-denied">
+      <div class="images-panel__access-denied-icon">
+        🔒
+      </div>
+      <p class="images-panel__access-denied-title">
+        Библиотека изображений недоступна на текущем тарифе
+      </p>
+      <p class="images-panel__access-denied-hint">
+        Обновите тариф для получения доступа к библиотеке изображений.
+      </p>
+    </div>
+
     <!-- Вкладки второго уровня -->
-    <div class="images-panel__tabs">
+    <div v-else class="images-panel__tabs">
       <button
         type="button"
         class="images-panel__tab"
@@ -67,7 +85,7 @@ const setActiveTab = (tab) => {
       </button>
     </div>
 
-    <div class="images-panel__content">
+    <div v-if="canUseImages" class="images-panel__content">
       <!-- Содержимое "Моя библиотека" -->
       <div v-if="activeTab === 'my'" class="images-panel__tab-content images-panel__tab-content--full">
         <MyLibraryTab />
@@ -216,6 +234,37 @@ const setActiveTab = (tab) => {
 }
 
 .images-panel__empty-hint {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* Access Denied State */
+.images-panel__access-denied {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.images-panel__access-denied-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.images-panel__access-denied-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.4;
+}
+
+.images-panel__access-denied-hint {
   margin: 0;
   font-size: 14px;
   color: #64748b;

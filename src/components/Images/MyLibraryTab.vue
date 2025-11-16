@@ -13,6 +13,7 @@ const selectedFolder = ref('')
 const searchQuery = ref('')
 const images = ref([])
 const isLoading = ref(false)
+const error = ref(null)
 const pagination = ref({
   page: 1,
   limit: 20,
@@ -54,9 +55,16 @@ const folderOptions = computed(() => {
 async function loadFolders() {
   try {
     folders.value = await getMyFolders()
-  } catch (error) {
-    console.error('Ошибка загрузки папок:', error)
-    alert(`Ошибка загрузки папок: ${error.message}`)
+  } catch (err) {
+    console.error('Ошибка загрузки папок:', err)
+
+    // Обработка специфической ошибки доступа
+    if (err.code === 'IMAGE_LIBRARY_ACCESS_DENIED') {
+      error.value = err
+      // Не показываем alert, ошибка отобразится в UI
+    } else {
+      alert(`Ошибка загрузки папок: ${err.message}`)
+    }
   }
 }
 
@@ -78,9 +86,16 @@ async function loadImages() {
       ...pagination.value,
       total: response.pagination.total
     }
-  } catch (error) {
-    console.error('Ошибка загрузки изображений:', error)
-    alert(`Ошибка загрузки изображений: ${error.message}`)
+  } catch (err) {
+    console.error('Ошибка загрузки изображений:', err)
+
+    // Обработка специфической ошибки доступа
+    if (err.code === 'IMAGE_LIBRARY_ACCESS_DENIED') {
+      error.value = err
+      // Не показываем alert, ошибка отобразится в UI
+    } else {
+      alert(`Ошибка загрузки изображений: ${err.message}`)
+    }
   } finally {
     isLoading.value = false
   }
@@ -358,6 +373,22 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
       Загрузка изображений...
     </div>
 
+    <!-- Ошибка доступа -->
+    <div v-else-if="error && error.code === 'IMAGE_LIBRARY_ACCESS_DENIED'" class="my-library-tab__access-denied">
+      <div class="my-library-tab__access-denied-icon">
+        🔒
+      </div>
+      <p class="my-library-tab__access-denied-title">
+        Библиотека изображений недоступна на текущем тарифе
+      </p>
+      <p class="my-library-tab__access-denied-text">
+        {{ error.message }}
+      </p>
+      <p class="my-library-tab__access-denied-hint">
+        Обновите тариф для получения доступа к библиотеке изображений.
+      </p>
+    </div>
+
     <!-- Сетка изображений -->
     <div v-else-if="filteredImages.length > 0" class="my-library-tab__grid">
       <ImageCard
@@ -372,7 +403,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
     </div>
 
     <!-- Пустое состояние -->
-    <div v-else class="my-library-tab__empty">
+    <div v-else-if="!error" class="my-library-tab__empty">
       <p class="my-library-tab__empty-text">
         {{ searchQuery ? 'Изображения не найдены' : 'Нет изображений' }}
       </p>
@@ -577,6 +608,43 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
 .my-library-tab__page-info {
   font-size: 14px;
   color: #64748b;
+}
+
+/* Access Denied State */
+.my-library-tab__access-denied {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.my-library-tab__access-denied-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.my-library-tab__access-denied-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.my-library-tab__access-denied-text {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.my-library-tab__access-denied-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
 }
 
 /* Scrollbar */
