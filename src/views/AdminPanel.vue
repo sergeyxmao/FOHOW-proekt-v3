@@ -33,6 +33,11 @@
       <div v-if="activeTab === 'logs'" class="tab-content">
         <AdminLogs />
       </div>
+
+      <!-- Вкладка: Модерация изображений -->
+      <div v-if="activeTab === 'moderation'" class="tab-content">
+        <AdminImagesModeration />
+      </div>
     </div>
 
     <!-- Уведомление об ошибках -->
@@ -51,6 +56,7 @@ import { useAuthStore } from '../stores/auth'
 import AdminStats from '../components/Admin/AdminStats.vue'
 import AdminUsers from '../components/Admin/AdminUsers.vue'
 import AdminLogs from '../components/Admin/AdminLogs.vue'
+import AdminImagesModeration from '../components/Admin/AdminImagesModeration.vue'
 
 const router = useRouter()
 const adminStore = useAdminStore()
@@ -61,6 +67,7 @@ const activeTab = ref('stats')
 const tabs = [
   { id: 'stats', label: 'Статистика' },
   { id: 'users', label: 'Пользователи' },
+  { id: 'moderation', label: 'Модерация изображений' },
   { id: 'logs', label: 'Логи' }
 ]
 
