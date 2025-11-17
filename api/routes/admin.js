@@ -1504,5 +1504,100 @@ export function registerAdminRoutes(app) {
     }
   });
 
+  /**
+   * Удалить общее изображение из библиотеки
+   * DELETE /api/admin/images/:id
+   */
+  app.delete('/api/admin/images/:id', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      const adminId = req.user.id;
+      const imageId = parseInt(req.params.id, 10);
+
+      console.log(`[ADMIN] Запрос на удаление общего изображения: image_id=${imageId}, admin_id=${adminId}`);
+
+      // Валидация ID изображения
+      if (!Number.isInteger(imageId) || imageId <= 0) {
+        return reply.code(400).send({
+          error: 'Некорректный ID изображения'
+        });
+      }
+
+      // Найти изображение в image_library по id и is_shared = TRUE
+      const imageResult = await pool.query(
+        `SELECT
+          il.id,
+          il.yandex_path,
+          il.is_shared
+         FROM image_library il
+         WHERE il.id = $1 AND il.is_shared = TRUE`,
+        [imageId]
+      );
+
+      // Если изображение не найдено
+      if (imageResult.rows.length === 0) {
+        console.log(`[ADMIN] Общее изображение не найдено: image_id=${imageId}`);
+        return reply.code(404).send({
+          error: 'Общее изображение не найдено'
+        });
+      }
+
+      const image = imageResult.rows[0];
+      const { yandex_path } = image;
+
+      // Проверяем наличие yandex_path
+      if (!yandex_path) {
+        console.error(`[ADMIN] Отсутствует yandex_path для изображения: image_id=${imageId}`);
+        return reply.code(500).send({
+          error: 'Не удалось определить путь к файлу на Яндекс.Диске'
+        });
+      }
+
+      console.log(`[ADMIN] Удаление файла с Яндекс.Диска: ${yandex_path}`);
+
+      // Удалить файл с Яндекс.Диска
+      try {
+        await deleteFile(yandex_path);
+        console.log(`[ADMIN] Файл успешно удалён с Яндекс.Диска`);
+      } catch (deleteError) {
+        console.error(`[ADMIN] Ошибка удаления файла с Яндекс.Диска:`, deleteError);
+
+        // Если файл не найден (404), продолжаем удаление из БД
+        // В других случаях - выбрасываем ошибку
+        if (!deleteError.status || deleteError.status !== 404) {
+          throw deleteError;
+        }
+
+        console.log(`[ADMIN] Файл не найден на Яндекс.Диске (возможно, уже удалён), продолжаем удаление из БД`);
+      }
+
+      // Удалить запись из image_library
+      await pool.query(
+        'DELETE FROM image_library WHERE id = $1',
+        [imageId]
+      );
+
+      console.log(`[ADMIN] ✅ Общее изображение успешно удалено: image_id=${imageId}`);
+
+      // Возвращаем успешный ответ 204 No Content
+      return reply.code(204).send();
+
+    } catch (err) {
+      console.error('[ADMIN] Ошибка удаления общего изображения:', err);
+
+      // Логируем дополнительную информацию для ошибок Яндекс.Диска
+      if (err.status) {
+        console.error(`[ADMIN] Yandex.Disk API вернул статус: ${err.status}`);
+      }
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
+
   console.log('✅ Маршруты админ-панели зарегистрированы');
 }
