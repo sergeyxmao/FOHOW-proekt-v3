@@ -23,7 +23,12 @@ import { registerAdminRoutes } from './routes/admin.js';
 import { registerImageRoutes } from './routes/images.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
-
+import {
+  ensureFolderExists,
+  getSharedRootPath,
+  getSharedPendingFolderPath,
+  YANDEX_DISK_BASE_DIR
+} from './services/yandexDiskService.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -2279,6 +2284,38 @@ app.delete('/api/comments/:commentId', {
 
 const PORT = Number(process.env.PORT || 4000);
 const HOST = '127.0.0.1';
+/**
+ * Инициализация структуры папок на Яндекс.Диске
+ * Создаёт все необходимые служебные папки при старте сервера
+ */
+async function initializeYandexDiskFolders() {
+  try {
+    console.log('[Yandex Disk] 🚀 Инициализация структуры папок...');
+
+    // Создать базовую директорию
+    await ensureFolderExists(YANDEX_DISK_BASE_DIR);
+    console.log(`[Yandex Disk] ✅ Базовая директория: ${YANDEX_DISK_BASE_DIR}`);
+
+    // Создать папку SHARED
+    const sharedRoot = getSharedRootPath();
+    await ensureFolderExists(sharedRoot);
+    console.log(`[Yandex Disk] ✅ Папка для общих изображений: ${sharedRoot}`);
+
+    // Создать папку для модерации (pending)
+    const pendingFolder = getSharedPendingFolderPath();
+    await ensureFolderExists(pendingFolder);
+    console.log(`[Yandex Disk] ✅ Папка для модерации: ${pendingFolder}`);
+
+    console.log('[Yandex Disk] ✅ Инициализация структуры папок завершена');
+  } catch (error) {
+    console.error('[Yandex Disk] ❌ Ошибка инициализации папок:', error.message);
+    console.warn('[Yandex Disk] ⚠️ Сервер продолжит работу, но могут быть проблемы с загрузкой файлов');
+    // Не останавливаем сервер при ошибке инициализации
+  }
+}
+
+// Инициализация папок на Яндекс.Диске
+await initializeYandexDiskFolders();
 
 try {
   await app.listen({ port: PORT, host: HOST });
