@@ -27,6 +27,14 @@ export async function getMyFolders() {
 
   if (!response.ok) {
     const data = await response.json();
+
+    if (data.code === 'IMAGE_LIBRARY_ACCESS_DENIED') {
+      const error = new Error(data.error);
+      error.code = data.code;
+      error.upgradeRequired = data.upgradeRequired;
+      throw error;
+    }
+
     throw new Error(data.error || 'Ошибка загрузки папок');
   }
 
@@ -59,6 +67,14 @@ export async function getMyImages({ page = 1, limit = 20, folder = null } = {}) 
 
   if (!response.ok) {
     const data = await response.json();
+
+    if (data.code === 'IMAGE_LIBRARY_ACCESS_DENIED') {
+      const error = new Error(data.error);
+      error.code = data.code;
+      error.upgradeRequired = data.upgradeRequired;
+      throw error;
+    }
+
     throw new Error(data.error || 'Ошибка загрузки изображений');
   }
 
