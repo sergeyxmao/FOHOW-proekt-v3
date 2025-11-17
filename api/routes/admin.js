@@ -802,8 +802,9 @@ export function registerAdminRoutes(app) {
           await moveFile(oldPath, newPath);
 
           // Опубликовать файл заново и получить новую публичную ссылку
-          const newPublicUrl = await publishFile(newPath);
-
+          const { public_url: originalPublicUrl, preview_url } = await publishFile(newPath);
+          const newPublicUrl = preview_url || originalPublicUrl;
+          
           // Обновить запись в БД
           await client.query(
             `UPDATE image_library
@@ -1021,8 +1022,9 @@ export function registerAdminRoutes(app) {
       console.log(`[ADMIN] Файл успешно перемещён в общую библиотеку`);
 
       // Опубликовать файл и получить новую публичную ссылку
-      const publicUrl = await publishFile(newFilePath);
-
+      const { public_url: originalPublicUrl, preview_url } = await publishFile(newFilePath);
+      const publicUrl = preview_url || originalPublicUrl;
+      
       console.log(`[ADMIN] Файл опубликован, public_url: ${publicUrl}`);
 
       // Обновить запись в image_library
@@ -1274,8 +1276,9 @@ export function registerAdminRoutes(app) {
       await uploadFile(filePath, buffer, mimeType);
 
       // Опубликовать файл и получить публичную ссылку
-      const publicUrl = await publishFile(filePath);
-
+      const { public_url: originalPublicUrl, preview_url } = await publishFile(filePath);
+      const publicUrl = preview_url || originalPublicUrl;
+      
       console.log(`[ADMIN] Файл опубликован, public_url: ${publicUrl}`);
 
       // Сохранить запись в БД
@@ -1460,8 +1463,9 @@ export function registerAdminRoutes(app) {
       console.log(`[ADMIN] Файл успешно перемещён на Яндекс.Диске`);
 
       // Обновить публичный URL (вызов publishFile для нового пути)
-      const newPublicUrl = await publishFile(newFilePath);
-
+      const { public_url: originalPublicUrl, preview_url } = await publishFile(newFilePath);
+      const newPublicUrl = preview_url || originalPublicUrl;
+      
       console.log(`[ADMIN] Файл опубликован, новый public_url: ${newPublicUrl}`);
 
       // Обновить запись в image_library
