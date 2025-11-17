@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useAuthStore } from './auth.js'
 
 // API_URL берем из переменных окружения
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
@@ -134,11 +135,24 @@ export const useSubscriptionStore = defineStore('subscription', {
      * @returns {boolean} true, если функция доступна
      */
     checkFeature(featureName) {
+      // Администраторы имеют доступ ко всем функциям (как на бэкенде)
+      const authStore = useAuthStore()
+      if (authStore.user?.role === 'admin') {
+        return true
+      }
+
       if (!this.features) {
         return false
       }
 
       const feature = this.features[featureName]
+
+      // Специальная логика для can_use_images: если флаг не задан (undefined),
+      // разрешаем доступ для всех тарифов, кроме guest
+      if (featureName === 'can_use_images' && feature === undefined) {
+        const isGuest = this.currentPlan?.code_name === 'guest'
+        return !isGuest
+      }
 
       // Если значение boolean, возвращаем его
       if (typeof feature === 'boolean') {
