@@ -1,7 +1,49 @@
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth'
+import router from '../router'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+
+/**
+ * Обработка ответов с ошибками авторизации (401/403)
+ * @param {Response} response - Ответ от сервера
+ * @param {string} defaultMessage - Сообщение по умолчанию
+ * @returns {Promise<never>}
+ */
+async function handleAdminErrorResponse(response, defaultMessage = 'Произошла ошибка') {
+  const authStore = useAuthStore()
+
+  let data
+  try {
+    data = await response.json()
+  } catch (e) {
+    // Если не удалось распарсить JSON, используем статус код
+    data = {}
+  }
+
+  const error = new Error(data.error || defaultMessage)
+  error.code = data.code
+  error.status = response.status
+
+  // Обработка специфических HTTP статус кодов
+  switch (response.status) {
+    case 401:
+      error.code = error.code || 'UNAUTHORIZED'
+      error.message = 'Сессия истекла. Пожалуйста, войдите в систему снова.'
+      // Выполняем logout и редирект на главную
+      await authStore.logout()
+      router.push('/')
+      break
+    case 403:
+      error.code = error.code || 'FORBIDDEN'
+      error.message = data.error || 'Недостаточно прав для выполнения этого действия.'
+      break
+    default:
+      error.message = data.error || defaultMessage
+  }
+
+  throw error
+}
 
 export const useAdminStore = defineStore('admin', {
   state: () => ({
@@ -410,7 +452,7 @@ export const useAdminStore = defineStore('admin', {
         })
 
         if (!response.ok) {
-          throw new Error(`Ошибка ${response.status}: ${response.statusText}`)
+          await handleAdminErrorResponse(response, 'Ошибка загрузки изображений на модерации')
         }
 
         const data = await response.json()
@@ -460,7 +502,7 @@ export const useAdminStore = defineStore('admin', {
         })
 
         if (!response.ok) {
-          throw new Error(`Ошибка ${response.status}: ${response.statusText}`)
+          await handleAdminErrorResponse(response, 'Ошибка загрузки папок общей библиотеки')
         }
 
         const data = await response.json()
@@ -500,8 +542,7 @@ export const useAdminStore = defineStore('admin', {
         })
 
         if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || `Ошибка ${response.status}`)
+          await handleAdminErrorResponse(response, 'Ошибка одобрения изображения')
         }
 
         const data = await response.json()
@@ -542,8 +583,7 @@ export const useAdminStore = defineStore('admin', {
         })
 
         if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || `Ошибка ${response.status}`)
+          await handleAdminErrorResponse(response, 'Ошибка отклонения изображения')
         }
 
         const data = await response.json()

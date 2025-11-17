@@ -237,9 +237,21 @@ async function handleApprove(imageId) {
   } catch (err) {
     console.error('[MODERATION] Ошибка одобрения изображения:', err)
 
-    // При ошибке - показать уведомление об ошибке (без технических подробностей)
+    // Обработка специфических кодов ошибок
+    let errorMessage = 'Не удалось одобрить изображение. Попробуйте позже'
+
+    if (err.code === 'UNAUTHORIZED') {
+      errorMessage = 'Сессия истекла. Выполняется выход из системы...'
+    } else if (err.code === 'FORBIDDEN') {
+      errorMessage = err.message || 'Недостаточно прав для выполнения этого действия'
+    } else if (err.message) {
+      // Если есть конкретное сообщение от сервера, используем его
+      errorMessage = err.message
+    }
+
+    // При ошибке - показать уведомление
     notificationsStore.addNotification({
-      message: 'Не удалось одобрить изображение. Попробуйте позже',
+      message: errorMessage,
       type: 'error',
       duration: 5000
     })
@@ -277,9 +289,21 @@ async function handleReject(imageId) {
   } catch (err) {
     console.error('[MODERATION] Ошибка отклонения изображения:', err)
 
-    // При ошибке - показать уведомление об ошибке (без технических подробностей)
+    // Обработка специфических кодов ошибок
+    let errorMessage = 'Не удалось отклонить изображение. Попробуйте позже'
+
+    if (err.code === 'UNAUTHORIZED') {
+      errorMessage = 'Сессия истекла. Выполняется выход из системы...'
+    } else if (err.code === 'FORBIDDEN') {
+      errorMessage = err.message || 'Недостаточно прав для выполнения этого действия'
+    } else if (err.message) {
+      // Если есть конкретное сообщение от сервера, используем его
+      errorMessage = err.message
+    }
+
+    // При ошибке - показать уведомление
     notificationsStore.addNotification({
-      message: 'Не удалось отклонить изображение. Попробуйте позже',
+      message: errorMessage,
       type: 'error',
       duration: 5000
     })
