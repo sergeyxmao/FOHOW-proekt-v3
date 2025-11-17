@@ -149,6 +149,24 @@ export const useSubscriptionStore = defineStore('subscription', {
       if (typeof feature === 'number') {
         return feature > 0 || feature === -1
       }
+      // В некоторых тарифах значения приходят строкой — пробуем нормализовать
+      if (typeof feature === 'string') {
+        const normalized = feature.trim().toLowerCase()
+
+        if (normalized === 'true') {
+          return true
+        }
+
+        if (normalized === 'false') {
+          return false
+        }
+
+        const numericValue = Number(feature)
+
+        if (!Number.isNaN(numericValue)) {
+          return numericValue > 0 || numericValue === -1
+        }
+      }
 
       // В остальных случаях считаем функцию недоступной
       return false
