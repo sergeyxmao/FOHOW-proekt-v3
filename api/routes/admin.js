@@ -935,9 +935,9 @@ export function registerAdminRoutes(app) {
     try {
       const adminId = req.user.id;
       const imageId = parseInt(req.params.id, 10);
-      const { shared_folder_id } = req.body;
+      const { folder_name } = req.body;
 
-      console.log(`[ADMIN] Запрос на одобрение изображения: image_id=${imageId}, shared_folder_id=${shared_folder_id}, admin_id=${adminId}`);
+      console.log(`[ADMIN] Запрос на одобрение изображения: image_id=${imageId}, folder_name="${folder_name}", admin_id=${adminId}`);
 
       // Валидация входных данных
       if (!Number.isInteger(imageId) || imageId <= 0) {
@@ -946,9 +946,19 @@ export function registerAdminRoutes(app) {
         });
       }
 
-      if (!shared_folder_id || !Number.isInteger(shared_folder_id) || shared_folder_id <= 0) {
+      // Валидация имени папки
+      if (!folder_name || folder_name.trim() === '') {
         return reply.code(400).send({
-          error: 'Поле shared_folder_id обязательно и должно быть положительным целым числом'
+          error: 'Не указано имя папки'
+        });
+      }
+
+      const folderNameClean = folder_name.trim();
+
+      // Проверка длины имени папки
+      if (folderNameClean.length > 50) {
+        return reply.code(400).send({
+          error: 'Имя папки не должно превышать 50 символов'
         });
       }
 
@@ -978,24 +988,37 @@ export function registerAdminRoutes(app) {
       const image = imageResult.rows[0];
       const { filename, yandex_path } = image;
 
-      // Найти запись в shared_folders по shared_folder_id
-      const folderResult = await pool.query(
-        'SELECT id, name FROM shared_folders WHERE id = $1',
-        [shared_folder_id]
+      // Найти или создать папку в базе данных
+      let folderResult = await pool.query(
+        'SELECT id, name FROM shared_folders WHERE name = $1',
+        [folderNameClean]
       );
 
-      // Если папка не найдена
+      let sharedFolder;
+      let shared_folder_id;
+
+      // Если папка не существует в БД, создаем её
       if (folderResult.rows.length === 0) {
-        console.log(`[ADMIN] Папка общей библиотеки не найдена: folder_id=${shared_folder_id}`);
-        return reply.code(400).send({
-          error: 'Указанная папка общей библиотеки не найдена'
-        });
+        console.log(`[ADMIN] Папка "${folderNameClean}" не найдена в БД, создаём новую...`);
+
+        const createFolderResult = await pool.query(
+          `INSERT INTO shared_folders (name, created_by, created_at)
+           VALUES ($1, $2, CURRENT_TIMESTAMP)
+           RETURNING id, name, created_by, created_at`,
+          [folderNameClean, adminId]
+        );
+
+        sharedFolder = createFolderResult.rows[0];
+        shared_folder_id = sharedFolder.id;
+
+        console.log(`[ADMIN] ✅ Папка создана в БД: id=${sharedFolder.id}, name="${sharedFolder.name}"`);
+      } else {
+        sharedFolder = folderResult.rows[0];
+        shared_folder_id = sharedFolder.id;
+        console.log(`[ADMIN] Папка найдена в БД: id=${sharedFolder.id}, name="${sharedFolder.name}"`);
       }
 
-      const sharedFolder = folderResult.rows[0];
-      const sharedFolderName = sharedFolder.name;
-
-      console.log(`[ADMIN] Перемещение изображения в папку: ${sharedFolderName}`);
+      console.log(`[ADMIN] Перемещение изображения в папку: ${folderNameClean}`);
 
       // Определить текущий путь файла (должен быть в pending)
       const currentPath = yandex_path;
@@ -1007,14 +1030,15 @@ export function registerAdminRoutes(app) {
         });
       }
 
-      // Построить новый путь файла в общей библиотеке
-      const sharedFolderPath = getSharedFolderPath(sharedFolderName);
+      // Построить путь к целевой папке
+      const sharedFolderPath = getSharedFolderPath(folderNameClean);
       const newFilePath = `${sharedFolderPath}/${filename}`;
 
       console.log(`[ADMIN] Перемещение файла: ${currentPath} -> ${newFilePath}`);
 
-      // Убедиться, что папка существует
+      // Создать папку на Яндекс.Диске, если она не существует
       await ensureFolderExists(sharedFolderPath);
+      console.log(`[ADMIN] Папка проверена/создана на Яндекс.Диске: ${sharedFolderPath}`);
 
       // Переместить файл из pending в общую папку
       await moveFile(currentPath, newFilePath);
