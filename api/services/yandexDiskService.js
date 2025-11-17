@@ -311,13 +311,13 @@ async function publishFile(path) {
  */
 async function deleteFile(path) {
   try {
-    // Удаляем файл без перемещения в корзину (permanently=true)
     const deleteEndpoint = `/resources?path=${encodeURIComponent(path)}&permanently=true`;
     await makeYandexDiskRequest(deleteEndpoint, { method: 'DELETE' }, path);
-
     console.log(`[Yandex Disk] Файл успешно удален: ${path}`);
   } catch (error) {
-    throw new Error(`Не удалось удалить файл ${path}: ${error.message}`);
+    const deleteError = new Error(`Не удалось удалить файл ${path}: ${error.message}`);
+    deleteError.status = error.status; // Сохранить статус ошибки
+    throw deleteError;
   }
 }
 
