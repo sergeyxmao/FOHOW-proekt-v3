@@ -9,6 +9,7 @@ export const useAdminStore = defineStore('admin', {
     selectedUser: null,
     stats: null,
     logs: [],
+    pendingImages: [],
     isLoading: false,
     error: null,
     pagination: {
@@ -389,6 +390,112 @@ export const useAdminStore = defineStore('admin', {
      */
     clearSelectedUser() {
       this.selectedUser = null
+    },
+
+    /**
+     * Получить список изображений, ожидающих модерации
+     */
+    async fetchPendingImages() {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/images/pending`, {
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error(`Ошибка ${response.status}: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        this.pendingImages = data.images || []
+
+        return data
+      } catch (err) {
+        console.error('[ADMIN] Ошибка загрузки изображений на модерации:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * Одобрить изображение и переместить в общую библиотеку
+     */
+    async approveImage(imageId) {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/images/${imageId}/approve`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || `Ошибка ${response.status}`)
+        }
+
+        const data = await response.json()
+
+        // Удаляем изображение из списка ожидающих модерации
+        this.pendingImages = this.pendingImages.filter(img => img.id !== imageId)
+
+        return data
+      } catch (err) {
+        console.error('[ADMIN] Ошибка одобрения изображения:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * Отклонить изображение и удалить его
+     */
+    async rejectImage(imageId) {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/images/${imageId}/reject`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || `Ошибка ${response.status}`)
+        }
+
+        const data = await response.json()
+
+        // Удаляем изображение из списка ожидающих модерации
+        this.pendingImages = this.pendingImages.filter(img => img.id !== imageId)
+
+        return data
+      } catch (err) {
+        console.error('[ADMIN] Ошибка отклонения изображения:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
     }
   }
 })
