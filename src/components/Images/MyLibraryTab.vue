@@ -1,11 +1,13 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStickersStore } from '../../stores/stickers'
+import { useNotificationsStore } from '../../stores/notifications'
 import { getMyFolders, getMyImages, uploadImage, deleteImage, requestShareImage } from '../../services/imageService'
 import { convertToWebP, isImageFile } from '../../utils/imageUtils'
 import ImageCard from './ImageCard.vue'
 
 const stickersStore = useStickersStore()
+const notificationsStore = useNotificationsStore()
 
 // Состояние
 const folders = ref([])
@@ -61,9 +63,13 @@ async function loadFolders() {
     // Обработка специфической ошибки доступа
     if (err.code === 'IMAGE_LIBRARY_ACCESS_DENIED') {
       error.value = err
-      // Не показываем alert, ошибка отобразится в UI
+      // Не показываем уведомление, ошибка отобразится в UI
     } else {
-      alert(`Ошибка загрузки папок: ${err.message}`)
+      notificationsStore.addNotification({
+        message: `Ошибка загрузки папок: ${err.message}`,
+        type: 'error',
+        duration: 6000
+      })
     }
   }
 }
@@ -92,9 +98,13 @@ async function loadImages() {
     // Обработка специфической ошибки доступа
     if (err.code === 'IMAGE_LIBRARY_ACCESS_DENIED') {
       error.value = err
-      // Не показываем alert, ошибка отобразится в UI
+      // Не показываем уведомление, ошибка отобразится в UI
     } else {
-      alert(`Ошибка загрузки изображений: ${err.message}`)
+      notificationsStore.addNotification({
+        message: `Ошибка загрузки изображений: ${err.message}`,
+        type: 'error',
+        duration: 6000
+      })
     }
   } finally {
     isLoading.value = false
@@ -141,7 +151,11 @@ async function handleFileSelect(event) {
 async function uploadSingleImage(file) {
   // Проверка типа файла
   if (!isImageFile(file)) {
-    alert(`Файл "${file.name}" не является изображением`)
+    notificationsStore.addNotification({
+      message: `Файл "${file.name}" не является изображением`,
+      type: 'error',
+      duration: 5000
+    })
     return
   }
 
@@ -175,18 +189,32 @@ async function uploadSingleImage(file) {
       folders.value.sort()
     }
 
+    notificationsStore.addNotification({
+      message: `Изображение "${originalName}" успешно загружено`,
+      type: 'success',
+      duration: 4000
+    })
+
     console.log('✅ Изображение успешно загружено:', newImage)
   } catch (error) {
     console.error('Ошибка загрузки изображения:', error)
 
+    let errorMessage = `Ошибка загрузки изображения "${file.name}": ${error.message}`
+
     // Обработка специфических ошибок лимитов
     if (error.code === 'FILE_SIZE_LIMIT_EXCEEDED' ||
         error.code === 'IMAGE_COUNT_LIMIT_EXCEEDED' ||
-        error.code === 'STORAGE_LIMIT_EXCEEDED') {
-      alert(error.message + '\n\nОбновите тариф для увеличения лимитов.')
-    } else {
-      alert(`Ошибка загрузки изображения "${file.name}": ${error.message}`)
+        error.code === 'STORAGE_LIMIT_EXCEEDED' ||
+        error.code === 'FILE_TOO_LARGE' ||
+        error.code === 'RATE_LIMIT_EXCEEDED') {
+      errorMessage = error.message + '\n\nОбновите тариф для увеличения лимитов.'
     }
+
+    notificationsStore.addNotification({
+      message: errorMessage,
+      type: 'error',
+      duration: 8000
+    })
   } finally {
     isUploading.value = false
   }
@@ -197,7 +225,11 @@ async function uploadSingleImage(file) {
  */
 function handleImageClick(image) {
   if (!stickersStore.currentBoardId) {
-    alert('Сначала откройте доску')
+    notificationsStore.addNotification({
+      message: 'Сначала откройте доску',
+      type: 'info',
+      duration: 4000
+    })
     return
   }
 
@@ -234,15 +266,27 @@ async function handleImageDelete(image) {
       pagination.value.total--
     }
 
+    notificationsStore.addNotification({
+      message: `Изображение "${image.original_name}" успешно удалено`,
+      type: 'success',
+      duration: 4000
+    })
+
     console.log('✅ Изображение успешно удалено:', image.id)
   } catch (error) {
     console.error('Ошибка удаления изображения:', error)
 
+    let errorMessage = `Ошибка удаления изображения: ${error.message}`
+
     if (error.code === 'IMAGE_IN_USE') {
-      alert('Нельзя удалить: картинка используется на досках. Удалите её с досок и попробуйте снова.')
-    } else {
-      alert(`Ошибка удаления изображения: ${error.message}`)
+      errorMessage = 'Нельзя удалить: картинка используется на досках. Удалите её с досок и попробуйте снова.'
     }
+
+    notificationsStore.addNotification({
+      message: errorMessage,
+      type: 'error',
+      duration: 7000
+    })
   }
 }
 
@@ -266,18 +310,29 @@ async function handleShareRequest(image) {
       }
     }
 
-    alert('Изображение успешно отправлено на модерацию!')
+    notificationsStore.addNotification({
+      message: 'Изображение успешно отправлено на модерацию!',
+      type: 'success',
+      duration: 5000
+    })
+
     console.log('✅ Запрос на модерацию отправлен:', image.id)
   } catch (error) {
     console.error('Ошибка отправки запроса:', error)
 
+    let errorMessage = `Ошибка отправки запроса: ${error.message}`
+
     if (error.code === 'ALREADY_REQUESTED') {
-      alert('Изображение уже отправлено на модерацию')
+      errorMessage = 'Изображение уже отправлено на модерацию'
     } else if (error.code === 'ALREADY_SHARED') {
-      alert('Изображение уже находится в общей библиотеке')
-    } else {
-      alert(`Ошибка отправки запроса: ${error.message}`)
+      errorMessage = 'Изображение уже находится в общей библиотеке'
     }
+
+    notificationsStore.addNotification({
+      message: errorMessage,
+      type: 'error',
+      duration: 6000
+    })
   }
 }
 
@@ -370,7 +425,8 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
 
     <!-- Индикатор загрузки -->
     <div v-if="isLoading" class="my-library-tab__loading">
-      Загрузка изображений...
+      <div class="my-library-tab__spinner"></div>
+      <span>Загрузка изображений...</span>
     </div>
 
     <!-- Ошибка доступа -->
@@ -537,10 +593,27 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
 .my-library-tab__loading {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 16px;
   color: #64748b;
   font-size: 14px;
+}
+
+.my-library-tab__spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(33, 150, 243, 0.1);
+  border-top-color: #2196f3;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .my-library-tab__grid {

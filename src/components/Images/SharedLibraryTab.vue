@@ -1,10 +1,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useStickersStore } from '../../stores/stickers'
+import { useNotificationsStore } from '../../stores/notifications'
 import { getSharedLibrary } from '../../services/imageService'
 import ImageCard from './ImageCard.vue'
 
 const stickersStore = useStickersStore()
+const notificationsStore = useNotificationsStore()
 
 // Состояние
 const folders = ref([])
@@ -83,7 +85,11 @@ async function loadSharedLibrary() {
     if (err.code === 'IMAGE_LIBRARY_ACCESS_DENIED') {
       // Ошибка доступа будет показана в UI
     } else {
-      alert(`Ошибка загрузки общей библиотеки: ${err.message}`)
+      notificationsStore.addNotification({
+        message: `Ошибка загрузки общей библиотеки: ${err.message}`,
+        type: 'error',
+        duration: 6000
+      })
     }
   } finally {
     isLoading.value = false
@@ -102,7 +108,11 @@ function handleFolderChange() {
  */
 function handleImageClick(image) {
   if (!stickersStore.currentBoardId) {
-    alert('Сначала откройте доску')
+    notificationsStore.addNotification({
+      message: 'Сначала откройте доску',
+      type: 'info',
+      duration: 4000
+    })
     return
   }
 
@@ -158,7 +168,8 @@ onMounted(async () => {
 
     <!-- Индикатор загрузки -->
     <div v-if="isLoading" class="shared-library-tab__loading">
-      Загрузка общей библиотеки...
+      <div class="shared-library-tab__spinner"></div>
+      <span>Загрузка общей библиотеки...</span>
     </div>
 
     <!-- Ошибка доступа -->
@@ -264,10 +275,27 @@ onMounted(async () => {
 .shared-library-tab__loading {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 16px;
   color: #64748b;
   font-size: 14px;
+}
+
+.shared-library-tab__spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(33, 150, 243, 0.1);
+  border-top-color: #2196f3;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .shared-library-tab__grid {

@@ -16,30 +16,86 @@ function getAuthHeaders() {
 }
 
 /**
+ * Обработка ответа с ошибкой
+ * @param {Response} response - Ответ от сервера
+ * @param {string} defaultMessage - Сообщение по умолчанию
+ * @returns {Promise<Error>}
+ */
+async function handleErrorResponse(response, defaultMessage = 'Произошла ошибка') {
+  let data;
+  try {
+    data = await response.json();
+  } catch (e) {
+    // Если не удалось распарсить JSON, используем текст ответа
+    const text = await response.text();
+    const error = new Error(text || defaultMessage);
+    error.status = response.status;
+    throw error;
+  }
+
+  const error = new Error(data.error || defaultMessage);
+  error.code = data.code;
+  error.status = response.status;
+  error.upgradeRequired = data.upgradeRequired;
+
+  // Обработка специфических HTTP статус кодов
+  switch (response.status) {
+    case 401:
+      error.code = error.code || 'UNAUTHORIZED';
+      error.message = data.error || 'Требуется авторизация. Пожалуйста, войдите в систему.';
+      break;
+    case 403:
+      error.code = error.code || 'FORBIDDEN';
+      if (!data.error) {
+        error.message = 'Нет прав доступа к этому ресурсу.';
+      }
+      break;
+    case 413:
+      error.code = error.code || 'FILE_TOO_LARGE';
+      error.message = data.error || 'Файл слишком большой. Максимальный размер файла превышен.';
+      break;
+    case 429:
+      error.code = error.code || 'RATE_LIMIT_EXCEEDED';
+      error.message = data.error || 'Превышены лимиты по библиотеке изображений на текущем тарифе.';
+      break;
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      error.code = error.code || 'SERVER_ERROR';
+      error.message = data.error || 'Ошибка на сервере. Попробуйте позже.';
+      break;
+  }
+
+  throw error;
+}
+
+/**
  * Получить список папок личной библиотеки
  * @returns {Promise<string[]>}
  */
 export async function getMyFolders() {
-  const response = await fetch(`${API_URL}/images/my/folders`, {
-    method: 'GET',
-    headers: getAuthHeaders()
-  });
+  try {
+    const response = await fetch(`${API_URL}/images/my/folders`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
 
-  if (!response.ok) {
-    const data = await response.json();
-
-    if (data.code === 'IMAGE_LIBRARY_ACCESS_DENIED') {
-      const error = new Error(data.error);
-      error.code = data.code;
-      error.upgradeRequired = data.upgradeRequired;
-      throw error;
+    if (!response.ok) {
+      await handleErrorResponse(response, 'Ошибка загрузки папок');
     }
 
-    throw new Error(data.error || 'Ошибка загрузки папок');
+    const data = await response.json();
+    return data.folders || [];
+  } catch (error) {
+    // Обработка сетевых ошибок
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      const networkError = new Error('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+      networkError.code = 'NETWORK_ERROR';
+      throw networkError;
+    }
+    throw error;
   }
-
-  const data = await response.json();
-  return data.folders || [];
 }
 
 /**
@@ -51,34 +107,35 @@ export async function getMyFolders() {
  * @returns {Promise<{items: Array, pagination: Object}>}
  */
 export async function getMyImages({ page = 1, limit = 20, folder = null } = {}) {
-  const params = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString()
-  });
+  try {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    });
 
-  if (folder) {
-    params.append('folder', folder);
-  }
-
-  const response = await fetch(`${API_URL}/images/my?${params}`, {
-    method: 'GET',
-    headers: getAuthHeaders()
-  });
-
-  if (!response.ok) {
-    const data = await response.json();
-
-    if (data.code === 'IMAGE_LIBRARY_ACCESS_DENIED') {
-      const error = new Error(data.error);
-      error.code = data.code;
-      error.upgradeRequired = data.upgradeRequired;
-      throw error;
+    if (folder) {
+      params.append('folder', folder);
     }
 
-    throw new Error(data.error || 'Ошибка загрузки изображений');
-  }
+    const response = await fetch(`${API_URL}/images/my?${params}`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
 
-  return await response.json();
+    if (!response.ok) {
+      await handleErrorResponse(response, 'Ошибка загрузки изображений');
+    }
+
+    return await response.json();
+  } catch (error) {
+    // Обработка сетевых ошибок
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      const networkError = new Error('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+      networkError.code = 'NETWORK_ERROR';
+      throw networkError;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -92,44 +149,42 @@ export async function getMyImages({ page = 1, limit = 20, folder = null } = {}) 
  * @returns {Promise<Object>}
  */
 export async function uploadImage({ file, originalName, folder = null, width = null, height = null }) {
-  const formData = new FormData();
-  formData.append('file', file, originalName);
+  try {
+    const formData = new FormData();
+    formData.append('file', file, originalName);
 
-  if (folder) {
-    formData.append('folder', folder);
-  }
-
-  if (width) {
-    formData.append('width', width.toString());
-  }
-
-  if (height) {
-    formData.append('height', height.toString());
-  }
-
-  const response = await fetch(`${API_URL}/images/upload`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: formData
-  });
-
-  if (!response.ok) {
-    const data = await response.json();
-
-    // Обработка специфических кодов ошибок
-    if (data.code === 'FILE_SIZE_LIMIT_EXCEEDED' ||
-        data.code === 'IMAGE_COUNT_LIMIT_EXCEEDED' ||
-        data.code === 'STORAGE_LIMIT_EXCEEDED') {
-      const error = new Error(data.error);
-      error.code = data.code;
-      error.upgradeRequired = data.upgradeRequired;
-      throw error;
+    if (folder) {
+      formData.append('folder', folder);
     }
 
-    throw new Error(data.error || 'Ошибка загрузки изображения');
-  }
+    if (width) {
+      formData.append('width', width.toString());
+    }
 
-  return await response.json();
+    if (height) {
+      formData.append('height', height.toString());
+    }
+
+    const response = await fetch(`${API_URL}/images/upload`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: formData
+    });
+
+    if (!response.ok) {
+      await handleErrorResponse(response, 'Ошибка загрузки изображения');
+    }
+
+    return await response.json();
+  } catch (error) {
+    // Обработка сетевых ошибок
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      const networkError = new Error('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+      networkError.code = 'NETWORK_ERROR';
+      throw networkError;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -138,21 +193,30 @@ export async function uploadImage({ file, originalName, folder = null, width = n
  * @returns {Promise<void>}
  */
 export async function deleteImage(imageId) {
-  const response = await fetch(`${API_URL}/images/${imageId}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
+  try {
+    const response = await fetch(`${API_URL}/images/${imageId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
 
-  if (response.status === 409) {
-    const data = await response.json();
-    const error = new Error(data.error || 'Изображение используется на досках');
-    error.code = 'IMAGE_IN_USE';
+    if (response.status === 409) {
+      const data = await response.json();
+      const error = new Error(data.error || 'Изображение используется на досках');
+      error.code = 'IMAGE_IN_USE';
+      throw error;
+    }
+
+    if (!response.ok && response.status !== 204) {
+      await handleErrorResponse(response, 'Ошибка удаления изображения');
+    }
+  } catch (error) {
+    // Обработка сетевых ошибок
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      const networkError = new Error('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+      networkError.code = 'NETWORK_ERROR';
+      throw networkError;
+    }
     throw error;
-  }
-
-  if (!response.ok && response.status !== 204) {
-    const data = await response.json();
-    throw new Error(data.error || 'Ошибка удаления изображения');
   }
 }
 
@@ -162,24 +226,33 @@ export async function deleteImage(imageId) {
  * @returns {Promise<Object>}
  */
 export async function requestShareImage(imageId) {
-  const response = await fetch(`${API_URL}/images/${imageId}/share-request`, {
-    method: 'POST',
-    headers: getAuthHeaders()
-  });
+  try {
+    const response = await fetch(`${API_URL}/images/${imageId}/share-request`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
 
-  if (response.status === 409) {
-    const data = await response.json();
-    const error = new Error(data.error);
-    error.code = data.code;
+    if (response.status === 409) {
+      const data = await response.json();
+      const error = new Error(data.error);
+      error.code = data.code;
+      throw error;
+    }
+
+    if (!response.ok) {
+      await handleErrorResponse(response, 'Ошибка отправки запроса');
+    }
+
+    return await response.json();
+  } catch (error) {
+    // Обработка сетевых ошибок
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      const networkError = new Error('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+      networkError.code = 'NETWORK_ERROR';
+      throw networkError;
+    }
     throw error;
   }
-
-  if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.error || 'Ошибка отправки запроса');
-  }
-
-  return await response.json();
 }
 
 /**
@@ -187,23 +260,24 @@ export async function requestShareImage(imageId) {
  * @returns {Promise<{folders: Array}>}
  */
 export async function getSharedLibrary() {
-  const response = await fetch(`${API_URL}/images/shared`, {
-    method: 'GET',
-    headers: getAuthHeaders()
-  });
+  try {
+    const response = await fetch(`${API_URL}/images/shared`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
 
-  if (!response.ok) {
-    const data = await response.json();
-
-    if (data.code === 'IMAGE_LIBRARY_ACCESS_DENIED') {
-      const error = new Error(data.error);
-      error.code = data.code;
-      error.upgradeRequired = data.upgradeRequired;
-      throw error;
+    if (!response.ok) {
+      await handleErrorResponse(response, 'Ошибка загрузки общей библиотеки');
     }
 
-    throw new Error(data.error || 'Ошибка загрузки общей библиотеки');
+    return await response.json();
+  } catch (error) {
+    // Обработка сетевых ошибок
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      const networkError = new Error('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+      networkError.code = 'NETWORK_ERROR';
+      throw networkError;
+    }
+    throw error;
   }
-
-  return await response.json();
 }
