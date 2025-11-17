@@ -446,13 +446,14 @@ export const useAdminStore = defineStore('admin', {
 
     /**
      * Получить список папок для общей библиотеки
+     * Использует GET /api/images/shared и извлекает только id и name из папок
      */
     async fetchSharedFolders() {
       this.error = null
 
       try {
         const authStore = useAuthStore()
-        const response = await fetch(`${API_URL}/admin/shared-folders`, {
+        const response = await fetch(`${API_URL}/images/shared`, {
           headers: {
             'Authorization': `Bearer ${authStore.token}`
           }
@@ -463,7 +464,12 @@ export const useAdminStore = defineStore('admin', {
         }
 
         const data = await response.json()
-        this.sharedFolders = data.folders || []
+
+        // Извлекаем только id и name из каждой папки
+        this.sharedFolders = (data.folders || []).map(folder => ({
+          id: folder.id,
+          name: folder.name
+        }))
 
         return data
       } catch (err) {
