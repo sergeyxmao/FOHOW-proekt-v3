@@ -48,11 +48,16 @@
         <div class="image-info">
           <h3 class="image-name">{{ image.original_name }}</h3>
           <div class="image-meta">
-            <p>
-              <strong>Автор:</strong>
-              {{ image.user_full_name || image.user_personal_id || 'Неизвестен' }}
+            <p v-if="image.user_full_name">
+              <strong>ФИО:</strong> {{ image.user_full_name }}
             </p>
-            <p><strong>Дата загрузки:</strong> {{ formatDate(image.share_requested_at) }}</p>
+            <p v-if="image.user_personal_id">
+              <strong>Компьютерный номер:</strong> {{ image.user_personal_id }}
+            </p>
+            <p v-if="!image.user_full_name && !image.user_personal_id">
+              <strong>Автор:</strong> Неизвестен
+            </p>
+            <p><strong>Дата заявки:</strong> {{ formatDate(image.share_requested_at) }}</p>
             <p v-if="image.file_size"><strong>Размер:</strong> {{ formatFileSize(image.file_size) }}</p>
             <p v-if="image.width && image.height">
               <strong>Разрешение:</strong> {{ image.width }}x{{ image.height }}
@@ -418,19 +423,21 @@ onMounted(async () => {
 }
 
 .image-preview {
-  width: 100%;
-  height: 250px;
+  width: 120px;
+  height: 120px;
   background: #e0e0e0;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  margin: 0 auto;
+  border-radius: 8px 8px 0 0;
 }
 
 .image-preview img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .image-info {
