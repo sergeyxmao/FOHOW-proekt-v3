@@ -582,7 +582,8 @@ export const useAdminStore = defineStore('admin', {
           headers: {
             'Authorization': `Bearer ${authStore.token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({})
         })
 
         if (!response.ok) {
