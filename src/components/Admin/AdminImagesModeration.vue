@@ -215,17 +215,38 @@ async function handleApprove(imageId) {
  * Отклонить изображение
  */
 async function handleReject(imageId) {
-  if (!confirm('Вы уверены, что хотите отклонить и удалить это изображение?')) {
+  // Запросить подтверждение у администратора
+  if (!confirm('Отклонить и удалить изображение? Действие необратимо.')) {
     return
   }
 
+  // Заблокировать кнопки для этой картинки
   processingId.value = imageId
+
   try {
+    // Отправить запрос на отклонение
     await adminStore.rejectImage(imageId)
+
+    // Удаляем выбор папки после успешного отклонения
+    delete selectedFolders.value[imageId]
+
+    // При успешном ответе backend - показать уведомление
+    notificationsStore.addNotification({
+      message: 'Изображение отклонено и удалено',
+      type: 'success',
+      duration: 5000
+    })
   } catch (err) {
     console.error('[MODERATION] Ошибка отклонения изображения:', err)
-    alert('Ошибка при отклонении изображения: ' + err.message)
+
+    // При ошибке - показать уведомление об ошибке (без технических подробностей)
+    notificationsStore.addNotification({
+      message: 'Не удалось отклонить изображение. Попробуйте позже',
+      type: 'error',
+      duration: 5000
+    })
   } finally {
+    // Разблокировать элементы управления
     processingId.value = null
   }
 }
