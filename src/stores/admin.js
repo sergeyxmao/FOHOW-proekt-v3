@@ -10,6 +10,7 @@ export const useAdminStore = defineStore('admin', {
     stats: null,
     logs: [],
     pendingImages: [],
+    pendingImagesTotal: 0,
     sharedFolders: [],
     isLoading: false,
     error: null,
@@ -413,7 +414,25 @@ export const useAdminStore = defineStore('admin', {
         }
 
         const data = await response.json()
-        this.pendingImages = data.items || []
+
+        // Формируем объекты изображений с правильным previewUrl
+        this.pendingImages = (data.items || []).map(image => ({
+          id: image.id,
+          previewUrl: image.public_url || image.yandex_path || '',
+          original_name: image.original_name,
+          file_size: image.file_size,
+          width: image.width,
+          height: image.height,
+          share_requested_at: image.share_requested_at,
+          user_full_name: image.user_full_name,
+          user_personal_id: image.user_personal_id,
+          // Сохраняем также оригинальный public_url для совместимости
+          public_url: image.public_url,
+          yandex_path: image.yandex_path
+        }))
+
+        // Сохраняем общее количество изображений
+        this.pendingImagesTotal = data.total || 0
 
         return data
       } catch (err) {

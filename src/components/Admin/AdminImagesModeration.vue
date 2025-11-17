@@ -22,6 +22,15 @@
       <p>Загрузка изображений...</p>
     </div>
 
+    <!-- Состояние ошибки -->
+    <div v-else-if="adminStore.error" class="error-state">
+      <div class="error-icon">⚠️</div>
+      <p class="error-message">{{ adminStore.error }}</p>
+      <button @click="handleRetry" class="retry-button">
+        Повторить
+      </button>
+    </div>
+
     <!-- Пустое состояние -->
     <div v-else-if="!adminStore.pendingImages || adminStore.pendingImages.length === 0" class="empty-state">
       <p>Нет изображений, ожидающих модерации</p>
@@ -32,7 +41,7 @@
       <div v-for="image in adminStore.pendingImages" :key="image.id" class="image-card">
         <!-- Превью изображения -->
         <div class="image-preview">
-          <img :src="getImageUrl(image.public_url)" :alt="image.original_name" />
+          <img :src="getImageUrl(image.previewUrl)" :alt="image.original_name" />
         </div>
 
         <!-- Информация об изображении -->
@@ -114,7 +123,7 @@ const selectedFolders = ref({})
  * Вычисляемое свойство для количества изображений в очереди
  */
 const pendingCount = computed(() => {
-  return adminStore.pendingImages?.length || 0
+  return adminStore.pendingImagesTotal || adminStore.pendingImages?.length || 0
 })
 
 /**
@@ -137,6 +146,14 @@ async function loadFolders() {
   } catch (err) {
     console.error('[MODERATION] Ошибка загрузки папок:', err)
   }
+}
+
+/**
+ * Обработать повторную попытку загрузки при ошибке
+ */
+async function handleRetry() {
+  adminStore.clearError()
+  await loadImages()
 }
 
 /**
@@ -336,6 +353,47 @@ onMounted(async () => {
   padding: 60px 20px;
   color: #666;
   font-size: 18px;
+}
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: #fff3f3;
+  border: 2px solid #ffcccc;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+}
+
+.error-message {
+  color: #d32f2f;
+  font-size: 16px;
+  margin-bottom: 20px;
+  text-align: center;
+  max-width: 600px;
+}
+
+.retry-button {
+  padding: 12px 30px;
+  background: #6c63ff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+
+.retry-button:hover {
+  background: #5a52d5;
 }
 
 .images-grid {
