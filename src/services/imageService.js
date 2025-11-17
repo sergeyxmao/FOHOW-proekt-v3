@@ -99,6 +99,34 @@ export async function getMyFolders() {
 }
 
 /**
+ * Получить статистику использования библиотеки
+ * @returns {Promise<{usage: Object, limits: Object, planName: string}>}
+ */
+export async function getMyStats() {
+  try {
+    const response = await fetch(`${API_URL}/images/my/stats`, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      await handleErrorResponse(response, 'Ошибка получения статистики');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    // Обработка сетевых ошибок
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      const networkError = new Error('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+      networkError.code = 'NETWORK_ERROR';
+      throw networkError;
+    }
+    throw error;
+  }
+}
+
+/**
  * Получить список личных изображений
  * @param {Object} params - Параметры запроса
  * @param {number} params.page - Номер страницы

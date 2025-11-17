@@ -28,6 +28,32 @@ export function registerImageRoutes(app) {
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
+      const userRole = req.user.role;
+
+      // Проверка доступа к библиотеке изображений (пропускаем для администраторов)
+      if (userRole !== 'admin') {
+        const userResult = await pool.query(
+          `SELECT sp.features, sp.name as plan_name
+           FROM users u
+           JOIN subscription_plans sp ON u.plan_id = sp.id
+           WHERE u.id = $1`,
+          [userId]
+        );
+
+        if (userResult.rows.length > 0) {
+          const features = userResult.rows[0].features;
+          const planName = userResult.rows[0].plan_name;
+          const canUseImages = features.can_use_images !== undefined ? features.can_use_images : true;
+
+          if (!canUseImages) {
+            return reply.code(403).send({
+              error: `Библиотека изображений недоступна на текущем тарифе "${planName}".`,
+              code: 'IMAGE_LIBRARY_ACCESS_DENIED',
+              upgradeRequired: true
+            });
+          }
+        }
+      }
 
       // Валидация и парсинг параметров запроса
       const page = parseInt(req.query.page) || 1;
@@ -127,6 +153,87 @@ export function registerImageRoutes(app) {
   });
 
   /**
+   * GET /api/images/my/stats - Получить статистику использования библиотеки
+   *
+   * Эндпоинт для получения информации о текущем использовании библиотеки изображений
+   * и лимитах тарифного плана.
+   */
+  app.get('/api/images/my/stats', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const userId = req.user.id;
+      const userRole = req.user.role;
+
+      // Получаем информацию о тарифе и статистику использования
+      const userResult = await pool.query(
+        `SELECT
+          u.plan_id,
+          sp.features,
+          sp.name as plan_name,
+          (SELECT COUNT(*) FROM image_library WHERE user_id = u.id) as image_count,
+          (SELECT COUNT(DISTINCT folder_name) FROM image_library WHERE user_id = u.id AND folder_name IS NOT NULL) as folder_count,
+          (SELECT COALESCE(SUM(file_size), 0) FROM image_library WHERE user_id = u.id) as total_size
+         FROM users u
+         JOIN subscription_plans sp ON u.plan_id = sp.id
+         WHERE u.id = $1`,
+        [userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        return reply.code(403).send({
+          error: 'Не удалось определить тарифный план пользователя.'
+        });
+      }
+
+      const user = userResult.rows[0];
+      const features = user.features;
+      const planName = user.plan_name;
+
+      // Проверка доступа к библиотеке изображений (пропускаем для администраторов)
+      if (userRole !== 'admin') {
+        const canUseImages = features.can_use_images !== undefined ? features.can_use_images : true;
+
+        if (!canUseImages) {
+          return reply.code(403).send({
+            error: `Библиотека изображений недоступна на текущем тарифе "${planName}".`,
+            code: 'IMAGE_LIBRARY_ACCESS_DENIED',
+            upgradeRequired: true
+          });
+        }
+      }
+
+      // Получаем лимиты из тарифа
+      const maxFiles = features.image_library_max_files !== undefined ? features.image_library_max_files : -1;
+      const maxFolders = features.image_library_max_folders !== undefined ? features.image_library_max_folders : -1;
+      const maxStorageMB = features.image_library_max_storage_mb !== undefined ? features.image_library_max_storage_mb : -1;
+
+      // Формируем ответ
+      return reply.send({
+        usage: {
+          files: parseInt(user.image_count, 10),
+          folders: parseInt(user.folder_count, 10),
+          storageMB: parseFloat((parseInt(user.total_size, 10) / 1024 / 1024).toFixed(2))
+        },
+        limits: {
+          files: maxFiles,
+          folders: maxFolders,
+          storageMB: maxStorageMB
+        },
+        planName
+      });
+    } catch (err) {
+      console.error('❌ Ошибка получения статистики библиотеки:', err);
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
+
+  /**
    * GET /api/images/my/folders - Получить список папок личной библиотеки
    *
    * Эндпоинт для получения списка уникальных папок, используемых в личной библиотеке пользователя.
@@ -137,6 +244,32 @@ export function registerImageRoutes(app) {
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
+      const userRole = req.user.role;
+
+      // Проверка доступа к библиотеке изображений (пропускаем для администраторов)
+      if (userRole !== 'admin') {
+        const userResult = await pool.query(
+          `SELECT sp.features, sp.name as plan_name
+           FROM users u
+           JOIN subscription_plans sp ON u.plan_id = sp.id
+           WHERE u.id = $1`,
+          [userId]
+        );
+
+        if (userResult.rows.length > 0) {
+          const features = userResult.rows[0].features;
+          const planName = userResult.rows[0].plan_name;
+          const canUseImages = features.can_use_images !== undefined ? features.can_use_images : true;
+
+          if (!canUseImages) {
+            return reply.code(403).send({
+              error: `Библиотека изображений недоступна на текущем тарифе "${planName}".`,
+              code: 'IMAGE_LIBRARY_ACCESS_DENIED',
+              upgradeRequired: true
+            });
+          }
+        }
+      }
 
       // Получаем уникальные значения folder_name из image_library
       const result = await pool.query(
@@ -237,25 +370,28 @@ export function registerImageRoutes(app) {
 
       // Проверка лимитов (пропускаем для администраторов)
       if (userRole !== 'admin') {
-        // Получаем лимиты из тарифа
-        const maxImages = features.max_images || 0;
-        const maxStorage = features.max_storage || 0; // в байтах
-        const maxImageSize = features.max_image_size || 0; // в байтах
+        // Проверяем право can_use_images
+        const canUseImages = features.can_use_images !== undefined ? features.can_use_images : true;
 
-        // Проверка максимального размера одного файла
-        if (maxImageSize > 0 && fileSize > maxImageSize) {
-          return reply.code(429).send({
-            error: `Размер файла (${(fileSize / 1024 / 1024).toFixed(2)} МБ) превышает максимально допустимый размер (${(maxImageSize / 1024 / 1024).toFixed(2)} МБ) для вашего тарифа "${planName}".`,
-            code: 'FILE_SIZE_LIMIT_EXCEEDED',
+        if (!canUseImages) {
+          return reply.code(403).send({
+            error: `Библиотека изображений недоступна на текущем тарифе "${planName}".`,
+            code: 'IMAGE_LIBRARY_ACCESS_DENIED',
             upgradeRequired: true
           });
         }
 
-        // Получаем текущее количество изображений и суммарный размер
+        // Получаем лимиты из тарифа (новые поля)
+        const maxFiles = features.image_library_max_files !== undefined ? features.image_library_max_files : -1;
+        const maxStorageMB = features.image_library_max_storage_mb !== undefined ? features.image_library_max_storage_mb : -1;
+        const maxFolders = features.image_library_max_folders !== undefined ? features.image_library_max_folders : -1;
+
+        // Получаем текущее количество изображений, суммарный размер и количество папок
         const statsResult = await pool.query(
           `SELECT
             COUNT(*) as image_count,
-            COALESCE(SUM(file_size), 0) as total_size
+            COALESCE(SUM(file_size), 0) as total_size,
+            COUNT(DISTINCT folder_name) FILTER (WHERE folder_name IS NOT NULL) as folder_count
            FROM image_library
            WHERE user_id = $1`,
           [userId]
@@ -263,23 +399,43 @@ export function registerImageRoutes(app) {
 
         const currentImageCount = parseInt(statsResult.rows[0].image_count, 10);
         const currentTotalSize = parseInt(statsResult.rows[0].total_size, 10);
+        const currentFolderCount = parseInt(statsResult.rows[0].folder_count, 10);
 
         // Проверка максимального количества изображений
-        if (maxImages > 0 && currentImageCount >= maxImages) {
-          return reply.code(429).send({
-            error: `Достигнут лимит изображений (${maxImages}) для вашего тарифа "${planName}".`,
+        if (maxFiles !== -1 && currentImageCount >= maxFiles) {
+          return reply.code(403).send({
+            error: `Превышен лимит количества изображений на текущем тарифе "${planName}". Доступно: ${maxFiles}, текущее количество: ${currentImageCount}.`,
             code: 'IMAGE_COUNT_LIMIT_EXCEEDED',
             upgradeRequired: true
           });
         }
 
-        // Проверка максимального суммарного объёма
-        if (maxStorage > 0 && (currentTotalSize + fileSize) > maxStorage) {
-          return reply.code(429).send({
-            error: `Превышен лимит хранилища (${(maxStorage / 1024 / 1024).toFixed(2)} МБ) для вашего тарифа "${planName}". Текущий размер: ${(currentTotalSize / 1024 / 1024).toFixed(2)} МБ, попытка загрузить: ${(fileSize / 1024 / 1024).toFixed(2)} МБ.`,
+        // Проверка максимального суммарного объёма (в МБ)
+        const maxStorageBytes = maxStorageMB !== -1 ? maxStorageMB * 1024 * 1024 : -1;
+        if (maxStorageBytes !== -1 && (currentTotalSize + fileSize) > maxStorageBytes) {
+          return reply.code(403).send({
+            error: `Превышен лимит объёма библиотеки изображений на текущем тарифе "${planName}". Доступно: ${maxStorageMB} МБ, текущий объём: ${(currentTotalSize / 1024 / 1024).toFixed(2)} МБ, размер файла: ${(fileSize / 1024 / 1024).toFixed(2)} МБ.`,
             code: 'STORAGE_LIMIT_EXCEEDED',
             upgradeRequired: true
           });
+        }
+
+        // Проверка максимального количества папок (если создаётся новая папка)
+        if (folderName && folderName.trim() !== '' && maxFolders !== -1) {
+          // Проверяем, существует ли уже такая папка
+          const folderCheckResult = await pool.query(
+            `SELECT 1 FROM image_library WHERE user_id = $1 AND folder_name = $2 LIMIT 1`,
+            [userId, folderName.trim()]
+          );
+
+          // Если папки нет, это новая папка - проверяем лимит
+          if (folderCheckResult.rows.length === 0 && currentFolderCount >= maxFolders) {
+            return reply.code(403).send({
+              error: `Превышен лимит количества папок в библиотеке изображений на текущем тарифе "${planName}". Доступно: ${maxFolders}, текущее количество: ${currentFolderCount}.`,
+              code: 'FOLDER_COUNT_LIMIT_EXCEEDED',
+              upgradeRequired: true
+            });
+          }
         }
       }
 
@@ -376,6 +532,7 @@ export function registerImageRoutes(app) {
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
+      const userRole = req.user.role;
       const imageId = parseInt(req.params.id, 10);
 
       // Валидация ID
@@ -383,6 +540,31 @@ export function registerImageRoutes(app) {
         return reply.code(400).send({
           error: 'Некорректный ID изображения'
         });
+      }
+
+      // Проверка доступа к библиотеке изображений (пропускаем для администраторов)
+      if (userRole !== 'admin') {
+        const userResult = await pool.query(
+          `SELECT sp.features, sp.name as plan_name
+           FROM users u
+           JOIN subscription_plans sp ON u.plan_id = sp.id
+           WHERE u.id = $1`,
+          [userId]
+        );
+
+        if (userResult.rows.length > 0) {
+          const features = userResult.rows[0].features;
+          const planName = userResult.rows[0].plan_name;
+          const canUseImages = features.can_use_images !== undefined ? features.can_use_images : true;
+
+          if (!canUseImages) {
+            return reply.code(403).send({
+              error: `Библиотека изображений недоступна на текущем тарифе "${planName}".`,
+              code: 'IMAGE_LIBRARY_ACCESS_DENIED',
+              upgradeRequired: true
+            });
+          }
+        }
       }
 
       // Получаем запись изображения по id и user_id

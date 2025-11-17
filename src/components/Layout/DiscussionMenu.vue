@@ -1,10 +1,12 @@
 <script setup>
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { useBoardCommentsStore } from '../Panels/boardComments.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
 import { useBoardStore } from '../../stores/board.js'
+import { useSubscriptionStore } from '../../stores/subscription.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -19,10 +21,14 @@ const boardCommentsStore = useBoardCommentsStore()
 const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
+const subscriptionStore = useSubscriptionStore()
 
 const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
 const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen, isImageBrowserOpen, isImagesOpen } = storeToRefs(sidePanelsStore)
 const { currentBoardId } = storeToRefs(boardStore)
+
+// Проверка доступа к библиотеке изображений
+const canUseImages = computed(() => subscriptionStore.checkFeature('can_use_images'))
 
 const handleNotesToggle = () => {
   sidePanelsStore.toggleNotes()
@@ -91,7 +97,7 @@ const handleAddSticker = () => {
       </button>
     </div>
 
-    <div class="discussion-menu__item">
+    <div v-if="canUseImages" class="discussion-menu__item">
       <span class="discussion-menu__icon" aria-hidden="true">🖼️</span>
       <button
         type="button"
