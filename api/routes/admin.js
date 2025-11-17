@@ -1128,20 +1128,18 @@ export function registerAdminRoutes(app) {
 
       console.log(`[ADMIN] Удаление файла из pending: ${yandex_path}`);
 
-      // Удалить файл из папки pending на Яндекс.Диске
+      // Удалить файл с Яндекс.Диска (если он существует)
       try {
         await deleteFile(yandex_path);
-        console.log(`[ADMIN] Файл успешно удалён с Яндекс.Диска`);
+        console.log(`[ADMIN] Файл успешно удалён: ${yandex_path}`);
       } catch (deleteError) {
-        console.error(`[ADMIN] Ошибка удаления файла с Яндекс.Диска:`, deleteError);
-
-        // Если файл не найден (404), продолжаем обновление БД
-        // В других случаях - выбрасываем ошибку
-        if (!deleteError.status || deleteError.status !== 404) {
-          throw deleteError;
+        // Если файл не найден (404), это нормально - продолжаем
+        if (deleteError.status === 404) {
+          console.warn(`[ADMIN] Файл не найден на Яндекс.Диске (уже удалён): ${yandex_path}`);
+        } else {
+          // Другие ошибки логируем, но не прерываем выполнение
+          console.error(`[ADMIN] Ошибка удаления файла (игнорируем): ${deleteError.message}`);
         }
-
-        console.log(`[ADMIN] Файл не найден на Яндекс.Диске (возможно, уже удалён), продолжаем обновление БД`);
       }
 
       // Обновить запись в image_library
