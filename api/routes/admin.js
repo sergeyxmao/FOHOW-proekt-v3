@@ -1147,9 +1147,7 @@ export function registerAdminRoutes(app) {
         `UPDATE image_library
          SET
            moderation_status = 'rejected',
-           share_requested_at = NULL,
-           yandex_path = NULL,
-           public_url = NULL
+           share_requested_at = NULL
          WHERE id = $1
          RETURNING id, moderation_status`,
         [imageId]
