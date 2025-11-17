@@ -457,9 +457,10 @@ export function registerImageRoutes(app) {
       // Загрузить файл на Яндекс.Диск
       await uploadFile(filePath, buffer, mimeType);
 
-      // Опубликовать файл и получить публичную ссылку
-      const publicUrl = await publishFile(filePath);
-
+      // Опубликовать файл и получить публичную и preview-ссылки
+      const { public_url: originalPublicUrl, preview_url } = await publishFile(filePath);
+      const publicUrl = preview_url || originalPublicUrl;
+      
       // Сохранить запись в БД
       const insertResult = await pool.query(
         `INSERT INTO image_library (
@@ -499,8 +500,11 @@ export function registerImageRoutes(app) {
         ]
       );
 
-      const newImage = insertResult.rows[0];
-
+      const newImage = {
+        ...insertResult.rows[0],
+        public_url: publicUrl
+      };
+      
       // Возвращаем успешный ответ
       return reply.code(201).send(newImage);
 
