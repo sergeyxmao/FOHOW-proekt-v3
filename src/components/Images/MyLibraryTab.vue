@@ -2,9 +2,10 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStickersStore } from '../../stores/stickers'
 import { useNotificationsStore } from '../../stores/notifications'
-import { getMyFolders, getMyImages, uploadImage, deleteImage, requestShareImage } from '../../services/imageService'
+import { getMyFolders, getMyImages, getMyStats, uploadImage, deleteImage, requestShareImage } from '../../services/imageService'
 import { convertToWebP, isImageFile } from '../../utils/imageUtils'
 import ImageCard from './ImageCard.vue'
+import LimitsDisplay from './LimitsDisplay.vue'
 
 const stickersStore = useStickersStore()
 const notificationsStore = useNotificationsStore()
@@ -21,6 +22,9 @@ const pagination = ref({
   limit: 20,
   total: 0
 })
+
+// Статистика и лимиты
+const stats = ref(null)
 
 // Локальное состояние для загрузки файлов
 const isUploading = ref(false)
@@ -196,6 +200,9 @@ async function uploadSingleImage(file) {
     })
 
     console.log('✅ Изображение успешно загружено:', newImage)
+
+    // Обновляем статистику
+    await loadStats()
   } catch (error) {
     console.error('Ошибка загрузки изображения:', error)
 
@@ -273,6 +280,9 @@ async function handleImageDelete(image) {
     })
 
     console.log('✅ Изображение успешно удалено:', image.id)
+
+    // Обновляем статистику
+    await loadStats()
   } catch (error) {
     console.error('Ошибка удаления изображения:', error)
 
@@ -357,10 +367,25 @@ function loadPrevPage() {
   }
 }
 
+/**
+ * Загрузить статистику использования библиотеки
+ */
+async function loadStats() {
+  try {
+    stats.value = await getMyStats()
+  } catch (err) {
+    console.error('Ошибка загрузки статистики:', err)
+    // Не показываем уведомление, т.к. это не критично
+  }
+}
+
 // Жизненный цикл
 onMounted(async () => {
-  await loadFolders()
-  await loadImages()
+  await Promise.all([
+    loadFolders(),
+    loadImages(),
+    loadStats()
+  ])
 })
 
 // Следим за изменениями currentBoardId
@@ -412,6 +437,14 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
         @change="handleFileSelect"
       />
     </div>
+
+    <!-- Отображение лимитов -->
+    <LimitsDisplay
+      v-if="stats"
+      :usage="stats.usage"
+      :limits="stats.limits"
+      :plan-name="stats.planName"
+    />
 
     <!-- Поле поиска -->
     <div class="my-library-tab__search">
