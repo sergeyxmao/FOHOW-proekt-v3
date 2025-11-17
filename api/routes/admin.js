@@ -1,12 +1,14 @@
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
+import { randomBytes } from 'crypto';
 import {
   getSharedFolderPath,
   ensureFolderExists,
   moveFile,
   publishFile,
-  deleteFile
+  deleteFile,
+  uploadFile
 } from '../services/yandexDiskService.js';
 
 /**
@@ -1162,6 +1164,173 @@ export function registerAdminRoutes(app) {
 
     } catch (err) {
       console.error('[ADMIN] Ошибка отклонения изображения:', err);
+
+      // Логируем дополнительную информацию для ошибок Яндекс.Диска
+      if (err.status) {
+        console.error(`[ADMIN] Yandex.Disk API вернул статус: ${err.status}`);
+      }
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
+
+  /**
+   * Загрузить изображение напрямую в общую библиотеку
+   * POST /api/admin/images/upload-shared
+   */
+  app.post('/api/admin/images/upload-shared', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      const adminId = req.user.id;
+
+      console.log(`[ADMIN] Запрос на загрузку изображения в общую библиотеку, admin_id=${adminId}`);
+
+      // Получаем multipart данные
+      const data = await req.file();
+
+      if (!data) {
+        return reply.code(400).send({
+          error: 'Файл не был передан. Поле "file" обязательно.'
+        });
+      }
+
+      // Валидация MIME-типа
+      const mimeType = data.mimetype;
+      if (mimeType !== 'image/webp') {
+        return reply.code(400).send({
+          error: 'Недопустимый формат файла. Разрешен только image/webp.'
+        });
+      }
+
+      // Получаем обязательное поле shared_folder_id
+      const sharedFolderIdRaw = data.fields.shared_folder_id?.value;
+
+      if (!sharedFolderIdRaw) {
+        return reply.code(400).send({
+          error: 'Поле shared_folder_id обязательно.'
+        });
+      }
+
+      const sharedFolderId = parseInt(sharedFolderIdRaw, 10);
+
+      // Валидация shared_folder_id
+      if (!Number.isInteger(sharedFolderId) || sharedFolderId <= 0) {
+        return reply.code(400).send({
+          error: 'Поле shared_folder_id должно быть положительным целым числом.'
+        });
+      }
+
+      // Получаем buffer файла
+      const buffer = await data.toBuffer();
+      const fileSize = buffer.length;
+
+      // Получаем опциональные width и height
+      const width = data.fields.width?.value ? parseInt(data.fields.width.value, 10) : null;
+      const height = data.fields.height?.value ? parseInt(data.fields.height.value, 10) : null;
+
+      // Получаем original_name
+      const originalName = data.filename || 'image.webp';
+
+      console.log(`[ADMIN] Загружаемый файл: ${originalName}, размер: ${fileSize} байт, shared_folder_id: ${sharedFolderId}`);
+
+      // Проверяем существование папки
+      const folderResult = await pool.query(
+        'SELECT id, name FROM shared_folders WHERE id = $1',
+        [sharedFolderId]
+      );
+
+      if (folderResult.rows.length === 0) {
+        console.log(`[ADMIN] Папка общей библиотеки не найдена: folder_id=${sharedFolderId}`);
+        return reply.code(400).send({
+          error: 'Указанная папка общей библиотеки не найдена.'
+        });
+      }
+
+      const sharedFolder = folderResult.rows[0];
+      const sharedFolderName = sharedFolder.name;
+
+      console.log(`[ADMIN] Загрузка изображения в папку: ${sharedFolderName}`);
+
+      // Построить путь папки на Яндекс.Диске
+      const folderPath = getSharedFolderPath(sharedFolderName);
+
+      // Убедиться, что папка существует
+      await ensureFolderExists(folderPath);
+
+      // Сгенерировать уникальное имя файла (UUID + .webp)
+      const uniqueFilename = `${randomBytes(16).toString('hex')}.webp`;
+
+      // Построить полный путь к файлу
+      const filePath = `${folderPath}/${uniqueFilename}`;
+
+      console.log(`[ADMIN] Путь на Яндекс.Диске: ${filePath}`);
+
+      // Загрузить файл на Яндекс.Диск
+      await uploadFile(filePath, buffer, mimeType);
+
+      // Опубликовать файл и получить публичную ссылку
+      const publicUrl = await publishFile(filePath);
+
+      console.log(`[ADMIN] Файл опубликован, public_url: ${publicUrl}`);
+
+      // Сохранить запись в БД
+      const insertResult = await pool.query(
+        `INSERT INTO image_library (
+          user_id,
+          original_name,
+          filename,
+          folder_name,
+          yandex_path,
+          public_url,
+          width,
+          height,
+          file_size,
+          moderation_status,
+          is_shared,
+          shared_folder_id,
+          share_requested_at,
+          share_approved_at,
+          share_approved_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        RETURNING
+          id,
+          original_name,
+          public_url,
+          shared_folder_id,
+          is_shared`,
+        [
+          adminId,              // user_id - кто загрузил
+          originalName,         // original_name
+          uniqueFilename,       // filename
+          null,                 // folder_name - NULL для общей библиотеки
+          filePath,             // yandex_path
+          publicUrl,            // public_url
+          width,                // width
+          height,               // height
+          fileSize,             // file_size
+          'approved',           // moderation_status
+          true,                 // is_shared
+          sharedFolderId,       // shared_folder_id
+          null,                 // share_requested_at - NULL
+          new Date(),           // share_approved_at - текущее время
+          adminId               // share_approved_by - id админа
+        ]
+      );
+
+      const newImage = insertResult.rows[0];
+
+      console.log(`[ADMIN] ✅ Изображение успешно загружено в общую библиотеку: id=${newImage.id}, folder=${sharedFolderName}`);
+
+      // Возвращаем успешный ответ
+      return reply.code(201).send(newImage);
+
+    } catch (err) {
+      console.error('[ADMIN] Ошибка загрузки изображения в общую библиотеку:', err);
 
       // Логируем дополнительную информацию для ошибок Яндекс.Диска
       if (err.status) {
