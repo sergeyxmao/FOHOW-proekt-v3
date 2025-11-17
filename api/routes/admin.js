@@ -571,6 +571,34 @@ export function registerAdminRoutes(app) {
   // ============================================
 
   /**
+   * Получить список папок для общей библиотеки
+   * GET /api/admin/shared-folders
+   */
+  app.get('/api/admin/shared-folders', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      console.log('[ADMIN] Запрос списка папок общей библиотеки, admin_id=' + req.user.id);
+
+      const result = await pool.query(
+        `SELECT id, name, created_at
+         FROM shared_folders
+         ORDER BY name ASC`
+      );
+
+      console.log(`[ADMIN] Найдено папок: ${result.rows.length}`);
+
+      return reply.send({
+        success: true,
+        folders: result.rows
+      });
+    } catch (err) {
+      console.error('[ADMIN] Ошибка получения списка папок:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  /**
    * Получить список изображений на модерацию (pending)
    * GET /api/admin/images/pending
    */

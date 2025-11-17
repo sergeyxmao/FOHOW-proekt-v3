@@ -1,7 +1,16 @@
 <template>
   <div class="images-moderation">
+    <!-- Верхняя панель с заголовком и статистикой -->
     <div class="moderation-header">
-      <h2>Модерация изображений</h2>
+      <div class="header-content">
+        <h2>Модерация изображений</h2>
+        <div class="stats-block">
+          <div class="stat-item">
+            <span class="stat-label">В очереди:</span>
+            <span class="stat-value">{{ pendingCount }}</span>
+          </div>
+        </div>
+      </div>
       <button @click="loadImages" class="refresh-button" :disabled="adminStore.isLoading">
         Обновить
       </button>
@@ -23,38 +32,65 @@
       <div v-for="image in adminStore.pendingImages" :key="image.id" class="image-card">
         <!-- Превью изображения -->
         <div class="image-preview">
-          <img :src="getImageUrl(image.url)" :alt="image.original_name" />
+          <img :src="getImageUrl(image.public_url)" :alt="image.original_name" />
         </div>
 
         <!-- Информация об изображении -->
         <div class="image-info">
           <h3 class="image-name">{{ image.original_name }}</h3>
           <div class="image-meta">
-            <p><strong>Автор:</strong> {{ image.user_email || 'Неизвестен' }}</p>
-            <p><strong>Дата загрузки:</strong> {{ formatDate(image.created_at) }}</p>
-            <p v-if="image.size"><strong>Размер:</strong> {{ formatFileSize(image.size) }}</p>
+            <p>
+              <strong>Автор:</strong>
+              {{ image.user_full_name || image.user_personal_id || 'Неизвестен' }}
+            </p>
+            <p><strong>Дата загрузки:</strong> {{ formatDate(image.share_requested_at) }}</p>
+            <p v-if="image.file_size"><strong>Размер:</strong> {{ formatFileSize(image.file_size) }}</p>
             <p v-if="image.width && image.height">
               <strong>Разрешение:</strong> {{ image.width }}x{{ image.height }}
             </p>
           </div>
         </div>
 
-        <!-- Кнопки действий -->
+        <!-- Выбор папки и кнопки действий -->
         <div class="image-actions">
-          <button
-            @click="handleApprove(image.id)"
-            class="approve-button"
-            :disabled="processingId === image.id"
-          >
-            ✓ Одобрить
-          </button>
-          <button
-            @click="handleReject(image.id)"
-            class="reject-button"
-            :disabled="processingId === image.id"
-          >
-            ✗ Отклонить
-          </button>
+          <div class="folder-select-wrapper">
+            <label :for="`folder-select-${image.id}`" class="folder-label">
+              Папка:
+            </label>
+            <select
+              :id="`folder-select-${image.id}`"
+              v-model="selectedFolders[image.id]"
+              class="folder-select"
+              :disabled="processingId === image.id"
+            >
+              <option value="" disabled>Выберите папку</option>
+              <option
+                v-for="folder in adminStore.sharedFolders"
+                :key="folder.id"
+                :value="folder.id"
+              >
+                {{ folder.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="action-buttons">
+            <button
+              @click="handleApprove(image.id)"
+              class="approve-button"
+              :disabled="processingId === image.id || !selectedFolders[image.id]"
+              :title="!selectedFolders[image.id] ? 'Выберите папку для одобрения' : ''"
+            >
+              ✓ Одобрить
+            </button>
+            <button
+              @click="handleReject(image.id)"
+              class="reject-button"
+              :disabled="processingId === image.id"
+            >
+              ✗ Отклонить
+            </button>
+          </div>
         </div>
 
         <!-- Индикатор обработки -->
@@ -67,11 +103,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAdminStore } from '../../stores/admin'
 
 const adminStore = useAdminStore()
 const processingId = ref(null)
+const selectedFolders = ref({})
+
+/**
+ * Вычисляемое свойство для количества изображений в очереди
+ */
+const pendingCount = computed(() => {
+  return adminStore.pendingImages?.length || 0
+})
 
 /**
  * Загрузить список изображений на модерации
@@ -85,16 +129,38 @@ async function loadImages() {
 }
 
 /**
+ * Загрузить список папок
+ */
+async function loadFolders() {
+  try {
+    await adminStore.fetchSharedFolders()
+  } catch (err) {
+    console.error('[MODERATION] Ошибка загрузки папок:', err)
+  }
+}
+
+/**
  * Одобрить изображение
  */
 async function handleApprove(imageId) {
-  if (!confirm('Вы уверены, что хотите одобрить это изображение и добавить его в общую библиотеку?')) {
+  const folderId = selectedFolders.value[imageId]
+
+  if (!folderId) {
+    alert('Пожалуйста, выберите папку для изображения')
+    return
+  }
+
+  const folderName = adminStore.sharedFolders.find(f => f.id === folderId)?.name || 'выбранную папку'
+
+  if (!confirm(`Вы уверены, что хотите одобрить это изображение и добавить его в папку "${folderName}"?`)) {
     return
   }
 
   processingId.value = imageId
   try {
-    await adminStore.approveImage(imageId)
+    await adminStore.approveImage(imageId, folderId)
+    // Удаляем выбор папки после успешного одобрения
+    delete selectedFolders.value[imageId]
   } catch (err) {
     console.error('[MODERATION] Ошибка одобрения изображения:', err)
     alert('Ошибка при одобрении изображения: ' + err.message)
@@ -161,9 +227,12 @@ function formatFileSize(bytes) {
   return `${mb.toFixed(2)} MB`
 }
 
-// Загрузить изображения при монтировании
-onMounted(() => {
-  loadImages()
+// Загрузить изображения и папки при монтировании
+onMounted(async () => {
+  await Promise.all([
+    loadImages(),
+    loadFolders()
+  ])
 })
 </script>
 
@@ -177,12 +246,46 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
+  gap: 20px;
+}
+
+.header-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .moderation-header h2 {
   margin: 0;
   font-size: 24px;
   color: #333;
+}
+
+.stats-block {
+  display: flex;
+  gap: 20px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 15px;
+  background: #f0f0f0;
+  border-radius: 5px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #6c63ff;
 }
 
 .refresh-button {
@@ -299,9 +402,46 @@ onMounted(() => {
 
 .image-actions {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 12px;
   padding: 15px;
   border-top: 1px solid #e0e0e0;
+}
+
+.folder-select-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.folder-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.folder-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.3s;
+}
+
+.folder-select:hover:not(:disabled) {
+  border-color: #6c63ff;
+}
+
+.folder-select:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
 }
 
 .approve-button,

@@ -10,6 +10,7 @@ export const useAdminStore = defineStore('admin', {
     stats: null,
     logs: [],
     pendingImages: [],
+    sharedFolders: [],
     isLoading: false,
     error: null,
     pagination: {
@@ -412,7 +413,7 @@ export const useAdminStore = defineStore('admin', {
         }
 
         const data = await response.json()
-        this.pendingImages = data.images || []
+        this.pendingImages = data.items || []
 
         return data
       } catch (err) {
@@ -425,9 +426,40 @@ export const useAdminStore = defineStore('admin', {
     },
 
     /**
-     * Одобрить изображение и переместить в общую библиотеку
+     * Получить список папок для общей библиотеки
      */
-    async approveImage(imageId) {
+    async fetchSharedFolders() {
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/shared-folders`, {
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error(`Ошибка ${response.status}: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        this.sharedFolders = data.folders || []
+
+        return data
+      } catch (err) {
+        console.error('[ADMIN] Ошибка загрузки папок:', err)
+        this.error = err.message
+        throw err
+      }
+    },
+
+    /**
+     * Одобрить изображение и переместить в общую библиотеку
+     * @param {number} imageId - ID изображения
+     * @param {number} sharedFolderId - ID папки в общей библиотеке
+     */
+    async approveImage(imageId, sharedFolderId) {
       this.isLoading = true
       this.error = null
 
@@ -438,7 +470,8 @@ export const useAdminStore = defineStore('admin', {
           headers: {
             'Authorization': `Bearer ${authStore.token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({ shared_folder_id: sharedFolderId })
         })
 
         if (!response.ok) {
