@@ -181,31 +181,46 @@ function getSharedFilePath(sharedFolderName, filename) {
  */
 async function ensureFolderExists(path) {
   try {
-    // Сначала проверяем, существует ли папка
-    const endpoint = `/resources?path=${encodeURIComponent(path)}`;
-    await makeYandexDiskRequest(endpoint, { method: 'GET' }, path);
+    // Разбиваем путь на сегменты
+    const segments = path.split('/').filter(s => s.length > 0);
 
-    // Если запрос успешен, папка уже существует
-    console.log(`[Yandex Disk] Папка уже существует: ${path}`);
-  } catch (error) {
-    // Если папка не найдена (404), создаем её
-    if (error.status === 404) {
+    // Последовательно создаём каждую вложенную папку
+    let currentPath = '';
+
+    for (const segment of segments) {
+      currentPath += '/' + segment;
+
       try {
-        const endpoint = `/resources?path=${encodeURIComponent(path)}`;
-        await makeYandexDiskRequest(endpoint, { method: 'PUT' }, path);
-        console.log(`[Yandex Disk] Папка успешно создана: ${path}`);
-      } catch (createError) {
-        // Если ошибка 409 (Conflict), значит папка уже существует (race condition)
-        if (createError.status === 409) {
-          console.log(`[Yandex Disk] Папка уже существует (race condition): ${path}`);
-          return;
+        // Проверяем существование текущей папки
+        const checkEndpoint = `/resources?path=${encodeURIComponent(currentPath)}`;
+        await makeYandexDiskRequest(checkEndpoint, { method: 'GET' }, currentPath);
+        // Папка существует, продолжаем
+
+      } catch (error) {
+        // Если папка не найдена (404), создаём её
+        if (error.status === 404) {
+          try {
+            const createEndpoint = `/resources?path=${encodeURIComponent(currentPath)}`;
+            await makeYandexDiskRequest(createEndpoint, { method: 'PUT' }, currentPath);
+            console.log(`[Yandex Disk] Папка создана: ${currentPath}`);
+          } catch (createError) {
+            // Если 409 (Conflict), значит папка уже существует (race condition)
+            if (createError.status === 409) {
+              console.log(`[Yandex Disk] Папка уже существует: ${currentPath}`);
+            } else {
+              throw new Error(`Не удалось создать папку ${currentPath}: ${createError.message}`);
+            }
+          }
+        } else {
+          // Другая ошибка при проверке существования
+          throw new Error(`Ошибка при проверке папки ${currentPath}: ${error.message}`);
         }
-        throw new Error(`Не удалось создать папку ${path}: ${createError.message}`);
       }
-    } else {
-      // Другая ошибка при проверке существования папки
-      throw new Error(`Ошибка при проверке папки ${path}: ${error.message}`);
     }
+
+    console.log(`[Yandex Disk] Все папки в пути ${path} готовы`);
+  } catch (error) {
+    throw new Error(`Ошибка при создании структуры папок ${path}: ${error.message}`);    
   }
 }
 
