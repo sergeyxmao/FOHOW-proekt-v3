@@ -119,8 +119,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useAdminStore } from '../../stores/admin'
+import { useNotificationsStore } from '../../stores/notifications'
 
 const adminStore = useAdminStore()
+const notificationsStore = useNotificationsStore()
 const processingId = ref(null)
 const selectedFolders = ref({})
 
@@ -167,26 +169,44 @@ async function handleRetry() {
 async function handleApprove(imageId) {
   const folderId = selectedFolders.value[imageId]
 
+  // Проверить, что для данной картинки выбран shared_folder_id
   if (!folderId) {
-    alert('Пожалуйста, выберите папку для изображения')
+    // Если папка не выбрана - показать уведомление
+    notificationsStore.addNotification({
+      message: 'Выберите папку общей библиотеки',
+      type: 'error',
+      duration: 4000
+    })
     return
   }
 
-  const folderName = adminStore.sharedFolders.find(f => f.id === folderId)?.name || 'выбранную папку'
-
-  if (!confirm(`Вы уверены, что хотите одобрить это изображение и добавить его в папку "${folderName}"?`)) {
-    return
-  }
-
+  // Заблокировать элементы управления для этой картинки
   processingId.value = imageId
+
   try {
+    // Отправить запрос на одобрение
     await adminStore.approveImage(imageId, folderId)
+
     // Удаляем выбор папки после успешного одобрения
     delete selectedFolders.value[imageId]
+
+    // При успешном ответе backend - показать уведомление
+    notificationsStore.addNotification({
+      message: 'Изображение одобрено и добавлено в общую библиотеку',
+      type: 'success',
+      duration: 5000
+    })
   } catch (err) {
     console.error('[MODERATION] Ошибка одобрения изображения:', err)
-    alert('Ошибка при одобрении изображения: ' + err.message)
+
+    // При ошибке - показать уведомление об ошибке (без технических подробностей)
+    notificationsStore.addNotification({
+      message: 'Не удалось одобрить изображение. Попробуйте позже',
+      type: 'error',
+      duration: 5000
+    })
   } finally {
+    // Разблокировать элементы управления
     processingId.value = null
   }
 }

@@ -509,6 +509,11 @@ export const useAdminStore = defineStore('admin', {
         // Удаляем изображение из списка ожидающих модерации
         this.pendingImages = this.pendingImages.filter(img => img.id !== imageId)
 
+        // Обновляем счётчик pending_count
+        if (this.pendingImagesTotal > 0) {
+          this.pendingImagesTotal--
+        }
+
         return data
       } catch (err) {
         console.error('[ADMIN] Ошибка одобрения изображения:', err)
@@ -545,6 +550,11 @@ export const useAdminStore = defineStore('admin', {
 
         // Удаляем изображение из списка ожидающих модерации
         this.pendingImages = this.pendingImages.filter(img => img.id !== imageId)
+
+        // Обновляем счётчик pending_count
+        if (this.pendingImagesTotal > 0) {
+          this.pendingImagesTotal--
+        }
 
         return data
       } catch (err) {
