@@ -624,14 +624,14 @@ export function registerImageRoutes(app) {
       // Построить полный путь к файлу на Яндекс.Диске
       const yandexPath = getUserFilePath(userId, personal_id, folder_name, filename);
 
-      // Удалить файл с Яндекс.Диска
+      // Удалить файл с Яндекс.Диска (если он существует)
       try {
         await deleteFile(yandexPath);
+        console.log(`✅ Файл удалён с Яндекс.Диска: ${yandexPath}`);
       } catch (err) {
         console.error('❌ Ошибка удаления файла с Яндекс.Диска:', err);
 
         // Если файл не найден на Яндекс.Диске (404), продолжаем удаление записи из БД
-        // В противном случае возвращаем ошибку
         if (!err.status || err.status !== 404) {
           const errorMessage = process.env.NODE_ENV === 'development'
             ? `Ошибка удаления файла с Яндекс.Диска: ${err.message}`
@@ -640,7 +640,7 @@ export function registerImageRoutes(app) {
           return reply.code(500).send({ error: errorMessage });
         }
 
-        console.warn('⚠️ Файл не найден на Яндекс.Диске, продолжаем удаление записи из БД');
+        console.warn('⚠️ Файл не найден на Яндекс.Диске (уже перемещён или удалён), продолжаем удаление записи из БД');
       }
 
       // Удалить запись из image_library
