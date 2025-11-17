@@ -283,8 +283,8 @@ async function publishFile(path) {
     const publishEndpoint = `/resources/publish?path=${encodeURIComponent(path)}`;
     await makeYandexDiskRequest(publishEndpoint, { method: 'PUT' }, path);
 
-    // Шаг 2: Получить метаданные ресурса с публичной ссылкой
-    const metaEndpoint = `/resources?path=${encodeURIComponent(path)}`;
+    // Шаг 2: Получить метаданные ресурса с публичной ссылкой и preview
+    const metaEndpoint = `/resources?path=${encodeURIComponent(path)}&fields=public_url,preview`;
     const metaData = await makeYandexDiskRequest(metaEndpoint, { method: 'GET' }, path);
 
     if (!metaData || !metaData.public_url) {
@@ -292,7 +292,13 @@ async function publishFile(path) {
     }
 
     console.log(`[Yandex Disk] Файл успешно опубликован: ${path}`);
-    return metaData.public_url;
+ 
+    // Возвращаем объект с обеими ссылками
+    return {
+      public_url: metaData.public_url,
+      preview_url: metaData.preview || metaData.public_url
+    };
+	return metaData.public_url;
   } catch (error) {
     throw new Error(`Не удалось опубликовать файл ${path}: ${error.message}`);
   }
