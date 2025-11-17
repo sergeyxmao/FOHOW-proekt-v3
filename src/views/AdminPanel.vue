@@ -38,6 +38,11 @@
       <div v-if="activeTab === 'moderation'" class="tab-content">
         <AdminImagesModeration />
       </div>
+
+      <!-- Вкладка: Общая библиотека -->
+      <div v-if="activeTab === 'library'" class="tab-content">
+        <AdminSharedLibrary />
+      </div>
     </div>
 
     <!-- Уведомление об ошибках -->
@@ -57,6 +62,7 @@ import AdminStats from '../components/Admin/AdminStats.vue'
 import AdminUsers from '../components/Admin/AdminUsers.vue'
 import AdminLogs from '../components/Admin/AdminLogs.vue'
 import AdminImagesModeration from '../components/Admin/AdminImagesModeration.vue'
+import AdminSharedLibrary from '../components/Admin/AdminSharedLibrary.vue'
 
 const router = useRouter()
 const adminStore = useAdminStore()
@@ -68,6 +74,7 @@ const tabs = [
   { id: 'stats', label: 'Статистика' },
   { id: 'users', label: 'Пользователи' },
   { id: 'moderation', label: 'Модерация изображений' },
+  { id: 'library', label: 'Общая библиотека' },
   { id: 'logs', label: 'Логи' }
 ]
 

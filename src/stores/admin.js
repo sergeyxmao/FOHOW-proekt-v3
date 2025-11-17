@@ -54,7 +54,10 @@ export const useAdminStore = defineStore('admin', {
     pendingImages: [],
     pendingImagesTotal: 0,
     sharedFolders: [],
+    sharedFoldersWithDetails: [],
+    currentFolderImages: [],
     isLoading: false,
+    isLoadingImages: false,
     error: null,
     pagination: {
       page: 1,
@@ -599,6 +602,265 @@ export const useAdminStore = defineStore('admin', {
         return data
       } catch (err) {
         console.error('[ADMIN] Ошибка отклонения изображения:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * Получить список папок общей библиотеки с количеством изображений
+     * Использует GET /api/admin/shared-folders
+     */
+    async fetchSharedFoldersWithDetails() {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/shared-folders`, {
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          }
+        })
+
+        if (!response.ok) {
+          await handleAdminErrorResponse(response, 'Ошибка загрузки папок общей библиотеки')
+        }
+
+        const data = await response.json()
+        this.sharedFoldersWithDetails = data.folders || []
+
+        return data
+      } catch (err) {
+        console.error('[ADMIN] Ошибка загрузки папок:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * Создать новую папку в общей библиотеке
+     * @param {string} name - Название папки
+     */
+    async createSharedFolder(name) {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/shared-folders`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name })
+        })
+
+        if (!response.ok) {
+          await handleAdminErrorResponse(response, 'Ошибка создания папки')
+        }
+
+        const newFolder = await response.json()
+
+        // Добавляем новую папку в список
+        this.sharedFoldersWithDetails.push(newFolder)
+
+        return newFolder
+      } catch (err) {
+        console.error('[ADMIN] Ошибка создания папки:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * Получить изображения из конкретной папки
+     * @param {number} folderId - ID папки
+     */
+    async fetchFolderImages(folderId) {
+      this.isLoadingImages = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/images/shared`, {
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          }
+        })
+
+        if (!response.ok) {
+          await handleAdminErrorResponse(response, 'Ошибка загрузки изображений')
+        }
+
+        const data = await response.json()
+
+        // Находим нужную папку и извлекаем её изображения
+        const folder = (data.folders || []).find(f => f.id === folderId)
+        this.currentFolderImages = folder ? (folder.images || []) : []
+
+        return this.currentFolderImages
+      } catch (err) {
+        console.error('[ADMIN] Ошибка загрузки изображений папки:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoadingImages = false
+      }
+    },
+
+    /**
+     * Загрузить изображение в общую библиотеку
+     * @param {File} file - Файл изображения
+     * @param {number} sharedFolderId - ID папки
+     * @param {number} width - Ширина изображения
+     * @param {number} height - Высота изображения
+     */
+    async uploadSharedImage(file, sharedFolderId, width, height) {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('shared_folder_id', sharedFolderId.toString())
+        if (width) formData.append('width', width.toString())
+        if (height) formData.append('height', height.toString())
+
+        const response = await fetch(`${API_URL}/admin/images/upload-shared`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          },
+          body: formData
+        })
+
+        if (!response.ok) {
+          await handleAdminErrorResponse(response, 'Ошибка загрузки изображения')
+        }
+
+        const newImage = await response.json()
+
+        // Добавляем новое изображение в список текущей папки, если она открыта
+        if (this.currentFolderImages.length >= 0) {
+          this.currentFolderImages.push(newImage)
+        }
+
+        // Обновляем счётчик изображений в папке
+        const folderIndex = this.sharedFoldersWithDetails.findIndex(f => f.id === sharedFolderId)
+        if (folderIndex !== -1) {
+          this.sharedFoldersWithDetails[folderIndex].images_count =
+            (this.sharedFoldersWithDetails[folderIndex].images_count || 0) + 1
+        }
+
+        return newImage
+      } catch (err) {
+        console.error('[ADMIN] Ошибка загрузки изображения:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * Переместить изображение в другую папку
+     * @param {number} imageId - ID изображения
+     * @param {number} newFolderId - ID новой папки
+     * @param {number} currentFolderId - ID текущей папки (для обновления списка)
+     */
+    async moveImageToFolder(imageId, newFolderId, currentFolderId) {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/images/${imageId}/move-to-folder`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ shared_folder_id: newFolderId })
+        })
+
+        if (!response.ok) {
+          await handleAdminErrorResponse(response, 'Ошибка перемещения изображения')
+        }
+
+        const data = await response.json()
+
+        // Если переместили в другую папку, удаляем из текущего списка
+        if (newFolderId !== currentFolderId) {
+          this.currentFolderImages = this.currentFolderImages.filter(img => img.id !== imageId)
+
+          // Обновляем счётчики в папках
+          const oldFolderIndex = this.sharedFoldersWithDetails.findIndex(f => f.id === currentFolderId)
+          if (oldFolderIndex !== -1 && this.sharedFoldersWithDetails[oldFolderIndex].images_count > 0) {
+            this.sharedFoldersWithDetails[oldFolderIndex].images_count--
+          }
+
+          const newFolderIndex = this.sharedFoldersWithDetails.findIndex(f => f.id === newFolderId)
+          if (newFolderIndex !== -1) {
+            this.sharedFoldersWithDetails[newFolderIndex].images_count =
+              (this.sharedFoldersWithDetails[newFolderIndex].images_count || 0) + 1
+          }
+        }
+
+        return data
+      } catch (err) {
+        console.error('[ADMIN] Ошибка перемещения изображения:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * Удалить изображение из общей библиотеки
+     * @param {number} imageId - ID изображения
+     * @param {number} folderId - ID папки (для обновления списка)
+     */
+    async deleteSharedImage(imageId, folderId) {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/images/${imageId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          }
+        })
+
+        if (!response.ok && response.status !== 204) {
+          await handleAdminErrorResponse(response, 'Ошибка удаления изображения')
+        }
+
+        // Удаляем изображение из списка
+        this.currentFolderImages = this.currentFolderImages.filter(img => img.id !== imageId)
+
+        // Обновляем счётчик изображений в папке
+        if (folderId) {
+          const folderIndex = this.sharedFoldersWithDetails.findIndex(f => f.id === folderId)
+          if (folderIndex !== -1 && this.sharedFoldersWithDetails[folderIndex].images_count > 0) {
+            this.sharedFoldersWithDetails[folderIndex].images_count--
+          }
+        }
+
+        return { success: true }
+      } catch (err) {
+        console.error('[ADMIN] Ошибка удаления изображения:', err)
         this.error = err.message
         throw err
       } finally {
