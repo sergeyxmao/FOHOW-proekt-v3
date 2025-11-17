@@ -59,6 +59,17 @@ const handleShareRequest = (e) => {
 const canShareRequest = computed(() => {
   return props.isMyLibrary && !props.image.is_shared && !props.image.share_requested_at
 })
+
+// Обработка ошибок загрузки изображения
+const handleImageError = (e) => {
+  // Если preview_url не загрузился, пробуем загрузить public_url
+  if (e.target.src === props.image.preview_url && props.image.public_url) {
+    e.target.src = props.image.public_url
+  } else {
+    // Если оба URL не загрузились, показываем placeholder
+    console.warn('Failed to load image:', props.image.original_name)
+  }
+}
 </script>
 
 <template>
@@ -73,10 +84,11 @@ const canShareRequest = computed(() => {
     <!-- Миниатюра -->
     <div class="image-card__thumbnail">
       <img
-        :src="image.public_url"
+        :src="image.preview_url || image.public_url"
         :alt="image.original_name"
         class="image-card__img"
         loading="lazy"
+        @error="handleImageError"
       />
 
       <!-- Индикатор статуса -->
