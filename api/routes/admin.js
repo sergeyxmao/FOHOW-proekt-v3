@@ -1076,7 +1076,7 @@ export function registerAdminRoutes(app) {
 
       const updatedImage = updateResult.rows[0];
 
-      console.log(`[ADMIN] ✅ Изображение успешно одобрено: image_id=${imageId}, folder=${sharedFolderName}`);
+      console.log(`[ADMIN] ✅ Изображение успешно одобрено: image_id=${imageId}, folder=${folderNameClean}`);
 
       // Возвращаем успешный ответ
       return reply.code(200).send(updatedImage);
