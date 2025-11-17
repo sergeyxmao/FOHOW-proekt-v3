@@ -37,7 +37,6 @@ import { checkAndAlertCardLimit } from './utils/limitsCheck'
 import NotesSidePanel from './components/Panels/NotesSidePanel.vue'
 import CommentsSidePanel from './components/Panels/CommentsSidePanel.vue'
 import StickerMessagesPanel from './components/Panels/StickerMessagesPanel.vue'
-import ImageBrowserPanel from './components/Panels/ImageBrowserPanel.vue'
 import ImagesPanel from './components/Panels/ImagesPanel.vue'
 import TheNotifications from './components/TheNotifications.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
@@ -73,7 +72,7 @@ const { isAuthenticated } = storeToRefs(authStore)
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMobileMode } = storeToRefs(mobileStore)
 const { headerColor, headerColorIndex } = storeToRefs(viewSettingsStore)
-const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen, isImageBrowserOpen, isImagesOpen } = storeToRefs(sidePanelsStore)
+const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen, isImagesOpen } = storeToRefs(sidePanelsStore)
 
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
@@ -225,51 +224,6 @@ function getViewportCenter() {
     x: Math.max(0, Math.round(canvasCenterX)),
     y: Math.max(0, Math.round(canvasCenterY))
   }
-}
-
-/**
- * Обработчик добавления изображения на доску
- * @param {Object} fileData - данные файла из FileBrowser
- * @param {string} fileData.name - имя файла
- * @param {string} fileData.dataUrl - base64 data URL изображения
- * @param {number} fileData.width - оригинальная ширина изображения
- * @param {number} fileData.height - оригинальная высота изображения
- */
-function handleAddImage(fileData) {
-  console.log('🖼️ Добавление изображения на доску:', fileData.name)
-
-  // Получаем центр видимой области
-  const center = getViewportCenter()
-
-  // Вычисляем размеры изображения для отображения
-  const displaySize = imagesStore.calculateDisplaySize(
-    fileData.width,
-    fileData.height,
-    500
-  )
-
-  // Позиционируем изображение так, чтобы его центр был в центре viewport
-  const x = center.x - displaySize.width / 2
-  const y = center.y - displaySize.height / 2
-
-  // Добавляем изображение через store
-  const newImage = imagesStore.addImage({
-    name: fileData.name,
-    dataUrl: fileData.dataUrl,
-    width: fileData.width,
-    height: fileData.height,
-    x: Math.max(0, Math.round(x)),
-    y: Math.max(0, Math.round(y))
-  })
-
-  console.log('✅ Изображение добавлено:', newImage.id)
-
-  // Показываем toast-уведомление об успешном добавлении
-  notificationsStore.addNotification({
-    message: 'Изображение добавлено',
-    type: 'success',
-    duration: 3000
-  })
 }
 
 async function handleNewStructure(shouldSave) {
@@ -1191,15 +1145,6 @@ onBeforeUnmount(() => {
         v-if="isStickerMessagesOpen && !isMobileMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
-      />
-    </transition>
-
-    <transition name="side-panel-slide">
-      <ImageBrowserPanel
-        v-if="isImageBrowserOpen && !isMobileMode"
-        class="no-print"
-        :is-modern-theme="isModernTheme"
-        @add-image="handleAddImage"
       />
     </transition>
 
