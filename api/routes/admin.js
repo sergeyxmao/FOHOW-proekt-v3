@@ -581,9 +581,19 @@ export function registerAdminRoutes(app) {
       console.log('[ADMIN] Запрос списка папок общей библиотеки, admin_id=' + req.user.id);
 
       const result = await pool.query(
-        `SELECT id, name, created_at
-         FROM shared_folders
-         ORDER BY name ASC`
+        `SELECT
+          sf.id,
+          sf.name,
+          sf.created_by,
+          sf.created_at,
+          (
+            SELECT COUNT(*)
+            FROM image_library il
+            WHERE il.is_shared = TRUE
+              AND il.shared_folder_id = sf.id
+          ) AS images_count
+         FROM shared_folders sf
+         ORDER BY sf.name ASC`
       );
 
       console.log(`[ADMIN] Найдено папок: ${result.rows.length}`);
@@ -595,6 +605,273 @@ export function registerAdminRoutes(app) {
     } catch (err) {
       console.error('[ADMIN] Ошибка получения списка папок:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  /**
+   * Создать новую папку в общей библиотеке
+   * POST /api/admin/shared-folders
+   */
+  app.post('/api/admin/shared-folders', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      const adminId = req.user.id;
+      const { name } = req.body;
+
+      console.log(`[ADMIN] Запрос на создание папки: name="${name}", admin_id=${adminId}`);
+
+      // Валидация: обрезаем пробелы
+      const folderName = name ? name.trim() : '';
+
+      // Проверка на пустое имя
+      if (!folderName) {
+        return reply.code(400).send({
+          error: 'Название папки не может быть пустым'
+        });
+      }
+
+      // Проверка на существование папки с таким именем
+      const existingFolder = await pool.query(
+        'SELECT id FROM shared_folders WHERE name = $1',
+        [folderName]
+      );
+
+      if (existingFolder.rows.length > 0) {
+        return reply.code(400).send({
+          error: 'Папка с таким названием уже существует'
+        });
+      }
+
+      // Создание папки
+      const result = await pool.query(
+        `INSERT INTO shared_folders (name, created_by, created_at)
+         VALUES ($1, $2, CURRENT_TIMESTAMP)
+         RETURNING id, name, created_by, created_at`,
+        [folderName, adminId]
+      );
+
+      const newFolder = result.rows[0];
+
+      console.log(`[ADMIN] ✅ Папка успешно создана: id=${newFolder.id}, name="${newFolder.name}"`);
+
+      // Возвращаем папку с images_count = 0
+      return reply.code(201).send({
+        id: newFolder.id,
+        name: newFolder.name,
+        images_count: 0,
+        created_at: newFolder.created_at,
+        created_by: newFolder.created_by
+      });
+
+    } catch (err) {
+      console.error('[ADMIN] Ошибка создания папки:', err);
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
+
+  /**
+   * Переименовать папку в общей библиотеке
+   * PATCH /api/admin/shared-folders/:id
+   */
+  app.patch('/api/admin/shared-folders/:id', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    const client = await pool.connect();
+
+    try {
+      const adminId = req.user.id;
+      const folderId = parseInt(req.params.id, 10);
+      const { name } = req.body;
+
+      console.log(`[ADMIN] Запрос на переименование папки: folder_id=${folderId}, new_name="${name}", admin_id=${adminId}`);
+
+      // Валидация ID папки
+      if (!Number.isInteger(folderId) || folderId <= 0) {
+        return reply.code(400).send({
+          error: 'Некорректный ID папки'
+        });
+      }
+
+      // Валидация: обрезаем пробелы
+      const newFolderName = name ? name.trim() : '';
+
+      // Проверка на пустое имя
+      if (!newFolderName) {
+        return reply.code(400).send({
+          error: 'Название папки не может быть пустым'
+        });
+      }
+
+      // Начинаем транзакцию
+      await client.query('BEGIN');
+
+      // Найти папку по id
+      const folderResult = await client.query(
+        'SELECT id, name FROM shared_folders WHERE id = $1',
+        [folderId]
+      );
+
+      // Если папка не найдена
+      if (folderResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return reply.code(404).send({
+          error: 'Папка не найдена'
+        });
+      }
+
+      const folder = folderResult.rows[0];
+      const oldFolderName = folder.name;
+
+      // Если имя не изменилось, просто возвращаем текущие данные
+      if (oldFolderName === newFolderName) {
+        await client.query('ROLLBACK');
+
+        // Получаем количество картинок
+        const countResult = await pool.query(
+          `SELECT COUNT(*) as images_count
+           FROM image_library
+           WHERE is_shared = TRUE AND shared_folder_id = $1`,
+          [folderId]
+        );
+
+        const imagesCount = parseInt(countResult.rows[0].images_count, 10);
+
+        return reply.send({
+          id: folder.id,
+          name: folder.name,
+          images_count: imagesCount,
+          created_at: folder.created_at,
+          created_by: folder.created_by
+        });
+      }
+
+      // Проверка на существование папки с новым именем
+      const duplicateFolder = await client.query(
+        'SELECT id FROM shared_folders WHERE name = $1 AND id != $2',
+        [newFolderName, folderId]
+      );
+
+      if (duplicateFolder.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return reply.code(400).send({
+          error: 'Папка с таким названием уже существует'
+        });
+      }
+
+      // Обновить имя папки в БД
+      await client.query(
+        'UPDATE shared_folders SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        [newFolderName, folderId]
+      );
+
+      console.log(`[ADMIN] Имя папки обновлено в БД: "${oldFolderName}" -> "${newFolderName}"`);
+
+      // Получить список всех файлов в этой папке
+      const filesResult = await client.query(
+        `SELECT id, filename, yandex_path
+         FROM image_library
+         WHERE is_shared = TRUE AND shared_folder_id = $1`,
+        [folderId]
+      );
+
+      const files = filesResult.rows;
+      console.log(`[ADMIN] Найдено файлов для перемещения: ${files.length}`);
+
+      // Переместить каждый файл на Яндекс.Диске
+      for (const file of files) {
+        const oldPath = file.yandex_path;
+        const oldFolderPath = getSharedFolderPath(oldFolderName);
+        const newFolderPath = getSharedFolderPath(newFolderName);
+        const newPath = `${newFolderPath}/${file.filename}`;
+
+        console.log(`[ADMIN] Перемещение файла: ${oldPath} -> ${newPath}`);
+
+        try {
+          // Убедиться, что новая папка существует
+          await ensureFolderExists(newFolderPath);
+
+          // Переместить файл
+          await moveFile(oldPath, newPath);
+
+          // Опубликовать файл заново и получить новую публичную ссылку
+          const newPublicUrl = await publishFile(newPath);
+
+          // Обновить запись в БД
+          await client.query(
+            `UPDATE image_library
+             SET yandex_path = $1, public_url = $2
+             WHERE id = $3`,
+            [newPath, newPublicUrl, file.id]
+          );
+
+          console.log(`[ADMIN] ✅ Файл успешно перемещён: ${file.filename}`);
+
+        } catch (moveError) {
+          console.error(`[ADMIN] Ошибка перемещения файла ${file.filename}:`, moveError);
+          await client.query('ROLLBACK');
+
+          return reply.code(500).send({
+            error: `Ошибка при перемещении файлов на Яндекс.Диске: ${moveError.message}`
+          });
+        }
+      }
+
+      // Коммитим транзакцию
+      await client.query('COMMIT');
+
+      console.log(`[ADMIN] ✅ Папка успешно переименована: "${oldFolderName}" -> "${newFolderName}"`);
+
+      // Получаем обновленные данные папки
+      const updatedFolderResult = await pool.query(
+        `SELECT
+          sf.id,
+          sf.name,
+          sf.created_by,
+          sf.created_at,
+          (
+            SELECT COUNT(*)
+            FROM image_library il
+            WHERE il.is_shared = TRUE
+              AND il.shared_folder_id = sf.id
+          ) AS images_count
+         FROM shared_folders sf
+         WHERE sf.id = $1`,
+        [folderId]
+      );
+
+      const updatedFolder = updatedFolderResult.rows[0];
+
+      return reply.send({
+        id: updatedFolder.id,
+        name: updatedFolder.name,
+        images_count: parseInt(updatedFolder.images_count, 10),
+        created_at: updatedFolder.created_at,
+        created_by: updatedFolder.created_by
+      });
+
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('[ADMIN] Ошибка переименования папки:', err);
+
+      // Логируем дополнительную информацию для ошибок Яндекс.Диска
+      if (err.status) {
+        console.error(`[ADMIN] Yandex.Disk API вернул статус: ${err.status}`);
+      }
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+
+    } finally {
+      client.release();
     }
   });
 
