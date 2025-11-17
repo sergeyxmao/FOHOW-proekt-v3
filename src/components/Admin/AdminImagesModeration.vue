@@ -33,14 +33,14 @@
 
     <!-- Пустое состояние -->
     <div v-else-if="!adminStore.pendingImages || adminStore.pendingImages.length === 0" class="empty-state">
-      <p>Нет изображений, ожидающих модерации</p>
+      <p>Сейчас нет изображений на модерации</p>
     </div>
 
     <!-- Список изображений -->
     <div v-else class="images-grid">
       <div v-for="image in adminStore.pendingImages" :key="image.id" class="image-card">
         <!-- Превью изображения -->
-        <div class="image-preview">
+        <div class="image-preview" @click="openImagePreview(image)" title="Нажмите для увеличения">
           <img :src="getImageUrl(image.previewUrl)" :alt="image.original_name" />
         </div>
 
@@ -113,6 +113,43 @@
         </div>
       </div>
     </div>
+
+    <!-- Модальное окно для просмотра изображения -->
+    <div v-if="selectedImageForPreview" class="modal-overlay" @click="closeImagePreview">
+      <div class="modal-content" @click.stop>
+        <button class="modal-close" @click="closeImagePreview" title="Закрыть">×</button>
+
+        <div class="modal-image-wrapper">
+          <img
+            :src="getImageUrl(selectedImageForPreview.public_url)"
+            :alt="selectedImageForPreview.original_name"
+            class="modal-image"
+          />
+        </div>
+
+        <div class="modal-info">
+          <h3 class="modal-title">{{ selectedImageForPreview.original_name }}</h3>
+          <div class="modal-details">
+            <p v-if="selectedImageForPreview.file_size">
+              <strong>Размер:</strong> {{ formatFileSize(selectedImageForPreview.file_size) }}
+            </p>
+            <p v-if="selectedImageForPreview.user_full_name">
+              <strong>Автор:</strong> {{ selectedImageForPreview.user_full_name }}
+              <span v-if="selectedImageForPreview.user_personal_id"> ({{ selectedImageForPreview.user_personal_id }})</span>
+            </p>
+            <p v-else>
+              <strong>Автор:</strong> Неизвестен
+            </p>
+            <p>
+              <strong>Дата заявки:</strong> {{ formatDate(selectedImageForPreview.share_requested_at) }}
+            </p>
+            <p v-if="selectedImageForPreview.width && selectedImageForPreview.height">
+              <strong>Разрешение:</strong> {{ selectedImageForPreview.width }}x{{ selectedImageForPreview.height }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -125,6 +162,7 @@ const adminStore = useAdminStore()
 const notificationsStore = useNotificationsStore()
 const processingId = ref(null)
 const selectedFolders = ref({})
+const selectedImageForPreview = ref(null)
 
 /**
  * Вычисляемое свойство для количества изображений в очереди
@@ -288,6 +326,20 @@ function formatFileSize(bytes) {
   }
   const mb = kb / 1024
   return `${mb.toFixed(2)} MB`
+}
+
+/**
+ * Открыть модальное окно с изображением
+ */
+function openImagePreview(image) {
+  selectedImageForPreview.value = image
+}
+
+/**
+ * Закрыть модальное окно с изображением
+ */
+function closeImagePreview() {
+  selectedImageForPreview.value = null
 }
 
 // Загрузить изображения и папки при монтировании
@@ -473,6 +525,12 @@ onMounted(async () => {
   overflow: hidden;
   margin: 0 auto;
   border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.image-preview:hover {
+  opacity: 0.8;
 }
 
 .image-preview img {
@@ -605,5 +663,128 @@ onMounted(async () => {
   border-top: 3px solid #6c63ff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+
+/* Модальное окно */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+  z-index: 10;
+}
+
+.modal-close:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.modal-image-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  min-height: 400px;
+  max-height: 70vh;
+  padding: 20px;
+}
+
+.modal-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.modal-info {
+  padding: 25px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.modal-title {
+  margin: 0 0 15px 0;
+  font-size: 20px;
+  color: #333;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.modal-details {
+  font-size: 15px;
+  color: #666;
+}
+
+.modal-details p {
+  margin: 10px 0;
+  line-height: 1.6;
+}
+
+.modal-details strong {
+  color: #333;
+  font-weight: 600;
+}
+
+/* Адаптивность модального окна */
+@media (max-width: 768px) {
+  .modal-content {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+
+  .modal-image-wrapper {
+    min-height: 300px;
+    max-height: 60vh;
+  }
+
+  .modal-image {
+    max-height: 60vh;
+  }
+
+  .modal-info {
+    padding: 20px;
+  }
+
+  .modal-title {
+    font-size: 18px;
+  }
+
+  .modal-details {
+    font-size: 14px;
+  }
 }
 </style>
