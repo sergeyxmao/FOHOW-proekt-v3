@@ -1345,5 +1345,164 @@ export function registerAdminRoutes(app) {
     }
   });
 
+  /**
+   * Переместить общее изображение в другую папку
+   * POST /api/admin/images/:id/move-to-folder
+   */
+  app.post('/api/admin/images/:id/move-to-folder', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      const adminId = req.user.id;
+      const imageId = parseInt(req.params.id, 10);
+      const { shared_folder_id } = req.body;
+
+      console.log(`[ADMIN] Запрос на перемещение изображения: image_id=${imageId}, new_folder_id=${shared_folder_id}, admin_id=${adminId}`);
+
+      // Валидация ID изображения
+      if (!Number.isInteger(imageId) || imageId <= 0) {
+        return reply.code(400).send({
+          error: 'Некорректный ID изображения'
+        });
+      }
+
+      // Валидация shared_folder_id
+      if (!shared_folder_id || !Number.isInteger(shared_folder_id) || shared_folder_id <= 0) {
+        return reply.code(400).send({
+          error: 'Поле shared_folder_id обязательно и должно быть положительным целым числом'
+        });
+      }
+
+      // Найти изображение в image_library по id и is_shared = TRUE
+      const imageResult = await pool.query(
+        `SELECT
+          il.id,
+          il.filename,
+          il.yandex_path,
+          il.shared_folder_id,
+          il.public_url
+         FROM image_library il
+         WHERE il.id = $1 AND il.is_shared = TRUE`,
+        [imageId]
+      );
+
+      // Если изображение не найдено или не является общим
+      if (imageResult.rows.length === 0) {
+        console.log(`[ADMIN] Общее изображение не найдено: image_id=${imageId}`);
+        return reply.code(404).send({
+          error: 'Общее изображение не найдено'
+        });
+      }
+
+      const image = imageResult.rows[0];
+      const { filename, yandex_path, shared_folder_id: currentFolderId } = image;
+
+      // Проверяем, что изображение не перемещается в ту же папку
+      if (currentFolderId === shared_folder_id) {
+        return reply.code(400).send({
+          error: 'Изображение уже находится в этой папке'
+        });
+      }
+
+      // Получить старое имя папки (по текущему shared_folder_id)
+      const oldFolderResult = await pool.query(
+        'SELECT id, name FROM shared_folders WHERE id = $1',
+        [currentFolderId]
+      );
+
+      if (oldFolderResult.rows.length === 0) {
+        console.error(`[ADMIN] Старая папка не найдена: folder_id=${currentFolderId}`);
+        return reply.code(500).send({
+          error: 'Текущая папка изображения не найдена в базе данных'
+        });
+      }
+
+      const oldFolderName = oldFolderResult.rows[0].name;
+
+      // Найти целевую папку по shared_folder_id
+      const newFolderResult = await pool.query(
+        'SELECT id, name FROM shared_folders WHERE id = $1',
+        [shared_folder_id]
+      );
+
+      // Если целевая папка не найдена
+      if (newFolderResult.rows.length === 0) {
+        console.log(`[ADMIN] Целевая папка не найдена: folder_id=${shared_folder_id}`);
+        return reply.code(400).send({
+          error: 'Указанная папка не найдена'
+        });
+      }
+
+      const newFolderName = newFolderResult.rows[0].name;
+
+      console.log(`[ADMIN] Перемещение изображения из папки "${oldFolderName}" в "${newFolderName}"`);
+
+      // Проверяем наличие yandex_path
+      if (!yandex_path) {
+        console.error(`[ADMIN] Отсутствует yandex_path для изображения: image_id=${imageId}`);
+        return reply.code(500).send({
+          error: 'Не удалось определить текущий путь файла'
+        });
+      }
+
+      // Вычислить целевой путь файла в новой папке
+      const newFolderPath = getSharedFolderPath(newFolderName);
+      const newFilePath = `${newFolderPath}/${filename}`;
+
+      console.log(`[ADMIN] Перемещение файла: ${yandex_path} -> ${newFilePath}`);
+
+      // Убедиться, что новая папка существует
+      await ensureFolderExists(newFolderPath);
+
+      // Переместить файл на Яндекс.Диске
+      await moveFile(yandex_path, newFilePath);
+
+      console.log(`[ADMIN] Файл успешно перемещён на Яндекс.Диске`);
+
+      // Обновить публичный URL (вызов publishFile для нового пути)
+      const newPublicUrl = await publishFile(newFilePath);
+
+      console.log(`[ADMIN] Файл опубликован, новый public_url: ${newPublicUrl}`);
+
+      // Обновить запись в image_library
+      const updateResult = await pool.query(
+        `UPDATE image_library
+         SET
+           yandex_path = $1,
+           public_url = $2,
+           shared_folder_id = $3,
+           updated_at = CURRENT_TIMESTAMP
+         WHERE id = $4
+         RETURNING
+           id,
+           shared_folder_id,
+           yandex_path,
+           public_url`,
+        [newFilePath, newPublicUrl, shared_folder_id, imageId]
+      );
+
+      const updatedImage = updateResult.rows[0];
+
+      console.log(`[ADMIN] ✅ Изображение успешно перемещено: image_id=${imageId}, old_folder="${oldFolderName}", new_folder="${newFolderName}"`);
+
+      // Возвращаем успешный ответ
+      return reply.code(200).send(updatedImage);
+
+    } catch (err) {
+      console.error('[ADMIN] Ошибка перемещения изображения:', err);
+
+      // Логируем дополнительную информацию для ошибок Яндекс.Диска
+      if (err.status) {
+        console.error(`[ADMIN] Yandex.Disk API вернул статус: ${err.status}`);
+      }
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
+
   console.log('✅ Маршруты админ-панели зарегистрированы');
 }
