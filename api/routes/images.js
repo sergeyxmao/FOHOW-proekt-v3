@@ -97,6 +97,7 @@ export function registerImageRoutes(app) {
             filename,
             folder_name,
             public_url,
+            preview_url,            
             width,
             height,
             file_size,
@@ -116,6 +117,7 @@ export function registerImageRoutes(app) {
             filename,
             folder_name,
             public_url,
+            preview_url,            
             width,
             height,
             file_size,
@@ -453,14 +455,16 @@ export function registerImageRoutes(app) {
 
       // Построить полный путь к файлу
       const filePath = getUserFilePath(userId, personalId, folderNameForDB, uniqueFilename);
+      const yandexPath = filePath;
 
       // Загрузить файл на Яндекс.Диск
       await uploadFile(filePath, buffer, mimeType);
 
       // Опубликовать файл и получить публичную и preview-ссылки
-      const { public_url: originalPublicUrl, preview_url } = await publishFile(filePath);
-      const publicUrl = preview_url || originalPublicUrl;
-      
+      const publishResult = await publishFile(yandexPath);
+      const publicUrl = publishResult.public_url;
+      const previewUrl = publishResult.preview_url || publishResult.public_url;
+
       // Сохранить запись в БД
       const insertResult = await pool.query(
         `INSERT INTO image_library (
@@ -469,18 +473,20 @@ export function registerImageRoutes(app) {
           filename,
           folder_name,
           public_url,
+          preview_url,          
           width,
           height,
           file_size,
           yandex_path,
           moderation_status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING
           id,
           original_name,
           filename,
           folder_name,
           public_url,
+          preview_url,       
           width,
           height,
           file_size,
@@ -492,17 +498,19 @@ export function registerImageRoutes(app) {
           uniqueFilename,
           folderNameForDB,
           publicUrl,
+          previewUrl,        
           width,
           height,
           fileSize,
-          filePath,
-          'approved'
+          yandexPath,
+          'none'
         ]
       );
 
       const newImage = {
         ...insertResult.rows[0],
-        public_url: publicUrl
+        public_url: publicUrl,
+        preview_url: previewUrl
       };
       
       // Возвращаем успешный ответ
