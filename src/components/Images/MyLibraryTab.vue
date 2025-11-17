@@ -247,7 +247,7 @@ function handleImageClick(image) {
   // Это будет обработано в компоненте CanvasBoard при клике на холст
   stickersStore.pendingImageData = {
     type: 'image',
-    url: image.public_url,
+    url: image.preview_url || image.public_url,
     width: image.width || 200,
     height: image.height || 150
   }

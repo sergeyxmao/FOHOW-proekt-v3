@@ -41,7 +41,7 @@
       <div v-for="image in adminStore.pendingImages" :key="image.id" class="image-card">
         <!-- Превью изображения -->
         <div class="image-preview" @click="openImagePreview(image)" title="Нажмите для увеличения">
-          <img :src="getImageUrl(image.previewUrl)" :alt="image.original_name" />
+          <img :src="getImageUrl(image.preview_url || image.public_url)" :alt="image.original_name" />
         </div>
 
         <!-- Информация об изображении -->
@@ -121,7 +121,7 @@
 
         <div class="modal-image-wrapper">
           <img
-            :src="getImageUrl(selectedImageForPreview.public_url)"
+            :src="getImageUrl(selectedImageForPreview.preview_url || selectedImageForPreview.public_url)"
             :alt="selectedImageForPreview.original_name"
             class="modal-image"
           />

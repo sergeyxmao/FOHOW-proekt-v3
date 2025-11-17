@@ -122,7 +122,7 @@ function handleImageClick(image) {
   // Сохраняем данные изображения для последующего создания стикера
   stickersStore.pendingImageData = {
     type: 'image',
-    url: image.public_url,
+    url: image.preview_url || image.public_url,
     width: image.width || 200,
     height: image.height || 150
   }
