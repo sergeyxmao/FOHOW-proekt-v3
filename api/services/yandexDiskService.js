@@ -63,13 +63,39 @@ async function makeYandexDiskRequest(endpoint, options = {}, logContext = '') {
     // Если ответ не успешный, логируем и выбрасываем ошибку
     if (!response.ok) {
       console.error(`[Yandex Disk API Error] Статус: ${response.status}, Путь: ${logContext}`);
+      console.error(`[Yandex Disk API Error] URL: ${url}`);
+      console.error(`[Yandex Disk API Error] Метод: ${options.method || 'GET'}`);
       console.error(`[Yandex Disk API Error] Тело ответа:`, responseData);
 
-      const error = new Error(
-        responseData?.message ||
-        responseData?.description ||
-        `Ошибка API Яндекс.Диска: ${response.status} ${response.statusText}`
-      );
+      // Специфичные сообщения для различных статусов
+      let errorMessage = responseData?.message || responseData?.description;
+
+      if (!errorMessage) {
+        switch (response.status) {
+          case 401:
+            errorMessage = 'Ошибка авторизации Яндекс.Диска. Проверьте YANDEX_DISK_TOKEN.';
+            break;
+          case 403:
+            errorMessage = 'Доступ запрещён. Проверьте права токена Яндекс.Диска.';
+            break;
+          case 404:
+            errorMessage = `Ресурс не найден: ${logContext}`;
+            break;
+          case 507:
+            errorMessage = 'Недостаточно места на Яндекс.Диске.';
+            break;
+          case 413:
+            errorMessage = 'Файл слишком большой.';
+            break;
+          case 429:
+            errorMessage = 'Превышен лимит запросов к API Яндекс.Диска.';
+            break;
+          default:
+            errorMessage = `Ошибка API Яндекс.Диска: ${response.status} ${response.statusText}`;
+        }
+      }
+
+      const error = new Error(errorMessage);
       error.status = response.status;
       error.responseData = responseData;
       throw error;

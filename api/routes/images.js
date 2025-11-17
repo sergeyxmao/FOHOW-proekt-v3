@@ -507,16 +507,45 @@ export function registerImageRoutes(app) {
     } catch (err) {
       console.error('❌ Ошибка загрузки изображения:', err);
 
+      // Определяем более конкретное сообщение об ошибке
+      let errorMessage = 'Ошибка сервера. Попробуйте позже';
+      let statusCode = 500;
+
       // Логируем дополнительную информацию для ошибок Яндекс.Диска
       if (err.status) {
         console.error(`❌ Yandex.Disk API вернул статус: ${err.status}`);
+
+        // Предоставляем более понятные сообщения для различных ошибок API
+        if (err.status === 401) {
+          errorMessage = 'Ошибка авторизации на сервере хранилища. Обратитесь к администратору.';
+          console.error('❌ Токен Яндекс.Диска невалиден или истёк');
+        } else if (err.status === 403) {
+          errorMessage = 'Недостаточно прав доступа к хранилищу. Обратитесь к администратору.';
+          console.error('❌ Недостаточно прав доступа к Яндекс.Диску');
+        } else if (err.status === 507) {
+          errorMessage = 'Недостаточно места на сервере хранилища. Обратитесь к администратору.';
+          console.error('❌ Нет свободного места на Яндекс.Диске');
+        } else if (err.status === 413) {
+          errorMessage = 'Файл слишком большой для загрузки.';
+          statusCode = 413;
+        } else if (err.status === 429) {
+          errorMessage = 'Слишком много запросов. Попробуйте позже.';
+          statusCode = 429;
+        }
+      } else if (err.message && err.message.includes('fetch')) {
+        errorMessage = 'Ошибка соединения с сервером хранилища. Попробуйте позже.';
+        console.error('❌ Сетевая ошибка при обращении к Яндекс.Диску');
+      } else if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+        errorMessage = 'Не удалось подключиться к серверу хранилища. Попробуйте позже.';
+        console.error('❌ Ошибка сети:', err.code);
       }
 
-      const errorMessage = process.env.NODE_ENV === 'development'
-        ? `Ошибка сервера: ${err.message}`
-        : 'Ошибка сервера. Попробуйте позже';
+      // В режиме разработки показываем полное сообщение об ошибке
+      if (process.env.NODE_ENV === 'development') {
+        errorMessage = `Ошибка сервера: ${err.message}`;
+      }
 
-      return reply.code(500).send({ error: errorMessage });
+      return reply.code(statusCode).send({ error: errorMessage });
     }
   });
 
