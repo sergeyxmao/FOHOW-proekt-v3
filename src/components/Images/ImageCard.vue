@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { truncateFilename } from '../../utils/imageUtils'
 import { useImageProxy } from '../../composables/useImageProxy'
 
@@ -18,17 +18,24 @@ const emit = defineEmits(['click', 'delete', 'share-request'])
 
 // Используем composable для загрузки изображений с токеном
 const { getImageUrl } = useImageProxy()
-const imageUrl = ref('')
+const imageSrc = ref('')
 
 // Загружаем изображение при монтировании и при изменении ID
 const loadImage = async () => {
   if (props.image?.id) {
-    imageUrl.value = await getImageUrl(props.image.id)
+    imageSrc.value = await getImageUrl(props.image.id)
   }
 }
 
 onMounted(loadImage)
 watch(() => props.image?.id, loadImage)
+
+// Освобождаем blob URL при размонтировании компонента
+onBeforeUnmount(() => {
+  if (imageSrc.value && imageSrc.value.startsWith('blob:')) {
+    URL.revokeObjectURL(imageSrc.value)
+  }
+})
 
 // Вычисляем статус изображения
 const imageStatus = computed(() => {
@@ -88,11 +95,13 @@ const canShareRequest = computed(() => {
     <!-- Миниатюра -->
     <div class="image-card__thumbnail">
       <img
-        :src="imageUrl"
+        v-if="imageSrc"
+        :src="imageSrc"
         :alt="image.original_name"
         class="image-card__img"
         loading="lazy"
       />
+      <div v-else class="image-card__loading">Загрузка...</div>
 
       <!-- Индикатор статуса -->
       <div v-if="statusLabel" class="image-card__status-badge">
@@ -185,6 +194,16 @@ const canShareRequest = computed(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.image-card__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #94a3b8;
+  font-size: 13px;
 }
 
 .image-card__status-badge {
