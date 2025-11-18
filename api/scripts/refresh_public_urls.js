@@ -15,8 +15,8 @@ const pool = new Pool({
 const YANDEX_TOKEN = process.env.YANDEX_DISK_TOKEN;
 
 async function publishFile(path) {
-  // Получить метаданные файла (включая preview)
-  const metaUrl = `https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(path)}&preview_size=S&preview_crop=false`;
+  // Получить метаданные файла
+  const metaUrl = `https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(path)}`;
   
   const metaResponse = await fetch(metaUrl, {
     headers: {
@@ -53,18 +53,16 @@ async function publishFile(path) {
     });
     
     const newMeta = await newMetaResponse.json();
+    const publicKey = newMeta.public_key || newMeta.public_url;
+    
+    // Получить preview через публичную ссылку
+    const previewUrl = await getPreviewUrl(publicKey);
     
     return {
       public_url: newMeta.public_url,
-      preview_url: newMeta.preview || newMeta.public_url
+      preview_url: previewUrl
     };
   }
-  
-  return {
-    public_url: meta.public_url,
-    preview_url: meta.preview || meta.public_url
-  };
-}
 
 async function refreshAllUrls() {
   try {
