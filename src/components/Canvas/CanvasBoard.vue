@@ -146,7 +146,8 @@ const selectionRect = ref(null);
 let selectionStartPoint = null;
 let selectionBaseSelection = new Set();
 let suppressNextStageClick = false;
-
+let selectionOverlayBaseRect = null;
+let selectionDragInProgress = false;
 const noteWindowRefs = new Map();
 const ACTIVE_PV_FLASH_MS = 650;
 
@@ -2017,6 +2018,96 @@ const screenToCanvas = (clientX, clientY) => {
   
   return { x, y };
 };
+
+const startSelectionGroupDrag = (event) => {
+  if (event.button !== 0 || !hasAnySelection()) {
+    return false;
+  }
+
+  const cardsToDrag = cardsStore.selectedCardIds
+    .map(id => {
+      const card = findCardById(id);
+      if (!card) return null;
+      return {
+        id: card.id,
+        type: 'card',
+        startX: card.x,
+        startY: card.y
+      };
+    })
+    .filter(Boolean);
+
+  const stickersToDrag = stickersStore.selectedStickerIds
+    .map(id => {
+      const sticker = stickersStore.stickers.find(s => s.id === id);
+      if (!sticker) return null;
+      return {
+        id: sticker.id,
+        type: 'sticker',
+        startX: sticker.pos_x,
+        startY: sticker.pos_y
+      };
+    })
+    .filter(Boolean);
+
+  if (!cardsToDrag.length && !stickersToDrag.length) {
+    return false;
+  }
+
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+  const itemsToDrag = [...cardsToDrag, ...stickersToDrag];
+  const movingIds = new Set(itemsToDrag.map(item => item.id));
+  const primaryEntry = cardsToDrag[0] || null;
+
+  dragState.value = {
+    cards: cardsToDrag,
+    stickers: stickersToDrag,
+    images: [],
+    items: itemsToDrag,
+    startPointer: canvasPos,
+    hasMoved: false,
+    movingIds,
+    primaryCardId: primaryEntry ? primaryEntry.id : null,
+    primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
+    axisLock: null
+  };
+
+  resetActiveGuides();
+  captureSelectionOverlayBaseRect();
+  selectionDragInProgress = true;
+  suppressNextStageClick = true;
+  selectedConnectionIds.value = [];
+
+  const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent;
+
+  if (isPointerEvent) {
+    activeDragPointerId = event.pointerId;
+    dragPointerCaptureElement = event.target;
+    dragPointerCaptureElement?.setPointerCapture?.(activeDragPointerId);
+    window.addEventListener('pointermove', handleDrag, { passive: false });
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+  } else {
+    window.addEventListener('mousemove', handleDrag);
+    window.addEventListener('mouseup', endDrag);
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  return true;
+};
+
+const tryStartSelectionGroupDrag = (event) => {
+  if (!isSelectionMode.value || isSelecting.value) {
+    return false;
+  }
+
+  if (!hasAnySelection() || !isPointInsideSelectionOverlay(event.clientX, event.clientY)) {
+    return false;
+  }
+
+  return startSelectionGroupDrag(event);
+};  
 const updateStageSize = () => {
   if (!canvasContainerRef.value) {
     return;
@@ -2044,6 +2135,96 @@ const removeSelectionListeners = () => {
   window.removeEventListener('pointermove', handleSelectionPointerMove);
   window.removeEventListener('pointerup', handleSelectionPointerUp);
   window.removeEventListener('pointercancel', handleSelectionPointerCancel);
+};
+const hasAnySelection = () => (
+  cardsStore.selectedCardIds.length > 0 || stickersStore.selectedStickerIds.length > 0
+);
+
+const computeSelectionBounds = () => {
+  if (!canvasContainerRef.value) {
+    return null;
+  }
+
+  const selectors = ['.card.selected', '.sticker.sticker--selected'];
+  const elements = canvasContainerRef.value.querySelectorAll(selectors.join(', '));
+
+  if (elements.length === 0) {
+    return null;
+  }
+
+  let left = Infinity;
+  let top = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+
+  elements.forEach((element) => {
+    const rect = element.getBoundingClientRect();
+    left = Math.min(left, rect.left);
+    top = Math.min(top, rect.top);
+    right = Math.max(right, rect.right);
+    bottom = Math.max(bottom, rect.bottom);
+  });
+
+  return {
+    left,
+    top,
+    width: Math.max(0, right - left),
+    height: Math.max(0, bottom - top),
+    right,
+    bottom
+  };
+};
+
+const updateSelectionOverlayRect = () => {
+  if (!isSelectionMode.value || isSelecting.value) {
+    if (!isSelecting.value) {
+      selectionRect.value = null;
+    }
+    return;
+  }
+
+  if (!hasAnySelection()) {
+    selectionRect.value = null;
+    return;
+  }
+
+  const immediateBounds = computeSelectionBounds();
+  if (immediateBounds) {
+    selectionRect.value = immediateBounds;
+    return;
+  }
+
+  nextTick(() => {
+    if (!isSelectionMode.value || isSelecting.value) {
+      return;
+    }
+
+    const bounds = computeSelectionBounds();
+    if (bounds) {
+      selectionRect.value = bounds;
+    } else {
+      selectionRect.value = null;
+    }
+  });
+};
+
+const captureSelectionOverlayBaseRect = () => {
+  if (!isSelectionMode.value || isSelecting.value || !hasAnySelection()) {
+    selectionOverlayBaseRect = null;
+    return;
+  }
+
+  const bounds = computeSelectionBounds();
+  selectionOverlayBaseRect = bounds ? { ...bounds } : null;
+};
+
+const isPointInsideSelectionOverlay = (clientX, clientY) => {
+  if (!selectionRect.value || isSelecting.value) {
+    return false;
+  }
+
+  const { left, right, top, bottom } = selectionRect.value;
+  return clientX >= left && clientX <= right && clientY >= top && clientY <= bottom;
 };
 
 const applySelectionFromRect = (rect) => {
@@ -2146,7 +2327,11 @@ const finishSelection = () => {
   selectionRect.value = null;
   selectionStartPoint = null;
   selectionBaseSelection = new Set();
+  selectionOverlayBaseRect = null;
 
+  if (isSelectionMode.value) {
+    updateSelectionOverlayRect();
+  }
   setTimeout(() => {
     suppressNextStageClick = false;
   }, 50);
@@ -2184,6 +2369,7 @@ const startSelection = (event) => {
   suppressNextStageClick = true;
   isSelecting.value = true;
   selectionStartPoint = { x: event.clientX, y: event.clientY };
+  selectionOverlayBaseRect = null;
 
   // Сохраняем базовое выделение (включая карточки и стикеры)
   if (event.ctrlKey || event.metaKey) {
@@ -2285,6 +2471,7 @@ const startDrag = (event, cardId) => {
     axisLock: null
   };
   resetActiveGuides();
+  captureSelectionOverlayBaseRect();
 
   const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent;
 
@@ -2367,6 +2554,7 @@ const startStickerDrag = (event, stickerId) => {
     axisLock: null
   };
   resetActiveGuides();
+  captureSelectionOverlayBaseRect();
 
   const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent;
 
@@ -2470,6 +2658,24 @@ const startImageDrag = ({ event, imageId, interactionType = 'move' }) => {
   }
   event.preventDefault();
 };
+const applySelectionOverlayDrag = (dx, dy) => {
+  if (!selectionOverlayBaseRect || !selectionRect.value || !isSelectionMode.value || isSelecting.value) {
+    return;
+  }
+
+  const scale = Number.isFinite(zoomScale.value) && zoomScale.value !== 0 ? zoomScale.value : 1;
+  const offsetX = dx * scale;
+  const offsetY = dy * scale;
+
+  selectionRect.value = {
+    left: selectionOverlayBaseRect.left + offsetX,
+    top: selectionOverlayBaseRect.top + offsetY,
+    width: selectionOverlayBaseRect.width,
+    height: selectionOverlayBaseRect.height,
+    right: selectionOverlayBaseRect.right + offsetX,
+    bottom: selectionOverlayBaseRect.bottom + offsetY
+  };
+};
 
 const handleDragInternal = (event) => {
   if (!dragState.value || (!dragState.value.cards.length && !dragState.value.stickers.length && !dragState.value.images?.length)) {
@@ -2571,6 +2777,9 @@ const handleDragInternal = (event) => {
       );
     });
   }
+  if (selectionOverlayBaseRect) {
+    applySelectionOverlayDrag(finalDx, finalDy);
+  }
 
   updateStageSize();
 
@@ -2651,7 +2860,11 @@ const endDrag = async (event) => {
 
   dragState.value = null;
   resetActiveGuides();
+  selectionOverlayBaseRect = null;
 
+  if (isSelectionMode.value && hasAnySelection()) {
+    updateSelectionOverlayRect();
+  }
   if (activeDragPointerId !== null) {
     dragPointerCaptureElement?.releasePointerCapture?.(activeDragPointerId);
   }
@@ -2662,6 +2875,13 @@ const endDrag = async (event) => {
   window.removeEventListener('pointercancel', endDrag);
   window.removeEventListener('mousemove', handleDrag);
   window.removeEventListener('mouseup', endDrag);
+
+  if (selectionDragInProgress) {
+    selectionDragInProgress = false;
+    setTimeout(() => {
+      suppressNextStageClick = false;
+    }, 50);
+  }  
 };
 
 // Обработчик изменения размера изображения
@@ -2938,10 +3158,13 @@ const handlePointerDown = (event) => {
     const interactiveTarget = event.target.closest('button, input, textarea, select, [contenteditable="true"], a[href]');
 
     if (!isCardTarget && !interactiveTarget) {
+      if (tryStartSelectionGroupDrag(event)) {
+        return;
+      }      
       startSelection(event);
       return;
     }
-  }  
+  }
 };
 
 const startDrawingLine = (cardId, side) => {
@@ -3210,6 +3433,9 @@ const syncAllNoteWindows = () => {
 
 const handleViewportChange = () => {
   syncAllNoteWindows();
+  if (isSelectionMode.value && !isSelecting.value && hasAnySelection()) {
+    updateSelectionOverlayRect();
+  }  
 };
 
 const handleWindowResize = () => {
@@ -3389,6 +3615,10 @@ watch(isDrawingLine, (isActive) => {
 watch(isSelectionMode, (active) => {
   if (!active) {
     finishSelection();
+    selectionRect.value = null;
+    selectionOverlayBaseRect = null;
+  } else if (!isSelecting.value && hasAnySelection()) {
+    updateSelectionOverlayRect();    
   }
 });
 const resetView = () => {
@@ -3609,7 +3839,29 @@ watch(guidesEnabled, (enabled) => {
 });
 watch([zoomScale, zoomTranslateX, zoomTranslateY], () => {
   syncAllNoteWindows();
+  if (isSelectionMode.value && !isSelecting.value && hasAnySelection()) {
+    updateSelectionOverlayRect();
+  }  
 });
+watch(
+  () => ({
+    cards: [...cardsStore.selectedCardIds],
+    stickers: [...stickersStore.selectedStickerIds]
+  }),
+  () => {
+    if (isSelecting.value) {
+      return;
+    }
+
+    if (!isSelectionMode.value || !hasAnySelection()) {
+      selectionRect.value = null;
+      selectionOverlayBaseRect = null;
+      return;
+    }
+
+    updateSelectionOverlayRect();
+  }
+);
 
 watch(cardsWithVisibleNotes, () => {
   nextTick(() => syncAllNoteWindows());
