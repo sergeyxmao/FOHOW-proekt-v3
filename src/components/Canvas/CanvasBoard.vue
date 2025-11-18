@@ -1929,7 +1929,6 @@ const collectDragTargets = (cardId, event) => {
 
     cardsStore.deselectAllCards();
     stickersStore.deselectAllStickers();
-    imagesStore.deselectAllImages();
     dragIds.add(cardId);
     cardsStore.selectCard(cardId);
 
@@ -1946,14 +1945,11 @@ const collectDragTargets = (cardId, event) => {
       cardsStore.selectedCardIds.forEach(id => dragIds.add(id));
       // Добавляем все выделенные стикеры
       stickersStore.selectedStickerIds.forEach(id => dragIds.add(id));
-      // Добавляем все выделенные изображения
-      imagesStore.selectedImageIds.forEach(id => dragIds.add(id));
     } else if (event?.ctrlKey || event?.metaKey) {
       return [];
     } else {
       cardsStore.deselectAllCards();
       stickersStore.deselectAllStickers();
-      imagesStore.deselectAllImages();
       cardsStore.selectCard(cardId);
       dragIds.add(cardId);
     }
@@ -1975,44 +1971,13 @@ const collectStickerDragTargets = (stickerId, event) => {
     stickersStore.selectedStickerIds.forEach(id => dragIds.add(id));
     // Добавляем все выделенные карточки
     cardsStore.selectedCardIds.forEach(id => dragIds.add(id));
-    // Добавляем все выделенные изображения
-    imagesStore.selectedImageIds.forEach(id => dragIds.add(id));
   } else if (event?.ctrlKey || event?.metaKey) {
     return [];
   } else {
     stickersStore.deselectAllStickers();
     cardsStore.deselectAllCards();
-    imagesStore.deselectAllImages();
     stickersStore.selectSticker(stickerId);
     dragIds.add(stickerId);
-  }
-
-  selectedCardId.value = null;
-  selectedConnectionIds.value = [];
-
-  return Array.from(dragIds);
-};
-
-const collectImageDragTargets = (imageId, event) => {
-  const dragIds = new Set();
-
-  const isImageAlreadySelected = imagesStore.selectedImageIds.includes(imageId);
-
-  if (isImageAlreadySelected) {
-    // Добавляем все выделенные изображения
-    imagesStore.selectedImageIds.forEach(id => dragIds.add(id));
-    // Добавляем все выделенные карточки
-    cardsStore.selectedCardIds.forEach(id => dragIds.add(id));
-    // Добавляем все выделенные стикеры
-    stickersStore.selectedStickerIds.forEach(id => dragIds.add(id));
-  } else if (event?.ctrlKey || event?.metaKey) {
-    return [];
-  } else {
-    imagesStore.deselectAllImages();
-    cardsStore.deselectAllCards();
-    stickersStore.deselectAllStickers();
-    imagesStore.selectImage(imageId);
-    dragIds.add(imageId);
   }
 
   selectedCardId.value = null;
@@ -2088,9 +2053,6 @@ const applySelectionFromRect = (rect) => {
   const nextSelectionStickerIds = new Set(
     Array.from(selectionBaseSelection).filter(id => stickersStore.stickers.some(s => s.id === id))
   );
-  const nextSelectionImageIds = new Set(
-    Array.from(selectionBaseSelection).filter(id => imagesStore.images.some(i => i.id === id))
-  );
 
   if (canvasContainerRef.value) {
     // Проверяем карточки
@@ -2132,26 +2094,6 @@ const applySelectionFromRect = (rect) => {
         nextSelectionStickerIds.add(Number(stickerId));
       }
     });
-
-    // Проверяем изображения
-    const imageElements = canvasContainerRef.value.querySelectorAll('.canvas-image');
-    imageElements.forEach((element) => {
-      const imageId = element.dataset.imageId;
-      if (!imageId) {
-        return;
-      }
-
-      const imageRect = element.getBoundingClientRect();
-      const intersects =
-        imageRect.left < rect.right &&
-        imageRect.right > rect.left &&
-        imageRect.top < rect.bottom &&
-        imageRect.bottom > rect.top;
-
-      if (intersects) {
-        nextSelectionImageIds.add(imageId);
-      }
-    });
   }
 
   // Применяем выделение для карточек
@@ -2166,13 +2108,6 @@ const applySelectionFromRect = (rect) => {
   const orderedStickerIds = Array.from(nextSelectionStickerIds);
   orderedStickerIds.forEach((id) => {
     stickersStore.selectSticker(id);
-  });
-
-  // Применяем выделение для изображений
-  imagesStore.deselectAllImages();
-  const orderedImageIds = Array.from(nextSelectionImageIds);
-  orderedImageIds.forEach((id) => {
-    imagesStore.selectImage(id);
   });
 
   selectedCardId.value = orderedCardIds.length > 0 ? orderedCardIds[orderedCardIds.length - 1] : null;
@@ -2250,18 +2185,16 @@ const startSelection = (event) => {
   isSelecting.value = true;
   selectionStartPoint = { x: event.clientX, y: event.clientY };
 
-  // Сохраняем базовое выделение (включая карточки, стикеры и изображения)
+  // Сохраняем базовое выделение (включая карточки и стикеры)
   if (event.ctrlKey || event.metaKey) {
     selectionBaseSelection = new Set([
       ...cardsStore.selectedCardIds,
-      ...stickersStore.selectedStickerIds,
-      ...imagesStore.selectedImageIds
+      ...stickersStore.selectedStickerIds
     ]);
   } else {
     selectionBaseSelection = new Set();
     cardsStore.deselectAllCards();
     stickersStore.deselectAllStickers();
-    imagesStore.deselectAllImages();
   }
 
   selectedConnectionIds.value = [];
@@ -2460,7 +2393,8 @@ const startImageDrag = ({ event, imageId, interactionType = 'move' }) => {
     return;
   }
 
-  // Проверяем что изображение существует и не заблокировано
+  // Для изображений пока не поддерживаем групповое перетаскивание
+  // Просто берем выбранное изображение
   const image = imagesStore.images.find(img => img.id === imageId);
   if (!image || image.isLocked) {
     return;
@@ -2499,73 +2433,24 @@ const startImageDrag = ({ event, imageId, interactionType = 'move' }) => {
     return;
   }
 
-  // Обычное перемещение изображения - поддерживаем групповое перемещение
-  const dragTargetIds = collectImageDragTargets(imageId, event);
-  if (dragTargetIds.length === 0) {
-    return;
-  }
-
-  // Собираем изображения
-  const imagesToDrag = dragTargetIds
-    .map(id => {
-      const img = imagesStore.images.find(i => i.id === id);
-      if (!img) return null;
-      return {
-        id: img.id,
-        type: 'image',
-        startX: img.x,
-        startY: img.y
-      };
-    })
-    .filter(Boolean);
-
-  // Собираем карточки
-  const cardsToDrag = dragTargetIds
-    .map(id => {
-      const card = findCardById(id);
-      if (!card) return null;
-      return {
-        id: card.id,
-        type: 'card',
-        startX: card.x,
-        startY: card.y
-      };
-    })
-    .filter(Boolean);
-
-  // Собираем стикеры
-  const stickersToDrag = dragTargetIds
-    .map(id => {
-      const sticker = stickersStore.stickers.find(s => s.id === id);
-      if (!sticker) return null;
-      return {
-        id: sticker.id,
-        type: 'sticker',
-        startX: sticker.pos_x,
-        startY: sticker.pos_y
-      };
-    })
-    .filter(Boolean);
-
-  const itemsToDrag = [...imagesToDrag, ...cardsToDrag, ...stickersToDrag];
-
-  if (itemsToDrag.length === 0) {
-    return;
-  }
-
-  const movingIds = new Set(itemsToDrag.map(item => item.id));
-  const primaryEntry = itemsToDrag.find(item => item.id === imageId) || itemsToDrag[0] || null;
+  // Обычное перемещение изображения
+  const imagesToDrag = [{
+    id: image.id,
+    type: 'image',
+    startX: image.x,
+    startY: image.y
+  }];
 
   dragState.value = {
-    cards: cardsToDrag,
-    stickers: stickersToDrag,
+    cards: [],
+    stickers: [],
     images: imagesToDrag,
-    items: itemsToDrag,
+    items: imagesToDrag,
     startPointer: canvasPos,
     hasMoved: false,
-    movingIds,
-    primaryCardId: primaryEntry ? primaryEntry.id : null,
-    primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
+    movingIds: new Set([imageId]),
+    primaryCardId: null,
+    primaryCardStart: null,
     axisLock: null
   };
   resetActiveGuides();
@@ -3541,48 +3426,6 @@ const fitToContent = (options = {}) => {
     maxY = Math.max(maxY, top + height);
     hasContent = true;
   });
-
-  // Учитываем стикеры
-  const stickersList = stickersStore.stickers;
-  if (Array.isArray(stickersList)) {
-    stickersList.forEach(sticker => {
-      if (!sticker) {
-        return;
-      }
-
-      const left = Number.isFinite(sticker.pos_x) ? sticker.pos_x : 0;
-      const top = Number.isFinite(sticker.pos_y) ? sticker.pos_y : 0;
-      const width = Number.isFinite(sticker.width) ? sticker.width : 200;
-      const height = Number.isFinite(sticker.height) ? sticker.height : 100;
-
-      minX = Math.min(minX, left);
-      minY = Math.min(minY, top);
-      maxX = Math.max(maxX, left + width);
-      maxY = Math.max(maxY, top + height);
-      hasContent = true;
-    });
-  }
-
-  // Учитываем изображения
-  const imagesList = imagesStore.images;
-  if (Array.isArray(imagesList)) {
-    imagesList.forEach(image => {
-      if (!image) {
-        return;
-      }
-
-      const left = Number.isFinite(image.x) ? image.x : 0;
-      const top = Number.isFinite(image.y) ? image.y : 0;
-      const width = Number.isFinite(image.width) ? image.width : 0;
-      const height = Number.isFinite(image.height) ? image.height : 0;
-
-      minX = Math.min(minX, left);
-      minY = Math.min(minY, top);
-      maxX = Math.max(maxX, left + width);
-      maxY = Math.max(maxY, top + height);
-      hasContent = true;
-    });
-  }
 
   if (Array.isArray(connectionsList) && connectionsList.length > 0) {
     const cardMap = new Map(cardsList.map(card => [card.id, card]));
