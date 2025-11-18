@@ -17,7 +17,7 @@ const YANDEX_TOKEN = process.env.YANDEX_DISK_TOKEN;
 async function publishFile(path) {
   // Получить метаданные файла
   const metaUrl = `https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(path)}`;
-  
+
   const metaResponse = await fetch(metaUrl, {
     headers: {
       'Authorization': `OAuth ${YANDEX_TOKEN}`
@@ -29,11 +29,11 @@ async function publishFile(path) {
   }
 
   const meta = await metaResponse.json();
-  
+
   // Если файл не опубликован, опубликовать его
   if (!meta.public_url) {
     const publishUrl = `https://cloud-api.yandex.net/v1/disk/resources/publish?path=${encodeURIComponent(path)}`;
-    
+
     const publishResponse = await fetch(publishUrl, {
       method: 'PUT',
       headers: {
@@ -51,18 +51,41 @@ async function publishFile(path) {
         'Authorization': `OAuth ${YANDEX_TOKEN}`
       }
     });
-    
+
     const newMeta = await newMetaResponse.json();
     const publicKey = newMeta.public_key || newMeta.public_url;
-    
+
     // Получить preview через публичную ссылку
     const previewUrl = await getPreviewUrl(publicKey);
-    
+
     return {
       public_url: newMeta.public_url,
       preview_url: previewUrl
     };
   }
+
+  const publicKey = meta.public_key || meta.public_url;
+  const previewUrl = await getPreviewUrl(publicKey);
+
+  return {
+    public_url: meta.public_url,
+    preview_url: previewUrl
+  };
+}
+
+async function getPreviewUrl(publicKey) {
+  // Получить информацию о публичном файле с preview
+  const publicUrl = `https://cloud-api.yandex.net/v1/disk/public/resources?public_key=${encodeURIComponent(publicKey)}&preview_size=S&preview_crop=false`;
+
+  const response = await fetch(publicUrl);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get preview: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.preview || data.file || publicKey;
+}
 
 async function refreshAllUrls() {
   try {
