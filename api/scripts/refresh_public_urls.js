@@ -1,7 +1,7 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ path: '/var/www/FOHOW-proekt-v3/api/.env' });
 
 const { Pool } = pg;
 const pool = new Pool({
