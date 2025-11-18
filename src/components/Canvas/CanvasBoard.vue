@@ -3071,6 +3071,10 @@ const handleImageClick = ({ event, imageId }) => {
   selectedCardId.value = null;
 };
 
+const handleImageRedraw = () => {
+  // Перерисовка происходит автоматически через реактивность Vue и Pinia
+};
+
 const handleAddNoteClick = (cardId) => {
   const card = findCardById(cardId);
   if (!card) {
@@ -3802,6 +3806,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         :is-selected="image.isSelected"
         @image-click="handleImageClick"
         @start-drag="startImageDrag"
+        @redraw="handleImageRedraw"
       />
     </div>
     <a
