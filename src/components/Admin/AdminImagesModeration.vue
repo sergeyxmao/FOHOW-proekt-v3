@@ -41,7 +41,7 @@
       <div v-for="image in adminStore.pendingImages" :key="image.id" class="image-card">
         <!-- Превью изображения -->
         <div class="image-preview" @click="openImagePreview(image)" title="Нажмите для увеличения">
-          <img :src="getImageUrl(image.preview_url || image.public_url)" :alt="image.original_name" />
+          <img :src="`/api/images/proxy/${image.id}`" :alt="image.original_name" />
         </div>
 
         <!-- Информация об изображении -->
@@ -123,7 +123,7 @@
 
         <div class="modal-image-wrapper">
           <img
-            :src="getImageUrl(selectedImageForPreview.preview_url || selectedImageForPreview.public_url)"
+            :src="`/api/images/proxy/${selectedImageForPreview.id}`"
             :alt="selectedImageForPreview.original_name"
             class="modal-image"
           />
@@ -334,17 +334,6 @@ async function handleReject(imageId) {
     // Разблокировать элементы управления
     processingId.value = null
   }
-}
-
-/**
- * Получить полный URL изображения
- */
-function getImageUrl(url) {
-  if (url.startsWith('http')) {
-    return url
-  }
-  const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
-  return `${API_URL.replace('/api', '')}${url}`
 }
 
 /**

@@ -96,7 +96,7 @@
               class="image-card"
             >
               <div class="image-preview">
-                <img :src="image.preview_url || image.public_url" :alt="image.original_name" />
+                <img :src="`/api/images/proxy/${image.id}`" :alt="image.original_name" />
               </div>
               <div class="image-info">
                 <div class="image-name" :title="image.original_name">
