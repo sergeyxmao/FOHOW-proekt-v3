@@ -1,12 +1,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useStickersStore } from '../../stores/stickers'
+import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
 import { getSharedLibrary } from '../../services/imageService'
 import ImageCard from './ImageCard.vue'
 import { useImageProxy } from '../../composables/useImageProxy'
 
 const stickersStore = useStickersStore()
+const boardStore = useBoardStore()
 const notificationsStore = useNotificationsStore()
 const { getImageUrl } = useImageProxy()
 
@@ -109,7 +111,14 @@ function handleFolderChange() {
  * Добавить изображение на доску
  */
 async function handleImageClick(image) {
-  if (!stickersStore.currentBoardId) {
+  // Проверяем все возможные источники boardId
+  const boardId = stickersStore.currentBoardId || boardStore.currentBoardId
+
+  if (!boardId) {
+    console.log('❌ Board ID не найден:', {
+      stickersStore: stickersStore.currentBoardId,
+      boardStore: boardStore.currentBoardId
+    })
     notificationsStore.addNotification({
       message: 'Сначала откройте доску',
       type: 'info',
@@ -118,11 +127,15 @@ async function handleImageClick(image) {
     return
   }
 
+  console.log('✅ Добавление изображения на доску:', boardId, 'image:', image.id)
+
   // Включаем режим размещения
   stickersStore.enablePlacementMode()
 
   // Получаем blob URL для изображения
   const imageUrl = await getImageUrl(image.id)
+
+  console.log('✅ Blob URL получен:', imageUrl?.substring(0, 50) + '...')
 
   // Сохраняем данные изображения для последующего создания стикера
   stickersStore.pendingImageData = {
@@ -132,7 +145,7 @@ async function handleImageClick(image) {
     height: image.height || 150
   }
 
-  console.log('📌 Режим размещения изображения активирован:', image)
+  console.log('📌 Pending image data установлен, режим размещения активирован')
 }
 
 // Жизненный цикл
