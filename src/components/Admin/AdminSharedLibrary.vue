@@ -96,7 +96,17 @@
               class="image-card"
             >
               <div class="image-preview">
-                <img :src="imageUrls[image.id] || ''" :alt="image.original_name" />
+                <div v-if="loadingImages[image.id]" class="image-loading">
+                  <div class="image-spinner"></div>
+                  <span>Загрузка...</span>
+                </div>
+                <img
+                  v-else-if="imageUrls[image.id]"
+                  :src="imageUrls[image.id]"
+                  :alt="image.original_name"
+                  loading="lazy"
+                />
+                <div v-else class="image-error">Ошибка загрузки</div>
               </div>
               <div class="image-info">
                 <div class="image-name" :title="image.original_name">
@@ -197,7 +207,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
 import { useAdminStore } from '../../stores/admin'
 import { useNotificationsStore } from '../../stores/notifications'
 import { useImageProxy } from '../../composables/useImageProxy'
@@ -208,6 +218,7 @@ const { getImageUrl } = useImageProxy()
 
 const selectedFolder = ref(null)
 const imageUrls = ref({})
+const loadingImages = ref({})
 const newFolderName = ref('')
 const fileInput = ref(null)
 
@@ -276,9 +287,23 @@ async function selectFolder(folder) {
  */
 async function loadImageUrls() {
   const urls = {}
+  const loading = {}
+
   for (const image of adminStore.currentFolderImages) {
-    urls[image.id] = await getImageUrl(image.id)
+    loading[image.id] = true
+    loadingImages.value = { ...loadingImages.value, ...loading }
+
+    try {
+      urls[image.id] = await getImageUrl(image.id)
+    } catch (error) {
+      console.error(`Ошибка загрузки изображения ${image.id}:`, error)
+      urls[image.id] = ''
+    } finally {
+      loading[image.id] = false
+      loadingImages.value = { ...loadingImages.value, ...loading }
+    }
   }
+
   imageUrls.value = urls
 }
 
@@ -444,6 +469,17 @@ function formatFileSize(bytes) {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ'
   return (bytes / (1024 * 1024)).toFixed(1) + ' МБ'
 }
+
+// Очистка blob URLs при размонтировании
+onBeforeUnmount(() => {
+  // Освобождаем все blob URLs
+  Object.values(imageUrls.value).forEach(url => {
+    if (url && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url)
+    }
+  })
+  imageUrls.value = {}
+})
 
 // Загружаем папки при монтировании
 onMounted(() => {
@@ -638,6 +674,37 @@ onMounted(() => {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+}
+
+.image-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 8px;
+  color: #666;
+  font-size: 13px;
+}
+
+.image-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #6c63ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.image-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #f44336;
+  font-size: 13px;
 }
 
 .image-info {
