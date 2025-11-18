@@ -4,9 +4,11 @@ import { useStickersStore } from '../../stores/stickers'
 import { useNotificationsStore } from '../../stores/notifications'
 import { getSharedLibrary } from '../../services/imageService'
 import ImageCard from './ImageCard.vue'
+import { useImageProxy } from '../../composables/useImageProxy'
 
 const stickersStore = useStickersStore()
 const notificationsStore = useNotificationsStore()
+const { getImageUrl } = useImageProxy()
 
 // Состояние
 const folders = ref([])
@@ -106,7 +108,7 @@ function handleFolderChange() {
 /**
  * Добавить изображение на доску
  */
-function handleImageClick(image) {
+async function handleImageClick(image) {
   if (!stickersStore.currentBoardId) {
     notificationsStore.addNotification({
       message: 'Сначала откройте доску',
@@ -119,10 +121,13 @@ function handleImageClick(image) {
   // Включаем режим размещения
   stickersStore.enablePlacementMode()
 
+  // Получаем blob URL для изображения
+  const imageUrl = await getImageUrl(image.id)
+
   // Сохраняем данные изображения для последующего создания стикера
   stickersStore.pendingImageData = {
     type: 'image',
-    url: `/api/images/proxy/${image.id}`,
+    url: imageUrl,
     width: image.width || 200,
     height: image.height || 150
   }

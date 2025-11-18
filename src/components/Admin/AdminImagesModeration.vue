@@ -41,7 +41,7 @@
       <div v-for="image in adminStore.pendingImages" :key="image.id" class="image-card">
         <!-- Превью изображения -->
         <div class="image-preview" @click="openImagePreview(image)" title="Нажмите для увеличения">
-          <img :src="`/api/images/proxy/${image.id}`" :alt="image.original_name" />
+          <img :src="imageUrls[image.id] || ''" :alt="image.original_name" />
         </div>
 
         <!-- Информация об изображении -->
@@ -123,7 +123,7 @@
 
         <div class="modal-image-wrapper">
           <img
-            :src="`/api/images/proxy/${selectedImageForPreview.id}`"
+            :src="imageUrls[selectedImageForPreview.id] || ''"
             :alt="selectedImageForPreview.original_name"
             class="modal-image"
           />
@@ -156,15 +156,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAdminStore } from '../../stores/admin'
 import { useNotificationsStore } from '../../stores/notifications'
+import { useImageProxy } from '../../composables/useImageProxy'
 
 const adminStore = useAdminStore()
 const notificationsStore = useNotificationsStore()
+const { getImageUrl } = useImageProxy()
 const processingId = ref(null)
 const selectedFolders = ref({})
 const selectedImageForPreview = ref(null)
+const imageUrls = ref({})
 
 /**
  * Вычисляемое свойство для количества изображений в очереди
@@ -179,10 +182,30 @@ const pendingCount = computed(() => {
 async function loadImages() {
   try {
     await adminStore.fetchPendingImages()
+    // Загружаем blob URLs для изображений
+    await loadImageUrls()
   } catch (err) {
     console.error('[MODERATION] Ошибка загрузки изображений:', err)
   }
 }
+
+/**
+ * Загрузить blob URLs для всех изображений
+ */
+async function loadImageUrls() {
+  const urls = {}
+  for (const image of adminStore.pendingImages || []) {
+    urls[image.id] = await getImageUrl(image.id)
+  }
+  imageUrls.value = urls
+}
+
+// Следим за изменением списка изображений
+watch(() => adminStore.pendingImages, async (newImages) => {
+  if (newImages && newImages.length > 0) {
+    await loadImageUrls()
+  }
+}, { deep: true })
 
 /**
  * Загрузить список папок
