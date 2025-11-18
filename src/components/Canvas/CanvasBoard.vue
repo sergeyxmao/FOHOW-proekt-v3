@@ -3041,8 +3041,10 @@ const handleStickerClick = (event, stickerId) => {
     stickersStore.toggleStickerSelection(stickerId);
   } else {
     if (!stickersStore.selectedStickerIds.includes(stickerId) || stickersStore.selectedStickerIds.length > 1) {
+      // Клик по стикеру без Ctrl - снять выделение со всех объектов
       stickersStore.deselectAllStickers();
       cardsStore.deselectAllCards();
+      imagesStore.deselectAllImages();
       stickersStore.selectSticker(stickerId);
     }
   }
@@ -3158,12 +3160,15 @@ const handleStageClick = async (event) => {
     return; // Завершаем выполнение функции
   }
 
-  // Логика для снятия выделения с карточек (остается без изменений)
+  // Логика для снятия выделения при клике на пустое место
   const preserveCardSelection = isSelectionMode.value;
   if (!event.ctrlKey && !event.metaKey) {
     if (!preserveCardSelection) {
       cardsStore.deselectAllCards();
     }
+    // Снять выделение со всех стикеров и изображений при клике на пустое место
+    stickersStore.deselectAllStickers();
+    imagesStore.deselectAllImages();
   }
 
   selectedConnectionIds.value = [];
