@@ -15,31 +15,54 @@ const pool = new Pool({
 const YANDEX_TOKEN = process.env.YANDEX_DISK_TOKEN;
 
 async function publishFile(path) {
-  const url = `https://cloud-api.yandex.net/v1/disk/resources/publish?path=${encodeURIComponent(path)}`;
+  // Получить метаданные файла (включая preview)
+  const metaUrl = `https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(path)}&preview_size=S&preview_crop=false`;
   
-  const response = await fetch(url, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `OAuth ${YANDEX_TOKEN}`
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to publish: ${response.status}`);
-  }
-
-  const metaUrl = `https://cloud-api.yandex.net/v1/disk/resources?path=${encodeURIComponent(path)}`;
   const metaResponse = await fetch(metaUrl, {
     headers: {
       'Authorization': `OAuth ${YANDEX_TOKEN}`
     }
   });
 
+  if (!metaResponse.ok) {
+    throw new Error(`Failed to get metadata: ${metaResponse.status}`);
+  }
+
   const meta = await metaResponse.json();
   
+  // Если файл не опубликован, опубликовать его
+  if (!meta.public_url) {
+    const publishUrl = `https://cloud-api.yandex.net/v1/disk/resources/publish?path=${encodeURIComponent(path)}`;
+    
+    const publishResponse = await fetch(publishUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `OAuth ${YANDEX_TOKEN}`
+      }
+    });
+
+    if (!publishResponse.ok) {
+      throw new Error(`Failed to publish: ${publishResponse.status}`);
+    }
+
+    // Получить метаданные снова после публикации
+    const newMetaResponse = await fetch(metaUrl, {
+      headers: {
+        'Authorization': `OAuth ${YANDEX_TOKEN}`
+      }
+    });
+    
+    const newMeta = await newMetaResponse.json();
+    
+    return {
+      public_url: newMeta.public_url,
+      preview_url: newMeta.preview || newMeta.public_url
+    };
+  }
+  
   return {
-    public_url: meta.file || meta.public_url,
-    preview_url: meta.preview || meta.file || meta.public_url
+    public_url: meta.public_url,
+    preview_url: meta.preview || meta.public_url
   };
 }
 
