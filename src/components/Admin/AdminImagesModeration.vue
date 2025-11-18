@@ -71,21 +71,23 @@
             <label :for="`folder-select-${image.id}`" class="folder-label">
               Папка:
             </label>
-            <select
+            <input
               :id="`folder-select-${image.id}`"
+              type="text"
               v-model="selectedFolders[image.id]"
+              list="folder-list"
+              placeholder="Выберите или введите название папки"
               class="folder-select"
               :disabled="processingId === image.id"
-            >
-              <option value="" disabled>Выберите папку</option>
+              maxlength="50"
+            />
+            <datalist id="folder-list">
               <option
                 v-for="folder in adminStore.sharedFolders"
                 :key="folder.id"
-                :value="folder.id"
-              >
-                {{ folder.name }}
-              </option>
-            </select>
+                :value="folder.name"
+              />
+            </datalist>
           </div>
 
           <div class="action-buttons">
@@ -202,16 +204,37 @@ async function handleRetry() {
 }
 
 /**
+ * Валидация имени папки
+ */
+function validateFolderName(folderName) {
+  if (!folderName || typeof folderName !== 'string') {
+    return 'Введите название папки'
+  }
+
+  const trimmedName = folderName.trim()
+
+  if (trimmedName.length === 0) {
+    return 'Название папки не может быть пустым'
+  }
+
+  if (trimmedName.length < 1 || trimmedName.length > 50) {
+    return 'Название папки должно быть от 1 до 50 символов'
+  }
+
+  return null // Валидация пройдена
+}
+
+/**
  * Одобрить изображение
  */
 async function handleApprove(imageId) {
-  const folderId = selectedFolders.value[imageId]
+  const folderName = selectedFolders.value[imageId]
 
-  // Проверить, что для данной картинки выбран shared_folder_id
-  if (!folderId) {
-    // Если папка не выбрана - показать уведомление
+  // Валидация имени папки
+  const validationError = validateFolderName(folderName)
+  if (validationError) {
     notificationsStore.addNotification({
-      message: 'Выберите папку общей библиотеки',
+      message: validationError,
       type: 'error',
       duration: 4000
     })
@@ -222,8 +245,8 @@ async function handleApprove(imageId) {
   processingId.value = imageId
 
   try {
-    // Отправить запрос на одобрение
-    await adminStore.approveImage(imageId, folderId)
+    // Отправить запрос на одобрение (передаем имя папки напрямую)
+    await adminStore.approveImage(imageId, folderName.trim())
 
     // Удаляем выбор папки после успешного одобрения
     delete selectedFolders.value[imageId]
@@ -614,17 +637,30 @@ onMounted(async () => {
   border-radius: 5px;
   font-size: 14px;
   background: white;
-  cursor: pointer;
-  transition: border-color 0.3s;
+  cursor: text;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  width: 100%;
 }
 
 .folder-select:hover:not(:disabled) {
   border-color: #6c63ff;
 }
 
+.folder-select:focus {
+  outline: none;
+  border-color: #6c63ff;
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+}
+
 .folder-select:disabled {
   background: #f5f5f5;
   cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.folder-select::placeholder {
+  color: #999;
+  font-style: italic;
 }
 
 .action-buttons {
