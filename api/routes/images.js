@@ -874,6 +874,7 @@ export function registerImageRoutes(app) {
             il.id,
             il.original_name,
             il.public_url,
+            il.preview_url,
             il.width,
             il.height,
             il.file_size,
