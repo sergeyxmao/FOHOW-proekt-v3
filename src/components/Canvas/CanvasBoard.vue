@@ -3814,7 +3814,6 @@ watch(() => notesStore.pendingOpenCardId, (cardId) => {
     }
   }
 });
-  }
 watch(() => notesStore.pendingFocusCardId, (cardId) => {
   if (!cardId) {
     return;
