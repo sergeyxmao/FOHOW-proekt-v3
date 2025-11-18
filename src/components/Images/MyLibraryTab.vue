@@ -1,14 +1,18 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useStickersStore } from '../../stores/stickers'
+import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
 import { getMyFolders, getMyImages, getMyStats, uploadImage, deleteImage, requestShareImage } from '../../services/imageService'
 import { convertToWebP, isImageFile } from '../../utils/imageUtils'
+import { useImageProxy } from '../../composables/useImageProxy'
 import ImageCard from './ImageCard.vue'
 import LimitsDisplay from './LimitsDisplay.vue'
 
 const stickersStore = useStickersStore()
+const boardStore = useBoardStore()
 const notificationsStore = useNotificationsStore()
+const { getImageUrl } = useImageProxy()
 
 // Состояние
 const folders = ref([])
@@ -225,8 +229,15 @@ async function uploadSingleImage(file) {
 /**
  * Добавить изображение на доску
  */
-function handleImageClick(image) {
-  if (!stickersStore.currentBoardId) {
+async function handleImageClick(image) {
+  // Проверяем все возможные источники boardId
+  const boardId = stickersStore.currentBoardId || boardStore.currentBoardId
+
+  if (!boardId) {
+    console.log('❌ Board ID не найден:', {
+      stickersStore: stickersStore.currentBoardId,
+      boardStore: boardStore.currentBoardId
+    })
     notificationsStore.addNotification({
       message: 'Сначала откройте доску',
       type: 'info',
@@ -235,19 +246,26 @@ function handleImageClick(image) {
     return
   }
 
+  console.log('✅ Добавление изображения на доску:', boardId, 'image:', image.id)
+
   // Включаем режим размещения
   stickersStore.enablePlacementMode()
+
+  // Получаем blob URL для изображения
+  const imageUrl = await getImageUrl(image.id)
+
+  console.log('✅ Blob URL получен:', imageUrl?.substring(0, 50) + '...')
 
   // Сохраняем данные изображения для последующего создания стикера
   // Это будет обработано в компоненте CanvasBoard при клике на холст
   stickersStore.pendingImageData = {
     type: 'image',
-    url: image.preview_url || image.public_url,
+    url: imageUrl,
     width: image.width || 200,
     height: image.height || 150
   }
 
-  console.log('📌 Режим размещения изображения активирован:', image)
+  console.log('📌 Pending image data установлен, режим размещения активирован')
 }
 
 /**
