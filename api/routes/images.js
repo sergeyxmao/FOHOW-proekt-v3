@@ -993,9 +993,10 @@ export function registerImageRoutes(app) {
       }
 
       console.log(`✅ Получена свежая ссылка для изображения id=${imageId}`);
+      console.log(`🔗 Redirect URL: ${data.href}`);
 
-      // Редирект на временную ссылку
-      return reply.redirect(302, data.href);
+      // Редирект на временную ссылку (Fastify redirect принимает только URL)
+      return reply.code(302).redirect(data.href);
 
     } catch (err) {
       console.error('❌ Ошибка прокси изображения:', err);
