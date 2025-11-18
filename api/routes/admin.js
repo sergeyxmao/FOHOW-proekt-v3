@@ -894,6 +894,7 @@ export function registerAdminRoutes(app) {
           il.id,
           il.original_name,
           il.public_url,
+          il.preview_url,
           il.yandex_path,
           il.user_id,
           u.full_name as user_full_name,
