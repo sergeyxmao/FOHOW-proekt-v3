@@ -26,7 +26,8 @@ const tempPosition = ref({ x: null, y: null });
 const stickerStyle = computed(() => ({
   left: `${tempPosition.value.x !== null ? tempPosition.value.x : props.sticker.pos_x}px`,
   top: `${tempPosition.value.y !== null ? tempPosition.value.y : props.sticker.pos_y}px`,
-  backgroundColor: props.sticker.color || '#FFFF88'
+  backgroundColor: props.sticker.color || '#FFFF88',
+  zIndex: props.sticker.z_index ?? 100
 }));
 
 // Проверка, выделен ли стикер
@@ -259,7 +260,7 @@ const handleDelete = async (event) => {
   font-size: 14px;
   line-height: 1.5;
   color: #333;
-  z-index: 100;
+  /* z-index теперь динамический и задается через style */
 }
 
 .sticker:hover {
@@ -270,13 +271,15 @@ const handleDelete = async (event) => {
   cursor: grabbing;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
   transform: rotate(1deg);
-  z-index: 1000;
+  /* Временно повышаем z-index при перетаскивании */
+  z-index: 9999 !important;
 }
 
 .sticker--editing {
   cursor: default;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
-  z-index: 1000;
+  /* Временно повышаем z-index при редактировании */
+  z-index: 9999 !important;
 }
 
 .sticker--selected {
