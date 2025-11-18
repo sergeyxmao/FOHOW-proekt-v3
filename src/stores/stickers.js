@@ -78,7 +78,8 @@ export const useStickersStore = defineStore('stickers', () => {
       // Нормализуем данные стикеров, убеждаемся что ID всегда числа
       stickers.value = (data.stickers || []).map(sticker => ({
         ...sticker,
-        id: parseInt(sticker.id, 10)
+        id: parseInt(sticker.id, 10),
+        z_index: sticker.z_index ?? 0
       }));
 
     } catch (error) {
@@ -92,7 +93,7 @@ export const useStickersStore = defineStore('stickers', () => {
   /**
    * Добавить новый стикер
    * @param {number|string} boardId - ID доски
-   * @param {Object} stickerData - Данные стикера { pos_x, pos_y, color }
+   * @param {Object} stickerData - Данные стикера { pos_x, pos_y, color, z_index }
    */
   async function addSticker(boardId, stickerData) {
     if (!boardId) {
@@ -103,10 +104,21 @@ export const useStickersStore = defineStore('stickers', () => {
     isLoading.value = true;
 
     try {
+      // Вычисляем максимальный zIndex среди существующих стикеров
+      const maxZIndex = stickers.value.length > 0
+        ? Math.max(...stickers.value.map(s => s.z_index || 0), 0)
+        : 0;
+
+      // Добавляем z_index в данные стикера
+      const stickerDataWithZIndex = {
+        ...stickerData,
+        z_index: maxZIndex + 1
+      };
+
       const response = await fetch(`${API_URL}/boards/${boardId}/stickers`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify(stickerData)
+        body: JSON.stringify(stickerDataWithZIndex)
       });
 
       if (!response.ok) {
@@ -131,7 +143,9 @@ export const useStickersStore = defineStore('stickers', () => {
       const data = await response.json();
       const newSticker = {
         ...data.sticker,
-        id: parseInt(data.sticker.id, 10)
+        id: parseInt(data.sticker.id, 10),
+        // Гарантируем, что z_index присутствует
+        z_index: data.sticker.z_index ?? maxZIndex + 1
       };
 
       // Добавляем новый стикер в массив
@@ -279,6 +293,7 @@ export const useStickersStore = defineStore('stickers', () => {
       pos_y: stickerData.pos_y || 0,
       color: stickerData.color || '#FFFF88',
       content: stickerData.content || '',
+      z_index: stickerData.z_index ?? 0,
       selected: false
     }));
 
