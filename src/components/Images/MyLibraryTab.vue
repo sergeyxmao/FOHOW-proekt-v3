@@ -45,13 +45,8 @@ const filteredImages = computed(() => {
   })
 })
 
-// Опции для выпадающего списка папок
-const folderOptions = computed(() => {
-  return [
-    { value: '', label: 'Все папки' },
-    ...folders.value.map(folder => ({ value: folder, label: folder }))
-  ]
-})
+// Placeholder для пустой папки (показывать все изображения)
+const folderPlaceholder = 'Все папки или введите новую'
 
 // Методы
 
@@ -398,20 +393,24 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
   <div class="my-library-tab">
     <!-- Верхняя панель управления -->
     <div class="my-library-tab__controls">
-      <!-- Выпадающий список папок -->
-      <select
+      <!-- Input с автодополнением для папок -->
+      <input
         v-model="selectedFolder"
+        type="text"
+        list="my-library-folder-list"
+        :placeholder="folderPlaceholder"
         class="my-library-tab__select"
         @change="handleFolderChange"
-      >
+        maxlength="50"
+      />
+      <datalist id="my-library-folder-list">
+        <option value="">Все папки</option>
         <option
-          v-for="option in folderOptions"
-          :key="option.value"
-          :value="option.value"
-        >
-          {{ option.label }}
-        </option>
-      </select>
+          v-for="folder in folders"
+          :key="folder"
+          :value="folder"
+        />
+      </datalist>
 
       <!-- Кнопка загрузки -->
       <button
@@ -550,7 +549,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
   background: #ffffff;
   font-size: 14px;
   color: #0f172a;
-  cursor: pointer;
+  cursor: text;
   transition: all 0.2s ease;
 }
 
@@ -562,6 +561,10 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
   outline: none;
   border-color: #2196f3;
   box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.my-library-tab__select::placeholder {
+  color: #94a3b8;
 }
 
 .my-library-tab__upload-btn {
