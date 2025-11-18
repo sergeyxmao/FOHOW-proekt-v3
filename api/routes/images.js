@@ -993,10 +993,26 @@ export function registerImageRoutes(app) {
       }
 
       console.log(`✅ Получена свежая ссылка для изображения id=${imageId}`);
-      console.log(`🔗 Redirect URL: ${data.href}`);
 
-      // Редирект на временную ссылку (Fastify redirect принимает только URL)
-      return reply.code(302).redirect(data.href);
+      // Загрузить изображение с временной ссылки Yandex
+      const imageResponse = await fetch(data.href);
+
+      if (!imageResponse.ok) {
+        console.error(`❌ Ошибка загрузки с Yandex: ${imageResponse.status}`);
+        return reply.code(500).send({ error: 'Ошибка загрузки изображения' });
+      }
+
+      // Получить тело как буфер
+      const imageBuffer = await imageResponse.arrayBuffer();
+
+      console.log(`✅ Изображение загружено, размер: ${imageBuffer.byteLength} байт`);
+
+      // Отдать клиенту с правильными заголовками
+      return reply
+        .header('Content-Type', imageResponse.headers.get('content-type') || 'image/webp')
+        .header('Content-Length', imageBuffer.byteLength)
+        .header('Cache-Control', 'private, max-age=3600')
+        .send(Buffer.from(imageBuffer));
 
     } catch (err) {
       console.error('❌ Ошибка прокси изображения:', err);
