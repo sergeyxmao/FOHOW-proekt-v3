@@ -1,5 +1,29 @@
 import { defineStore } from 'pinia'
 import { useHistoryStore } from './history'
+const Z_INDEX_RULES = Object.freeze({
+  BACKGROUND_MIN: 1,
+  BACKGROUND_MAX: 4,
+  LINES_MIN: 5,
+  LINES_MAX: 9,
+  LICENSE: 10,
+  FOREGROUND_MIN: 11
+})
+
+function getNextBackgroundZIndex(images) {
+  const backgroundZIndices = images
+    .map(img => img?.zIndex ?? 0)
+    .filter(zIndex => zIndex < Z_INDEX_RULES.LINES_MIN)
+
+  if (backgroundZIndices.length === 0) {
+    return Z_INDEX_RULES.BACKGROUND_MAX
+  }
+
+  const minBackgroundZIndex = Math.min(...backgroundZIndices)
+  const desiredZIndex = minBackgroundZIndex - 1
+  const clampedByUpperBorder = Math.min(desiredZIndex, Z_INDEX_RULES.BACKGROUND_MAX)
+
+  return Math.max(Z_INDEX_RULES.BACKGROUND_MIN, clampedByUpperBorder)
+}
 
 /**
  * Store для управления изображениями на canvas
@@ -370,14 +394,8 @@ export const useImagesStore = defineStore('images', {
         return false
       }
 
-      // Находим минимальный zIndex среди всех изображений
-      const minZIndex = this.images.reduce((min, img) => {
-        const zIndex = img.zIndex ?? 0
-        return Math.min(min, zIndex)
-      }, 0)
-
-      // Устанавливаем zIndex = minZIndex - 1
-      image.zIndex = minZIndex - 1
+      // Располагаем изображение в диапазоне фоновых элементов (1-4)
+      image.zIndex = getNextBackgroundZIndex(this.images)
 
       if (saveToHistory) {
         const historyStore = useHistoryStore()
