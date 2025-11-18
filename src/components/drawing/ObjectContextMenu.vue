@@ -112,7 +112,7 @@ const toggleLock = () => {
   border: 1px solid #ccc;
   border-radius: 6px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-  z-index: 10000;
+  z-index: 9999;
   min-width: 180px;
   padding: 4px 0;
 }
