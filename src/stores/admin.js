@@ -527,19 +527,13 @@ export const useAdminStore = defineStore('admin', {
     /**
      * Одобрить изображение и переместить в общую библиотеку
      * @param {number} imageId - ID изображения
-     * @param {number} sharedFolderId - ID папки в общей библиотеке
+     * @param {string} folderName - Название папки в общей библиотеке (существующей или новой)
      */
-    async approveImage(imageId, sharedFolderId) {
+    async approveImage(imageId, folderName) {
       this.isLoading = true
       this.error = null
 
       try {
-        // Найти название папки по ID
-        const folder = this.sharedFolders.find(f => f.id === sharedFolderId)
-        if (!folder) {
-          throw new Error('Папка не найдена')
-        }
-
         const authStore = useAuthStore()
         const response = await fetch(`${API_URL}/admin/images/${imageId}/approve`, {
           method: 'POST',
@@ -547,7 +541,7 @@ export const useAdminStore = defineStore('admin', {
             'Authorization': `Bearer ${authStore.token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ folder_name: folder.name })
+          body: JSON.stringify({ folder_name: folderName })
         })
 
         if (!response.ok) {
