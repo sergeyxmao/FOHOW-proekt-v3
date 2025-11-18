@@ -96,7 +96,7 @@
               class="image-card"
             >
               <div class="image-preview">
-                <img :src="`/api/images/proxy/${image.id}`" :alt="image.original_name" />
+                <img :src="imageUrls[image.id] || ''" :alt="image.original_name" />
               </div>
               <div class="image-info">
                 <div class="image-name" :title="image.original_name">
@@ -197,14 +197,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useAdminStore } from '../../stores/admin'
 import { useNotificationsStore } from '../../stores/notifications'
+import { useImageProxy } from '../../composables/useImageProxy'
 
 const adminStore = useAdminStore()
 const notificationsStore = useNotificationsStore()
+const { getImageUrl } = useImageProxy()
 
 const selectedFolder = ref(null)
+const imageUrls = ref({})
 const newFolderName = ref('')
 const fileInput = ref(null)
 
@@ -258,6 +261,8 @@ async function selectFolder(folder) {
   selectedFolder.value = folder
   try {
     await adminStore.fetchFolderImages(folder.id)
+    // Загружаем blob URLs для изображений
+    await loadImageUrls()
   } catch (err) {
     notificationsStore.add({
       type: 'error',
@@ -265,6 +270,24 @@ async function selectFolder(folder) {
     })
   }
 }
+
+/**
+ * Загрузить blob URLs для всех изображений
+ */
+async function loadImageUrls() {
+  const urls = {}
+  for (const image of adminStore.currentFolderImages) {
+    urls[image.id] = await getImageUrl(image.id)
+  }
+  imageUrls.value = urls
+}
+
+// Следим за изменением списка изображений
+watch(() => adminStore.currentFolderImages, async (newImages) => {
+  if (newImages && newImages.length > 0) {
+    await loadImageUrls()
+  }
+}, { deep: true })
 
 /**
  * Обработка выбора файла для загрузки

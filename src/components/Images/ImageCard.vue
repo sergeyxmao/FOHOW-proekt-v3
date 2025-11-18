@@ -1,6 +1,7 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { truncateFilename } from '../../utils/imageUtils'
+import { useImageProxy } from '../../composables/useImageProxy'
 
 const props = defineProps({
   image: {
@@ -14,6 +15,20 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['click', 'delete', 'share-request'])
+
+// Используем composable для загрузки изображений с токеном
+const { getImageUrl } = useImageProxy()
+const imageUrl = ref('')
+
+// Загружаем изображение при монтировании и при изменении ID
+const loadImage = async () => {
+  if (props.image?.id) {
+    imageUrl.value = await getImageUrl(props.image.id)
+  }
+}
+
+onMounted(loadImage)
+watch(() => props.image?.id, loadImage)
 
 // Вычисляем статус изображения
 const imageStatus = computed(() => {
@@ -73,7 +88,7 @@ const canShareRequest = computed(() => {
     <!-- Миниатюра -->
     <div class="image-card__thumbnail">
       <img
-        :src="`/api/images/proxy/${image.id}`"
+        :src="imageUrl"
         :alt="image.original_name"
         class="image-card__img"
         loading="lazy"
