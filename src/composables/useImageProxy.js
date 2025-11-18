@@ -1,5 +1,4 @@
 import { ref } from 'vue';
-import axios from 'axios';
 
 export function useImageProxy() {
   const imageCache = new Map();
@@ -13,11 +12,29 @@ export function useImageProxy() {
     }
 
     try {
-      const response = await axios.get(`/api/images/proxy/${imageId}`, {
-        responseType: 'blob'
+      // Получаем JWT токен из localStorage
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        console.error('JWT токен не найден');
+        return '';
+      }
+
+      // Загружаем изображение через fetch с JWT токеном
+      const response = await fetch(`/api/images/proxy/${imageId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
-      const blobUrl = URL.createObjectURL(response.data);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Получаем blob из ответа
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
       imageCache.set(imageId, blobUrl);
 
       return blobUrl;
