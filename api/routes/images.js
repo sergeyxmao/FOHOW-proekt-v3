@@ -60,7 +60,6 @@ export function registerImageRoutes(app) {
       const limit = parseInt(req.query.limit) || 20;
       const folder = req.query.folder || null;
 
-      // Валидация параметров
       if (page < 1) {
         return reply.code(400).send({
           error: 'Параметр page должен быть >= 1'
@@ -73,24 +72,24 @@ export function registerImageRoutes(app) {
         });
       }
 
-      // Рассчитываем offset для пагинации
       const offset = (page - 1) * limit;
 
-      // Получаем общее количество изображений пользователя (без учёта фильтра по папке)
-        const countResult = await pool.query(
-          `SELECT COUNT(*) as total FROM image_library WHERE user_id = $1 AND is_shared = FALSE`,
-          [userId]
-        );
-
+      // Считаем только ЛИЧНЫЕ изображения (is_shared = FALSE)
+      const countResult = await pool.query(
+        `SELECT COUNT(*) as total
+         FROM image_library
+         WHERE user_id = $1 AND is_shared = FALSE`,
+        [userId]
+      );
 
       const total = parseInt(countResult.rows[0].total, 10);
 
-      // Формируем запрос с учётом фильтра по папке
+      // Формируем запрос с учётом папки
       let query;
       let queryParams;
 
       if (folder !== null && folder.trim() !== '') {
-        // Фильтруем по конкретной папке
+        // Изображения в конкретной папке
         query = `
           SELECT
             id,
@@ -98,43 +97,44 @@ export function registerImageRoutes(app) {
             filename,
             folder_name,
             public_url,
-            preview_url,            
-            width,
-            height,
-            file_size,
-            created_at
-          FROM image_library
-          WHERE user_id = $1 AND is_shared = FALSE AND folder_name = $2
-          ORDER BY created_at DESC
-          LIMIT $3 OFFSET $4
-        `;
-        queryParams = [userId, folder.trim(), limit, offset];
-      } else {
-        // Получаем все изображения пользователя
-        query = `
-          SELECT
-            id,
-            original_name,
-            filename,
-            folder_name,
-            public_url,
-            preview_url,            
+            preview_url,
             width,
             height,
             file_size,
             created_at
           FROM image_library
           WHERE user_id = $1
-          WHERE user_id = $1 AND is_shared = FALSE
+            AND is_shared = FALSE
+            AND folder_name = $2
+          ORDER BY created_at DESC
+          LIMIT $3 OFFSET $4
+        `;
+        queryParams = [userId, folder.trim(), limit, offset];
+      } else {
+        // Все ЛИЧНЫЕ изображения пользователя
+        query = `
+          SELECT
+            id,
+            original_name,
+            filename,
+            folder_name,
+            public_url,
+            preview_url,
+            width,
+            height,
+            file_size,
+            created_at
+          FROM image_library
+          WHERE user_id = $1
+            AND is_shared = FALSE
+          ORDER BY created_at DESC
           LIMIT $2 OFFSET $3
         `;
         queryParams = [userId, limit, offset];
       }
 
-      // Выполняем запрос
       const result = await pool.query(query, queryParams);
 
-      // Формируем ответ
       return reply.code(200).send({
         items: result.rows,
         pagination: {
@@ -143,7 +143,6 @@ export function registerImageRoutes(app) {
           total
         }
       });
-
     } catch (err) {
       console.error('❌ Ошибка получения списка изображений:', err);
 
@@ -278,10 +277,12 @@ export function registerImageRoutes(app) {
       const result = await pool.query(
         `SELECT DISTINCT folder_name
          FROM image_library
-         WHERE user_id = $1 AND is_shared = FALSE
+         WHERE user_id = $1
+           AND is_shared = FALSE
          ORDER BY folder_name ASC NULLS FIRST`,
         [userId]
       );
+
 
       // Извлекаем массив названий папок, фильтруя null и пустые строки
       const folders = result.rows
@@ -534,11 +535,12 @@ export function registerImageRoutes(app) {
   });
 
   /**
-   * DELETE /api/images/:id - Удалить изображение из личной библиотеки
+   * DELETE /api/images/:id - Удалить изображение из библиотеки
    *
-   * Эндпоинт для удаления изображения из личной библиотеки пользователя.
-   * Проверяет, используется ли изображение на досках, удаляет файл с Яндекс.Диска
-   * и удаляет запись из БД.
+   * Удаляет изображение (личное или общее) пользователя:
+   *  - проверяет, используется ли на досках;
+   *  - удаляет файл по yandex_path;
+   *  - удаляет запись из БД.
    */
   app.delete('/api/images/:id', {
     preHandler: [authenticateToken]
@@ -548,14 +550,13 @@ export function registerImageRoutes(app) {
       const userRole = req.user.role;
       const imageId = parseInt(req.params.id, 10);
 
-      // Валидация ID
       if (!Number.isInteger(imageId) || imageId <= 0) {
         return reply.code(400).send({
           error: 'Некорректный ID изображения'
         });
       }
 
-      // Проверка доступа к библиотеке изображений (пропускаем для администраторов)
+      // Проверка доступа к библиотеке изображений (кроме админов)
       if (userRole !== 'admin') {
         const userResult = await pool.query(
           `SELECT sp.features, sp.name as plan_name
@@ -587,6 +588,8 @@ export function registerImageRoutes(app) {
           il.filename,
           il.folder_name,
           il.public_url,
+          il.yandex_path,
+          il.is_shared,
           u.personal_id
          FROM image_library il
          JOIN users u ON il.user_id = u.id
@@ -594,7 +597,6 @@ export function registerImageRoutes(app) {
         [imageId, userId]
       );
 
-      // Если запись не найдена, возвращаем 404
       if (imageResult.rows.length === 0) {
         return reply.code(404).send({
           error: 'Изображение не найдено'
@@ -602,37 +604,40 @@ export function registerImageRoutes(app) {
       }
 
       const image = imageResult.rows[0];
-      const { filename, folder_name, public_url, personal_id } = image;
+      const { filename, folder_name, public_url, personal_id, yandex_path } = image;
 
-      // Проверяем, используется ли это изображение на досках пользователя
-      // Ищем в content->images->dataUrl по public_url
+      // Проверяем, используется ли изображение на досках пользователя
       const usageCheck = await pool.query(
         `SELECT id, name
          FROM boards
          WHERE owner_id = $1
-         AND content::text LIKE $2
+           AND content::text LIKE $2
          LIMIT 1`,
         [userId, `%${public_url}%`]
       );
 
-      // Если изображение используется на досках, возвращаем 409 Conflict
       if (usageCheck.rows.length > 0) {
         return reply.code(409).send({
           error: 'Картинка используется в проектах. Удалите её с досок перед удалением.'
         });
       }
 
-      // Построить полный путь к файлу на Яндекс.Диске
-      const yandexPath = getUserFilePath(userId, personal_id, folder_name, filename);
+      // Итоговый путь к файлу — в приоритете yandex_path
+      let filePath = yandex_path;
 
-      // Удалить файл с Яндекс.Диска (если он существует)
+      // Для старых записей, где yandex_path ещё не заполнен, вычисляем путь
+      if (!filePath) {
+        filePath = getUserFilePath(userId, personal_id, folder_name, filename);
+      }
+
+      // Удаляем файл с Яндекс.Диска (если существует)
       try {
-        await deleteFile(yandexPath);
-        console.log(`✅ Файл удалён с Яндекс.Диска: ${yandexPath}`);
+        await deleteFile(filePath);
+        console.log(`✅ Файл удалён с Яндекс.Диска: ${filePath}`);
       } catch (err) {
         console.error('❌ Ошибка удаления файла с Яндекс.Диска:', err);
 
-        // Если файл не найден на Яндекс.Диске (404), продолжаем удаление записи из БД
+        // Если файл не найден (404), продолжаем удаление записи
         if (!err.status || err.status !== 404) {
           const errorMessage = process.env.NODE_ENV === 'development'
             ? `Ошибка удаления файла с Яндекс.Диска: ${err.message}`
@@ -641,22 +646,21 @@ export function registerImageRoutes(app) {
           return reply.code(500).send({ error: errorMessage });
         }
 
-        console.warn('⚠️ Файл не найден на Яндекс.Диске (уже перемещён или удалён), продолжаем удаление записи из БД');
+        console.warn('⚠️ Файл не найден на Яндекс.Диске, но запись будет удалена из БД');
       }
 
-      // Удалить запись из image_library
+      // Удаляем запись из БД
       await pool.query(
-        'DELETE FROM image_library WHERE id = $1',
-        [imageId]
+        `DELETE FROM image_library
+         WHERE id = $1 AND user_id = $2`,
+        [imageId, userId]
       );
 
-      console.log(`✅ Изображение успешно удалено: id=${imageId}, path=${yandexPath}`);
-
-      // Возвращаем 204 No Content при успехе
-      return reply.code(204).send();
-
+      return reply.code(200).send({
+        success: true
+      });
     } catch (err) {
-      console.error('❌ Ошибка удаления изображения:', err);
+      console.error('❌ Ошибка удаления изображения из библиотеки:', err);
 
       const errorMessage = process.env.NODE_ENV === 'development'
         ? `Ошибка сервера: ${err.message}`
@@ -665,6 +669,7 @@ export function registerImageRoutes(app) {
       return reply.code(500).send({ error: errorMessage });
     }
   });
+
 
   /**
    * POST /api/images/:id/share-request - Отправить изображение на модерацию в общую библиотеку
