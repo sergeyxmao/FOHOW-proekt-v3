@@ -77,10 +77,10 @@ export const useStickersStore = defineStore('stickers', () => {
       const data = await response.json();
       // Нормализуем данные стикеров, убеждаемся что ID всегда числа
       stickers.value = (data.stickers || []).map(sticker => {
-        // Проверяем z_index и устанавливаем минимум 11 (выше лицензии)
-        let zIndex = sticker.z_index ?? 11
-        if (zIndex < 11) {
-          zIndex = 11
+        // Проверяем z_index и устанавливаем минимум 10000 (стикеры ВСЕГДА на переднем плане)
+        let zIndex = sticker.z_index ?? 10000
+        if (zIndex < 10000) {
+          zIndex = 10000
         }
 
         return {
@@ -117,10 +117,10 @@ export const useStickersStore = defineStore('stickers', () => {
         ? Math.max(...stickers.value.map(s => s.z_index || 0), 0)
         : 0;
 
-      // Добавляем z_index в данные стикера (минимум 11 - выше лицензии)
+      // Добавляем z_index в данные стикера (минимум 10000 - стикеры ВСЕГДА на переднем плане)
       const stickerDataWithZIndex = {
         ...stickerData,
-        z_index: Math.max(maxZIndex + 1, 11)
+        z_index: Math.max(maxZIndex + 1, 10000)
       };
 
       const response = await fetch(`${API_URL}/boards/${boardId}/stickers`, {
@@ -295,15 +295,23 @@ export const useStickersStore = defineStore('stickers', () => {
     }
 
     // Преобразуем данные в нужный формат с нормализацией ID
-    stickers.value = stickersData.map(stickerData => ({
-      id: parseInt(stickerData.id, 10),
-      pos_x: stickerData.pos_x || 0,
-      pos_y: stickerData.pos_y || 0,
-      color: stickerData.color || '#FFFF88',
-      content: stickerData.content || '',
-      z_index: stickerData.z_index ?? 0,
-      selected: false
-    }));
+    stickers.value = stickersData.map(stickerData => {
+      // Проверяем z_index и устанавливаем минимум 10000 (стикеры ВСЕГДА на переднем плане)
+      let zIndex = stickerData.z_index ?? 10000
+      if (zIndex < 10000) {
+        zIndex = 10000
+      }
+
+      return {
+        id: parseInt(stickerData.id, 10),
+        pos_x: stickerData.pos_x || 0,
+        pos_y: stickerData.pos_y || 0,
+        color: stickerData.color || '#FFFF88',
+        content: stickerData.content || '',
+        z_index: zIndex,
+        selected: false
+      }
+    });
 
     console.log('✅ Загружено стикеров из сохраненных данных:', stickers.value.length);
   }

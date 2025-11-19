@@ -27,7 +27,7 @@ const stickerStyle = computed(() => ({
   left: `${tempPosition.value.x !== null ? tempPosition.value.x : props.sticker.pos_x}px`,
   top: `${tempPosition.value.y !== null ? tempPosition.value.y : props.sticker.pos_y}px`,
   backgroundColor: props.sticker.color || '#FFFF88',
-  zIndex: props.sticker.z_index ?? 100
+  zIndex: props.sticker.z_index ?? 10000
 }));
 
 // Проверка, выделен ли стикер
