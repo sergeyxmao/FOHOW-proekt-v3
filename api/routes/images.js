@@ -78,7 +78,7 @@ export function registerImageRoutes(app) {
 
       // Получаем общее количество изображений пользователя (без учёта фильтра по папке)
       const countResult = await pool.query(
-        'SELECT COUNT(*) as total FROM image_library WHERE user_id = $1',
+        SELECT COUNT(*) as total FROM image_library WHERE user_id = $1 AND is_shared = FALSE
         [userId]
       );
 
@@ -103,7 +103,7 @@ export function registerImageRoutes(app) {
             file_size,
             created_at
           FROM image_library
-          WHERE user_id = $1 AND folder_name = $2
+          WHERE user_id = $1 AND is_shared = FALSE AND folder_name = $2
           ORDER BY created_at DESC
           LIMIT $3 OFFSET $4
         `;
@@ -124,7 +124,7 @@ export function registerImageRoutes(app) {
             created_at
           FROM image_library
           WHERE user_id = $1
-          ORDER BY created_at DESC
+          WHERE user_id = $1 AND is_shared = FALSE
           LIMIT $2 OFFSET $3
         `;
         queryParams = [userId, limit, offset];
@@ -173,9 +173,9 @@ export function registerImageRoutes(app) {
           u.plan_id,
           sp.features,
           sp.name as plan_name,
-          (SELECT COUNT(*) FROM image_library WHERE user_id = u.id) as image_count,
-          (SELECT COUNT(DISTINCT folder_name) FROM image_library WHERE user_id = u.id AND folder_name IS NOT NULL) as folder_count,
-          (SELECT COALESCE(SUM(file_size), 0) FROM image_library WHERE user_id = u.id) as total_size
+          (SELECT COUNT(*) FROM image_library WHERE user_id = u.id AND is_shared = FALSE) as image_count,
+          (SELECT COUNT(DISTINCT folder_name) FROM image_library WHERE user_id = u.id AND is_shared = FALSE AND folder_name IS NOT NULL) as folder_count,
+          (SELECT COALESCE(SUM(file_size), 0) FROM image_library WHERE user_id = u.id AND is_shared = FALSE) as total_size
          FROM users u
          JOIN subscription_plans sp ON u.plan_id = sp.id
          WHERE u.id = $1`,
@@ -277,7 +277,7 @@ export function registerImageRoutes(app) {
       const result = await pool.query(
         `SELECT DISTINCT folder_name
          FROM image_library
-         WHERE user_id = $1
+         WHERE user_id = $1 AND is_shared = FALSE
          ORDER BY folder_name ASC NULLS FIRST`,
         [userId]
       );
