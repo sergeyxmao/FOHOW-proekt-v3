@@ -3983,14 +3983,14 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         />
       </svg>
       <!-- Контейнер для карточек -->
-      <!-- z-index: 1000 - карточки структуры (аналогично стикерам, всегда на переднем плане) -->
+      <!-- z-index: 10 - карточки структуры (лицензии) -->
       <div
         class="cards-container"
         :style="{
           width: stageConfig.width + 'px',
           height: stageConfig.height + 'px',
           position: 'relative',
-          zIndex: 1000,
+          zIndex: 10,
           pointerEvents: 'none'
         }"
         @dragstart.prevent
@@ -4016,7 +4016,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         @close="() => handleNoteWindowClose(card.id)"
       />
       <!-- Изображения отсортированные по z-index -->
-      <!-- Диапазон z-index для изображений: 1-4 (задний план) и 11-999 (передний план) -->
+      <!-- Диапазон z-index для изображений: 6-9 (задний план) и 11-999 (передний план) -->
       <CanvasImage
         v-for="image in sortedImages"
         :key="`image-${image.id}`"
@@ -4027,7 +4027,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         @redraw="handleImageRedraw"
       />
       <!-- Стикеры отсортированные по z-index -->
-      <!-- Диапазон z-index для стикеров: 1000+ (всегда на переднем плане) -->
+      <!-- Диапазон z-index для стикеров: 10000+ (всегда на переднем плане) -->
       <Sticker
         v-for="sticker in sortedStickers"
         :key="`sticker-${sticker.id}`"
