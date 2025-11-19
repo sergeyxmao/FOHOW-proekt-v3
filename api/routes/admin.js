@@ -1045,7 +1045,7 @@ export function registerAdminRoutes(app) {
 
       console.log(`[ADMIN] Копирование изображения в папку: ${folderNameClean}`);
 
-      const sourceFilePath = yandex_path;
+      const sourceFilePath = getUserFilePath(ownerId, personalId, folder_name, filename);
 
       if (!sourceFilePath) {
         console.error(`[ADMIN] Отсутствует путь к файлу (yandex_path) для изображения: image_id=${imageId}`);
