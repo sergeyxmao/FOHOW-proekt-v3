@@ -937,9 +937,11 @@ export function registerAdminRoutes(app) {
     try {
       const adminId = req.user.id;
       const imageId = parseInt(req.params.id, 10);
-      const { folder_name } = req.body;
+      const { folder_name: requested_folder_name } = req.body;
 
-      console.log(`[ADMIN] Запрос на одобрение изображения: image_id=${imageId}, folder_name="${folder_name}", admin_id=${adminId}`);
+      console.log(
+        `[ADMIN] Запрос на одобрение изображения: image_id=${imageId}, folder_name="${requested_folder_name}", admin_id=${adminId}`
+      );
 
       // Валидация входных данных
       if (!Number.isInteger(imageId) || imageId <= 0) {
@@ -949,13 +951,14 @@ export function registerAdminRoutes(app) {
       }
 
       // Валидация имени папки
-      if (!folder_name || folder_name.trim() === '') {
+      if (!requested_folder_name || requested_folder_name.trim() === '') {
         return reply.code(400).send({
           error: 'Не указано имя папки'
         });
       }
 
-      const folderNameClean = folder_name.trim();
+      const folderNameClean = requested_folder_name.trim();
+
 
       // Проверка длины имени папки
       if (folderNameClean.length > 50) {
