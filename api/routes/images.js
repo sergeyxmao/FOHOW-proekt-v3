@@ -23,125 +23,97 @@ export function registerImageRoutes(app) {
    * Эндпоинт для получения списка изображений текущего пользователя с пагинацией.
    * Позволяет фильтровать изображения по папкам.
    */
-  app.get('/api/images/my', {
-    preHandler: [authenticateToken]
-  }, async (req, reply) => {
-    try {
-      const userId = req.user.id;
-      const userRole = req.user.role;
+  app.get('/api/images/my', { preHandler: authenticateToken }, async (req, reply) => {
+    const page = parseInt(req.query.page || '1', 10);
+    const limit = parseInt(req.query.limit || '20', 10);
+    const folderRaw = req.query.folder || ''; // может быть undefined / 'Все папки' / имя папки
 
-      // Проверка доступа к библиотеке изображений (пропускаем для администраторов)
-      if (userRole !== 'admin') {
-        const userResult = await pool.query(
-          `SELECT sp.features, sp.name as plan_name
-           FROM users u
-           JOIN subscription_plans sp ON u.plan_id = sp.id
-           WHERE u.id = $1`,
-          [userId]
-        );
+    if (page < 1) {
+      return reply.code(400).send({ error: 'Параметр page должен быть >= 1' });
+    }
 
-        if (userResult.rows.length > 0) {
-          const features = userResult.rows[0].features;
-          const planName = userResult.rows[0].plan_name;
-          const canUseImages = features.can_use_images !== undefined ? features.can_use_images : true;
+    if (limit < 1 || limit > 100) {
+      return reply.code(400).send({
+        error: 'Параметр limit должен быть в диапазоне 1-100'
+      });
+    }
 
-          if (!canUseImages) {
-            return reply.code(403).send({
-              error: `Библиотека изображений недоступна на текущем тарифе "${planName}".`,
-              code: 'IMAGE_LIBRARY_ACCESS_DENIED',
-              upgradeRequired: true
-            });
-          }
-        }
-      }
+    const offset = (page - 1) * limit;
 
-      // Валидация и парсинг параметров запроса
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 20;
-      const folder = req.query.folder || null;
+    // НОРМАЛИЗУЕМ имя папки
+    const folderName = String(folderRaw).trim();
 
-      if (page < 1) {
-        return reply.code(400).send({
-          error: 'Параметр page должен быть >= 1'
-        });
-      }
+    // "Все папки" и пустое значение — это ОТСУТСТВИЕ фильтра
+    const hasFolderFilter =
+      folderName !== '' &&
+      folderName !== 'Все папки';
 
-      if (limit < 1 || limit > 100) {
-        return reply.code(400).send({
-          error: 'Параметр limit должен быть в диапазоне 1-100'
-        });
-      }
+    // Считаем общее количество личных изображений (без учёта папки)
+    const countResult = await pool.query(
+      `SELECT COUNT(*) AS total
+       FROM image_library
+       WHERE user_id = $1
+         AND is_shared = FALSE`,
+      [userId]
+    );
 
-      const offset = (page - 1) * limit;
+    const total = parseInt(countResult.rows[0].total, 10);
 
-      // Считаем только ЛИЧНЫЕ изображения (is_shared = FALSE)
-      const countResult = await pool.query(
-        `SELECT COUNT(*) as total
-         FROM image_library
-         WHERE user_id = $1 AND is_shared = FALSE`,
-        [userId]
-      );
+    let query;
+    let queryParams;
 
-      const total = parseInt(countResult.rows[0].total, 10);
+    if (hasFolderFilter) {
+      // Фильтр по конкретной папке
+      query = `
+        SELECT
+          id,
+          original_name,
+          filename,
+          folder_name,
+          public_url,
+          preview_url,
+          width,
+          height,
+          file_size,
+          created_at
+        FROM image_library
+        WHERE user_id = $1
+          AND is_shared = FALSE
+          AND folder_name = $2
+        ORDER BY created_at DESC
+        LIMIT $3 OFFSET $4
+      `;
+      queryParams = [userId, folderName, limit, offset];
+    } else {
+      // БЕЗ фильтра по папке — просто все личные картинки
+      query = `
+        SELECT
+          id,
+          original_name,
+          filename,
+          folder_name,
+          public_url,
+          preview_url,
+          width,
+          height,
+          file_size,
+          created_at
+        FROM image_library
+        WHERE user_id = $1
+          AND is_shared = FALSE
+        ORDER BY created_at DESC
+        LIMIT $2 OFFSET $3
+      `;
+      queryParams = [userId, limit, offset];
+    }
 
-      // Формируем запрос с учётом папки
-      let query;
-      let queryParams;
+    const imagesResult = await pool.query(query, queryParams);
 
-      if (folder !== null && folder.trim() !== '') {
-        // Изображения в конкретной папке
-        query = `
-          SELECT
-            id,
-            original_name,
-            filename,
-            folder_name,
-            public_url,
-            preview_url,
-            width,
-            height,
-            file_size,
-            created_at
-          FROM image_library
-          WHERE user_id = $1
-            AND is_shared = FALSE
-            AND folder_name = $2
-          ORDER BY created_at DESC
-          LIMIT $3 OFFSET $4
-        `;
-        queryParams = [userId, folder.trim(), limit, offset];
-      } else {
-        // Все ЛИЧНЫЕ изображения пользователя
-        query = `
-          SELECT
-            id,
-            original_name,
-            filename,
-            folder_name,
-            public_url,
-            preview_url,
-            width,
-            height,
-            file_size,
-            created_at
-          FROM image_library
-          WHERE user_id = $1
-            AND is_shared = FALSE
-          ORDER BY created_at DESC
-          LIMIT $2 OFFSET $3
-        `;
-        queryParams = [userId, limit, offset];
-      }
-
-      const result = await pool.query(query, queryParams);
-
-      return reply.code(200).send({
-        items: result.rows,
-        pagination: {
-          page,
-          limit,
-          total
-        }
+    return reply.send({
+      success: true,
+      items: imagesResult.rows,
+      total
+    });
       });
     } catch (err) {
       console.error('❌ Ошибка получения списка изображений:', err);
