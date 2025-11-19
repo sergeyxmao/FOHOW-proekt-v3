@@ -3355,12 +3355,14 @@ const handleStageClick = async (event) => {
 
     if (!isImageAlreadySelected || hasMultipleImages || hasOtherTypesSelected) {
       clearObjectSelections();
-	  
-  // Логика для снятия выделения при клике на пустое место  
+    }
+
+  }
+
+  // Логика для снятия выделения при клике на пустое место 
   const preserveCardSelection = isSelectionMode.value;
   if (!event.ctrlKey && !event.metaKey) {
     clearObjectSelections({ preserveCardSelection });
-
   }
 
   selectedConnectionIds.value = [];
