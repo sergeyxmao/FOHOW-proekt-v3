@@ -149,11 +149,18 @@ export const useStickersStore = defineStore('stickers', () => {
       }
 
       const data = await response.json();
+
+      // Сервер может вернуть стикер с произвольным z_index.
+      // По ТЗ стикеры всегда должны находиться поверх изображений,
+      // поэтому жестко гарантируем минимальное значение 10000.
+      let serverZIndex = data.sticker.z_index ?? maxZIndex + 1
+      if (serverZIndex < 10000) {
+        serverZIndex = 10000
+      }      
       const newSticker = {
         ...data.sticker,
         id: parseInt(data.sticker.id, 10),
-        // Гарантируем, что z_index присутствует
-        z_index: data.sticker.z_index ?? maxZIndex + 1
+        z_index: serverZIndex
       };
 
       // Добавляем новый стикер в массив
