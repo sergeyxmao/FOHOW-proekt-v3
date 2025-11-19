@@ -26,7 +26,7 @@ export const useImagesStore = defineStore('images', {
 
     /**
      * Получить максимальный zIndex среди всех изображений
-     * Диапазон для изображений: 1-4 (задний план) и 11-999 (передний план)
+     * Диапазон для изображений: 6-9 (задний план) и 11-999 (передний план)
      */
     getMaxImageZIndex: (state) => {
       if (state.images.length === 0) return 10 // Минимальный zIndex для первого изображения - 11
@@ -111,7 +111,7 @@ export const useImagesStore = defineStore('images', {
       let newZIndex = Math.max(maxForegroundZIndex + 1, 11)
 
       // Ограничиваем zIndex диапазоном переднего плана (не больше 999)
-      // Стикеры имеют zIndex >= 1000 и должны оставаться выше
+      // Стикеры имеют zIndex >= 10000 и должны оставаться выше
       newZIndex = Math.min(newZIndex, 999)
 
       const newImage = {
@@ -432,7 +432,7 @@ export const useImagesStore = defineStore('images', {
       let newZIndex = Math.max(maxForegroundZIndex + 1, 11)
 
       // Ограничиваем zIndex диапазоном переднего плана (не больше 999)
-      // Стикеры имеют zIndex >= 1000 и должны оставаться выше изображений
+      // Стикеры имеют zIndex >= 10000 и должны оставаться выше изображений
       newZIndex = Math.min(newZIndex, 999)
 
       // Устанавливаем новый zIndex
@@ -463,35 +463,35 @@ export const useImagesStore = defineStore('images', {
         return false
       }
 
-      // Изображение на заднем плане имеет zIndex от 1 до 4
+      // Изображение на заднем плане имеет zIndex от 6 до 9
       // Это позволяет ему быть:
       // - Выше фона (zIndex = 0)
-      // - Ниже линий связи (zIndex = 5-9)
-      // - Ниже лицензии (zIndex = 10)
+      // - Выше линий связи (zIndex = 5)
+      // - Ниже карточек/лицензий (zIndex = 10)
       // - Ниже изображений на переднем плане (zIndex = 11-999)
-      // - Ниже стикеров (zIndex >= 1000)
+      // - Ниже стикеров (zIndex >= 10000)
 
-      // Находим минимальный занятый zIndex в диапазоне 1-4
+      // Находим минимальный занятый zIndex в диапазоне 6-9
       const backgroundImages = this.images.filter(img => {
         const zIndex = img.zIndex ?? 0
-        return zIndex >= 1 && zIndex <= 4 && img.id !== imageId
+        return zIndex >= 6 && zIndex <= 9 && img.id !== imageId
       })
 
-      let newZIndex = 1
+      let newZIndex = 6
 
       // Если есть другие изображения на заднем плане, ставим ниже самого нижнего
       if (backgroundImages.length > 0) {
         const minBackgroundZIndex = backgroundImages.reduce((min, img) => {
-          const zIndex = img.zIndex ?? 1
+          const zIndex = img.zIndex ?? 6
           return Math.min(min, zIndex)
-        }, 4)
+        }, 9)
 
-        newZIndex = Math.max(minBackgroundZIndex - 1, 1)
+        newZIndex = Math.max(minBackgroundZIndex - 1, 6)
       }
 
       // Устанавливаем zIndex в диапазоне заднего плана
-      // Ограничиваем диапазоном 1-4
-      image.zIndex = Math.max(1, Math.min(newZIndex, 4))
+      // Ограничиваем диапазоном 6-9
+      image.zIndex = Math.max(6, Math.min(newZIndex, 9))
 
       if (saveToHistory) {
         const historyStore = useHistoryStore()
