@@ -271,15 +271,15 @@ const handleDelete = async (event) => {
   cursor: grabbing;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
   transform: rotate(1deg);
-  /* Временно повышаем z-index при перетаскивании */
-  z-index: 9999 !important;
+  /* Временно повышаем z-index при перетаскивании - должен быть выше всех стикеров */
+  z-index: 99999 !important;
 }
 
 .sticker--editing {
   cursor: default;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
-  /* Временно повышаем z-index при редактировании */
-  z-index: 9999 !important;
+  /* Временно повышаем z-index при редактировании - должен быть выше всех стикеров */
+  z-index: 99999 !important;
 }
 
 .sticker--selected {
