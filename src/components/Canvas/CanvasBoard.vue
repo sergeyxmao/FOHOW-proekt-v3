@@ -151,6 +151,7 @@ const createSelectionBaseState = () => ({
 });
 let selectionBaseSelection = createSelectionBaseState();
 let suppressNextStageClick = false;
+
 const clearObjectSelections = ({ preserveCardSelection = false } = {}) => {
   if (!preserveCardSelection) {
     cardsStore.deselectAllCards();
@@ -1925,6 +1926,7 @@ const collectDragTargets = (cardId, event) => {
   const cardIds = new Set();
   const stickerIds = new Set();
   let imageIds = [];
+  
   if (isHierarchicalDragMode.value) {
     const branchTarget = event.target;
     let branchFilter = null;
@@ -1961,7 +1963,6 @@ const collectDragTargets = (cardId, event) => {
       return { cardIds: [], stickerIds: [], imageIds: [] };
     } else {
       clearObjectSelections();
-
       cardsStore.selectCard(cardId);
       cardIds.add(cardId);
     }
@@ -2371,6 +2372,7 @@ const startDrag = (event, cardId) => {
     .filter(Boolean);
 
   const itemsToDrag = [...cardsToDrag, ...stickersToDrag, ...imagesToDrag];
+  
   if (itemsToDrag.length === 0) {
     return;
   }
@@ -3243,10 +3245,13 @@ const handleImageClick = ({ event, imageId }) => {
   if (isCtrlPressed) {
     imagesStore.toggleImageSelection(imageId);
   } else {
-    if (!imagesStore.selectedImageIds.includes(imageId) || imagesStore.selectedImageIds.length > 1) {
-      imagesStore.deselectAllImages();
-      cardsStore.deselectAllCards();
-      stickersStore.deselectAllStickers();
+    const isImageAlreadySelected = imagesStore.selectedImageIds.includes(imageId);
+    const hasMultipleImages = imagesStore.selectedImageIds.length > 1;
+    const hasOtherTypesSelected =
+      cardsStore.selectedCardIds.length > 0 || stickersStore.selectedStickerIds.length > 0;
+
+    if (!isImageAlreadySelected || hasMultipleImages || hasOtherTypesSelected) {
+      clearObjectSelections();
       imagesStore.selectImage(imageId);
     }
   }
@@ -3350,6 +3355,8 @@ const handleStageClick = async (event) => {
 
     if (!isImageAlreadySelected || hasMultipleImages || hasOtherTypesSelected) {
       clearObjectSelections();
+	  
+  // Логика для снятия выделения при клике на пустое место  
   const preserveCardSelection = isSelectionMode.value;
   if (!event.ctrlKey && !event.metaKey) {
     clearObjectSelections({ preserveCardSelection });
