@@ -340,7 +340,24 @@ async function moveFile(fromPath, toPath) {
 }
 
 /**
- * 2.6. Переименовать корневую папку пользователя
+ * 2.6. Скопировать файл на Яндекс.Диске
+ * @param {string} fromPath - Исходный путь
+ * @param {string} toPath - Целевой путь
+ * @returns {Promise<void>}
+ */
+async function copyFile(fromPath, toPath) {
+  try {
+    const copyEndpoint = `/resources/copy?from=${encodeURIComponent(fromPath)}&path=${encodeURIComponent(toPath)}&overwrite=true`;
+    await makeYandexDiskRequest(copyEndpoint, { method: 'POST' }, `${fromPath} -> ${toPath}`);
+
+    console.log(`[Yandex Disk] Файл успешно скопирован: ${fromPath} -> ${toPath}`);
+  } catch (error) {
+    throw new Error(`Не удалось скопировать файл ${fromPath} в ${toPath}: ${error.message}`);
+  }
+}
+
+/**
+ * 2.7. Переименовать корневую папку пользователя
  * @param {number} userId - ID пользователя
  * @param {string} oldPersonalId - Старый персональный ID
  * @param {string} newPersonalId - Новый персональный ID
@@ -375,5 +392,6 @@ export {
   publishFile,
   deleteFile,
   moveFile,
+  copyFile,	
   renameUserRootFolder
 };
