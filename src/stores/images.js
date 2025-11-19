@@ -30,7 +30,9 @@ export const useImagesStore = defineStore('images', {
      * Добавить изображение на canvas
      * @param {Object} imageData - данные изображения
      * @param {string} imageData.name - имя файла
-     * @param {string} imageData.dataUrl - base64 data URL
+     * @param {number} imageData.imageId - ID изображения из библиотеки (опционально)
+     * @param {string} imageData.dataUrl - base64 data URL или blob URL
+     * @param {string} imageData.originalUrl - оригинальный URL (опционально)
      * @param {number} imageData.width - оригинальная ширина
      * @param {number} imageData.height - оригинальная высота
      * @param {number} imageData.x - позиция X на доске
@@ -59,7 +61,9 @@ export const useImagesStore = defineStore('images', {
       const newImage = {
         id,
         type: 'image',
-        dataUrl: imageData.dataUrl,
+        imageId: imageData.imageId, // ID из библиотеки
+        dataUrl: imageData.dataUrl, // Blob URL для отображения
+        originalUrl: imageData.originalUrl, // Оригинальный URL
         x: imageData.x,
         y: imageData.y,
         width: displaySize.width,
@@ -271,7 +275,7 @@ export const useImagesStore = defineStore('images', {
     /**
      * Загрузить изображения из данных
      */
-    loadImages(imagesData) {
+    async loadImages(imagesData) {
       this.images = []
       this.selectedImageIds = []
 
@@ -279,11 +283,30 @@ export const useImagesStore = defineStore('images', {
         return
       }
 
-      imagesData.forEach(imageData => {
+      // Импортируем useImageProxy для получения blob URLs
+      const { useImageProxy } = await import('@/composables/useImageProxy')
+      const { getImageUrl } = useImageProxy()
+
+      // Загружаем изображения параллельно
+      const imagePromises = imagesData.map(async (imageData) => {
+        let dataUrl = imageData.dataUrl || ''
+
+        // Если есть imageId, получаем свежий blob URL
+        if (imageData.imageId && !dataUrl) {
+          try {
+            dataUrl = await getImageUrl(imageData.imageId)
+            console.log(`✅ Получен blob URL для изображения ${imageData.imageId}`)
+          } catch (error) {
+            console.error(`❌ Ошибка загрузки изображения ${imageData.imageId}:`, error)
+          }
+        }
+
         const normalizedImage = {
           id: imageData.id || ('img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)),
           type: 'image',
-          dataUrl: imageData.dataUrl || '',
+          imageId: imageData.imageId, // Сохраняем imageId из библиотеки
+          dataUrl: dataUrl,
+          originalUrl: imageData.originalUrl,
           x: Number.isFinite(imageData.x) ? imageData.x : 0,
           y: Number.isFinite(imageData.y) ? imageData.y : 0,
           width: Number.isFinite(imageData.width) ? imageData.width : 100,
@@ -298,18 +321,30 @@ export const useImagesStore = defineStore('images', {
           name: imageData.name || 'image.png'
         }
 
-        this.images.push(normalizedImage)
+        return normalizedImage
       })
+
+      // Ждем загрузки всех изображений
+      this.images = await Promise.all(imagePromises)
     },
 
     /**
      * Получить изображения для экспорта
      */
     getImagesForExport() {
-      return this.images.map(image => ({
-        ...image,
-        isSelected: false // Не сохраняем состояние выделения
-      }))
+      return this.images.map(image => {
+        const exportData = {
+          ...image,
+          isSelected: false // Не сохраняем состояние выделения
+        }
+
+        // Если есть imageId, не сохраняем blob URL (он временный)
+        if (image.imageId) {
+          delete exportData.dataUrl // Удаляем blob URL, будет получен заново при загрузке
+        }
+
+        return exportData
+      })
     },
 
     /**

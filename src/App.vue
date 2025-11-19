@@ -427,7 +427,7 @@ async function loadBoard(boardId) {
     const imagesData = Array.isArray(content.images)
       ? content.images
       : []
-    imagesStore.loadImages(imagesData)
+    await imagesStore.loadImages(imagesData)
 
     console.log('✅ Загружена структура:', data.board.name)
     console.log('  Карточек:', cardsData.length)

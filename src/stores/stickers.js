@@ -76,11 +76,19 @@ export const useStickersStore = defineStore('stickers', () => {
 
       const data = await response.json();
       // Нормализуем данные стикеров, убеждаемся что ID всегда числа
-      stickers.value = (data.stickers || []).map(sticker => ({
-        ...sticker,
-        id: parseInt(sticker.id, 10),
-        z_index: sticker.z_index ?? 0
-      }));
+      stickers.value = (data.stickers || []).map(sticker => {
+        // Проверяем z_index и устанавливаем минимум 11 (выше лицензии)
+        let zIndex = sticker.z_index ?? 11
+        if (zIndex < 11) {
+          zIndex = 11
+        }
+
+        return {
+          ...sticker,
+          id: parseInt(sticker.id, 10),
+          z_index: zIndex
+        }
+      });
 
     } catch (error) {
       console.error('❌ Ошибка загрузки стикеров:', error);
@@ -109,10 +117,10 @@ export const useStickersStore = defineStore('stickers', () => {
         ? Math.max(...stickers.value.map(s => s.z_index || 0), 0)
         : 0;
 
-      // Добавляем z_index в данные стикера
+      // Добавляем z_index в данные стикера (минимум 11 - выше лицензии)
       const stickerDataWithZIndex = {
         ...stickerData,
-        z_index: maxZIndex + 1
+        z_index: Math.max(maxZIndex + 1, 11)
       };
 
       const response = await fetch(`${API_URL}/boards/${boardId}/stickers`, {
