@@ -260,7 +260,9 @@ async function handleImageClick(image) {
   // Это будет обработано в компоненте CanvasBoard при клике на холст
   stickersStore.pendingImageData = {
     type: 'image',
-    url: imageUrl,
+    imageId: image.id, // ID изображения из библиотеки
+    url: imageUrl, // Blob URL для отображения
+    originalUrl: image.public_url, // Оригинальный URL
     width: image.width || 200,
     height: image.height || 150
   }

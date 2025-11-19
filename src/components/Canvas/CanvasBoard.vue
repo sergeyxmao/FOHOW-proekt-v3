@@ -3312,7 +3312,9 @@ const handleStageClick = async (event) => {
         // Добавляем изображение на canvas через imagesStore
         imagesStore.addImage({
           name: 'Image from library',
-          dataUrl: imageData.url,
+          imageId: imageData.imageId, // ID из библиотеки
+          dataUrl: imageData.url, // Blob URL для отображения
+          originalUrl: imageData.originalUrl, // Оригинальный URL
           width: imageData.width || 200,
           height: imageData.height || 150,
           x: Math.round(x),
@@ -3539,6 +3541,13 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  // Очищаем blob URLs для предотвращения утечки памяти
+  imagesStore.images.forEach(image => {
+    if (image.dataUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(image.dataUrl);
+    }
+  });
+
   // Очищаем стикеры при размонтировании
   stickersStore.clearStickers();
 
