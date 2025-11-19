@@ -77,10 +77,11 @@ export function registerImageRoutes(app) {
       const offset = (page - 1) * limit;
 
       // Получаем общее количество изображений пользователя (без учёта фильтра по папке)
-      const countResult = await pool.query(
-        SELECT COUNT(*) as total FROM image_library WHERE user_id = $1 AND is_shared = FALSE
-        [userId]
-      );
+        const countResult = await pool.query(
+          `SELECT COUNT(*) as total FROM image_library WHERE user_id = $1 AND is_shared = FALSE`,
+          [userId]
+        );
+
 
       const total = parseInt(countResult.rows[0].total, 10);
 
