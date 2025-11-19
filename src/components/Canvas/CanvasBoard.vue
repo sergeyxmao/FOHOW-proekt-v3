@@ -1421,6 +1421,30 @@ const getCurrentZoom = () => {
 };  
 const cardsWithVisibleNotes = computed(() => cards.value.filter(card => card.note && card.note.visible));
 
+/**
+ * Отсортированные изображения по z-index (от меньшего к большему)
+ * Это гарантирует правильный порядок рендеринга в DOM
+ */
+const sortedImages = computed(() => {
+  return [...images.value].sort((a, b) => {
+    const zIndexA = a.zIndex !== undefined ? a.zIndex : 0
+    const zIndexB = b.zIndex !== undefined ? b.zIndex : 0
+    return zIndexA - zIndexB
+  })
+})
+
+/**
+ * Отсортированные стикеры по z-index (от меньшего к большему)
+ * Это гарантирует правильный порядок рендеринга в DOM
+ */
+const sortedStickers = computed(() => {
+  return [...stickersStore.stickers].sort((a, b) => {
+    const zIndexA = a.z_index !== undefined ? a.z_index : 10000
+    const zIndexB = b.z_index !== undefined ? b.z_index : 10000
+    return zIndexA - zIndexB
+  })
+})
+
 const engineInput = computed(() => {
   const normalizedCards = cards.value.map(card => ({
     id: card.id,
@@ -3875,6 +3899,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       </div>
 
       <!-- Canvas слой для рендеринга изображений -->
+      <!-- z-index: 0 - фон/сетка доски -->
       <canvas
         ref="imagesCanvasRef"
         class="images-canvas-layer"
@@ -3883,11 +3908,13 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         style="position: absolute; top: 0; left: 0; z-index: 0; pointer-events: none;"
       ></canvas>
 
-<svg
+      <!-- SVG слой для линий связи -->
+      <!-- z-index: 5 - линии связи между объектами (диапазон 5-9) -->
+      <svg
         class="svg-layer"
         :width="stageConfig.width"
         :height="stageConfig.height"
-        style="position: absolute; top: 0; left: 0; z-index: 1; overflow: visible; pointer-events: auto;"
+        style="position: absolute; top: 0; left: 0; z-index: 5; overflow: visible; pointer-events: auto;"
         @click="handleStageClick"
       >
         <defs>
@@ -3955,13 +3982,15 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           marker-end="url(#marker-dot)"
         />
       </svg>
+      <!-- Контейнер для карточек -->
+      <!-- z-index: 1000 - карточки структуры (аналогично стикерам, всегда на переднем плане) -->
       <div
         class="cards-container"
         :style="{
           width: stageConfig.width + 'px',
           height: stageConfig.height + 'px',
           position: 'relative',
-          zIndex: 2,
+          zIndex: 1000,
           pointerEvents: 'none'
         }"
         @dragstart.prevent
@@ -3986,21 +4015,25 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         :ref="el => handleNoteWindowRegister(card.id, el)"
         @close="() => handleNoteWindowClose(card.id)"
       />
-      <Sticker
-        v-for="sticker in stickersStore.stickers"
-        :key="`sticker-${sticker.id}`"
-        :sticker="sticker"
-        @sticker-click="handleStickerClick"
-        @start-drag="startStickerDrag"
-      />
+      <!-- Изображения отсортированные по z-index -->
+      <!-- Диапазон z-index для изображений: 1-4 (задний план) и 11-999 (передний план) -->
       <CanvasImage
-        v-for="image in images"
+        v-for="image in sortedImages"
         :key="`image-${image.id}`"
         :image="image"
         :is-selected="image.isSelected"
         @image-click="handleImageClick"
         @start-drag="startImageDrag"
         @redraw="handleImageRedraw"
+      />
+      <!-- Стикеры отсортированные по z-index -->
+      <!-- Диапазон z-index для стикеров: 1000+ (всегда на переднем плане) -->
+      <Sticker
+        v-for="sticker in sortedStickers"
+        :key="`sticker-${sticker.id}`"
+        :sticker="sticker"
+        @sticker-click="handleStickerClick"
+        @start-drag="startStickerDrag"
       />
     </div>
     <a

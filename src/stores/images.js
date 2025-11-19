@@ -22,6 +22,57 @@ export const useImagesStore = defineStore('images', {
     // Получить изображение по ID
     getImageById: (state) => (imageId) => {
       return state.images.find(img => img.id === imageId)
+    },
+
+    /**
+     * Получить максимальный zIndex среди всех изображений
+     * Диапазон для изображений: 1-4 (задний план) и 11-999 (передний план)
+     */
+    getMaxImageZIndex: (state) => {
+      if (state.images.length === 0) return 10 // Минимальный zIndex для первого изображения - 11
+
+      const maxZIndex = state.images.reduce((max, img) => {
+        const zIndex = img.zIndex ?? 0
+        return Math.max(max, zIndex)
+      }, 10)
+
+      return maxZIndex
+    },
+
+    /**
+     * Получить минимальный zIndex среди изображений в зоне переднего плана (11-999)
+     * Используется для определения свободного слота на переднем плане
+     */
+    getMinForegroundImageZIndex: (state) => {
+      const foregroundImages = state.images.filter(img => {
+        const zIndex = img.zIndex ?? 0
+        return zIndex >= 11 && zIndex <= 999
+      })
+
+      if (foregroundImages.length === 0) return 11
+
+      return foregroundImages.reduce((min, img) => {
+        const zIndex = img.zIndex ?? 11
+        return Math.min(min, zIndex)
+      }, 999)
+    },
+
+    /**
+     * Получить максимальный zIndex среди изображений в зоне переднего плана (11-999)
+     * Используется для размещения нового изображения сверху
+     */
+    getMaxForegroundImageZIndex: (state) => {
+      const foregroundImages = state.images.filter(img => {
+        const zIndex = img.zIndex ?? 0
+        return zIndex >= 11 && zIndex <= 999
+      })
+
+      if (foregroundImages.length === 0) return 10 // Вернём 10, чтобы при добавлении 1 получилось 11
+
+      return foregroundImages.reduce((max, img) => {
+        const zIndex = img.zIndex ?? 11
+        return Math.max(max, zIndex)
+      }, 10)
     }
   },
 
@@ -53,10 +104,15 @@ export const useImagesStore = defineStore('images', {
       // Генерируем уникальный ID
       const id = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
 
-      // Вычисляем максимальный zIndex среди существующих изображений
-      const maxZIndex = this.images.length > 0
-        ? Math.max(...this.images.map(img => img.zIndex || 0))
-        : 0
+      // Вычисляем zIndex для нового изображения
+      // Новое изображение добавляется на передний план (диапазон 11-999)
+      // Находим максимальный zIndex среди изображений на переднем плане
+      const maxForegroundZIndex = this.getMaxForegroundImageZIndex
+      let newZIndex = Math.max(maxForegroundZIndex + 1, 11)
+
+      // Ограничиваем zIndex диапазоном переднего плана (не больше 999)
+      // Стикеры имеют zIndex >= 1000 и должны оставаться выше
+      newZIndex = Math.min(newZIndex, 999)
 
       const newImage = {
         id,
@@ -72,7 +128,7 @@ export const useImagesStore = defineStore('images', {
         originalHeight: imageData.height,
         rotation: 0,
         opacity: 1,
-        zIndex: maxZIndex + 1,
+        zIndex: newZIndex,
         isSelected: true,
         isLocked: false,
         name: imageData.name
@@ -371,14 +427,16 @@ export const useImagesStore = defineStore('images', {
         return false
       }
 
-      // Находим максимальный zIndex среди всех изображений
-      const maxZIndex = this.images.reduce((max, img) => {
-        const zIndex = img.zIndex ?? 0
-        return Math.max(max, zIndex)
-      }, 0)
+      // Находим максимальный zIndex среди изображений на переднем плане (11-999)
+      const maxForegroundZIndex = this.getMaxForegroundImageZIndex
+      let newZIndex = Math.max(maxForegroundZIndex + 1, 11)
 
-      // Устанавливаем zIndex = maxZIndex + 1
-      image.zIndex = maxZIndex + 1
+      // Ограничиваем zIndex диапазоном переднего плана (не больше 999)
+      // Стикеры имеют zIndex >= 1000 и должны оставаться выше изображений
+      newZIndex = Math.min(newZIndex, 999)
+
+      // Устанавливаем новый zIndex
+      image.zIndex = newZIndex
 
       if (saveToHistory) {
         const historyStore = useHistoryStore()
@@ -405,14 +463,35 @@ export const useImagesStore = defineStore('images', {
         return false
       }
 
-      // Находим минимальный zIndex среди всех изображений
-      const minZIndex = this.images.reduce((min, img) => {
-        const zIndex = img.zIndex ?? 0
-        return Math.min(min, zIndex)
-      }, 0)
+      // Изображение на заднем плане имеет zIndex от 1 до 4
+      // Это позволяет ему быть:
+      // - Выше фона (zIndex = 0)
+      // - Ниже линий связи (zIndex = 5-9)
+      // - Ниже лицензии (zIndex = 10)
+      // - Ниже изображений на переднем плане (zIndex = 11-999)
+      // - Ниже стикеров (zIndex >= 1000)
 
-      // Устанавливаем zIndex = minZIndex - 1
-      image.zIndex = minZIndex - 1
+      // Находим минимальный занятый zIndex в диапазоне 1-4
+      const backgroundImages = this.images.filter(img => {
+        const zIndex = img.zIndex ?? 0
+        return zIndex >= 1 && zIndex <= 4 && img.id !== imageId
+      })
+
+      let newZIndex = 1
+
+      // Если есть другие изображения на заднем плане, ставим ниже самого нижнего
+      if (backgroundImages.length > 0) {
+        const minBackgroundZIndex = backgroundImages.reduce((min, img) => {
+          const zIndex = img.zIndex ?? 1
+          return Math.min(min, zIndex)
+        }, 4)
+
+        newZIndex = Math.max(minBackgroundZIndex - 1, 1)
+      }
+
+      // Устанавливаем zIndex в диапазоне заднего плана
+      // Ограничиваем диапазоном 1-4
+      image.zIndex = Math.max(1, Math.min(newZIndex, 4))
 
       if (saveToHistory) {
         const historyStore = useHistoryStore()
@@ -443,10 +522,13 @@ export const useImagesStore = defineStore('images', {
       // Генерируем новый ID
       const newId = 'img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
 
-      // Вычисляем максимальный zIndex среди существующих изображений
-      const maxZIndex = this.images.length > 0
-        ? Math.max(...this.images.map(img => img.zIndex || 0))
-        : 0
+      // Вычисляем zIndex для дублированного изображения
+      // Дублированное изображение размещается на переднем плане (диапазон 11-999)
+      const maxForegroundZIndex = this.getMaxForegroundImageZIndex
+      let newZIndex = Math.max(maxForegroundZIndex + 1, 11)
+
+      // Ограничиваем zIndex диапазоном переднего плана (не больше 999)
+      newZIndex = Math.min(newZIndex, 999)
 
       // Создаем копию изображения
       const newImage = {
@@ -454,7 +536,7 @@ export const useImagesStore = defineStore('images', {
         id: newId,
         x: image.x + offset.x,
         y: image.y + offset.y,
-        zIndex: maxZIndex + 1,
+        zIndex: newZIndex,
         isSelected: false
       }
 
