@@ -3,7 +3,8 @@ import { authenticateToken } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { randomBytes } from 'crypto';
 import {
-  getSharedFolderPath, 
+  getUserFilePath,
+  getSharedFolderPath,
   ensureFolderExists,
   moveFile,
   copyFile,  
