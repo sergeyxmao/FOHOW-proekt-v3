@@ -1119,6 +1119,15 @@ export function registerAdminRoutes(app) {
       );
 
       const sharedImage = insertResult.rows[0];
+      const userOriginalPath = getUserFilePath(ownerId, personalId, folder_name, filename);
+
+      await pool.query(
+        `UPDATE image_library
+         SET yandex_path = $1,
+             share_requested_at = NULL
+         WHERE id = $2`,
+        [userOriginalPath, imageId]
+      );
 
       // Сбросить флаг share_requested_at у личной копии
       await pool.query(
