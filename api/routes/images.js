@@ -127,145 +127,121 @@ export function registerImageRoutes(app) {
 
 
   /**
-   * GET /api/images/my/stats - Получить статистику использования библиотеки
+   * GET /api/images/my - Получить список личных изображений
    *
-   * Эндпоинт для получения информации о текущем использовании библиотеки изображений
-   * и лимитах тарифного плана.
+   * Эндпоинт для получения списка изображений текущего пользователя с пагинацией.
+   * Позволяет фильтровать изображения по папкам.
    */
-  app.get('/api/images/my/stats', {
+  app.get('/api/images/my', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
-      const userRole = req.user.role;
+      const page = parseInt(req.query.page || '1', 10);
+      const limit = parseInt(req.query.limit || '20', 10);
+      const folderRaw = req.query.folder || ''; // может быть undefined / 'Все папки' / имя папки
 
-      // Получаем информацию о тарифе и статистику использования
-      const userResult = await pool.query(
-        `SELECT
-          u.plan_id,
-          sp.features,
-          sp.name as plan_name,
-          (SELECT COUNT(*) FROM image_library WHERE user_id = u.id AND is_shared = FALSE) as image_count,
-          (SELECT COUNT(DISTINCT folder_name) FROM image_library WHERE user_id = u.id AND is_shared = FALSE AND folder_name IS NOT NULL) as folder_count,
-          (SELECT COALESCE(SUM(file_size), 0) FROM image_library WHERE user_id = u.id AND is_shared = FALSE) as total_size
-         FROM users u
-         JOIN subscription_plans sp ON u.plan_id = sp.id
-         WHERE u.id = $1`,
-        [userId]
-      );
+      if (page < 1) {
+        return reply.code(400).send({ error: 'Параметр page должен быть >= 1' });
+      }
 
-      if (userResult.rows.length === 0) {
-        return reply.code(403).send({
-          error: 'Не удалось определить тарифный план пользователя.'
+      if (limit < 1 || limit > 100) {
+        return reply.code(400).send({
+          error: 'Параметр limit должен быть в диапазоне 1-100'
         });
       }
 
-      const user = userResult.rows[0];
-      const features = user.features;
-      const planName = user.plan_name;
+      const offset = (page - 1) * limit;
 
-      // Проверка доступа к библиотеке изображений (пропускаем для администраторов)
-      if (userRole !== 'admin') {
-        const canUseImages = features.can_use_images !== undefined ? features.can_use_images : true;
+      // НОРМАЛИЗУЕМ имя папки
+      const folderName = String(folderRaw).trim();
 
-        if (!canUseImages) {
-          return reply.code(403).send({
-            error: `Библиотека изображений недоступна на текущем тарифе "${planName}".`,
-            code: 'IMAGE_LIBRARY_ACCESS_DENIED',
-            upgradeRequired: true
-          });
-        }
-      }
+      // "Все папки" и пустое значение — это ОТСУТСТВИЕ фильтра
+      const hasFolderFilter =
+        folderName !== '' &&
+        folderName !== 'Все папки';
 
-      // Получаем лимиты из тарифа
-      const maxFiles = features.image_library_max_files !== undefined ? features.image_library_max_files : -1;
-      const maxFolders = features.image_library_max_folders !== undefined ? features.image_library_max_folders : -1;
-      const maxStorageMB = features.image_library_max_storage_mb !== undefined ? features.image_library_max_storage_mb : -1;
+      // Считаем общее количество личных изображений С УЧЁТОМ фильтра по папке
+      let total = 0;
 
-      // Формируем ответ
-      return reply.send({
-        usage: {
-          files: parseInt(user.image_count, 10),
-          folders: parseInt(user.folder_count, 10),
-          storageMB: parseFloat((parseInt(user.total_size, 10) / 1024 / 1024).toFixed(2))
-        },
-        limits: {
-          files: maxFiles,
-          folders: maxFolders,
-          storageMB: maxStorageMB
-        },
-        planName
-      });
-    } catch (err) {
-      console.error('❌ Ошибка получения статистики библиотеки:', err);
-
-      const errorMessage = process.env.NODE_ENV === 'development'
-        ? `Ошибка сервера: ${err.message}`
-        : 'Ошибка сервера. Попробуйте позже';
-
-      return reply.code(500).send({ error: errorMessage });
-    }
-  });
-
-  /**
-   * GET /api/images/my/folders - Получить список папок личной библиотеки
-   *
-   * Эндпоинт для получения списка уникальных папок, используемых в личной библиотеке пользователя.
-   * Фронтенд использует это для построения дерева папок.
-   */
-  app.get('/api/images/my/folders', {
-    preHandler: [authenticateToken]
-  }, async (req, reply) => {
-    try {
-      const userId = req.user.id;
-      const userRole = req.user.role;
-
-      // Проверка доступа к библиотеке изображений (пропускаем для администраторов)
-      if (userRole !== 'admin') {
-        const userResult = await pool.query(
-          `SELECT sp.features, sp.name as plan_name
-           FROM users u
-           JOIN subscription_plans sp ON u.plan_id = sp.id
-           WHERE u.id = $1`,
+      if (hasFolderFilter) {
+        const countResult = await pool.query(
+          `SELECT COUNT(*) AS total
+           FROM image_library
+           WHERE user_id = $1
+             AND is_shared = FALSE
+             AND folder_name = $2`,
+          [userId, folderName]
+        );
+        total = parseInt(countResult.rows[0].total, 10);
+      } else {
+        const countResult = await pool.query(
+          `SELECT COUNT(*) AS total
+           FROM image_library
+           WHERE user_id = $1
+             AND is_shared = FALSE`,
           [userId]
         );
-
-        if (userResult.rows.length > 0) {
-          const features = userResult.rows[0].features;
-          const planName = userResult.rows[0].plan_name;
-          const canUseImages = features.can_use_images !== undefined ? features.can_use_images : true;
-
-          if (!canUseImages) {
-            return reply.code(403).send({
-              error: `Библиотека изображений недоступна на текущем тарифе "${planName}".`,
-              code: 'IMAGE_LIBRARY_ACCESS_DENIED',
-              upgradeRequired: true
-            });
-          }
-        }
+        total = parseInt(countResult.rows[0].total, 10);
       }
 
-      // Получаем уникальные значения folder_name из image_library
-      const result = await pool.query(
-        `SELECT DISTINCT folder_name
-         FROM image_library
-         WHERE user_id = $1
-           AND is_shared = FALSE
-         ORDER BY folder_name ASC NULLS FIRST`,
-        [userId]
-      );
+      let query;
+      let queryParams;
 
+      if (hasFolderFilter) {
+        // Фильтр по конкретной папке
+        query = `
+          SELECT
+            id,
+            original_name,
+            filename,
+            folder_name,
+            public_url,
+            preview_url,
+            width,
+            height,
+            file_size,
+            created_at
+          FROM image_library
+          WHERE user_id = $1
+            AND is_shared = FALSE
+            AND folder_name = $2
+          ORDER BY created_at DESC
+          LIMIT $3 OFFSET $4
+        `;
+        queryParams = [userId, folderName, limit, offset];
+      } else {
+        // БЕЗ фильтра по папке — просто все личные картинки
+        query = `
+          SELECT
+            id,
+            original_name,
+            filename,
+            folder_name,
+            public_url,
+            preview_url,
+            width,
+            height,
+            file_size,
+            created_at
+          FROM image_library
+          WHERE user_id = $1
+            AND is_shared = FALSE
+          ORDER BY created_at DESC
+          LIMIT $2 OFFSET $3
+        `;
+        queryParams = [userId, limit, offset];
+      }
 
-      // Извлекаем массив названий папок, фильтруя null и пустые строки
-      const folders = result.rows
-        .map(row => row.folder_name)
-        .filter(name => name !== null && name.trim() !== '');
+      const imagesResult = await pool.query(query, queryParams);
 
-      // Возвращаем список папок
-      return reply.code(200).send({ folders });
-
+      return reply.send({
+        success: true,
+        items: imagesResult.rows,
+        total
+      });
     } catch (err) {
-      console.error('❌ Ошибка получения списка папок:', err);
+      console.error('❌ Ошибка получения списка изображений:', err);
 
       const errorMessage = process.env.NODE_ENV === 'development'
         ? `Ошибка сервера: ${err.message}`
