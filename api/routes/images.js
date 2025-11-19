@@ -109,11 +109,10 @@ export function registerImageRoutes(app) {
 
     const imagesResult = await pool.query(query, queryParams);
 
-    return reply.send({
-      success: true,
-      items: imagesResult.rows,
-      total
-    });
+      return reply.send({
+        success: true,
+        items: imagesResult.rows,
+        total
       });
     } catch (err) {
       console.error('❌ Ошибка получения списка изображений:', err);
@@ -125,6 +124,7 @@ export function registerImageRoutes(app) {
       return reply.code(500).send({ error: errorMessage });
     }
   });
+
 
   /**
    * GET /api/images/my/stats - Получить статистику использования библиотеки
