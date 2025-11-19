@@ -4,8 +4,11 @@ import { requireAdmin } from '../middleware/requireAdmin.js';
 import { randomBytes } from 'crypto';
 import {
   getSharedFolderPath,
+  getUserFilePath,
+  getUserLibraryFolderPath,  
   ensureFolderExists,
   moveFile,
+  copyFile,  
   publishFile,
   deleteFile,
   uploadFile
@@ -927,7 +930,7 @@ export function registerAdminRoutes(app) {
   });
 
   /**
-   * Одобрить изображение и переместить в общую библиотеку
+   * Одобрить изображение и скопировать в общую библиотеку
    * POST /api/admin/images/:id/approve
    */
   app.post('/api/admin/images/:id/approve', {
@@ -967,11 +970,21 @@ export function registerAdminRoutes(app) {
       const imageResult = await pool.query(
         `SELECT
           il.id,
+          il.user_id,
+          il.original_name,          
           il.filename,
+          il.folder_name,          
           il.yandex_path,
+          il.public_url,
+          il.preview_url,
+          il.width,
+          il.height,
+          il.file_size,          
           il.share_requested_at,
-          il.is_shared
-         FROM image_library il
+          il.is_shared,
+          u.personal_id as user_personal_id
+          FROM image_library il
+         JOIN users u ON il.user_id = u.id         
          WHERE il.id = $1
            AND il.share_requested_at IS NOT NULL
            AND il.is_shared = FALSE`,
@@ -987,8 +1000,18 @@ export function registerAdminRoutes(app) {
       }
 
       const image = imageResult.rows[0];
-      const { filename, yandex_path } = image;
-
+      const {
+        filename,
+        yandex_path,
+        user_id: ownerId,
+        original_name,
+        folder_name,
+        width,
+        height,
+        file_size,
+        share_requested_at,
+        user_personal_id: personalId
+      } = image;
       // Найти или создать папку в базе данных
       let folderResult = await pool.query(
         'SELECT id, name FROM shared_folders WHERE name = $1',
@@ -1021,66 +1044,104 @@ export function registerAdminRoutes(app) {
 
       console.log(`[ADMIN] Перемещение изображения в папку: ${folderNameClean}`);
 
-      // Определить текущий путь файла (должен быть в pending)
-      const currentPath = yandex_path;
+      // Построить путь к личной копии и убедиться, что она существует
+      const personalFolderPath = getUserLibraryFolderPath(ownerId, personalId, folder_name);
+      const personalFilePath = getUserFilePath(ownerId, personalId, folder_name, filename);
+      await ensureFolderExists(personalFolderPath);
 
-      if (!currentPath) {
-        console.error(`[ADMIN] Отсутствует yandex_path для изображения: image_id=${imageId}`);
+      let sourceFilePath = yandex_path || personalFilePath;
+
+      if (!sourceFilePath) {
+        console.error(`[ADMIN] Отсутствует путь к файлу для изображения: image_id=${imageId}`);
         return reply.code(500).send({
-          error: 'Не удалось определить текущий путь файла'
+          error: 'Не удалось определить путь к файлу'
         });
+      }
+      if (sourceFilePath !== personalFilePath) {
+        console.log(`[ADMIN] Возвращаем файл пользователя в личную библиотеку: ${sourceFilePath} -> ${personalFilePath}`);
+        await moveFile(sourceFilePath, personalFilePath);
+        sourceFilePath = personalFilePath;
       }
 
       // Построить путь к целевой папке
       const sharedFolderPath = getSharedFolderPath(folderNameClean);
       const newFilePath = `${sharedFolderPath}/${filename}`;
 
-      console.log(`[ADMIN] Перемещение файла: ${currentPath} -> ${newFilePath}`);
+      console.log(`[ADMIN] Копирование файла: ${sourceFilePath} -> ${newFilePath}`);
 
       // Создать папку на Яндекс.Диске, если она не существует
       await ensureFolderExists(sharedFolderPath);
       console.log(`[ADMIN] Папка проверена/создана на Яндекс.Диске: ${sharedFolderPath}`);
 
-      // Переместить файл из pending в общую папку
-      await moveFile(currentPath, newFilePath);
+      // Скопировать файл из личной библиотеки в общую
+      await copyFile(sourceFilePath, newFilePath);
 
-      console.log(`[ADMIN] Файл успешно перемещён в общую библиотеку`);
+      console.log(`[ADMIN] Файл успешно скопирован в общую библиотеку`);
 
       // Опубликовать файл и получить новую публичную ссылку
-      const { public_url: originalPublicUrl, preview_url } = await publishFile(newFilePath);
-      const publicUrl = preview_url || originalPublicUrl;
+      const publishResult = await publishFile(newFilePath);
+      const publicUrl = publishResult.public_url;
+      const previewUrl = publishResult.preview_url || publishResult.public_url;
       
       console.log(`[ADMIN] Файл опубликован, public_url: ${publicUrl}`);
 
-      // Обновить запись в image_library
-      const updateResult = await pool.query(
-        `UPDATE image_library
-         SET
-           yandex_path = $1,
-           public_url = $2,
-           is_shared = TRUE,
-           shared_folder_id = $3,
-           share_approved_at = NOW(),
-           share_approved_by = $4,
-           moderation_status = 'approved'
-         WHERE id = $5
-         RETURNING
-           id,
-           is_shared,
-           shared_folder_id,
-           share_approved_at,
-           share_approved_by,
-           public_url,
-           moderation_status`,
-        [newFilePath, publicUrl, shared_folder_id, adminId, imageId]
+      // Создать новую запись для общей библиотеки
+      const insertResult = await pool.query(
+        `INSERT INTO image_library (
+          user_id,
+          original_name,
+          filename,
+          folder_name,
+          yandex_path,
+          public_url,
+          preview_url,
+          width,
+          height,
+          file_size,
+          moderation_status,
+          is_shared,
+          shared_folder_id,
+          share_requested_at,
+          share_approved_at,
+          share_approved_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        RETURNING id, user_id, original_name, public_url, preview_url, shared_folder_id, is_shared`,
+        [
+          ownerId,
+          original_name,
+          filename,
+          null,
+          newFilePath,
+          publicUrl,
+          previewUrl,
+          width,
+          height,
+          file_size,
+          'approved',
+          true,
+          shared_folder_id,
+          share_requested_at,
+          new Date(),
+          adminId
+        ]
       );
 
-      const updatedImage = updateResult.rows[0];
+      const sharedImage = insertResult.rows[0];
 
-      console.log(`[ADMIN] ✅ Изображение успешно одобрено: image_id=${imageId}, folder=${folderNameClean}`);
+      // Сбросить флаг share_requested_at у личной копии
+      await pool.query(
+        `UPDATE image_library
+         SET
+           share_requested_at = NULL,
+           yandex_path = $1
+         WHERE id = $2`,
+        [sourceFilePath, imageId]
+      );
 
-      // Возвращаем успешный ответ
-      return reply.code(200).send(updatedImage);
+      console.log(`[ADMIN] ✅ Изображение успешно одобрено и скопировано: image_id=${imageId}, folder=${folderNameClean}`);
+      
+      // Возвращаем данные о новой записи в общей библиотеке
+      return reply.code(200).send(sharedImage);
 
     } catch (err) {
       console.error('[ADMIN] Ошибка одобрения изображения:', err);
