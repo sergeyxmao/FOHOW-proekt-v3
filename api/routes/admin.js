@@ -3,9 +3,7 @@ import { authenticateToken } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { randomBytes } from 'crypto';
 import {
-  getSharedFolderPath,
-  getUserFilePath,
-  getUserLibraryFolderPath,  
+  getSharedFolderPath, 
   ensureFolderExists,
   moveFile,
   copyFile,  
@@ -1042,25 +1040,15 @@ export function registerAdminRoutes(app) {
         console.log(`[ADMIN] Папка найдена в БД: id=${sharedFolder.id}, name="${sharedFolder.name}"`);
       }
 
-      console.log(`[ADMIN] Перемещение изображения в папку: ${folderNameClean}`);
+      console.log(`[ADMIN] Копирование изображения в папку: ${folderNameClean}`);
 
-      // Построить путь к личной копии и убедиться, что она существует
-      const personalFolderPath = getUserLibraryFolderPath(ownerId, personalId, folder_name);
-      const personalFilePath = getUserFilePath(ownerId, personalId, folder_name, filename);
-      await ensureFolderExists(personalFolderPath);
-
-      let sourceFilePath = yandex_path || personalFilePath;
+      const sourceFilePath = yandex_path;
 
       if (!sourceFilePath) {
-        console.error(`[ADMIN] Отсутствует путь к файлу для изображения: image_id=${imageId}`);
+        console.error(`[ADMIN] Отсутствует путь к файлу (yandex_path) для изображения: image_id=${imageId}`);
         return reply.code(500).send({
-          error: 'Не удалось определить путь к файлу'
+          error: 'Не удалось определить путь к файлу на Яндекс.Диске'
         });
-      }
-      if (sourceFilePath !== personalFilePath) {
-        console.log(`[ADMIN] Возвращаем файл пользователя в личную библиотеку: ${sourceFilePath} -> ${personalFilePath}`);
-        await moveFile(sourceFilePath, personalFilePath);
-        sourceFilePath = personalFilePath;
       }
 
       // Построить путь к целевой папке
@@ -1120,7 +1108,7 @@ export function registerAdminRoutes(app) {
           'approved',
           true,
           shared_folder_id,
-          share_requested_at,
+          null,
           new Date(),
           adminId
         ]
@@ -1131,11 +1119,9 @@ export function registerAdminRoutes(app) {
       // Сбросить флаг share_requested_at у личной копии
       await pool.query(
         `UPDATE image_library
-         SET
-           share_requested_at = NULL,
-           yandex_path = $1
-         WHERE id = $2`,
-        [sourceFilePath, imageId]
+         SET share_requested_at = NULL
+         WHERE id = $1`,
+        [imageId]
       );
 
       console.log(`[ADMIN] ✅ Изображение успешно одобрено и скопировано: image_id=${imageId}, folder=${folderNameClean}`);
