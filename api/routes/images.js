@@ -22,12 +22,115 @@ export function registerImageRoutes(app) {
    *
    * Эндпоинт для получения списка изображений текущего пользователя с пагинацией.
    * Позволяет фильтровать изображения по папкам.
+   */
+  app.get('/api/images/my', { preHandler: authenticateToken }, async (req, reply) => {
+    const page = parseInt(req.query.page || '1', 10);
+    const limit = parseInt(req.query.limit || '20', 10);
+    const folderRaw = req.query.folder || ''; // может быть undefined / 'Все папки' / имя папки
+
+    if (page < 1) {
+      return reply.code(400).send({ error: 'Параметр page должен быть >= 1' });
+    }
+
+    if (limit < 1 || limit > 100) {
+      return reply.code(400).send({
+        error: 'Параметр limit должен быть в диапазоне 1-100'
+      });
+    }
+
+    const offset = (page - 1) * limit;
+
+    // НОРМАЛИЗУЕМ имя папки
+    const folderName = String(folderRaw).trim();
+
+    // "Все папки" и пустое значение — это ОТСУТСТВИЕ фильтра
+    const hasFolderFilter =
+      folderName !== '' &&
+      folderName !== 'Все папки';
+
+    // Считаем общее количество личных изображений (без учёта папки)
+    const countResult = await pool.query(
+      `SELECT COUNT(*) AS total
+       FROM image_library
+       WHERE user_id = $1
+         AND is_shared = FALSE`,
+      [userId]
+    );
+
+    const total = parseInt(countResult.rows[0].total, 10);
+
+    let query;
+    let queryParams;
+
+    if (hasFolderFilter) {
+      // Фильтр по конкретной папке
+      query = `
+        SELECT
+          id,
+          original_name,
+          filename,
+          folder_name,
+          public_url,
+          preview_url,
+          width,
+          height,
+          file_size,
+          created_at
+        FROM image_library
+        WHERE user_id = $1
+          AND is_shared = FALSE
+          AND folder_name = $2
+        ORDER BY created_at DESC
+        LIMIT $3 OFFSET $4
+      `;
+      queryParams = [userId, folderName, limit, offset];
+    } else {
+      // БЕЗ фильтра по папке — просто все личные картинки
+      query = `
+        SELECT
+          id,
+          original_name,
+          filename,
+          folder_name,
+          public_url,
+          preview_url,
+          width,
+          height,
+          file_size,
+          created_at
+        FROM image_library
+        WHERE user_id = $1
+          AND is_shared = FALSE
+        ORDER BY created_at DESC
+        LIMIT $2 OFFSET $3
+      `;
+      queryParams = [userId, limit, offset];
+    }
+
+    const imagesResult = await pool.query(query, queryParams);
+
+      return reply.send({
+        success: true,
+        items: imagesResult.rows,
+        total
+      });
+    } catch (err) {
+      console.error('❌ Ошибка получения списка изображений:', err);
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
+
+
+  /**
+   * GET /api/images/my - Получить список личных изображений
    *
-   * ВАЖНО:
-   * - Возвращаются только ЛИЧНЫЕ изображения (is_shared = FALSE).
-   * - Параметр folder:
-   *    - '' или 'Все папки' -> без фильтра по папке
-   *    - любое другое значение -> фильтр по folder_name = value
+   * Эндпоинт для получения списка изображений текущего пользователя с пагинацией.
+   * Позволяет фильтровать изображения по папкам.
    */
   app.get('/api/images/my', {
     preHandler: [authenticateToken]
@@ -36,7 +139,7 @@ export function registerImageRoutes(app) {
       const userId = req.user.id;
       const page = parseInt(req.query.page || '1', 10);
       const limit = parseInt(req.query.limit || '20', 10);
-      const folderRaw = req.query.folder ?? ''; // может быть undefined / 'Все папки' / имя папки
+      const folderRaw = req.query.folder || ''; // может быть undefined / 'Все папки' / имя папки
 
       if (page < 1) {
         return reply.code(400).send({ error: 'Параметр page должен быть >= 1' });
@@ -50,15 +153,15 @@ export function registerImageRoutes(app) {
 
       const offset = (page - 1) * limit;
 
-      // Нормализуем имя папки
+      // НОРМАЛИЗУЕМ имя папки
       const folderName = String(folderRaw).trim();
 
-      // "Все папки" и пустое значение — это отсутствие фильтра
+      // "Все папки" и пустое значение — это ОТСУТСТВИЕ фильтра
       const hasFolderFilter =
         folderName !== '' &&
         folderName !== 'Все папки';
 
-      // Считаем ОБЩЕЕ количество личных изображений С УЧЁТОМ фильтра по папке
+      // Считаем общее количество личных изображений С УЧЁТОМ фильтра по папке
       let total = 0;
 
       if (hasFolderFilter) {
@@ -70,7 +173,7 @@ export function registerImageRoutes(app) {
              AND folder_name = $2`,
           [userId, folderName]
         );
-        total = parseInt(countResult.rows[0]?.total || '0', 10);
+        total = parseInt(countResult.rows[0].total, 10);
       } else {
         const countResult = await pool.query(
           `SELECT COUNT(*) AS total
@@ -79,10 +182,9 @@ export function registerImageRoutes(app) {
              AND is_shared = FALSE`,
           [userId]
         );
-        total = parseInt(countResult.rows[0]?.total || '0', 10);
+        total = parseInt(countResult.rows[0].total, 10);
       }
 
-      // Формируем запрос за списком изображений
       let query;
       let queryParams;
 
@@ -109,7 +211,7 @@ export function registerImageRoutes(app) {
         `;
         queryParams = [userId, folderName, limit, offset];
       } else {
-        // Без фильтра по папке — все личные картинки
+        // БЕЗ фильтра по папке — просто все личные картинки
         query = `
           SELECT
             id,
@@ -321,7 +423,7 @@ export function registerImageRoutes(app) {
           filename,
           folder_name,
           public_url,
-          preview_url,
+          preview_url,          
           width,
           height,
           file_size,
@@ -334,7 +436,7 @@ export function registerImageRoutes(app) {
           filename,
           folder_name,
           public_url,
-          preview_url,
+          preview_url,       
           width,
           height,
           file_size,
@@ -346,7 +448,7 @@ export function registerImageRoutes(app) {
           uniqueFilename,
           folderNameForDB,
           publicUrl,
-          previewUrl,
+          previewUrl,        
           width,
           height,
           fileSize,
@@ -360,7 +462,7 @@ export function registerImageRoutes(app) {
         public_url: publicUrl,
         preview_url: previewUrl
       };
-
+      
       // Возвращаем успешный ответ
       return reply.code(201).send(newImage);
 
@@ -515,6 +617,7 @@ export function registerImageRoutes(app) {
       return reply.code(500).send({ error: errorMessage });
     }
   });
+
 
   /**
    * POST /api/images/:id/share-request - Отправить изображение на модерацию в общую библиотеку
