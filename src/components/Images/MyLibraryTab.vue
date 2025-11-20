@@ -669,9 +669,10 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
 
 .my-library-tab__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, 120px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
   gap: 8px;
-  flex: 1;
+  max-height: calc(4 * 180px + 3 * 8px);
   overflow-y: auto;
 }
 
