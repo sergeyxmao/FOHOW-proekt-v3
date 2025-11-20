@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useStickersStore } from '../../stores/stickers'
 import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
@@ -17,14 +17,16 @@ const folders = ref([])
 const selectedFolder = ref('')
 const searchQuery = ref('')
 const images = ref([])
-const isLoading = ref(false)
 const error = ref(null)
 const pagination = ref({
   page: 1,
-  limit: 100,
+  limit: 40,
   total: 0
 })
-
+const isInitialLoading = ref(false)
+const isLoadingMore = ref(false)
+const hasMore = ref(true)
+const scrollContainerRef = ref(null)
 // Статистика и лимиты
 const stats = ref(null)
 
@@ -76,10 +78,13 @@ async function loadFolders() {
 }
 
 /**
- * Загрузить список изображений
+ * Загрузить первую страницу изображений
  */
-async function loadImages() {
-  isLoading.value = true
+async function loadInitialImages() {
+  pagination.value.page = 1
+  images.value = []
+  hasMore.value = true
+  isInitialLoading.value = true
 
   try {
     const response = await getMyImages({
@@ -88,17 +93,23 @@ async function loadImages() {
       folder: selectedFolder.value || null
     })
     const responsePagination = response?.pagination || {}
+    const fetchedItems = Array.isArray(response?.items) ? response.items : []
 
-    images.value = Array.isArray(response?.items) ? response.items : []
+    images.value = fetchedItems
     pagination.value = {
       ...pagination.value,
       page: responsePagination.page ?? pagination.value.page,
       limit: responsePagination.limit ?? pagination.value.limit,
-      total: responsePagination.total ?? 0
+      total: responsePagination.total ?? fetchedItems.length
+    }
+
+    if (fetchedItems.length < pagination.value.limit) {
+      hasMore.value = false
     }
   } catch (err) {
     console.error('Ошибка загрузки изображений:', err)
-
+    images.value = []
+    hasMore.value = false
     // Обработка специфической ошибки доступа
     if (err.code === 'IMAGE_LIBRARY_ACCESS_DENIED') {
       error.value = err
@@ -111,7 +122,49 @@ async function loadImages() {
       })
     }
   } finally {
-    isLoading.value = false
+    isInitialLoading.value = false
+  }
+}
+
+/**
+ * Дозагрузить следующую страницу изображений
+ */
+async function loadMoreImages() {
+  if (!hasMore.value || isInitialLoading.value || isLoadingMore.value) {
+    return
+  }
+
+  isLoadingMore.value = true
+  const previousPage = pagination.value.page
+  pagination.value = {
+    ...pagination.value,
+    page: previousPage + 1
+  }
+
+  try {
+    const response = await getMyImages({
+      page: pagination.value.page,
+      limit: pagination.value.limit,
+      folder: selectedFolder.value || null
+    })
+
+    const fetchedItems = Array.isArray(response?.items) ? response.items : []
+    images.value = [...images.value, ...fetchedItems]
+
+    if (fetchedItems.length < pagination.value.limit) {
+      hasMore.value = false
+    }
+  } catch (err) {
+    console.error('Ошибка загрузки следующей страницы:', err)
+    pagination.value.page = previousPage
+
+    notificationsStore.addNotification({
+      message: `Ошибка загрузки изображений: ${err.message}`,
+      type: 'error',
+      duration: 6000
+    })
+  } finally {
+    isLoadingMore.value = false
   }
 }
 
@@ -120,7 +173,7 @@ async function loadImages() {
  */
 function handleFolderChange() {
   pagination.value.page = 1
-  loadImages()
+  loadInitialImages()
 }
 
 /**
@@ -367,14 +420,52 @@ async function loadStats() {
     // Не показываем уведомление, т.к. это не критично
   }
 }
+function handleScroll() {
+  const container = scrollContainerRef.value
+  if (!container) return
+
+  const { scrollHeight, scrollTop, clientHeight } = container
+  const threshold = 200
+  const distanceToBottom = scrollHeight - scrollTop - clientHeight
+
+  if (distanceToBottom <= threshold) {
+    loadMoreImages()
+  }
+}
+
+function resetState() {
+  images.value = []
+  pagination.value = { ...pagination.value, page: 1, total: 0 }
+  hasMore.value = true
+  isInitialLoading.value = false
+  isLoadingMore.value = false
+  error.value = null
+}
+
+defineExpose({
+  resetState
+})
 
 // Жизненный цикл
 onMounted(async () => {
   await Promise.all([
     loadFolders(),
-    loadImages(),
-    loadStats()
+    loadStats(),
+    loadInitialImages()
   ])
+
+  await nextTick()
+  const container = scrollContainerRef.value
+  if (container) {
+    container.addEventListener('scroll', handleScroll)
+  }
+})
+
+onBeforeUnmount(() => {
+  const container = scrollContainerRef.value
+  if (container) {
+    container.removeEventListener('scroll', handleScroll)
+  }  
 })
 
 // Следим за изменениями currentBoardId
@@ -450,7 +541,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
     </div>
 
     <!-- Индикатор загрузки -->
-    <div v-if="isLoading" class="my-library-tab__loading">
+    <div v-if="isInitialLoading" class="my-library-tab__loading">
       <div class="my-library-tab__spinner"></div>
       <span>Загрузка изображений...</span>
     </div>
@@ -472,7 +563,11 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
     </div>
 
     <!-- Сетка изображений -->
-    <div v-else-if="filteredImages.length > 0" class="my-library-tab__grid">
+    <div
+      v-else-if="filteredImages.length > 0"
+      ref="scrollContainerRef"
+      class="my-library-tab__grid"
+    >
       <ImageCard
         v-for="image in filteredImages"
         :key="image.id"
@@ -483,7 +578,15 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
         @share-request="handleShareRequest"
       />
     </div>
-
+    <div v-if="filteredImages.length > 0" class="my-library-tab__footer">
+      <div v-if="isLoadingMore" class="my-library-tab__loading-more">
+        <div class="my-library-tab__spinner my-library-tab__spinner--small"></div>
+        <span>Загружаем ещё...</span>
+      </div>
+      <div v-else-if="!hasMore" class="my-library-tab__no-more">
+        Больше изображений нет
+      </div>
+    </div>
     <!-- Пустое состояние -->
     <div v-else-if="!error" class="my-library-tab__empty">
       <p class="my-library-tab__empty-text">
@@ -627,12 +730,36 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: var(--images-grid-card-height, 190px);
   gap: 8px;
-  max-height: calc(4 * var(--images-grid-card-height, 190px) + 3 * 8px);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   align-content: start;
 }
+.my-library-tab__footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 32px;
+  color: #64748b;
+  font-size: 13px;
+}
 
+.my-library-tab__loading-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.my-library-tab__spinner--small {
+  width: 20px;
+  height: 20px;
+  border-width: 3px;
+}
+
+.my-library-tab__no-more {
+  color: #94a3b8;
+}
 .my-library-tab__empty {
   flex: 1;
   display: flex;
