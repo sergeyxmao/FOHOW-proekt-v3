@@ -26,7 +26,9 @@ const pagination = ref({
 })
 const gridRef = ref(null)
 const scrollContainerRef = gridRef
-
+const gridWrapperRef = ref(null)
+const indicatorRef = ref(null)
+let hideTimeout = null
 function onWheel(e) {
   e.stopPropagation()
 
@@ -269,6 +271,51 @@ async function handleImageClick(image) {
 
   console.log('📌 Pending image data установлен, режим размещения активирован')
 }
+
+function updateIndicator() {
+  const el = gridRef.value
+  const ind = indicatorRef.value
+  if (!el || !ind) return
+
+  const maxScroll = el.scrollHeight - el.clientHeight
+  if (maxScroll <= 0 || el.scrollTop <= 0) {
+    ind.style.opacity = 0
+    return
+  }
+
+  const scrollTop = el.scrollTop
+  const ratio = scrollTop / maxScroll
+
+  const indicatorHeight = Math.max(20, el.clientHeight * (el.clientHeight / el.scrollHeight))
+  const maxYOffset = el.clientHeight - indicatorHeight
+
+  const yOffset = ratio * maxYOffset
+
+  ind.style.height = indicatorHeight + 'px'
+  ind.style.transform = `translateY(${yOffset}px)`
+}
+
+function onScroll() {
+  const el = gridRef.value
+  const ind = indicatorRef.value
+
+  updateIndicator()
+
+  if (!el || !ind) return
+
+  const maxScroll = el.scrollHeight - el.clientHeight
+  if (maxScroll <= 0 || el.scrollTop <= 0) {
+    ind.style.opacity = 0
+    return
+  }
+
+  ind.style.opacity = 1
+
+  clearTimeout(hideTimeout)
+  hideTimeout = setTimeout(() => {
+    ind.style.opacity = 0
+  }, 600)
+}  
 function handleScroll() {
   const container = scrollContainerRef.value
   if (!container) return
@@ -304,6 +351,8 @@ onMounted(async () => {
   const container = scrollContainerRef.value
   if (container) {
     container.addEventListener('scroll', handleScroll)
+    container.addEventListener('scroll', onScroll)
+    updateIndicator()    
   }
 })
 
@@ -311,7 +360,9 @@ onBeforeUnmount(() => {
   const container = scrollContainerRef.value
   if (container) {
     container.removeEventListener('scroll', handleScroll)
-  }  
+    container.removeEventListener('scroll', onScroll)
+  }
+  clearTimeout(hideTimeout)
 })
 </script>
 
@@ -369,19 +420,21 @@ onBeforeUnmount(() => {
 
     <template v-else>
       <!-- Сетка изображений -->
-      <div
-        v-if="filteredImages.length > 0"
-        ref="gridRef"
-        class="shared-library-tab__grid"
-        @wheel.stop="onWheel"
-      >
-        <ImageCard
-          v-for="image in filteredImages"
-          :key="image.id"
-          :image="image"
-          :is-my-library="false"
-          @click="handleImageClick"
-        />
+      <div v-if="filteredImages.length > 0" class="images-scroll-wrapper" ref="gridWrapperRef">
+        <div class="scroll-indicator" ref="indicatorRef" />
+        <div
+          ref="gridRef"
+          class="shared-library-tab__grid"
+          @wheel.stop="onWheel"
+        >
+          <ImageCard
+            v-for="image in filteredImages"
+            :key="image.id"
+            :image="image"
+            :is-my-library="false"
+            @click="handleImageClick"
+          />
+        </div>
       </div>
 
       <div v-if="filteredImages.length > 0" class="shared-library-tab__footer">
@@ -466,6 +519,29 @@ onBeforeUnmount(() => {
 
 .shared-library-tab__search-input::placeholder {
   color: #94a3b8;
+}
+.images-scroll-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.scroll-indicator {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  width: 3px;
+  height: 20px;
+
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 2px;
+
+  opacity: 0;
+  transform: translateY(0);
+  transition: opacity 0.25s ease;
+  
+  z-index: 10;
+  pointer-events: none;
 }
 
 .shared-library-tab__loading {
