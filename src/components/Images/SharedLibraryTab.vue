@@ -390,7 +390,7 @@ onBeforeUnmount(() => {
       <div v-else-if="!hasMore" class="shared-library-tab__no-more">
         Больше изображений нет
       </div>
-    <
+    </div>
     <!-- Пустое состояние -->
     <div v-else-if="!isInitialLoading && !error" class="shared-library-tab__empty">
       <p class="shared-library-tab__empty-text">
