@@ -367,39 +367,43 @@ onBeforeUnmount(() => {
       </p>
     </div>
 
-    <!-- Сетка изображений -->
-    <div
-      v-else-if="filteredImages.length > 0"
-      ref="gridRef"
-      class="shared-library-tab__grid"
-         @wheel.stop="onWheel"   
-    >
-      <ImageCard
-        v-for="image in filteredImages"
-        :key="image.id"
-        :image="image"
-        :is-my-library="false"
-        @click="handleImageClick"
-      />
-    </div>
-    <div v-if="filteredImages.length > 0" class="shared-library-tab__footer">
-      <div v-if="isLoadingMore" class="shared-library-tab__loading-more">
-        <div class="shared-library-tab__spinner shared-library-tab__spinner--small"></div>
-        <span>Загружаем ещё...</span>
+    <template v-else>
+      <!-- Сетка изображений -->
+      <div
+        v-if="filteredImages.length > 0"
+        ref="gridRef"
+        class="shared-library-tab__grid"
+        @wheel.stop="onWheel"
+      >
+        <ImageCard
+          v-for="image in filteredImages"
+          :key="image.id"
+          :image="image"
+          :is-my-library="false"
+          @click="handleImageClick"
+        />
       </div>
-      <div v-else-if="!hasMore" class="shared-library-tab__no-more">
-        Больше изображений нет
+
+      <div v-if="filteredImages.length > 0" class="shared-library-tab__footer">
+        <div v-if="isLoadingMore" class="shared-library-tab__loading-more">
+          <div class="shared-library-tab__spinner shared-library-tab__spinner--small"></div>
+          <span>Загружаем ещё...</span>
+        </div>
+        <div v-else-if="!hasMore" class="shared-library-tab__no-more">
+          Больше изображений нет
+        </div>
       </div>
-    </div>
-    <!-- Пустое состояние -->
-    <div v-else-if="!isInitialLoading && !error" class="shared-library-tab__empty">
-      <p class="shared-library-tab__empty-text">
-        {{ searchQuery ? 'Изображения не найдены' : 'Общая библиотека пуста' }}
-      </p>
-      <p v-if="!searchQuery" class="shared-library-tab__empty-hint">
-        Пока нет изображений, одобренных администратором
-      </p>
-    </div>
+
+      <!-- Пустое состояние -->
+      <div v-else class="shared-library-tab__empty">
+        <p class="shared-library-tab__empty-text">
+          {{ searchQuery ? 'Изображения не найдены' : 'Общая библиотека пуста' }}
+        </p>
+        <p v-if="!searchQuery" class="shared-library-tab__empty-hint">
+          Пока нет изображений, одобренных администратором
+        </p>
+      </div>
+    </template>
   </div>
 </template>
 
