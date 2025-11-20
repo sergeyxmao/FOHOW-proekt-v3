@@ -83,7 +83,6 @@ export const useImagesStore = defineStore('images', {
      * @param {string} imageData.name - имя файла
      * @param {number} imageData.imageId - ID изображения из библиотеки (опционально)
      * @param {string} imageData.dataUrl - base64 data URL или blob URL
-     * @param {string} imageData.originalUrl - оригинальный URL (опционально)
      * @param {number} imageData.width - оригинальная ширина
      * @param {number} imageData.height - оригинальная высота
      * @param {number} imageData.x - позиция X на доске
@@ -91,8 +90,21 @@ export const useImagesStore = defineStore('images', {
      * @param {Object} options - дополнительные опции
      * @param {boolean} options.saveToHistory - сохранить в историю (по умолчанию true)
      */
-    addImage(imageData, options = {}) {
+    async addImage(imageData, options = {}) {
       const { saveToHistory = true } = options
+      // Загружаем blob URL через прокси, если он не передан и есть imageId
+      let resolvedDataUrl = imageData.dataUrl
+
+      if (!resolvedDataUrl && imageData.imageId) {
+        const { useImageProxy } = await import('@/composables/useImageProxy')
+        const { getImageUrl } = useImageProxy()
+
+        try {
+          resolvedDataUrl = await getImageUrl(imageData.imageId)
+        } catch (error) {
+          console.error(`❌ Ошибка загрузки изображения ${imageData.imageId}:`, error)
+        }
+      }
 
       // Вычисляем размеры для отображения с учетом максимального размера 500px
       const displaySize = this.calculateDisplaySize(
@@ -118,8 +130,7 @@ export const useImagesStore = defineStore('images', {
         id,
         type: 'image',
         imageId: imageData.imageId, // ID из библиотеки
-        dataUrl: imageData.dataUrl, // Blob URL для отображения
-        originalUrl: imageData.originalUrl, // Оригинальный URL
+        dataUrl: resolvedDataUrl, // Blob URL для отображения
         x: imageData.x,
         y: imageData.y,
         width: displaySize.width,
@@ -342,27 +353,133 @@ export const useImagesStore = defineStore('images', {
       // Импортируем useImageProxy для получения blob URLs
       const { useImageProxy } = await import('@/composables/useImageProxy')
       const { getImageUrl } = useImageProxy()
+      // Кэш для поиска imageId по старым URL
+      const resolvedLegacyIds = new Map()
+      let myLibraryCache = null
+      let sharedLibraryCache = null
+
+      const loadMyLibraryOnce = async () => {
+        if (myLibraryCache !== null) return myLibraryCache
+
+        try {
+          const { getMyImages } = await import('@/services/imageService')
+          const response = await getMyImages({ page: 1, limit: 500 })
+          myLibraryCache = Array.isArray(response?.items) ? response.items : []
+        } catch (error) {
+          console.error('❌ Ошибка загрузки личной библиотеки для миграции:', error)
+          myLibraryCache = []
+        }
+
+        return myLibraryCache
+      }
+
+      const loadSharedLibraryOnce = async () => {
+        if (sharedLibraryCache !== null) return sharedLibraryCache
+
+        try {
+          const { getSharedLibrary } = await import('@/services/imageService')
+          const response = await getSharedLibrary()
+          sharedLibraryCache = Array.isArray(response?.folders) ? response.folders : []
+        } catch (error) {
+          console.error('❌ Ошибка загрузки общей библиотеки для миграции:', error)
+          sharedLibraryCache = []
+        }
+
+        return sharedLibraryCache
+      }
+
+      const findImageIdByUrl = async (legacyUrl) => {
+        if (!legacyUrl) return null
+
+        if (resolvedLegacyIds.has(legacyUrl)) {
+          return resolvedLegacyIds.get(legacyUrl)
+        }
+
+        let foundId = null
+
+        try {
+          const myImages = await loadMyLibraryOnce()
+          const match = myImages.find(img =>
+            img.public_url === legacyUrl || img.preview_url === legacyUrl
+          )
+
+          if (match?.id) {
+            foundId = match.id
+          }
+        } catch (error) {
+          console.error('❌ Ошибка поиска изображения в личной библиотеке:', error)
+        }
+
+        if (!foundId) {
+          try {
+            const sharedFolders = await loadSharedLibraryOnce()
+
+            for (const folder of sharedFolders) {
+              const sharedMatch = (folder.images || []).find(img =>
+                img.public_url === legacyUrl || img.preview_url === legacyUrl
+              )
+
+              if (sharedMatch?.id) {
+                foundId = sharedMatch.id
+                break
+              }
+            }
+          } catch (error) {
+            console.error('❌ Ошибка поиска изображения в общей библиотеке:', error)
+          }
+        }
+
+        resolvedLegacyIds.set(legacyUrl, foundId)
+        return foundId
+      }
+
+      const loadLegacyBlob = async (legacyUrl) => {
+        if (!legacyUrl) return ''
+
+        try {
+          const response = await fetch(legacyUrl)
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`)
+          }
+
+          const blob = await response.blob()
+          return URL.createObjectURL(blob)
+        } catch (error) {
+          console.error('❌ Ошибка загрузки изображения по прямой ссылке:', error)
+          return ''
+        }
+      }
 
       // Загружаем изображения параллельно
       const imagePromises = imagesData.map(async (imageData) => {
         let dataUrl = imageData.dataUrl || ''
+        let imageId = imageData.imageId
+        const legacyUrl = imageData.originalUrl || imageData.public_url || imageData.preview_url
 
+        // Миграция: если есть старые ссылки, пытаемся найти imageId в библиотеке
+        if (!imageId && legacyUrl) {
+          imageId = await findImageIdByUrl(legacyUrl)
+        }
         // Если есть imageId, получаем свежий blob URL
-        if (imageData.imageId && !dataUrl) {
+        if (imageId && !dataUrl) {
           try {
-            dataUrl = await getImageUrl(imageData.imageId)
-            console.log(`✅ Получен blob URL для изображения ${imageData.imageId}`)
+            dataUrl = await getImageUrl(imageId)
+            console.log(`✅ Получен blob URL для изображения ${imageId}`)
           } catch (error) {
-            console.error(`❌ Ошибка загрузки изображения ${imageData.imageId}:`, error)
+            console.error(`❌ Ошибка загрузки изображения ${imageId}:`, error)
           }
+        }
+        // Фоллбэк для старых данных без imageId
+        if (!imageId && !dataUrl && legacyUrl) {
+          dataUrl = await loadLegacyBlob(legacyUrl)
         }
 
         const normalizedImage = {
           id: imageData.id || ('img_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)),
           type: 'image',
-          imageId: imageData.imageId, // Сохраняем imageId из библиотеки
+          imageId: imageId, // Сохраняем imageId из библиотеки
           dataUrl: dataUrl,
-          originalUrl: imageData.originalUrl,
           x: Number.isFinite(imageData.x) ? imageData.x : 0,
           y: Number.isFinite(imageData.y) ? imageData.y : 0,
           width: Number.isFinite(imageData.width) ? imageData.width : 100,
@@ -394,9 +511,12 @@ export const useImagesStore = defineStore('images', {
           isSelected: false // Не сохраняем состояние выделения
         }
 
-        // Если есть imageId, не сохраняем blob URL (он временный)
+        // Если есть imageId, не сохраняем blob URL и прямые ссылки (они временные)
         if (image.imageId) {
           delete exportData.dataUrl // Удаляем blob URL, будет получен заново при загрузке
+           delete exportData.originalUrl
+          delete exportData.public_url
+          delete exportData.preview_url         
         }
 
         return exportData
