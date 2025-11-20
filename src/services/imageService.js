@@ -33,37 +33,50 @@ async function handleErrorResponse(response, defaultMessage = 'Произошл�
     throw error;
   }
 
-  const error = new Error(data.error || defaultMessage);
-  error.code = data.code;
+  const normalizedData = (data && typeof data === 'object') ? data : {};
+  const errorMessage = typeof normalizedData.error === 'string' && normalizedData.error.trim()
+    ? normalizedData.error
+    : defaultMessage;
+
+  const error = new Error(errorMessage);
+  error.code = normalizedData.code;
   error.status = response.status;
-  error.upgradeRequired = data.upgradeRequired;
+  error.upgradeRequired = normalizedData.upgradeRequired;
 
   // Обработка специфических HTTP статус кодов
   switch (response.status) {
     case 401:
       error.code = error.code || 'UNAUTHORIZED';
-      error.message = data.error || 'Требуется авторизация. Пожалуйста, войдите в систему.';
+      error.message = normalizedData.error || 'Требуется авторизация. Пожалуйста, войдите в систему.';
       break;
     case 403:
       error.code = error.code || 'FORBIDDEN';
-      if (!data.error) {
+      if (!normalizedData.error) {
         error.message = 'Нет прав доступа к этому ресурсу.';
       }
       break;
     case 413:
+    case 404:
+      error.code = error.code || 'NOT_FOUND';
+      if (!normalizedData.error) {
+        error.message = 'Ресурс не найден или был удалён.';
+      }
+      break;      
       error.code = error.code || 'FILE_TOO_LARGE';
-      error.message = data.error || 'Файл слишком большой. Максимальный размер файла превышен.';
+      error.message = normalizedData.error || 'Файл слишком большой. Максимальный размер файла превышен.';
       break;
     case 429:
       error.code = error.code || 'RATE_LIMIT_EXCEEDED';
-      error.message = data.error || 'Превышены лимиты по библиотеке изображений на текущем тарифе.';
+      error.message = normalizedData.error || 'Превышены лимиты по библиотеке изображений на текущем тарифе.';
       break;
     case 500:
     case 502:
     case 503:
     case 504:
       error.code = error.code || 'SERVER_ERROR';
-      error.message = data.error || 'Ошибка на сервере. Попробуйте позже.';
+      if (!normalizedData.error) {
+        error.message = 'Ошибка на сервере. Попробуйте позже.';
+      }
       break;
   }
 
