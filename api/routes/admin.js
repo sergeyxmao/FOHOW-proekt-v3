@@ -1081,37 +1081,63 @@ export function registerAdminRoutes(app) {
       
       console.log(`[ADMIN] Файл опубликован, public_url: ${publicUrl}`);
 
-      // Обновить оригинальную запись, пометив её как размещённую в общей библиотеке
-      const updateResult = await pool.query(
-        `UPDATE image_library
-           SET share_requested_at = NULL,
-               pending_yandex_path = NULL,
-               folder_name = NULL,
-               yandex_path = $1,
-               public_url = $2,
-               preview_url = $3,
-               moderation_status = 'approved',
-               is_shared = TRUE,
-               shared_folder_id = $4,
-               share_approved_at = $5,
-               share_approved_by = $6
-         WHERE id = $7
-     RETURNING id, user_id, original_name, public_url, preview_url, shared_folder_id, is_shared`,
-        [          
+      // Создать новую запись для общей библиотеки
+      const insertResult = await pool.query(
+        `INSERT INTO image_library (
+          user_id,
+          original_name,
+          filename,
+          folder_name,
+          yandex_path,
+          public_url,
+          preview_url,
+          width,
+          height,
+          file_size,
+          moderation_status,
+          is_shared,
+          shared_folder_id,
+          share_requested_at,
+          share_approved_at,
+          share_approved_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        RETURNING id, user_id, original_name, public_url, preview_url, shared_folder_id, is_shared`,
+        [ 
+          ownerId,
+          original_name,
+          filename,
+          null,          
           newFilePath,
           publicUrl,
           previewUrl,
+          width,
+          height,
+          file_size,
+          'approved',
+          true,          
           shared_folder_id,
+          null,
           new Date(),          
-          adminId,
-          imageId        ]
+          adminId
+        ]
       );
 
-      const sharedImage = updatedImageResult.rows[0];
+    const sharedImage = insertResult.rows[0];
 
+// Обновить оригинальную запись: сбросить флаги модерации
+// Оригинальные пути оставляем без изменений, чтобы изображения на досках продолжали работать
+// Оставляем is_shared = FALSE, чтобы избежать дублирования в shared библиотеке
+await pool.query(
+  `UPDATE image_library
+     SET share_requested_at = NULL,
+         pending_yandex_path = NULL,
+         moderation_status = 'approved'
+     WHERE id = $1`,
+  [imageId]
+);
       console.log(`[ADMIN] ✅ Изображение успешно одобрено и скопировано: image_id=${imageId}, folder=${folderNameClean}`);
       
-      // Возвращаем обновлённую запись
+      // Возвращаем данные о новой записи в общей библиотеке
       return reply.code(200).send(sharedImage);
 
     } catch (err) {
