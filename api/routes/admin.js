@@ -1096,6 +1096,17 @@ export function registerAdminRoutes(app) {
 
       console.log(`[ADMIN] Файл успешно скопирован в общую библиотеку`);
 
+      // Удалить файл из pending после успешного копирования
+      if (pending_yandex_path) {
+        try {
+          await deleteFile(pending_yandex_path);
+          console.log(`[ADMIN] Файл удален из pending: ${pending_yandex_path}`);
+        } catch (deleteError) {
+          // Логируем, но не прерываем процесс
+          console.warn(`[ADMIN] Не удалось удалить файл из pending:`, deleteError);
+        }
+      }
+
       // Опубликовать файл и получить новую публичную ссылку
       const publishResult = await publishFile(newFilePath);
       const publicUrl = publishResult.public_url;
