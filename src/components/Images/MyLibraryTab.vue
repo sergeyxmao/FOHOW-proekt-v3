@@ -27,7 +27,10 @@ const isInitialLoading = ref(false)
 const isLoadingMore = ref(false)
 const hasMore = ref(true)
 const gridRef = ref(null)
+const gridWrapperRef = ref(null)
+const indicatorRef = ref(null)  
 const scrollContainerRef = gridRef
+let hideTimeout = null  
   // Статистика и лимиты
 const stats = ref(null)
 
@@ -436,6 +439,51 @@ async function loadStats() {
     // Не показываем уведомление, т.к. это не критично
   }
 }
+
+function updateIndicator() {
+  const el = gridRef.value
+  const ind = indicatorRef.value
+  if (!el || !ind) return
+
+  const maxScroll = el.scrollHeight - el.clientHeight
+  if (maxScroll <= 0 || el.scrollTop <= 0) {
+    ind.style.opacity = 0
+    return
+  }
+
+  const scrollTop = el.scrollTop
+  const ratio = scrollTop / maxScroll
+
+  const indicatorHeight = Math.max(20, el.clientHeight * (el.clientHeight / el.scrollHeight))
+  const maxYOffset = el.clientHeight - indicatorHeight
+
+  const yOffset = ratio * maxYOffset
+
+  ind.style.height = indicatorHeight + 'px'
+  ind.style.transform = `translateY(${yOffset}px)`
+}
+
+function onScroll() {
+  const el = gridRef.value
+  const ind = indicatorRef.value
+
+  updateIndicator()
+
+  if (!el || !ind) return
+
+  const maxScroll = el.scrollHeight - el.clientHeight
+  if (maxScroll <= 0 || el.scrollTop <= 0) {
+    ind.style.opacity = 0
+    return
+  }
+
+  ind.style.opacity = 1
+
+  clearTimeout(hideTimeout)
+  hideTimeout = setTimeout(() => {
+    ind.style.opacity = 0
+  }, 600)
+}  
 function handleScroll() {
   const container = scrollContainerRef.value
   if (!container) return
@@ -474,6 +522,8 @@ onMounted(async () => {
   const container = scrollContainerRef.value
   if (container) {
     container.addEventListener('scroll', handleScroll)
+    container.addEventListener('scroll', onScroll)
+    updateIndicator()    
   }
 })
 
@@ -481,7 +531,9 @@ onBeforeUnmount(() => {
   const container = scrollContainerRef.value
   if (container) {
     container.removeEventListener('scroll', handleScroll)
-  }  
+    container.removeEventListener('scroll', onScroll)
+  }
+  clearTimeout(hideTimeout)
 })
 
 // Следим за изменениями currentBoardId
@@ -579,21 +631,23 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
     </div>
 
     <!-- Сетка изображений -->
-    <div
-      v-else-if="filteredImages.length > 0"
-      ref="gridRef"
-      class="my-library-tab__grid"
-       @wheel.stop="onWheel"     
-    >
-      <ImageCard
-        v-for="image in filteredImages"
-        :key="image.id"
-        :image="image"
-        :is-my-library="true"
-        @click="handleImageClick"
-        @delete="handleImageDelete"
-        @share-request="handleShareRequest"
-      />
+    <div v-else-if="filteredImages.length > 0" class="images-scroll-wrapper" ref="gridWrapperRef">
+      <div class="scroll-indicator" ref="indicatorRef" />
+      <div
+        ref="gridRef"
+        class="my-library-tab__grid"
+        @wheel.stop="onWheel"
+      >
+        <ImageCard
+          v-for="image in filteredImages"
+          :key="image.id"
+          :image="image"
+          :is-my-library="true"
+          @click="handleImageClick"
+          @delete="handleImageDelete"
+          @share-request="handleShareRequest"
+        />
+      </div>
     </div>
     <div v-if="filteredImages.length > 0" class="my-library-tab__footer">
       <div v-if="isLoadingMore" class="my-library-tab__loading-more">
@@ -714,6 +768,29 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
 
 .my-library-tab__search-input::placeholder {
   color: #94a3b8;
+}
+.images-scroll-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.scroll-indicator {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  width: 3px;
+  height: 20px;
+
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 2px;
+
+  opacity: 0;
+  transform: translateY(0);
+  transition: opacity 0.25s ease;
+  
+  z-index: 10;
+  pointer-events: none;
 }
 
 .my-library-tab__loading {
