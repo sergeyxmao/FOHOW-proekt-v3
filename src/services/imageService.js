@@ -100,10 +100,9 @@ export async function getMyFolders() {
 
     const data = await response.json();
 
-    возврат (data. folders || [])
-      . карта ( папка => тип_папки === 'строка' ? папка : папка?. имя )
- 
-      . фильтр ( логический );
+    return (data?.folders || [])
+      .map(folder => (typeof folder === 'string' ? folder : folder?.name))
+      .filter(Boolean)
   } catch (error) {
     // Обработка сетевых ошибок
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
