@@ -926,6 +926,7 @@ export function registerImageRoutes(app) {
             il.filename,
             il.folder_name,
             il.yandex_path,
+            il.pending_yandex_path,            
             il.share_requested_at,
             il.is_shared,
             u.personal_id,
@@ -1027,15 +1028,19 @@ export function registerImageRoutes(app) {
           `
           UPDATE image_library
           SET
-            yandex_path = $1,
-            share_requested_at = NOW()
-          WHERE id = $2
+            yandex_path = COALESCE(yandex_path, $1),
+            pending_yandex_path = $2,
+            share_requested_at = NOW(),
+            moderation_status = 'pending'
+          WHERE id = $3
           RETURNING
             id,
             share_requested_at,
-            yandex_path
-        `,
-          [pendingFilePath, imageId]
+            yandex_path,
+            pending_yandex_path,
+            moderation_status
+            `,
+          [currentPath, pendingFilePath, imageId]
         );
 
         const updatedImage = updateResult.rows[0];
@@ -1045,6 +1050,8 @@ export function registerImageRoutes(app) {
           id: updatedImage.id,
           share_requested_at: updatedImage.share_requested_at,
           yandex_path: updatedImage.yandex_path,
+          pending_yandex_path: updatedImage.pending_yandex_path,
+          moderation_status: updatedImage.moderation_status,          
           share_request_submitted: true
         });
       } catch (err) {
