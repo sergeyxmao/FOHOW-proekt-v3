@@ -230,7 +230,7 @@ async function ensureFolderExists(path) {
  * @param {string} path - Путь к корневой папке
  * @returns {Promise<string[]>} Список имён подпапок
 */
-асинхронная функция listFolderDirectories ( path ) {
+async function listFolderDirectories(path) {
   
   const listEndpoint = `/resources?path= ${ encodeURIComponent (path)} &fields=_embedded.items.name,_embedded.items.type` ;
 
