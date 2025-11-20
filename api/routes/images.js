@@ -251,9 +251,12 @@ export function registerImageRoutes(app) {
       const imagesResult = await pool.query(query, queryParams);
 
       return reply.send({
-        success: true,
         items: imagesResult.rows,
-        total
+        пагинация : {
+          страница,
+          предел,
+          общий
+        }
       });
     } catch (err) {
       console.error('❌ Ошибка получения списка изображений:', err);
