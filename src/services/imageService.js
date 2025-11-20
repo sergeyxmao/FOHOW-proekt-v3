@@ -301,11 +301,25 @@ export async function requestShareImage(imageId) {
 
 /**
  * Получить структуру общей библиотеки
- * @returns {Promise<{folders: Array}>}
+ * @param {Object} params - Параметры запроса
+ * @param {number} params.page - Номер страницы
+ * @param {number} params.limit - Количество элементов на странице
+ * @returns {Promise<{folders: Array, items?: Array, pagination?: Object}>}
  */
-export async function getSharedLibrary() {
+export async function getSharedLibrary({ page, limit } = {}) {
   try {
-    const response = await fetch(`${API_URL}/images/shared`, {
+    const params = new URLSearchParams()
+
+    if (page) {
+      params.append('page', page.toString())
+    }
+
+    if (limit) {
+      params.append('limit', limit.toString())
+    }
+
+    const query = params.toString()
+    const response = await fetch(`${API_URL}/images/shared${query ? `?${query}` : ''}`, {
       method: 'GET',
       headers: getAuthHeaders()
     });
