@@ -3,11 +3,10 @@ import { authenticateToken } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { randomBytes } from 'crypto';
 import {
-  getUserFilePath,
   getSharedFolderPath,
   ensureFolderExists,
   moveFile,
-  copyFile,  
+  copyFile,
   publishFile,
   deleteFile,
   uploadFile
@@ -898,6 +897,7 @@ export function registerAdminRoutes(app) {
           il.public_url,
           il.preview_url,
           il.yandex_path,
+          il.pending_yandex_path,          
           il.user_id,
           u.full_name as user_full_name,
           u.personal_id as user_personal_id,
@@ -973,15 +973,16 @@ export function registerAdminRoutes(app) {
         `SELECT
           il.id,
           il.user_id,
-          il.original_name,          
+          il.original_name,
           il.filename,
-          il.folder_name,          
+          il.folder_name,
           il.yandex_path,
           il.public_url,
+          il.pending_yandex_path,          
           il.preview_url,
           il.width,
           il.height,
-          il.file_size,          
+          il.file_size,
           il.share_requested_at,
           il.is_shared,
           u.personal_id as user_personal_id
@@ -997,19 +998,20 @@ export function registerAdminRoutes(app) {
       if (imageResult.rows.length === 0) {
         console.log(`[ADMIN] Изображение не найдено или не на модерации: image_id=${imageId}`);
         return reply.code(404).send({
-          error: 'Изображение не найдено или не находится на модерации'
-        });
-      }
+        error: 'Изображение не найдено или не находится на модерации'
+      });
+    }
 
-      const image = imageResult.rows[0];
-      const {
-        filename,
-        yandex_path,
-        user_id: ownerId,
-        original_name,
-        folder_name,
-        width,
-        height,
+    const image = imageResult.rows[0];
+    const {
+      filename,
+      yandex_path,
+      pending_yandex_path,
+      user_id: ownerId,
+      original_name,
+      folder_name,
+      width,
+      height,
         file_size,
         share_requested_at,
         user_personal_id: personalId
@@ -1044,16 +1046,18 @@ export function registerAdminRoutes(app) {
         console.log(`[ADMIN] Папка найдена в БД: id=${sharedFolder.id}, name="${sharedFolder.name}"`);
       }
 
-      console.log(`[ADMIN] Копирование изображения в папку: ${folderNameClean}`);
+    console.log(`[ADMIN] Копирование изображения в папку: ${folderNameClean}`);
 
-      const sourceFilePath = yandex_path;
+    const sourceFilePath = pending_yandex_path || yandex_path;
 
-      if (!sourceFilePath) {
-        console.error(`[ADMIN] Отсутствует путь к файлу (yandex_path) для изображения: image_id=${imageId}`);
-        return reply.code(500).send({
-          error: 'Не удалось определить путь к файлу на Яндекс.Диске'
-        });
-      }
+    if (!sourceFilePath) {
+      console.error(
+        `[ADMIN] Отсутствует путь к файлу для изображения: image_id=${imageId}`
+      );
+      return reply.code(500).send({
+        error: 'Не удалось определить путь к файлу на Яндекс.Диске'
+      });
+    }
 
       // Построить путь к целевой папке
       const sharedFolderPath = getSharedFolderPath(folderNameClean);
@@ -1118,20 +1122,20 @@ export function registerAdminRoutes(app) {
         ]
       );
 
-      const sharedImage = insertResult.rows[0];
-      const userOriginalPath = getUserFilePath(ownerId, personalId, folder_name, filename);
+    const sharedImage = insertResult.rows[0];
 
-      await pool.query(
-        `UPDATE image_library
-         SET yandex_path = $1,
-             share_requested_at = NULL
-         WHERE id = $2`,
-        [userOriginalPath, imageId]
-      );
+    await pool.query(
+      `UPDATE image_library
+         SET share_requested_at = NULL,
+             pending_yandex_path = NULL,
+             moderation_status = 'approved'
+         WHERE id = $1`,
+      [imageId]
+    );
 
-      // Сбросить флаг share_requested_at у личной копии
-      await pool.query(
-        `UPDATE image_library
+    // Сбросить флаг share_requested_at у личной копии
+    await pool.query(
+      `UPDATE image_library
          SET share_requested_at = NULL
          WHERE id = $1`,
         [imageId]
@@ -1183,6 +1187,7 @@ export function registerAdminRoutes(app) {
         `SELECT
           il.id,
           il.yandex_path,
+          il.pending_yandex_path,          
           il.share_requested_at,
           il.is_shared
          FROM image_library il
@@ -1201,26 +1206,28 @@ export function registerAdminRoutes(app) {
       }
 
       const image = imageResult.rows[0];
-      const { yandex_path } = image;
+      const { yandex_path, pending_yandex_path } = image;
 
-      // Проверка наличия yandex_path
-      if (!yandex_path) {
-        console.error(`[ADMIN] Отсутствует yandex_path для изображения: image_id=${imageId}`);
+      // Проверка наличия пути к файлу
+      const filePath = pending_yandex_path || yandex_path;
+
+      if (!filePath) {
+        console.error(`[ADMIN] Отсутствует путь к файлу для изображения: image_id=${imageId}`);
         return reply.code(500).send({
           error: 'Не удалось определить путь к файлу на Яндекс.Диске'
         });
       }
 
-      console.log(`[ADMIN] Удаление файла из pending: ${yandex_path}`);
+      console.log(`[ADMIN] Удаление файла из pending: ${filePath}`);
 
       // Удалить файл с Яндекс.Диска (если он существует)
       try {
-        await deleteFile(yandex_path);
-        console.log(`[ADMIN] Файл успешно удалён: ${yandex_path}`);
+        await deleteFile(filePath);
+        console.log(`[ADMIN] Файл успешно удалён: ${filePath}`);
       } catch (deleteError) {
         // Если файл не найден (404), это нормально - продолжаем
         if (deleteError.status === 404) {
-          console.warn(`[ADMIN] Файл не найден на Яндекс.Диске (уже удалён): ${yandex_path}`);
+          console.warn(`[ADMIN] Файл не найден на Яндекс.Диске (уже удалён): ${filePath}`);
         } else {
           // Другие ошибки логируем, но не прерываем выполнение
           console.error(`[ADMIN] Ошибка удаления файла (игнорируем): ${deleteError.message}`);
@@ -1232,8 +1239,9 @@ export function registerAdminRoutes(app) {
         `UPDATE image_library
          SET
            moderation_status = 'rejected',
-           share_requested_at = NULL
-         WHERE id = $1
+           share_requested_at = NULL,
+           pending_yandex_path = NULL
+           WHERE id = $1
          RETURNING id, moderation_status`,
         [imageId]
       );
