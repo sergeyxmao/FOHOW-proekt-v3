@@ -13,6 +13,28 @@ import {
 } from '../services/yandexDiskService.js';
 
 /**
+ * Рекурсивная функция для замены URL в JSON-структурах
+ * @param {*} obj - Объект для обработки
+ * @param {string} oldUrl - Старый URL для замены
+ * @param {string} newUrl - Новый URL
+ * @returns {*} - Обработанный объект
+ */
+function replaceUrls(obj, oldUrl, newUrl) {
+  if (typeof obj === 'string') {
+    return obj.includes(oldUrl) ? obj.replace(new RegExp(oldUrl, 'g'), newUrl) : obj;
+  } else if (Array.isArray(obj)) {
+    return obj.map(item => replaceUrls(item, oldUrl, newUrl));
+  } else if (obj && typeof obj === 'object') {
+    const result = {};
+    for (const key in obj) {
+      result[key] = replaceUrls(obj[key], oldUrl, newUrl);
+    }
+    return result;
+  }
+  return obj;
+}
+
+/**
  * Регистрация маршрутов для админ-панели
  * @param {import('fastify').FastifyInstance} app - Экземпляр Fastify
  */
@@ -1135,8 +1157,80 @@ await pool.query(
      WHERE id = $1`,
   [imageId]
 );
+
+      // ============================================
+      // АВТООБНОВЛЕНИЕ ССЫЛОК НА ИЗОБРАЖЕНИЯ В ДОСКАХ
+      // ============================================
+
+      // Шаг 1: Получить старый и новый URL изображения
+      const oldPreviewUrl = image.preview_url;
+      const oldFileName = image.filename;
+      const newPreviewUrl = sharedImage.preview_url;
+
+      console.log(`[ADMIN] Начало обновления ссылок в досках для изображения ${imageId}`);
+      console.log(`[ADMIN] Старый URL: ${oldPreviewUrl}`);
+      console.log(`[ADMIN] Новый URL: ${newPreviewUrl}`);
+
+      try {
+        // Шаг 2: Найти все доски с устаревшими ссылками
+        const boardsResult = await pool.query(
+          `SELECT id, content
+           FROM boards
+           WHERE content::text ILIKE '%' || $1 || '%'
+              OR content::text ILIKE '%' || $2 || '%'`,
+          [oldPreviewUrl, oldFileName]
+        );
+
+        const boardsToUpdate = boardsResult.rows;
+
+        if (boardsToUpdate.length === 0) {
+          console.log(`[ADMIN] Досок с изображением ${imageId} не найдено`);
+        } else {
+          console.log(`[ADMIN] Найдено досок для обновления: ${boardsToUpdate.length}`);
+
+          let updatedCount = 0;
+
+          // Шаг 3: Обновить JSON-контент каждой найденной доски
+          for (const board of boardsToUpdate) {
+            try {
+              const boardId = board.id;
+              let content = board.content;
+
+              // Распарсить JSONB в объект
+              if (typeof content === 'string') {
+                content = JSON.parse(content);
+              }
+
+              // Применить рекурсивную функцию замены ссылок
+              const updatedContent = replaceUrls(content, oldPreviewUrl, newPreviewUrl);
+
+              // Обновить доску в БД
+              await pool.query(
+                `UPDATE boards
+                 SET content = $1
+                 WHERE id = $2`,
+                [JSON.stringify(updatedContent), boardId]
+              );
+
+              updatedCount++;
+              console.log(`[ADMIN] Обновлена доска id=${boardId}: заменена ссылка на изображение ${imageId}`);
+
+            } catch (boardError) {
+              // Логировать ошибку, но продолжить обработку оставшихся досок
+              console.error(`[ADMIN] Ошибка при обновлении доски id=${board.id} для изображения ${imageId}:`, boardError);
+            }
+          }
+
+          // Шаг 4: Логирование итогов
+          console.log(`[ADMIN] Всего обновлено досок: ${updatedCount} для изображения ${imageId}`);
+        }
+      } catch (boardsUpdateError) {
+        // Логировать ошибку, но не прерывать основной процесс модерации
+        console.error(`[ADMIN] Ошибка при обновлении досок для изображения ${imageId}:`, boardsUpdateError);
+      }
+
       console.log(`[ADMIN] ✅ Изображение успешно одобрено и скопировано: image_id=${imageId}, folder=${folderNameClean}`);
-      
+
       // Возвращаем данные о новой записи в общей библиотеке
       return reply.code(200).send(sharedImage);
 
