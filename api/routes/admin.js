@@ -1082,7 +1082,7 @@ export function registerAdminRoutes(app) {
       console.log(`[ADMIN] Файл опубликован, public_url: ${publicUrl}`);
 
       // Обновить оригинальную запись, пометив её как размещённую в общей библиотеке
-      const updateResult = await pool.query(
+      await pool.query(
         `UPDATE image_library
            SET moderation_status = 'approved',
                is_shared = TRUE,
@@ -1095,18 +1095,26 @@ export function registerAdminRoutes(app) {
                share_approved_at = CURRENT_TIMESTAMP,
                share_approved_by = $5,
                updated_at = CURRENT_TIMESTAMP
-         WHERE id = $6
-     RETURNING id, user_id, original_name, public_url, preview_url, shared_folder_id, is_shared`,
+         WHERE id = $6`,
         [
           shared_folder_id,          
           newFilePath,
           publicUrl,
           previewUrl,
           adminId,
-          imageId        ]
+          imageId
+        ]
       );
 
-      const sharedImage = updateResult.rows[0];
+      // Получить обновлённую запись из БД и вернуть её
+      const updatedImageResult = await pool.query(
+        `SELECT id, user_id, original_name, public_url, preview_url, shared_folder_id, is_shared
+           FROM image_library
+          WHERE id = $1`,
+        [imageId]
+      );
+
+      const sharedImage = updatedImageResult.rows[0];
 
       console.log(`[ADMIN] ✅ Изображение успешно одобрено и скопировано: image_id=${imageId}, folder=${folderNameClean}`);
       
