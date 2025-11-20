@@ -5,12 +5,10 @@ import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
 import { getSharedLibrary } from '../../services/imageService'
 import ImageCard from './ImageCard.vue'
-import { useImageProxy } from '../../composables/useImageProxy'
 
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
 const notificationsStore = useNotificationsStore()
-const { getImageUrl } = useImageProxy()
 
 // Состояние
 const folders = ref([])
@@ -132,17 +130,10 @@ async function handleImageClick(image) {
   // Включаем режим размещения
   stickersStore.enablePlacementMode()
 
-  // Получаем blob URL для изображения
-  const imageUrl = await getImageUrl(image.id)
-
-  console.log('✅ Blob URL получен:', imageUrl?.substring(0, 50) + '...')
-
   // Сохраняем данные изображения для последующего создания стикера
   stickersStore.pendingImageData = {
     type: 'image',
     imageId: image.id, // ID изображения из библиотеки
-    url: imageUrl, // Blob URL для отображения
-    originalUrl: image.public_url, // Оригинальный URL
     width: image.width || 200,
     height: image.height || 150
   }
