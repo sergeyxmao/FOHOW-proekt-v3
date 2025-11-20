@@ -163,17 +163,16 @@ const canShareRequest = computed(() => {
   position: relative;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
-  border-radius: 8px;
+  background: transparent;
+  border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 1px solid rgba(15, 23, 42, 0.08);
   height: 100%;  
 }
 
 .image-card:hover {
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  box-shadow: none;
   transform: translateY(-2px);
 }
 
@@ -187,8 +186,9 @@ const canShareRequest = computed(() => {
 
 .image-card__thumbnail {
   position: relative;
-  width: 120px;
-  height: 120px;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
   background: #f5f5f5;
   overflow: hidden;
 }
@@ -196,7 +196,8 @@ const canShareRequest = computed(() => {
 .image-card__img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  display: block;
 }
 
 .image-card__loading {
