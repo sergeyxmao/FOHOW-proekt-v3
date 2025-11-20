@@ -6,6 +6,7 @@ import {
   getUserFilePath,
   getSharedPendingFolderPath,
   ensureFolderExists,
+  списокПапокКаталоги,  
   uploadFile,
   publishFile,
   deleteFile,
@@ -17,6 +18,122 @@ import {
  * @param {import('fastify').FastifyInstance} app - экземпляр Fastify
  */
 export function registerImageRoutes(app) {
+  /**
+   * GET /api/images/my/folders - Получить список папок личной библиотеки
+   */
+  приложение. получить ( '/api/images/my/folders' , {
+    preHandler : [authenticateToken]
+  }, асинхронный (запрос, ответ) => {
+    пытаться {
+      const userId =
+ req.user.id ;​
+      const userRole =
+ req.user.role ;​
+
+      const userResult = await pool. query (
+        `ВЫБРАТЬ
+          u.personal_id,
+          u.plan_id,
+          sp.особенности,
+          sp.name как plan_name
+         ОТ пользователей u
+         ПРИСОЕДИНЯЙТЕСЬ к subscription_plans sp ON u.plan_id = sp.id
+         ГДЕ u.id = $1` ,
+        [ID пользователя]
+      );
+
+      если ( userResult.rows.length === 0 ) {
+​
+        обратный ответ. код ( 403 ). отправить ({
+          error: 'Не удалось определить тарифный план пользователя.'
+        });
+      }
+
+      const user = userResult.rows [ 0 ] ;
+      const features = user.features ;
+      const personalId = user.personal_id ;
+      const planName = user.plan_name ;
+
+      если (userRole !== 'администратор' ) {
+        const canUseImages = features. can_use_images || false ;
+
+        если (!canUseImages) {
+          обратный ответ. код ( 403 ). отправить ({
+            error: `Доступ к библиотеке изображений запрещён для вашего тарифа "${planName}".`,
+            код : 'IMAGE_LIBRARY_ACCESS_DENIED' ,
+            upgradeRequired : true
+          });
+        }
+      }
+
+      const libraryRootPath = getUserLibraryFolderPath (userId, personalId, null );
+
+      пусть yandexFolders = [];
+      пытаться {
+        yandexFolders = await listFolderDirectories (libraryRootPath);
+ 
+      } поймать (ошибка) {
+        console.error('❌ Ошибка получения списка папок на Яндекс.Диске:', error);
+        ответный код ( 500 ). отправить ( {
+          ошибка : process. env . NODE_ENV === 'development'
+            ? `Ошибка сервера: ${error.message}`
+            : 'Ошибка сервера. Попробуйте позже'
+        });
+      }
+
+      const foldersResult = await pool. query (
+        `ВЫБРАТЬ
+           имя_папки как имя,
+           COUNT(*) AS images_count,
+           COALESCE(SUM(file_size), 0) AS total_size
+         ИЗ библиотеки_изображений
+         ГДЕ user_id = $1
+           И is_shared = ЛОЖЬ
+           И имя_папки НЕ NULL
+           И имя_папки <> ''
+         ГРУППИРОВАТЬ ПО имени_папки
+         ORDER BY folder_name ASC` ,
+        [ID пользователя]
+      );
+
+      const foldersMap = new Map ();
+ 
+
+      для ( константная строка папокResult . rows ) {
+        const folderName = row.name ;
+        foldersMap.set (folderName,
+ {
+          имя : имя_папки,
+          images_count : parseInt (row. images_count , 10 ) || 0 ,
+          total_size : parseInt (row. total_size , 10 ) || 0
+        });
+      }
+
+      для ( const folderName of yandexFolders) {
+        если (!foldersMap. имеет (folderName)) {
+          foldersMap.set (folderName,
+ {
+            имя : имя_папки,
+            Количество_изображений : 0 ,
+            общий_размер : 0
+          });
+        }
+      }
+
+      const folders = Array.from ( foldersMap.values ( ) );
+
+      возврат ответа. код ( 200 ). отправить ({folders});
+    } поймать (ошибка) {
+      console.error('❌ Ошибка получения списка папок:', err);
+
+      const errorMessage = process.env . NODE_ENV === ' development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      вернуть ответ. код ( 500 ). отправить ({ error : errorMessage });
+    }
+  });
+  
   /**
    * GET /api/images/my - Получить список личных изображений
    *
