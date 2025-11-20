@@ -21,7 +21,7 @@ const isLoading = ref(false)
 const error = ref(null)
 const pagination = ref({
   page: 1,
-  limit: 20,
+  limit: 100,
   total: 0
 })
 
@@ -357,27 +357,6 @@ async function handleShareRequest(image) {
 }
 
 /**
- * Загрузить следующую страницу (пагинация)
- */
-function loadNextPage() {
-  const totalPages = Math.ceil(pagination.value.total / pagination.value.limit)
-  if (pagination.value.page < totalPages) {
-    pagination.value.page++
-    loadImages()
-  }
-}
-
-/**
- * Загрузить предыдущую страницу
- */
-function loadPrevPage() {
-  if (pagination.value.page > 1) {
-    pagination.value.page--
-    loadImages()
-  }
-}
-
-/**
  * Загрузить статистику использования библиотеки
  */
 async function loadStats() {
@@ -515,30 +494,6 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
       </p>
     </div>
 
-    <!-- Пагинация -->
-    <div v-if="!isLoading && images.length > 0" class="my-library-tab__pagination">
-      <button
-        type="button"
-        class="my-library-tab__page-btn"
-        :disabled="pagination.page === 1"
-        @click="loadPrevPage"
-      >
-        Назад
-      </button>
-
-      <span class="my-library-tab__page-info">
-        Страница {{ pagination.page }} из {{ Math.ceil(pagination.total / pagination.limit) }}
-      </span>
-
-      <button
-        type="button"
-        class="my-library-tab__page-btn"
-        :disabled="pagination.page >= Math.ceil(pagination.total / pagination.limit)"
-        @click="loadNextPage"
-      >
-        Вперёд
-      </button>
-    </div>
   </div>
 </template>
 
@@ -697,42 +652,6 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
 
 .my-library-tab__empty-hint {
   margin: 0;
-  font-size: 14px;
-  color: #64748b;
-}
-
-.my-library-tab__pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
-}
-
-.my-library-tab__page-btn {
-  padding: 8px 16px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 6px;
-  background: #ffffff;
-  color: #0f172a;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.my-library-tab__page-btn:hover:not(:disabled) {
-  background: rgba(15, 23, 42, 0.06);
-  border-color: rgba(15, 23, 42, 0.24);
-}
-
-.my-library-tab__page-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.my-library-tab__page-info {
   font-size: 14px;
   color: #64748b;
 }
