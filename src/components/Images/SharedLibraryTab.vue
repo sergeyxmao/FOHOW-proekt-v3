@@ -24,8 +24,24 @@ const pagination = ref({
   limit: 40,
   total: 0
 })
-const scrollContainerRef = ref(null)
-  const error = ref(null)
+const gridRef = ref(null)
+const scrollContainerRef = gridRef
+
+function onWheel(e) {
+  e.stopPropagation()
+
+  const el = gridRef.value
+  if (!el) return
+
+  const atTop = el.scrollTop === 0
+  const atBottom = el.scrollHeight - el.scrollTop === el.clientHeight
+
+  if (!(atTop && e.deltaY < 0) && !(atBottom && e.deltaY > 0)) {
+    return
+  }
+
+  e.preventDefault()
+}
 
 // Вычисляемые свойства
 
@@ -354,8 +370,9 @@ onBeforeUnmount(() => {
     <!-- Сетка изображений -->
     <div
       v-else-if="filteredImages.length > 0"
-      ref="scrollContainerRef"
+      ref="gridRef"
       class="shared-library-tab__grid"
+         @wheel.stop="onWheel"   
     >
       <ImageCard
         v-for="image in filteredImages"
