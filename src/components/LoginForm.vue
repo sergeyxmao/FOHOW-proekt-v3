@@ -99,16 +99,23 @@ async function fetchVerificationCode(showError = true) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ previousToken: verificationToken.value || undefined })
     })
+    const data = await response.json().catch(() => null)
 
     if (!response.ok) {
-      throw new Error('Не удалось получить проверочный код')
+      throw new Error(data?.message || 'Не удалось получить проверочный код')
     }
 
-    const data = await response.json()
+    if (!data?.code || !data?.token) {
+      throw new Error('Некорректный ответ сервера. Попробуйте обновить код.')
+    }
+
     verificationCode.value = data.code
     verificationToken.value = data.token
     verificationInput.value = ''
   } catch (err) {
+    verificationCode.value = ''
+    verificationToken.value = ''
+    verificationInput.value = ''    
     if (showError) {
       error.value = err.message || 'Не удалось получить проверочный код'
     }
