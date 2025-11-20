@@ -313,11 +313,12 @@ onMounted(async () => {
 .shared-library-tab__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: auto;
+  grid-auto-rows: var(--images-grid-card-height, 190px);
   gap: 8px;
-  max-height: calc(4 * 170px + 3 * 8px);
+  max-height: calc(4 * var(--images-grid-card-height, 190px) + 3 * 8px);
   overflow-y: auto;
-  overscroll-behavior: contain;  
+  overscroll-behavior: contain;
+  align-content: start;
 }
 
 .shared-library-tab__empty {
