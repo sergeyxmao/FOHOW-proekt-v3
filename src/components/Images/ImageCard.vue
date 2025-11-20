@@ -107,25 +107,7 @@ const canShareRequest = computed(() => {
       <div v-if="statusLabel" class="image-card__status-badge">
         {{ statusLabel }}
       </div>
-    </div>
-
-    <!-- Информация -->
-    <div class="image-card__info">
-      <div class="image-card__name" :title="image.original_name">
-        {{ displayName }}
-      </div>
-
-      <!-- Информация об авторе (для общей библиотеки) -->
-      <div v-if="!isMyLibrary && (image.author_full_name || image.author_personal_id)" class="image-card__author">
-        <span v-if="image.author_full_name" class="image-card__author-name">
-          {{ image.author_full_name }}
-        </span>
-        <span v-if="image.author_personal_id" class="image-card__author-id">
-          ID: {{ image.author_personal_id }}
-        </span>
-      </div>
-
-      <!-- Действия -->
+      
       <div v-if="isMyLibrary" class="image-card__actions">
         <!-- Кнопка "Предложить для общего доступа" -->
         <button
@@ -136,8 +118,7 @@ const canShareRequest = computed(() => {
           @click="handleShareRequest"
         >
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M18 8C19.6569 8 21 6.65685 21 5C21 3.34315 19.6569 2 18 2C16.3431 2 15 3.34315 15 5C15 5.12549 15.0077 15.2491 15.0227 15.3715L8.08261 11.9015C7.54305 11.3453 6.81024 11 6 11C4.34315 11 3 12.3431 3 14C3 15.6569 4.34315 17 6 17C6.81024 17 7.54305 16.6547 8.08261 16.0985L15.0227 19.5685C15.0077 19.6909 15 19.8155 15 19.941C15 21.5979 16.3431 22.941 18 22.941C19.6569 22.941 21 21.5979 21 19.941C21 18.2841 19.6569 16.941 18 16.941C17.1898 16.941 16.457 17.2863 15.9174 17.8425L8.97733 14.3725C8.99229 14.2501 9 14.1255 9 14C9 13.8745 8.99229 13.7499 8.97733 13.6275L15.9174 10.1575C16.457 10.7137 17.1898 11.059 18 11.059C19.6569 11.059 21 9.71585 21 8.059C21 6.40215 19.6569 5.059 18 5.059V8Z" fill="currentColor"/>
-          </svg>
+            <path d="M18 8C19.6569 8 21 6.65685 21 5C21 3.34315 19.6569 2 18 2C16.3431 2 15 3.34315 15 5C15 5.12549 15.0077 15.291 15.0227 15.3715L8.08261 11.9015C7.54305 11.3453 6.81024 11 6 11C4.34315 11 3 12.3431 3 14C3 15.6569 4.34315 17 6 17C6.81024 17 7.54305 16.6547 8.08261 16.0985L15.0227 19.5685C15.0077 19.6909 15 19.8155 15 19.941C15 21.5979 16.3431 22.941 18 22.941C19.6569 22.941 21 21.5979 21 19.941C21 18.2841 19.6569 16.941 18 16.941C17.1898 16.941 16.457 17.2863 15.9174 17.8425L8.97733 14.3725C8.99229 14.2501 9 14.1255 9 14C9 13.8745 8.99229 13.7499 8.97733 13.6275L15.9174 10.1575C16.457 10.7137 17.1898 11.059 18 11.059C19.6569 11.059 21 9.71585 21 8.059C21 6.40215 19.6569 5.059 18 5.059V8Z" fill="currentColor"/>          </svg>
         </button>
 
         <!-- Кнопка удаления -->
@@ -153,7 +134,22 @@ const canShareRequest = computed(() => {
         </button>
       </div>
     </div>
-  </div>
+
+    <!-- Информация -->
+    <div
+      v-if="!isMyLibrary && (image.author_full_name || image.author_personal_id)"
+      class="image-card__info"
+    >
+      <!-- Информация об авторе (для общей библиотеки) -->
+      <div class="image-card__author">
+        <span v-if="image.author_full_name" class="image-card__author-name">
+          {{ image.author_full_name }}
+        </span>
+        <span v-if="image.author_personal_id" class="image-card__author-id">
+          ID: {{ image.author_personal_id }}
+        </span>
+      </div>
+    </div>
 </template>
 
 <style scoped>
@@ -230,19 +226,10 @@ const canShareRequest = computed(() => {
 }
 
 .image-card__info {
-  padding: 12px;
+  padding: 8px 12px 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.image-card__name {
-  font-size: 13px;
-  font-weight: 500;
-  color: #0f172a;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  gap: 6px;
 }
 
 .image-card__author {
@@ -264,9 +251,22 @@ const canShareRequest = computed(() => {
 }
 
 .image-card__actions {
+  position: absolute;
+  inset: 0;
   display: flex;
+  align-items: flex-end;
+  justify-content: center;
   gap: 8px;
-  justify-content: flex-end;
+  padding: 8px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.55) 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.image-card:hover .image-card__actions {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .image-card__action {
