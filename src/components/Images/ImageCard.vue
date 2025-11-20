@@ -169,6 +169,7 @@ const canShareRequest = computed(() => {
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid rgba(15, 23, 42, 0.08);
+  height: 100%;  
 }
 
 .image-card:hover {
