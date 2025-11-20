@@ -22,8 +22,12 @@ const activeTab = ref('my')
 
 // Проверка доступа к библиотеке изображений
 const canUseImages = computed(() => subscriptionStore.checkFeature('can_use_images'))
+const myLibraryRef = ref(null)
+const sharedLibraryRef = ref(null)
 
 const handleClose = () => {
+  myLibraryRef.value?.resetState?.()
+  sharedLibraryRef.value?.resetState?.()  
   sidePanelsStore.closePanel()
 }
 
@@ -88,12 +92,12 @@ const setActiveTab = (tab) => {
     <div v-if="canUseImages" class="images-panel__content">
       <!-- Содержимое "Моя библиотека" -->
       <div v-if="activeTab === 'my'" class="images-panel__tab-content images-panel__tab-content--full">
-        <MyLibraryTab />
+        <MyLibraryTab ref="myLibraryRef" />
       </div>
 
       <!-- Содержимое "Общая" -->
       <div v-if="activeTab === 'shared'" class="images-panel__tab-content images-panel__tab-content--full">
-        <SharedLibraryTab />
+        <SharedLibraryTab ref="sharedLibraryRef" />
       </div>
     </div>
   </div>
