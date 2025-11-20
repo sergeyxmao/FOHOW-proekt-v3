@@ -86,7 +86,11 @@ export async function getMyFolders() {
     }
 
     const data = await response.json();
-    return data.folders || [];
+
+    возврат (data. folders || [])
+      . карта ( папка => тип_папки === 'строка' ? папка : папка?. имя )
+ 
+      . фильтр ( логический );
   } catch (error) {
     // Обработка сетевых ошибок
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
