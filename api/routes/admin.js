@@ -1084,24 +1084,25 @@ export function registerAdminRoutes(app) {
       // Обновить оригинальную запись, пометив её как размещённую в общей библиотеке
       const updateResult = await pool.query(
         `UPDATE image_library
-           SET moderation_status = 'approved',
-               is_shared = TRUE,
-               shared_folder_id = $1,
-               yandex_path = $2,
-               public_url = $3,
-               preview_url = $4,
-               share_requested_at = NULL,
+           SET share_requested_at = NULL,
                pending_yandex_path = NULL,
-               share_approved_at = CURRENT_TIMESTAMP,
-               share_approved_by = $5,
-               updated_at = CURRENT_TIMESTAMP
-         WHERE id = $6
+               folder_name = NULL,
+               yandex_path = $1,
+               public_url = $2,
+               preview_url = $3,
+               moderation_status = 'approved',
+               is_shared = TRUE,
+               shared_folder_id = $4,
+               share_approved_at = $5,
+               share_approved_by = $6
+         WHERE id = $7
      RETURNING id, user_id, original_name, public_url, preview_url, shared_folder_id, is_shared`,
-        [
-          shared_folder_id,          
+        [          
           newFilePath,
           publicUrl,
           previewUrl,
+          shared_folder_id,
+          new Date(),          
           adminId,
           imageId        ]
       );
