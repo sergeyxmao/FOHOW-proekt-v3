@@ -176,7 +176,7 @@ app.post('/api/verification-code', async (req, reply) => {
     return reply.send({ token, code });
   } catch (err) {
     req.log.error('❌ Ошибка генерации проверочного кода:', err);
-    return reply.code(500).send({ error: 'Не удалось создать проверочный код' });
+    return reply.code(500).send({ message: 'Не удалось создать проверочный код' });
   }
 });
 
