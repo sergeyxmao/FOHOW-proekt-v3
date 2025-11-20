@@ -21,9 +21,9 @@ export function registerImageRoutes(app) {
   /**
    * GET /api/images/my/folders - Получить список папок личной библиотеки
    */
-  приложение. получить ( '/api/images/my/folders' , {
+  app.get('/api/images/my/folders', {
     preHandler : [authenticateToken]
-  }, асинхронный (запрос, ответ) => {
+  }, async (req, reply) => {
     пытаться {
       const userId =
  req.user.id ;​
