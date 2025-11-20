@@ -135,7 +135,8 @@ async function handleImageClick(image) {
     type: 'image',
     imageId: image.id, // ID изображения из библиотеки
     width: image.width || 200,
-    height: image.height || 150
+    height: image.height || 150,
+    dataUrl: image.url || image.preview_url || image.thumbnail
   }
 
   console.log('📌 Pending image data установлен, режим размещения активирован')
