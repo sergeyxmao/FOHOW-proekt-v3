@@ -260,14 +260,16 @@ const canShareRequest = computed(() => {
 
 .image-card__actions {
   position: absolute;
-  inset: 0;
+  top: 8px;
+  right: 8px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;  
   align-items: flex-end;
   gap: 8px;
-  padding: 8px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.55) 100%);
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
+  border-radius: 8px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
@@ -293,34 +295,37 @@ const canShareRequest = computed(() => {
   padding: 0;
   border: none;
   background: transparent;
-  color: #64748b;
+  color: #ffffff;
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: auto;  
+  pointer-events: auto;
 }
 
 .image-card__action svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
+  fill: white;
+  stroke: white;
+  opacity: 1;
 }
 
 .image-card__action:hover {
   background: rgba(15, 23, 42, 0.06);
-  color: #0f172a;
+  color: #ffffff;
 }
 
 .image-card__action--delete:hover {
   background: rgba(244, 67, 54, 0.1);
-  color: #f44336;
+  color: #ffffff;
 }
 
 .image-card__action--share:hover {
   background: rgba(33, 150, 243, 0.1);
-  color: #2196f3;
+  color: #ffffff;
 }
 
 .image-card__action:active {
