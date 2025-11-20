@@ -157,6 +157,126 @@ export function registerImageRoutes(app) {
       }
     }
   );
+  /**
+   * GET /api/images/my/stats - Получить статистику личной библиотеки изображений
+   */
+  app.get(
+    '/api/images/my/stats',
+    {
+      preHandler: [authenticateToken]
+    },
+    async (req, reply) => {
+      try {
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        const userResult = await pool.query(
+          `
+          SELECT
+            u.personal_id,
+            u.plan_id,
+            sp.features,
+            sp.name AS plan_name
+          FROM users u
+          JOIN subscription_plans sp ON u.plan_id = sp.id
+          WHERE u.id = $1
+        `,
+          [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+          return reply.code(403).send({
+            error: 'Не удалось определить тарифный план пользователя.'
+          });
+        }
+
+        const user = userResult.rows[0];
+        const features = user.features || {};
+        const planName = user.plan_name;
+
+        if (userRole !== 'admin') {
+          const canUseImages =
+            typeof features.can_use_images === 'boolean'
+              ? features.can_use_images
+              : false;
+
+          if (!canUseImages) {
+            return reply.code(403).send({
+              error: `Доступ к библиотеке изображений запрещён для вашего тарифа "${planName}".`,
+              code: 'IMAGE_LIBRARY_ACCESS_DENIED',
+              upgradeRequired: true
+            });
+          }
+        }
+
+        const statsResult = await pool.query(
+          `
+          SELECT
+            COUNT(*) AS image_count,
+            COALESCE(SUM(file_size), 0) AS total_size,
+            COUNT(DISTINCT folder_name) FILTER (
+              WHERE folder_name IS NOT NULL
+                AND folder_name <> ''
+            ) AS folder_count
+          FROM image_library
+          WHERE user_id = $1
+            AND is_shared = FALSE
+        `,
+          [userId]
+        );
+
+        const currentImageCount = parseInt(
+          statsResult.rows[0]?.image_count || '0',
+          10
+        );
+        const currentTotalSize = parseInt(
+          statsResult.rows[0]?.total_size || '0',
+          10
+        );
+        const currentFolderCount = parseInt(
+          statsResult.rows[0]?.folder_count || '0',
+          10
+        );
+
+        const limits = {
+          files:
+            features.image_library_max_files !== undefined
+              ? features.image_library_max_files
+              : -1,
+          storageMB:
+            features.image_library_max_storage_mb !== undefined
+              ? features.image_library_max_storage_mb
+              : -1,
+          folders:
+            features.image_library_max_folders !== undefined
+              ? features.image_library_max_folders
+              : -1
+        };
+
+        const stats = {
+          usage: {
+            files: currentImageCount,
+            folders: currentFolderCount,
+            storageBytes: currentTotalSize,
+            storageMB: currentTotalSize / 1024 / 1024
+          },
+          limits,
+          planName
+        };
+
+        return reply.code(200).send(stats);
+      } catch (err) {
+        console.error('❌ Ошибка получения статистики библиотеки изображений:', err);
+
+        const errorMessage =
+          process.env.NODE_ENV === 'development'
+            ? `Ошибка сервера: ${err.message}`
+            : 'Ошибка сервера. Попробуйте позже';
+
+        return reply.code(500).send({ error: errorMessage });
+      }
+    }
+  );
 
   /**
    * GET /api/images/my - Получить список личных изображений
