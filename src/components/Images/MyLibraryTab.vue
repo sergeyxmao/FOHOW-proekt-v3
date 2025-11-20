@@ -89,11 +89,15 @@ async function loadImages() {
       limit: pagination.value.limit,
       folder: selectedFolder.value || null
     })
+    // total берём из response.pagination.total согласно контракту бэкенда
+    const responsePagination = response.pagination || {}
 
     images.value = response.items || []
     pagination.value = {
       ...pagination.value,
-      total: response.pagination.total
+      page: responsePagination.page ?? pagination.value.page,
+      limit: responsePagination.limit ?? pagination.value.limit,
+      total: responsePagination.total ?? 0
     }
   } catch (err) {
     console.error('Ошибка загрузки изображений:', err)
