@@ -1218,7 +1218,7 @@ export function registerImageRoutes(app) {
         // Получить информацию об изображении
         const result = await pool.query(
           `
-          SELECT yandex_path, is_shared, user_id
+          SELECT yandex_path, is_shared, user_id, moderation_status
           FROM image_library
           WHERE id = $1
         `,
@@ -1232,9 +1232,10 @@ export function registerImageRoutes(app) {
         const image = result.rows[0];
 
         // Проверка прав доступа:
-        // Личные изображения (is_shared = FALSE) доступны только владельцу
-        // Общие изображения (is_shared = TRUE) доступны всем авторизованным пользователям
-        if (!image.is_shared && image.user_id !== userId) {
+        // 1. Общие изображения (is_shared = TRUE) доступны всем авторизованным пользователям
+        // 2. Одобренные изображения (moderation_status = 'approved') доступны всем (для работы на shared досках)
+        // 3. Личные изображения (is_shared = FALSE) доступны только владельцу
+        if (!image.is_shared && image.moderation_status !== 'approved' && image.user_id !== userId) {
           return reply.code(403).send({ error: 'Доступ запрещен' });
         }
 

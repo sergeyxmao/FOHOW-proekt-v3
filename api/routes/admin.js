@@ -1124,22 +1124,20 @@ export function registerAdminRoutes(app) {
 
     const sharedImage = insertResult.rows[0];
 
+    // Обновить оригинальную запись: сбросить флаги модерации и обновить пути
+    // на новые в shared библиотеке, чтобы изображения на досках продолжали работать
+    // Оставляем is_shared = FALSE, чтобы избежать дублирования в shared библиотеке
     await pool.query(
       `UPDATE image_library
          SET share_requested_at = NULL,
              pending_yandex_path = NULL,
-             moderation_status = 'approved'
+             moderation_status = 'approved',
+             yandex_path = $2,
+             public_url = $3,
+             preview_url = $4
          WHERE id = $1`,
-      [imageId]
+      [imageId, newFilePath, publicUrl, previewUrl]
     );
-
-    // Сбросить флаг share_requested_at у личной копии
-    await pool.query(
-      `UPDATE image_library
-         SET share_requested_at = NULL
-         WHERE id = $1`,
-        [imageId]
-      );
 
       console.log(`[ADMIN] ✅ Изображение успешно одобрено и скопировано: image_id=${imageId}, folder=${folderNameClean}`);
       
