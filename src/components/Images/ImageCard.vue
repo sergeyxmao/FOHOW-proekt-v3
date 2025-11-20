@@ -184,16 +184,16 @@ const canShareRequest = computed(() => {
 
 .image-card__thumbnail {
   position: relative;
-  width: 100%;
-  height: 160px;
-  background: #f8fafc;
+  width: 120px;
+  height: 120px;
+  background: #f5f5f5;
   overflow: hidden;
 }
 
 .image-card__img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .image-card__loading {
