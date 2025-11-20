@@ -220,7 +220,37 @@ async function ensureFolderExists(path) {
 
     console.log(`[Yandex Disk] Все папки в пути ${path} готовы`);
   } catch (error) {
-    throw new Error(`Ошибка при создании структуры папок ${path}: ${error.message}`);    
+    thrownewError(`Ошибка при создании структуры папок ${path}: ${error.message}`);
+  
+  }
+}
+
+/**
+* Получить список вложенных папок для указанного пути на Яндекс.Диске
+ * @param {string} path - Путь к корневой папке
+ * @returns {Promise<string[]>} Список имён подпапок
+*/
+асинхронная функция listFolderDirectories ( path ) {
+  
+  const listEndpoint = `/resources?path= ${ encodeURIComponent (path)} &fields=_embedded.items.name,_embedded.items.type` ;
+
+  пытаться {
+    const responseData = await makeYandexDiskRequest (listEndpoint, { method : 'GET' }, path);
+ 
+    const items = responseData?._ embedded ? .items || [];
+
+    возврат товаров
+      . фильтр ( элемент => элемент. тип === 'dir' )
+      . карта ( элемент => элемент. имя );
+  } поймать (ошибка) {
+    если (ошибка. статус === 404 ) {
+      // Корневая папка не найдена — создаём её и возвращаем пустой список
+      await ensureFolderExists (путь);
+ 
+      возвращаться [];
+    }
+
+    ошибка броска ;
   }
 }
 
@@ -392,6 +422,7 @@ export {
   publishFile,
   deleteFile,
   moveFile,
-  copyFile,	
+  copyFile,
+  списокПапокКаталоги,
   renameUserRootFolder
 };
