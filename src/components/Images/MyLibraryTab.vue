@@ -26,13 +26,29 @@ const pagination = ref({
 const isInitialLoading = ref(false)
 const isLoadingMore = ref(false)
 const hasMore = ref(true)
-const scrollContainerRef = ref(null)
-// Статистика и лимиты
+const gridRef = ref(null)
+const scrollContainerRef = gridRef
+  // Статистика и лимиты
 const stats = ref(null)
 
 // Локальное состояние для загрузки файлов
 const isUploading = ref(false)
 const fileInputRef = ref(null)
+function onWheel(e) {
+  e.stopPropagation()
+
+  const el = gridRef.value
+  if (!el) return
+
+  const atTop = el.scrollTop === 0
+  const atBottom = el.scrollHeight - el.scrollTop === el.clientHeight
+
+  if (!(atTop && e.deltaY < 0) && !(atBottom && e.deltaY > 0)) {
+    return
+  }
+
+  e.preventDefault()
+}
 
 // Вычисляемые свойства
 
@@ -565,8 +581,9 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
     <!-- Сетка изображений -->
     <div
       v-else-if="filteredImages.length > 0"
-      ref="scrollContainerRef"
+      ref="gridRef"
       class="my-library-tab__grid"
+       @wheel.stop="onWheel"     
     >
       <ImageCard
         v-for="image in filteredImages"
