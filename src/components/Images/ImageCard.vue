@@ -150,6 +150,7 @@ const canShareRequest = computed(() => {
         </span>
       </div>
     </div>
+  </div>    
 </template>
 
 <style scoped>
