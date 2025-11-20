@@ -10,7 +10,7 @@ import {
   uploadFile,
   publishFile,
   deleteFile,
-  moveFile
+  copyFile
 } from '../services/yandexDiskService.js';
 
 /**
@@ -1015,11 +1015,11 @@ export function registerImageRoutes(app) {
         // Путь к файлу в pending
         const pendingFilePath = `${pendingFolderPath}/${filename}`;
 
-        // Переместить файл из личной библиотеки в pending
-        await moveFile(currentPath, pendingFilePath);
+        // Скопировать файл из личной библиотеки в pending, оставляя оригинал у пользователя
+        await copyFile(currentPath, pendingFilePath);
 
         console.log(
-          `✅ Файл перемещён из "${currentPath}" в "${pendingFilePath}"`
+          `✅ Файл скопирован из "${currentPath}" в "${pendingFilePath}"`
         );
 
         // Обновить запись в БД
