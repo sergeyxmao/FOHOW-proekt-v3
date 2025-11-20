@@ -89,10 +89,9 @@ async function loadImages() {
       limit: pagination.value.limit,
       folder: selectedFolder.value || null
     })
-    // total берём из response.pagination.total согласно контракту бэкенда
-    const responsePagination = response.pagination || {}
+    const responsePagination = response?.pagination || {}
 
-    images.value = response.items || []
+    images.value = Array.isArray(response?.items) ? response.items : []
     pagination.value = {
       ...pagination.value,
       page: responsePagination.page ?? pagination.value.page,
