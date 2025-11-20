@@ -24,7 +24,7 @@ export function registerImageRoutes(app) {
   app.get('/api/images/my/folders', {
     preHandler : [authenticateToken]
   }, async (req, reply) => {
-    пытаться {
+    Unexpected token '{'
       const userId =
  req.user.id ;​
       const userRole =
