@@ -220,7 +220,7 @@ async function ensureFolderExists(path) {
 
     console.log(`[Yandex Disk] Все папки в пути ${path} готовы`);
   } catch (error) {
-    thrownewError(`Ошибка при создании структуры папок ${path}: ${error.message}`);
+    throw new Error(`Ошибка при создании структуры папок ${path}: ${error.message}`);
   
   }
 }
@@ -231,26 +231,26 @@ async function ensureFolderExists(path) {
  * @returns {Promise<string[]>} Список имён подпапок
 */
 async function listFolderDirectories(path) {
-  
-  const listEndpoint = `/resources?path= ${ encodeURIComponent (path)} &fields=_embedded.items.name,_embedded.items.type` ;
 
-  пытаться {
-    const responseData = await makeYandexDiskRequest (listEndpoint, { method : 'GET' }, path);
- 
-    const items = responseData?._ embedded ? .items || [];
+  const listEndpoint = `/resources?path=${encodeURIComponent(path)}&fields=_embedded.items.name,_embedded.items.type`;
 
-    возврат товаров
-      . фильтр ( элемент => элемент. тип === 'dir' )
-      . карта ( элемент => элемент. имя );
-  } поймать (ошибка) {
-    если (ошибка. статус === 404 ) {
+  try {
+    const responseData = await makeYandexDiskRequest(listEndpoint, { method: 'GET' }, path);
+
+    const items = responseData?._embedded?.items || [];
+
+    return items
+      .filter(item => item.type === 'dir')
+      .map(item => item.name);
+  } catch (error) {
+    if (error.status === 404) {
       // Корневая папка не найдена — создаём её и возвращаем пустой список
-      await ensureFolderExists (путь);
- 
-      возвращаться [];
+      await ensureFolderExists(path);
+
+      return [];
     }
 
-    ошибка броска ;
+    throw error;
   }
 }
 
@@ -328,7 +328,6 @@ async function publishFile(path) {
       public_url: metaData.public_url,
       preview_url: metaData.preview || metaData.public_url
     };
-	return metaData.public_url;
   } catch (error) {
     throw new Error(`Не удалось опубликовать файл ${path}: ${error.message}`);
   }
@@ -423,6 +422,6 @@ export {
   deleteFile,
   moveFile,
   copyFile,
-  списокПапокКаталоги,
+  listFolderDirectories,
   renameUserRootFolder
 };
