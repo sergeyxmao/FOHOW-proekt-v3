@@ -315,7 +315,8 @@ onMounted(async () => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: var(--images-grid-card-height, 190px);
   gap: 8px;
-  max-height: calc(4 * var(--images-grid-card-height, 190px) + 3 * 8px);
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   align-content: start;
