@@ -291,7 +291,7 @@ async function loadFolders() {
   } catch (err) {
     const message = formatError(err, 'Ошибка загрузки папок')
     lastError.value = message    
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'error',
       message
     })
@@ -331,14 +331,14 @@ async function handleRenameSubmit() {
     selectedFolder.value = { ...selectedFolder.value, name: newName }
     clearLastError()
 
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'success',
       message: 'Папка переименована'
     })
   } catch (err) {
     const message = formatError(err, 'Не удалось переименовать папку')
     lastError.value = message
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'error',
       message
     })
@@ -365,7 +365,7 @@ async function handleCreateFolder() {
     if (syncedFolder) {
       await selectFolder(syncedFolder)
     }
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'success',
       message: 'Папка успешно создана'
     })
@@ -374,7 +374,7 @@ async function handleCreateFolder() {
   } catch (err) {
     const message = formatError(err, 'Ошибка создания папки')
     lastError.value = message    
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'error',
       message
     })
@@ -394,7 +394,7 @@ async function selectFolder(folder) {
   } catch (err) {
     const message = formatError(err, 'Ошибка загрузки изображений')
     lastError.value = message    
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'error',
       message
     })
@@ -442,7 +442,7 @@ async function handleFileSelect(event) {
 
   try {
     if (!isImageFile(file)) {
-      notificationsStore.add({
+      notificationsStore.addNotification({
         type: 'error',
         message: `Файл "${file.name}" не является изображением`
       })
@@ -473,7 +473,7 @@ async function handleFileSelect(event) {
       height
     )
 
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'success',
       message: 'Изображение успешно загружено'
     })
@@ -487,7 +487,7 @@ async function handleFileSelect(event) {
   } catch (err) {
     const message = formatError(err, 'Ошибка загрузки изображения')
     lastError.value = message    
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'error',
       message
     })
@@ -551,7 +551,7 @@ async function handleMoveImage() {
       selectedFolder.value.id
     )
 
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'success',
       message: 'Изображение успешно перемещено'
     })
@@ -560,7 +560,7 @@ async function handleMoveImage() {
   } catch (err) {
     const message = formatError(err, 'Ошибка перемещения изображения')
     lastError.value = message    
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'error',
       message
     })
@@ -592,7 +592,7 @@ async function handleDeleteImage() {
   try {
     await adminStore.deleteSharedImage(imageToDelete.value.id, selectedFolder.value.id)
 
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'success',
       message: 'Изображение успешно удалено'
     })
@@ -601,7 +601,7 @@ async function handleDeleteImage() {
   } catch (err) {
     const message = formatError(err, 'Ошибка удаления изображения')
     lastError.value = message
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'error',
       message
     })
@@ -621,7 +621,7 @@ async function handleDeleteFolder() {
     await adminStore.deleteSharedFolder(selectedFolder.value.id)
     selectedFolder.value = null
 
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'success',
       message: 'Папка удалена'
     })
@@ -629,7 +629,7 @@ async function handleDeleteFolder() {
   } catch (err) {
     const message = formatError(err, 'Ошибка удаления папки')
     lastError.value = message    
-    notificationsStore.add({
+    notificationsStore.addNotification({
       type: 'error',
       message
     })
