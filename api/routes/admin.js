@@ -510,8 +510,13 @@ export function registerAdminRoutes(app) {
       // Получение логов
       queryParams.push(limit, offset);
       const logsResult = await pool.query(
-        `SELECT id, level, message, context, created_at
-         FROM system_logs
+        `SELECT
+           id,
+           level,
+           action AS message,
+           details AS context,
+           created_at
+           FROM system_logs
          ${whereClause}
          ORDER BY created_at DESC
          LIMIT $${queryParams.length - 1} OFFSET $${queryParams.length}`,
