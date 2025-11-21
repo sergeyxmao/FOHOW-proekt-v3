@@ -75,6 +75,7 @@ export default {
     boardComments: '看板评论',
     stickerMessages: '贴纸消息',
     addSticker: '添加贴纸',
+    setAnchor: '设置锚点',    
     createStructureAlert: '请创建新结构或进入现有结构以添加贴纸。'
   },
   board: {
