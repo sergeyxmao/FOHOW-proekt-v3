@@ -38,6 +38,7 @@ import NotesSidePanel from './components/Panels/NotesSidePanel.vue'
 import CommentsSidePanel from './components/Panels/CommentsSidePanel.vue'
 import StickerMessagesPanel from './components/Panels/StickerMessagesPanel.vue'
 import ImagesPanel from './components/Panels/ImagesPanel.vue'
+import BoardAnchorsPanel from './components/Panels/BoardAnchorsPanel.vue'  
 import TheNotifications from './components/TheNotifications.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
 import { useNotificationsStore } from './stores/notifications'
@@ -73,7 +74,13 @@ const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMobileMode } = storeToRefs(mobileStore)
 const { headerColor, headerColorIndex } = storeToRefs(viewSettingsStore)
 const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen, isImagesOpen } = storeToRefs(sidePanelsStore)
-
+const {
+  isNotesOpen,
+  isCommentsOpen,
+  isStickerMessagesOpen,
+  isImagesOpen,
+  isAnchorsOpen
+} = storeToRefs(sidePanelsStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
 const isSaveAvailable = computed(() => {
@@ -397,6 +404,7 @@ async function loadBoard(boardId) {
     
     // Устанавливаем текущую доску
     boardStore.setCurrentBoard(data.board.id, data.board.name)
+    boardStore.setPlacementMode(null)
 
     const content = data.board.content || {}
 
@@ -428,12 +436,16 @@ async function loadBoard(boardId) {
       ? content.images
       : []
     await imagesStore.loadImages(imagesData)
-
+    const anchorsData = Array.isArray(content.anchors)
+      ? content.anchors
+      : []
+    boardStore.setAnchors(anchorsData)
     console.log('✅ Загружена структура:', data.board.name)
     console.log('  Карточек:', cardsData.length)
     console.log('  Соединений:', connectionsData.length)
     console.log('  Стикеров:', stickersData.length)
     console.log('  Изображений:', imagesData.length)
+    console.log('  Точек:', anchorsData.length)
 
     // Загружаем заметки для структуры
     try {
@@ -638,12 +650,16 @@ function getCanvasState() {
 
   // Сохраняем изображения
   const imagesData = imagesStore.getImagesForExport()
+  const anchorsData = Array.isArray(boardStore.anchors)
+    ? boardStore.anchors
+    : []
 
   console.log('📤 Сохраняем состояние:', {
     cardsCount: cardsData.length,
     connectionsCount: connectionsData.length,
     stickersCount: stickersData.length,
-    imagesCount: imagesData.length
+    imagesCount: imagesData.length,
+    anchorsCount: anchorsData.length
   })
 
   return {
@@ -653,7 +669,8 @@ function getCanvasState() {
     objects: cardsData,
     connections: connectionsData,
     stickers: stickersData,
-    images: imagesData
+    images: imagesData,
+    anchors: anchorsData
   }
 }
 
@@ -1124,6 +1141,13 @@ onBeforeUnmount(() => {
     </Teleport>
 
     <!-- Side Panels -->
+    <transition name="side-panel-slide">
+      <BoardAnchorsPanel
+        v-if="isAnchorsOpen && !isMobileMode"
+        class="no-print"
+        :is-modern-theme="isModernTheme"
+      />
+    </transition>      
     <transition name="side-panel-slide">
       <NotesSidePanel
         v-if="isNotesOpen && !isMobileMode"
