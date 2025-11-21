@@ -8,7 +8,11 @@ export const useBoardStore = defineStore('board', () => {
   const lastSaved = ref(null)
   const isSaving = ref(false)
   const hasUnsavedChanges = ref(false)
-
+  const anchors = ref([])
+  const selectedAnchorId = ref(null)
+  const pendingFocusAnchorId = ref(null)
+  const pendingEditAnchorId = ref(null)
+  const placementMode = ref(null) // 'anchor' | null
   const isCurrentBoard = computed(() => currentBoardId.value !== null)
   const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
@@ -24,6 +28,11 @@ export const useBoardStore = defineStore('board', () => {
     currentBoardName.value = 'Без названия'
     hasUnsavedChanges.value = false
     lastSaved.value = null
+    anchors.value = []
+    selectedAnchorId.value = null
+    pendingFocusAnchorId.value = null
+    pendingEditAnchorId.value = null
+    placementMode.value = null    
   }
 
   function markAsChanged() {
@@ -35,6 +44,60 @@ export const useBoardStore = defineStore('board', () => {
     lastSaved.value = new Date()
     isSaving.value = false
   }
+
+  function setAnchors(list) {
+    anchors.value = Array.isArray(list) ? list : []
+  }
+
+  function addAnchor(anchor) {
+    anchors.value.push(anchor)
+    selectedAnchorId.value = anchor.id
+    markAsChanged()
+  }
+
+  function updateAnchor(id, data) {
+    const index = anchors.value.findIndex(anchor => anchor.id === id)
+    if (index === -1) {
+      return
+    }
+    anchors.value[index] = { ...anchors.value[index], ...data }
+    markAsChanged()
+  }
+
+  function removeAnchor(id) {
+    anchors.value = anchors.value.filter(anchor => anchor.id !== id)
+    if (selectedAnchorId.value === id) {
+      selectedAnchorId.value = null
+    }
+    if (pendingFocusAnchorId.value === id) {
+      pendingFocusAnchorId.value = null
+    }
+    if (pendingEditAnchorId.value === id) {
+      pendingEditAnchorId.value = null
+    }
+    markAsChanged()
+  }
+
+  function selectAnchor(id) {
+    selectedAnchorId.value = id
+  }
+
+  function focusAnchor(id) {
+    pendingFocusAnchorId.value = id
+    selectedAnchorId.value = id
+  }
+
+  function requestAnchorEdit(id) {
+    pendingEditAnchorId.value = id
+  }
+
+  function clearPendingAnchorEdit() {
+    pendingEditAnchorId.value = null
+  }
+
+  function setPlacementMode(mode) {
+    placementMode.value = mode
+  }  
   async function updateCurrentBoardName(newName) {
     const trimmedName = typeof newName === 'string' ? newName.trim() : ''
 
@@ -107,10 +170,24 @@ export const useBoardStore = defineStore('board', () => {
     isSaving,
     hasUnsavedChanges,
     isCurrentBoard,
+    anchors,
+    selectedAnchorId,
+    pendingFocusAnchorId,
+    pendingEditAnchorId,
+    placementMode,    
     setCurrentBoard,
     clearCurrentBoard,
     markAsChanged,
     markAsSaved,
-    updateCurrentBoardName
+    updateCurrentBoardName,
+    setAnchors,
+    addAnchor,
+    updateAnchor,
+    removeAnchor,
+    selectAnchor,
+    focusAnchor,
+    requestAnchorEdit,
+    clearPendingAnchorEdit,
+    setPlacementMode    
   }
 })
