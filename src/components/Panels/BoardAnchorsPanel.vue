@@ -25,8 +25,8 @@ const textareaRef = ref(null)
 
 const sortedAnchors = computed(() => {
   return [...anchors.value].sort((a, b) => {
-    const dateA = a.created_at ? new Date(a.created_at).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0)
-    const dateB = b.created_at ? new Date(b.created_at).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0)
+    const dateA = a.created_at ? new Date(a.created_at).getTime() : 0
+    const dateB = b.created_at ? new Date(b.created_at).getTime() : 0
     return dateB - dateA
   })
 })
@@ -50,7 +50,7 @@ const handleSelect = (anchorId) => {
 
 const handleStartEdit = (anchor) => {
   editingAnchorId.value = anchor.id
-  editText.value = anchor.description || anchor.text || ''
+  editText.value = anchor.description || ''
   boardStore.requestAnchorEdit(anchor.id)
   nextTick(() => {
     textareaRef.value?.focus()
@@ -68,6 +68,7 @@ const handleDelete = async (anchorId) => {
   if (selectedAnchorId.value === anchorId) {
     boardStore.selectAnchor(null)
   }
+  boardStore.clearPendingAnchorEdit()  
 }
 
 watch(pendingEditAnchorId, (anchorId) => {
@@ -113,7 +114,7 @@ watch(anchors, () => {
         :class="{ 'anchors-panel__item--active': selectedAnchorId === anchor.id }"
         @click="handleSelect(anchor.id)"
       >
-        <div class="anchors-panel__meta">{{ formatDateTime(anchor.created_at || anchor.createdAt) }}</div>
+        <div class="anchors-panel__meta">{{ formatDateTime(anchor.created_at) }}</div>
         <div v-if="editingAnchorId === anchor.id" class="anchors-panel__editor" @click.stop>
           <textarea
             ref="textareaRef"
@@ -129,7 +130,7 @@ watch(anchors, () => {
             </button>
           </div>
         </div>
-        <div v-else class="anchors-panel__text">{{ anchor.description || anchor.text || 'Нет описания' }}</div>
+        <div v-else class="anchors-panel__text">{{ anchor.description || 'Нет описания' }}</div>
         <div class="anchors-panel__toolbar" @click.stop>
           <button type="button" class="anchors-panel__icon" title="Редактировать" @click="handleStartEdit(anchor)">
             ✏️
