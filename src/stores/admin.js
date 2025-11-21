@@ -693,7 +693,7 @@ export const useAdminStore = defineStore('admin', {
       try {
         const authStore = useAuthStore()
         const response = await fetch(`${API_URL}/admin/shared-folders/${folderId}`, {
-          method: 'PATCH',
+          method: 'PUT',
           headers: {
             'Authorization': `Bearer ${authStore.token}`,
             'Content-Type': 'application/json'
