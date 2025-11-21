@@ -12,6 +12,7 @@ import {
   deleteFile,
   copyFile
 } from '../services/yandexDiskService.js';
+import { syncSharedFoldersWithYandexDisk } from '../services/sharedFoldersSync.js';
 
 /**
  * Регистрация маршрутов для работы с библиотекой изображений
@@ -1129,6 +1130,18 @@ export function registerImageRoutes(app) {
         }
 
         // Все папки из shared_folders
+        try {
+          await syncSharedFoldersWithYandexDisk();
+        } catch (syncError) {
+          console.error('❌ Ошибка синхронизации папок с Яндекс.Диском:', syncError);
+
+          return reply.code(500).send({
+            error:
+              process.env.NODE_ENV === 'development'
+                ? `Ошибка синхронизации папок: ${syncError.message}`
+                : 'Ошибка сервера. Попробуйте позже'
+          });
+        }        
         const foldersResult = await pool.query(
           `
           SELECT id, name
