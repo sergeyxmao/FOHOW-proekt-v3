@@ -21,6 +21,7 @@ import { checkUsageLimit } from './middleware/checkUsageLimit.js';
 import { registerPromoRoutes } from './routes/promo.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerImageRoutes } from './routes/images.js';
+import { registerAnchorRoutes } from './routes/anchors.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
 import {
@@ -1752,6 +1753,11 @@ registerAdminRoutes(app);
 // БИБЛИОТЕКА ИЗОБРАЖЕНИЙ (IMAGE LIBRARY)
 // ============================================
 registerImageRoutes(app);
+
+// ============================================
+// ТОЧКИ (ANCHORS)
+// ============================================
+registerAnchorRoutes(app);
 
 // ============================================
 // СТИКЕРЫ (STICKERS)
