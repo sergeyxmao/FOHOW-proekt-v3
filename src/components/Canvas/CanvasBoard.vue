@@ -2144,9 +2144,11 @@ const updateStageSize = () => {
   
   stageConfig.value.width = UNLIMITED_CANVAS_SIZE;
   stageConfig.value.height = UNLIMITED_CANVAS_SIZE;
-}));
-
-
+  
+  const cardBounds = cardsStore.cards.map(card => ({
+    right: card.x + (card.width || 0),
+    bottom: card.y + (card.height || 0)
+  }));
 
   const stickerBounds = stickersStore.stickers.map(sticker => ({
     right: sticker.pos_x + 200,
