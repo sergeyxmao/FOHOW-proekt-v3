@@ -670,10 +670,100 @@ export const useAdminStore = defineStore('admin', {
 
         // Добавляем новую папку в список
         this.sharedFoldersWithDetails.push(newFolder)
+        this.sharedFolders.push({ id: newFolder.id, name: newFolder.name })
 
         return newFolder
       } catch (err) {
         console.error('[ADMIN] Ошибка создания папки:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+    /**
+     * Переименовать папку в общей библиотеке
+     * @param {number} folderId - ID папки
+     * @param {string} name - Новое название папки
+     */
+    async renameSharedFolder(folderId, name) {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/shared-folders/${folderId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name })
+        })
+
+        if (!response.ok) {
+          await handleAdminErrorResponse(response, 'Ошибка переименования папки')
+        }
+
+        const updatedFolder = await response.json()
+
+        // Обновляем папку в расширенном списке
+        const folderIndex = this.sharedFoldersWithDetails.findIndex(f => f.id === folderId)
+        if (folderIndex !== -1) {
+          this.sharedFoldersWithDetails[folderIndex] = {
+            ...this.sharedFoldersWithDetails[folderIndex],
+            ...updatedFolder
+          }
+        }
+
+        // Обновляем папку в кратком списке
+        const shortIndex = this.sharedFolders.findIndex(f => f.id === folderId)
+        if (shortIndex !== -1) {
+          this.sharedFolders[shortIndex] = {
+            ...this.sharedFolders[shortIndex],
+            name: updatedFolder.name
+          }
+        }
+
+        return updatedFolder
+      } catch (err) {
+        console.error('[ADMIN] Ошибка переименования папки:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * Удалить папку общей библиотеки
+     * @param {number} folderId - ID папки
+     */
+    async deleteSharedFolder(folderId) {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/shared-folders/${folderId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          }
+        })
+
+        if (!response.ok && response.status !== 204) {
+          await handleAdminErrorResponse(response, 'Ошибка удаления папки')
+        }
+
+        // Удаляем папку из списков
+        this.sharedFoldersWithDetails = this.sharedFoldersWithDetails.filter(folder => folder.id !== folderId)
+        this.sharedFolders = this.sharedFolders.filter(folder => folder.id !== folderId)
+        this.currentFolderImages = []
+
+        return { success: true }
+      } catch (err) {
+        console.error('[ADMIN] Ошибка удаления папки:', err)
         this.error = err.message
         throw err
       } finally {
