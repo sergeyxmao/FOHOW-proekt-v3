@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { useBoardCommentsStore } from '../Panels/boardComments.js'
@@ -33,7 +33,8 @@ const {
 } = storeToRefs(sidePanelsStore)
 const { placementMode } = storeToRefs(boardStore)
 const { currentBoardId } = storeToRefs(boardStore)
-
+const isGeolocationMenuOpen = ref(false)
+const isStickersMenuOpen = ref(false)
 // Проверка доступа к библиотеке изображений
 const canUseImages = computed(() => subscriptionStore.checkFeature('can_use_images'))
 
@@ -46,9 +47,28 @@ const handleCommentsToggle = () => {
   sidePanelsStore.toggleComments()
   emit('request-close')
 }
+const handleImagesToggle = () => {
+  sidePanelsStore.toggleImages()
+  emit('request-close')
+}
+
+const toggleGeolocationMenu = () => {
+  isGeolocationMenuOpen.value = !isGeolocationMenuOpen.value
+  if (isGeolocationMenuOpen.value) {
+    isStickersMenuOpen.value = false
+  }
+}
+
+const toggleStickersMenu = () => {
+  isStickersMenuOpen.value = !isStickersMenuOpen.value
+  if (isStickersMenuOpen.value) {
+    isGeolocationMenuOpen.value = false
+  }
+}
 
 const handleStickerMessagesToggle = () => {
   sidePanelsStore.toggleStickerMessages()
+  isStickersMenuOpen.value = false  
   emit('request-close')
 }
 const handleAnchorsToggle = () => {
@@ -57,11 +77,13 @@ const handleAnchorsToggle = () => {
   if (nextMode) {
     sidePanelsStore.openAnchors()
   }
+  isGeolocationMenuOpen.value = false  
   emit('request-close')
 }
 
-const handleImagesToggle = () => {
-  sidePanelsStore.toggleImages()
+const handleAnchorsPanelOpen = () => {
+  sidePanelsStore.openAnchors()
+  isGeolocationMenuOpen.value = false
   emit('request-close')
 }
 
@@ -71,7 +93,9 @@ const handleAddSticker = () => {
     emit('request-close')
     return
   }
+  sidePanelsStore.openStickerMessages()  
   stickersStore.enablePlacementMode()
+  isStickersMenuOpen.value = false  
   emit('request-close')
 }
 </script>
@@ -123,39 +147,71 @@ const handleAddSticker = () => {
         aria-hidden="true"
       ></span>
     </div>
-    <div class="discussion-menu__item">
-      <span class="discussion-menu__icon" aria-hidden="true">🧷</span>
-      <button
-        type="button"
-        class="discussion-menu__action"
-        :class="{ 'discussion-menu__action--active': placementMode === 'anchor' }"
-        @click="handleAnchorsToggle"
-      >
-        {{ t('discussionMenu.setAnchor') }}
-      </button>
+    <div class="discussion-menu__item discussion-menu__item--has-children">
+      <span class="discussion-menu__icon" aria-hidden="true">🧭</span>
+      <div class="discussion-menu__item-content">
+        <button
+          type="button"
+          class="discussion-menu__action"
+          :class="{ 'discussion-menu__action--active': isAnchorsOpen || placementMode === 'anchor' }"
+          @click="toggleGeolocationMenu"
+        >
+          {{ t('discussionMenu.geolocation') }}
+        </button>
+        <transition name="top-menu-fade">
+          <div v-if="isGeolocationMenuOpen" class="discussion-menu__submenu">
+            <button
+              type="button"
+              class="discussion-menu__subaction"
+              :class="{ 'discussion-menu__subaction--active': placementMode === 'anchor' }"
+              @click="handleAnchorsToggle"
+            >
+              {{ t('discussionMenu.setAnchor') }}
+            </button>
+            <button
+              type="button"
+              class="discussion-menu__subaction"
+              :class="{ 'discussion-menu__subaction--active': isAnchorsOpen }"
+              @click="handleAnchorsPanelOpen"
+            >
+              {{ t('discussionMenu.boardAnchors') }}
+            </button>
+          </div>
+        </transition>
+      </div>
     </div>
 
-    <div class="discussion-menu__item">
+    <div class="discussion-menu__item discussion-menu__item--has-children">
       <span class="discussion-menu__icon" aria-hidden="true">📌</span>
-      <button
-        type="button"
-        class="discussion-menu__action"
-        :class="{ 'discussion-menu__action--active': isStickerMessagesOpen }"
-        @click="handleStickerMessagesToggle"
-      >
-        {{ t('discussionMenu.stickerMessages') }}
-      </button>
-    </div>
-
-    <div class="discussion-menu__item">
-      <span class="discussion-menu__icon" aria-hidden="true">📝</span>
-      <button
-        type="button"
-        class="discussion-menu__action"
-        @click="handleAddSticker"
-      >
-        {{ t('discussionMenu.addSticker') }}
-      </button>
+      <div class="discussion-menu__item-content">
+        <button
+          type="button"
+          class="discussion-menu__action"
+          :class="{ 'discussion-menu__action--active': isStickerMessagesOpen }"
+          @click="toggleStickersMenu"
+        >
+          {{ t('discussionMenu.stickerMessages') }}
+        </button>
+        <transition name="top-menu-fade">
+          <div v-if="isStickersMenuOpen" class="discussion-menu__submenu">
+            <button
+              type="button"
+              class="discussion-menu__subaction"
+              :class="{ 'discussion-menu__subaction--active': isStickerMessagesOpen }"
+              @click="handleStickerMessagesToggle"
+            >
+              {{ t('discussionMenu.allStickers') }}
+            </button>
+            <button
+              type="button"
+              class="discussion-menu__subaction"
+              @click="handleAddSticker"
+            >
+              {{ t('discussionMenu.addSticker') }}
+            </button>
+          </div>
+        </transition>
+      </div>
     </div>
   </div>
 </template>
@@ -222,6 +278,41 @@ const handleAddSticker = () => {
   color: #fff;
   box-shadow: 0 16px 28px rgba(37, 99, 235, 0.32);
 }
+.discussion-menu__item-content {
+  flex: 1;
+}
+
+.discussion-menu__submenu {
+  margin-top: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.discussion-menu__subaction {
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(248, 250, 252, 0.92);
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.discussion-menu__subaction:not(:disabled):hover {
+  background: rgba(59, 130, 246, 0.12);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
+}
+
+.discussion-menu__subaction--active {
+  background: linear-gradient(120deg, #93c5fd 0%, #3b82f6 100%);
+  color: #0b1324;
+  box-shadow: 0 14px 26px rgba(37, 99, 235, 0.24);
+}
 
 .discussion-menu__badge {
   position: absolute;
@@ -265,4 +356,23 @@ const handleAddSticker = () => {
   background: #73c8ff;
   box-shadow: 0 0 0 3px rgba(114, 182, 255, 0.3);
 }
+
+.discussion-menu--modern .discussion-menu__subaction {
+  border-color: rgba(96, 164, 255, 0.35);
+  background: rgba(24, 34, 58, 0.94);
+  color: #e5f3ff;
+  box-shadow: 0 14px 26px rgba(6, 11, 21, 0.58);
+}
+
+.discussion-menu--modern .discussion-menu__subaction:not(:disabled):hover {
+  background: rgba(96, 164, 255, 0.22);
+  color: #0b1324;
+  box-shadow: 0 18px 30px rgba(6, 11, 21, 0.7);
+}
+
+.discussion-menu--modern .discussion-menu__subaction--active {
+  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
+  color: #051125;
+  box-shadow: 0 22px 36px rgba(6, 11, 21, 0.78);
+}  
 </style>
