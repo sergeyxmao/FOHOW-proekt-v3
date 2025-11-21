@@ -22,7 +22,7 @@ const handleClick = (event) => {
   <div
     class="anchor-point"
     :class="{ 'anchor-point--selected': isSelected }"
-    :style="{ left: `${(anchor?.x || 0) - 6}px`, top: `${(anchor?.y || 0) - 6}px` }"
+    :style="{ left: `${(anchor?.pos_x ?? anchor?.x ?? 0) - 6}px`, top: `${(anchor?.pos_y ?? anchor?.y ?? 0) - 6}px` }"
     @click="handleClick"
   ></div>
 </template>
