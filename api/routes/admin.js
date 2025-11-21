@@ -11,6 +11,7 @@ import {
   deleteFile,
   uploadFile
 } from '../services/yandexDiskService.js';
+import { syncSharedFoldersWithYandexDisk } from '../services/sharedFoldersSync.js';
 
 /**
  * Рекурсивная функция для замены URL в JSON-структурах
@@ -604,6 +605,7 @@ export function registerAdminRoutes(app) {
   }, async (req, reply) => {
     try {
       console.log('[ADMIN] Запрос списка папок общей библиотеки, admin_id=' + req.user.id);
+      await syncSharedFoldersWithYandexDisk();
 
       const result = await pool.query(
         `SELECT
