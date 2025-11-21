@@ -3898,6 +3898,15 @@ watch(
 watch(cards, () => {
   updateStageSize();
 }, { deep: true });
+watch(() => stickersStore.stickers, () => {
+  updateStageSize();
+}, { deep: true });
+watch(() => imagesStore.images, () => {
+  updateStageSize();
+}, { deep: true });
+watch(anchors, () => {
+  updateStageSize();
+}, { deep: true });  
 watch(() => cardsStore.calculationMeta, () => {
   applyActivePvPropagation();
 }, { deep: true });
