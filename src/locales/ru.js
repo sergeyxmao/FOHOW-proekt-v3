@@ -78,9 +78,12 @@ export default {
     title: 'Обсуждение',
     notesList: 'Список заметок',
     boardComments: 'Комментарии доски',
-    stickerMessages: 'Сообщения стикеров',
+    stickerMessages: 'Стикеры',
+    allStickers: 'Все стикеры',
     addSticker: 'Добавить стикер',
-    setAnchor: 'Установить точку',    
+    setAnchor: 'Установить точку',
+    boardAnchors: 'Точки на доске',
+    geolocation: 'Геолокация',
     createStructureAlert: 'Пожалуйста, создайте новую структуру или войдите в существующую, чтобы добавить стикер.'
   },
   board: {
