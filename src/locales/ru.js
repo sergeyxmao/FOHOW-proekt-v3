@@ -80,6 +80,7 @@ export default {
     boardComments: 'Комментарии доски',
     stickerMessages: 'Сообщения стикеров',
     addSticker: 'Добавить стикер',
+    setAnchor: 'Установить точку',    
     createStructureAlert: 'Пожалуйста, создайте новую структуру или войдите в существующую, чтобы добавить стикер.'
   },
   board: {
