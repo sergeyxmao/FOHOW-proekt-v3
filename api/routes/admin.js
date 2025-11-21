@@ -817,8 +817,13 @@ export function registerAdminRoutes(app) {
 
       // Переместить каждый файл на Яндекс.Диске
       for (const file of files) {
+        // Пропускаем записи без пути на Яндекс.Диске, чтобы не падать с 500
+        if (!file.yandex_path) {
+          console.warn(`[ADMIN] Пропуск файла без yandex_path: id=${file.id}, filename=${file.filename}`);
+          continue;
+        }
+        
         const oldPath = file.yandex_path;
-        const oldFolderPath = getSharedFolderPath(oldFolderName);
         const newFolderPath = getSharedFolderPath(newFolderName);
         const newPath = `${newFolderPath}/${file.filename}`;
 
@@ -847,6 +852,14 @@ export function registerAdminRoutes(app) {
 
         } catch (moveError) {
           console.error(`[ADMIN] Ошибка перемещения файла ${file.filename}:`, moveError);
+
+          // Если файл не найден на Яндекс.Диске, логируем и продолжаем обработку остальных,
+          // чтобы не прерывать переименование всей папки
+          if (moveError.status === 404) {
+            console.warn(`[ADMIN] Файл не найден на Яндекс.Диске, пропускаем: ${oldPath}`);
+            continue;
+          }
+          
           await client.query('ROLLBACK');
 
           return reply.code(500).send({
@@ -907,7 +920,113 @@ export function registerAdminRoutes(app) {
       client.release();
     }
   });
+  /**
+   * Удалить папку общей библиотеки вместе с содержимым
+   * DELETE /api/admin/shared-folders/:id
+   */
+  app.delete('/api/admin/shared-folders/:id', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    const client = await pool.connect();
 
+    try {
+      const adminId = req.user.id;
+      const folderId = parseInt(req.params.id, 10);
+
+      console.log(`[ADMIN] Запрос на удаление папки: folder_id=${folderId}, admin_id=${adminId}`);
+
+      if (!Number.isInteger(folderId) || folderId <= 0) {
+        return reply.code(400).send({
+          error: 'Некорректный ID папки'
+        });
+      }
+
+      await client.query('BEGIN');
+
+      const folderResult = await client.query(
+        'SELECT id, name FROM shared_folders WHERE id = $1',
+        [folderId]
+      );
+
+      if (folderResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return reply.code(404).send({ error: 'Папка не найдена' });
+      }
+
+      const folderName = folderResult.rows[0].name;
+      const folderPath = getSharedFolderPath(folderName);
+
+      const filesResult = await client.query(
+        `SELECT id, yandex_path
+         FROM image_library
+         WHERE is_shared = TRUE AND shared_folder_id = $1`,
+        [folderId]
+      );
+
+      for (const file of filesResult.rows) {
+        if (!file.yandex_path) {
+          console.warn(`[ADMIN] Пропуск удаления файла без yandex_path: id=${file.id}`);
+          continue;
+        }
+
+        try {
+          await deleteFile(file.yandex_path);
+        } catch (deleteError) {
+          console.error(`[ADMIN] Ошибка удаления файла ${file.yandex_path}:`, deleteError);
+
+          if (!deleteError.status || deleteError.status !== 404) {
+            await client.query('ROLLBACK');
+
+            return reply.code(500).send({
+              error: `Ошибка при удалении файлов папки: ${deleteError.message}`
+            });
+          }
+
+          console.warn(`[ADMIN] Файл не найден на Яндекс.Диске, продолжаем: ${file.yandex_path}`);
+        }
+      }
+
+      await client.query(
+        'DELETE FROM image_library WHERE is_shared = TRUE AND shared_folder_id = $1',
+        [folderId]
+      );
+
+      await client.query(
+        'DELETE FROM shared_folders WHERE id = $1',
+        [folderId]
+      );
+
+      await client.query('COMMIT');
+
+      // Пытаемся удалить папку на Яндекс.Диске после успешной транзакции
+      try {
+        await deleteFile(folderPath);
+      } catch (folderDeleteError) {
+        if (!folderDeleteError.status || folderDeleteError.status !== 404) {
+          console.error(`[ADMIN] Не удалось удалить папку на Яндекс.Диске: ${folderPath}`, folderDeleteError);
+        }
+      }
+
+      console.log(`[ADMIN] ✅ Папка успешно удалена: id=${folderId}, name="${folderName}"`);
+
+      return reply.code(204).send();
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('[ADMIN] Ошибка удаления папки:', err);
+
+      if (err.status) {
+        console.error(`[ADMIN] Yandex.Disk API вернул статус: ${err.status}`);
+      }
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    } finally {
+      client.release();
+    }
+  });
   /**
    * Получить список изображений на модерацию (pending)
    * GET /api/admin/images/pending
