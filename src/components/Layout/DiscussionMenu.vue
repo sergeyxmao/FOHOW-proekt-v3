@@ -24,7 +24,14 @@ const boardStore = useBoardStore()
 const subscriptionStore = useSubscriptionStore()
 
 const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
-const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen, isImagesOpen } = storeToRefs(sidePanelsStore)
+const {
+  isNotesOpen,
+  isCommentsOpen,
+  isStickerMessagesOpen,
+  isImagesOpen,
+  isAnchorsOpen
+} = storeToRefs(sidePanelsStore)
+const { placementMode } = storeToRefs(boardStore)
 const { currentBoardId } = storeToRefs(boardStore)
 
 // Проверка доступа к библиотеке изображений
@@ -42,6 +49,14 @@ const handleCommentsToggle = () => {
 
 const handleStickerMessagesToggle = () => {
   sidePanelsStore.toggleStickerMessages()
+  emit('request-close')
+}
+const handleAnchorsToggle = () => {
+  const nextMode = placementMode.value === 'anchor' ? null : 'anchor'
+  boardStore.setPlacementMode(nextMode)
+  if (nextMode) {
+    sidePanelsStore.openAnchors()
+  }
   emit('request-close')
 }
 
@@ -107,6 +122,17 @@ const handleAddSticker = () => {
         class="discussion-menu__badge"
         aria-hidden="true"
       ></span>
+    </div>
+    <div class="discussion-menu__item">
+      <span class="discussion-menu__icon" aria-hidden="true">🧷</span>
+      <button
+        type="button"
+        class="discussion-menu__action"
+        :class="{ 'discussion-menu__action--active': placementMode === 'anchor' }"
+        @click="handleAnchorsToggle"
+      >
+        {{ t('discussionMenu.setAnchor') }}
+      </button>
     </div>
 
     <div class="discussion-menu__item">
