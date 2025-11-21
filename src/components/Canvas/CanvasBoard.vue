@@ -2136,14 +2136,16 @@ const updateStageSize = () => {
   if (!canvasContainerRef.value) {
     return;
   }
-
   const containerWidth = canvasContainerRef.value.clientWidth;
   const containerHeight = canvasContainerRef.value.clientHeight;
+  
+  // Установите большой размер холста по умолчанию (неограниченная область)
+  const UNLIMITED_CANVAS_SIZE = 50000; // Размер в пиксели - достаточный для любого использования
+  
+  stageConfig.value.width = UNLIMITED_CANVAS_SIZE;
+  stageConfig.value.height = UNLIMITED_CANVAS_SIZE;
+};
 
-  const cardBounds = cards.value.map(card => ({
-    right: card.x + card.width,
-    bottom: card.y + card.height
-  }));
 
   const stickerBounds = stickersStore.stickers.map(sticker => ({
     right: sticker.pos_x + 200,
