@@ -95,11 +95,6 @@ const stageConfig = ref({
   height: 0
 });
 const CANVAS_PADDING = 400;
-const statusPanelPosition = ref('left');
-const isStatusPanelAutoHide = ref(false);
-const statusPanelVisible = ref(true);
-const STATUS_PANEL_HIDE_DELAY = 2600;
-let statusPanelHideTimer = null;
 
 const canvasContainerRef = ref(null);
 const {
@@ -114,10 +109,6 @@ const viewportStore = useViewportStore();
 watch(zoomScale, (value) => {
   viewportStore.setZoomScale(value);
 }, { immediate: true });
-
-watch(isStatusPanelAutoHide, () => {
-  ensureStatusPanelVisible();
-});  
 const canvasContentStyle = computed(() => {
   const translateX = Number.isFinite(zoomTranslateX.value) ? zoomTranslateX.value : 0;
   const translateY = Number.isFinite(zoomTranslateY.value) ? zoomTranslateY.value : 0;
@@ -1644,65 +1635,6 @@ const guideOverlayStyle = computed(() => ({
   width: `${stageConfig.value.width}px`,
   height: `${stageConfig.value.height}px`
 }));
-const canvasBoundaryStyle = computed(() => ({
-  width: `${stageConfig.value.width}px`,
-  height: `${stageConfig.value.height}px`
-}));
-
-const statusPanelPositionStyle = computed(() => {
-  const base = { bottom: '16px' };
-  if (statusPanelPosition.value === 'right') {
-    base.right = '16px';
-  } else {
-    base.left = '16px';
-  }
-  return base;
-});
-
-const zoomIndicator = computed(() => {
-  const zoom = getCurrentZoom();
-  return `${Math.round(zoom * 100)}%`;
-});
-
-const canvasSizeLabel = computed(() => {
-  const width = Math.round(stageConfig.value.width);
-  const height = Math.round(stageConfig.value.height);
-  return `${width} × ${height}`;
-});
-
-const ensureStatusPanelVisible = () => {
-  statusPanelVisible.value = true;
-  if (statusPanelHideTimer) {
-    clearTimeout(statusPanelHideTimer);
-  }
-  if (isStatusPanelAutoHide.value) {
-    statusPanelHideTimer = window.setTimeout(() => {
-      statusPanelVisible.value = false;
-    }, STATUS_PANEL_HIDE_DELAY);
-  }
-};
-
-const registerUserInteraction = useThrottleFn(() => {
-  ensureStatusPanelVisible();
-}, 150, true, false);
-
-const applyZoomStep = (delta) => {
-  const currentScale = getCurrentZoom();
-  const targetScale = clampZoomScale(currentScale + delta);
-
-  setZoomTransform({
-    scale: targetScale,
-    translateX: zoomTranslateX.value,
-    translateY: zoomTranslateY.value
-  });
-
-  ensureStatusPanelVisible();
-};
-
-const resetZoom = () => {
-  resetZoomTransform();
-  ensureStatusPanelVisible();
-};
 
   
 const canvasContainerClasses = computed(() => ({
@@ -2853,44 +2785,23 @@ const handleDragInternal = (event) => {
 
   let guideAdjustX = 0;
   let guideAdjustY = 0;
-  let targetX = dragState.value.primaryCardStart
-    ? dragState.value.primaryCardStart.x + dx
-    : dx;
-  let targetY = dragState.value.primaryCardStart
-    ? dragState.value.primaryCardStart.y + dy
-    : dy;
-
-  let guideResult = null;
 
   if (dragState.value.primaryCardId && dragState.value.primaryCardStart) {
-    guideResult = computeGuideSnap(dragState.value.primaryCardId, targetX, targetY);
+    const proposedX = dragState.value.primaryCardStart.x + dx;
+    const proposedY = dragState.value.primaryCardStart.y + dy;
+    const guideResult = computeGuideSnap(dragState.value.primaryCardId, proposedX, proposedY);
 
     if (guideResult) {
       guideAdjustX = axisLock === 'vertical' ? 0 : guideResult.adjustX;
       guideAdjustY = axisLock === 'horizontal' ? 0 : guideResult.adjustY;
       activeGuides.value = guideResult.guides;
-      targetX += guideAdjustX;
-      targetY += guideAdjustY;      
     } else {
       resetActiveGuides();
     }
   }
 
-  const applyGridSnap = (value) => {
-    const step = gridStepRef.value;
-    if (!step || step <= 0) {
-      return value;
-    }
-    return Math.round(value / step) * step;
-  };
-
-  if (!guideResult) {
-    targetX = applyGridSnap(targetX);
-    targetY = applyGridSnap(targetY);
-  }
-
-  const finalDx = dragState.value.primaryCardStart ? targetX - dragState.value.primaryCardStart.x : targetX;
-  const finalDy = dragState.value.primaryCardStart ? targetY - dragState.value.primaryCardStart.y : targetY;
+  const finalDx = dx + guideAdjustX;
+  const finalDy = dy + guideAdjustY;
 
   // Обновляем позиции карточек
   dragState.value.cards.forEach(item => {
@@ -3257,7 +3168,6 @@ const endImageResize = (event) => {
 };
 
 const handleMouseMoveInternal = (event) => {
-  registerUserInteraction();
   if (isDrawingLine.value) {
     const canvasPos = screenToCanvas(event.clientX, event.clientY);
     mousePosition.value = {
@@ -3271,8 +3181,6 @@ const handleMouseMoveInternal = (event) => {
 const handleMouseMove = useThrottleFn(handleMouseMoveInternal, 16, true, false);
 
 const handlePointerDown = (event) => {
-  registerUserInteraction();
-  
   const connectionPoint = event.target.closest('.connection-point');
   
   if (connectionPoint) {
@@ -3720,8 +3628,7 @@ onMounted(() => {
     canvasContainerRef.value.addEventListener('pointerdown', handlePointerDown);
     canvasContainerRef.value.addEventListener('click', handleActivePvButtonClick, true);
   }
-  window.addEventListener('wheel', registerUserInteraction, { passive: true });
-  
+
   handleWindowResize();
   window.addEventListener('resize', handleWindowResize);
   window.addEventListener('keydown', handleKeydown);
@@ -3762,11 +3669,6 @@ onBeforeUnmount(() => {
     canvasContainerRef.value.removeEventListener('click', handleActivePvButtonClick, true);
 
   }
-  if (statusPanelHideTimer) {
-    clearTimeout(statusPanelHideTimer);
-    statusPanelHideTimer = null;
-  }
-  window.removeEventListener('wheel', registerUserInteraction, { passive: true });  
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('keyup', handleKeyup);
   window.removeEventListener('resize', handleWindowResize);
@@ -3996,15 +3898,6 @@ watch(
 watch(cards, () => {
   updateStageSize();
 }, { deep: true });
-watch(() => stickersStore.stickers, () => {
-  updateStageSize();
-}, { deep: true });
-watch(() => imagesStore.images, () => {
-  updateStageSize();
-}, { deep: true });
-watch(anchors, () => {
-  updateStageSize();
-}, { deep: true });  
 watch(() => cardsStore.calculationMeta, () => {
   applyActivePvPropagation();
 }, { deep: true });
@@ -4073,11 +3966,6 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       :style="selectionBoxStyle"
     ></div>  
     <div class="canvas-content" :style="canvasContentStyle" @click="handleStageClick">
-      <div
-        class="canvas-boundary"
-        :style="canvasBoundaryStyle"
-        aria-hidden="true"
-      ></div>      
       <div
         v-if="guidesEnabled && (activeGuides.vertical !== null || activeGuides.horizontal !== null)"
         class="guides-overlay"
@@ -4242,64 +4130,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         @start-drag="startStickerDrag"
       />
     </div>
-    <div
-      class="canvas-status-panel"
-      :class="{ 'canvas-status-panel--hidden': !statusPanelVisible }"
-      :style="statusPanelPositionStyle"
-    >
-      <div class="canvas-status-panel__row">
-        <span class="canvas-status-panel__label">Масштаб</span>
-        <span class="canvas-status-panel__value">{{ zoomIndicator }}</span>
-      </div>
-      <div class="canvas-status-panel__row">
-        <span class="canvas-status-panel__label">Границы</span>
-        <span class="canvas-status-panel__value">{{ canvasSizeLabel }}</span>
-      </div>
-      <div class="canvas-status-panel__controls">
-        <button
-          type="button"
-          class="canvas-status-panel__btn"
-          aria-label="Уменьшить масштаб"
-          @click="applyZoomStep(-0.1)"
-        >
-          −
-        </button>
-        <button
-          type="button"
-          class="canvas-status-panel__btn"
-          aria-label="Сбросить масштаб"
-          @click="resetZoom"
-        >
-          100%
-        </button>
-        <button
-          type="button"
-          class="canvas-status-panel__btn"
-          aria-label="Увеличить масштаб"
-          @click="applyZoomStep(0.1)"
-        >
-          +
-        </button>
-      </div>
-      <div class="canvas-status-panel__settings">
-        <label class="canvas-status-panel__toggle">
-          <input
-            v-model="isStatusPanelAutoHide"
-            type="checkbox"
-          >
-          Автоскрытие
-        </label>
-        <label class="canvas-status-panel__position">
-          Позиция
-          <select v-model="statusPanelPosition">
-            <option value="left">Слева</option>
-            <option value="right">Справа</option>
-          </select>
-        </label>
-      </div>
-    </div>  
     <a
-      v-if="!isMobileMode"
+      v-if="!isMobileMode"      
       class="marketing-watermark"
       :class="{ 'marketing-watermark--modern': props.isModernTheme }"
       href="https://t.me/MarketingFohow"
@@ -4372,18 +4204,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   background-position: 0 0;
   opacity: var(--grid-opacity);
   pointer-events: none;
-  z-index: -1;
+  z-index: -1;  
 }
-
-.canvas-boundary {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border: 1px dashed rgba(255, 255, 255, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
-  pointer-events: none;
-  border-radius: 4px;
-  mix-blend-mode: soft-light;}
 
 .line-group {
   cursor: pointer;
@@ -4465,102 +4287,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 .anchors-layer :deep(.anchor-point) {
   pointer-events: auto;
 }
-.canvas-status-panel {
-  position: absolute;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(18, 20, 24, 0.7);
-  color: #f8f9fb;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
-  font-size: 13px;
-  line-height: 1.4;
-  z-index: 30;
-  min-width: 190px;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
 
-.canvas-status-panel--hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(6px);
-}
-
-.canvas-status-panel__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.canvas-status-panel__row + .canvas-status-panel__row {
-  margin-top: 6px;
-}
-
-.canvas-status-panel__label {
-  opacity: 0.8;
-  font-weight: 500;
-}
-
-.canvas-status-panel__value {
-  font-weight: 700;
-  letter-spacing: 0.3px;
-}
-
-.canvas-status-panel__controls {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.canvas-status-panel__btn {
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  color: #f8f9fb;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.canvas-status-panel__btn:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.canvas-status-panel__settings {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 10px;
-  font-size: 12px;
-  opacity: 0.9;
-}
-
-.canvas-status-panel__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-}
-
-.canvas-status-panel__position {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.canvas-status-panel__position select {
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
-  color: #f8f9fb;
-  padding: 4px 8px;
-}
 @keyframes lineBalanceFlash {
   0% {
     stroke-width: var(--line-width, 5px);
