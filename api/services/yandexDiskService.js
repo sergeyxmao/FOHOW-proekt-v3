@@ -364,7 +364,14 @@ async function moveFile(fromPath, toPath) {
 
     console.log(`[Yandex Disk] Файл успешно перемещен: ${fromPath} -> ${toPath}`);
   } catch (error) {
-    throw new Error(`Не удалось переместить файл ${fromPath} в ${toPath}: ${error.message}`);
+    const moveError = new Error(`Не удалось переместить файл ${fromPath} в ${toPath}: ${error.message}`);
+
+    // Сохраняем статус ошибки API Яндекс.Диска, если он есть
+    if (error.status) {
+      moveError.status = error.status;
+    }
+
+    throw moveError;
   }
 }
 
