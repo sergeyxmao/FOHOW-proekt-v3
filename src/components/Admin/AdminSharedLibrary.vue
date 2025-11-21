@@ -1,5 +1,9 @@
 <template>
   <div class="shared-library">
+    <div v-if="lastError" class="error-banner">
+      <span>{{ lastError }}</span>
+      <button type="button" class="error-close" @click="clearLastError">&times;</button>
+    </div>    
     <div class="library-container">
       <!-- Левая колонка: папки -->
       <div class="folders-column">
@@ -58,7 +62,23 @@
         <div v-else>
           <!-- Заголовок и кнопка загрузки -->
           <div class="content-header">
-            <h2>Папка: {{ selectedFolder.name }}</h2>
+            <div class="folder-title" @dblclick="startRename">
+              <template v-if="isRenaming">
+                <input
+                  ref="renameInput"
+                  v-model="renameValue"
+                  type="text"
+                  class="rename-input"
+                  @keyup.enter="handleRenameSubmit"
+                  @keyup.esc="cancelRename"
+                  @blur="handleRenameSubmit"
+                />
+              </template>
+              <template v-else>
+                <h2>Папка: {{ selectedFolder.name }}</h2>
+                <span class="rename-hint">Двойной клик для переименования</span>
+              </template>
+            </div>
             <div class="header-actions">
               <input
                 ref="fileInput"
@@ -67,6 +87,14 @@
                 @change="handleFileSelect"
                 style="display: none"
               />
+               <button
+                @click="handleDeleteFolder"
+                :disabled="adminStore.isLoading"
+                class="delete-folder-button"
+                title="Удалить папку"
+              >
+                🗑
+              </button>             
               <button
                 @click="$refs.fileInput.click()"
                 :disabled="adminStore.isLoading"
@@ -222,7 +250,29 @@ const imageUrls = ref({})
 const loadingImages = ref({})
 const newFolderName = ref('')
 const fileInput = ref(null)
+const isRenaming = ref(false)
+const renameValue = ref('')
+const renameInput = ref(null)
+const lastError = ref('')
 
+function formatError(err, fallbackMessage) {
+  const base = err?.message || fallbackMessage || 'Произошла ошибка'
+  const details = []
+
+  if (err?.status) {
+    details.push(`Статус: ${err.status}`)
+  }
+
+  if (err?.code) {
+    details.push(`Код: ${err.code}`)
+  }
+
+  return details.length ? `${base} · ${details.join(' · ')}` : base
+}
+
+function clearLastError() {
+  lastError.value = ''
+}
 // Модальные окна
 const showMoveDialog = ref(false)
 const imageToMove = ref(null)
@@ -237,14 +287,70 @@ const imageToDelete = ref(null)
 async function loadFolders() {
   try {
     await adminStore.fetchSharedFoldersWithDetails()
+    clearLastError()  
   } catch (err) {
+    const message = formatError(err, 'Ошибка загрузки папок')
+    lastError.value = message    
     notificationsStore.add({
       type: 'error',
-      message: err.message || 'Ошибка загрузки папок'
+      message
     })
   }
 }
+/**
+ * Начать переименование папки
+ */
+function startRename() {
+  if (!selectedFolder.value) return
 
+  renameValue.value = selectedFolder.value.name
+  isRenaming.value = true
+
+  requestAnimationFrame(() => {
+    if (renameInput.value) {
+      renameInput.value.focus()
+      renameInput.value.select()
+    }
+  })
+}
+
+/**
+ * Завершить переименование папки
+ */
+async function handleRenameSubmit() {
+  if (!selectedFolder.value) return
+
+  const newName = renameValue.value.trim()
+  if (!newName || newName === selectedFolder.value.name) {
+    isRenaming.value = false
+    return
+  }
+
+  try {
+    await adminStore.renameSharedFolder(selectedFolder.value.id, newName)
+    selectedFolder.value = { ...selectedFolder.value, name: newName }
+    clearLastError()
+
+    notificationsStore.add({
+      type: 'success',
+      message: 'Папка переименована'
+    })
+  } catch (err) {
+    const message = formatError(err, 'Не удалось переименовать папку')
+    lastError.value = message
+    notificationsStore.add({
+      type: 'error',
+      message
+    })
+  } finally {
+    isRenaming.value = false
+  }
+}
+
+function cancelRename() {
+  isRenaming.value = false
+  renameValue.value = ''
+}
 /**
  * Создать новую папку
  */
@@ -252,16 +358,25 @@ async function handleCreateFolder() {
   if (!newFolderName.value.trim()) return
 
   try {
-    await adminStore.createSharedFolder(newFolderName.value.trim())
+    const createdFolder = await adminStore.createSharedFolder(newFolderName.value.trim())
+    await loadFolders()
+
+    const syncedFolder = adminStore.sharedFoldersWithDetails.find(folder => folder.id === createdFolder.id)
+    if (syncedFolder) {
+      await selectFolder(syncedFolder)
+    }
     notificationsStore.add({
       type: 'success',
       message: 'Папка успешно создана'
     })
+    clearLastError()    
     newFolderName.value = ''
   } catch (err) {
+    const message = formatError(err, 'Ошибка создания папки')
+    lastError.value = message    
     notificationsStore.add({
       type: 'error',
-      message: err.message || 'Ошибка создания папки'
+      message
     })
   }
 }
@@ -275,10 +390,13 @@ async function selectFolder(folder) {
     await adminStore.fetchFolderImages(folder.id)
     // Загружаем blob URLs для изображений
     await loadImageUrls()
+    clearLastError()    
   } catch (err) {
+    const message = formatError(err, 'Ошибка загрузки изображений')
+    lastError.value = message    
     notificationsStore.add({
       type: 'error',
-      message: err.message || 'Ошибка загрузки изображений'
+      message
     })
   }
 }
@@ -362,13 +480,16 @@ async function handleFileSelect(event) {
 
     // Очищаем input
     event.target.value = ''
-
+    clearLastError()
+    
     // Перезагружаем изображения папки
     await adminStore.fetchFolderImages(selectedFolder.value.id)
   } catch (err) {
+    const message = formatError(err, 'Ошибка загрузки изображения')
+    lastError.value = message    
     notificationsStore.add({
       type: 'error',
-      message: err.message || 'Ошибка загрузки изображения'
+      message
     })
     event.target.value = ''
   }
@@ -434,12 +555,14 @@ async function handleMoveImage() {
       type: 'success',
       message: 'Изображение успешно перемещено'
     })
-
+    clearLastError()
     closeMoveDialog()
   } catch (err) {
+    const message = formatError(err, 'Ошибка перемещения изображения')
+    lastError.value = message    
     notificationsStore.add({
       type: 'error',
-      message: err.message || 'Ошибка перемещения изображения'
+      message
     })
   }
 }
@@ -473,12 +596,42 @@ async function handleDeleteImage() {
       type: 'success',
       message: 'Изображение успешно удалено'
     })
-
+    clearLastError()
     closeDeleteDialog()
   } catch (err) {
+    const message = formatError(err, 'Ошибка удаления изображения')
+    lastError.value = message
     notificationsStore.add({
       type: 'error',
-      message: err.message || 'Ошибка удаления изображения'
+      message
+    })
+  }
+}
+
+/**
+ * Удалить выбранную папку
+ */
+async function handleDeleteFolder() {
+  if (!selectedFolder.value) return
+
+  const confirmed = confirm('Удалить текущую папку и все её содержимое?')
+  if (!confirmed) return
+
+  try {
+    await adminStore.deleteSharedFolder(selectedFolder.value.id)
+    selectedFolder.value = null
+
+    notificationsStore.add({
+      type: 'success',
+      message: 'Папка удалена'
+    })
+    clearLastError()
+  } catch (err) {
+    const message = formatError(err, 'Ошибка удаления папки')
+    lastError.value = message    
+    notificationsStore.add({
+      type: 'error',
+      message
     })
   }
 }
@@ -513,6 +666,28 @@ onMounted(() => {
 <style scoped>
 .shared-library {
   padding: 20px;
+}
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffecec;
+  border: 1px solid #f5c6cb;
+  color: #b71c1c;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.error-close {
+  background: transparent;
+  border: none;
+  color: #b71c1c;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
 }
 
 .library-container {
@@ -637,11 +812,41 @@ onMounted(() => {
   padding-bottom: 15px;
   border-bottom: 2px solid #f0f0f0;
 }
+.folder-title {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.rename-input {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  width: 320px;
+}
+
+.rename-input:focus {
+  outline: none;
+  border-color: #6c63ff;
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.12);
+}
+
+.rename-hint {
+  font-size: 12px;
+  color: #94a3b8;
+}
 
 .content-header h2 {
   margin: 0;
   font-size: 22px;
   color: #333;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .upload-button {
@@ -653,6 +858,28 @@ onMounted(() => {
   cursor: pointer;
   font-size: 14px;
   transition: background 0.3s;
+}
+.delete-folder-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.delete-folder-button:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.delete-folder-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .upload-button:hover:not(:disabled) {
