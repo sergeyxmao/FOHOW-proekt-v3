@@ -8,6 +8,7 @@ import { useConnectionsStore } from '../../stores/connections';
 import { useCanvasStore } from '../../stores/canvas';
 import { useViewSettingsStore } from '../../stores/viewSettings';
 import { useImagesStore } from '../../stores/images';
+import { useAnchorsStore } from '../../stores/anchors';  
 import Card from './Card.vue';
 import NoteWindow from './NoteWindow.vue';
 import Sticker from './Sticker.vue';
@@ -49,6 +50,7 @@ const mobileStore = useMobileStore();
 const stickersStore = useStickersStore();
 const boardStore = useBoardStore();
 const sidePanelsStore = useSidePanelsStore();
+const anchorsStore = useAnchorsStore();  
 const imagesStore = useImagesStore();  
 const emit = defineEmits(['update-connection-status']);
 const props = defineProps({
@@ -65,7 +67,8 @@ const viewSettingsStore = useViewSettingsStore();
 const { cards } = storeToRefs(cardsStore);
 const { connections } = storeToRefs(connectionsStore);
 const { images } = storeToRefs(imagesStore);
-const { anchors, selectedAnchorId, pendingFocusAnchorId, placementMode } = storeToRefs(boardStore);
+const { selectedAnchorId, pendingFocusAnchorId, placementMode } = storeToRefs(boardStore);
+const { anchors } = storeToRefs(anchorsStore);
   
 const {
   backgroundColor,
@@ -1885,12 +1888,13 @@ const focusAnchorOnCanvas = (anchorId) => {
   if (!anchor || !canvasContainerRef.value) {
     return;
   }
+  const anchorX = Number.isFinite(anchor.pos_x) ? anchor.pos_x : anchor.x;
+  const anchorY = Number.isFinite(anchor.pos_y) ? anchor.pos_y : anchor.y;
 
   const scale = zoomScale.value || 1;
   const containerRect = canvasContainerRef.value.getBoundingClientRect();
-  const targetTranslateX = containerRect.width / 2 - anchor.x * scale;
-  const targetTranslateY = containerRect.height / 2 - anchor.y * scale;
-
+  const targetTranslateX = containerRect.width / 2 - anchorX * scale;
+  const targetTranslateY = containerRect.height / 2 - anchorY * scale;
   setZoomTransform({
     scale,
     translateX: targetTranslateX,
@@ -2126,12 +2130,6 @@ const screenToCanvas = (clientX, clientY) => {
   return { x, y };
 };
 
-const generateAnchorId = () => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `anchor-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};  
 const updateStageSize = () => {
   if (!canvasContainerRef.value) {
     return;
@@ -2160,10 +2158,14 @@ const updateStageSize = () => {
     bottom: image.y + (image.height || 0)
   }));
 
-  const anchorBounds = anchors.value.map(anchor => ({
-    right: anchor.x + 12,
-    bottom: anchor.y + 12
-  }));
+  const anchorBounds = anchors.value.map(anchor => {
+    const anchorX = Number.isFinite(anchor.pos_x) ? anchor.pos_x : anchor.x;
+    const anchorY = Number.isFinite(anchor.pos_y) ? anchor.pos_y : anchor.y;
+    return {
+      right: anchorX + 12,
+      bottom: anchorY + 12
+    };
+  });
 
   const allBounds = [...cardBounds, ...stickerBounds, ...imageBounds, ...anchorBounds];
 
@@ -3393,19 +3395,25 @@ const handleStageClick = async (event) => {
   if (placementMode.value === 'anchor') {
     event.stopPropagation();
     const { x, y } = screenToCanvas(event.clientX, event.clientY);
-    const anchor = {
-      id: generateAnchorId(),
-      type: 'anchor',
-      x: Math.round(x),
-      y: Math.round(y),
-      text: '',
-      createdAt: new Date().toISOString()
-    };
+    if (!boardStore.currentBoardId) {
+      console.warn('Не удалось создать точку: доска не выбрана');
+      return;
+    }
 
-    boardStore.addAnchor(anchor);
-    boardStore.setPlacementMode(null);
-    sidePanelsStore.openAnchors();
-    boardStore.requestAnchorEdit(anchor.id);
+    try {
+      const newAnchor = await anchorsStore.createAnchor(boardStore.currentBoardId, {
+        pos_x: Math.round(x),
+        pos_y: Math.round(y),
+        description: ''
+      });
+
+      boardStore.selectAnchor(newAnchor.id);
+      boardStore.setPlacementMode(null);
+      sidePanelsStore.openAnchors();
+      boardStore.requestAnchorEdit(newAnchor.id);
+    } catch (error) {
+      console.error('Ошибка создания точки:', error);
+    }
     return;
   }
 
@@ -3626,7 +3634,17 @@ const handleKeyup = (event) => {
     resizeState.value.keepAspectRatio = true;
   }
 };
+const loadAnchorsForBoard = async (boardId) => {
+  if (!boardId) {
+    return;
+  }
 
+  try {
+    await anchorsStore.loadForBoard(boardId);
+  } catch (error) {
+    console.error('Ошибка загрузки точек:', error);
+  }
+};
 onMounted(() => {
   if (canvasContainerRef.value) { // Добавляем проверку
     canvasContainerRef.value.addEventListener('pointermove', handleMouseMove);
@@ -3653,6 +3671,18 @@ onMounted(() => {
     renderAllImages();
   });
 });
+watch(() => boardStore.currentBoardId, (newBoardId, oldBoardId) => {
+  if (!newBoardId) {
+    anchorsStore.reset();
+    return;
+  }
+
+  if (oldBoardId && oldBoardId !== newBoardId) {
+    anchorsStore.reset();
+  }
+
+  loadAnchorsForBoard(newBoardId);
+}, { immediate: true });
 
 onBeforeUnmount(() => {
   // Очищаем blob URLs для предотвращения утечки памяти
@@ -3664,6 +3694,9 @@ onBeforeUnmount(() => {
 
   // Очищаем стикеры при размонтировании
   stickersStore.clearStickers();
+  
+  // Сбрасываем точки
+  anchorsStore.reset();
 
   // Очищаем кэш изображений
   imageCache.clear();
