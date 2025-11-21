@@ -78,9 +78,12 @@ export default {
     title: 'Discussion',
     notesList: 'Notes List',
     boardComments: 'Board Comments',
-    stickerMessages: 'Sticker Messages',
+    stickerMessages: 'Stickers',
+    allStickers: 'All stickers',
     addSticker: 'Add Sticker',
-    setAnchor: 'Place anchor point',    
+    setAnchor: 'Set point',
+    boardAnchors: 'Points on board',
+    geolocation: 'Geolocation',
     createStructureAlert: 'Please create a new structure or enter an existing one to add a sticker.'
   },
   board: {
