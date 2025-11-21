@@ -2140,19 +2140,43 @@ const updateStageSize = () => {
   const containerWidth = canvasContainerRef.value.clientWidth;
   const containerHeight = canvasContainerRef.value.clientHeight;
 
-  if (!cards.value.length) {
-    stageConfig.value.width = containerWidth;
-    stageConfig.value.height = containerHeight;
-    return;
-  }
+  const cardBounds = cards.value.map(card => ({
+    right: card.x + card.width,
+    bottom: card.y + card.height
+  }));
 
-  const maxRight = Math.max(...cards.value.map(card => card.x + card.width));
-  const maxBottom = Math.max(...cards.value.map(card => card.y + card.height));
+  const stickerBounds = stickersStore.stickers.map(sticker => ({
+    right: sticker.pos_x + 200,
+    bottom: sticker.pos_y + 150
+  }));
+
+  const imageBounds = imagesStore.images.map(image => ({
+    right: image.x + (image.width || 0),
+    bottom: image.y + (image.height || 0)
+  }));
+
+  const anchorBounds = anchors.value.map(anchor => ({
+    right: anchor.x + 12,
+    bottom: anchor.y + 12
+  }));
+
+  const allBounds = [...cardBounds, ...stickerBounds, ...imageBounds, ...anchorBounds];
+
+  const hasObjects = allBounds.length > 0;
+
+  const maxRight = hasObjects ? Math.max(...allBounds.map(item => item.right)) : 0;
+  const maxBottom = hasObjects ? Math.max(...allBounds.map(item => item.bottom)) : 0;
   const dynamicPadding = Math.max(CANVAS_PADDING, containerWidth, containerHeight);
+  
+  const baseWidth = hasObjects
+    ? Math.max(containerWidth, maxRight + dynamicPadding)
+    : Math.max(containerWidth + CANVAS_PADDING, dynamicPadding);
+  const baseHeight = hasObjects
+    ? Math.max(containerHeight, maxBottom + dynamicPadding)
+    : Math.max(containerHeight + CANVAS_PADDING, dynamicPadding);
 
-
-  stageConfig.value.width = Math.max(containerWidth, maxRight + dynamicPadding);
-  stageConfig.value.height = Math.max(containerHeight, maxBottom + dynamicPadding);
+  stageConfig.value.width = baseWidth;
+  stageConfig.value.height = baseHeight;
 };
 
 const removeSelectionListeners = () => {
