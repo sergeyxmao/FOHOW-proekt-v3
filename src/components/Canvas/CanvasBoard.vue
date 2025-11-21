@@ -12,6 +12,7 @@ import Card from './Card.vue';
 import NoteWindow from './NoteWindow.vue';
 import Sticker from './Sticker.vue';
 import CanvasImage from './CanvasImage.vue';
+import AnchorPoint from './AnchorPoint.vue';  
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { getHeaderColorRgb } from '../../utils/constants';
 import { batchDeleteCards } from '../../utils/historyOperations';
@@ -22,6 +23,7 @@ import { useNotesStore } from '../../stores/notes.js';
 import { useMobileStore } from '../../stores/mobile.js';
 import { useStickersStore } from '../../stores/stickers.js';
 import { useBoardStore } from '../../stores/board.js';
+import { useSidePanelsStore } from '../../stores/sidePanels.js';  
 import { Engine } from '../../utils/calculationEngine';
 import {
   propagateActivePvUp,
@@ -46,6 +48,7 @@ const notesStore = useNotesStore();
 const mobileStore = useMobileStore();
 const stickersStore = useStickersStore();
 const boardStore = useBoardStore();
+const sidePanelsStore = useSidePanelsStore();
 const imagesStore = useImagesStore();  
 const emit = defineEmits(['update-connection-status']);
 const props = defineProps({
@@ -62,6 +65,8 @@ const viewSettingsStore = useViewSettingsStore();
 const { cards } = storeToRefs(cardsStore);
 const { connections } = storeToRefs(connectionsStore);
 const { images } = storeToRefs(imagesStore);
+const { anchors, selectedAnchorId, pendingFocusAnchorId, placementMode } = storeToRefs(boardStore);
+  
 const {
   backgroundColor,
   isHierarchicalDragMode,
@@ -124,6 +129,8 @@ const canvasContentStyle = computed(() => {
 
   return style;
 });
+  
+const anchorPoints = computed(() => Array.isArray(anchors.value) ? anchors.value : []);
   
 const selectedCardId = ref(null);
 const connectionStart = ref(null);
@@ -1632,7 +1639,8 @@ const guideOverlayStyle = computed(() => ({
   
 const canvasContainerClasses = computed(() => ({
   'canvas-container--selection-mode': isSelectionMode.value,
-  'canvas-container--sticker-placement': stickersStore.isPlacementMode
+  'canvas-container--sticker-placement': stickersStore.isPlacementMode,
+  'canvas-container--anchor-placement': placementMode.value === 'anchor'
 }));
 
 const selectionBoxStyle = computed(() => {
@@ -1872,6 +1880,25 @@ const focusStickerOnCanvas = (stickerId) => {
     }
   }, 150); // Задержка в 150мс
 };
+const focusAnchorOnCanvas = (anchorId) => {
+  const anchor = anchors.value.find(item => item.id === anchorId);
+  if (!anchor || !canvasContainerRef.value) {
+    return;
+  }
+
+  const scale = zoomScale.value || 1;
+  const containerRect = canvasContainerRef.value.getBoundingClientRect();
+  const targetTranslateX = containerRect.width / 2 - anchor.x * scale;
+  const targetTranslateY = containerRect.height / 2 - anchor.y * scale;
+
+  setZoomTransform({
+    scale,
+    translateX: targetTranslateX,
+    translateY: targetTranslateY
+  });
+
+  boardStore.selectAnchor(anchorId);
+};
 
 // Наблюдаем за запросами на фокусировку стикера через Pinia store
 watch(() => stickersStore.pendingFocusStickerId, (stickerId) => {
@@ -1880,6 +1907,13 @@ watch(() => stickersStore.pendingFocusStickerId, (stickerId) => {
     // Сбрасываем состояние, чтобы можно было повторно кликнуть на тот же стикер
     stickersStore.pendingFocusStickerId = null;
   }
+});
+watch(pendingFocusAnchorId, (anchorId) => {
+  if (!anchorId) {
+    return;
+  }
+  focusAnchorOnCanvas(anchorId);
+  pendingFocusAnchorId.value = null;
 });
 
 const getBranchDescendants = (startCardId, branchFilter) => {
@@ -2091,6 +2125,13 @@ const screenToCanvas = (clientX, clientY) => {
   
   return { x, y };
 };
+
+const generateAnchorId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `anchor-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};  
 const updateStageSize = () => {
   if (!canvasContainerRef.value) {
     return;
@@ -3258,6 +3299,10 @@ const handleStickerClick = (event, stickerId) => {
   }
   selectedCardId.value = null;
 };
+const handleAnchorSelect = (anchorId) => {
+  boardStore.selectAnchor(anchorId);
+  sidePanelsStore.openAnchors();
+};
 
 const handleImageClick = ({ event, imageId }) => {
   // Останавливаем всплытие события
@@ -3314,6 +3359,24 @@ const handlePvChanged = (cardId) => {
 const handleStageClick = async (event) => {
   if (suppressNextStageClick) {
     suppressNextStageClick = false;
+    return;
+  }
+  if (placementMode.value === 'anchor') {
+    event.stopPropagation();
+    const { x, y } = screenToCanvas(event.clientX, event.clientY);
+    const anchor = {
+      id: generateAnchorId(),
+      type: 'anchor',
+      x: Math.round(x),
+      y: Math.round(y),
+      text: '',
+      createdAt: new Date().toISOString()
+    };
+
+    boardStore.addAnchor(anchor);
+    boardStore.setPlacementMode(null);
+    sidePanelsStore.openAnchors();
+    boardStore.requestAnchorEdit(anchor.id);
     return;
   }
 
@@ -3980,6 +4043,15 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           marker-end="url(#marker-dot)"
         />
       </svg>
+            <div class="anchors-layer">
+        <AnchorPoint
+          v-for="anchor in anchorPoints"
+          :key="anchor.id"
+          :anchor="anchor"
+          :is-selected="selectedAnchorId === anchor.id"
+          @select="handleAnchorSelect"
+        />
+      </div>
       <!-- Контейнер для карточек -->
       <!-- z-index: 10 - карточки структуры (лицензии) -->
       <div
@@ -4067,6 +4139,12 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 .canvas-container--sticker-placement .svg-layer {
   cursor: crosshair;
 }
+.canvas-container--anchor-placement,
+.canvas-container--anchor-placement .canvas-content,
+.canvas-container--anchor-placement .cards-container,
+.canvas-container--anchor-placement .svg-layer {
+  cursor: crosshair;
+}  
 .canvas-container--panning,
 .canvas-container--panning .canvas-content,
 .canvas-container--panning .cards-container,
@@ -4174,6 +4252,16 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
   filter: drop-shadow(0 0 10px var(--line-highlight-color));
+}
+.anchors-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.anchors-layer :deep(.anchor-point) {
+  pointer-events: auto;
 }
 
 @keyframes lineBalanceFlash {
