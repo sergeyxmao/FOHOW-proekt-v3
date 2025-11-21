@@ -211,6 +211,7 @@ import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
 import { useAdminStore } from '../../stores/admin'
 import { useNotificationsStore } from '../../stores/notifications'
 import { useImageProxy } from '../../composables/useImageProxy'
+import { convertToWebP, isImageFile } from '../../utils/imageUtils'
 
 const adminStore = useAdminStore()
 const notificationsStore = useNotificationsStore()
@@ -322,14 +323,36 @@ async function handleFileSelect(event) {
   if (!file || !selectedFolder.value) return
 
   try {
-    // Получаем размеры изображения
-    const dimensions = await getImageDimensions(file)
+    if (!isImageFile(file)) {
+      notificationsStore.add({
+        type: 'error',
+        message: `Файл "${file.name}" не является изображением`
+      })
+      event.target.value = ''
+      return
+    }
+
+    let uploadFile = file
+    let width
+    let height
+
+    if (file.type !== 'image/webp') {
+      const { blob, width: convertedWidth, height: convertedHeight } = await convertToWebP(file, 0.9, 2048, 2048)
+      const originalName = file.name.replace(/\.[^/.]+$/, '') + '.webp'
+      uploadFile = new File([blob], originalName, { type: 'image/webp' })
+      width = convertedWidth
+      height = convertedHeight
+    } else {
+      const dimensions = await getImageDimensions(file)
+      width = dimensions.width
+      height = dimensions.height
+    }
 
     await adminStore.uploadSharedImage(
-      file,
+      uploadFile,
       selectedFolder.value.id,
-      dimensions.width,
-      dimensions.height
+      width,
+      height
     )
 
     notificationsStore.add({
