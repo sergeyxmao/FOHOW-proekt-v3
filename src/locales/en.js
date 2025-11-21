@@ -80,6 +80,7 @@ export default {
     boardComments: 'Board Comments',
     stickerMessages: 'Sticker Messages',
     addSticker: 'Add Sticker',
+    setAnchor: 'Place anchor point',    
     createStructureAlert: 'Please create a new structure or enter an existing one to add a sticker.'
   },
   board: {
