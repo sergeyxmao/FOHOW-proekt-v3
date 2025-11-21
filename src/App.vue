@@ -1471,10 +1471,13 @@ html,body{
 
 /* Canvas/SVG */
 #canvas {
-  position: relative;
-  width: 100%;
-  height: 100%;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   transform-origin: 0 0;
+  pointer-events: auto;
+  z-index: 0;  
   cursor: default;
 }
 
