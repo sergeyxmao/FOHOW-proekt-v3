@@ -73,9 +73,12 @@ export default {
     title: '讨论',
     notesList: '笔记列表',
     boardComments: '看板评论',
-    stickerMessages: '贴纸消息',
+    stickerMessages: '贴纸',
+    allStickers: '所有贴纸',
     addSticker: '添加贴纸',
-    setAnchor: '设置锚点',    
+    setAnchor: '设置锚点',
+    boardAnchors: '看板上的点',
+    geolocation: '地理定位',
     createStructureAlert: '请创建新结构或进入现有结构以添加贴纸。'
   },
   board: {
