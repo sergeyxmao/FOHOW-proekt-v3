@@ -8,11 +8,11 @@ export const useAnchorsStore = defineStore('anchors', () => {
   const isLoading = ref(false);
   const error = ref(null);
 
-  const getAuthHeaders = () => {
+  const getAuthHeaders = ({ withJsonBody = true } = {}) => {
     const token = localStorage.getItem('token');
     return {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      ...(withJsonBody ? { 'Content-Type': 'application/json' } : {})
     };
   };
 
@@ -28,7 +28,7 @@ export const useAnchorsStore = defineStore('anchors', () => {
     try {
       const response = await fetch(`${API_URL}/boards/${boardId}/anchors`, {
         method: 'GET',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders({ withJsonBody: false })
       });
 
       if (!response.ok) {
@@ -62,7 +62,7 @@ export const useAnchorsStore = defineStore('anchors', () => {
     try {
       const response = await fetch(`${API_URL}/boards/${boardId}/anchors`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders({ withJsonBody: true }),
         body: JSON.stringify(payload)
       });
 
@@ -98,7 +98,7 @@ export const useAnchorsStore = defineStore('anchors', () => {
     try {
       const response = await fetch(`${API_URL}/anchors/${anchorId}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: getAuthHeaders({ withJsonBody: true }),
         body: JSON.stringify({ description })
       });
 
@@ -136,7 +136,7 @@ export const useAnchorsStore = defineStore('anchors', () => {
     try {
       const response = await fetch(`${API_URL}/anchors/${anchorId}`, {
         method: 'DELETE',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders({ withJsonBody: false })
       });
 
       if (!response.ok) {
