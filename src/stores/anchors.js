@@ -10,10 +10,15 @@ export const useAnchorsStore = defineStore('anchors', () => {
 
   const getAuthHeaders = ({ withJsonBody = true } = {}) => {
     const token = localStorage.getItem('token');
-    return {
-      'Authorization': `Bearer ${token}`,
-      ...(withJsonBody ? { 'Content-Type': 'application/json' } : {})
+    const headers = {
+      'Authorization': `Bearer ${token}`
     };
+
+    if (withJsonBody) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    return headers;    
   };
 
   async function loadForBoard(boardId) {
