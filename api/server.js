@@ -715,6 +715,7 @@ app.get('/api/profile', {
             u.instagram_profile, u.whatsapp_contact,
             u.visibility_settings, u.search_settings,
             u.subscription_started_at, u.subscription_expires_at,
+            u.is_verified, u.verified_at,
             sp.id as plan_id, sp.name as plan_name, sp.features
      FROM users u
      LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
@@ -728,7 +729,7 @@ app.get('/api/profile', {
 
     const userData = result.rows[0];
 
-    // Формируем объект пользователя с информацией о плане
+    // Формируем объект пользователя с информацией о плане и верификации
     const user = {
       id: userData.id,
       email: userData.email,
@@ -752,6 +753,8 @@ app.get('/api/profile', {
       search_settings: userData.search_settings,
       subscription_started_at: userData.subscription_started_at,
       subscription_expires_at: userData.subscription_expires_at,
+      is_verified: userData.is_verified || false,
+      verified_at: userData.verified_at || null,
       plan: userData.plan_id ? {
         id: userData.plan_id,
         name: userData.plan_name,
