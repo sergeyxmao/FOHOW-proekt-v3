@@ -27,6 +27,7 @@
               <th @click="sort('username')">Username</th>
               <th @click="sort('role')">Роль</th>
               <th @click="sort('plan_name')">Тариф</th>
+              <th>Верифицирован</th>
               <th>Досок</th>
               <th>Сессий</th>
               <th @click="sort('created_at')">Создан</th>
@@ -44,6 +45,14 @@
                 </span>
               </td>
               <td>{{ user.plan_name || '-' }}</td>
+              <td>
+                <span v-if="user.is_verified" class="verification-badge verified" title="Верифицирован">
+                  ⭐ Да
+                </span>
+                <span v-else class="verification-badge not-verified">
+                  Нет
+                </span>
+              </td>
               <td>{{ user.boards_count }}</td>
               <td>{{ user.active_sessions }}</td>
               <td>{{ formatDate(user.created_at) }}</td>
@@ -477,6 +486,29 @@ h2 {
   border-radius: 12px;
   font-size: 12px;
   font-weight: bold;
+}
+
+.verification-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.verification-badge.verified {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 165, 0, 0.2) 100%);
+  color: #FF8C00;
+  border: 1px solid rgba(255, 215, 0, 0.5);
+}
+
+.verification-badge.not-verified {
+  background: #f5f5f5;
+  color: #999;
+  border: 1px solid #e0e0e0;
 }
 
 .role-badge.admin {

@@ -205,9 +205,12 @@ async function approveVerification(verificationId, adminId) {
   try {
     await client.query('BEGIN');
 
-    // Получить информацию о заявке
+    // Получить информацию о заявке И telegram_chat_id пользователя
     const verificationResult = await client.query(
-      'SELECT user_id, status FROM user_verifications WHERE id = $1',
+      `SELECT v.user_id, v.status, u.telegram_chat_id, u.personal_id
+       FROM user_verifications v
+       JOIN users u ON v.user_id = u.id
+       WHERE v.id = $1`,
       [verificationId]
     );
 
@@ -238,6 +241,17 @@ async function approveVerification(verificationId, adminId) {
     await client.query('COMMIT');
 
     console.log(`[VERIFICATION] Заявка одобрена: verification_id=${verificationId}, user_id=${verification.user_id}, admin_id=${adminId}`);
+
+    // Отправить Telegram-уведомление об одобрении
+    if (verification.telegram_chat_id) {
+      const message = `✅ Поздравляем! Ваша заявка на верификацию одобрена!\n\n⭐ Компьютерный номер ${verification.personal_id} успешно верифицирован.\n\nТеперь ваш профиль отмечен значком верификации.`;
+      try {
+        await sendTelegramMessage(verification.telegram_chat_id, message);
+        console.log(`[VERIFICATION] Telegram-уведомление об одобрении отправлено пользователю ${verification.user_id}`);
+      } catch (telegramError) {
+        console.error('[VERIFICATION] Ошибка отправки Telegram-уведомления:', telegramError.message);
+      }
+    }
 
     return { success: true };
 
