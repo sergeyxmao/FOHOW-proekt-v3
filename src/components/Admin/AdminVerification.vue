@@ -64,18 +64,28 @@
           <div class="screenshots-grid">
             <div class="screenshot-wrapper" @click="openScreenshotPreview(verification, 1)">
               <img
+                v-if="getScreenshotUrl(verification.screenshot_1_path)"
                 :src="getScreenshotUrl(verification.screenshot_1_path)"
                 alt="Скриншот 1"
                 class="screenshot-thumb"
               />
+              <div v-else class="screenshot-placeholder">
+                <span v-if="screenshotErrors[verification.screenshot_1_path]">Ошибка загрузки</span>
+                <span v-else>Загрузка...</span>
+              </div>
               <span class="screenshot-label">Скриншот 1</span>
             </div>
             <div class="screenshot-wrapper" @click="openScreenshotPreview(verification, 2)">
               <img
+                v-if="getScreenshotUrl(verification.screenshot_2_path)"
                 :src="getScreenshotUrl(verification.screenshot_2_path)"
                 alt="Скриншот 2"
                 class="screenshot-thumb"
               />
+              <div v-else class="screenshot-placeholder">
+                <span v-if="screenshotErrors[verification.screenshot_2_path]">Ошибка загрузки</span>
+                <span v-else>Загрузка...</span>
+              </div>
               <span class="screenshot-label">Скриншот 2</span>
             </div>
           </div>
@@ -164,14 +174,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useAdminStore } from '../../stores/admin'
+import { useAuthStore } from '../../stores/auth'
 import { useNotificationsStore } from '../../stores/notifications'
 
 const adminStore = useAdminStore()
+const authStore = useAuthStore()
 const notificationsStore = useNotificationsStore()
 const processingId = ref(null)
 const selectedScreenshot = ref(null)
+const screenshotCache = ref({})
+const screenshotErrors = ref({})
+const screenshotLoading = ref({})
 
 const rejectModal = ref({
   visible: false,
@@ -193,8 +208,64 @@ const pendingCount = computed(() => {
  */
 function getScreenshotUrl(path) {
   if (!path) return ''
-  // Используем API для получения изображения через прокси
-  return `${API_URL}/verification/screenshot?path=${encodeURIComponent(path)}`
+
+  if (!screenshotCache.value[path] && !screenshotErrors.value[path] && !screenshotLoading.value[path]) {
+    loadScreenshot(path)
+  }
+
+  return screenshotCache.value[path] || ''
+}
+
+/**
+ * Загрузить скриншот через админ-прокси с авторизацией
+ */
+async function loadScreenshot(path) {
+  if (!path || screenshotCache.value[path] || screenshotLoading.value[path]) return
+
+  screenshotLoading.value = { ...screenshotLoading.value, [path]: true }
+
+  try {
+    const token = authStore.token
+
+    if (!token) {
+      throw new Error('Требуется авторизация администратора')
+    }
+
+    const response = await fetch(`${API_URL}/admin/screenshot-proxy?path=${encodeURIComponent(path)}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Не удалось загрузить скриншот')
+    }
+
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+
+    screenshotCache.value = { ...screenshotCache.value, [path]: objectUrl }
+  } catch (error) {
+    console.error('[VERIFICATION] Ошибка загрузки скриншота:', error)
+    screenshotErrors.value = { ...screenshotErrors.value, [path]: true }
+  } finally {
+    const { [path]: _removed, ...rest } = screenshotLoading.value
+    screenshotLoading.value = rest
+  }
+}
+
+/**
+ * Предзагрузить все скриншоты в очереди
+ */
+async function preloadScreenshots(verifications = []) {
+  const paths = []
+
+  verifications.forEach((verification) => {
+    if (verification.screenshot_1_path) paths.push(verification.screenshot_1_path)
+    if (verification.screenshot_2_path) paths.push(verification.screenshot_2_path)
+  })
+
+  await Promise.all(paths.map(loadScreenshot))
 }
 
 /**
@@ -203,6 +274,7 @@ function getScreenshotUrl(path) {
 async function loadVerifications() {
   try {
     await adminStore.fetchPendingVerifications()
+    await preloadScreenshots(adminStore.pendingVerifications || [])    
   } catch (err) {
     console.error('[VERIFICATION] Ошибка загрузки заявок:', err)
   }
@@ -221,11 +293,13 @@ async function handleRetry() {
  */
 function openScreenshotPreview(verification, screenshotNumber) {
   const path = screenshotNumber === 1 ? verification.screenshot_1_path : verification.screenshot_2_path
-  selectedScreenshot.value = {
-    url: getScreenshotUrl(path),
-    label: `Скриншот ${screenshotNumber}`,
-    verification
-  }
+  loadScreenshot(path).then(() => {
+    selectedScreenshot.value = {
+      url: getScreenshotUrl(path),
+      label: `Скриншот ${screenshotNumber}`,
+      verification
+    }
+  })
 }
 
 /**
@@ -363,6 +437,10 @@ function formatDate(dateString) {
 onMounted(async () => {
   await loadVerifications()
 })
+
+onBeforeUnmount(() => {
+  Object.values(screenshotCache.value).forEach((url) => URL.revokeObjectURL(url))
+})  
 </script>
 
 <style scoped>
@@ -600,6 +678,20 @@ onMounted(async () => {
   object-fit: cover;
   border-radius: 8px;
   background: #e0e0e0;
+}
+.screenshot-placeholder {
+  width: 100%;
+  height: 120px;
+  border-radius: 8px;
+  background: #f3f3f3;
+  border: 1px dashed #d0d0d0;
+  color: #777;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10px;
 }
 
 .screenshot-label {
