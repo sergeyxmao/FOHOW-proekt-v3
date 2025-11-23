@@ -154,6 +154,51 @@ async function submitVerification(userId, fullName, screenshot1Buffer, screensho
 
     console.log(`[VERIFICATION] Заявка создана: user_id=${userId}, verification_id=${insertResult.rows[0].id}`);
 
+    // ========================================
+    // Уведомить всех админов о новой заявке
+    // ========================================
+    try {
+      // Получить список всех админов с подключенным Telegram
+      const adminsResult = await pool.query(
+        `SELECT telegram_chat_id, username, email
+         FROM users
+         WHERE role = 'admin' AND telegram_chat_id IS NOT NULL`
+      );
+
+      if (adminsResult.rows.length > 0) {
+        // Получить информацию о пользователе, подавшем заявку
+        const userResult = await pool.query(
+          `SELECT personal_id, email, username FROM users WHERE id = $1`,
+          [userId]
+        );
+
+        const user = userResult.rows[0];
+
+        const message = `🔔 Новая заявка на верификацию!\n\n` +
+          `👤 ФИО: ${fullName}\n` +
+          `🔢 Номер: ${user.personal_id || 'не указан'}\n` +
+          `📧 Email: ${user.email}\n` +
+          `👥 Username: ${user.username || 'не указан'}\n\n` +
+          `⚡ Перейдите в админ-панель для проверки заявки.`;
+
+        // Отправить уведомление каждому админу
+        for (const admin of adminsResult.rows) {
+          try {
+            await sendTelegramMessage(admin.telegram_chat_id, message);
+            console.log(`[VERIFICATION] Уведомление отправлено админу: ${admin.email}`);
+          } catch (telegramError) {
+            console.error(`[VERIFICATION] Ошибка отправки уведомления админу ${admin.email}:`, telegramError.message);
+          }
+        }
+      } else {
+        console.log('[VERIFICATION] Нет админов с подключенным Telegram для уведомления');
+      }
+    } catch (notifyError) {
+      console.error('[VERIFICATION] Ошибка отправки уведомлений админам:', notifyError.message);
+      // Не прерываем выполнение, заявка уже создана
+    }
+    // ========================================
+
     return {
       success: true,
       verificationId: insertResult.rows[0].id
