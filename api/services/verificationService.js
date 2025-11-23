@@ -70,15 +70,24 @@ async function canSubmitVerification(userId) {
     const hoursSinceLastAttempt = (now - lastAttempt) / (1000 * 60 * 60);
 
     if (hoursSinceLastAttempt < VERIFICATION_COOLDOWN_HOURS) {
+      // Рассчитать время окончания кулдауна
+      const cooldownEndTime = new Date(lastAttempt.getTime() + (VERIFICATION_COOLDOWN_HOURS * 60 * 60 * 1000));
       const hoursRemaining = Math.ceil(VERIFICATION_COOLDOWN_HOURS - hoursSinceLastAttempt);
+
       return {
         canSubmit: false,
-        reason: `Вы сможете подать новую заявку через ${hoursRemaining} ч.`
+        reason: `Вы сможете подать новую заявку через ${hoursRemaining} ч.`,
+        cooldownEndTime: cooldownEndTime.toISOString(),
+        lastAttempt: lastAttempt.toISOString()
       };
     }
   }
 
-  return { canSubmit: true };
+  return {
+    canSubmit: true,
+    cooldownEndTime: null,
+    lastAttempt: user.last_verification_attempt ? new Date(user.last_verification_attempt).toISOString() : null
+  };
 }
 
 /**
@@ -353,12 +362,26 @@ async function getUserVerificationStatus(userId) {
 
   const lastRejection = rejectedResult.rows[0] || null;
 
+  // Рассчитать время окончания кулдауна
+  let cooldownUntil = null;
+  if (data.last_verification_attempt && !data.is_verified) {
+    const lastAttempt = new Date(data.last_verification_attempt);
+    const cooldownEndTime = new Date(lastAttempt.getTime() + (VERIFICATION_COOLDOWN_HOURS * 60 * 60 * 1000));
+    const now = new Date();
+
+    // Если кулдаун ещё действует
+    if (now < cooldownEndTime) {
+      cooldownUntil = cooldownEndTime.toISOString();
+    }
+  }
+
   return {
     isVerified: data.is_verified,
     verifiedAt: data.verified_at,
     lastAttempt: data.last_verification_attempt,
     hasPendingRequest: !!data.pending_verification_id,
-    lastRejection: lastRejection
+    lastRejection: lastRejection,
+    cooldownUntil: cooldownUntil
   };
 }
 

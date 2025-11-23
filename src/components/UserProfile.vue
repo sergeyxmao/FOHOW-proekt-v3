@@ -660,6 +660,12 @@ const submittingVerification = ref(false)
 // Интервал автоматической проверки статуса верификации
 let verificationCheckInterval = null
 
+// Интервал обновления таймера кулдауна
+let cooldownTimerInterval = null
+
+// Оставшееся время кулдауна (форматированная строка)
+const cooldownTimeRemaining = ref('')
+
 // Вычисляемые свойства для верификации
 const canSubmitVerification = computed(() => {
   // Нельзя подать заявку, если уже есть ожидающая
@@ -686,6 +692,12 @@ const cooldownMessage = computed(() => {
 
   if (now >= cooldownEnd) return ''
 
+  // Если есть точное оставшееся время, показать его
+  if (cooldownTimeRemaining.value) {
+    return `Повторная заявка доступна через ${cooldownTimeRemaining.value}`
+  }
+
+  // Fallback на часы/дни (если таймер ещё не запущен)
   const diffMs = cooldownEnd - now
   const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
@@ -698,6 +710,57 @@ const cooldownMessage = computed(() => {
     return 'Повторная заявка скоро будет доступна'
   }
 })
+
+// Обновление таймера обратного отсчёта кулдауна
+function updateCooldownTime() {
+  const endTime = verificationStatus.cooldownUntil
+
+  if (!endTime) {
+    cooldownTimeRemaining.value = ''
+    return
+  }
+
+  const now = new Date()
+  const end = new Date(endTime)
+  const diff = end - now
+
+  if (diff <= 0) {
+    cooldownTimeRemaining.value = ''
+    // Очистить интервал
+    if (cooldownTimerInterval) {
+      clearInterval(cooldownTimerInterval)
+      cooldownTimerInterval = null
+    }
+    // Перезагрузить статус
+    loadVerificationStatus()
+    return
+  }
+
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+
+  if (hours > 0) {
+    cooldownTimeRemaining.value = `${hours}ч ${minutes}м ${seconds}с`
+  } else if (minutes > 0) {
+    cooldownTimeRemaining.value = `${minutes}м ${seconds}с`
+  } else {
+    cooldownTimeRemaining.value = `${seconds}с`
+  }
+}
+
+// Запустить таймер кулдауна
+function startCooldownTimer() {
+  // Очистить предыдущий интервал
+  if (cooldownTimerInterval) {
+    clearInterval(cooldownTimerInterval)
+  }
+
+  // Запустить обновление каждую секунду
+  cooldownTimerInterval = setInterval(updateCooldownTime, 1000)
+  // Сразу обновить
+  updateCooldownTime()
+}
 
 // Инициализация
 onMounted(async () => {
@@ -743,6 +806,12 @@ onBeforeUnmount(() => {
   if (verificationCheckInterval) {
     clearInterval(verificationCheckInterval)
     verificationCheckInterval = null
+  }
+
+  // Очистить интервал таймера кулдауна
+  if (cooldownTimerInterval) {
+    clearInterval(cooldownTimerInterval)
+    cooldownTimerInterval = null
   }
 })
 
@@ -860,6 +929,18 @@ async function loadVerificationStatus() {
       verificationStatus.lastRejection = data.lastRejection || null
       verificationStatus.lastAttempt = data.lastAttempt || null
       verificationStatus.cooldownUntil = data.cooldownUntil || null
+
+      // Запустить таймер обратного отсчёта, если есть активный кулдаун
+      if (data.cooldownUntil) {
+        startCooldownTimer()
+      } else {
+        // Очистить таймер если кулдаун закончился
+        if (cooldownTimerInterval) {
+          clearInterval(cooldownTimerInterval)
+          cooldownTimerInterval = null
+        }
+        cooldownTimeRemaining.value = ''
+      }
     }
   } catch (error) {
     console.error('Ошибка загрузки статуса верификации:', error)
