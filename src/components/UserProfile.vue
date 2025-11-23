@@ -2055,8 +2055,8 @@ async function handleAvatarDelete() {
 /* ВЕРИФИКАЦИОННОЕ МОДАЛЬНОЕ ОКНО */
 /* ========================================== */
 .verification-modal {
-  background: var(--profile-modal-bg);
-  color: var(--profile-text);
+  background: var(--profile-modal-bg, #ffffff);
+  color: var(--profile-text, #111827);
   padding: 22px 24px 20px;
   border-radius: 18px;
   width: min(560px, 100%);
@@ -2088,8 +2088,8 @@ async function handleAvatarDelete() {
 
 .verification-modal__body .form-group input[type="file"] {
   padding: 10px;
-  background: var(--profile-input-bg);
-  border: 1px solid var(--profile-input-border);
+  background: var(--profile-input-bg, #ffffff);
+  border: 1px solid var(--profile-input-border, #d1d5db);
   border-radius: 12px;
   color: var(--profile-text);
 }
@@ -2109,7 +2109,7 @@ async function handleAvatarDelete() {
 
 .helper-text {
   margin: 0;
-  color: var(--profile-muted);
+  color: var(--profile-muted, #666666);
   font-size: 14px;
 }
 
