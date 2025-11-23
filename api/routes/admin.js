@@ -2123,5 +2123,51 @@ await pool.query(
     }
   });
 
+  /**
+   * Получить архив верификации (одобренные и отклонённые)
+   * GET /api/admin/verifications/archive
+   */
+  app.get('/api/admin/verifications/archive', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      console.log('[ADMIN] Запрос архива верификации, admin_id=' + req.user.id);
+
+      const result = await pool.query(
+        `SELECT
+          v.id,
+          v.user_id,
+          v.full_name,
+          v.screenshot_1_path,
+          v.screenshot_2_path,
+          v.status,
+          v.rejection_reason,
+          v.submitted_at,
+          v.processed_at,
+          u.personal_id,
+          u.email,
+          u.username,
+          (SELECT username FROM users WHERE id = v.processed_by) as processed_by_username
+         FROM user_verifications v
+         JOIN users u ON v.user_id = u.id
+         WHERE v.status IN ('approved', 'rejected')
+         ORDER BY v.processed_at DESC
+         LIMIT 100`,
+        []
+      );
+
+      console.log(`[ADMIN] Найдено записей в архиве: ${result.rows.length}`);
+
+      return reply.send({
+        success: true,
+        items: result.rows,
+        total: result.rows.length
+      });
+    } catch (err) {
+      console.error('[ADMIN] Ошибка получения архива верификации:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
   console.log('✅ Маршруты админ-панели зарегистрированы');
 }
