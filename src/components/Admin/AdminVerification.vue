@@ -4,40 +4,56 @@
     <div class="moderation-header">
       <div class="header-content">
         <h2>Модерация верификации</h2>
-        <div class="stats-block">
-          <div class="stat-item">
-            <span class="stat-label">В очереди:</span>
-            <span class="stat-value">{{ pendingCount }}</span>
-          </div>
+
+        <!-- Переключатель табов -->
+        <div class="tabs-switcher">
+          <button
+            :class="['tab-btn', { active: activeTab === 'pending' }]"
+            @click="switchTab('pending')"
+          >
+            В очереди ({{ pendingCount }})
+          </button>
+          <button
+            :class="['tab-btn', { active: activeTab === 'archive' }]"
+            @click="switchTab('archive')"
+          >
+            Архив ({{ archiveVerifications.length }})
+          </button>
         </div>
       </div>
-      <button @click="loadVerifications" class="refresh-button" :disabled="adminStore.isLoadingVerifications">
+      <button
+        @click="activeTab === 'pending' ? loadVerifications() : loadArchive()"
+        class="refresh-button"
+        :disabled="adminStore.isLoadingVerifications || archiveLoading"
+      >
         Обновить
       </button>
     </div>
 
-    <!-- Индикатор загрузки -->
-    <div v-if="adminStore.isLoadingVerifications" class="loading">
-      <div class="spinner"></div>
-      <p>Загрузка заявок...</p>
-    </div>
+    <!-- Контент для "В очереди" -->
+    <div v-if="activeTab === 'pending'">
+      <!-- Индикатор загрузки -->
+      <div v-if="adminStore.isLoadingVerifications" class="loading">
+        <div class="spinner"></div>
+        <p>Загрузка заявок...</p>
+      </div>
 
-    <!-- Состояние ошибки -->
-    <div v-else-if="adminStore.error" class="error-state">
-      <div class="error-icon">!</div>
-      <p class="error-message">{{ adminStore.error }}</p>
-      <button @click="handleRetry" class="retry-button">
-        Повторить
-      </button>
-    </div>
+      <!-- Состояние ошибки -->
+      <div v-else-if="adminStore.error" class="error-state">
+        <div class="error-icon">!</div>
+        <p class="error-message">{{ adminStore.error }}</p>
+        <button @click="handleRetry" class="retry-button">
+          Повторить
+        </button>
+      </div>
 
-    <!-- Пустое состояние -->
-    <div v-else-if="!adminStore.pendingVerifications || adminStore.pendingVerifications.length === 0" class="empty-state">
-      <p>Сейчас нет заявок на верификацию</p>
-    </div>
+      <!-- Пустое состояние -->
+      <div v-else-if="!adminStore.pendingVerifications || adminStore.pendingVerifications.length === 0" class="empty-state">
+        <p>Сейчас нет заявок на верификацию</p>
+      </div>
 
-    <!-- Список заявок -->
-    <div v-else class="verifications-grid">
+      <!-- Список заявок -->
+      <div v-else class="verifications-grid">
       <div v-for="verification in adminStore.pendingVerifications" :key="verification.id" class="verification-card">
         <!-- Информация о пользователе -->
         <div class="user-info">
@@ -112,6 +128,81 @@
         <!-- Индикатор обработки -->
         <div v-if="processingId === verification.id" class="processing-overlay">
           <div class="spinner-small"></div>
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Контент для "Архив" -->
+    <div v-if="activeTab === 'archive'">
+      <!-- Индикатор загрузки -->
+      <div v-if="archiveLoading" class="loading">
+        <div class="spinner"></div>
+        <p>Загрузка архива...</p>
+      </div>
+
+      <!-- Состояние ошибки -->
+      <div v-else-if="archiveError" class="error-state">
+        <div class="error-icon">!</div>
+        <p class="error-message">{{ archiveError }}</p>
+        <button @click="loadArchive" class="retry-button">
+          Повторить
+        </button>
+      </div>
+
+      <!-- Пустое состояние -->
+      <div v-else-if="archiveVerifications.length === 0" class="empty-state">
+        <p>Архив пуст</p>
+      </div>
+
+      <!-- Список заявок из архива -->
+      <div v-else class="verifications-grid">
+        <div v-for="verification in archiveVerifications" :key="verification.id" class="verification-card archive-card">
+          <!-- Статус заявки -->
+          <div class="archive-status-badge" :class="`status-${verification.status}`">
+            {{ verification.status === 'approved' ? 'Одобрено' : 'Отклонено' }}
+          </div>
+
+          <!-- Информация о заявке -->
+          <div class="user-info">
+            <h3 class="user-name">{{ verification.full_name }}</h3>
+            <div class="user-meta">
+              <p><strong>Компьютерный номер:</strong> {{ verification.personal_id || 'Не указан' }}</p>
+              <p><strong>Email:</strong> {{ verification.email }}</p>
+              <p v-if="verification.username"><strong>Username:</strong> {{ verification.username }}</p>
+              <p><strong>Дата подачи:</strong> {{ formatDate(verification.submitted_at) }}</p>
+              <p><strong>Обработана:</strong> {{ formatDate(verification.processed_at) }}</p>
+              <p v-if="verification.processed_by_username">
+                <strong>Обработал:</strong> {{ verification.processed_by_username }}
+              </p>
+
+              <!-- Причина отклонения -->
+              <div v-if="verification.status === 'rejected' && verification.rejection_reason" class="rejection-block">
+                <strong>Причина отклонения:</strong>
+                <p>{{ verification.rejection_reason }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Скриншоты (миниатюры) -->
+          <div v-if="verification.screenshot_1_path" class="screenshots-section">
+            <h4>Скриншоты:</h4>
+            <div class="screenshots-grid-mini">
+              <img
+                :src="getScreenshotUrl(verification.screenshot_1_path)"
+                alt="Скриншот 1"
+                class="screenshot-preview-small"
+                @click="openArchiveScreenshotPreview(getScreenshotUrl(verification.screenshot_1_path))"
+              />
+              <img
+                v-if="verification.screenshot_2_path"
+                :src="getScreenshotUrl(verification.screenshot_2_path)"
+                alt="Скриншот 2"
+                class="screenshot-preview-small"
+                @click="openArchiveScreenshotPreview(getScreenshotUrl(verification.screenshot_2_path))"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -193,6 +284,12 @@ const rejectModal = ref({
   verification: null,
   reason: ''
 })
+
+// Переменные для архива
+const activeTab = ref('pending') // 'pending' или 'archive'
+const archiveVerifications = ref([])
+const archiveLoading = ref(false)
+const archiveError = ref(null)
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
@@ -431,6 +528,61 @@ function formatDate(dateString) {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+/**
+ * Загрузка архива верификации
+ */
+async function loadArchive() {
+  archiveLoading.value = true
+  archiveError.value = null
+
+  try {
+    const token = authStore.token
+
+    const response = await fetch(`${API_URL}/admin/verifications/archive`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Ошибка загрузки архива')
+    }
+
+    const data = await response.json()
+    archiveVerifications.value = data.items || []
+
+    // Предзагрузка скриншотов для архива
+    await preloadScreenshots(archiveVerifications.value)
+  } catch (err) {
+    console.error('[ADMIN VERIFICATION] Ошибка загрузки архива:', err)
+    archiveError.value = err.message || 'Не удалось загрузить архив'
+  } finally {
+    archiveLoading.value = false
+  }
+}
+
+/**
+ * Переключение табов
+ */
+function switchTab(tab) {
+  activeTab.value = tab
+  if (tab === 'archive' && archiveVerifications.value.length === 0) {
+    loadArchive()
+  }
+}
+
+/**
+ * Открыть скриншот в модальном окне (для архива)
+ */
+function openArchiveScreenshotPreview(url) {
+  if (!url) return
+  selectedScreenshot.value = {
+    url,
+    label: 'Скриншот',
+    verification: { full_name: '', personal_id: '' }
+  }
 }
 
 // Загрузить заявки при монтировании
@@ -954,5 +1106,112 @@ onBeforeUnmount(() => {
   .reject-modal {
     padding: 20px;
   }
+
+  .tabs-switcher {
+    flex-direction: column;
+  }
+}
+
+/* Переключатель табов */
+.tabs-switcher {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  background: #f5f5f5;
+  color: #666;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  background: #e0e0e0;
+}
+
+.tab-btn.active {
+  background: #6c63ff;
+  color: white;
+  border-color: #6c63ff;
+}
+
+/* Карточка архива */
+.archive-card {
+  position: relative;
+}
+
+.archive-status-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  z-index: 10;
+}
+
+.archive-status-badge.status-approved {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+  border: 1px solid rgba(76, 175, 80, 0.5);
+}
+
+.archive-status-badge.status-rejected {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+  border: 1px solid rgba(244, 67, 54, 0.5);
+}
+
+/* Блок причины отклонения */
+.rejection-block {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: 8px;
+  border-left: 3px solid #f44336;
+}
+
+.rejection-block strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #f44336;
+  font-size: 14px;
+}
+
+.rejection-block p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+}
+
+/* Сетка миниатюр скриншотов */
+.screenshots-grid-mini {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.screenshot-preview-small {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.screenshot-preview-small:hover {
+  border-color: #6c63ff;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
 }
 </style>
