@@ -16,6 +16,8 @@ export const useStickersStore = defineStore('stickers', () => {
 
   // Текущий режим размещения стикера
   const isPlacementMode = ref(false);
+  // Целевая поверхность для размещения (основная доска или режим рисования)
+  const placementTarget = ref('board');
 
   // ID текущей доски
   const currentBoardId = ref(null);
@@ -330,13 +332,15 @@ export const useStickersStore = defineStore('stickers', () => {
     stickers.value = [];
     currentBoardId.value = null;
     isPlacementMode.value = false;
+    placementTarget.value = 'board';   
     selectedStickerIds.value = [];
   }
 
   /**
    * Включить режим размещения стикера
    */
-  function enablePlacementMode() {
+  function enablePlacementMode(target = 'board') {
+    placementTarget.value = target;
     isPlacementMode.value = true;
   }
 
@@ -345,6 +349,11 @@ export const useStickersStore = defineStore('stickers', () => {
    */
   function disablePlacementMode() {
     isPlacementMode.value = false;
+    placementTarget.value = 'board';
+  }
+
+  function setPlacementTarget(target = 'board') {
+    placementTarget.value = target;    
   }
 
   /**
@@ -427,6 +436,7 @@ export const useStickersStore = defineStore('stickers', () => {
     stickers,
     isLoading,
     isPlacementMode,
+    placementTarget,    
     currentBoardId,
     selectedStickerIds,
     pendingFocusStickerId,
@@ -444,6 +454,7 @@ export const useStickersStore = defineStore('stickers', () => {
     clearStickers,
     enablePlacementMode,
     disablePlacementMode,
+    setPlacementTarget,    
     togglePlacementMode,
     selectSticker,
     deselectSticker,
