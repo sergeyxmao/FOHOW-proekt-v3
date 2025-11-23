@@ -118,6 +118,11 @@ const canDecrease = computed(() => menuScale.value > 1)
   color: #e5f3ff;
 }
 
+.scale-button:hover:not(:disabled) {
+  transform: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
 .scale-button:active:not(:disabled) {
   transform: scale(0.95);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -133,6 +138,12 @@ const canDecrease = computed(() => menuScale.value > 1)
   background: linear-gradient(135deg, #0f62fe 0%, #0353e9 100%);
   color: #ffffff;
   border-color: rgba(15, 98, 254, 0.5);
+  box-shadow: 0 2px 8px rgba(15, 98, 254, 0.3);
+}
+
+.scale-button--increase:hover:not(:disabled),
+.scale-button--decrease:hover:not(:disabled) {
+  transform: none;
   box-shadow: 0 2px 8px rgba(15, 98, 254, 0.3);
 }
 
