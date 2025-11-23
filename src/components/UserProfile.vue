@@ -178,6 +178,42 @@
                   :class="{ 'verified-input': user.is_verified }"
                   @input="handlePersonalIdChange"
                 />
+
+                <!-- Кнопка верификации и сообщение об отклонении -->
+                <div v-if="!user.is_verified" class="verification-section">
+                  <button
+                    v-if="!verificationStatus.hasPendingRequest"
+                    type="button"
+                    class="btn-verify"
+                    @click="openVerificationModal"
+                    :disabled="!canSubmitVerification"
+                  >
+                    <span class="btn-icon">✓</span>
+                    Верифицировать
+                  </button>
+
+                  <div v-else class="verification-pending">
+                    <span class="pending-icon">⏳</span>
+                    Заявка на модерации
+                  </div>
+
+                  <!-- Сообщение об отклонении -->
+                  <div v-if="verificationStatus.lastRejection" class="rejection-message">
+                    <div class="rejection-header">
+                      <span class="rejection-icon">❌</span>
+                      <strong>Заявка отклонена</strong>
+                    </div>
+                    <p class="rejection-reason">{{ verificationStatus.lastRejection.rejection_reason }}</p>
+                    <p class="rejection-date">
+                      {{ formatDate(verificationStatus.lastRejection.processed_at) }}
+                    </p>
+                  </div>
+
+                  <!-- Сообщение о кулдауне -->
+                  <p v-if="!canSubmitVerification && !verificationStatus.hasPendingRequest" class="cooldown-message">
+                    {{ cooldownMessage }}
+                  </p>
+                </div>
               </div>
 
               <div v-if="personalError" class="error-message">{{ personalError }}</div>
@@ -459,7 +495,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
@@ -474,7 +510,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'openVerificationModal'])
 
 const authStore = useAuthStore()
 const subscriptionStore = useSubscriptionStore()
@@ -534,6 +570,52 @@ const applyingPromo = ref(false)
 const showPersonalIdWarning = ref(false)
 const pendingPersonalId = ref('')
 
+// Статус верификации
+const verificationStatus = reactive({
+  hasPendingRequest: false,
+  lastRejection: null,
+  cooldownUntil: null
+})
+
+// Вычисляемые свойства для верификации
+const canSubmitVerification = computed(() => {
+  // Нельзя подать заявку, если уже есть ожидающая
+  if (verificationStatus.hasPendingRequest) return false
+
+  // Нельзя подать заявку, если не указан компьютерный номер
+  if (!personalForm.personal_id || !personalForm.personal_id.trim()) return false
+
+  // Нельзя подать заявку, если действует кулдаун
+  if (verificationStatus.cooldownUntil) {
+    const now = new Date()
+    const cooldownEnd = new Date(verificationStatus.cooldownUntil)
+    if (now < cooldownEnd) return false
+  }
+
+  return true
+})
+
+const cooldownMessage = computed(() => {
+  if (!verificationStatus.cooldownUntil) return ''
+
+  const now = new Date()
+  const cooldownEnd = new Date(verificationStatus.cooldownUntil)
+
+  if (now >= cooldownEnd) return ''
+
+  const diffMs = cooldownEnd - now
+  const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+
+  if (diffDays > 1) {
+    return `Повторная заявка доступна через ${diffDays} дн.`
+  } else if (diffHours > 1) {
+    return `Повторная заявка доступна через ${diffHours} ч.`
+  } else {
+    return 'Повторная заявка скоро будет доступна'
+  }
+})
+
 // Инициализация
 onMounted(async () => {
   // Принудительно загружаем свежие данные пользователя и план подписки
@@ -542,6 +624,8 @@ onMounted(async () => {
     await authStore.fetchProfile()
     // Загружаем план подписки
     await subscriptionStore.loadPlan()
+    // Загружаем статус верификации
+    await loadVerificationStatus()
   } catch (error) {
     console.error('Ошибка при загрузке данных профиля:', error)
   }
@@ -665,6 +749,31 @@ function handlePersonalIdChange() {
   } else {
     showPersonalIdWarning.value = false
   }
+}
+
+// Загрузка статуса верификации
+async function loadVerificationStatus() {
+  try {
+    const response = await fetch(`${API_URL}/verification/status`, {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      verificationStatus.hasPendingRequest = data.hasPendingRequest || false
+      verificationStatus.lastRejection = data.lastRejection || null
+      verificationStatus.cooldownUntil = data.cooldownUntil || null
+    }
+  } catch (error) {
+    console.error('Ошибка загрузки статуса верификации:', error)
+  }
+}
+
+// Открыть модальное окно верификации
+function openVerificationModal() {
+  emit('openVerificationModal')
 }
 
 // Сохранить личную информацию
@@ -1320,6 +1429,115 @@ async function handleAvatarDelete() {
 .verified-input:focus {
   border-color: #FFA500;
   box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
+}
+
+/* Секция верификации */
+.verification-section {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-verify {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.btn-verify:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.btn-verify:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-verify .btn-icon {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.verification-pending {
+  padding: 12px 16px;
+  background: rgba(255, 193, 7, 0.1);
+  border: 2px solid #FFC107;
+  border-radius: 8px;
+  color: #F57C00;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+}
+
+.user-profile--modern .verification-pending {
+  background: rgba(255, 193, 7, 0.15);
+  color: #FFB300;
+}
+
+.pending-icon {
+  font-size: 18px;
+}
+
+.rejection-message {
+  padding: 16px;
+  background: rgba(244, 67, 54, 0.05);
+  border: 2px solid rgba(244, 67, 54, 0.3);
+  border-radius: 8px;
+  color: var(--profile-text);
+}
+
+.user-profile--modern .rejection-message {
+  background: rgba(244, 67, 54, 0.1);
+  border-color: rgba(244, 67, 54, 0.4);
+}
+
+.rejection-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #f44336;
+  font-size: 16px;
+}
+
+.rejection-icon {
+  font-size: 20px;
+}
+
+.rejection-reason {
+  margin: 8px 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--profile-text);
+}
+
+.rejection-date {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--profile-muted);
+  font-style: italic;
+}
+
+.cooldown-message {
+  font-size: 14px;
+  color: var(--profile-muted);
+  font-style: italic;
+  margin: 0;
 }
 
 .form-group input {
