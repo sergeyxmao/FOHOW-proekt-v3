@@ -87,7 +87,7 @@ export function registerAdminRoutes(app) {
         `SELECT
           u.id, u.email, u.username, u.avatar_url, u.role,
           u.created_at, u.updated_at, u.subscription_expires_at,
-          u.country, u.city, u.full_name, u.phone,
+          u.country, u.city, u.full_name, u.phone, u.is_verified,
           sp.id as plan_id, sp.name as plan_name, sp.code_name as plan_code,
           (SELECT COUNT(*) FROM boards WHERE owner_id = u.id) as boards_count,
           (SELECT COUNT(*) FROM active_sessions WHERE user_id = u.id) as active_sessions
@@ -443,6 +443,7 @@ export function registerAdminRoutes(app) {
           (SELECT COUNT(*) FROM users WHERE role = 'admin') as admin_users,
           (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '7 days') as new_users_week,
           (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '30 days') as new_users_month,
+          (SELECT COUNT(*) FROM users WHERE is_verified = TRUE) as verified_users,
           (SELECT COUNT(*) FROM boards) as total_boards,
           (SELECT COUNT(*) FROM notes) as total_notes,
           (SELECT COUNT(*) FROM stickers) as total_stickers,

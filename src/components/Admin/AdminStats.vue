@@ -27,6 +27,13 @@
             <div class="stat-value">{{ stats.stats.new_users_month }}</div>
             <div class="stat-label">Новых за месяц</div>
           </div>
+          <div class="stat-card stat-card--verification">
+            <div class="stat-value">
+              <span class="verification-icon">⭐</span>
+              {{ stats.stats.verified_users || 0 }}
+            </div>
+            <div class="stat-label">Верифицированных</div>
+          </div>
         </div>
       </div>
 
@@ -218,6 +225,33 @@ h3 {
 .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card--verification {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 165, 0, 0.1) 100%);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+}
+
+.stat-card--verification .stat-value {
+  color: #FF8C00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.verification-icon {
+  font-size: 32px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .stat-value {
