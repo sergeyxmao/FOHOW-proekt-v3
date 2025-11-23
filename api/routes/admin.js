@@ -2177,7 +2177,7 @@ await pool.query(
    * Вспомогательная функция генерации CSV
    */
   function generateUserCSV(rows, title, includeVerificationDate = true, includeVerificationStatus = false) {
-    // Заголовки
+    // Заголовки колонок
     const headers = [
       'ID',
       'Компьютерный номер',
@@ -2200,10 +2200,10 @@ await pool.query(
 
     headers.push('Дата регистрации', 'Тарифный план');
 
-    let csv = '\uFEFF'; // BOM для корректного отображения кириллицы в Excel
-    csv += `"${title}"\n`;
-    csv += `"Дата экспорта: ${new Date().toLocaleString('ru-RU')}"\n`;
-    csv += `"Всего записей: ${rows.length}"\n\n`;
+    // BOM для корректного отображения кириллицы в Excel
+    let csv = '\uFEFF';
+
+    // Только заголовки таблицы
     csv += headers.join(',') + '\n';
 
     // Данные
