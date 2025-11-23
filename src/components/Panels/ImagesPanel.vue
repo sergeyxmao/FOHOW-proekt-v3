@@ -10,6 +10,10 @@ const props = defineProps({
   isModernTheme: {
     type: Boolean,
     default: false
+  },
+  placementTarget: {
+    type: String,
+    default: 'board'    
   }
 })
 
@@ -92,12 +96,18 @@ const setActiveTab = (tab) => {
     <div v-if="canUseImages" class="images-panel__content">
       <!-- Содержимое "Моя библиотека" -->
       <div v-if="activeTab === 'my'" class="images-panel__tab-content images-panel__tab-content--full">
-        <MyLibraryTab ref="myLibraryRef" />
+        <MyLibraryTab
+          ref="myLibraryRef"
+          :placement-target="props.placementTarget"
+        />
       </div>
 
       <!-- Содержимое "Общая" -->
       <div v-if="activeTab === 'shared'" class="images-panel__tab-content images-panel__tab-content--full">
-        <SharedLibraryTab ref="sharedLibraryRef" />
+        <SharedLibraryTab
+          ref="sharedLibraryRef"
+          :placement-target="props.placementTarget"
+        />
       </div>
     </div>
   </div>
