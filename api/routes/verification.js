@@ -1,0 +1,115 @@
+import { authenticateToken } from '../middleware/auth.js';
+import {
+  canSubmitVerification,
+  submitVerification,
+  getUserVerificationStatus,
+  MAX_SCREENSHOT_SIZE
+} from '../services/verificationService.js';
+
+export default async function verificationRoutes(app) {
+
+  // Проверка возможности подачи заявки
+  app.get('/api/verification/can-submit', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const userId = req.user.id;
+      const result = await canSubmitVerification(userId);
+      return reply.send(result);
+    } catch (err) {
+      console.error('[VERIFICATION] Ошибка проверки возможности подачи заявки:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  // Получение статуса верификации
+  app.get('/api/verification/status', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const userId = req.user.id;
+      const status = await getUserVerificationStatus(userId);
+      return reply.send(status);
+    } catch (err) {
+      console.error('[VERIFICATION] Ошибка получения статуса:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  // Отправка заявки на верификацию
+  app.post('/api/verification/submit', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const userId = req.user.id;
+
+      // Получить multipart данные
+      const parts = req.parts();
+
+      let fullName = null;
+      let screenshot1Buffer = null;
+      let screenshot2Buffer = null;
+
+      for await (const part of parts) {
+        if (part.type === 'field') {
+          if (part.fieldname === 'full_name') {
+            fullName = part.value;
+          }
+        } else if (part.type === 'file') {
+          const buffer = await part.toBuffer();
+
+          // Валидация MIME-типа
+          if (part.mimetype !== 'image/jpeg' && part.mimetype !== 'image/png') {
+            return reply.code(400).send({
+              error: `Недопустимый формат файла ${part.fieldname}. Разрешены только JPG и PNG.`
+            });
+          }
+
+          // Валидация размера
+          if (buffer.length > MAX_SCREENSHOT_SIZE) {
+            return reply.code(400).send({
+              error: `Файл ${part.fieldname} превышает максимальный размер 5MB.`
+            });
+          }
+
+          if (part.fieldname === 'screenshot_1') {
+            screenshot1Buffer = buffer;
+          } else if (part.fieldname === 'screenshot_2') {
+            screenshot2Buffer = buffer;
+          }
+        }
+      }
+
+      // Валидация обязательных полей
+      if (!fullName || !fullName.trim()) {
+        return reply.code(400).send({ error: 'Поле "Полное ФИО" обязательно для заполнения.' });
+      }
+
+      if (!screenshot1Buffer) {
+        return reply.code(400).send({ error: 'Первый скриншот обязателен.' });
+      }
+
+      if (!screenshot2Buffer) {
+        return reply.code(400).send({ error: 'Второй скриншот обязателен.' });
+      }
+
+      // Отправить заявку
+      const result = await submitVerification(userId, fullName.trim(), screenshot1Buffer, screenshot2Buffer);
+
+      return reply.code(201).send({
+        success: true,
+        message: 'Заявка на верификацию отправлена. Ожидайте проверки администратором.',
+        verificationId: result.verificationId
+      });
+
+    } catch (err) {
+      console.error('[VERIFICATION] Ошибка отправки заявки:', err);
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка: ${err.message}`
+        : 'Не удалось отправить заявку. Попробуйте позже.';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
+}
