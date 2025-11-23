@@ -53,11 +53,14 @@ export const useAdminStore = defineStore('admin', {
     logs: [],
     pendingImages: [],
     pendingImagesTotal: 0,
+    pendingVerifications: [],
+    pendingVerificationsTotal: 0,
     sharedFolders: [],
     sharedFoldersWithDetails: [],
     currentFolderImages: [],
     isLoading: false,
     isLoadingImages: false,
+    isLoadingVerifications: false,
     error: null,
     pagination: {
       page: 1,
@@ -952,6 +955,121 @@ export const useAdminStore = defineStore('admin', {
         return { success: true }
       } catch (err) {
         console.error('[ADMIN] Ошибка удаления изображения:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * Получить список заявок на верификацию
+     */
+    async fetchPendingVerifications() {
+      this.isLoadingVerifications = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/verifications/pending`, {
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          }
+        })
+
+        if (!response.ok) {
+          await handleAdminErrorResponse(response, 'Ошибка загрузки заявок на верификацию')
+        }
+
+        const data = await response.json()
+        this.pendingVerifications = data.items || []
+        this.pendingVerificationsTotal = data.total || 0
+
+        return data
+      } catch (err) {
+        console.error('[ADMIN] Ошибка загрузки заявок на верификацию:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoadingVerifications = false
+      }
+    },
+
+    /**
+     * Одобрить заявку на верификацию
+     * @param {number} verificationId - ID заявки
+     */
+    async approveVerification(verificationId) {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/verifications/${verificationId}/approve`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (!response.ok) {
+          await handleAdminErrorResponse(response, 'Ошибка одобрения заявки')
+        }
+
+        const data = await response.json()
+
+        // Удаляем заявку из списка ожидающих
+        this.pendingVerifications = this.pendingVerifications.filter(v => v.id !== verificationId)
+        if (this.pendingVerificationsTotal > 0) {
+          this.pendingVerificationsTotal--
+        }
+
+        return data
+      } catch (err) {
+        console.error('[ADMIN] Ошибка одобрения заявки:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * Отклонить заявку на верификацию
+     * @param {number} verificationId - ID заявки
+     * @param {string} rejectionReason - Причина отклонения
+     */
+    async rejectVerification(verificationId, rejectionReason) {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/verifications/${verificationId}/reject`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ rejection_reason: rejectionReason })
+        })
+
+        if (!response.ok) {
+          await handleAdminErrorResponse(response, 'Ошибка отклонения заявки')
+        }
+
+        const data = await response.json()
+
+        // Удаляем заявку из списка ожидающих
+        this.pendingVerifications = this.pendingVerifications.filter(v => v.id !== verificationId)
+        if (this.pendingVerificationsTotal > 0) {
+          this.pendingVerificationsTotal--
+        }
+
+        return data
+      } catch (err) {
+        console.error('[ADMIN] Ошибка отклонения заявки:', err)
         this.error = err.message
         throw err
       } finally {
