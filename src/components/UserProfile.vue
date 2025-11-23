@@ -213,6 +213,13 @@
                     {{ cooldownMessage }}
                   </p>
                 </div>
+
+                <!-- Кнопка истории верификации -->
+                <div v-if="verificationHistory.length > 0 || user.is_verified" class="verification-history-link">
+                  <button type="button" class="btn-history" @click="openHistory">
+                    📋 История верификации
+                  </button>
+                </div>
               </div>
 
               <div v-if="personalError" class="error-message">{{ personalError }}</div>
@@ -558,6 +565,62 @@
       </div>
     </transition>
   </Teleport>
+
+  <!-- Модальное окно истории верификации -->
+  <Teleport to="body">
+    <transition name="fade">
+      <div v-if="showHistory" class="modal-overlay" @click.self="closeHistory">
+        <div class="modal-history">
+          <div class="modal-history-header">
+            <h3>История верификации</h3>
+            <button class="modal-close" @click="closeHistory">×</button>
+          </div>
+
+          <div class="modal-history-body">
+            <div v-if="loadingHistory" class="loading-history">
+              <div class="spinner-small"></div>
+              <p>Загрузка истории...</p>
+            </div>
+
+            <div v-else-if="verificationHistory.length === 0" class="empty-history">
+              <p>История верификации пуста</p>
+            </div>
+
+            <div v-else class="history-list">
+              <div
+                v-for="item in verificationHistory"
+                :key="item.id"
+                class="history-item"
+                :class="getStatusClass(item.status)"
+              >
+                <div class="history-item-header">
+                  <span class="history-status">{{ getStatusLabel(item.status) }}</span>
+                  <span class="history-date">{{ formatDate(item.submitted_at) }}</span>
+                </div>
+
+                <div class="history-item-body">
+                  <p><strong>ФИО:</strong> {{ item.full_name }}</p>
+                  <p><strong>Дата подачи:</strong> {{ formatDate(item.submitted_at) }}</p>
+
+                  <div v-if="item.processed_at">
+                    <p><strong>Дата обработки:</strong> {{ formatDate(item.processed_at) }}</p>
+                    <p v-if="item.processed_by_username">
+                      <strong>Обработал:</strong> {{ item.processed_by_username }}
+                    </p>
+                  </div>
+
+                  <div v-if="item.status === 'rejected' && item.rejection_reason" class="rejection-reason-history">
+                    <strong>Причина отклонения:</strong>
+                    <p>{{ item.rejection_reason }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+  </Teleport>
 </template>
 
 <script setup>
@@ -665,6 +728,11 @@ let cooldownTimerInterval = null
 
 // Оставшееся время кулдауна (форматированная строка)
 const cooldownTimeRemaining = ref('')
+
+// История верификации
+const verificationHistory = ref([])
+const loadingHistory = ref(false)
+const showHistory = ref(false)
 
 // Вычисляемые свойства для верификации
 const canSubmitVerification = computed(() => {
@@ -945,6 +1013,56 @@ async function loadVerificationStatus() {
   } catch (error) {
     console.error('Ошибка загрузки статуса верификации:', error)
   }
+}
+
+// Функция загрузки истории верификации
+async function loadVerificationHistory() {
+  loadingHistory.value = true
+
+  try {
+    const response = await fetch(`${API_URL}/verification/history`, {
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Ошибка загрузки истории')
+    }
+
+    const data = await response.json()
+    verificationHistory.value = data.history || []
+  } catch (err) {
+    console.error('Ошибка загрузки истории верификации:', err)
+  } finally {
+    loadingHistory.value = false
+  }
+}
+
+// Открыть историю верификации
+function openHistory() {
+  showHistory.value = true
+  loadVerificationHistory()
+}
+
+// Закрыть историю верификации
+function closeHistory() {
+  showHistory.value = false
+}
+
+// Функция получения метки статуса
+function getStatusLabel(status) {
+  const labels = {
+    'pending': '⏳ На модерации',
+    'approved': '✅ Одобрено',
+    'rejected': '❌ Отклонено'
+  }
+  return labels[status] || status
+}
+
+// Функция получения класса статуса
+function getStatusClass(status) {
+  return `status-${status}`
 }
 
 // Открыть модальное окно верификации
@@ -2507,5 +2625,207 @@ async function handleAvatarDelete() {
 .btn-confirm-danger:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(255, 107, 0, 0.4);
+}
+
+/* ========================================== */
+/* ИСТОРИЯ ВЕРИФИКАЦИИ */
+/* ========================================== */
+.verification-history-link {
+  margin-top: 12px;
+}
+
+.btn-history {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #6c63ff 0%, #5848ff 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-history:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
+}
+
+/* Модальное окно истории */
+.modal-history {
+  background: #ffffff;
+  border-radius: 16px;
+  max-width: 700px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease;
+}
+
+.user-profile--modern .modal-history {
+  background: rgba(17, 24, 39, 0.98);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.modal-history-header {
+  padding: 24px 24px 16px;
+  border-bottom: 2px solid #6c63ff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 10;
+}
+
+.user-profile--modern .modal-history-header {
+  background: rgba(17, 24, 39, 0.98);
+}
+
+.modal-history-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #6c63ff;
+  font-weight: 700;
+}
+
+.user-profile--modern .modal-history-header h3 {
+  color: #8b82ff;
+}
+
+.modal-history-body {
+  padding: 24px;
+}
+
+.loading-history {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.spinner-small {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #6c63ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.empty-history {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--profile-muted);
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.history-item {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 16px;
+  border-left: 4px solid #ccc;
+  transition: all 0.2s;
+}
+
+.user-profile--modern .history-item {
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.history-item.status-approved {
+  border-left-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.05);
+}
+
+.user-profile--modern .history-item.status-approved {
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.history-item.status-rejected {
+  border-left-color: #f44336;
+  background: rgba(244, 67, 54, 0.05);
+}
+
+.user-profile--modern .history-item.status-rejected {
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.history-item.status-pending {
+  border-left-color: #FFC107;
+  background: rgba(255, 193, 7, 0.05);
+}
+
+.user-profile--modern .history-item.status-pending {
+  background: rgba(255, 193, 7, 0.1);
+}
+
+.history-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.user-profile--modern .history-item-header {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.history-status {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.history-date {
+  font-size: 13px;
+  color: var(--profile-muted);
+}
+
+.history-item-body p {
+  margin: 6px 0;
+  font-size: 14px;
+  color: var(--profile-text);
+}
+
+.history-item-body strong {
+  font-weight: 600;
+}
+
+.rejection-reason-history {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: 8px;
+  border-left: 3px solid #f44336;
+}
+
+.user-profile--modern .rejection-reason-history {
+  background: rgba(244, 67, 54, 0.15);
+}
+
+.rejection-reason-history strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #f44336;
+}
+
+.rejection-reason-history p {
+  margin: 0;
+  line-height: 1.5;
 }
 </style>
