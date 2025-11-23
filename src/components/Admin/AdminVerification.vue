@@ -57,7 +57,7 @@
                   <button
                     v-for="plan in subscriptionPlans"
                     :key="plan.id || 'null'"
-                    @click="exportByPlan(plan.name)"
+                    @click="exportByPlan(plan)"
                     class="export-menu-item"
                   >
                     📊 {{ plan.name }} ({{ plan.user_count }})
@@ -747,29 +747,44 @@ async function exportNonVerified() {
 /**
  * Экспорт пользователей по плану
  */
-async function exportByPlan(planName) {
+async function exportByPlan(plan) {
+  console.log('[ADMIN] Начало экспорта по плану:', plan)
+
   try {
     const token = authStore.token
-    const safePlanName = planName === 'Без плана' ? 'null' : planName
+    // Использовать ID плана вместо названия
+    const planId = plan.id === null ? 'null' : plan.id
+    const url = `${API_URL}/admin/export/users-by-plan/${planId}`
 
-    const response = await fetch(`${API_URL}/admin/export/users-by-plan/${encodeURIComponent(safePlanName)}`, {
+    console.log('[ADMIN] URL экспорта:', url)
+    console.log('[ADMIN] ID плана:', planId)
+
+    const response = await fetch(url, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
     })
 
+    console.log('[ADMIN] Статус ответа:', response.status)
+
     if (!response.ok) {
-      throw new Error('Ошибка экспорта данных')
+      const errorData = await response.json()
+      console.error('[ADMIN] Ошибка от сервера:', errorData)
+      throw new Error(errorData.error || 'Ошибка экспорта данных')
     }
 
     const blob = await response.blob()
-    const fileName = `users_plan_${planName.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`
+    console.log('[ADMIN] Blob получен, размер:', blob.size)
+
+    const fileName = `users_plan_${plan.name.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`
     downloadBlob(blob, fileName)
 
     showExportMenu.value = false
+
+    console.log('[ADMIN] Экспорт завершён успешно')
   } catch (err) {
     console.error('[ADMIN] Ошибка экспорта по плану:', err)
-    alert('Ошибка экспорта данных')
+    alert(`Ошибка экспорта данных: ${err.message}`)
   }
 }
 

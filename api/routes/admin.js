@@ -2330,66 +2330,93 @@ await pool.query(
 
   /**
    * Экспорт пользователей по тарифному плану в CSV
-   * GET /api/admin/export/users-by-plan/:planName
-   * Параметры: planName - название плана (Demo, Guest, Individual, Premium, Corporate) или "null" для пользователей без плана
+   * GET /api/admin/export/users-by-plan/:planId
+   * Параметры: planId - ID плана или "null" для пользователей без плана
    */
-  app.get('/api/admin/export/users-by-plan/:planName', {
+  app.get('/api/admin/export/users-by-plan/:planId', {
     preHandler: [authenticateToken, requireAdmin]
   }, async (req, reply) => {
     try {
-      const { planName } = req.params;
-      console.log(`[ADMIN] Экспорт пользователей по плану "${planName}", admin_id=` + req.user.id);
+      const { planId } = req.params;
 
-      let query;
-      let queryParams = [];
+      console.log(`[ADMIN] Экспорт пользователей по плану ID="${planId}", admin_id=${req.user.id}`);
 
-      if (planName === 'null' || planName === 'NULL') {
+      let result;
+      let planName = '';
+
+      if (planId === 'null' || planId === 'NULL') {
         // Пользователи без плана
-        query = `SELECT
-          u.id,
-          u.personal_id,
-          u.full_name,
-          u.email,
-          u.username,
-          u.phone,
-          u.city,
-          u.country,
-          u.office,
-          u.is_verified,
-          u.verified_at,
-          u.created_at,
-          'Без плана' as plan_name
-         FROM users u
-         WHERE u.plan_id IS NULL
-         ORDER BY u.created_at DESC`;
+        console.log('[ADMIN] Экспорт пользователей без плана');
+
+        result = await pool.query(
+          `SELECT
+            u.id,
+            u.personal_id,
+            u.full_name,
+            u.email,
+            u.username,
+            u.phone,
+            u.city,
+            u.country,
+            u.office,
+            u.is_verified,
+            u.verified_at,
+            u.created_at,
+            'Без плана' as plan_name
+           FROM users u
+           WHERE u.plan_id IS NULL
+           ORDER BY u.created_at DESC`
+        );
+
+        planName = 'Без плана';
       } else {
-        // Пользователи конкретного плана
-        query = `SELECT
-          u.id,
-          u.personal_id,
-          u.full_name,
-          u.email,
-          u.username,
-          u.phone,
-          u.city,
-          u.country,
-          u.office,
-          u.is_verified,
-          u.verified_at,
-          u.created_at,
-          sp.name as plan_name
-         FROM users u
-         JOIN subscription_plans sp ON u.plan_id = sp.id
-         WHERE sp.name = $1
-         ORDER BY u.created_at DESC`;
-        queryParams = [planName];
+        // Пользователи конкретного плана по ID
+        console.log(`[ADMIN] Поиск плана с ID: ${planId}`);
+
+        // Получить название плана по ID
+        const planCheck = await pool.query(
+          'SELECT id, name FROM subscription_plans WHERE id = $1',
+          [parseInt(planId)]
+        );
+
+        if (planCheck.rows.length === 0) {
+          console.error(`[ADMIN] План с ID ${planId} не найден в БД`);
+          return reply.code(404).send({
+            error: `План с ID ${planId} не найден`
+          });
+        }
+
+        planName = planCheck.rows[0].name;
+        console.log(`[ADMIN] План найден: "${planName}"`);
+
+        result = await pool.query(
+          `SELECT
+            u.id,
+            u.personal_id,
+            u.full_name,
+            u.email,
+            u.username,
+            u.phone,
+            u.city,
+            u.country,
+            u.office,
+            u.is_verified,
+            u.verified_at,
+            u.created_at,
+            sp.name as plan_name
+           FROM users u
+           JOIN subscription_plans sp ON u.plan_id = sp.id
+           WHERE sp.id = $1
+           ORDER BY u.created_at DESC`,
+          [parseInt(planId)]
+        );
       }
 
-      const result = await pool.query(query, queryParams);
+      console.log(`[ADMIN] Найдено пользователей: ${result.rows.length}`);
 
       const csv = generateUserCSV(result.rows, `Пользователи плана: ${planName}`, true, true);
 
-      console.log(`[ADMIN] Экспортировано пользователей по плану "${planName}": ${result.rows.length}`);
+      console.log(`[ADMIN] CSV сгенерирован, размер: ${csv.length} символов`);
 
       const fileName = `users_plan_${planName.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
 
@@ -2400,7 +2427,11 @@ await pool.query(
 
     } catch (err) {
       console.error(`[ADMIN] Ошибка экспорта пользователей по плану:`, err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
+      console.error(`[ADMIN] Stack trace:`, err.stack);
+      return reply.code(500).send({
+        error: 'Ошибка сервера',
+        message: err.message
+      });
     }
   });
 
