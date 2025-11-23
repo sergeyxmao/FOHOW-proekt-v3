@@ -27,6 +27,11 @@
           <div v-else class="profile-avatar-placeholder">
             {{ getInitials(user.username || user.email) }}
           </div>
+
+          <!-- Значок верификации -->
+          <div v-if="user.is_verified" class="verification-badge" title="Верифицированный пользователь">
+            ⭐
+          </div>
         </div>
         <div class="avatar-actions">
           <label class="btn-upload">
@@ -946,7 +951,30 @@ async function handleAvatarDelete() {
 }
 
 .avatar-wrapper {
+  position: relative;
+  display: inline-block;
   flex-shrink: 0;
+}
+
+.verification-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.user-profile--modern .verification-badge {
+  border-color: rgba(17, 24, 39, 0.95);
 }
 
 .profile-avatar,

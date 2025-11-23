@@ -277,13 +277,18 @@ watch(
           @click="handleAvatarClick"
           :title="user?.name || 'Профиль'"
         >
-          <img
-            v-if="user?.avatar_url"
-            :src="getAvatarUrl(user.avatar_url)"
-            alt="Аватар"
-            class="avatar-image"
-          >
-          <span v-else class="avatar-initials">{{ userInitials }}</span>
+          <div class="avatar-container">
+            <img
+              v-if="user?.avatar_url"
+              :src="getAvatarUrl(user.avatar_url)"
+              alt="Аватар"
+              class="avatar-image"
+            >
+            <span v-else class="avatar-initials">{{ userInitials }}</span>
+
+            <!-- Значок верификации -->
+            <div v-if="user?.is_verified" class="verification-badge-mini" title="Верифицирован">⭐</div>
+          </div>
         </button>
         <button
           v-else-if="!isLoadingProfile"
@@ -558,6 +563,34 @@ watch(
 .avatar-initials {
   font-size: 16px;
   font-weight: 700;
+}
+
+.avatar-container {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+}
+
+.verification-badge-mini {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 18px;
+  height: 18px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.mobile-header--dark .verification-badge-mini {
+  border-color: rgba(28, 38, 58, 0.95);
 }
 .mobile-user-menu-overlay {
   position: fixed;
