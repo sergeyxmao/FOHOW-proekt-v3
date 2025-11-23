@@ -282,12 +282,19 @@ export const useAuthStore = defineStore('auth', {
           // Если токен невалиден, вызываем logout
           const errorData = await response.json().catch(() => ({})); // Пытаемся получить тело ошибки
           console.error('Ошибка загрузки профиля (невалидный токен?):', errorData.error || response.statusText);
-          await this.logout(); 
+          await this.logout();
           throw new Error(errorData.error || 'Ошибка загрузки профиля'); // Перебрасываем ошибку дальше
         }
 
         const data = await response.json()
-        this.user = mergeUserData(this.user, data.user)
+
+        // ВАЖНО: Обновить все поля, включая is_verified и verified_at
+        this.user = {
+          ...mergeUserData(this.user, data.user),
+          is_verified: data.user?.is_verified || false,
+          verified_at: data.user?.verified_at || null
+        }
+
         localStorage.setItem('user', JSON.stringify(this.user))
 
         return data.user

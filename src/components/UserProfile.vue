@@ -658,6 +658,9 @@ const verificationForm = reactive({
 const verificationError = ref('')
 const submittingVerification = ref(false)
 
+// Интервал автоматической проверки статуса верификации
+let verificationCheckInterval = null
+
 // Вычисляемые свойства для верификации
 const canSubmitVerification = computed(() => {
   // Нельзя подать заявку, если уже есть ожидающая
@@ -725,10 +728,23 @@ onMounted(async () => {
     socialForm.instagram_profile = user.value.instagram_profile || ''
     socialForm.website = user.value.website || ''
   }
+
+  // Автоматически проверять статус верификации каждые 10 секунд (если есть pending заявка)
+  verificationCheckInterval = setInterval(async () => {
+    if (verificationStatus.hasPendingRequest) {
+      await loadVerificationStatus()
+    }
+  }, 10000) // 10 секунд
 })
 
 onBeforeUnmount(() => {
   cancelCrop()
+
+  // Очистить интервал автоматической проверки статуса верификации
+  if (verificationCheckInterval) {
+    clearInterval(verificationCheckInterval)
+    verificationCheckInterval = null
+  }
 })
 
 // Форматирование даты
@@ -843,6 +859,12 @@ async function loadVerificationStatus() {
 
     if (response.ok) {
       const data = await response.json()
+
+      // Если статус верификации изменился, обновить профиль пользователя
+      if (data.isVerified !== user.value.is_verified) {
+        await authStore.fetchProfile()
+      }
+
       verificationStatus.isVerified = data.isVerified || false
       verificationStatus.hasPendingRequest = data.hasPendingRequest || false
       verificationStatus.lastRejection = data.lastRejection || null
