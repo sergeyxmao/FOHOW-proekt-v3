@@ -29,6 +29,11 @@
         <AdminUsers />
       </div>
 
+      <!-- Вкладка: Верификация -->
+      <div v-if="activeTab === 'verification'" class="tab-content">
+        <AdminVerification />
+      </div>
+
       <!-- Вкладка: Логи -->
       <div v-if="activeTab === 'logs'" class="tab-content">
         <AdminLogs />
@@ -60,6 +65,7 @@ import { useAdminStore } from '../stores/admin'
 import { useAuthStore } from '../stores/auth'
 import AdminStats from '../components/Admin/AdminStats.vue'
 import AdminUsers from '../components/Admin/AdminUsers.vue'
+import AdminVerification from '../components/Admin/AdminVerification.vue'
 import AdminLogs from '../components/Admin/AdminLogs.vue'
 import AdminImagesModeration from '../components/Admin/AdminImagesModeration.vue'
 import AdminSharedLibrary from '../components/Admin/AdminSharedLibrary.vue'
@@ -73,6 +79,7 @@ const activeTab = ref('stats')
 const tabs = [
   { id: 'stats', label: 'Статистика' },
   { id: 'users', label: 'Пользователи' },
+  { id: 'verification', label: 'Верификация' },
   { id: 'moderation', label: 'Модерация изображений' },
   { id: 'library', label: 'Общая библиотека' },
   { id: 'logs', label: 'Логи' }
