@@ -21,13 +21,61 @@
           </button>
         </div>
       </div>
-      <button
-        @click="activeTab === 'pending' ? loadVerifications() : loadArchive()"
-        class="refresh-button"
-        :disabled="adminStore.isLoadingVerifications || archiveLoading"
-      >
-        Обновить
-      </button>
+
+      <div class="header-actions">
+        <!-- Выпадающее меню экспорта -->
+        <div class="export-dropdown" @click.stop>
+          <button
+            @click="toggleExportMenu"
+            class="export-button"
+            title="Экспорт пользователей"
+          >
+            📥 Экспорт
+          </button>
+
+          <transition name="fade">
+            <div v-if="showExportMenu" class="export-menu" @click.stop>
+              <div class="export-menu-section">
+                <div class="export-menu-title">По статусу верификации</div>
+                <button @click="exportVerified" class="export-menu-item">
+                  ⭐ Верифицированные
+                </button>
+                <button @click="exportNonVerified" class="export-menu-item">
+                  ⚪ Не верифицированные
+                </button>
+              </div>
+
+              <div class="export-menu-divider"></div>
+
+              <div class="export-menu-section">
+                <div class="export-menu-title">По тарифным планам</div>
+                <div v-if="loadingPlans" class="export-menu-loading">
+                  <div class="spinner-tiny"></div>
+                  <span>Загрузка...</span>
+                </div>
+                <div v-else>
+                  <button
+                    v-for="plan in subscriptionPlans"
+                    :key="plan.id || 'null'"
+                    @click="exportByPlan(plan.name)"
+                    class="export-menu-item"
+                  >
+                    📊 {{ plan.name }} ({{ plan.user_count }})
+                  </button>
+                </div>
+              </div>
+            </div>
+          </transition>
+        </div>
+
+        <button
+          @click="activeTab === 'pending' ? loadVerifications() : loadArchive()"
+          class="refresh-button"
+          :disabled="adminStore.isLoadingVerifications || archiveLoading"
+        >
+          Обновить
+        </button>
+      </div>
     </div>
 
     <!-- Контент для "В очереди" -->
@@ -290,6 +338,11 @@ const activeTab = ref('pending') // 'pending' или 'archive'
 const archiveVerifications = ref([])
 const archiveLoading = ref(false)
 const archiveError = ref(null)
+
+// Переменные для экспорта
+const showExportMenu = ref(false)
+const subscriptionPlans = ref([])
+const loadingPlans = ref(false)
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
@@ -573,6 +626,153 @@ function switchTab(tab) {
   }
 }
 
+// ============================================
+// ФУНКЦИИ ЭКСПОРТА
+// ============================================
+
+/**
+ * Загрузить список тарифных планов
+ */
+async function loadSubscriptionPlans() {
+  if (subscriptionPlans.value.length > 0) return
+
+  loadingPlans.value = true
+  try {
+    const token = authStore.token
+
+    const response = await fetch(`${API_URL}/admin/subscription-plans`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Ошибка загрузки планов')
+    }
+
+    const data = await response.json()
+    subscriptionPlans.value = data.plans || []
+  } catch (err) {
+    console.error('[ADMIN] Ошибка загрузки планов:', err)
+  } finally {
+    loadingPlans.value = false
+  }
+}
+
+/**
+ * Открыть/закрыть меню экспорта
+ */
+function toggleExportMenu() {
+  showExportMenu.value = !showExportMenu.value
+  if (showExportMenu.value && subscriptionPlans.value.length === 0) {
+    loadSubscriptionPlans()
+  }
+}
+
+/**
+ * Закрыть меню при клике вне
+ */
+function closeExportMenu() {
+  showExportMenu.value = false
+}
+
+/**
+ * Вспомогательная функция скачивания blob
+ */
+function downloadBlob(blob, fileName) {
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  window.URL.revokeObjectURL(url)
+  document.body.removeChild(a)
+}
+
+/**
+ * Экспорт верифицированных пользователей
+ */
+async function exportVerified() {
+  try {
+    const token = authStore.token
+
+    const response = await fetch(`${API_URL}/admin/export/verified-users`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Ошибка экспорта данных')
+    }
+
+    const blob = await response.blob()
+    downloadBlob(blob, `verified_users_${new Date().toISOString().split('T')[0]}.csv`)
+
+    showExportMenu.value = false
+  } catch (err) {
+    console.error('[ADMIN] Ошибка экспорта верифицированных:', err)
+    alert('Ошибка экспорта данных')
+  }
+}
+
+/**
+ * Экспорт НЕ верифицированных пользователей
+ */
+async function exportNonVerified() {
+  try {
+    const token = authStore.token
+
+    const response = await fetch(`${API_URL}/admin/export/non-verified-users`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Ошибка экспорта данных')
+    }
+
+    const blob = await response.blob()
+    downloadBlob(blob, `non_verified_users_${new Date().toISOString().split('T')[0]}.csv`)
+
+    showExportMenu.value = false
+  } catch (err) {
+    console.error('[ADMIN] Ошибка экспорта НЕ верифицированных:', err)
+    alert('Ошибка экспорта данных')
+  }
+}
+
+/**
+ * Экспорт пользователей по плану
+ */
+async function exportByPlan(planName) {
+  try {
+    const token = authStore.token
+    const safePlanName = planName === 'Без плана' ? 'null' : planName
+
+    const response = await fetch(`${API_URL}/admin/export/users-by-plan/${encodeURIComponent(safePlanName)}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Ошибка экспорта данных')
+    }
+
+    const blob = await response.blob()
+    const fileName = `users_plan_${planName.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`
+    downloadBlob(blob, fileName)
+
+    showExportMenu.value = false
+  } catch (err) {
+    console.error('[ADMIN] Ошибка экспорта по плану:', err)
+    alert('Ошибка экспорта данных')
+  }
+}
+
 /**
  * Открыть скриншот в модальном окне (для архива)
  */
@@ -588,10 +788,13 @@ function openArchiveScreenshotPreview(url) {
 // Загрузить заявки при монтировании
 onMounted(async () => {
   await loadVerifications()
+  // Закрывать меню экспорта при клике вне его
+  document.addEventListener('click', closeExportMenu)
 })
 
 onBeforeUnmount(() => {
   Object.values(screenshotCache.value).forEach((url) => URL.revokeObjectURL(url))
+  document.removeEventListener('click', closeExportMenu)
 })  
 </script>
 
@@ -1213,5 +1416,131 @@ onBeforeUnmount(() => {
   border-color: #6c63ff;
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
+}
+
+/* Действия в шапке */
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Выпадающее меню экспорта */
+.export-dropdown {
+  position: relative;
+}
+
+.export-button {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.export-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.export-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  min-width: 280px;
+  z-index: 1000;
+  overflow: hidden;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.export-menu-section {
+  padding: 12px;
+}
+
+.export-menu-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #999;
+  margin-bottom: 8px;
+  padding: 0 8px;
+}
+
+.export-menu-item {
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  text-align: left;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.export-menu-item:hover {
+  background: #f5f5f5;
+  color: #6c63ff;
+}
+
+.export-menu-divider {
+  height: 1px;
+  background: #e0e0e0;
+  margin: 8px 12px;
+}
+
+.export-menu-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  color: #999;
+  font-size: 14px;
+}
+
+.spinner-tiny {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #6c63ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Transition для fade */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
