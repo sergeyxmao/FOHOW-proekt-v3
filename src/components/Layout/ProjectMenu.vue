@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useProjectActions } from '../../composables/useProjectActions.js'
+import { useAuthStore } from '../../stores/auth.js'  
 import ExportSettingsModal from '../ExportSettingsModal.vue'
 
 const props = defineProps({
@@ -13,7 +14,8 @@ const props = defineProps({
 
 const emit = defineEmits(['request-close'])
 const { t } = useI18n()
-
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.user?.role === 'admin')
 const {
   handleSaveProject,
   handleLoadProject,
@@ -57,44 +59,50 @@ const handleExport = async (settings) => {
   }
 }
 
-const items = computed(() => [
-  {
-    id: 'save-json',
-    icon: '💾',
-    label: t('projectMenu.saveJson'),
-    action: handleSaveProject
-  },
-  {
-    id: 'load-json',
-    icon: '📂',
-    label: t('projectMenu.loadJson'),
-    action: handleLoadProject
-  },
-  {
-    id: 'export-html',
-    icon: '🌐',
-    label: t('projectMenu.exportHtml'),
-    action: handleExportHTML
-  },
-  {
-    id: 'export-svg',
-    icon: '🖋️',
-    label: t('projectMenu.exportSvg'),
-    action: handleExportSVG
-  },
-  {
-    id: 'export-png',
-    icon: '🖼️',
-    label: t('projectMenu.exportPng'),
-    action: openExportModal
-  },
-  {
-    id: 'print',
-    icon: '🖨️',
-    label: t('projectMenu.print'),
-    action: handlePrint
-  }
-])
+const items = computed(() => {
+  const baseItems = [
+    {
+      id: 'save-json',
+      icon: '💾',
+      label: t('projectMenu.saveJson'),
+      action: handleSaveProject
+    },
+    {
+      id: 'load-json',
+      icon: '📂',
+      label: t('projectMenu.loadJson'),
+      action: handleLoadProject
+    },
+    {
+      id: 'export-html',
+      icon: '🌐',
+      label: t('projectMenu.exportHtml'),
+      action: handleExportHTML
+    },
+    {
+      id: 'export-svg',
+      icon: '🖋️',
+      label: t('projectMenu.exportSvg'),
+      action: handleExportSVG
+    },
+    {
+      id: 'export-png',
+      icon: '🖼️',
+      label: t('projectMenu.exportPng'),
+      action: openExportModal
+    },
+    {
+      id: 'print',
+      icon: '🖨️',
+      label: t('projectMenu.print'),
+      action: handlePrint
+    }
+  ]
+
+  const adminOnlyItems = new Set(['save-json', 'load-json', 'export-svg'])
+
+  return baseItems.filter((item) => !adminOnlyItems.has(item.id) || isAdmin.value)
+})
 
 const handleItemClick = async (item) => {
   if (item.hasSubmenu) {
