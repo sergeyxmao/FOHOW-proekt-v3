@@ -3418,7 +3418,7 @@ const handleStageClick = async (event) => {
   }
 
   // Если активен режим размещения стикера/изображения
-  if (stickersStore.isPlacementMode) {
+  if (stickersStore.isPlacementMode && stickersStore.placementTarget === 'board') {
     // Выключаем режим размещения СРАЗУ, чтобы предотвратить дублирование
     stickersStore.disablePlacementMode();
 
