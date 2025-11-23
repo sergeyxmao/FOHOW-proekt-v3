@@ -163,12 +163,20 @@
               </div>
 
               <div class="form-group">
-                <label for="personal-id">Компьютерный номер:</label>
+                <label
+                  for="personal-id"
+                  :class="{ 'verified-label': user.is_verified }"
+                >
+                  Компьютерный номер:
+                  <span v-if="user.is_verified" class="verified-icon" title="Верифицирован">⭐</span>
+                </label>
                 <input
                   id="personal-id"
                   v-model="personalForm.personal_id"
                   type="text"
                   placeholder="Введите компьютерный номер"
+                  :class="{ 'verified-input': user.is_verified }"
+                  @input="handlePersonalIdChange"
                 />
               </div>
 
@@ -616,6 +624,12 @@ function getLimitColor(percentage) {
   if (percentage < 70) return '#4caf50' // Зелёный
   if (percentage < 90) return '#ffc107' // Оранжевый
   return '#f44336' // Красный
+}
+
+// Обработчик изменения компьютерного номера
+function handlePersonalIdChange() {
+  // Функция вызывается при изменении поля "Компьютерный номер"
+  // Может использоваться для отслеживания изменений или отмены верификации
 }
 
 // Сохранить личную информацию
@@ -1191,6 +1205,34 @@ async function handleAvatarDelete() {
   font-weight: 600;
   font-size: 14px;
   color: var(--profile-muted);
+}
+
+/* Стили для верифицированного поля "Компьютерный номер" */
+.verified-label {
+  background: linear-gradient(90deg, #FFD700 0%, #FFA500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.verified-icon {
+  font-size: 16px;
+  -webkit-text-fill-color: initial;
+}
+
+.verified-input {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 165, 0, 0.1) 100%);
+  border: 2px solid #FFD700;
+  font-weight: 600;
+}
+
+.verified-input:focus {
+  border-color: #FFA500;
+  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
 }
 
 .form-group input {
