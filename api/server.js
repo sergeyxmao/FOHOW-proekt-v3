@@ -22,6 +22,7 @@ import { registerPromoRoutes } from './routes/promo.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerImageRoutes } from './routes/images.js';
 import { registerAnchorRoutes } from './routes/anchors.js';
+import verificationRoutes from './routes/verification.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
 import {
@@ -1758,6 +1759,11 @@ registerImageRoutes(app);
 // ТОЧКИ (ANCHORS)
 // ============================================
 registerAnchorRoutes(app);
+
+// ============================================
+// ВЕРИФИКАЦИЯ (VERIFICATION)
+// ============================================
+app.register(verificationRoutes);
 
 // ============================================
 // СТИКЕРЫ (STICKERS)
