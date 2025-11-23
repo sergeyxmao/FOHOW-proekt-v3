@@ -112,4 +112,38 @@ export default async function verificationRoutes(app) {
       return reply.code(500).send({ error: errorMessage });
     }
   });
+
+  // Получить историю верификации пользователя
+  app.get('/api/verification/history', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const userId = req.user.id;
+
+      const { pool } = await import('../db.js');
+
+      const result = await pool.query(
+        `SELECT
+          id,
+          full_name,
+          status,
+          rejection_reason,
+          submitted_at,
+          processed_at,
+          (SELECT username FROM users WHERE id = v.processed_by) as processed_by_username
+         FROM user_verifications v
+         WHERE user_id = $1
+         ORDER BY submitted_at DESC`,
+        [userId]
+      );
+
+      return reply.send({
+        success: true,
+        history: result.rows
+      });
+    } catch (err) {
+      console.error('[VERIFICATION] Ошибка получения истории:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
 }
