@@ -176,7 +176,6 @@
                   type="text"
                   placeholder="Введите компьютерный номер"
                   :class="{ 'verified-input': user.is_verified }"
-                  @input="handlePersonalIdChange"
                 />
 
                 <!-- Кнопка верификации и сообщение об отклонении -->
@@ -838,15 +837,6 @@ function getLimitColor(percentage) {
   return '#f44336' // Красный
 }
 
-// Обработчик изменения компьютерного номера
-function handlePersonalIdChange() {
-  if (user.value.is_verified && personalForm.personal_id !== user.value.personal_id) {
-    showPersonalIdWarning.value = true
-    pendingPersonalId.value = personalForm.personal_id
-  } else {
-    showPersonalIdWarning.value = false
-  }
-}
 
 // Загрузка статуса верификации
 async function loadVerificationStatus() {
@@ -995,14 +985,19 @@ async function savePersonalInfo() {
   personalError.value = ''
   personalSuccess.value = ''
 
-  // Если пользователь верифицирован и меняет номер, показать предупреждение
-  if (user.value.is_verified && personalForm.personal_id !== user.value.personal_id) {
+  // КРИТИЧЕСКИ ВАЖНО: Проверка изменения номера для верифицированных пользователей
+  if (user.value.is_verified &&
+      personalForm.personal_id &&
+      personalForm.personal_id.trim() !== '' &&
+      personalForm.personal_id !== user.value.personal_id) {
+
+    // Открыть модальное окно предупреждения
     showPersonalIdWarning.value = true
     pendingPersonalId.value = personalForm.personal_id
-    return
+    return // Остановить выполнение до подтверждения
   }
 
-  // Остальная логика сохранения остаётся без изменений
+  // Если предупреждение не нужно, продолжить обычное сохранение
   savingPersonal.value = true
 
   try {
