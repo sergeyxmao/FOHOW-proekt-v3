@@ -1,5 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useSidePanelsStore } from '../../stores/sidePanels.js';
+import ImagesPanel from '../Panels/ImagesPanel.vue';  
 
 const props = defineProps({
   snapshot: {
@@ -26,6 +28,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close']);
+const sidePanelsStore = useSidePanelsStore();
 
 const drawingCanvasRef = ref(null);
 const canvasContext = ref(null);
@@ -71,6 +74,8 @@ const panStartPoint = ref(null);
 const panInitialOffset = ref({ x: 0, y: 0 });  
 const ERASER_MIN_SIZE = 4;
 const ERASER_MAX_SIZE = 80;
+  
+const isImagesPanelOpen = computed(() => sidePanelsStore.currentPanel === 'images');
 
 const MAX_HISTORY_LENGTH = 50;
 const MARKER_MIN_SIZE = 30;
@@ -161,7 +166,11 @@ const panelStyle = computed(() => {
 const panelClasses = computed(() => [
   'pencil-overlay__panel',
   props.isModernTheme ? 'pencil-overlay__panel--modern' : 'pencil-overlay__panel--classic'
-]);  
+]);
+
+const openImagesPanel = () => {
+  sidePanelsStore.openPanel('images');
+};
 const hexToRgba = (hex, alpha) => {
   if (typeof hex !== 'string') {
     return `rgba(0, 0, 0, ${alpha})`;
@@ -1289,6 +1298,18 @@ const closeAllDropdowns = () => {
           </div>
         </div>
       </div>
+
+      <!-- Изображения -->
+      <div class="pencil-overlay__tool-item">
+        <button
+          type="button"
+          class="pencil-overlay__tool-btn"
+          title="Изображения"
+          @click="openImagesPanel"
+        >
+          🖼️
+        </button>
+      </div>      
     </div>
 
     <!-- Кнопки отмена/повтор в центре сверху -->
@@ -1312,6 +1333,12 @@ const closeAllDropdowns = () => {
         Повтор ↷
       </button>
     </div>
+
+    <!-- Панель изображений -->
+    <ImagesPanel
+      v-if="isImagesPanelOpen"
+      :is-modern-theme="false"
+    />    
   </div>
 </template>
 
@@ -1464,7 +1491,23 @@ const closeAllDropdowns = () => {
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* Панель изображений в режиме рисования */
+.pencil-overlay .images-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 400px;
+  height: 100vh;
+  z-index: 10002;
+  background: white;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+}
 
+@media (max-width: 768px) {
+  .pencil-overlay .images-panel {
+    width: 100%;
+  }
+}
 .pencil-overlay__board {
   position: fixed;
   background-repeat: no-repeat;
