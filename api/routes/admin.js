@@ -2418,7 +2418,9 @@ await pool.query(
 
       console.log(`[ADMIN] CSV сгенерирован, размер: ${csv.length} символов`);
 
-      const fileName = `users_plan_${planName.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+      // Использовать ID плана вместо названия, чтобы избежать кириллицы в HTTP-заголовках
+      const safeFileName = planId === 'null' || planId === 'NULL' ? 'no_plan' : `plan_${planId}`;
+      const fileName = `users_${safeFileName}_${new Date().toISOString().split('T')[0]}.csv`;
 
       return reply
         .header('Content-Type', 'text/csv; charset=utf-8')
