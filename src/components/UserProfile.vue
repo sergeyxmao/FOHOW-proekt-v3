@@ -429,6 +429,33 @@
       </div>
     </div>
   </transition>
+
+  <!-- Модальное окно предупреждения об отмене верификации -->
+  <Teleport to="body">
+    <transition name="fade">
+      <div v-if="showPersonalIdWarning" class="modal-overlay" @click.self="cancelPersonalIdChange">
+        <div class="modal-warning">
+          <div class="modal-warning-header">
+            <h3>ВНИМАНИЕ!</h3>
+            <button class="modal-close" @click="cancelPersonalIdChange">×</button>
+          </div>
+          <div class="modal-warning-body">
+            <p>Изменение компьютерного номера приведет к <strong>потере статуса верификации</strong>.</p>
+            <p>Вам придется заново пройти процедуру верификации.</p>
+            <p class="modal-warning-question">Вы уверены, что хотите изменить номер?</p>
+          </div>
+          <div class="modal-warning-actions">
+            <button class="btn-cancel" @click="cancelPersonalIdChange">
+              Отменить
+            </button>
+            <button class="btn-confirm-danger" @click="confirmPersonalIdChange">
+              Изменить номер
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+  </Teleport>
 </template>
 
 <script setup>
@@ -502,6 +529,10 @@ const promoCodeInput = ref('')
 const promoError = ref('')
 const promoSuccess = ref('')
 const applyingPromo = ref(false)
+
+// Предупреждение об изменении компьютерного номера
+const showPersonalIdWarning = ref(false)
+const pendingPersonalId = ref('')
 
 // Инициализация
 onMounted(async () => {
@@ -628,27 +659,39 @@ function getLimitColor(percentage) {
 
 // Обработчик изменения компьютерного номера
 function handlePersonalIdChange() {
-  // Функция вызывается при изменении поля "Компьютерный номер"
-  // Может использоваться для отслеживания изменений или отмены верификации
+  if (user.value.is_verified && personalForm.personal_id !== user.value.personal_id) {
+    showPersonalIdWarning.value = true
+    pendingPersonalId.value = personalForm.personal_id
+  } else {
+    showPersonalIdWarning.value = false
+  }
 }
 
 // Сохранить личную информацию
 async function savePersonalInfo() {
   personalError.value = ''
   personalSuccess.value = ''
+
+  // Если пользователь верифицирован и меняет номер, показать предупреждение
+  if (user.value.is_verified && personalForm.personal_id !== user.value.personal_id) {
+    showPersonalIdWarning.value = true
+    pendingPersonalId.value = personalForm.personal_id
+    return
+  }
+
+  // Остальная логика сохранения остаётся без изменений
   savingPersonal.value = true
 
   try {
-    const profileData = {
-      full_name: personalForm.full_name?.trim() || '',
-      phone: personalForm.phone?.trim() || '',
-      city: personalForm.city?.trim() || '',
-      country: personalForm.country?.trim() || '',
-      office: personalForm.office?.trim() || '',
-      personal_id: personalForm.personal_id?.trim() || ''
-    }
+    await authStore.updateProfile({
+      full_name: personalForm.full_name,
+      phone: personalForm.phone,
+      city: personalForm.city,
+      country: personalForm.country,
+      office: personalForm.office,
+      personal_id: personalForm.personal_id
+    })
 
-    await authStore.updateProfile(profileData)
     personalSuccess.value = 'Личная информация успешно обновлена!'
 
     setTimeout(() => {
@@ -658,6 +701,50 @@ async function savePersonalInfo() {
     personalError.value = err.message || 'Произошла ошибка при сохранении'
   } finally {
     savingPersonal.value = false
+  }
+}
+
+// Подтвердить изменение компьютерного номера
+function confirmPersonalIdChange() {
+  showPersonalIdWarning.value = false
+  // Продолжить сохранение с новым номером
+  savePersonalInfoConfirmed()
+}
+
+// Отменить изменение компьютерного номера
+function cancelPersonalIdChange() {
+  showPersonalIdWarning.value = false
+  // Вернуть старое значение
+  personalForm.personal_id = user.value.personal_id
+  pendingPersonalId.value = ''
+}
+
+// Сохранить личную информацию после подтверждения
+async function savePersonalInfoConfirmed() {
+  savingPersonal.value = true
+  personalError.value = ''
+  personalSuccess.value = ''
+
+  try {
+    await authStore.updateProfile({
+      full_name: personalForm.full_name,
+      phone: personalForm.phone,
+      city: personalForm.city,
+      country: personalForm.country,
+      office: personalForm.office,
+      personal_id: pendingPersonalId.value
+    })
+
+    personalSuccess.value = 'Личная информация обновлена. Верификация отменена.'
+
+    setTimeout(() => {
+      personalSuccess.value = ''
+    }, 3000)
+  } catch (err) {
+    personalError.value = err.message || 'Произошла ошибка при сохранении'
+  } finally {
+    savingPersonal.value = false
+    pendingPersonalId.value = ''
   }
 }
 
@@ -1672,5 +1759,175 @@ async function handleAvatarDelete() {
   .cropper-body {
     max-height: 320px;
   }
+}
+
+/* ========================================== */
+/* МОДАЛЬНОЕ ОКНО ПРЕДУПРЕЖДЕНИЯ */
+/* ========================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.modal-warning {
+  background: #ffffff;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease;
+}
+
+.user-profile--modern .modal-warning {
+  background: rgba(17, 24, 39, 0.98);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-warning-header {
+  padding: 24px 24px 16px;
+  border-bottom: 2px solid #FFA500;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-warning-header h3 {
+  margin: 0;
+  font-size: 22px;
+  color: #FF6B00;
+  font-weight: 700;
+}
+
+.user-profile--modern .modal-warning-header h3 {
+  color: #FFA500;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 32px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.user-profile--modern .modal-close:hover {
+  color: #e2e8f0;
+}
+
+.modal-warning-body {
+  padding: 24px;
+}
+
+.modal-warning-body p {
+  margin: 0 0 12px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #333;
+}
+
+.user-profile--modern .modal-warning-body p {
+  color: #e2e8f0;
+}
+
+.modal-warning-body strong {
+  color: #FF6B00;
+  font-weight: 700;
+}
+
+.user-profile--modern .modal-warning-body strong {
+  color: #FFA500;
+}
+
+.modal-warning-question {
+  margin-top: 20px;
+  font-weight: 600;
+  font-size: 17px;
+  color: #111;
+}
+
+.user-profile--modern .modal-warning-question {
+  color: #f1f5f9;
+}
+
+.modal-warning-actions {
+  padding: 16px 24px 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.btn-cancel {
+  padding: 12px 24px;
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+  background: #e0e0e0;
+}
+
+.user-profile--modern .btn-cancel {
+  background: rgba(51, 65, 85, 0.9);
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.user-profile--modern .btn-cancel:hover {
+  background: rgba(71, 85, 105, 0.95);
+}
+
+.btn-confirm-danger {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #FF6B00 0%, #FF4500 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3);
+}
+
+.btn-confirm-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 107, 0, 0.4);
 }
 </style>
