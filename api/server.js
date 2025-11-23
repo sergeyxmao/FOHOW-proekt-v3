@@ -883,6 +883,17 @@ app.post('/api/reset-password', async (req, reply) => {
 
         // Проверки personal_id (формат и уникальность)
         if (personal_id && personal_id !== user.personal_id) {
+          // Если пользователь верифицирован, предупреждаем об отмене верификации
+          if (user.is_verified) {
+            // ВАЖНО: На этом этапе мы только проверяем, фронтенд должен был показать предупреждение
+            // Отменяем верификацию
+            await pool.query(
+              'UPDATE users SET is_verified = FALSE, verified_at = NULL WHERE id = $1',
+              [userId]
+            );
+            console.log(`⚠️ Верификация отменена для пользователя ${userId} из-за смены personal_id`);
+          }
+
           // Проверяем формат (RUY00 + 9 цифр)
           const formatRegex = /^RUY00\d{9}$/;
           if (!formatRegex.test(personal_id)) {
@@ -893,7 +904,10 @@ app.post('/api/reset-password', async (req, reply) => {
           }
 
           // Проверяем уникальность
-          const personalIdCheck = await pool.query('SELECT id FROM users WHERE personal_id = $1 AND id != $2', [personal_id, userId]);
+          const personalIdCheck = await pool.query(
+            'SELECT id FROM users WHERE personal_id = $1 AND id != $2',
+            [personal_id, userId]
+          );
           if (personalIdCheck.rows.length > 0) {
             return reply.code(400).send({
               error: 'Этот компьютерный номер уже используется другим пользователем',
