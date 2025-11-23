@@ -1,8 +1,9 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useSidePanelsStore } from '../../stores/sidePanels.js';
-import ImagesPanel from '../Panels/ImagesPanel.vue';  
-
+import { useStickersStore } from '../../stores/stickers.js';
+import ImagesPanel from '../Panels/ImagesPanel.vue';
+  
 const props = defineProps({
   snapshot: {
     type: String,
@@ -29,6 +30,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close']);
 const sidePanelsStore = useSidePanelsStore();
+const stickersStore = useStickersStore();
 
 const drawingCanvasRef = ref(null);
 const canvasContext = ref(null);
@@ -75,7 +77,7 @@ const panInitialOffset = ref({ x: 0, y: 0 });
 const ERASER_MIN_SIZE = 4;
 const ERASER_MAX_SIZE = 80;
   
-const isImagesPanelOpen = computed(() => sidePanelsStore.currentPanel === 'images');
+const isImagesPanelOpen = computed(() => sidePanelsStore.isImagesOpen);
 
 const MAX_HISTORY_LENGTH = 50;
 const MARKER_MIN_SIZE = 30;
@@ -169,7 +171,7 @@ const panelClasses = computed(() => [
 ]);
 
 const openImagesPanel = () => {
-  sidePanelsStore.openPanel('images');
+  sidePanelsStore.openImages();
 };
 const hexToRgba = (hex, alpha) => {
   if (typeof hex !== 'string') {
@@ -195,7 +197,30 @@ const hexToRgba = (hex, alpha) => {
   const b = int & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
+const calculateImageDisplaySize = (originalWidth, originalHeight, maxSize = 500) => {
+  if (originalWidth <= maxSize && originalHeight <= maxSize) {
+    return { width: originalWidth, height: originalHeight };
+  }
 
+  let displayWidth;
+  let displayHeight;
+
+  if (originalWidth > originalHeight) {
+    displayWidth = maxSize;
+    displayHeight = (originalHeight / originalWidth) * maxSize;
+  } else if (originalHeight > originalWidth) {
+    displayHeight = maxSize;
+    displayWidth = (originalWidth / originalHeight) * maxSize;
+  } else {
+    displayWidth = maxSize;
+    displayHeight = maxSize;
+  }
+
+  return {
+    width: Math.round(displayWidth),
+    height: Math.round(displayHeight)
+  };
+};
 const captureCanvasData = () => {
   const canvas = drawingCanvasRef.value;
   if (!canvas) {
@@ -368,6 +393,32 @@ const getCanvasPoint = (event) => {
     x: ((event.clientX - rect.left) / scale) * displayScale,
     y: ((event.clientY - rect.top) / scale) * displayScale
   };
+};
+const placePendingImageOnCanvas = (point) => {
+  const pendingImage = stickersStore.pendingImageData;
+  const context = canvasContext.value;
+
+  if (!pendingImage || !pendingImage.dataUrl || !context) {
+    return;
+  }
+
+  const imageElement = new Image();
+  imageElement.crossOrigin = 'anonymous';
+
+  imageElement.onload = () => {
+    const originalWidth = pendingImage.width || imageElement.width || 200;
+    const originalHeight = pendingImage.height || imageElement.height || 150;
+    const displaySize = calculateImageDisplaySize(originalWidth, originalHeight);
+
+    context.drawImage(imageElement, point.x, point.y, displaySize.width, displaySize.height);
+    scheduleHistorySave(true);
+  };
+
+  imageElement.onerror = () => {
+    console.error('Не удалось загрузить изображение для режима рисования');
+  };
+
+  imageElement.src = pendingImage.dataUrl;
 };
 
 const startStroke = (point) => {
@@ -697,6 +748,12 @@ const handleCanvasPointerDown = (event) => {
 
   const canvas = drawingCanvasRef.value;
   if (!canvas) return;
+  if (stickersStore.isPlacementMode && stickersStore.placementTarget === 'drawing') {
+    placePendingImageOnCanvas(point);
+    stickersStore.pendingImageData = null;
+    stickersStore.disablePlacementMode();
+    return;
+  }
 
   if (isSelectionToolActive.value) {
     canvas.setPointerCapture(event.pointerId);
@@ -908,6 +965,9 @@ onMounted(() => {
 
   document.documentElement.style.overflow = 'hidden';
   document.body.style.overflow = 'hidden';
+  stickersStore.disablePlacementMode();
+  stickersStore.setPlacementTarget('drawing');
+  stickersStore.pendingImageData = null;
 
   window.addEventListener('keydown', handleKeydown);
   loadBaseImage();
@@ -941,6 +1001,9 @@ onBeforeUnmount(() => {
   document.documentElement.style.overflow = previousHtmlOverflow;
   document.body.style.overflow = previousBodyOverflow;
   window.removeEventListener('keydown', handleKeydown);
+  stickersStore.pendingImageData = null;
+  stickersStore.disablePlacementMode();
+  stickersStore.setPlacementTarget('board');  
 });
 
 const clampZoom = (value) => {
@@ -1338,7 +1401,8 @@ const closeAllDropdowns = () => {
     <ImagesPanel
       v-if="isImagesPanelOpen"
       :is-modern-theme="false"
-    />    
+      placement-target="drawing"
+    />
   </div>
 </template>
 
