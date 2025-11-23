@@ -124,9 +124,15 @@ export const useAuthStore = defineStore('auth', {
 
           if (response.ok) {
             const data = await response.json();
-            this.user = mergeUserData(this.user, data.user); // Обновляем, сохраняя роль
+            // Обновляем данные, включая is_verified (с преобразованием в boolean)
+            this.user = {
+              ...mergeUserData(this.user, data.user),
+              is_verified: Boolean(data.user?.is_verified),
+              verified_at: data.user?.verified_at || null
+            };
             localStorage.setItem('user', JSON.stringify(this.user)); // Обновляем кэш
             this.isAuthenticated = true; // Токен валиден, пользователь авторизован
+            console.log('[AUTH] Init: профиль загружен, is_verified:', this.user.is_verified);
           } else {
             // Токен невалидный - вызываем logout для полного сброса
             await this.logout();
@@ -209,7 +215,13 @@ export const useAuthStore = defineStore('auth', {
 
         if (profileResponse.ok) {
           const profileData = await profileResponse.json()
-          this.user = mergeUserData(this.user, profileData.user)
+          // Обновляем данные, включая is_verified (с преобразованием в boolean)
+          this.user = {
+            ...mergeUserData(this.user, profileData.user),
+            is_verified: Boolean(profileData.user?.is_verified),
+            verified_at: profileData.user?.verified_at || null
+          }
+          console.log('[AUTH] FinalizeAuth: профиль загружен, is_verified:', this.user.is_verified)
         } else {
           // Если данные профиля не удалось получить, используем fallbackUser
           this.user = mergeUserData(this.user, fallbackUser)
@@ -279,25 +291,33 @@ export const useAuthStore = defineStore('auth', {
         })
 
         if (!response.ok) {
-          // Если токен невалиден, вызываем logout
-          const errorData = await response.json().catch(() => ({})); // Пытаемся получить тело ошибки
-          console.error('Ошибка загрузки профиля (невалидный токен?):', errorData.error || response.statusText);
-          await this.logout();
-          throw new Error(errorData.error || 'Ошибка загрузки профиля'); // Перебрасываем ошибку дальше
+          if (response.status === 401) {
+            await this.logout()
+            throw new Error('Сессия истекла')
+          }
+          const errorData = await response.json().catch(() => ({}))
+          console.error('Ошибка загрузки профиля:', errorData.error || response.statusText)
+          throw new Error(errorData.error || 'Ошибка загрузки профиля')
         }
 
         const data = await response.json()
 
-        // ВАЖНО: Обновить все поля, включая is_verified и verified_at
+        // КРИТИЧЕСКИ ВАЖНО: Обновить ВСЕ поля, включая is_verified
         this.user = {
           ...mergeUserData(this.user, data.user),
-          is_verified: data.user?.is_verified || false,
+          is_verified: Boolean(data.user?.is_verified), // Преобразовать в boolean
           verified_at: data.user?.verified_at || null
         }
 
+        // Сохранить в localStorage
         localStorage.setItem('user', JSON.stringify(this.user))
 
+        console.log('[AUTH] Профиль обновлён, is_verified:', this.user.is_verified)
+
         return data.user
+      } catch (err) {
+        console.error('[AUTH] Ошибка загрузки профиля:', err)
+        throw err
       } finally {
         this.isLoadingProfile = false
       }
