@@ -572,10 +572,24 @@ const pendingPersonalId = ref('')
 
 // Статус верификации
 const verificationStatus = reactive({
+  isVerified: false,
   hasPendingRequest: false,
   lastRejection: null,
+  lastAttempt: null,
   cooldownUntil: null
 })
+
+const showVerificationModal = ref(false)
+
+// Форма верификации
+const verificationForm = reactive({
+  full_name: '',
+  screenshot_1: null,
+  screenshot_2: null
+})
+
+const verificationError = ref('')
+const submittingVerification = ref(false)
 
 // Вычисляемые свойства для верификации
 const canSubmitVerification = computed(() => {
@@ -762,8 +776,10 @@ async function loadVerificationStatus() {
 
     if (response.ok) {
       const data = await response.json()
+      verificationStatus.isVerified = data.isVerified || false
       verificationStatus.hasPendingRequest = data.hasPendingRequest || false
       verificationStatus.lastRejection = data.lastRejection || null
+      verificationStatus.lastAttempt = data.lastAttempt || null
       verificationStatus.cooldownUntil = data.cooldownUntil || null
     }
   } catch (error) {
@@ -773,7 +789,116 @@ async function loadVerificationStatus() {
 
 // Открыть модальное окно верификации
 function openVerificationModal() {
-  emit('openVerificationModal')
+  if (!canSubmitVerification.value) {
+    return
+  }
+
+  // Предзаполнить ФИО из профиля
+  verificationForm.full_name = user.value.full_name || ''
+  verificationForm.screenshot_1 = null
+  verificationForm.screenshot_2 = null
+  verificationError.value = ''
+
+  showVerificationModal.value = true
+}
+
+// Закрыть модальное окно верификации
+function closeVerificationModal() {
+  showVerificationModal.value = false
+  verificationForm.full_name = ''
+  verificationForm.screenshot_1 = null
+  verificationForm.screenshot_2 = null
+  verificationError.value = ''
+}
+
+// Обработка выбора файла
+function handleScreenshotChange(event, screenshotNumber) {
+  const file = event.target.files[0]
+
+  if (!file) {
+    return
+  }
+
+  // Валидация типа файла
+  if (!file.type.match(/^image\/(jpeg|png)$/)) {
+    verificationError.value = 'Допустимы только файлы JPG и PNG'
+    event.target.value = ''
+    return
+  }
+
+  // Валидация размера файла (5MB)
+  const maxSize = 5 * 1024 * 1024
+  if (file.size > maxSize) {
+    verificationError.value = `Файл ${screenshotNumber === 1 ? '1' : '2'} превышает максимальный размер 5MB`
+    event.target.value = ''
+    return
+  }
+
+  if (screenshotNumber === 1) {
+    verificationForm.screenshot_1 = file
+  } else {
+    verificationForm.screenshot_2 = file
+  }
+
+  verificationError.value = ''
+}
+
+// Отправить заявку на верификацию
+async function submitVerification() {
+  verificationError.value = ''
+
+  // Валидация формы
+  if (!verificationForm.full_name.trim()) {
+    verificationError.value = 'Введите полное ФИО'
+    return
+  }
+
+  if (!verificationForm.screenshot_1) {
+    verificationError.value = 'Загрузите первый скриншот'
+    return
+  }
+
+  if (!verificationForm.screenshot_2) {
+    verificationError.value = 'Загрузите второй скриншот'
+    return
+  }
+
+  submittingVerification.value = true
+
+  try {
+    const formData = new FormData()
+    formData.append('full_name', verificationForm.full_name.trim())
+    formData.append('screenshot_1', verificationForm.screenshot_1)
+    formData.append('screenshot_2', verificationForm.screenshot_2)
+
+    const response = await fetch(`${API_URL}/verification/submit`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: formData
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Ошибка отправки заявки')
+    }
+
+    // Закрыть модальное окно
+    closeVerificationModal()
+
+    // Обновить статус верификации
+    await loadVerificationStatus()
+
+    // Показать успешное уведомление
+    alert('Заявка на верификацию отправлена! Ожидайте проверки администратором.')
+
+  } catch (err) {
+    verificationError.value = err.message || 'Не удалось отправить заявку. Попробуйте позже.'
+  } finally {
+    submittingVerification.value = false
+  }
 }
 
 // Сохранить личную информацию
