@@ -9,7 +9,13 @@ import ImageCard from './ImageCard.vue'
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
 const notificationsStore = useNotificationsStore()
-
+const props = defineProps({
+  placementTarget: {
+    type: String,
+    default: 'board'
+  }
+})
+  
 // Состояние
 const folders = ref([])
 const images = ref([])  
@@ -258,7 +264,7 @@ async function handleImageClick(image) {
   console.log('✅ Добавление изображения на доску:', boardId, 'image:', image.id)
 
   // Включаем режим размещения
-  stickersStore.enablePlacementMode()
+  stickersStore.enablePlacementMode(props.placementTarget || 'board')
 
   // Сохраняем данные изображения для последующего создания стикера
   stickersStore.pendingImageData = {
