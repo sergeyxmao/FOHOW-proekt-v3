@@ -2169,5 +2169,273 @@ await pool.query(
     }
   });
 
+  // ============================================
+  // ЭКСПОРТ ПОЛЬЗОВАТЕЛЕЙ В CSV
+  // ============================================
+
+  /**
+   * Вспомогательная функция генерации CSV
+   */
+  function generateUserCSV(rows, title, includeVerificationDate = true, includeVerificationStatus = false) {
+    // Заголовки
+    const headers = [
+      'ID',
+      'Компьютерный номер',
+      'ФИО',
+      'Email',
+      'Username',
+      'Телефон',
+      'Город',
+      'Страна',
+      'Представительство'
+    ];
+
+    if (includeVerificationStatus) {
+      headers.push('Статус верификации');
+    }
+
+    if (includeVerificationDate) {
+      headers.push('Дата верификации');
+    }
+
+    headers.push('Дата регистрации', 'Тарифный план');
+
+    let csv = '\uFEFF'; // BOM для корректного отображения кириллицы в Excel
+    csv += `"${title}"\n`;
+    csv += `"Дата экспорта: ${new Date().toLocaleString('ru-RU')}"\n`;
+    csv += `"Всего записей: ${rows.length}"\n\n`;
+    csv += headers.join(',') + '\n';
+
+    // Данные
+    rows.forEach(row => {
+      const values = [
+        row.id,
+        row.personal_id || '',
+        `"${(row.full_name || '').replace(/"/g, '""')}"`,
+        row.email || '',
+        row.username || '',
+        row.phone || '',
+        `"${(row.city || '').replace(/"/g, '""')}"`,
+        `"${(row.country || '').replace(/"/g, '""')}"`,
+        `"${(row.office || '').replace(/"/g, '""')}"`
+      ];
+
+      if (includeVerificationStatus) {
+        values.push(row.is_verified ? 'Да' : 'Нет');
+      }
+
+      if (includeVerificationDate) {
+        values.push(row.verified_at ? new Date(row.verified_at).toISOString().split('T')[0] : '');
+      }
+
+      values.push(
+        row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : '',
+        `"${(row.plan_name || '').replace(/"/g, '""')}"`
+      );
+
+      csv += values.join(',') + '\n';
+    });
+
+    return csv;
+  }
+
+  /**
+   * Экспорт списка верифицированных пользователей в CSV
+   * GET /api/admin/export/verified-users
+   */
+  app.get('/api/admin/export/verified-users', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      console.log('[ADMIN] Экспорт верифицированных пользователей, admin_id=' + req.user.id);
+
+      const result = await pool.query(
+        `SELECT
+          u.id,
+          u.personal_id,
+          u.full_name,
+          u.email,
+          u.username,
+          u.phone,
+          u.city,
+          u.country,
+          u.office,
+          u.verified_at,
+          u.created_at,
+          sp.name as plan_name
+         FROM users u
+         LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
+         WHERE u.is_verified = TRUE
+         ORDER BY u.verified_at DESC`
+      );
+
+      const csv = generateUserCSV(result.rows, 'Верифицированные пользователи');
+
+      console.log(`[ADMIN] Экспортировано верифицированных пользователей: ${result.rows.length}`);
+
+      return reply
+        .header('Content-Type', 'text/csv; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="verified_users_${new Date().toISOString().split('T')[0]}.csv"`)
+        .send(csv);
+
+    } catch (err) {
+      console.error('[ADMIN] Ошибка экспорта верифицированных пользователей:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  /**
+   * Экспорт списка НЕ верифицированных пользователей в CSV
+   * GET /api/admin/export/non-verified-users
+   */
+  app.get('/api/admin/export/non-verified-users', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      console.log('[ADMIN] Экспорт НЕ верифицированных пользователей, admin_id=' + req.user.id);
+
+      const result = await pool.query(
+        `SELECT
+          u.id,
+          u.personal_id,
+          u.full_name,
+          u.email,
+          u.username,
+          u.phone,
+          u.city,
+          u.country,
+          u.office,
+          u.created_at,
+          sp.name as plan_name
+         FROM users u
+         LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
+         WHERE u.is_verified = FALSE OR u.is_verified IS NULL
+         ORDER BY u.created_at DESC`
+      );
+
+      const csv = generateUserCSV(result.rows, 'Не верифицированные пользователи', false);
+
+      console.log(`[ADMIN] Экспортировано НЕ верифицированных пользователей: ${result.rows.length}`);
+
+      return reply
+        .header('Content-Type', 'text/csv; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="non_verified_users_${new Date().toISOString().split('T')[0]}.csv"`)
+        .send(csv);
+
+    } catch (err) {
+      console.error('[ADMIN] Ошибка экспорта НЕ верифицированных пользователей:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  /**
+   * Экспорт пользователей по тарифному плану в CSV
+   * GET /api/admin/export/users-by-plan/:planName
+   * Параметры: planName - название плана (Demo, Guest, Individual, Premium, Corporate) или "null" для пользователей без плана
+   */
+  app.get('/api/admin/export/users-by-plan/:planName', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      const { planName } = req.params;
+      console.log(`[ADMIN] Экспорт пользователей по плану "${planName}", admin_id=` + req.user.id);
+
+      let query;
+      let queryParams = [];
+
+      if (planName === 'null' || planName === 'NULL') {
+        // Пользователи без плана
+        query = `SELECT
+          u.id,
+          u.personal_id,
+          u.full_name,
+          u.email,
+          u.username,
+          u.phone,
+          u.city,
+          u.country,
+          u.office,
+          u.is_verified,
+          u.verified_at,
+          u.created_at,
+          'Без плана' as plan_name
+         FROM users u
+         WHERE u.plan_id IS NULL
+         ORDER BY u.created_at DESC`;
+      } else {
+        // Пользователи конкретного плана
+        query = `SELECT
+          u.id,
+          u.personal_id,
+          u.full_name,
+          u.email,
+          u.username,
+          u.phone,
+          u.city,
+          u.country,
+          u.office,
+          u.is_verified,
+          u.verified_at,
+          u.created_at,
+          sp.name as plan_name
+         FROM users u
+         JOIN subscription_plans sp ON u.plan_id = sp.id
+         WHERE sp.name = $1
+         ORDER BY u.created_at DESC`;
+        queryParams = [planName];
+      }
+
+      const result = await pool.query(query, queryParams);
+
+      const csv = generateUserCSV(result.rows, `Пользователи плана: ${planName}`, true, true);
+
+      console.log(`[ADMIN] Экспортировано пользователей по плану "${planName}": ${result.rows.length}`);
+
+      const fileName = `users_plan_${planName.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+
+      return reply
+        .header('Content-Type', 'text/csv; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="${fileName}"`)
+        .send(csv);
+
+    } catch (err) {
+      console.error(`[ADMIN] Ошибка экспорта пользователей по плану:`, err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  /**
+   * Получить список всех тарифных планов для фильтра
+   * GET /api/admin/subscription-plans
+   */
+  app.get('/api/admin/subscription-plans', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      const result = await pool.query(
+        `SELECT id, name,
+          (SELECT COUNT(*) FROM users WHERE plan_id = sp.id) as user_count
+         FROM subscription_plans sp
+         ORDER BY id`
+      );
+
+      // Добавить "Без плана"
+      const nullPlanCount = await pool.query(
+        'SELECT COUNT(*) as count FROM users WHERE plan_id IS NULL'
+      );
+
+      return reply.send({
+        success: true,
+        plans: [
+          ...result.rows,
+          { id: null, name: 'Без плана', user_count: parseInt(nullPlanCount.rows[0].count) }
+        ]
+      });
+    } catch (err) {
+      console.error('[ADMIN] Ошибка получения списка планов:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
   console.log('✅ Маршруты админ-панели зарегистрированы');
 }
