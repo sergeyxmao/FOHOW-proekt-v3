@@ -1569,15 +1569,16 @@ async function handleAvatarDelete() {
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  padding: 8px;
   border-radius: 50%;
+  background: linear-gradient(135deg, #f1f2f6 0%, #d9dce3 100%);
+  border: 2px solid rgba(118, 131, 158, 0.2);  
   transition: box-shadow 0.4s ease, transform 0.4s ease, background 0.4s ease, border-color 0.4s ease;
 }
 
 .avatar-wrapper--verified {
-  padding: 8px;
-  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 165, 0, 0.2) 100%);
-  border: 2px solid rgba(255, 215, 0, 0.5);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.35) 0%, rgba(255, 165, 0, 0.35) 100%);
+  border: 2px solid rgba(255, 215, 0, 0.55);
   box-shadow: 0 12px 28px rgba(255, 215, 0, 0.25);
   animation: goldPulseProfile 3s ease-in-out infinite;
 }
