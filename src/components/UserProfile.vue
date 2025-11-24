@@ -116,6 +116,7 @@
                   v-model="personalForm.username"
                   type="text"
                   placeholder="Введите имя пользователя"
+                  maxlength="50"
                 />
                 <span class="form-hint">Будет отображаться в системе</span>
               </div>
