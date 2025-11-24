@@ -1587,8 +1587,7 @@ async function cancelVerification() {
   const response = await fetch(`${API_URL}/verification/cancel`, {
     method: 'DELETE',
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      'Authorization': `Bearer ${token}`
     }
   })
 
