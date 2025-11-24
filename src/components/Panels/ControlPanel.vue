@@ -32,7 +32,6 @@ const viewportStore = useViewportStore()
   
 const {
   backgroundColor,
-  isSelectionMode,
   isHierarchicalDragMode,
   guidesEnabled,
   gridStep,
@@ -66,11 +65,11 @@ const handleSaveProject = () => {
     },
     canvas: {
       backgroundColor: backgroundColor.value,
-      isSelectionMode: isSelectionMode.value,
       isHierarchicalDragMode: isHierarchicalDragMode.value,
       guidesEnabled: guidesEnabled.value,
       gridStep: gridStep.value,
-      isGridBackgroundVisible: isGridBackgroundVisible.value    }
+      isGridBackgroundVisible: isGridBackgroundVisible.value
+    }
   }
   const dataStr = JSON.stringify(projectData, null, 2)
   const dataBlob = new Blob([dataStr], {type: 'application/json'})
