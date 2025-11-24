@@ -16,7 +16,7 @@
       <!-- Блок 1: Аватарка (верх страницы, по центру) -->
       <!-- ============================================ -->
       <div class="profile-avatar-section">
-        <div class="avatar-wrapper">
+        <div :class="['avatar-wrapper', { 'avatar-wrapper--verified': user.is_verified }]">
           <img
             v-if="user.avatar_url"
             :key="avatarKey"
@@ -27,10 +27,6 @@
           <div v-else class="profile-avatar-placeholder">
             {{ getInitials(user.username || user.email) }}
           </div>
-
-          <!-- Значок верификации -->
-          <div v-if="user.is_verified" class="verification-badge" title="Верифицированный пользователь">
-            ⭐
           </div>
         </div>
         <div class="avatar-actions">
@@ -1570,29 +1566,21 @@ async function handleAvatarDelete() {
 
 .avatar-wrapper {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
   flex-shrink: 0;
-}
-
-.verification-badge {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-  border-radius: 50%;
-  border: 3px solid #ffffff;
-  display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  z-index: 10;
+  padding: 0;
+  border-radius: 50%;
+  transition: box-shadow 0.4s ease, transform 0.4s ease, background 0.4s ease, border-color 0.4s ease;
 }
 
-.user-profile--modern .verification-badge {
-  border-color: rgba(17, 24, 39, 0.95);
+.avatar-wrapper--verified {
+  padding: 8px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(255, 165, 0, 0.2) 100%);
+  border: 2px solid rgba(255, 215, 0, 0.5);
+  box-shadow: 0 12px 28px rgba(255, 215, 0, 0.25);
+  animation: goldPulseProfile 3s ease-in-out infinite;
 }
 
 .profile-avatar,
@@ -1622,6 +1610,20 @@ async function handleAvatarDelete() {
   color: white;
   font-size: 48px;
   font-weight: 700;
+}
+@keyframes goldPulseProfile {
+  0% {
+    box-shadow: 0 12px 28px rgba(255, 215, 0, 0.22), 0 0 0 0 rgba(255, 215, 0, 0.35);
+    border-color: rgba(255, 215, 0, 0.6);
+  }
+  50% {
+    box-shadow: 0 18px 36px rgba(255, 215, 0, 0.35), 0 0 0 12px rgba(255, 215, 0, 0.08);
+    border-color: rgba(255, 215, 0, 0.85);
+  }
+  100% {
+    box-shadow: 0 12px 28px rgba(255, 215, 0, 0.22), 0 0 0 0 rgba(255, 215, 0, 0.0);
+    border-color: rgba(255, 215, 0, 0.6);
+  }
 }
 
 .avatar-actions {
