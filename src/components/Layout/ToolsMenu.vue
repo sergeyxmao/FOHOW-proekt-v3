@@ -16,16 +16,11 @@ const emit = defineEmits(['request-close', 'activate-pencil', 'clear-canvas', 'n
 const { t } = useI18n()
 const canvasStore = useCanvasStore()
 const historyStore = useHistoryStore()
-const { isSelectionMode, isHierarchicalDragMode, guidesEnabled } = storeToRefs(canvasStore)
+const { isHierarchicalDragMode, guidesEnabled } = storeToRefs(canvasStore)
 const { canUndo, canRedo } = storeToRefs(historyStore)
 
 const showClearCanvasDialog = ref(false)
 const showNewStructureDialog = ref(false)
-
-const handleSelectionMode = () => {
-  canvasStore.toggleSelectionMode()
-  emit('request-close')
-}
 
 const handleHierarchicalMode = () => {
   canvasStore.toggleHierarchicalDragMode()
@@ -97,17 +92,6 @@ const cancelNewStructure = () => {
   >
     <h3 class="tools-menu__title">{{ t('toolsMenu.title') }}</h3>
     <div class="tools-menu__list">
-      <div class="tools-menu__item">
-        <span class="tools-menu__icon" aria-hidden="true">⬚</span>
-        <button
-          type="button"
-          class="tools-menu__action"
-          :class="{ 'tools-menu__action--active': isSelectionMode }"
-          @click="handleSelectionMode"
-        >
-          {{ t('toolsMenu.selectionMode') }}
-        </button>
-      </div>
       <div class="tools-menu__item">
         <span class="tools-menu__icon" aria-hidden="true">🌳</span>
         <button
