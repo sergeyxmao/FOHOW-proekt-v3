@@ -121,8 +121,9 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
         }
 
         const data = await response.json()
-        this.folders = data.folders || []
-
+        const foldersData = Array.isArray(data) ? data : (data.folders || [])
+        this.folders = foldersData
+        
         return this.folders
       } catch (error) {
         console.error('Ошибка при загрузке папок:', error)
@@ -170,11 +171,12 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
         }
 
         const data = await response.json()
-        const createdFolder = data.folder
+        const createdFolder = data.folder || data
 
         // Добавить созданную папку в массив folders
-        this.folders.push(createdFolder)
-
+        if (createdFolder) {
+          this.folders.push(createdFolder)
+        }
         // Обновить список папок для синхронизации
         await this.fetchFolders()
 
@@ -215,7 +217,7 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
         }
 
         const data = await response.json()
-        const updatedFolder = data.folder
+        const updatedFolder = data.folder || data
 
         // Обновить имя папки в массиве folders
         const folderIndex = this.folders.findIndex(f => f.id === folderId)
@@ -258,7 +260,7 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
         }
 
         const data = await response.json()
-        const deletedBoardsCount = data.deletedBoardsCount || 0
+        const deletedBoardsCount = data.deletedBoardsCount || data.deleted_boards_count || 0
 
         // Удалить папку из массива folders
         this.folders = this.folders.filter(f => f.id !== folderId)
@@ -302,7 +304,8 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
         }
 
         const data = await response.json()
-        return data.boards || []
+        const boardsData = Array.isArray(data) ? data : (data.boards || [])
+        return boardsData
       } catch (error) {
         console.error('Ошибка при загрузке досок папки:', error)
         this.error = error.message
