@@ -3207,9 +3207,14 @@ const handlePointerDown = (event) => {
 
   if (!isSelecting.value && !isDrawingLine.value) {
     const isCardTarget = event.target.closest('.card');
+    const isStickerTarget = event.target.closest('.sticker');
+    const isImageTarget = event.target.closest('.canvas-image');
+    const isNoteTarget = event.target.closest('.note-window');
+    const isAnchorTarget = event.target.closest('.anchor-point');
     const interactiveTarget = event.target.closest('button, input, textarea, select, [contenteditable="true"], a[href]');
 
-    if (!isCardTarget && !interactiveTarget) {
+    // Начинаем выделение только если клик по пустой области
+    if (!isCardTarget && !isStickerTarget && !isImageTarget && !isNoteTarget && !isAnchorTarget && !interactiveTarget) {
       startSelection(event);
       return;
     }
