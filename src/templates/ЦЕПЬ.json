@@ -653,7 +653,6 @@
   },
   "canvas": {
     "backgroundColor": "#b9c4da",
-    "isSelectionMode": false,
     "isHierarchicalDragMode": false,
     "guidesEnabled": true,
     "gridStep": 40,
