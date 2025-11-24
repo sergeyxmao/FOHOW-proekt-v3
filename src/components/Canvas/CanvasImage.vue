@@ -75,7 +75,7 @@ const imageStyle = computed(() => ({
   opacity: props.image.opacity || 1,
   zIndex: props.image.zIndex || 0,
   cursor: props.image.isLocked ? 'default' : 'move',
-  pointerEvents: props.image.isLocked ? 'none' : 'auto',
+  pointerEvents: 'auto',
   userSelect: 'none'
 }))
 
@@ -121,8 +121,6 @@ function handleDragStart(event) {
 
 // Обработчик контекстного меню
 function handleContextMenu(event) {
-  if (props.image.isLocked) return
-
   event.preventDefault()
   event.stopPropagation()
 
@@ -201,6 +199,9 @@ onBeforeUnmount(() => {
       }"
       draggable="false"
     />
+    <div v-if="image.isLocked" class="canvas-image__lock-indicator" aria-hidden="true">
+      🔒
+    </div>
 
     <!-- Рамка выделения -->
     <div
@@ -248,7 +249,19 @@ onBeforeUnmount(() => {
   cursor: default !important;
   opacity: 0.6;
 }
-
+.canvas-image__lock-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
 .canvas-image--selected .canvas-image__selection-border {
   position: absolute;
   top: -2px;
