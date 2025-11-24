@@ -3,6 +3,7 @@ import {
   canSubmitVerification,
   submitVerification,
   getUserVerificationStatus,
+  cancelVerificationByUser,
   MAX_SCREENSHOT_SIZE
 } from '../services/verificationService.js';
 
@@ -143,6 +144,31 @@ export default async function verificationRoutes(app) {
       });
     } catch (err) {
       console.error('[VERIFICATION] Ошибка получения истории:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  // Отмена заявки на верификацию пользователем
+  app.delete('/api/verification/cancel', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const userId = req.user.id;
+
+      const result = await cancelVerificationByUser(userId);
+
+      return reply.send({
+        success: true,
+        message: 'Заявка на верификацию отменена'
+      });
+    } catch (err) {
+      console.error('[VERIFICATION] Ошибка отмены заявки:', err);
+
+      // Если заявка не найдена - вернуть 404
+      if (err.message === 'Активная заявка на верификацию не найдена') {
+        return reply.code(404).send({ error: err.message });
+      }
+
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });

@@ -208,7 +208,7 @@ onBeforeUnmount(() => {
               >
               <div class="user-menu__section user-menu__section--account">
                 <div class="user-menu__account-number">
-                  RUY68241101111
+                  {{ user?.personal_id || 'Не указан' }}
                 </div>
               </div>
               <div class="user-menu__divider" />
