@@ -1084,7 +1084,15 @@ onBeforeUnmount(() => {
         'canvas--mobile': isMobileMode
       }"
     >
-      <CanvasBoard ref="canvasRef" :is-modern-theme="isModernTheme" />
+      <!-- Показываем canvas только для домашнего экрана и конкретной доски -->
+      <CanvasBoard
+        v-if="$route.name === 'home' || $route.name === 'board'"
+        ref="canvasRef"
+        :is-modern-theme="isModernTheme"
+      />
+
+      <!-- Для остальных роутов отображаем содержимое через router-view -->
+      <router-view v-else />
     </div>
 
     <!-- Pencil Overlay (shared) -->
