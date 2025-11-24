@@ -110,6 +110,17 @@
           <div v-if="activeTab === 'personal'" class="tab-panel">
             <form @submit.prevent="savePersonalInfo" class="info-form">
               <div class="form-group">
+                <label for="username">Имя пользователя:</label>
+                <input
+                  id="username"
+                  v-model="personalForm.username"
+                  type="text"
+                  placeholder="Введите имя пользователя"
+                />
+                <span class="form-hint">Будет отображаться в системе</span>
+              </div>
+
+              <div class="form-group">
                 <label for="full-name">Полное имя:</label>
                 <input
                   id="full-name"
@@ -738,6 +749,7 @@ const tabs = [
 
 // Формы
 const personalForm = reactive({
+  username: '',
   full_name: '',
   phone: '',
   city: '',
@@ -1037,6 +1049,7 @@ onMounted(async () => {
 
   // Заполняем формы текущими данными
   if (user.value) {
+    personalForm.username = user.value.username || ''
     personalForm.full_name = user.value.full_name || ''
     personalForm.phone = user.value.phone || ''
     personalForm.city = user.value.city || ''
@@ -1410,6 +1423,7 @@ async function savePersonalInfo() {
 
   try {
     await authStore.updateProfile({
+      username: personalForm.username,
       full_name: personalForm.full_name,
       phone: personalForm.phone,
       city: personalForm.city,
@@ -1459,6 +1473,7 @@ async function savePersonalInfoConfirmed() {
 
   try {
     await authStore.updateProfile({
+      username: personalForm.username,
       full_name: personalForm.full_name,
       phone: personalForm.phone,
       city: personalForm.city,
@@ -1511,6 +1526,7 @@ async function confirmPendingChange() {
     savingPersonal.value = true
 
     await authStore.updateProfile({
+      username: personalForm.username,
       full_name: personalForm.full_name,
       phone: personalForm.phone,
       city: personalForm.city,
@@ -2399,6 +2415,12 @@ async function handleAvatarDelete() {
   color: #f44336;
   font-size: 13px;
   margin-top: -4px;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
 }
 
 .btn-save {

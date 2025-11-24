@@ -61,24 +61,6 @@
         </button>
       </div>
 
-      <div class="auth-card__group">
-        <label class="auth-card__checkbox">
-          <input
-            type="checkbox"
-            v-model="enableTelegramNotifications"
-          />
-          <span class="auth-card__checkbox-text">
-            <svg class="auth-card__checkbox-icon" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18.717-3.146 14.338-3.146 14.338s-.194.764-.897.764c-.36 0-.668-.234-.668-.234l-3.478-2.702L6.3 18.918l-.6-2.04-2.897-1.11s-.896-.36-.896-1.08c0-.54.717-.897.717-.897l13.778-5.378s.897-.36.897 0z"/>
-            </svg>
-            Получать уведомления в Telegram
-          </span>
-        </label>
-        <p class="auth-card__hint">
-          После регистрации вы сможете подключить Telegram уведомления
-        </p>
-      </div>
-
       <div v-if="error" class="auth-card__message auth-card__message--error">{{ error }}</div>
       <div v-if="success" class="auth-card__message auth-card__message--success">{{ success }}</div>
 
@@ -98,7 +80,7 @@
 import { onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
-const emit = defineEmits(['register-success', 'switch-to-login'])
+const emit = defineEmits(['switch-to-login'])
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -118,7 +100,6 @@ const verificationCode = ref('')
 const verificationToken = ref('')
 const verificationInput = ref('')
 const verificationLoading = ref(false)
-const enableTelegramNotifications = ref(false)
 
 async function fetchVerificationCode(showError = true) {
   try {
@@ -177,14 +158,12 @@ async function handleRegister() {
       verificationInput.value,
       verificationToken.value
     )
-      success.value = 'Регистрация успешна! Сейчас выполним вход...'
+    success.value = 'Регистрация успешна! Теперь вы можете войти в систему.'
 
-    // Автоматический вход после регистрации
+    // Перенаправление на форму входа после успешной регистрации
     setTimeout(() => {
-      emit('register-success', {
-        showTelegramSetup: enableTelegramNotifications.value
-      })
-    }, 1500)
+      emit('switch-to-login')
+    }, 2000)
   } catch (err) {
     error.value = err.message
     await fetchVerificationCode(false)
