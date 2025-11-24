@@ -396,6 +396,7 @@ import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useUserStore } from '@/stores/user'
 import { useBoardFoldersStore } from '@/stores/boardFolders'
+import { useNotificationsStore } from '@/stores/notifications'  
 import FeatureGate from '@/components/FeatureGate.vue'
 import UsageLimitBar from '@/components/UsageLimitBar.vue'
 
@@ -403,6 +404,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const userStore = useUserStore()
 const boardFoldersStore = useBoardFoldersStore()
+const notificationsStore = useNotificationsStore()
 
 // Refs из store папок
 const {
@@ -847,8 +849,13 @@ const deleteFolderConfirm = async () => {
   if (!selectedFolder.value) return
 
   try {
-    await boardFoldersStore.deleteFolder(selectedFolder.value.id)
+    const folderName = selectedFolder.value.name
+    const deletedBoardsCount = await boardFoldersStore.deleteFolder(selectedFolder.value.id)
     await loadBoards()
+    notificationsStore.addNotification({
+      type: 'success',
+      message: `Папка "${folderName}" удалена${deletedBoardsCount ? ` вместе с ${deletedBoardsCount} досками` : ''}.`
+    })
     showDeleteFolderModal.value = false
     selectedFolder.value = null
   } catch (err) {
