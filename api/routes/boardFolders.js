@@ -177,13 +177,16 @@ export function registerBoardFolderRoutes(app) {
       preHandler: [authenticateToken]
     },
     async (req, reply) => {
+      let client;
+      
       try {
         const userId = req.user.id;
         const { folderId } = req.params;
         const { confirm } = req.query;
 
-        // Проверяем параметр confirm
-        if (confirm !== 'true') {
+        // Проверяем параметр подтверждения (принимаем true/"true"/"1")
+        const confirmFlag = String(confirm ?? '').toLowerCase();
+        if (!['true', '1'].includes(confirmFlag)) {
           return reply.code(400).send({ error: 'Требуется подтверждение удаления' });
         }
 
@@ -192,23 +195,27 @@ export function registerBoardFolderRoutes(app) {
         if (isNaN(folderIdInt)) {
           return reply.code(400).send({ error: 'Некорректный ID папки' });
         }
+        client = await pool.connect();
+        await client.query('BEGIN');
 
         // Проверяем владельца папки
-        const folderResult = await pool.query(
-          'SELECT owner_id FROM board_folders WHERE id = $1',
+        const folderResult = await client.query(
+          'SELECT owner_id FROM board_folders WHERE id = $1 FOR UPDATE',
           [folderIdInt]
         );
 
         if (folderResult.rows.length === 0) {
+          await client.query('ROLLBACK');          
           return reply.code(404).send({ error: 'Папка не найдена' });
         }
 
         if (folderResult.rows[0].owner_id !== userId) {
+          await client.query('ROLLBACK');          
           return reply.code(403).send({ error: 'Папка не принадлежит пользователю' });
         }
 
         // Получаем все board_id в папке
-        const boardsResult = await pool.query(
+        const boardsResult = await client.query(
           'SELECT board_id FROM board_folder_items WHERE folder_id = $1',
           [folderIdInt]
         );
@@ -216,7 +223,7 @@ export function registerBoardFolderRoutes(app) {
         const boardIds = boardsResult.rows.map(row => row.board_id);
 
         // Удаляем связи
-        await pool.query(
+        await client.query(
           'DELETE FROM board_folder_items WHERE folder_id = $1',
           [folderIdInt]
         );
@@ -224,7 +231,7 @@ export function registerBoardFolderRoutes(app) {
         // Удаляем доски (только если есть что удалять)
         let deletedBoardsCount = 0;
         if (boardIds.length > 0) {
-          const deleteResult = await pool.query(
+          const deleteResult = await client.query(
             'DELETE FROM boards WHERE id = ANY($1::int[]) AND owner_id = $2',
             [boardIds, userId]
           );
@@ -232,15 +239,27 @@ export function registerBoardFolderRoutes(app) {
         }
 
         // Удаляем папку
-        await pool.query(
+        await client.query(
           'DELETE FROM board_folders WHERE id = $1',
           [folderIdInt]
         );
+        await client.query('COMMIT');
 
         return reply.send({ deleted_boards_count: deletedBoardsCount });
       } catch (err) {
         console.error('❌ Ошибка удаления папки:', err);
+        if (client) {
+          try {
+            await client.query('ROLLBACK');
+          } catch (rollbackErr) {
+            console.error('❌ Ошибка отката транзакции при удалении папки:', rollbackErr);
+          }
+        }        
         return reply.code(500).send({ error: 'Ошибка сервера' });
+      } finally {
+        if (client) {
+          client.release();
+        }        
       }
     }
   );
