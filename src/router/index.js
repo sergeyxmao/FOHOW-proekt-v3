@@ -14,6 +14,7 @@ const routes = [
     path: '/boards',
     name: 'boards',
     component: () => import('../components/Board/BoardsList.vue'),
+    alias: '/board',    
     meta: { requiresAuth: true }
   },
   {
