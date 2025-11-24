@@ -73,7 +73,6 @@ const { anchors } = storeToRefs(anchorsStore);
 const {
   backgroundColor,
   isHierarchicalDragMode,
-  isSelectionMode,
   guidesEnabled,
   gridStep: gridStepRef,
   isGridBackgroundVisible
@@ -1641,7 +1640,7 @@ const guideOverlayStyle = computed(() => ({
 
   
 const canvasContainerClasses = computed(() => ({
-  'canvas-container--selection-mode': isSelectionMode.value,
+  'canvas-container--selection-mode': true,
   'canvas-container--sticker-placement': stickersStore.isPlacementMode,
   'canvas-container--anchor-placement': placementMode.value === 'anchor'
 }));
@@ -3206,7 +3205,7 @@ const handlePointerDown = (event) => {
     return;
   }
 
-  if (isSelectionMode.value && !isSelecting.value) {
+  if (!isSelecting.value && !isDrawingLine.value) {
     const isCardTarget = event.target.closest('.card');
     const interactiveTarget = event.target.closest('button, input, textarea, select, [contenteditable="true"], a[href]');
 
@@ -3214,7 +3213,7 @@ const handlePointerDown = (event) => {
       startSelection(event);
       return;
     }
-  }  
+  }
 };
 
 const startDrawingLine = (cardId, side) => {
@@ -3484,7 +3483,7 @@ const handleStageClick = async (event) => {
   }
 
   // Логика для снятия выделения при клике на пустое место 
-  const preserveCardSelection = isSelectionMode.value;
+  const preserveCardSelection = true;
   if (!event.ctrlKey && !event.metaKey) {
     clearObjectSelections({ preserveCardSelection });
   }
@@ -3593,9 +3592,6 @@ const handleKeydown = (event) => {
       selectedConnectionIds.value = [];
       cancelDrawing();
       finishSelection();
-      if (isSelectionMode.value) {
-        canvasStore.setSelectionMode(false);
-      }
       if (isHierarchicalDragMode.value) {
         canvasStore.setHierarchicalDragMode(false);
       }
@@ -3726,11 +3722,6 @@ watch(isDrawingLine, (isActive) => {
     window.addEventListener('pointermove', handleMouseMove);
   } else {
     window.removeEventListener('pointermove', handleMouseMove);
-  }
-});
-watch(isSelectionMode, (active) => {
-  if (!active) {
-    finishSelection();
   }
 });
 const resetView = () => {
