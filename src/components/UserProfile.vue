@@ -1563,7 +1563,7 @@ async function confirmCancelVerification() {
 
 // Отменить заявку на верификацию
 async function cancelVerification() {
-  const token = localStorage.getItem('auth_token')
+  const token = localStorage.getItem('token')
   if (!token) {
     throw new Error('Необходима авторизация')
   }
