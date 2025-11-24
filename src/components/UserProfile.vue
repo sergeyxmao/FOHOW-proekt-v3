@@ -155,26 +155,42 @@
                   id="office"
                   v-model="personalForm.office"
                   type="text"
-                  placeholder="Название представительства"
-                />
+                  placeholder="RUY68"
+                  @input="validateOffice"
+                  :disabled="user.is_verified"
+                  :class="{ 'input-error': officeError }"
+                  />
+                <div v-if="officeError" class="error-text">{{ officeError }}</div>
               </div>
 
               <div class="form-group">
                 <label
-                  for="personal-id"
+                  for="personal-id-input"
                   :class="{ 'verified-label': user.is_verified }"
                 >
                   Компьютерный номер:
                   <span v-if="user.is_verified" class="verified-icon" title="Верифицирован">⭐</span>
                 </label>
-                <input
-                  id="personal-id"
-                  v-model="personalForm.personal_id"
-                  type="text"
-                  placeholder="Введите компьютерный номер"
-                  :class="{ 'verified-input': user.is_verified }"
-                />
-
+                <div
+                  :class="[
+                    'personal-id-input-container',
+                    { 'input-error': personalIdError, 'personal-id-input-container--complete': isPersonalIdComplete }
+                  ]"
+                >
+                  <span class="personal-id-prefix">{{ officePrefix }}</span>
+                  <input
+                    id="personal-id-input"
+                    v-model="personalIdSuffix"
+                    type="text"
+                    placeholder="9 цифр"
+                    maxlength="9"
+                    @input="updatePersonalId"
+                    :disabled="user.is_verified"
+                  />
+                </div>
+                <div v-if="personalIdError" class="error-text">{{ personalIdError }}</div>
+                <p class="hint-text">Введите 9 цифр после автоматического префикса</p>
+                <p v-if="user.is_verified" class="hint-text hint-text--warning">Компьютерный номер верифицирован и недоступен для изменения.</p>
                 <!-- Кнопка верификации и сообщение об отклонении -->
                 <div v-if="!user.is_verified" class="verification-section">
                   <button
@@ -670,7 +686,9 @@ const personalForm = reactive({
   office: '',
   personal_id: ''
 })
-
+const officeError = ref('')
+const personalIdError = ref('')
+const personalIdSuffix = ref('')
 const socialForm = reactive({
   telegram_user: '',
   vk_profile: '',
@@ -730,6 +748,14 @@ const cooldownTimeRemaining = ref('')
 const verificationHistory = ref([])
 const loadingHistory = ref(false)
 const showHistory = ref(false)
+const OFFICE_PATTERN = /^[A-Z]{3}\d{2,3}$/
+
+const officePrefix = computed(() => personalForm.office.trim().toUpperCase())
+
+const isPersonalIdComplete = computed(() => {
+  const suffix = personalIdSuffix.value.replace(/\D/g, '')
+  return OFFICE_PATTERN.test(officePrefix.value) && suffix.length === 9
+})
 
 // Вычисляемые свойства для верификации
 const canSubmitVerification = computed(() => {
@@ -826,7 +852,108 @@ function startCooldownTimer() {
   // Сразу обновить
   updateCooldownTime()
 }
+function normalizeOffice(value) {
+  return (value || '').trim().toUpperCase()
+}
 
+function validateOffice() {
+  const office = normalizeOffice(personalForm.office)
+  personalForm.office = office
+
+  if (!office) {
+    officeError.value = ''
+    personalIdError.value = ''
+    updatePersonalId(false)
+    return true
+  }
+
+  if (!OFFICE_PATTERN.test(office)) {
+    officeError.value = 'Представительство должно быть в формате: 3 английские буквы + 2-3 цифры (например: RUY68)'
+    personalIdError.value = officeError.value
+    return false
+  }
+
+  officeError.value = ''
+  updatePersonalId()
+  return true
+}
+
+function updatePersonalId(showOfficeValidation = true) {
+  const office = normalizeOffice(personalForm.office)
+  personalForm.office = office
+
+  const digitsOnly = personalIdSuffix.value.replace(/\D/g, '')
+  if (digitsOnly !== personalIdSuffix.value) {
+    personalIdSuffix.value = digitsOnly
+  }
+
+  if (personalIdSuffix.value.length > 9) {
+    personalIdSuffix.value = personalIdSuffix.value.slice(0, 9)
+  }
+
+  const suffix = personalIdSuffix.value
+  personalForm.personal_id = office + suffix
+
+  if (!office) {
+    personalIdError.value = showOfficeValidation ? 'Укажите представительство' : ''
+    return
+  }
+
+  if (!OFFICE_PATTERN.test(office)) {
+    personalIdError.value = showOfficeValidation ? (officeError.value || 'Некорректный формат представительства') : ''
+    return
+  }
+
+  if (suffix.length === 9) {
+    personalIdError.value = ''
+  } else {
+    personalIdError.value = `Введено ${suffix.length}/9 цифр`
+  }
+}
+
+function validatePersonalId() {
+  const isOfficeValid = validateOffice()
+  const office = officePrefix.value
+  const suffix = personalIdSuffix.value.replace(/\D/g, '')
+
+  if (!office) {
+    personalIdError.value = 'Укажите представительство'
+    return false
+  }
+
+  if (!isOfficeValid) {
+    personalIdError.value = officeError.value
+    return false
+  }
+
+  if (suffix.length !== 9) {
+    personalIdError.value = `Введено ${suffix.length}/9 цифр`
+    return false
+  }
+
+  personalForm.personal_id = office + suffix
+  personalIdError.value = ''
+  return true
+}
+
+function initializePersonalIdFields() {
+  personalForm.office = normalizeOffice(personalForm.office)
+  const existingPersonalId = (personalForm.personal_id || '').trim()
+  let suffix = ''
+
+  if (existingPersonalId && officePrefix.value && existingPersonalId.startsWith(officePrefix.value)) {
+    suffix = existingPersonalId.slice(officePrefix.value.length)
+  } else if (existingPersonalId) {
+    const match = existingPersonalId.match(/^([A-Z]{3}\d{2,3})(\d{0,9})/)
+    if (match) {
+      personalForm.office = match[1]
+      suffix = match[2]
+    }
+  }
+
+  personalIdSuffix.value = (suffix || '').replace(/\D/g, '').slice(0, 9)
+  updatePersonalId(false)
+}
 // Инициализация
 onMounted(async () => {
   // Принудительно загружаем свежие данные пользователя и план подписки
@@ -849,6 +976,7 @@ onMounted(async () => {
     personalForm.country = user.value.country || ''
     personalForm.office = user.value.office || ''
     personalForm.personal_id = user.value.personal_id || ''
+    initializePersonalIdFields()
 
     socialForm.telegram_user = user.value.telegram_user || ''
     socialForm.vk_profile = user.value.vk_profile || ''
@@ -1180,6 +1308,10 @@ async function submitVerification() {
 async function savePersonalInfo() {
   personalError.value = ''
   personalSuccess.value = ''
+  if (!validatePersonalId()) {
+    personalError.value = personalIdError.value || 'Проверьте корректность представительства и компьютерного номера'
+    return
+  }
 
   // КРИТИЧЕСКИ ВАЖНО: Проверка изменения номера для верифицированных пользователей
   if (user.value.is_verified &&
@@ -1974,6 +2106,68 @@ async function handleAvatarDelete() {
 
 .form-group input::placeholder {
   color: var(--profile-input-placeholder);
+}
+.input-error {
+  border-color: var(--profile-error-text) !important;
+}
+
+.personal-id-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 2px solid var(--profile-input-border);
+  border-radius: 12px;
+  background: var(--profile-input-bg);
+  transition: all 0.3s ease;
+}
+
+.personal-id-input-container--complete {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.15);
+}
+
+.personal-id-input-container--complete .personal-id-prefix {
+  color: #2e7d32;
+}
+
+.personal-id-prefix {
+  font-weight: 700;
+  color: #667eea;
+  font-size: 16px;
+  min-width: max-content;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.personal-id-input-container input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--profile-text);
+  font-size: 16px;
+  padding: 0;
+}
+
+.personal-id-input-container input:focus {
+  outline: none;
+}
+
+.hint-text {
+  font-size: 13px;
+  color: var(--profile-muted);
+  margin: 6px 0 0;
+}
+
+.hint-text--warning {
+  color: #f57c00;
+}
+
+.error-text {
+  color: #f44336;
+  font-size: 13px;
+  margin-top: -4px;
 }
 
 .btn-save {
