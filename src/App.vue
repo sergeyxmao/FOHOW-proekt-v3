@@ -50,6 +50,7 @@ const isAppInitialized = ref(false)
 const route = useRoute()
 const layout = computed(() => route.meta.layout)
 const isSimpleLayout = computed(() => layout.value === 'public' || layout.value === 'admin')
+const isBoardsPage = computed(() => route.name === 'boards')
 
 // Подключаем i18n для мультиязычности
 const { t } = useI18n()
@@ -945,7 +946,7 @@ onBeforeUnmount(() => {
     }"
   >
     <!-- Для публичных страниц показываем только компонент маршрута -->
-    <template v-if="isSimpleLayout">
+    <template v-if="isSimpleLayout || isBoardsPage">
       <transition name="page" mode="out-in">
         <router-view />
       </transition>
