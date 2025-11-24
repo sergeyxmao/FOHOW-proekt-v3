@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import ObjectContextMenu from '../drawing/ObjectContextMenu.vue'
 
 const props = defineProps({
@@ -21,7 +21,30 @@ const contextMenu = ref({
   x: 0,
   y: 0
 })
+const CONTEXT_MENU_DEFAULT_WIDTH = 200
+const CONTEXT_MENU_DEFAULT_HEIGHT = 240
+const CONTEXT_MENU_OFFSET = 12
+const contextMenuSize = ref({
+  width: CONTEXT_MENU_DEFAULT_WIDTH,
+  height: CONTEXT_MENU_DEFAULT_HEIGHT
+})
+const contextMenuRef = ref(null)
 
+const calculateContextMenuPosition = (clientX, clientY) => {
+  const menuWidth = contextMenuSize.value.width
+  const menuHeight = contextMenuSize.value.height
+
+  const availableRight = window.innerWidth - clientX
+  const placeLeft = availableRight < menuWidth + CONTEXT_MENU_OFFSET
+  const x = placeLeft
+    ? Math.max(clientX - menuWidth - CONTEXT_MENU_OFFSET, 0)
+    : clientX + CONTEXT_MENU_OFFSET
+
+  const maxTop = window.innerHeight - menuHeight - CONTEXT_MENU_OFFSET
+  const y = Math.min(clientY, Math.max(maxTop, 0))
+
+  return { x, y }
+}
 /**
  * Определение типа взаимодействия с объектом изображения
  * @param {MouseEvent} event - событие мыши
@@ -103,11 +126,27 @@ function handleContextMenu(event) {
   event.preventDefault()
   event.stopPropagation()
 
+  const position = calculateContextMenuPosition(event.clientX, event.clientY)
+  
   contextMenu.value = {
     visible: true,
-    x: event.clientX,
-    y: event.clientY
+    x: position.x,
+    y: position.y
   }
+
+  nextTick().then(() => {
+    const rect = contextMenuRef.value?.getMenuRect?.()
+    if (rect) {
+      contextMenuSize.value = {
+        width: rect.width,
+        height: rect.height
+      }
+
+      const adjustedPosition = calculateContextMenuPosition(event.clientX, event.clientY)
+      contextMenu.value.x = adjustedPosition.x
+      contextMenu.value.y = adjustedPosition.y
+    }
+  })  
 }
 
 // Закрыть контекстное меню
@@ -184,6 +223,7 @@ onBeforeUnmount(() => {
 
   <!-- Контекстное меню -->
   <ObjectContextMenu
+    ref="contextMenuRef"    
     :is-visible="contextMenu.visible"
     :x="contextMenu.x"
     :y="contextMenu.y"
