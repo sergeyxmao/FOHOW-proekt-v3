@@ -10,6 +10,7 @@
     ></canvas>
 
     <ObjectContextMenu
+      ref="contextMenuRef"      
       :is-visible="contextMenu.isVisible"
       :x="contextMenu.x"
       :y="contextMenu.y"
@@ -21,7 +22,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, reactive } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, reactive, nextTick } from 'vue';
 import { useImagesStore } from '../../stores/images';
 import ObjectContextMenu from './ObjectContextMenu.vue';
 
@@ -38,7 +39,31 @@ const dragInitialY = ref(0);
 const currentInteractionType = ref(null);
 // Начальные позиции всех выделенных объектов для группового перемещения
 const dragInitialPositions = ref(new Map());
+const CONTEXT_MENU_OFFSET = 12;
+const CONTEXT_MENU_DEFAULT_WIDTH = 200;
+const CONTEXT_MENU_DEFAULT_HEIGHT = 240;
+const contextMenuSize = ref({
+  width: CONTEXT_MENU_DEFAULT_WIDTH,
+  height: CONTEXT_MENU_DEFAULT_HEIGHT,
+});
+const contextMenuRef = ref(null);
 
+const calculateContextMenuPosition = (clientX, clientY) => {
+  const availableRight = window.innerWidth - clientX;
+  const menuWidth = contextMenuSize.value.width;
+  const menuHeight = contextMenuSize.value.height;
+  const placeLeft = availableRight < menuWidth + CONTEXT_MENU_OFFSET;
+
+  const x = placeLeft
+    ? Math.max(clientX - menuWidth - CONTEXT_MENU_OFFSET, 0)
+    : clientX + CONTEXT_MENU_OFFSET;
+
+  const maxTop = window.innerHeight - menuHeight - CONTEXT_MENU_OFFSET;
+  const y = Math.min(clientY, Math.max(maxTop, 0));
+
+  return { x, y };
+};
+  
 // State для resize-операций
 const resizeInitialWidth = ref(0);    // начальная ширина объекта
 const resizeInitialHeight = ref(0);   // начальная высота объекта
@@ -829,10 +854,25 @@ const handleContextMenu = (event) => {
   if (object) {
     // Открываем контекстное меню
     contextMenu.isVisible = true;
-    contextMenu.x = event.clientX;
-    contextMenu.y = event.clientY;
+    const initialPosition = calculateContextMenuPosition(event.clientX, event.clientY);
+    contextMenu.x = initialPosition.x;
+    contextMenu.y = initialPosition.y;
     contextMenu.object = object;
 
+    nextTick().then(() => {
+      const rect = contextMenuRef.value?.getMenuRect?.();
+      if (rect) {
+        contextMenuSize.value = {
+          width: rect.width,
+          height: rect.height,
+        };
+
+        const adjustedPosition = calculateContextMenuPosition(event.clientX, event.clientY);
+        contextMenu.x = adjustedPosition.x;
+        contextMenu.y = adjustedPosition.y;
+      }
+    });
+    
     // Выделить объект если не выделен
     if (!object.isSelected) {
       imagesStore.deselectAllImages();
