@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch, provide } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
@@ -90,6 +90,8 @@ const saveTooltip = computed(() =>
 
 const isModernTheme = ref(false)
 const isPencilMode = ref(false)
+// Делаем isPencilMode доступным для дочерних компонентов
+provide('isPencilMode', isPencilMode)
 const pencilSnapshot = ref(null)
 const pencilBounds = ref(null)
 const canvasRef = ref(null)

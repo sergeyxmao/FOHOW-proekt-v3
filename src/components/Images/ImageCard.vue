@@ -81,6 +81,24 @@ const handleShareRequest = (e) => {
 const canShareRequest = computed(() => {
   return props.isMyLibrary && !props.image.is_shared && !props.image.share_requested_at
 })
+
+// Обработчик начала перетаскивания
+const handleDragStart = (event) => {
+  // Сохраняем данные изображения для drop
+  const imageData = {
+    id: props.image.id,
+    imageId: props.image.id,
+    url: imageSrc.value || props.image.preview_url || props.image.public_url,
+    originalUrl: props.image.public_url,
+    width: props.image.width || 200,
+    height: props.image.height || 150,
+    originalName: props.image.original_name
+  }
+
+  event.dataTransfer.effectAllowed = 'copy'
+  event.dataTransfer.setData('application/json', JSON.stringify(imageData))
+  event.dataTransfer.setData('text/plain', imageData.originalName || 'image')
+}
 </script>
 
 <template>
@@ -90,7 +108,9 @@ const canShareRequest = computed(() => {
       'image-card--shared': imageStatus === 'shared',
       'image-card--pending': imageStatus === 'pending'
     }"
+    draggable="true"
     @click="handleClick"
+    @dragstart="handleDragStart"
   >
     <!-- Миниатюра -->
     <div class="image-card__thumbnail">

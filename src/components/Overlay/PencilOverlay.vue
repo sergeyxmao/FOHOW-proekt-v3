@@ -79,6 +79,14 @@ const ERASER_MAX_SIZE = 80;
   
 const isImagesPanelOpen = computed(() => sidePanelsStore.isImagesOpen);
 
+// Следим за открытием панели изображений - отключаем активный инструмент
+watch(isImagesPanelOpen, (isOpen) => {
+  if (isOpen) {
+    currentTool.value = null; // Сбрасываем активный инструмент
+    openDropdown.value = null; // Закрываем все выпадающие меню
+  }
+});
+
 const MAX_HISTORY_LENGTH = 50;
 const MARKER_MIN_SIZE = 30;
 const MARKER_MAX_SIZE = 100;
@@ -1149,6 +1157,75 @@ const selectTool = (toolName) => {
 const closeAllDropdowns = () => {
   openDropdown.value = null;
 };
+
+// Обработчики drag-and-drop для изображений из библиотеки
+const handleDragOver = (event) => {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'copy';
+};
+
+const handleDrop = async (event) => {
+  event.preventDefault();
+
+  // Получаем данные изображения
+  const jsonData = event.dataTransfer.getData('application/json');
+  if (!jsonData) return;
+
+  let imageData;
+  try {
+    imageData = JSON.parse(jsonData);
+  } catch (error) {
+    console.error('Ошибка парсинга данных изображения:', error);
+    return;
+  }
+
+  // Вычисляем координаты drop с учётом масштаба и offset
+  const point = getCanvasPoint(event);
+  if (!point) return;
+
+  // Получаем blob URL для изображения (если нужно)
+  let imageUrl = imageData.url;
+  if (imageData.imageId && !imageUrl) {
+    try {
+      const { useImageProxy } = await import('../../composables/useImageProxy');
+      const { getImageUrl } = useImageProxy();
+      imageUrl = await getImageUrl(imageData.imageId);
+    } catch (error) {
+      console.error('Ошибка загрузки blob URL:', error);
+    }
+  }
+
+  // Рисуем изображение на canvas
+  const context = canvasContext.value;
+  if (!context || !imageUrl) {
+    console.error('Не удалось добавить изображение: отсутствует контекст или URL');
+    return;
+  }
+
+  const imageElement = new Image();
+  imageElement.crossOrigin = 'anonymous';
+
+  imageElement.onload = () => {
+    const originalWidth = imageData.width || imageElement.width || 200;
+    const originalHeight = imageData.height || imageElement.height || 150;
+    const displaySize = calculateImageDisplaySize(originalWidth, originalHeight);
+
+    // Центрируем изображение по месту drop
+    const drawX = point.x - displaySize.width / 2;
+    const drawY = point.y - displaySize.height / 2;
+
+    context.drawImage(imageElement, drawX, drawY, displaySize.width, displaySize.height);
+    scheduleHistorySave(true);
+
+    console.log('✅ Изображение добавлено на canvas через drag-and-drop:', imageData.originalName);
+  };
+
+  imageElement.onerror = () => {
+    console.error('Не удалось загрузить изображение для режима рисования');
+  };
+
+  imageElement.src = imageUrl;
+};
 </script>
 
 <template>
@@ -1164,6 +1241,8 @@ const closeAllDropdowns = () => {
       @pointerup="handleBoardPointerUp"
       @pointerleave="handleBoardPointerCancel"
       @pointercancel="handleBoardPointerCancel"
+      @dragover.prevent="handleDragOver"
+      @drop.prevent="handleDrop"
       >
       <canvas
         ref="drawingCanvasRef"
