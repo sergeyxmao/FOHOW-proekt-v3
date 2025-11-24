@@ -548,7 +548,21 @@ app.post('/api/resend-verification-code', async (req, reply) => {
     return reply.code(500).send({ error: 'Ошибка сервера' });
   }
 });
+function validateOffice(office) {
+  const pattern = /^[A-Z]{3}\d{2,3}$/;
+  return pattern.test(office);
+}
 
+function validatePersonalId(personalId, office) {
+  if (!personalId || !office) return false;
+
+  const normalizedOffice = office.trim().toUpperCase();
+  if (!validateOffice(normalizedOffice)) return false;
+
+  if (!personalId.startsWith(normalizedOffice)) return false;
+  const suffix = personalId.substring(normalizedOffice.length);
+  return /^\d{9}$/.test(suffix);
+}
 // === ПРОВЕРКА КОДА И АКТИВАЦИЯ АККАУНТА ===
 app.post('/api/verify-email', async (req, reply) => {
   const { email, code } = req.body;
@@ -867,12 +881,26 @@ app.post('/api/reset-password', async (req, reply) => {
           telegram_user, telegram_channel, vk_profile, ok_profile,
           instagram_profile, whatsapp_contact
         } = req.body;
+        const normalizedOffice = typeof office === 'string' ? office.trim().toUpperCase() : null;
+        const normalizedPersonalId = typeof personal_id === 'string' ? personal_id.trim().toUpperCase() : null;
 
         const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
         if (userResult.rows.length === 0) {
           return reply.code(404).send({ error: 'Пользователь не найден' });
         }
         const user = userResult.rows[0];
+        const currentOffice = user.office ? user.office.toUpperCase() : '';
+        const currentPersonalId = user.personal_id ? user.personal_id.toUpperCase() : null;
+
+        const targetOffice = normalizedOffice ?? currentOffice;
+        const targetPersonalId = normalizedPersonalId ?? currentPersonalId;
+
+        if (normalizedOffice !== null && normalizedOffice !== '' && !validateOffice(normalizedOffice)) {
+          return reply.code(400).send({
+            error: 'Представительство должно быть в формате: 3 английские буквы + 2-3 цифры (например: RUY68)',
+            field: 'office'
+          });
+        }
 
         // Проверки уникальности email и username
         if (email && email !== user.email) {
@@ -885,7 +913,16 @@ app.post('/api/reset-password', async (req, reply) => {
         }
 
         // Проверки personal_id (формат и уникальность)
-        if (personal_id && personal_id !== user.personal_id) {
+        if (targetPersonalId) {
+          if (!validatePersonalId(targetPersonalId, targetOffice)) {
+            return reply.code(400).send({
+              error: 'Компьютерный номер должен начинаться с представительства и содержать 9 цифр (например: RUY68000000000)',
+              field: 'personal_id'
+            });
+          }
+        }
+
+        if (normalizedPersonalId && normalizedPersonalId !== currentPersonalId) {
           // Если пользователь верифицирован, предупреждаем об отмене верификации
           if (user.is_verified) {
             // ВАЖНО: На этом этапе мы только проверяем, фронтенд должен был показать предупреждение
@@ -897,19 +934,10 @@ app.post('/api/reset-password', async (req, reply) => {
             console.log(`⚠️ Верификация отменена для пользователя ${userId} из-за смены personal_id`);
           }
 
-          // Проверяем формат (RUY00 + 9 цифр)
-          const formatRegex = /^RUY00\d{9}$/;
-          if (!formatRegex.test(personal_id)) {
-            return reply.code(400).send({
-              error: 'Неверный формат компьютерного номера. Формат: RUY00XXXXXXXXX (9 цифр)',
-              field: 'personal_id'
-            });
-          }
-
           // Проверяем уникальность
           const personalIdCheck = await pool.query(
             'SELECT id FROM users WHERE personal_id = $1 AND id != $2',
-            [personal_id, userId]
+            [normalizedPersonalId, userId]
           );
           if (personalIdCheck.rows.length > 0) {
             return reply.code(400).send({
@@ -918,7 +946,7 @@ app.post('/api/reset-password', async (req, reply) => {
             });
           }
 
-          console.log(`✅ Пользователь ${userId} изменил personal_id на: ${personal_id}`);
+          console.log(`✅ Пользователь ${userId} изменил personal_id на: ${normalizedPersonalId}`);
         }
         
         // Логика смены пароля... (оставляем без изменений)
@@ -930,8 +958,8 @@ app.post('/api/reset-password', async (req, reply) => {
           passwordHash = await bcrypt.hash(newPassword, 10);
         }
 
-        const queryText = `UPDATE users SET 
-             username = COALESCE($1, username), email = COALESCE($2, email), password = $3, 
+        const queryText = `UPDATE users SET
+             username = COALESCE($1, username), email = COALESCE($2, email), password = $3,
              country = COALESCE($4, country), city = COALESCE($5, city), office = COALESCE($6, office),
              personal_id = COALESCE($7, personal_id), phone = COALESCE($8, phone), full_name = COALESCE($9, full_name),
              telegram_user = COALESCE($10, telegram_user), telegram_channel = COALESCE($11, telegram_channel),
@@ -943,7 +971,7 @@ app.post('/api/reset-password', async (req, reply) => {
         
         const queryParams = [
             username || null, email || null, passwordHash,
-            country || null, city || null, office || null, personal_id || null, phone || null, full_name || null,
+            country || null, city || null, normalizedOffice || null, normalizedPersonalId || null, phone || null, full_name || null,
             telegram_user || null, telegram_channel || null, vk_profile || null, ok_profile || null,
             instagram_profile || null, whatsapp_contact || null,
             userId
