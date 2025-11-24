@@ -21,12 +21,6 @@ const { canUndo, canRedo } = storeToRefs(historyStore)
 
 const showClearCanvasDialog = ref(false)
 const showNewStructureDialog = ref(false)
-
-const handleHierarchicalMode = () => {
-  canvasStore.toggleHierarchicalDragMode()
-  emit('request-close')
-}
-
 const handleActivatePencil = () => {
   emit('activate-pencil')
   emit('request-close')
@@ -94,17 +88,6 @@ const cancelNewStructure = () => {
     <div class="tools-menu__list">
       <div class="tools-menu__item">
         <span class="tools-menu__icon" aria-hidden="true">🌳</span>
-        <button
-          type="button"
-          class="tools-menu__action"
-          :class="{ 'tools-menu__action--active': isHierarchicalDragMode }"
-          @click="handleHierarchicalMode"
-        >
-          {{ t('toolsMenu.hierarchyMode') }}
-        </button>
-      </div>
-      <div class="tools-menu__item">
-        <span class="tools-menu__icon" aria-hidden="true">✏️</span>
         <button
           type="button"
           class="tools-menu__action"
