@@ -277,7 +277,7 @@ watch(
           @click="handleAvatarClick"
           :title="user?.name || 'Профиль'"
         >
-          <div class="avatar-container">
+          <div :class="['avatar-container', { 'avatar-container--verified': user?.is_verified }]">
             <img
               v-if="user?.avatar_url"
               :src="getAvatarUrl(user.avatar_url)"
@@ -285,9 +285,6 @@ watch(
               class="avatar-image"
             >
             <span v-else class="avatar-initials">{{ userInitials }}</span>
-
-            <!-- Значок верификации -->
-            <div v-if="user?.is_verified" class="verification-badge-mini" title="Верифицирован">⭐</div>
           </div>
         </button>
         <button
@@ -570,27 +567,32 @@ watch(
   display: inline-block;
   width: 100%;
   height: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;  
 }
 
-.verification-badge-mini {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 18px;
-  height: 18px;
-  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+.avatar-container--verified {
+  padding: 6px;
   border-radius: 50%;
-  border: 2px solid #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-  z-index: 10;
+  border: 3px solid #FFD700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.18) 0%, rgba(255, 165, 0, 0.18) 100%);
+  animation: goldPulse 3s ease-in-out infinite;
 }
 
-.mobile-header--dark .verification-badge-mini {
-  border-color: rgba(28, 38, 58, 0.95);
+@keyframes goldPulse {
+  0% {
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.45), 0 0 0 0 rgba(255, 215, 0, 0.35);
+    border-color: rgba(255, 215, 0, 0.85);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.7), 0 0 0 8px rgba(255, 215, 0, 0.08);
+    border-color: rgba(255, 215, 0, 1);
+  }
+  100% {
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.45), 0 0 0 0 rgba(255, 215, 0, 0.0);
+    border-color: rgba(255, 215, 0, 0.85);
+  }
 }
 .mobile-user-menu-overlay {
   position: fixed;
