@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth.js'
+import { useUserStore } from './user.js'
 
 // API_URL берем из переменных окружения
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
@@ -28,13 +29,17 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
      * @returns {boolean} true, если можно создать папку
      */
     canCreateFolder: (state) => {
-      const authStore = useAuthStore()
+      const userStore = useUserStore()
       const user = authStore.user
 
-      if (!user || !user.plan_id) return false
+      if (!user && !userStore.features) return false
 
-      // Получить лимит из features плана
-      const maxFoldersRaw = user.subscription_plan?.features?.max_folders || user.plan?.features?.max_folders || 0
+      // Получить лимит из features плана (приоритет userStore -> authStore)
+      const maxFoldersRaw =
+        userStore.features?.max_folders ||
+        user?.subscription_plan?.features?.max_folders ||
+        user?.plan?.features?.max_folders ||
+        0
       const maxFolders = parseInt(maxFoldersRaw, 10)
 
       // Если лимит 0 или NaN - функция недоступна
@@ -55,12 +60,18 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
      */
     foldersLimit: () => {
       const authStore = useAuthStore()
+      const userStore = useUserStore()
+     
       const user = authStore.user
 
-      if (!user || !user.plan_id) return 0
+      if (!user && !userStore.features) return 0
 
-      const maxFoldersRaw = user.subscription_plan?.features?.max_folders || user.plan?.features?.max_folders || 0
-      return parseInt(maxFoldersRaw, 10) || 0
+      const maxFoldersRaw =
+        userStore.features?.max_folders ||
+        user?.subscription_plan?.features?.max_folders ||
+        user?.plan?.features?.max_folders ||
+        0
+        return parseInt(maxFoldersRaw, 10) || 0
     },
 
     /**
