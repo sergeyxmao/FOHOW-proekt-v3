@@ -53,6 +53,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useBoardFoldersStore } from '@/stores/boardFolders'
+import { useNotificationsStore } from '@/stores/notifications'
 
 const props = defineProps({
   folder: {
@@ -64,6 +65,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'deleted'])
 
 const boardFoldersStore = useBoardFoldersStore()
+const notificationsStore = useNotificationsStore() 
 const confirmed = ref(false)
 const loading = ref(false)
 const error = ref(null)
@@ -75,8 +77,11 @@ const deleteFolder = async () => {
   error.value = null
 
   try {
-    const result = await boardFoldersStore.deleteFolder(props.folder.id)
-    console.log(`Удалено досок: ${result.deleted_boards_count}`)
+    const deletedBoardsCount = await boardFoldersStore.deleteFolder(props.folder.id)
+    notificationsStore.addNotification({
+      type: 'success',
+      message: `Папка "${props.folder.name}" удалена${deletedBoardsCount ? ` вместе с ${deletedBoardsCount} досками` : ''}.`
+    })
     emit('deleted')
   } catch (err) {
     error.value = 'Не удалось удалить папку. Попробуйте позже'
