@@ -185,7 +185,7 @@ onBeforeUnmount(() => {
                 class="app-header__user-trigger"
                 @click.stop="toggleUserMenu"
               >
-                <span class="user-avatar-wrapper">
+                <span :class="['user-avatar-wrapper', { 'user-avatar-wrapper--verified': user?.is_verified }]">
                   <img
                     v-if="user?.avatar_url"
                     :src="getAvatarUrl(user.avatar_url)"
@@ -465,6 +465,35 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+}
+
+.user-avatar-wrapper--verified {
+  padding: 6px;
+  border-radius: 50%;
+  border: 3px solid #FFD700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+  transition: box-shadow 0.4s ease, transform 0.4s ease, border-color 0.4s ease, background 0.4s ease;
+  animation: goldPulse 3s ease-in-out infinite;
+}
+
+.user-avatar-wrapper--verified:hover {
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.75);
+}
+
+@keyframes goldPulse {
+  0% {
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.45), 0 0 0 0 rgba(255, 215, 0, 0.35);
+    border-color: rgba(255, 215, 0, 0.85);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.7), 0 0 0 8px rgba(255, 215, 0, 0.08);
+    border-color: rgba(255, 215, 0, 1);
+  }
+  100% {
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.45), 0 0 0 0 rgba(255, 215, 0, 0.0);
+    border-color: rgba(255, 215, 0, 0.85);
+  }  
 }
 
 .user-menu {
