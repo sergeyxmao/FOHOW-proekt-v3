@@ -16,22 +16,21 @@
       <!-- Блок 1: Аватарка (верх страницы, по центру) -->
       <!-- ============================================ -->
       <div class="profile-avatar-section">
-        <div :class="['avatar-wrapper', { 'avatar-wrapper--verified': user.is_verified }]">
-          <img
-            v-if="user.avatar_url"
-            :key="avatarKey"
-            :src="getAvatarUrl(user.avatar_url)"
-            alt="Аватар"
-            class="profile-avatar"
-          >
-          <div v-else class="profile-avatar-placeholder">
-            {{ getInitials(user.username || user.email) }}
+          <div :class="['avatar-wrapper', { 'avatar-wrapper--verified': user.is_verified }]">
+            <img
+              v-if="user.avatar_url"
+              :key="avatarKey"
+              :src="getAvatarUrl(user.avatar_url)"
+              alt="Аватар"
+              class="profile-avatar"
+            >
+            <div v-else class="profile-avatar-placeholder">
+              {{ getInitials(user.username || user.email) }}
+            </div>
           </div>
-          </div>
-        </div>
-        <div class="avatar-actions">
-          <label class="btn-upload">
-            <input
+          <div class="avatar-actions">
+            <label class="btn-upload">
+              <input
               type="file"
               accept="image/*"
               @change="handleAvatarChange"
