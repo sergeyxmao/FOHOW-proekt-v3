@@ -88,8 +88,8 @@ function openRegister() {
 }
 
 function openBoards() {
-  showBoards.value = true
   closeUserMenu()
+  router.push('/board')  
 }
 
 function handleOpenBoard(boardId) {
