@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, inject } from 'vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
 import { useSubscriptionStore } from '../../stores/subscription.js'
@@ -20,6 +20,9 @@ const props = defineProps({
 const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
 const subscriptionStore = useSubscriptionStore()
+
+// Получаем состояние режима рисования из родительского компонента
+const isPencilMode = inject('isPencilMode', ref(false))
 
 // Активная вкладка: 'my' | 'shared'
 const activeTab = ref('my')
@@ -45,7 +48,8 @@ const setActiveTab = (tab) => {
     class="images-panel"
     :class="{
       'images-panel--modern': props.isModernTheme,
-      'images-panel--no-pointer': stickersStore.isPlacementMode
+      'images-panel--no-pointer': stickersStore.isPlacementMode,
+      'images-panel--above-pencil': isPencilMode
     }"
   >
     <div class="images-panel__header">
@@ -315,5 +319,10 @@ const setActiveTab = (tab) => {
 
 .images-panel__content::-webkit-scrollbar-thumb:hover {
   background: rgba(15, 23, 42, 0.3);
+}
+
+/* Повышенный z-index для отображения поверх режима рисования */
+.images-panel--above-pencil {
+  z-index: 4100;
 }
 </style>

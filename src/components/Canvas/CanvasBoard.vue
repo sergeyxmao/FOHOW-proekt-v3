@@ -3908,6 +3908,76 @@ const deselectAll = () => {
   renderAllImages();
 };
 
+/**
+ * Обработчик dragover для drag-and-drop изображений из библиотеки
+ */
+const handleImageDragOver = (event) => {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'copy';
+};
+
+/**
+ * Обработчик drop для drag-and-drop изображений из библиотеки
+ */
+const handleImageDrop = async (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  // Получаем данные изображения
+  const jsonData = event.dataTransfer.getData('application/json');
+  if (!jsonData) return;
+
+  let imageData;
+  try {
+    imageData = JSON.parse(jsonData);
+  } catch (error) {
+    console.error('Ошибка парсинга данных изображения:', error);
+    return;
+  }
+
+  // Вычисляем координаты drop с учётом масштаба
+  const { x, y } = screenToCanvas(event.clientX, event.clientY);
+
+  // Проверяем наличие boardId
+  if (!boardStore.currentBoardId) {
+    console.error('Не удалось добавить изображение: boardId не определён');
+    return;
+  }
+
+  // Получаем blob URL для изображения (если нужно)
+  let imageUrl = imageData.url;
+  if (imageData.imageId && !imageUrl) {
+    try {
+      const { useImageProxy } = await import('../../composables/useImageProxy');
+      const { getImageUrl } = useImageProxy();
+      imageUrl = await getImageUrl(imageData.imageId);
+    } catch (error) {
+      console.error('Ошибка загрузки blob URL:', error);
+    }
+  }
+
+  // Вычисляем размеры для отображения (макс. 500px)
+  const displaySize = imagesStore.calculateDisplaySize(
+    imageData.width || 200,
+    imageData.height || 150,
+    500
+  );
+
+  // Добавляем изображение на canvas через imagesStore
+  await imagesStore.addImage({
+    name: imageData.originalName || 'Image from library',
+    imageId: imageData.imageId,
+    dataUrl: imageUrl,
+    originalUrl: imageData.originalUrl,
+    width: imageData.width || 200,
+    height: imageData.height || 150,
+    x: Math.round(x - displaySize.width / 2),  // Центрируем по курсору
+    y: Math.round(y - displaySize.height / 2)
+  });
+
+  console.log('✅ Изображение добавлено на доску через drag-and-drop:', imageData.originalName);
+};
+
 defineExpose({
   resetView,
   fitToContent,
@@ -4012,7 +4082,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       class="selection-box"
       :style="selectionBoxStyle"
     ></div>  
-    <div class="canvas-content" :style="canvasContentStyle" @click="handleStageClick">
+    <div class="canvas-content" :style="canvasContentStyle" @click="handleStageClick" @dragover.prevent="handleImageDragOver" @drop.prevent="handleImageDrop">
       <div
         v-if="guidesEnabled && (activeGuides.vertical !== null || activeGuides.horizontal !== null)"
         class="guides-overlay"
