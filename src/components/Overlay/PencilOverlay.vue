@@ -3,6 +3,9 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js';
 import { useStickersStore } from '../../stores/stickers.js';
 import ImagesPanel from '../Panels/ImagesPanel.vue';
+import { calculateImageDisplaySize } from '../../utils/imageSizing.js';
+import { toCanvasPoint } from '../../utils/canvasCoordinates.js';
+import { buildPlacedImage, movePlacedImage, resizePlacedImage } from '../../utils/placedImages.js';
   
 const props = defineProps({
   snapshot: {
@@ -74,10 +77,13 @@ const panOffset = ref({ x: 0, y: 0 });
 const isPanning = ref(false);
 const panPointerId = ref(null);
 const panStartPoint = ref(null);
-const panInitialOffset = ref({ x: 0, y: 0 });  
+const panInitialOffset = ref({ x: 0, y: 0 });
 const ERASER_MIN_SIZE = 4;
 const ERASER_MAX_SIZE = 80;
-  
+const TEMP_IMAGE_MIN_SIZE = 24;
+const placedImages = ref([]);
+const activeImageId = ref(null);
+const imageTransformState = ref(null);  
 const isImagesPanelOpen = computed(() => sidePanelsStore.isImagesOpen);
 
 // Следим за открытием панели изображений - переключаемся в режим перемещения
@@ -211,30 +217,6 @@ const hexToRgba = (hex, alpha) => {
   const g = (int >> 8) & 255;
   const b = int & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
-const calculateImageDisplaySize = (originalWidth, originalHeight, maxSize = 500) => {
-  if (originalWidth <= maxSize && originalHeight <= maxSize) {
-    return { width: originalWidth, height: originalHeight };
-  }
-
-  let displayWidth;
-  let displayHeight;
-
-  if (originalWidth > originalHeight) {
-    displayWidth = maxSize;
-    displayHeight = (originalHeight / originalWidth) * maxSize;
-  } else if (originalHeight > originalWidth) {
-    displayHeight = maxSize;
-    displayWidth = (originalWidth / originalHeight) * maxSize;
-  } else {
-    displayWidth = maxSize;
-    displayHeight = maxSize;
-  }
-
-  return {
-    width: Math.round(displayWidth),
-    height: Math.round(displayHeight)
-  };
 };
 const captureCanvasData = () => {
   const canvas = drawingCanvasRef.value;
@@ -396,18 +378,163 @@ const canUndo = computed(() => historyIndex.value > 0);
 const canRedo = computed(() => historyIndex.value >= 0 && historyIndex.value < historyEntries.value.length - 1);
 const isDrawingToolActive = computed(() => ['brush', 'marker', 'eraser'].includes(currentTool.value));
 const isSelectionToolActive = computed(() => currentTool.value === 'selection');
+const activePlacedImage = computed(() => placedImages.value.find((image) => image.id === activeImageId.value) || null);
+
+const updatePlacedImageRect = (imageId, updater) => {
+  placedImages.value = placedImages.value.map((image) => {
+    if (image.id !== imageId) {
+      return image;
+    }
+
+    const updated = typeof updater === 'function' ? updater(image) : updater;
+    return updated || image;
+  });
+};
+
+const getPlacedImageStyle = (image) => {
+  const displayScale = canvasScale.value || 1;
+
+  return {
+    width: `${image.width / displayScale}px`,
+    height: `${image.height / displayScale}px`,
+    transform: `translate(${image.x / displayScale}px, ${image.y / displayScale}px) rotate(${image.rotation}deg)`,
+    transformOrigin: 'top left'
+  };
+};  
 const getCanvasPoint = (event) => {
   const canvas = drawingCanvasRef.value;
   if (!canvas) return null;
 
   const rect = canvas.getBoundingClientRect();
   const scale = zoomScale.value || 1;
-  // Учитываем масштаб между отображаемым размером и высокоразрешенным canvas
   const displayScale = canvasScale.value || 1;
-  return {
-    x: ((event.clientX - rect.left) / scale) * displayScale,
-    y: ((event.clientY - rect.top) / scale) * displayScale
+
+  return toCanvasPoint({
+    clientX: event.clientX,
+    clientY: event.clientY,
+    rect,
+    zoomScale: scale,
+    canvasScale: displayScale
+  });
+};
+
+const ensureImageElement = (src) => new Promise((resolve, reject) => {
+  const element = new Image();
+  element.crossOrigin = 'anonymous';
+  element.onload = () => resolve(element);
+  element.onerror = (error) => reject(error);
+  element.src = src;
+});
+
+const drawPlacedImageOnCanvas = async (image) => {
+  const context = canvasContext.value;
+  if (!context || !image) {
+    return;
+  }
+
+  try {
+    const element = await ensureImageElement(image.src);
+    context.save();
+    context.translate(image.x + image.width / 2, image.y + image.height / 2);
+    context.rotate((image.rotation * Math.PI) / 180);
+    context.drawImage(element, -image.width / 2, -image.height / 2, image.width, image.height);
+    context.restore();
+    scheduleHistorySave(true);
+  } catch (error) {
+    console.error('Не удалось отрисовать временное изображение на холст', error);
+  }
+};
+
+const finalizeActiveImagePlacement = async () => {
+  if (!activePlacedImage.value) {
+    return;
+  }
+
+  const imageId = activePlacedImage.value.id;
+  const imageToDraw = { ...activePlacedImage.value };
+  await drawPlacedImageOnCanvas(imageToDraw);
+  placedImages.value = placedImages.value.filter((image) => image.id !== imageId);
+  if (activeImageId.value === imageId) {
+    activeImageId.value = null;
+  }
+};
+
+const cancelActiveImagePlacement = () => {
+  if (!activePlacedImage.value) {
+    return;
+  }
+
+  const imageId = activePlacedImage.value.id;
+  placedImages.value = placedImages.value.filter((image) => image.id !== imageId);
+  if (activeImageId.value === imageId) {
+    activeImageId.value = null;
+  }
+};
+
+const beginImageTransform = (imageId, type, handle, event) => {
+  const point = getCanvasPoint(event);
+  if (!point) return;
+
+  const target = placedImages.value.find((image) => image.id === imageId);
+  if (!target) return;
+
+  activeImageId.value = imageId;
+  imageTransformState.value = {
+    pointerId: event.pointerId,
+    type,
+    handle,
+    startPoint: point,
+    startRect: { ...target },
+    captureTarget: event.currentTarget || null,
+    changed: false
   };
+
+  if (imageTransformState.value.captureTarget && imageTransformState.value.captureTarget.setPointerCapture) {
+    imageTransformState.value.captureTarget.setPointerCapture(event.pointerId);
+  }
+};
+
+const applyImageTransform = (event) => {
+  if (!imageTransformState.value || imageTransformState.value.pointerId !== event.pointerId) {
+    return;
+  }
+
+  const point = getCanvasPoint(event);
+  if (!point) return;
+
+  const dx = point.x - imageTransformState.value.startPoint.x;
+  const dy = point.y - imageTransformState.value.startPoint.y;
+  const { type, handle, startRect } = imageTransformState.value;
+
+  if (type === 'move') {
+    const next = movePlacedImage(startRect, dx, dy, canvasWidth.value, canvasHeight.value);
+    updatePlacedImageRect(activeImageId.value, next);
+  } else if (type === 'resize') {
+    const next = resizePlacedImage(
+      startRect,
+      handle,
+      dx,
+      dy,
+      canvasWidth.value,
+      canvasHeight.value,
+      TEMP_IMAGE_MIN_SIZE
+    );
+    updatePlacedImageRect(activeImageId.value, next);
+  }
+
+  imageTransformState.value.changed = true;
+};
+
+const finishImageTransform = (event) => {
+  if (!imageTransformState.value || imageTransformState.value.pointerId !== event.pointerId) {
+    return;
+  }
+
+  if (imageTransformState.value.captureTarget?.releasePointerCapture) {
+    imageTransformState.value.captureTarget.releasePointerCapture(event.pointerId);
+  }
+
+  imageTransformState.value = null;
 };
 const placePendingImageOnCanvas = (point) => {
   const pendingImage = stickersStore.pendingImageData;
@@ -885,7 +1012,8 @@ const exportFinalImage = () => {
   return resultCanvas.toDataURL('image/png');
 };
 
-const handleClose = () => {
+const handleClose = async () => {
+  await finalizeActiveImagePlacement();
   const image = exportFinalImage();
   emit('close', { image });
 };
@@ -911,6 +1039,11 @@ const handleKeydown = (event) => {
   }
   
   if (event.key === 'Escape') {
+    if (activePlacedImage.value) {
+      event.preventDefault();
+      cancelActiveImagePlacement();
+      return;
+    }    
     if (currentTool.value === 'selection' && (activeSelection.value || isCreatingSelection.value || isMovingSelection.value)) {
       event.preventDefault();
       cancelSelection();
@@ -939,6 +1072,9 @@ const loadBaseImage = () => {
     zoomScale.value = 1;
     minZoomScale.value = 1;
     isReady.value = true;
+     placedImages.value = [];
+    activeImageId.value = null;
+    imageTransformState.value = null;   
 
     nextTick(() => {
       const canvas = drawingCanvasRef.value;
@@ -1121,8 +1257,11 @@ const finishPan = (event) => {
 };
 
 const handleBoardPointerDown = (event) => {
-   const isPrimaryButton = event.button === 0 || event.button === undefined || event.button === -1;
+  const isPrimaryButton = event.button === 0 || event.button === undefined || event.button === -1;
 
+  if (isPrimaryButton && !imageTransformState.value && !event.target.closest('.pencil-overlay__image-wrapper')) {
+    void finalizeActiveImagePlacement();
+  }
   if (currentTool.value === 'pan' && isPrimaryButton) {
     beginPan(event);
     return;
@@ -1137,6 +1276,11 @@ const handleBoardPointerDown = (event) => {
 };
 
 const handleBoardPointerMove = (event) => {
+  if (imageTransformState.value && imageTransformState.value.pointerId === event.pointerId) {
+    event.preventDefault();
+    applyImageTransform(event);
+    return;
+  }  
   if (!isPanning.value || panPointerId.value !== event.pointerId) {
     return;
   }
@@ -1146,6 +1290,10 @@ const handleBoardPointerMove = (event) => {
 };
 
 const handleBoardPointerUp = (event) => {
+  if (imageTransformState.value && imageTransformState.value.pointerId === event.pointerId) {
+    finishImageTransform(event);
+    return;
+  }  
   if (panPointerId.value !== event.pointerId) {
     return;
   }
@@ -1154,6 +1302,10 @@ const handleBoardPointerUp = (event) => {
 };
 
 const handleBoardPointerCancel = (event) => {
+  if (imageTransformState.value && imageTransformState.value.pointerId === event.pointerId) {
+    finishImageTransform(event);
+    return;
+  }  
   if (panPointerId.value !== event.pointerId) {
     return;
   }
@@ -1186,6 +1338,7 @@ const handleDragOver = (event) => {
 
 const handleDrop = async (event) => {
   event.preventDefault();
+  await finalizeActiveImagePlacement();
 
   // Получаем данные изображения
   const jsonData = event.dataTransfer.getData('application/json');
@@ -1215,37 +1368,32 @@ const handleDrop = async (event) => {
     }
   }
 
-  // Рисуем изображение на canvas
-  const context = canvasContext.value;
-  if (!context || !imageUrl) {
-    console.error('Не удалось добавить изображение: отсутствует контекст или URL');
+  if (!imageUrl) {
+    console.error('Не удалось добавить изображение: отсутствует URL');
     return;
   }
 
-  const imageElement = new Image();
-  imageElement.crossOrigin = 'anonymous';
-
-  imageElement.onload = () => {
+  try {
+    const imageElement = await ensureImageElement(imageUrl);
     const originalWidth = imageData.width || imageElement.width || 200;
     const originalHeight = imageData.height || imageElement.height || 150;
-    const displaySize = calculateImageDisplaySize(originalWidth, originalHeight);
+    const draftId = imageData.imageId || (crypto?.randomUUID ? crypto.randomUUID() : `temp-${Date.now()}`);
+    const draft = buildPlacedImage({
+      id: draftId,
+      src: imageUrl,
+      originalWidth,
+      originalHeight,
+      point,
+      canvasWidth: canvasWidth.value,
+      canvasHeight: canvasHeight.value
+    });
 
-    // Центрируем изображение по месту drop
-    const drawX = point.x - displaySize.width / 2;
-    const drawY = point.y - displaySize.height / 2;
-
-    context.drawImage(imageElement, drawX, drawY, displaySize.width, displaySize.height);
-    scheduleHistorySave(true);
-
-    console.log('✅ Изображение добавлено на canvas через drag-and-drop:', imageData.originalName);
+    placedImages.value = [...placedImages.value, draft];
+    activeImageId.value = draft.id;
+  } catch (error) {
+    console.error('Не удалось загрузить изображение для режима рисования', error);
+  }
   };
-
-  imageElement.onerror = () => {
-    console.error('Не удалось загрузить изображение для режима рисования');
-  };
-
-  imageElement.src = imageUrl;
-};
 </script>
 
 <template>
@@ -1273,11 +1421,68 @@ const handleDrop = async (event) => {
         @pointerleave="handleCanvasPointerLeave"
         @pointercancel="handleCanvasPointerLeave"
       ></canvas>
+      <div class="pencil-overlay__images-layer">
+        <div
+          v-for="image in placedImages"
+          :key="image.id"
+          class="pencil-overlay__image-wrapper"
+          :class="{ 'pencil-overlay__image-wrapper--active': image.id === activeImageId }"
+          :style="getPlacedImageStyle(image)"
+          @pointerdown.stop.prevent="beginImageTransform(image.id, 'move', null, $event)"
+          @pointermove.stop.prevent="applyImageTransform"
+          @pointerup.stop.prevent="finishImageTransform"
+          @pointercancel.stop.prevent="finishImageTransform"
+        >
+          <img :src="image.src" alt="Вставленное изображение" class="pencil-overlay__image" draggable="false" />
+          <div v-if="image.id === activeImageId" class="pencil-overlay__image-frame">
+            <span
+              class="pencil-overlay__image-handle pencil-overlay__image-handle--top-left"
+              title="Масштабировать"
+              @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'top-left', $event)"
+            ></span>
+            <span
+              class="pencil-overlay__image-handle pencil-overlay__image-handle--top"
+              title="Масштабировать"
+              @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'top', $event)"
+            ></span>
+            <span
+              class="pencil-overlay__image-handle pencil-overlay__image-handle--top-right"
+              title="Масштабировать"
+              @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'top-right', $event)"
+            ></span>
+            <span
+              class="pencil-overlay__image-handle pencil-overlay__image-handle--right"
+              title="Масштабировать"
+              @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'right', $event)"
+            ></span>
+            <span
+              class="pencil-overlay__image-handle pencil-overlay__image-handle--bottom-right"
+              title="Масштабировать"
+              @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'bottom-right', $event)"
+            ></span>
+            <span
+              class="pencil-overlay__image-handle pencil-overlay__image-handle--bottom"
+              title="Масштабировать"
+              @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'bottom', $event)"
+            ></span>
+            <span
+              class="pencil-overlay__image-handle pencil-overlay__image-handle--bottom-left"
+              title="Масштабировать"
+              @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'bottom-left', $event)"
+            ></span>
+            <span
+              class="pencil-overlay__image-handle pencil-overlay__image-handle--left"
+              title="Масштабировать"
+              @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'left', $event)"
+            ></span>
+          </div>
+        </div>
+      </div>      
       <div
         v-if="showEraserPreview && eraserPreviewStyle"
         class="pencil-overlay__eraser-preview"
         :style="eraserPreviewStyle"
-      ></div>      
+      ></div>
       <div
         v-if="selectionStyle"
         class="pencil-overlay__selection"
@@ -1708,6 +1913,107 @@ const handleDrop = async (event) => {
   touch-action: none;
   outline: none;
 }
+.pencil-overlay__images-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pencil-overlay__image-wrapper {
+  position: absolute;
+  pointer-events: auto;
+  user-select: none;
+  transform-origin: top left;
+}
+
+.pencil-overlay__image-wrapper--active {
+  z-index: 2;
+}
+
+.pencil-overlay__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+}
+
+.pencil-overlay__image-frame {
+  position: absolute;
+  inset: 0;
+  border: 2px dashed rgba(15, 98, 254, 0.85);
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.15);
+  pointer-events: none;
+}
+
+.pencil-overlay__image-wrapper--active .pencil-overlay__image-frame {
+  pointer-events: none;
+}
+
+.pencil-overlay__image-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #0f62fe;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+}
+
+.pencil-overlay__image-handle--top-left {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.pencil-overlay__image-handle--top {
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.pencil-overlay__image-handle--top-right {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.pencil-overlay__image-handle--right {
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+.pencil-overlay__image-handle--bottom-right {
+  bottom: -6px;
+  right: -6px;
+  cursor: nwse-resize;
+}
+
+.pencil-overlay__image-handle--bottom {
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.pencil-overlay__image-handle--bottom-left {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.pencil-overlay__image-handle--left {
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}  
 .pencil-overlay__selection {
   position: absolute;
   border: 2px dashed rgba(15, 98, 254, 0.85);
