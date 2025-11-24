@@ -29,6 +29,7 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
      * @returns {boolean} true, если можно создать папку
      */
     canCreateFolder: (state) => {
+      const authStore = useAuthStore()      
       const userStore = useUserStore()
       const user = authStore.user
 
