@@ -34,10 +34,11 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
       if (!user || !user.plan_id) return false
 
       // Получить лимит из features плана
-      const maxFolders = user.subscription_plan?.features?.max_folders || user.plan?.features?.max_folders || 0
+      const maxFoldersRaw = user.subscription_plan?.features?.max_folders || user.plan?.features?.max_folders || 0
+      const maxFolders = parseInt(maxFoldersRaw, 10)
 
-      // Если лимит 0 - функция недоступна
-      if (maxFolders === 0) return false
+      // Если лимит 0 или NaN - функция недоступна
+      if (!maxFolders || maxFolders === 0) return false
 
       // Если лимит -1 - безлимит
       if (maxFolders === -1) return true
@@ -58,7 +59,8 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
 
       if (!user || !user.plan_id) return 0
 
-      return user.subscription_plan?.features?.max_folders || user.plan?.features?.max_folders || 0
+      const maxFoldersRaw = user.subscription_plan?.features?.max_folders || user.plan?.features?.max_folders || 0
+      return parseInt(maxFoldersRaw, 10) || 0
     },
 
     /**
