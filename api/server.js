@@ -22,6 +22,7 @@ import { registerPromoRoutes } from './routes/promo.js';
 import { registerAdminRoutes } from './routes/admin.js';
 import { registerImageRoutes } from './routes/images.js';
 import { registerAnchorRoutes } from './routes/anchors.js';
+import { registerBoardFolderRoutes } from './routes/boardFolders.js';
 import verificationRoutes from './routes/verification.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
@@ -1120,11 +1121,27 @@ app.get('/api/boards', {
 }, async (req, reply) => {
   try {
     const result = await pool.query(
-      `SELECT id, name, description, thumbnail_url, is_public, 
-              created_at, updated_at, object_count
-       FROM boards 
-       WHERE owner_id = $1 
-       ORDER BY updated_at DESC`,
+      `SELECT
+        b.id,
+        b.name,
+        b.description,
+        b.thumbnail_url,
+        b.is_public,
+        b.created_at,
+        b.updated_at,
+        b.object_count,
+        COALESCE(
+          json_agg(
+            json_build_object('id', bf.id, 'name', bf.name)
+          ) FILTER (WHERE bf.id IS NOT NULL),
+          '[]'::json
+        ) as folders
+       FROM boards b
+       LEFT JOIN board_folder_items bfi ON b.id = bfi.board_id
+       LEFT JOIN board_folders bf ON bfi.folder_id = bf.id
+       WHERE b.owner_id = $1
+       GROUP BY b.id
+       ORDER BY b.updated_at DESC`,
       [req.user.id]
     );
 
@@ -1821,6 +1838,11 @@ registerImageRoutes(app);
 // ТОЧКИ (ANCHORS)
 // ============================================
 registerAnchorRoutes(app);
+
+// ============================================
+// ПАПКИ ДОСОК (BOARD FOLDERS)
+// ============================================
+registerBoardFolderRoutes(app);
 
 // ============================================
 // ВЕРИФИКАЦИЯ (VERIFICATION)
