@@ -4,7 +4,6 @@ import { ref } from 'vue'
 export const useCanvasStore = defineStore('canvas', () => {
   
   const backgroundColor = ref('#b9c4da')
-  const isSelectionMode = ref(false)
   const isHierarchicalDragMode = ref(false)
   const guidesEnabled = ref(true)
   const gridStep = ref(40)
@@ -25,24 +24,9 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
-  function setSelectionMode(value) {
-    const nextValue = Boolean(value)
-    isSelectionMode.value = nextValue
-    if (nextValue) {
-      isHierarchicalDragMode.value = false
-    }
-  }
-
-  function toggleSelectionMode() {
-    setSelectionMode(!isSelectionMode.value)
-  }
-
   function setHierarchicalDragMode(value) {
     const nextValue = Boolean(value)
     isHierarchicalDragMode.value = nextValue
-    if (nextValue) {
-      isSelectionMode.value = false
-    }
   }
 
   function toggleHierarchicalDragMode() {
@@ -88,10 +72,6 @@ export const useCanvasStore = defineStore('canvas', () => {
       }
     }
 
-    if (typeof state.isSelectionMode === 'boolean') {
-      setSelectionMode(state.isSelectionMode)
-    }
-
     if (typeof state.isHierarchicalDragMode === 'boolean') {
       setHierarchicalDragMode(state.isHierarchicalDragMode)
     }
@@ -117,15 +97,12 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
   return {
     backgroundColor,
-    isSelectionMode,
     isHierarchicalDragMode,
     guidesEnabled,
     gridStep,
     isGridBackgroundVisible,
     setBackgroundColor,
     setBackgroundGradient,
-    setSelectionMode,
-    toggleSelectionMode,
     setHierarchicalDragMode,
     toggleHierarchicalDragMode,
     setGuidesEnabled,
