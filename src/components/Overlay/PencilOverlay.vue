@@ -43,8 +43,9 @@ const isReady = ref(false);
 const activePointerId = ref(null);
 const lastPoint = ref(null);
 const isDrawing = ref(false);
-const hasStrokeChanges = ref(false);  
+const hasStrokeChanges = ref(false);
 const currentTool = ref('brush');
+const previousToolBeforeImages = ref(currentTool.value);  
 const brushColor = ref('#ff4757');
 const brushSize = ref(4);
 const markerSize = ref(60);
@@ -79,11 +80,14 @@ const ERASER_MAX_SIZE = 80;
   
 const isImagesPanelOpen = computed(() => sidePanelsStore.isImagesOpen);
 
-// Следим за открытием панели изображений - отключаем активный инструмент
+// Следим за открытием панели изображений - переключаемся в режим перемещения
 watch(isImagesPanelOpen, (isOpen) => {
   if (isOpen) {
-    currentTool.value = null; // Сбрасываем активный инструмент
+    previousToolBeforeImages.value = currentTool.value;
+    currentTool.value = 'pan';
     openDropdown.value = null; // Закрываем все выпадающие меню
+  } else if (currentTool.value === 'pan') {
+    currentTool.value = previousToolBeforeImages.value || 'brush';    
   }
 });
 
@@ -100,6 +104,9 @@ const boardClasses = computed(() => {
   const classes = ['pencil-overlay__board'];
 
   switch (currentTool.value) {
+     case 'pan':
+      classes.push('pencil-overlay__board--pan');
+      break;     
     case 'marker':
       classes.push('pencil-overlay__board--marker');
       break;
@@ -994,6 +1001,12 @@ watch(currentTool, (tool, previous) => {
   if (tool !== 'eraser') {
     pointerPosition.value = null;
   }
+  if (previous === 'pan' && tool !== 'pan') {
+    isPanning.value = false;
+    panPointerId.value = null;
+    panStartPoint.value = null;
+    panInitialOffset.value = { x: 0, y: 0 };
+  }  
 });
 watch(isZoomedIn, (zoomed) => {
   if (!zoomed) {
@@ -1108,6 +1121,13 @@ const finishPan = (event) => {
 };
 
 const handleBoardPointerDown = (event) => {
+   const isPrimaryButton = event.button === 0 || event.button === undefined || event.button === -1;
+
+  if (currentTool.value === 'pan' && isPrimaryButton) {
+    beginPan(event);
+    return;
+  }
+ 
   if (event.pointerType !== 'mouse' || event.button !== 1) {
     return;
   }
@@ -1660,7 +1680,11 @@ const handleDrop = async (event) => {
   border-radius: 0;
   overflow: hidden;
   pointer-events: auto;
-  outline: none;  
+  outline: none;
+}
+
+.pencil-overlay__board--pan {
+  cursor: grab;
 }
 
 .pencil-overlay__board--brush {
