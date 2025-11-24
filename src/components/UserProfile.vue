@@ -15,8 +15,10 @@
       <!-- ============================================ -->
       <!-- Блок 1: Аватарка (верх страницы, по центру) -->
       <!-- ============================================ -->
-      <div class="profile-avatar-section">
-          <div :class="['avatar-wrapper', { 'avatar-wrapper--verified': user.is_verified }]">
+      <div
+        class="profile-avatar-section"
+        :class="{ 'profile-avatar-section--verified': user.is_verified }"
+      >          <div :class="['avatar-wrapper', { 'avatar-wrapper--verified': user.is_verified }]">
             <img
               v-if="user.avatar_url"
               :key="avatarKey"
@@ -1562,7 +1564,11 @@ async function handleAvatarDelete() {
   margin-bottom: 30px;
   border: 2px solid var(--profile-border);
 }
-
+.profile-avatar-section--verified {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.12) 0%, rgba(255, 193, 7, 0.12) 100%);
+  border-color: rgba(255, 193, 7, 0.45);
+  box-shadow: 0 12px 36px rgba(255, 193, 7, 0.2);
+}
 .avatar-wrapper {
   position: relative;
   display: inline-flex;
