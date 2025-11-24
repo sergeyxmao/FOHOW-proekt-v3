@@ -157,7 +157,6 @@
                   type="text"
                   placeholder="RUY68"
                   @input="validateOffice"
-                  :disabled="user.is_verified"
                   :class="{ 'input-error': officeError }"
                   />
                 <div v-if="officeError" class="error-text">{{ officeError }}</div>
@@ -185,12 +184,11 @@
                     placeholder="9 цифр"
                     maxlength="9"
                     @input="updatePersonalId"
-                    :disabled="user.is_verified"
                   />
                 </div>
                 <div v-if="personalIdError" class="error-text">{{ personalIdError }}</div>
                 <p class="hint-text">Введите 9 цифр после автоматического префикса</p>
-                <p v-if="user.is_verified" class="hint-text hint-text--warning">Компьютерный номер верифицирован и недоступен для изменения.</p>
+                <p v-if="user.is_verified" class="hint-text hint-text--warning">Изменение номера или представительства приведет к потере статуса верификации.</p>
                 <!-- Кнопка верификации и сообщение об отклонении -->
                 <div v-if="!user.is_verified" class="verification-section">
                   <button
@@ -204,9 +202,19 @@
                     Верифицировать
                   </button>
 
-                  <div v-else class="verification-pending">
-                    <span class="pending-icon">⏳</span>
-                    Заявка на модерации
+                  <div v-else class="verification-pending-wrapper">
+                    <div class="verification-pending">
+                      <span class="pending-icon">⏳</span>
+                      Заявка на модерации
+                    </div>
+                    <button
+                      type="button"
+                      class="btn-cancel-request"
+                      @click="openCancelConfirm"
+                      :disabled="cancellingVerification"
+                    >
+                      {{ cancellingVerification ? 'Отмена...' : 'Отменить запрос' }}
+                    </button>
                   </div>
 
                   <!-- Сообщение об отклонении -->
@@ -562,16 +570,67 @@
             <button class="modal-close" @click="cancelPersonalIdChange">×</button>
           </div>
           <div class="modal-warning-body">
-            <p>Изменение компьютерного номера приведет к <strong>потере статуса верификации</strong>.</p>
+            <p>Изменение компьютерного номера или представительства приведет к <strong>потере статуса верификации</strong>.</p>
             <p>Вам придется заново пройти процедуру верификации.</p>
-            <p class="modal-warning-question">Вы уверены, что хотите изменить номер?</p>
+            <p class="modal-warning-question">Вы уверены, что хотите изменить данные?</p>
           </div>
           <div class="modal-warning-actions">
             <button class="btn-cancel" @click="cancelPersonalIdChange">
               Отменить
             </button>
             <button class="btn-confirm-danger" @click="confirmPersonalIdChange">
-              Изменить номер
+              Изменить данные
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+  </Teleport>
+
+  <!-- Модальное окно предупреждения при изменении данных во время pending заявки -->
+  <Teleport to="body">
+    <transition name="fade">
+      <div v-if="showPendingWarning" class="modal-overlay" @click.self="cancelPendingChange">
+        <div class="modal-warning">
+          <div class="modal-warning-header">
+            <h3>Заявка на верификации</h3>
+            <button class="modal-close" @click="cancelPendingChange">×</button>
+          </div>
+          <div class="modal-warning-body">
+            <p>У вас есть активная заявка на верификацию.</p>
+            <p>Изменение представительства или компьютерного номера <strong>отменит текущую заявку</strong>.</p>
+          </div>
+          <div class="modal-warning-actions">
+            <button class="btn-cancel" @click="cancelPendingChange">
+              Отменить изменения
+            </button>
+            <button class="btn-confirm-danger" @click="confirmPendingChange" :disabled="cancellingVerification">
+              {{ cancellingVerification ? 'Отмена заявки...' : 'Отменить верификацию' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+  </Teleport>
+
+  <!-- Модальное окно подтверждения отмены заявки -->
+  <Teleport to="body">
+    <transition name="fade">
+      <div v-if="showCancelConfirm" class="modal-overlay" @click.self="closeCancelConfirm">
+        <div class="modal-warning">
+          <div class="modal-warning-header">
+            <h3>Отменить заявку?</h3>
+            <button class="modal-close" @click="closeCancelConfirm">×</button>
+          </div>
+          <div class="modal-warning-body">
+            <p>Вы уверены, что хотите отменить заявку на верификацию?</p>
+          </div>
+          <div class="modal-warning-actions">
+            <button class="btn-cancel" @click="closeCancelConfirm">
+              Нет, оставить
+            </button>
+            <button class="btn-confirm-danger" @click="confirmCancelVerification" :disabled="cancellingVerification">
+              {{ cancellingVerification ? 'Отмена...' : 'Да, отменить' }}
             </button>
           </div>
         </div>
@@ -713,6 +772,14 @@ const applyingPromo = ref(false)
 // Предупреждение об изменении компьютерного номера
 const showPersonalIdWarning = ref(false)
 const pendingPersonalId = ref('')
+const pendingOffice = ref('')
+
+// Предупреждение при изменении данных во время pending заявки
+const showPendingWarning = ref(false)
+const cancellingVerification = ref(false)
+
+// Подтверждение отмены заявки на верификацию
+const showCancelConfirm = ref(false)
 
 // Статус верификации
 const verificationStatus = reactive({
@@ -1313,15 +1380,28 @@ async function savePersonalInfo() {
     return
   }
 
-  // КРИТИЧЕСКИ ВАЖНО: Проверка изменения номера для верифицированных пользователей
-  if (user.value.is_verified &&
-      personalForm.personal_id &&
-      personalForm.personal_id.trim() !== '' &&
-      personalForm.personal_id !== user.value.personal_id) {
+  // Проверяем, изменились ли критические поля (office или personal_id)
+  const officeChanged = personalForm.office &&
+    personalForm.office.trim().toUpperCase() !== (user.value.office || '').trim().toUpperCase()
+  const personalIdChanged = personalForm.personal_id &&
+    personalForm.personal_id.trim() !== '' &&
+    personalForm.personal_id !== user.value.personal_id
 
+  // ПРОВЕРКА 1: Если есть pending заявка и изменяются критические поля
+  if (verificationStatus.hasPendingRequest && (officeChanged || personalIdChanged)) {
+    // Показать предупреждение о pending заявке
+    showPendingWarning.value = true
+    pendingPersonalId.value = personalForm.personal_id
+    pendingOffice.value = personalForm.office
+    return // Остановить выполнение до подтверждения
+  }
+
+  // ПРОВЕРКА 2: Проверка изменения номера/офиса для верифицированных пользователей
+  if (user.value.is_verified && (officeChanged || personalIdChanged)) {
     // Открыть модальное окно предупреждения
     showPersonalIdWarning.value = true
     pendingPersonalId.value = personalForm.personal_id
+    pendingOffice.value = personalForm.office
     return // Остановить выполнение до подтверждения
   }
 
@@ -1360,9 +1440,15 @@ function confirmPersonalIdChange() {
 // Отменить изменение компьютерного номера
 function cancelPersonalIdChange() {
   showPersonalIdWarning.value = false
-  // Вернуть старое значение
-  personalForm.personal_id = user.value.personal_id
+  // Вернуть старые значения
+  personalForm.personal_id = user.value.personal_id || ''
+  personalForm.office = user.value.office || ''
   pendingPersonalId.value = ''
+  pendingOffice.value = ''
+  // Обновить суффикс
+  if (user.value.personal_id && user.value.office) {
+    personalIdSuffix.value = user.value.personal_id.replace(user.value.office.toUpperCase(), '')
+  }
 }
 
 // Сохранить личную информацию после подтверждения
@@ -1377,8 +1463,8 @@ async function savePersonalInfoConfirmed() {
       phone: personalForm.phone,
       city: personalForm.city,
       country: personalForm.country,
-      office: personalForm.office,
-      personal_id: pendingPersonalId.value
+      office: pendingOffice.value || personalForm.office,
+      personal_id: pendingPersonalId.value || personalForm.personal_id
     })
 
     personalSuccess.value = 'Личная информация обновлена. Верификация отменена.'
@@ -1391,7 +1477,114 @@ async function savePersonalInfoConfirmed() {
   } finally {
     savingPersonal.value = false
     pendingPersonalId.value = ''
+    pendingOffice.value = ''
   }
+}
+
+// === Функции для работы с pending заявками ===
+
+// Отменить изменения при pending заявке
+function cancelPendingChange() {
+  showPendingWarning.value = false
+  // Вернуть старые значения
+  personalForm.personal_id = user.value.personal_id || ''
+  personalForm.office = user.value.office || ''
+  pendingPersonalId.value = ''
+  pendingOffice.value = ''
+  // Обновить суффикс
+  if (user.value.personal_id && user.value.office) {
+    personalIdSuffix.value = user.value.personal_id.replace(user.value.office.toUpperCase(), '')
+  }
+}
+
+// Подтвердить изменения и отменить pending заявку
+async function confirmPendingChange() {
+  cancellingVerification.value = true
+  try {
+    // Отменить заявку на верификацию
+    await cancelVerification()
+
+    // Закрыть модальное окно
+    showPendingWarning.value = false
+
+    // Продолжить сохранение с новыми данными
+    savingPersonal.value = true
+
+    await authStore.updateProfile({
+      full_name: personalForm.full_name,
+      phone: personalForm.phone,
+      city: personalForm.city,
+      country: personalForm.country,
+      office: pendingOffice.value || personalForm.office,
+      personal_id: pendingPersonalId.value || personalForm.personal_id
+    })
+
+    personalSuccess.value = 'Заявка на верификацию отменена. Данные обновлены.'
+
+    setTimeout(() => {
+      personalSuccess.value = ''
+    }, 3000)
+  } catch (err) {
+    personalError.value = err.message || 'Произошла ошибка'
+  } finally {
+    cancellingVerification.value = false
+    savingPersonal.value = false
+    pendingPersonalId.value = ''
+    pendingOffice.value = ''
+  }
+}
+
+// Открыть подтверждение отмены заявки
+function openCancelConfirm() {
+  showCancelConfirm.value = true
+}
+
+// Закрыть подтверждение отмены заявки
+function closeCancelConfirm() {
+  showCancelConfirm.value = false
+}
+
+// Подтвердить отмену заявки
+async function confirmCancelVerification() {
+  cancellingVerification.value = true
+  try {
+    await cancelVerification()
+    showCancelConfirm.value = false
+    personalSuccess.value = 'Заявка на верификацию отменена.'
+    setTimeout(() => {
+      personalSuccess.value = ''
+    }, 3000)
+  } catch (err) {
+    personalError.value = err.message || 'Не удалось отменить заявку'
+  } finally {
+    cancellingVerification.value = false
+  }
+}
+
+// Отменить заявку на верификацию
+async function cancelVerification() {
+  const token = localStorage.getItem('auth_token')
+  if (!token) {
+    throw new Error('Необходима авторизация')
+  }
+
+  const response = await fetch(`${API_URL}/verification/cancel`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+
+  if (!response.ok) {
+    const data = await response.json()
+    throw new Error(data.error || 'Ошибка отмены заявки')
+  }
+
+  // Обновить статус верификации
+  await loadVerificationStatus()
+
+  return true
 }
 
 // Сохранить соц. сети
@@ -2017,6 +2210,44 @@ async function handleAvatarDelete() {
 .btn-verify .btn-icon {
   font-size: 18px;
   font-weight: bold;
+}
+
+.verification-pending-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: flex-start;
+}
+
+.btn-cancel-request {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  background: rgba(244, 67, 54, 0.1);
+  color: #F44336;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.btn-cancel-request:hover:not(:disabled) {
+  background: rgba(244, 67, 54, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-cancel-request:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.user-profile--modern .btn-cancel-request {
+  background: rgba(244, 67, 54, 0.15);
+  color: #EF5350;
+}
+
+.user-profile--modern .btn-cancel-request:hover:not(:disabled) {
+  background: rgba(244, 67, 54, 0.25);
 }
 
 .verification-pending {

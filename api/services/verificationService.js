@@ -458,6 +458,101 @@ async function revokeVerification(userId) {
   console.log(`[VERIFICATION] Верификация отменена для user_id=${userId}`);
 }
 
+/**
+ * Отмена заявки на верификацию пользователем
+ * @param {number} userId - ID пользователя
+ * @returns {Promise<{success: boolean}>} Результат отмены
+ */
+async function cancelVerificationByUser(userId) {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // Найти pending заявку
+    const verificationResult = await client.query(
+      `SELECT v.id, v.screenshot_1_path, v.screenshot_2_path, u.email, u.telegram_chat_id
+       FROM user_verifications v
+       JOIN users u ON v.user_id = u.id
+       WHERE v.user_id = $1 AND v.status = 'pending'`,
+      [userId]
+    );
+
+    if (verificationResult.rows.length === 0) {
+      throw new Error('Активная заявка на верификацию не найдена');
+    }
+
+    const verification = verificationResult.rows[0];
+
+    // Удалить заявку из БД
+    await client.query(
+      'DELETE FROM user_verifications WHERE id = $1',
+      [verification.id]
+    );
+
+    // Обновить last_verification_attempt для кулдауна
+    await client.query(
+      'UPDATE users SET last_verification_attempt = NOW() WHERE id = $1',
+      [userId]
+    );
+
+    await client.query('COMMIT');
+
+    console.log(`[VERIFICATION] Заявка отменена пользователем: user_id=${userId}, verification_id=${verification.id}`);
+
+    // Удалить скриншоты с Yandex.Disk (асинхронно, не блокируем ответ)
+    try {
+      await deleteFile(verification.screenshot_1_path);
+      await deleteFile(verification.screenshot_2_path);
+      console.log(`[VERIFICATION] Скриншоты удалены для verification_id=${verification.id}`);
+    } catch (deleteError) {
+      console.error('[VERIFICATION] Ошибка удаления скриншотов (игнорируем):', deleteError.message);
+    }
+
+    // Отправить Telegram-уведомление пользователю
+    if (verification.telegram_chat_id) {
+      try {
+        const userMessage = '❌ Вы отменили заявку на верификацию.';
+        await sendTelegramMessage(verification.telegram_chat_id, userMessage);
+      } catch (telegramError) {
+        console.error('[VERIFICATION] Ошибка отправки Telegram-уведомления пользователю:', telegramError.message);
+      }
+    }
+
+    // Отправить Telegram-уведомление всем админам
+    try {
+      const adminsResult = await pool.query(
+        `SELECT telegram_chat_id, email
+         FROM users
+         WHERE role = 'admin' AND telegram_chat_id IS NOT NULL`
+      );
+
+      if (adminsResult.rows.length > 0) {
+        const adminMessage = `ℹ️ Пользователь ${verification.email} отменил заявку на верификацию.`;
+
+        for (const admin of adminsResult.rows) {
+          try {
+            await sendTelegramMessage(admin.telegram_chat_id, adminMessage);
+          } catch (telegramError) {
+            console.error(`[VERIFICATION] Ошибка отправки уведомления админу ${admin.email}:`, telegramError.message);
+          }
+        }
+      }
+    } catch (notifyError) {
+      console.error('[VERIFICATION] Ошибка отправки уведомлений админам:', notifyError.message);
+    }
+
+    return { success: true };
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('[VERIFICATION] Ошибка отмены заявки:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export {
   canSubmitVerification,
   submitVerification,
@@ -466,5 +561,6 @@ export {
   rejectVerification,
   getUserVerificationStatus,
   revokeVerification,
+  cancelVerificationByUser,
   MAX_SCREENSHOT_SIZE
 };

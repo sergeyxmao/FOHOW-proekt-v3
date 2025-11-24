@@ -31,6 +31,7 @@ import {
   getSharedPendingFolderPath,
   YANDEX_DISK_BASE_DIR
 } from './services/yandexDiskService.js';
+import { sendTelegramMessage } from './utils/telegramService.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -922,18 +923,33 @@ app.post('/api/reset-password', async (req, reply) => {
           }
         }
 
-        if (normalizedPersonalId && normalizedPersonalId !== currentPersonalId) {
-          // Если пользователь верифицирован, предупреждаем об отмене верификации
-          if (user.is_verified) {
-            // ВАЖНО: На этом этапе мы только проверяем, фронтенд должен был показать предупреждение
-            // Отменяем верификацию
-            await pool.query(
-              'UPDATE users SET is_verified = FALSE, verified_at = NULL WHERE id = $1',
-              [userId]
-            );
-            console.log(`⚠️ Верификация отменена для пользователя ${userId} из-за смены personal_id`);
-          }
+        // Проверяем, изменились ли критические поля (personal_id или office)
+        const personalIdChanged = normalizedPersonalId && normalizedPersonalId !== currentPersonalId;
+        const officeChanged = normalizedOffice && normalizedOffice !== currentOffice;
+        let verificationRevoked = false;
 
+        // Если пользователь верифицирован и изменяются критические поля - снимаем верификацию
+        if (user.is_verified && (personalIdChanged || officeChanged)) {
+          await pool.query(
+            'UPDATE users SET is_verified = FALSE, verified_at = NULL WHERE id = $1',
+            [userId]
+          );
+          verificationRevoked = true;
+          console.log(`⚠️ Верификация отменена для пользователя ${userId} из-за смены ${personalIdChanged ? 'personal_id' : ''}${personalIdChanged && officeChanged ? ' и ' : ''}${officeChanged ? 'office' : ''}`);
+
+          // Отправить Telegram-уведомление о снятии верификации
+          if (user.telegram_chat_id) {
+            try {
+              const message = '⚠️ Ваш статус верификации был снят из-за изменения компьютерного номера или представительства.';
+              await sendTelegramMessage(user.telegram_chat_id, message);
+              console.log(`[VERIFICATION] Telegram-уведомление о снятии верификации отправлено пользователю ${userId}`);
+            } catch (telegramError) {
+              console.error('[VERIFICATION] Ошибка отправки Telegram-уведомления:', telegramError.message);
+            }
+          }
+        }
+
+        if (personalIdChanged) {
           // Проверяем уникальность
           const personalIdCheck = await pool.query(
             'SELECT id FROM users WHERE personal_id = $1 AND id != $2',
@@ -994,7 +1010,8 @@ app.post('/api/reset-password', async (req, reply) => {
 
         return reply.send({
           success: true,
-          user: updateResult.rows[0]
+          user: updateResult.rows[0],
+          verificationRevoked: verificationRevoked
         });
 
       } catch (err) {
