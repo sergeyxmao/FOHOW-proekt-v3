@@ -19,6 +19,22 @@
   --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
   --vt-c-text-dark-1: var(--vt-c-white);
   --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+
+  /* Board Folders Color Variables */
+  --primary-color: #667eea;
+  --primary-color-hover: #5a6fd6;
+  --bg-secondary: #f8f9fa;
+  --bg-hover: #f0f1f3;
+  --border-color: #e0e0e0;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --danger-color: #dc3545;
+  --danger-color-hover: #c82333;
+  --danger-bg-light: #f8d7da;
+  --warning-color: #ffc107;
+  --warning-bg: #fff3cd;
+  --disabled-color: #6c757d;
+  --drag-over-bg: #e7f3ff;
 }
 
 /* semantic color variables for this project */
