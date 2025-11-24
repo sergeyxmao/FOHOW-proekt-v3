@@ -278,7 +278,6 @@ export function useProjectActions() {
 
   const {
     backgroundColor,
-    isSelectionMode,
     isHierarchicalDragMode,
     guidesEnabled,
     gridStep,
@@ -300,7 +299,6 @@ export function useProjectActions() {
       },
       canvas: {
         backgroundColor: backgroundColor.value,
-        isSelectionMode: isSelectionMode.value,
         isHierarchicalDragMode: isHierarchicalDragMode.value,
         guidesEnabled: guidesEnabled.value,
         gridStep: gridStep.value,
