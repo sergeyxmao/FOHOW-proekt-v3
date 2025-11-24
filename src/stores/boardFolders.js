@@ -246,7 +246,9 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
           throw new Error('Отсутствует токен авторизации')
         }
 
-        const response = await fetch(`${API_URL}/board-folders/${folderId}?confirm=true`, {
+        const params = new URLSearchParams({ confirm: '1' })
+
+        const response = await fetch(`${API_URL}/board-folders/${folderId}?${params.toString()}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${authStore.token}`,
@@ -256,8 +258,11 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.error || 'Ошибка удаления папки')
-        }
+          throw new Error(
+            errorData.message ||
+            errorData.error ||
+            'Ошибка удаления папки'
+          )        }
 
         const data = await response.json()
         const deletedBoardsCount = data.deletedBoardsCount || data.deleted_boards_count || 0
