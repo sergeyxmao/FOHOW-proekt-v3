@@ -1,6 +1,7 @@
 <template>
   <div
     v-if="isVisible"
+    ref="menuRef"    
     class="context-menu"
     :style="{ left: x + 'px', top: y + 'px' }"
   >
@@ -19,6 +20,8 @@
 </template>
 
 <script setup>
+import { ref, computed } from 'vue';
+  
 import { useImagesStore } from '../../stores/images';
 
 // Props
@@ -45,7 +48,14 @@ const props = defineProps({
 const emit = defineEmits(['close', 'redraw']);
 
 const imagesStore = useImagesStore();
+const menuRef = ref(null);
 
+const menuRect = computed(() => menuRef.value?.getBoundingClientRect() || null);
+
+const getMenuRect = () => menuRect.value;
+
+defineExpose({ getMenuRect });
+  
 /**
  * Переместить объект на передний план
  */
