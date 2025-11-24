@@ -1153,7 +1153,7 @@ onBeforeUnmount(() => {
 
     <transition name="side-panel-slide">
       <ImagesPanel
-        v-if="isImagesOpen && !isMobileMode"
+        v-if="isImagesOpen && !isMobileMode && !isPencilMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
