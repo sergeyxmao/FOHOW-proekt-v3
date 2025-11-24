@@ -8,6 +8,10 @@
         </div>
       </div>
       <div class="header-actions">
+        <div v-if="userPlanLoading" class="plan-loading-indicator">
+          <span class="spinner"></span>
+          <span>Загружаем лимиты тарифа...</span>
+        </div>        
         <button
           v-if="canCreateFolder"
           @click="openCreateFolderModal"
@@ -408,7 +412,7 @@ const {
   foldersLimit,
   foldersCount
 } = storeToRefs(boardFoldersStore)
-
+const { loading: userPlanLoading } = storeToRefs(userStore)
 const boards = ref([])
 const loading = ref(true)
 const error = ref('')
@@ -903,6 +907,25 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 40px;
+}
+.plan-loading-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid #e0e7ff;
+  border-radius: 10px;
+  background: #f5f7ff;
+  color: #4a5568;
+  font-weight: 600;
+  margin-right: 12px;
+}
+
+.plan-loading-indicator .spinner {
+  width: 18px;
+  height: 18px;
+  border-width: 3px;
+  margin: 0;
 }
 
 .boards-header h1 {
