@@ -16,6 +16,7 @@ const stickersStore = useStickersStore();
 // Локальное состояние
 const isEditing = ref(false);
 const editableContent = ref(props.sticker.content || '');
+const originalContent = ref(''); // Сохраняем оригинальный текст для отмены по Esc
 const isDragging = ref(false);
 const dragOffset = ref({ x: 0, y: 0 });
 const isHovering = ref(false);
@@ -38,6 +39,7 @@ const handleDoubleClick = () => {
   if (isDragging.value) return;
   isEditing.value = true;
   editableContent.value = props.sticker.content || '';
+  originalContent.value = props.sticker.content || ''; // Сохраняем оригинальный текст для отмены
 };
 
 const saveChanges = async () => {
@@ -56,6 +58,24 @@ const saveChanges = async () => {
       alert('Не удалось сохранить изменения');
     }
   }
+
+  // Очищаем оригинальный контент
+  originalContent.value = '';
+};
+
+// Отмена редактирования по Esc
+const cancelEditing = (event) => {
+  if (!isEditing.value) return;
+
+  // Восстанавливаем оригинальный текст
+  editableContent.value = originalContent.value;
+  isEditing.value = false;
+  originalContent.value = '';
+
+  // Убираем фокус с элемента
+  event.target.blur();
+  event.preventDefault();
+  event.stopPropagation();
 };
 
 // Перетаскивание
@@ -238,7 +258,7 @@ const handleDelete = async (event) => {
       @blur="saveChanges"
       @click.stop
       @pointerdown.stop
-      @keydown.esc="saveChanges"
+      @keydown.esc="cancelEditing"
       autofocus
     />
   </div>

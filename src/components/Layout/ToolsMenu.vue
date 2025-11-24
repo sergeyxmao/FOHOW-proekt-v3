@@ -49,6 +49,11 @@ const toggleGuides = () => {
   emit('request-close')
 }
 
+const toggleHierarchyMode = () => {
+  canvasStore.toggleHierarchicalDragMode()
+  emit('request-close')
+}
+
 const handleClearCanvas = () => {
   showClearCanvasDialog.value = true
 }
@@ -94,6 +99,17 @@ const cancelNewStructure = () => {
           @click="handleActivatePencil"
         >
           {{ t('toolsMenu.drawingMode') }}
+        </button>
+      </div>
+      <div class="tools-menu__item">
+        <span class="tools-menu__icon" aria-hidden="true">🔗</span>
+        <button
+          type="button"
+          class="tools-menu__action"
+          :class="{ 'tools-menu__action--active': isHierarchicalDragMode }"
+          @click="toggleHierarchyMode"
+        >
+          {{ t('toolsMenu.hierarchyMode') }}
         </button>
       </div>
       <div class="tools-menu__item">

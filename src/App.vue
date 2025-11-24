@@ -249,6 +249,29 @@ async function handleNewStructure(shouldSave) {
 }
 
 function handleGlobalKeydown(event) {
+  // Обработка Esc
+  if (event.key === 'Escape') {
+    // Деактивация режима иерархии
+    if (canvasStore.isHierarchicalDragMode) {
+      canvasStore.toggleHierarchicalDragMode()
+      event.preventDefault()
+      return
+    }
+
+    // Снятие выделения со всех объектов
+    const hasSelectedCards = cardsStore.selectedCardIds && cardsStore.selectedCardIds.length > 0
+    const hasSelectedStickers = stickersStore.selectedStickerIds && stickersStore.selectedStickerIds.length > 0
+    const hasSelectedImages = imagesStore.selectedImageIds && imagesStore.selectedImageIds.length > 0
+
+    if (hasSelectedCards || hasSelectedStickers || hasSelectedImages) {
+      cardsStore.deselectAllCards()
+      stickersStore.deselectAllStickers()
+      imagesStore.deselectAllImages()
+      event.preventDefault()
+      return
+    }
+  }
+
   const isResetCombo = event.ctrlKey && !event.shiftKey && (event.code === 'Digit0' || event.code === 'Numpad0')
   if (!isResetCombo) {
     return
