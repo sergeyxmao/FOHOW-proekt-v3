@@ -3741,13 +3741,22 @@ const fitToContent = (options = {}) => {
   const padding = Number.isFinite(options.padding) ? Math.max(0, options.padding) : 120;
   const cardsList = cards.value;
   const connectionsList = connections.value;
-
+  const imagesList = images.value;
+  const stickersList = stickersStore.stickers;
+  
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
   let hasContent = false;
-
+  const updateBounds = (left, top, width, height) => {
+    minX = Math.min(minX, left);
+    minY = Math.min(minY, top);
+    maxX = Math.max(maxX, left + width);
+    maxY = Math.max(maxY, top + height);
+    hasContent = true;
+  };
+  
   cardsList.forEach(card => {
     if (!card) {
       return;
@@ -3758,11 +3767,33 @@ const fitToContent = (options = {}) => {
     const width = Number.isFinite(card.width) ? card.width : 0;
     const height = Number.isFinite(card.height) ? card.height : 0;
 
-    minX = Math.min(minX, left);
-    minY = Math.min(minY, top);
-    maxX = Math.max(maxX, left + width);
-    maxY = Math.max(maxY, top + height);
-    hasContent = true;
+    updateBounds(left, top, width, height);
+  });
+
+  imagesList.forEach(image => {
+    if (!image) {
+      return;
+    }
+
+    const left = Number.isFinite(image.x) ? image.x : 0;
+    const top = Number.isFinite(image.y) ? image.y : 0;
+    const width = Number.isFinite(image.width) ? image.width : 0;
+    const height = Number.isFinite(image.height) ? image.height : 0;
+
+    updateBounds(left, top, width, height);
+  });
+
+  stickersList.forEach(sticker => {
+    if (!sticker) {
+      return;
+    }
+
+    const left = Number.isFinite(sticker.pos_x) ? sticker.pos_x : 0;
+    const top = Number.isFinite(sticker.pos_y) ? sticker.pos_y : 0;
+    const width = 200;
+    const height = 150;
+
+    updateBounds(left, top, width, height);
   });
 
   if (Array.isArray(connectionsList) && connectionsList.length > 0) {
