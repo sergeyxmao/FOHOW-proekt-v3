@@ -22,7 +22,7 @@ const emit = defineEmits([
   'request-auth',
   'open-boards',
   'export-html',
-  'load-json'
+  'activate-pencil'
 ])
 
 const router = useRouter()
@@ -146,8 +146,8 @@ const toggleHierarchyMode = () => {
   canvasStore.toggleHierarchicalDragMode()
 }
 
-const handleLoadJSON = () => {
-  emit('load-json')
+const handleActivatePencil = () => {
+  emit('activate-pencil')
 }
 
 const handleExportHTML = () => {
@@ -244,15 +244,15 @@ watch(
           <span class="button-icon">🌳</span>
         </button>
 
-        <!-- Загрузить JSON -->
+        <!-- Режим рисования -->
         <button
           v-if="isAuthenticated"
           class="mobile-header-button"
           type="button"
-          @click="handleLoadJSON"
-          title="Загрузить JSON"
+          @click="handleActivatePencil"
+          title="Режим рисования"
         >
-          <span class="button-icon">📂</span>
+          <span class="button-icon">✏️</span>
         </button>
 
         <!-- Поделиться проектом -->
