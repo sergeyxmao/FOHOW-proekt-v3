@@ -1,5 +1,14 @@
 <template>
   <div class="boards-container">
+    <!-- Кнопка назад -->
+    <button
+      class="btn-back"
+      @click="goBack"
+      title="Вернуться на главную"
+    >
+      ← Назад
+    </button>
+
     <div class="boards-header">
       <div class="header-left">
         <h1>Мои структуры</h1>
@@ -434,6 +443,11 @@ const folderContextMenu = ref({ show: false, x: 0, y: 0 })
 const boardContextMenu = ref({ show: false, x: 0, y: 0 })
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+
+// Функция возврата на главную страницу
+const goBack = () => {
+  router.push('/')
+}
 
 async function loadBoards() {
   loading.value = true
@@ -907,6 +921,25 @@ onBeforeUnmount(() => {
   max-width: 1400px;
   margin: 0 auto;
   padding: 40px 20px;
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  margin-bottom: 20px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  background: #f8f8f8;
+  border-color: #999;
 }
 
 .boards-header {
