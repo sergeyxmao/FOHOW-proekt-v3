@@ -251,8 +251,7 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
         const response = await fetch(`${API_URL}/board-folders/${folderId}?${params.toString()}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${authStore.token}`,
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${authStore.token}`
           }
         })
 
@@ -380,8 +379,7 @@ export const useBoardFoldersStore = defineStore('boardFolders', {
         const response = await fetch(`${API_URL}/board-folders/${folderId}/boards/${boardId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${authStore.token}`,
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${authStore.token}`
           }
         })
 
