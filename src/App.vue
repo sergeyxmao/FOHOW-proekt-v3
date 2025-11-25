@@ -1012,7 +1012,7 @@ onBeforeUnmount(() => {
         @open-boards="handleOpenMobileBoards"
         @request-auth="openMobileAuthPrompt"
         @export-html="handleMobileExportHTML"
-        @load-json="handleMobileLoadJSON"
+        @activate-pencil="handleActivatePencil"
       />
       <MobileToolbar
         v-show="!isPencilMode && !showResetPassword"
