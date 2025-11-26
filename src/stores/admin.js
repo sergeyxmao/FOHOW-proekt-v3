@@ -963,6 +963,45 @@ export const useAdminStore = defineStore('admin', {
     },
 
     /**
+     * Переименовать изображение в общей библиотеке
+     * @param {number} imageId - ID изображения
+     * @param {string} newName - Новое имя изображения
+     */
+    async renameImage(imageId, newName) {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/images/${imageId}/rename`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ new_name: newName })
+        })
+
+        if (!response.ok) {
+          await handleAdminErrorResponse(response, 'Ошибка переименования изображения')
+        }
+
+        const data = await response.json()
+
+        console.log(`[ADMIN] Изображение переименовано: image_id=${imageId}, boards_updated=${data.boards_updated}`)
+
+        return data
+
+      } catch (err) {
+        console.error('[ADMIN] Ошибка переименования изображения:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
      * Получить список заявок на верификацию
      */
     async fetchPendingVerifications() {

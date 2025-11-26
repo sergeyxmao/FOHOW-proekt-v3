@@ -1829,6 +1829,233 @@ await pool.query(
   });
 
   /**
+   * Переименовать изображение в общей библиотеке
+   * PATCH /api/admin/images/:id/rename
+   */
+  app.patch('/api/admin/images/:id/rename', {
+    preHandler: [authenticateToken, requireAdmin]
+  }, async (req, reply) => {
+    try {
+      const adminId = req.user.id;
+      const imageId = parseInt(req.params.id, 10);
+      const { new_name } = req.body;
+
+      console.log(`[ADMIN] Запрос на переименование изображения: image_id=${imageId}, new_name="${new_name}", admin_id=${adminId}`);
+
+      // Валидация ID изображения
+      if (!Number.isInteger(imageId) || imageId <= 0) {
+        return reply.code(400).send({
+          error: 'Некорректный ID изображения'
+        });
+      }
+
+      // Валидация нового имени
+      if (!new_name || typeof new_name !== 'string' || new_name.trim() === '') {
+        return reply.code(400).send({
+          error: 'Поле new_name обязательно и должно быть непустой строкой'
+        });
+      }
+
+      const newNameClean = new_name.trim();
+
+      // Проверка длины имени
+      if (newNameClean.length > 200) {
+        return reply.code(400).send({
+          error: 'Имя файла не должно превышать 200 символов'
+        });
+      }
+
+      // Найти изображение в image_library по id и is_shared = TRUE
+      const imageResult = await pool.query(
+        `SELECT
+          il.id,
+          il.original_name,
+          il.filename,
+          il.yandex_path,
+          il.public_url,
+          il.shared_folder_id,
+          sf.name as folder_name
+         FROM image_library il
+         JOIN shared_folders sf ON il.shared_folder_id = sf.id
+         WHERE il.id = $1 AND il.is_shared = TRUE`,
+        [imageId]
+      );
+
+      // Если изображение не найдено или не является общим
+      if (imageResult.rows.length === 0) {
+        console.log(`[ADMIN] Общее изображение не найдено: image_id=${imageId}`);
+        return reply.code(404).send({
+          error: 'Общее изображение не найдено'
+        });
+      }
+
+      const image = imageResult.rows[0];
+      const { filename, yandex_path, public_url, folder_name, original_name: oldOriginalName } = image;
+
+      // Если имя не изменилось, возвращаем текущее изображение
+      if (newNameClean === oldOriginalName) {
+        console.log(`[ADMIN] Имя не изменилось: "${newNameClean}"`);
+        return reply.code(200).send({
+          image: image,
+          boards_updated: 0
+        });
+      }
+
+      // Проверяем наличие yandex_path
+      if (!yandex_path) {
+        console.error(`[ADMIN] Отсутствует yandex_path для изображения: image_id=${imageId}`);
+        return reply.code(500).send({
+          error: 'Не удалось определить текущий путь файла'
+        });
+      }
+
+      // Извлечь расширение из старого имени файла
+      const fileExtension = filename.substring(filename.lastIndexOf('.'));
+
+      // Создать новое имя файла: удалить расширение из нового имени (если есть) и добавить оригинальное расширение
+      let newFileName = newNameClean;
+      if (newFileName.includes('.')) {
+        newFileName = newFileName.substring(0, newFileName.lastIndexOf('.'));
+      }
+      newFileName = newFileName + fileExtension;
+
+      console.log(`[ADMIN] Переименование: "${filename}" -> "${newFileName}"`);
+
+      // Вычислить новый путь файла в той же папке
+      const folderPath = getSharedFolderPath(folder_name);
+      const newFilePath = `${folderPath}/${newFileName}`;
+
+      console.log(`[ADMIN] Перемещение файла: ${yandex_path} -> ${newFilePath}`);
+
+      // Переместить (переименовать) файл на Яндекс.Диске
+      await moveFile(yandex_path, newFilePath);
+
+      console.log(`[ADMIN] Файл успешно переименован на Яндекс.Диске`);
+
+      // Получить новые публичные ссылки
+      const { public_url: originalPublicUrl, preview_url } = await publishFile(newFilePath);
+      const newPublicUrl = preview_url || originalPublicUrl;
+
+      console.log(`[ADMIN] Файл опубликован, новый public_url: ${newPublicUrl}`);
+
+      // Обновить запись в image_library
+      const updateResult = await pool.query(
+        `UPDATE image_library
+         SET
+           original_name = $1,
+           filename = $2,
+           yandex_path = $3,
+           public_url = $4,
+           updated_at = CURRENT_TIMESTAMP
+         WHERE id = $5
+         RETURNING
+           id,
+           original_name,
+           filename,
+           yandex_path,
+           public_url,
+           shared_folder_id,
+           width,
+           height,
+           file_size`,
+        [newNameClean, newFileName, newFilePath, newPublicUrl, imageId]
+      );
+
+      const updatedImage = updateResult.rows[0];
+
+      // ============================================
+      // АВТООБНОВЛЕНИЕ ССЫЛОК НА ИЗОБРАЖЕНИЯ В ДОСКАХ
+      // ============================================
+
+      console.log(`[ADMIN] Начало обновления ссылок в досках для изображения ${imageId}`);
+      console.log(`[ADMIN] Старый URL: ${public_url}`);
+      console.log(`[ADMIN] Новый URL: ${newPublicUrl}`);
+
+      let boardsUpdatedCount = 0;
+
+      try {
+        // Экранируем специальные символы в URL для безопасного использования в регулярных выражениях
+        const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const oldUrlEscaped = escapeRegex(public_url);
+
+        // Найти все доски с устаревшими ссылками
+        const boardsResult = await pool.query(
+          `SELECT id, content
+           FROM boards
+           WHERE content::text ~ $1`,
+          [oldUrlEscaped]
+        );
+
+        const boardsToUpdate = boardsResult.rows;
+
+        if (boardsToUpdate.length === 0) {
+          console.log(`[ADMIN] Досок с изображением ${imageId} не найдено`);
+        } else {
+          console.log(`[ADMIN] Найдено досок для обновления: ${boardsToUpdate.length}`);
+
+          // Обновить JSON-контент каждой найденной доски
+          for (const board of boardsToUpdate) {
+            try {
+              const boardId = board.id;
+              let content = board.content;
+
+              // Распарсить JSONB в объект
+              if (typeof content === 'string') {
+                content = JSON.parse(content);
+              }
+
+              // Применить рекурсивную функцию замены ссылок
+              const updatedContent = replaceUrls(content, public_url, newPublicUrl);
+
+              // Обновить доску в БД
+              await pool.query(
+                `UPDATE boards
+                 SET content = $1
+                 WHERE id = $2`,
+                [JSON.stringify(updatedContent), boardId]
+              );
+
+              boardsUpdatedCount++;
+              console.log(`[ADMIN] Обновлена доска id=${boardId}: заменена ссылка на изображение ${imageId}`);
+
+            } catch (boardError) {
+              // Логировать ошибку, но продолжить обработку оставшихся досок
+              console.error(`[ADMIN] Ошибка при обновлении доски id=${board.id} для изображения ${imageId}:`, boardError);
+            }
+          }
+
+          console.log(`[ADMIN] Всего обновлено досок: ${boardsUpdatedCount} для изображения ${imageId}`);
+        }
+      } catch (boardsUpdateError) {
+        // Логировать ошибку, но не прерывать основной процесс
+        console.error(`[ADMIN] Ошибка при обновлении досок для изображения ${imageId}:`, boardsUpdateError);
+      }
+
+      console.log(`[ADMIN] ✅ Изображение успешно переименовано: image_id=${imageId}, old_name="${oldOriginalName}", new_name="${newNameClean}"`);
+
+      // Возвращаем успешный ответ с информацией об обновленных досках
+      return reply.code(200).send({
+        image: updatedImage,
+        boards_updated: boardsUpdatedCount
+      });
+
+    } catch (err) {
+      console.error('[ADMIN] Ошибка переименования изображения:', err);
+
+      // Логируем дополнительную информацию для ошибок Яндекс.Диска
+      if (err.status) {
+        console.error(`[ADMIN] Yandex.Disk API вернул статус: ${err.status}`);
+      }
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка сервера: ${err.message}`
+        : 'Ошибка сервера. Попробуйте позже';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
+  });
+
+  /**
    * Удалить общее изображение из библиотеки
    * DELETE /api/admin/images/:id
    */

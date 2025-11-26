@@ -137,9 +137,24 @@
                 <div v-else class="image-error">Ошибка загрузки</div>
               </div>
               <div class="image-info">
-                <div class="image-name" :title="image.original_name">
+                <div
+                  v-if="renamingImageId !== image.id"
+                  class="image-name editable"
+                  :title="image.original_name"
+                  @dblclick="startImageRename(image)"
+                >
                   {{ image.original_name }}
                 </div>
+                <input
+                  v-else
+                  ref="renameImageInput"
+                  type="text"
+                  class="rename-image-input"
+                  v-model="newImageName"
+                  @blur="cancelImageRename"
+                  @keydown.enter="confirmImageRename"
+                  @keydown.esc="cancelImageRename"
+                />
                 <div class="image-meta">
                   <span class="image-size">{{ formatFileSize(image.file_size) }}</span>
                   <span v-if="image.width && image.height" class="image-dimensions">
@@ -254,6 +269,11 @@ const isRenaming = ref(false)
 const renameValue = ref('')
 const renameInput = ref(null)
 const lastError = ref('')
+
+// Переименование изображения
+const renamingImageId = ref(null)
+const newImageName = ref('')
+const renameImageInput = ref(null)
 
 function formatError(err, fallbackMessage) {
   const base = err?.message || fallbackMessage || 'Произошла ошибка'
@@ -637,6 +657,92 @@ async function handleDeleteFolder() {
 }
 
 /**
+ * Начать переименование изображения
+ */
+function startImageRename(image) {
+  renamingImageId.value = image.id
+  newImageName.value = image.original_name
+
+  requestAnimationFrame(() => {
+    if (renameImageInput.value) {
+      renameImageInput.value.focus()
+      renameImageInput.value.select()
+    }
+  })
+}
+
+/**
+ * Отменить переименование изображения
+ */
+function cancelImageRename() {
+  renamingImageId.value = null
+  newImageName.value = ''
+}
+
+/**
+ * Подтвердить переименование изображения
+ */
+async function confirmImageRename() {
+  const imageId = renamingImageId.value
+  const newName = newImageName.value.trim()
+
+  // Валидация
+  if (!newName) {
+    alert('Имя не может быть пустым')
+    return
+  }
+
+  // Найти изображение в списке
+  const image = adminStore.currentFolderImages.find(img => img.id === imageId)
+  if (!image) {
+    cancelImageRename()
+    return
+  }
+
+  // Если имя не изменилось
+  if (newName === image.original_name) {
+    cancelImageRename()
+    return
+  }
+
+  try {
+    // Вызов API для переименования
+    const result = await adminStore.renameImage(imageId, newName)
+
+    // Обновить данные изображения в списке
+    const index = adminStore.currentFolderImages.findIndex(img => img.id === imageId)
+    if (index !== -1) {
+      adminStore.currentFolderImages[index] = {
+        ...adminStore.currentFolderImages[index],
+        ...result.image
+      }
+    }
+
+    // Показать уведомление
+    const boardsCount = result.boards_updated || 0
+    const message = boardsCount > 0
+      ? `Изображение переименовано. Обновлено досок: ${boardsCount}`
+      : 'Изображение переименовано'
+
+    notificationsStore.addNotification({
+      type: 'success',
+      message
+    })
+    clearLastError()
+
+    cancelImageRename()
+
+  } catch (err) {
+    const message = formatError(err, 'Ошибка переименования изображения')
+    lastError.value = message
+    notificationsStore.addNotification({
+      type: 'error',
+      message
+    })
+  }
+}
+
+/**
  * Форматирование размера файла
  */
 function formatFileSize(bytes) {
@@ -969,6 +1075,33 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.image-name.editable {
+  cursor: text;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.image-name.editable:hover {
+  background-color: #f0f0f0;
+}
+
+.rename-image-input {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 14px;
+  border: 2px solid #6c63ff;
+  border-radius: 4px;
+  outline: none;
+  font-family: inherit;
+  margin-bottom: 8px;
+}
+
+.rename-image-input:focus {
+  border-color: #5a52d5;
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
 }
 
 .image-meta {
