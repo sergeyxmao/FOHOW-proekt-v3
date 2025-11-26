@@ -1,26 +1,26 @@
 <template>
-  <div class="boards-container">
-    <!-- Кнопка назад -->
-    <button
-      class="btn-back"
-      @click="goBack"
-      title="Вернуться на главную"
-    >
-      ← Назад
-    </button>
-
+  <div class="boards-page">
+    <!-- Фиксированная шапка -->
     <div class="boards-header">
-      <div class="header-left">
-        <h1>Мои структуры</h1>
-        <div v-if="foldersLimit > 0" class="folders-counter">
-          Папки: {{ foldersCount }} / {{ foldersLimit === -1 ? '∞' : foldersLimit }}
-        </div>
+      <button
+        class="btn-back"
+        @click="goBack"
+        title="Вернуться на главную"
+      >
+        ← Назад
+      </button>
+
+      <h1>Мои структуры</h1>
+
+      <div v-if="foldersLimit > 0" class="folders-counter">
+        Папки: {{ foldersCount }} / {{ foldersLimit === -1 ? '∞' : foldersLimit }}
       </div>
+
       <div class="header-actions">
         <div v-if="userPlanLoading" class="plan-loading-indicator">
           <span class="spinner"></span>
           <span>Загружаем лимиты тарифа...</span>
-        </div>        
+        </div>
         <button
           v-if="canCreateFolder"
           @click="openCreateFolderModal"
@@ -36,11 +36,7 @@
       </div>
     </div>
 
-    <UsageLimitBar
-      resourceType="boards"
-      label="Мои доски"
-    />
-
+    <!-- Состояния загрузки и ошибок -->
     <div v-if="loading" class="loading">
       <div class="spinner"></div>
       <p>Загрузка структур...</p>
@@ -62,37 +58,63 @@
       </FeatureGate>
     </div>
 
-    <div v-else class="folders-view">
-      <!-- Секция "Все доски" -->
-      <div class="folder-section all-boards">
-        <div class="folder-header" @click="showAllBoards">
-          <span class="folder-icon">📁</span>
-          <span class="folder-name">Все доски</span>
-          <span class="board-count">({{ allBoardsCount }})</span>
+    <!-- Двухпанельный контент -->
+    <div v-else class="boards-content">
+      <!-- ЛЕВАЯ ПАНЕЛЬ: Список папок -->
+      <div class="folders-panel">
+        <div class="folders-list">
+          <!-- Все доски -->
+          <div
+            class="folder-item"
+            :class="{ active: currentFolderId === null }"
+            @click="selectAllBoards"
+          >
+            <span class="folder-icon">📁</span>
+            <span class="folder-name">Все доски</span>
+            <span class="folder-count">({{ allBoardsCount }})</span>
+          </div>
+
+          <!-- Без категории -->
+          <div
+            class="folder-item"
+            :class="{ active: currentFolderId === 'uncategorized' }"
+            @click="selectUncategorized"
+          >
+            <span class="folder-icon">📂</span>
+            <span class="folder-name">Без категории</span>
+            <span class="folder-count">({{ uncategorizedCount }})</span>
+          </div>
+
+          <!-- Пользовательские папки -->
+          <div
+            v-for="folder in folders"
+            :key="folder.id"
+            class="folder-item"
+            :class="{ active: currentFolderId === folder.id }"
+            @click="selectFolder(folder.id)"
+            @drop="handleDropOnFolder($event, folder.id)"
+            @dragover.prevent
+            @dragenter="handleDragEnterFolder"
+            @dragleave="handleDragLeaveFolder"
+          >
+            <span class="folder-icon">📁</span>
+            <span class="folder-name">{{ folder.name }}</span>
+            <span class="folder-count">({{ folder.board_count || 0 }})</span>
+            <button
+              class="folder-menu-btn"
+              @click.stop="showFolderContextMenu($event, folder)"
+            >
+              ⋮
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Секция "Без категории" -->
-      <div class="folder-section uncategorized">
-        <div
-          class="folder-header"
-          @click="toggleFolderCollapse('uncategorized')"
-        >
-          <span class="chevron-icon" :class="{ collapsed: isFolderCollapsed('uncategorized') }">▼</span>
-          <span class="folder-icon">📂</span>
-          <span class="folder-name">Без категории</span>
-          <span class="board-count">({{ uncategorizedCount }})</span>
-        </div>
-        <div
-          v-show="!isFolderCollapsed('uncategorized')"
-          class="folder-boards"
-          @drop="handleDrop($event, null)"
-          @dragover.prevent
-          @dragenter="handleDragEnter($event, null)"
-          @dragleave="handleDragLeave"
-        >
+      <!-- ПРАВАЯ ПАНЕЛЬ: Список досок -->
+      <div class="boards-panel">
+        <div class="boards-list">
           <div
-            v-for="board in uncategorizedBoards"
+            v-for="board in displayedBoards"
             :key="board.id"
             class="board-card"
             :class="{ 'locked': board.is_locked }"
@@ -146,98 +168,8 @@
             </div>
           </div>
 
-          <div v-if="uncategorizedBoards.length === 0" class="empty-folder">
-            Перетащите доски сюда
-          </div>
-        </div>
-      </div>
-
-      <!-- Пользовательские папки -->
-      <div
-        v-for="folder in folders"
-        :key="folder.id"
-        class="folder-section"
-      >
-        <div
-          class="folder-header"
-          @click="toggleFolderCollapse(folder.id)"
-        >
-          <span class="chevron-icon" :class="{ collapsed: isFolderCollapsed(folder.id) }">▼</span>
-          <span class="folder-icon">📁</span>
-          <span class="folder-name">{{ folder.name }}</span>
-          <span class="board-count">({{ folder.board_count || 0 }})</span>
-          <button
-            class="btn-folder-menu"
-            @click.stop="showFolderContextMenu($event, folder)"
-          >
-            ⋮
-          </button>
-        </div>
-        <div
-          v-show="!isFolderCollapsed(folder.id)"
-          class="folder-boards"
-          @drop="handleDrop($event, folder.id)"
-          @dragover.prevent
-          @dragenter="handleDragEnter($event, folder.id)"
-          @dragleave="handleDragLeave"
-        >
-          <div
-            v-for="board in getFolderBoards(folder.id)"
-            :key="board.id"
-            class="board-card"
-            :class="{ 'locked': board.is_locked }"
-            draggable="true"
-            @dragstart="handleDragStart($event, board)"
-            @dragend="handleDragEnd"
-            @click="openBoard(board)"
-          >
-            <div v-if="board.is_locked" class="lock-indicator">
-              <span class="lock-icon">🔒</span>
-            </div>
-
-            <div class="board-thumbnail">
-              <img
-                v-if="board.thumbnail_url"
-                :src="board.thumbnail_url"
-                alt="Preview"
-                class="board-thumb-image"
-              >
-              <div v-else class="board-placeholder">
-                🎨
-              </div>
-            </div>
-
-            <div class="board-info">
-              <h3>{{ board.name }}</h3>
-              <p class="board-meta">
-                {{ formatDate(board.updated_at) }}
-              </p>
-              <div class="board-stats">
-                <span class="stat">{{ board.object_count }} объектов</span>
-                <span v-if="board.is_public" class="stat public">Общая</span>
-                <span v-else class="stat private">Приватная</span>
-              </div>
-            </div>
-
-            <div class="board-actions" @click.stop>
-              <button class="btn-menu" @click="toggleMenu(board.id)">⋯</button>
-              <div v-if="activeMenu === board.id" class="dropdown-menu">
-                <button @click="openBoard(board)">Открыть</button>
-                <button @click="renameBoard(board)">Переименовать</button>
-                <button @click="showBoardFolderMenu($event, board)">Управление папками</button>
-                <FeatureGate feature="can_duplicate_boards" displayMode="hide" :showUpgrade="false">
-                  <button @click="duplicateBoard(board.id)">Дублировать</button>
-                </FeatureGate>
-                <FeatureGate feature="can_export_pdf" displayMode="hide" :showUpgrade="false">
-                  <button @click="exportBoardToPDF(board.id)">Экспорт PDF</button>
-                </FeatureGate>
-                <button @click="deleteBoard(board.id)" class="danger">Удалить</button>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="getFolderBoards(folder.id).length === 0" class="empty-folder">
-            Перетащите доски сюда
+          <div v-if="displayedBoards.length === 0" class="empty-folder">
+            В этой папке пока нет досок
           </div>
         </div>
       </div>
@@ -407,7 +339,6 @@ import { useUserStore } from '@/stores/user'
 import { useBoardFoldersStore } from '@/stores/boardFolders'
 import { useNotificationsStore } from '@/stores/notifications'  
 import FeatureGate from '@/components/FeatureGate.vue'
-import UsageLimitBar from '@/components/UsageLimitBar.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -430,6 +361,7 @@ const error = ref('')
 const activeMenu = ref(null)
 const showLockedModal = ref(false)
 const lockedMessage = ref('')
+const currentFolderId = ref(null) // null = все доски, 'uncategorized' = без категории, number = ID папки
 
 // Локальное состояние для модальных окон папок
 const showCreateFolderModal = ref(false)
@@ -728,9 +660,37 @@ const uncategorizedBoards = computed(() => {
 const uncategorizedCount = computed(() => uncategorizedBoards.value.length)
 const allBoardsCount = computed(() => boards.value.length)
 
-// Показать все доски
+// Computed для отображаемых досок в зависимости от выбранной папки
+const displayedBoards = computed(() => {
+  if (currentFolderId.value === null) {
+    // Показать все доски
+    return boards.value
+  } else if (currentFolderId.value === 'uncategorized') {
+    // Показать доски без категории
+    return uncategorizedBoards.value
+  } else {
+    // Показать доски из выбранной папки
+    return getFolderBoards(currentFolderId.value)
+  }
+})
+
+// Функции для выбора папок
+const selectAllBoards = () => {
+  currentFolderId.value = null
+}
+
+const selectUncategorized = () => {
+  currentFolderId.value = 'uncategorized'
+}
+
+const selectFolder = (folderId) => {
+  currentFolderId.value = folderId
+}
+
+// Показать все доски (старая функция, оставляем для совместимости)
 const showAllBoards = () => {
   boardFoldersStore.setCurrentFolder(null)
+  currentFolderId.value = null
 }
 
 // Переключить свёрнутость папки
@@ -793,6 +753,37 @@ const handleDrop = async (event, folderId) => {
     draggedBoard = null
     dragTarget = null
   }
+}
+
+// Обработчики для drag & drop на папки (левая панель)
+const handleDropOnFolder = async (event, folderId) => {
+  event.currentTarget.classList.remove('drag-over-folder')
+  event.stopPropagation()
+
+  if (!draggedBoard) return
+
+  try {
+    // Добавить доску в папку
+    await boardFoldersStore.addBoardToFolder(folderId, draggedBoard.id)
+
+    // Обновить списки
+    await loadBoards()
+    await boardFoldersStore.fetchFolders()
+
+  } catch (err) {
+    console.error('Ошибка при перемещении доски в папку:', err)
+    error.value = 'Ошибка при перемещении доски в папку'
+  } finally {
+    draggedBoard = null
+  }
+}
+
+const handleDragEnterFolder = (event) => {
+  event.currentTarget.classList.add('drag-over-folder')
+}
+
+const handleDragLeaveFolder = (event) => {
+  event.currentTarget.classList.remove('drag-over-folder')
 }
 
 // Контекстное меню папки
@@ -917,36 +908,46 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.boards-container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 40px 20px;
+.boards-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f5f5f5;
+}
+
+/* ШАПКА (фиксированная) */
+.boards-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 24px;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .btn-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  margin-bottom: 20px;
-  background: white;
+  padding: 8px 16px;
+  background: transparent;
   border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 16px;
+  border-radius: 6px;
   cursor: pointer;
+  font-size: 14px;
   transition: all 0.2s;
 }
 
 .btn-back:hover {
-  background: #f8f8f8;
+  background: #f5f5f5;
   border-color: #999;
 }
 
-.boards-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 40px;
+.boards-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
 }
 .plan-loading-indicator {
   display: inline-flex;
@@ -968,27 +969,49 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
-.boards-header h1 {
-  font-size: 32px;
-  font-weight: 700;
-  margin: 0;
+.folders-counter {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  background: #f0f0f0;
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 12px;
+}
+
+.btn-create-folder,
+.btn-create {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-create-folder {
+  background: white;
+  border: 2px dashed #5D8BF4;
+  color: #5D8BF4;
+}
+
+.btn-create-folder:hover {
+  background: #f0f5ff;
 }
 
 .btn-create {
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #5D8BF4;
   color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .btn-create:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+  background: #4a7de8;
 }
 
 .loading {
@@ -1054,30 +1077,115 @@ onBeforeUnmount(() => {
   transform: translateY(-2px);
 }
 
-.boards-grid {
+/* ДВУХПАНЕЛЬНЫЙ КОНТЕНТ */
+.boards-content {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 24px;
+  grid-template-columns: 300px 1fr;
+  gap: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ЛЕВАЯ ПАНЕЛЬ: Папки */
+.folders-panel {
+  background: white;
+  border-right: 1px solid #e0e0e0;
+  overflow-y: auto;
+}
+
+.folders-list {
+  padding: 16px 0;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: background 0.2s;
+  user-select: none;
+  position: relative;
+}
+
+.folder-item:hover {
+  background: #f5f5f5;
+}
+
+.folder-item.active {
+  background: #e3f2fd;
+  border-left: 3px solid #5D8BF4;
+}
+
+.folder-item.drag-over-folder {
+  background: #e3f2fd;
+  border-left: 3px solid #2196f3;
+}
+
+.folder-icon {
+  font-size: 20px;
+}
+
+.folder-name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.folder-count {
+  font-size: 14px;
+  color: #666;
+}
+
+.folder-menu-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: 4px;
+}
+
+.folder-item:hover .folder-menu-btn {
+  opacity: 1;
+}
+
+.folder-menu-btn:hover {
+  background: #e0e0e0;
+}
+
+/* ПРАВАЯ ПАНЕЛЬ: Доски */
+.boards-panel {
+  background: #f9f9f9;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.boards-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
 }
 
 .board-card {
   background: white;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   position: relative;
 }
 
 .board-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 .board-thumbnail {
   width: 100%;
-  height: 200px;
+  height: 180px;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   display: flex;
   align-items: center;
@@ -1085,12 +1193,9 @@ onBeforeUnmount(() => {
 }
 
 .board-thumb-image {
-  width: min(100%, 200px);
-  height: 120px;
+  width: 100%;
+  height: 180px;
   object-fit: cover;
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.05);
-  display: block;  
 }
 
 .board-placeholder {
@@ -1187,6 +1292,36 @@ onBeforeUnmount(() => {
 
 .dropdown-menu button.danger:hover {
   background: #ffebee;
+}
+
+.empty-folder {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+  font-size: 16px;
+}
+
+/* Скроллбары */
+.folders-panel::-webkit-scrollbar,
+.boards-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.folders-panel::-webkit-scrollbar-track,
+.boards-panel::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.folders-panel::-webkit-scrollbar-thumb,
+.boards-panel::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.folders-panel::-webkit-scrollbar-thumb:hover,
+.boards-panel::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 /* Стили для заблокированных досок */
@@ -1361,43 +1496,6 @@ onBeforeUnmount(() => {
   }
 }
 
-/* === Стили для заголовка с папками === */
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.folders-counter {
-  font-size: 14px;
-  color: #666;
-  background: #f0f0f0;
-  padding: 6px 12px;
-  border-radius: 8px;
-}
-
-.btn-create-folder {
-  padding: 12px 24px;
-  background: #f5f5f5;
-  color: #333;
-  border: 2px dashed #ccc;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-create-folder:hover {
-  background: #e8e8e8;
-  border-color: #999;
-}
-
 .btn-retry {
   margin-left: 12px;
   padding: 8px 16px;
@@ -1406,105 +1504,6 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-}
-
-/* === Стили для папок === */
-.folders-view {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.folder-section {
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.folder-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  background: #f8f9fa;
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.2s;
-}
-
-.folder-header:hover {
-  background: #f0f1f3;
-}
-
-.chevron-icon {
-  font-size: 12px;
-  transition: transform 0.2s;
-  color: #666;
-}
-
-.chevron-icon.collapsed {
-  transform: rotate(-90deg);
-}
-
-.folder-icon {
-  font-size: 20px;
-}
-
-.folder-name {
-  font-weight: 600;
-  font-size: 16px;
-  color: #333;
-}
-
-.board-count {
-  font-size: 14px;
-  color: #888;
-}
-
-.btn-folder-menu {
-  margin-left: auto;
-  background: transparent;
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  font-size: 18px;
-  cursor: pointer;
-  color: #666;
-  transition: all 0.2s;
-}
-
-.btn-folder-menu:hover {
-  background: #e0e0e0;
-  color: #333;
-}
-
-.folder-boards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-  padding: 20px;
-  min-height: 100px;
-  transition: background 0.2s;
-}
-
-.folder-boards.drag-over {
-  background: #e3f2fd;
-  border: 2px dashed #2196f3;
-  border-radius: 12px;
-  margin: 8px;
-  padding: 12px;
-}
-
-.empty-folder {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 40px;
-  color: #999;
-  font-size: 14px;
-  border: 2px dashed #e0e0e0;
-  border-radius: 12px;
 }
 
 /* === Стили для контекстного меню папки === */
