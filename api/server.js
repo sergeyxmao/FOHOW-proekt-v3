@@ -23,6 +23,7 @@ import { registerAdminRoutes } from './routes/admin.js';
 import { registerImageRoutes } from './routes/images.js';
 import { registerAnchorRoutes } from './routes/anchors.js';
 import { registerBoardFolderRoutes } from './routes/boardFolders.js';
+import { registerDiscussionRoutes } from './routes/discussion.js';
 import verificationRoutes from './routes/verification.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
@@ -1843,6 +1844,11 @@ registerAnchorRoutes(app);
 // ПАПКИ ДОСОК (BOARD FOLDERS)
 // ============================================
 registerBoardFolderRoutes(app);
+
+// ============================================
+// ОБСУЖДЕНИЯ (DISCUSSIONS)
+// ============================================
+registerDiscussionRoutes(app);
 
 // ============================================
 // ВЕРИФИКАЦИЯ (VERIFICATION)
