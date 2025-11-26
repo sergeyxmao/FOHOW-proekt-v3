@@ -1703,6 +1703,38 @@ watch(
   }
 }
 
+/* Скрываем кнопки управления активными заказами для больших и Gold карточек */
+.card--large .card-active-controls,
+.card--gold .card-active-controls {
+  display: none !important;
+}
+
+/* Увеличение шрифта и центрирование строк для больших и Gold карточек */
+.card--large .card-row,
+.card--gold .card-row {
+  font-size: 18px; /* Увеличиваем размер шрифта с базового значения */
+  line-height: 1.6; /* Увеличиваем межстрочный интервал для лучшей читаемости */
+  justify-content: center; /* Центрируем содержимое по горизонтали */
+  text-align: center; /* Центрируем текст */
+}
+
+/* Центрирование содержимого карточки по вертикали */
+.card--large .card-body,
+.card--gold .card-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Центрируем по вертикали */
+  height: 100%; /* Занимаем всю доступную высоту */
+}
+
+/* Увеличиваем размер шрифта для лейблов и значений */
+.card--large .card-row .label,
+.card--gold .card-row .label,
+.card--large .card-row .value,
+.card--gold .card-row .value {
+  font-size: 18px; /* Применяем увеличенный размер к обеим частям строки */
+}
+
 /* Print Styles - Скрываем кнопки управления при печати */
 @media print {
   /* Скрываем кнопки управления карточкой */
