@@ -104,31 +104,6 @@
                 </span>
               </div>
             </div>
-
-            <!-- Секция настроек конфиденциальности -->
-            <div class="privacy-settings-section privacy-settings-section--basic">
-              <h3 class="privacy-settings-title">Настройки конфиденциальности</h3>
-              <p class="privacy-settings-hint">
-                Управляйте видимостью ваших личных данных в поиске. Перейдите на вкладку "Личная информация" для настройки конфиденциальности каждого поля.
-              </p>
-
-              <div v-if="privacyError" class="error-message">{{ privacyError }}</div>
-              <div v-if="privacySuccess" class="success-message">{{ privacySuccess }}</div>
-
-              <button
-                type="button"
-                class="btn-save btn-privacy"
-                :disabled="savingPrivacy"
-                @click="savePrivacySettings"
-              >
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                  <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                  <circle cx="12" cy="16" r="1.5" fill="currentColor"/>
-                </svg>
-                {{ savingPrivacy ? 'Сохранение...' : 'Сохранить настройки конфиденциальности' }}
-              </button>
-            </div>
           </div>
 
           <!-- ===== TAB 2: Личная информация ===== -->
@@ -516,7 +491,12 @@
                 :disabled="savingPrivacy"
                 @click="savePrivacySettings"
               >
-                {{ savingPrivacy ? 'Сохранение...' : '🔒 Сохранить настройки конфиденциальности' }}
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="12" cy="16" r="1.5" fill="currentColor"/>
+                </svg>
+                {{ savingPrivacy ? 'Сохранение...' : 'Сохранить настройки конфиденциальности' }}
               </button>
             </div>
           </div>
