@@ -110,7 +110,18 @@
           <div v-if="activeTab === 'personal'" class="tab-panel">
             <form @submit.prevent="savePersonalInfo" class="info-form">
               <div class="form-group">
-                <label for="username">Имя пользователя:</label>
+                <div class="form-group-header">
+                  <label for="username">Имя пользователя:</label>
+                  <button
+                    type="button"
+                    class="privacy-lock"
+                    :class="{ 'privacy-lock--open': privacySettings.username, 'privacy-lock--closed': !privacySettings.username }"
+                    @click="togglePrivacy('username')"
+                    :title="privacySettings.username ? 'Поиск разрешен' : 'Поиск запрещен'"
+                  >
+                    {{ privacySettings.username ? '🔓' : '🔒' }}
+                  </button>
+                </div>
                 <input
                   id="username"
                   v-model="personalForm.username"
@@ -132,7 +143,18 @@
               </div>
 
               <div class="form-group">
-                <label for="phone">Телефон:</label>
+                <div class="form-group-header">
+                  <label for="phone">Телефон:</label>
+                  <button
+                    type="button"
+                    class="privacy-lock"
+                    :class="{ 'privacy-lock--open': privacySettings.phone, 'privacy-lock--closed': !privacySettings.phone }"
+                    @click="togglePrivacy('phone')"
+                    :title="privacySettings.phone ? 'Поиск разрешен' : 'Поиск запрещен'"
+                  >
+                    {{ privacySettings.phone ? '🔓' : '🔒' }}
+                  </button>
+                </div>
                 <input
                   id="phone"
                   v-model="personalForm.phone"
@@ -142,7 +164,18 @@
               </div>
 
               <div class="form-group">
-                <label for="city">Город:</label>
+                <div class="form-group-header">
+                  <label for="city">Город:</label>
+                  <button
+                    type="button"
+                    class="privacy-lock"
+                    :class="{ 'privacy-lock--open': privacySettings.city, 'privacy-lock--closed': !privacySettings.city }"
+                    @click="togglePrivacy('city')"
+                    :title="privacySettings.city ? 'Поиск разрешен' : 'Поиск запрещен'"
+                  >
+                    {{ privacySettings.city ? '🔓' : '🔒' }}
+                  </button>
+                </div>
                 <input
                   id="city"
                   v-model="personalForm.city"
@@ -152,7 +185,18 @@
               </div>
 
               <div class="form-group">
-                <label for="country">Страна:</label>
+                <div class="form-group-header">
+                  <label for="country">Страна:</label>
+                  <button
+                    type="button"
+                    class="privacy-lock"
+                    :class="{ 'privacy-lock--open': privacySettings.country, 'privacy-lock--closed': !privacySettings.country }"
+                    @click="togglePrivacy('country')"
+                    :title="privacySettings.country ? 'Поиск разрешен' : 'Поиск запрещен'"
+                  >
+                    {{ privacySettings.country ? '🔓' : '🔒' }}
+                  </button>
+                </div>
                 <input
                   id="country"
                   v-model="personalForm.country"
@@ -162,7 +206,18 @@
               </div>
 
               <div class="form-group">
-                <label for="office">Представительство:</label>
+                <div class="form-group-header">
+                  <label for="office">Представительство:</label>
+                  <button
+                    type="button"
+                    class="privacy-lock"
+                    :class="{ 'privacy-lock--open': privacySettings.office, 'privacy-lock--closed': !privacySettings.office }"
+                    @click="togglePrivacy('office')"
+                    :title="privacySettings.office ? 'Поиск разрешен' : 'Поиск запрещен'"
+                  >
+                    {{ privacySettings.office ? '🔓' : '🔒' }}
+                  </button>
+                </div>
                 <input
                   id="office"
                   v-model="personalForm.office"
@@ -175,13 +230,24 @@
               </div>
 
               <div class="form-group">
-                <label
-                  for="personal-id-input"
-                  :class="{ 'verified-label': user.is_verified }"
-                >
-                  Компьютерный номер:
-                  <span v-if="user.is_verified" class="verified-icon" title="Верифицирован">⭐</span>
-                </label>
+                <div class="form-group-header">
+                  <label
+                    for="personal-id-input"
+                    :class="{ 'verified-label': user.is_verified }"
+                  >
+                    Компьютерный номер:
+                    <span v-if="user.is_verified" class="verified-icon" title="Верифицирован">⭐</span>
+                  </label>
+                  <button
+                    type="button"
+                    class="privacy-lock"
+                    :class="{ 'privacy-lock--open': privacySettings.personal_id, 'privacy-lock--closed': !privacySettings.personal_id }"
+                    @click="togglePrivacy('personal_id')"
+                    :title="privacySettings.personal_id ? 'Поиск разрешен' : 'Поиск запрещен'"
+                  >
+                    {{ privacySettings.personal_id ? '🔓' : '🔒' }}
+                  </button>
+                </div>
                 <div
                   :class="[
                     'personal-id-input-container',
@@ -268,7 +334,18 @@
           <div v-if="activeTab === 'social'" class="tab-panel">
             <form @submit.prevent="saveSocialInfo" class="info-form">
               <div class="form-group">
-                <label for="telegram">Telegram (@username):</label>
+                <div class="form-group-header">
+                  <label for="telegram">Telegram (@username):</label>
+                  <button
+                    type="button"
+                    class="privacy-lock"
+                    :class="{ 'privacy-lock--open': privacySettings.telegram_user, 'privacy-lock--closed': !privacySettings.telegram_user }"
+                    @click="togglePrivacy('telegram_user')"
+                    :title="privacySettings.telegram_user ? 'Поиск разрешен' : 'Поиск запрещен'"
+                  >
+                    {{ privacySettings.telegram_user ? '🔓' : '🔒' }}
+                  </button>
+                </div>
                 <input
                   id="telegram"
                   v-model="socialForm.telegram_user"
@@ -288,7 +365,18 @@
               </div>
 
               <div class="form-group">
-                <label for="instagram">Instagram (@username):</label>
+                <div class="form-group-header">
+                  <label for="instagram">Instagram (@username):</label>
+                  <button
+                    type="button"
+                    class="privacy-lock"
+                    :class="{ 'privacy-lock--open': privacySettings.instagram_profile, 'privacy-lock--closed': !privacySettings.instagram_profile }"
+                    @click="togglePrivacy('instagram_profile')"
+                    :title="privacySettings.instagram_profile ? 'Поиск разрешен' : 'Поиск запрещен'"
+                  >
+                    {{ privacySettings.instagram_profile ? '🔓' : '🔒' }}
+                  </button>
+                </div>
                 <input
                   id="instagram"
                   v-model="socialForm.instagram_profile"
@@ -314,6 +402,26 @@
                 {{ savingSocial ? 'Сохранение...' : '💾 Сохранить изменения' }}
               </button>
             </form>
+
+            <!-- Секция настроек конфиденциальности -->
+            <div class="privacy-settings-section">
+              <h3 class="privacy-settings-title">Настройки конфиденциальности</h3>
+              <p class="privacy-settings-hint">
+                Нажмите на замок рядом с любым полем, чтобы разрешить или запретить поиск по этому полю
+              </p>
+
+              <div v-if="privacyError" class="error-message">{{ privacyError }}</div>
+              <div v-if="privacySuccess" class="success-message">{{ privacySuccess }}</div>
+
+              <button
+                type="button"
+                class="btn-save btn-privacy"
+                :disabled="savingPrivacy"
+                @click="savePrivacySettings"
+              >
+                {{ savingPrivacy ? 'Сохранение...' : '🔒 Сохранить настройки конфиденциальности' }}
+              </button>
+            </div>
           </div>
 
           <!-- ===== TAB 4: Лимиты / Используемые ресурсы ===== -->
@@ -776,6 +884,22 @@ const socialError = ref('')
 const socialSuccess = ref('')
 const savingSocial = ref(false)
 
+// Настройки конфиденциальности
+const privacySettings = ref({
+  username: false,
+  phone: false,
+  city: false,
+  country: false,
+  office: false,
+  personal_id: false,
+  telegram_user: false,
+  instagram_profile: false
+})
+
+const privacyError = ref('')
+const privacySuccess = ref('')
+const savingPrivacy = ref(false)
+
 // Промокод
 const promoCodeInput = ref('')
 const promoError = ref('')
@@ -1063,6 +1187,20 @@ onMounted(async () => {
     socialForm.vk_profile = user.value.vk_profile || ''
     socialForm.instagram_profile = user.value.instagram_profile || ''
     socialForm.website = user.value.website || ''
+
+    // Инициализируем настройки конфиденциальности
+    if (user.value.search_settings) {
+      privacySettings.value = {
+        username: user.value.search_settings.username || false,
+        phone: user.value.search_settings.phone || false,
+        city: user.value.search_settings.city || false,
+        country: user.value.search_settings.country || false,
+        office: user.value.search_settings.office || false,
+        personal_id: user.value.search_settings.personal_id || false,
+        telegram_user: user.value.search_settings.telegram_user || false,
+        instagram_profile: user.value.search_settings.instagram_profile || false
+      }
+    }
   }
 
   // Автоматически проверять статус верификации каждые 10 секунд (если есть pending заявка)
@@ -1630,6 +1768,51 @@ async function saveSocialInfo() {
   }
 }
 
+// Переключить настройку конфиденциальности
+function togglePrivacy(field) {
+  privacySettings.value[field] = !privacySettings.value[field]
+}
+
+// Сохранить настройки конфиденциальности
+async function savePrivacySettings() {
+  privacyError.value = ''
+  privacySuccess.value = ''
+  savingPrivacy.value = true
+
+  try {
+    const response = await fetch(`${API_URL}/profile/privacy`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ search_settings: privacySettings.value })
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Ошибка сохранения настроек')
+    }
+
+    const result = await response.json()
+
+    // Обновляем search_settings в authStore
+    if (user.value) {
+      user.value.search_settings = result.search_settings
+    }
+
+    privacySuccess.value = 'Настройки конфиденциальности успешно сохранены!'
+
+    setTimeout(() => {
+      privacySuccess.value = ''
+    }, 3000)
+  } catch (err) {
+    privacyError.value = err.message || 'Произошла ошибка при сохранении'
+  } finally {
+    savingPrivacy.value = false
+  }
+}
+
 // Применить промокод
 async function handleApplyPromo() {
   promoError.value = ''
@@ -2152,6 +2335,66 @@ async function handleAvatarDelete() {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.form-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.privacy-lock {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.privacy-lock:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.privacy-lock--closed {
+  filter: grayscale(20%);
+}
+
+.privacy-lock--open {
+  filter: grayscale(0%);
+}
+
+.privacy-settings-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--profile-border);
+}
+
+.privacy-settings-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--profile-text);
+  margin-bottom: 12px;
+}
+
+.privacy-settings-hint {
+  font-size: 14px;
+  color: var(--profile-muted);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.btn-privacy {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 100%;
+}
+
+.btn-privacy:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
 }
 
 .form-group label {
