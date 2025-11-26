@@ -927,6 +927,7 @@ onBeforeUnmount(() => {
   background: white;
   border-bottom: 1px solid #e0e0e0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
 }
 
 .btn-back {
@@ -1084,6 +1085,7 @@ onBeforeUnmount(() => {
   gap: 0;
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 
 /* ЛЕВАЯ ПАНЕЛЬ: Папки */
@@ -1091,6 +1093,7 @@ onBeforeUnmount(() => {
   background: white;
   border-right: 1px solid #e0e0e0;
   overflow-y: auto;
+  height: 100%;
 }
 
 .folders-list {
@@ -1159,6 +1162,7 @@ onBeforeUnmount(() => {
 .boards-panel {
   background: #f9f9f9;
   overflow-y: auto;
+  height: 100%;
   padding: 24px;
 }
 
