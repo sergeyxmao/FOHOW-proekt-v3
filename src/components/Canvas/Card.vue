@@ -1392,8 +1392,8 @@ watch(
 /* Стили для аватара в карточке */
 .card-avatar-container {
   position: absolute;
-  width: 150px;
-  height: 150px;
+  width: 250px;
+  height: 250px;
   left: -75px;
   top: 50%;
   transform: translateY(-50%);
