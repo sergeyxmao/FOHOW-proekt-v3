@@ -104,6 +104,31 @@
                 </span>
               </div>
             </div>
+
+            <!-- Секция настроек конфиденциальности -->
+            <div class="privacy-settings-section privacy-settings-section--basic">
+              <h3 class="privacy-settings-title">Настройки конфиденциальности</h3>
+              <p class="privacy-settings-hint">
+                Управляйте видимостью ваших личных данных в поиске. Перейдите на вкладку "Личная информация" для настройки конфиденциальности каждого поля.
+              </p>
+
+              <div v-if="privacyError" class="error-message">{{ privacyError }}</div>
+              <div v-if="privacySuccess" class="success-message">{{ privacySuccess }}</div>
+
+              <button
+                type="button"
+                class="btn-save btn-privacy"
+                :disabled="savingPrivacy"
+                @click="savePrivacySettings"
+              >
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                  <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="12" cy="16" r="1.5" fill="currentColor"/>
+                </svg>
+                {{ savingPrivacy ? 'Сохранение...' : 'Сохранить настройки конфиденциальности' }}
+              </button>
+            </div>
           </div>
 
           <!-- ===== TAB 2: Личная информация ===== -->
@@ -119,7 +144,16 @@
                     @click="togglePrivacy('username')"
                     :title="privacySettings.username ? 'Поиск разрешен' : 'Поиск запрещен'"
                   >
-                    {{ privacySettings.username ? '🔓' : '🔒' }}
+                    <svg v-if="privacySettings.username" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
+                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
                   </button>
                 </div>
                 <input
@@ -152,7 +186,16 @@
                     @click="togglePrivacy('phone')"
                     :title="privacySettings.phone ? 'Поиск разрешен' : 'Поиск запрещен'"
                   >
-                    {{ privacySettings.phone ? '🔓' : '🔒' }}
+                    <svg v-if="privacySettings.phone" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
+                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
                   </button>
                 </div>
                 <input
@@ -173,7 +216,16 @@
                     @click="togglePrivacy('city')"
                     :title="privacySettings.city ? 'Поиск разрешен' : 'Поиск запрещен'"
                   >
-                    {{ privacySettings.city ? '🔓' : '🔒' }}
+                    <svg v-if="privacySettings.city" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
+                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
                   </button>
                 </div>
                 <input
@@ -194,7 +246,16 @@
                     @click="togglePrivacy('country')"
                     :title="privacySettings.country ? 'Поиск разрешен' : 'Поиск запрещен'"
                   >
-                    {{ privacySettings.country ? '🔓' : '🔒' }}
+                    <svg v-if="privacySettings.country" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
+                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
                   </button>
                 </div>
                 <input
@@ -215,7 +276,16 @@
                     @click="togglePrivacy('office')"
                     :title="privacySettings.office ? 'Поиск разрешен' : 'Поиск запрещен'"
                   >
-                    {{ privacySettings.office ? '🔓' : '🔒' }}
+                    <svg v-if="privacySettings.office" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
+                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
                   </button>
                 </div>
                 <input
@@ -245,7 +315,16 @@
                     @click="togglePrivacy('personal_id')"
                     :title="privacySettings.personal_id ? 'Поиск разрешен' : 'Поиск запрещен'"
                   >
-                    {{ privacySettings.personal_id ? '🔓' : '🔒' }}
+                    <svg v-if="privacySettings.personal_id" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
+                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
                   </button>
                 </div>
                 <div
@@ -343,7 +422,16 @@
                     @click="togglePrivacy('telegram_user')"
                     :title="privacySettings.telegram_user ? 'Поиск разрешен' : 'Поиск запрещен'"
                   >
-                    {{ privacySettings.telegram_user ? '🔓' : '🔒' }}
+                    <svg v-if="privacySettings.telegram_user" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
+                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
                   </button>
                 </div>
                 <input
@@ -374,7 +462,16 @@
                     @click="togglePrivacy('instagram_profile')"
                     :title="privacySettings.instagram_profile ? 'Поиск разрешен' : 'Поиск запрещен'"
                   >
-                    {{ privacySettings.instagram_profile ? '🔓' : '🔒' }}
+                    <svg v-if="privacySettings.instagram_profile" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
+                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
                   </button>
                 </div>
                 <input
@@ -2347,25 +2444,39 @@ async function handleAvatarDelete() {
 .privacy-lock {
   background: transparent;
   border: none;
-  font-size: 18px;
   cursor: pointer;
   padding: 4px;
   transition: transform 0.2s ease, opacity 0.2s ease;
-  opacity: 0.7;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .privacy-lock:hover {
-  opacity: 1;
-  transform: scale(1.1);
+  transform: scale(1.15);
 }
 
-.privacy-lock--closed {
-  filter: grayscale(20%);
+.privacy-lock:active {
+  transform: scale(0.95);
 }
 
-.privacy-lock--open {
-  filter: grayscale(0%);
+.lock-icon {
+  width: 24px;
+  height: 24px;
+  transition: transform 0.3s ease, filter 0.2s ease;
+}
+
+.lock-icon--open {
+  filter: drop-shadow(0 2px 4px rgba(76, 175, 80, 0.3));
+}
+
+.lock-icon--closed {
+  filter: drop-shadow(0 2px 4px rgba(244, 67, 54, 0.3));
+}
+
+.privacy-lock:hover .lock-icon {
+  filter: brightness(1.1);
 }
 
 .privacy-settings-section {
@@ -2391,10 +2502,25 @@ async function handleAvatarDelete() {
 .btn-privacy {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .btn-privacy:hover:not(:disabled) {
   background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+}
+
+.btn-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.privacy-settings-section--basic {
+  margin-top: 24px;
+  padding-top: 20px;
 }
 
 .form-group label {
