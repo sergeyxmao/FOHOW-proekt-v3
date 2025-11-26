@@ -1321,6 +1321,7 @@ watch(
 }
 
 .card-body {
+  position: relative;
   padding: 20px 20px 60px;
   background: var(--card-body-background, var(--card-body-gradient, var(--surface, #ffffff)));
   border-radius: 0 0 14px 14px;
@@ -1332,7 +1333,8 @@ watch(
   width: 100%;
   box-sizing: border-box;
   line-height: 1.3;
-  border-top: 1px solid var(--card-body-divider, var(--card-border-color, rgba(47, 128, 237, 0.25)));  
+  border-top: 1px solid var(--card-body-divider, var(--card-border-color, rgba(47, 128, 237, 0.25)));
+  overflow: visible;
 }
 .card:not(.card--large):not(.card--gold) .card-body {
   padding-bottom: 40px;
@@ -1389,10 +1391,14 @@ watch(
 
 /* Стили для аватара в карточке */
 .card-avatar-container {
+  position: absolute;
   width: 150px;
   height: 150px;
-  margin: 0 auto 16px;
+  left: -75px;
+  top: 50%;
+  transform: translateY(-50%);
   flex-shrink: 0;
+  z-index: 10;
 }
 
 .card-avatar {
