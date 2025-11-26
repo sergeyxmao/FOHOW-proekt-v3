@@ -934,7 +934,7 @@ watch(
         <div
           v-else
           class="card-avatar card-avatar--default"
-          title="Аватар по умолчанию"
+          title="Партнёр"
         ></div>
       </div>
 
