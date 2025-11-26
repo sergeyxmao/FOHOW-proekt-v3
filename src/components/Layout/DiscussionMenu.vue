@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { useBoardCommentsStore } from '../Panels/boardComments.js'
@@ -46,7 +46,7 @@ const createDefaultCounters = () => ({
   stickers: 0
 })
 const counters = ref(createDefaultCounters())
-const countersLoading = ref(false)  
+const countersLoading = ref(false)
 // Проверка доступа к библиотеке изображений
 const canUseImages = computed(() => subscriptionStore.checkFeature('can_use_images'))
 const loadDiscussionCounters = async () => {
@@ -55,6 +55,7 @@ const loadDiscussionCounters = async () => {
   try {
     if (!currentBoardId.value || !authStore.token) {
       counters.value = createDefaultCounters()
+      countersLoading.value = false      
       return
     }
 
@@ -82,6 +83,10 @@ const loadDiscussionCounters = async () => {
 onMounted(() => {
   loadDiscussionCounters()
 })
+
+watch(currentBoardId, () => {
+  loadDiscussionCounters()
+})  
 const handleNotesToggle = () => {
   sidePanelsStore.toggleNotes()
   emit('request-close')
