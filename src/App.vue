@@ -51,7 +51,8 @@ const route = useRoute()
 const layout = computed(() => route.meta.layout)
 const isSimpleLayout = computed(() => layout.value === 'public' || layout.value === 'admin')
 const isBoardsPage = computed(() => route.name === 'boards')
-
+const routeBoardId = computed(() => (route.name === 'board' ? route.params.id : null))
+  
 // Подключаем i18n для мультиязычности
 const { t } = useI18n()
 
@@ -883,6 +884,13 @@ watch(isSaveAvailable, (canSave) => {
     stopAutoSave()
   }
 })
+watch(routeBoardId, async (boardId) => {
+  if (!boardId) {
+    return
+  }
+
+  await loadBoard(boardId)
+}, { immediate: true })
 
 onMounted(async () => {
   // Вся асинхронная инициализация (authStore.init) УЖЕ ЗАВЕРШИЛАСЬ в main.js
