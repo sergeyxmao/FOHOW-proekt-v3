@@ -275,11 +275,18 @@
             <button class="modal-close" @click="showManageBoardFoldersModal = false">✕</button>
             <h2>Управление папками</h2>
             <p class="modal-subtitle">Доска: {{ selectedBoard?.name }}</p>
-            <div class="folders-list">
+            <input
+              v-model="manageFoldersSearch"
+              type="text"
+              placeholder="Поиск папок"
+              class="modal-input search-input"
+            >
+            <div class="manage-folders-list">
               <div
-                v-for="folder in folders"
+                v-for="folder in filteredFolders"
                 :key="folder.id"
                 class="folder-checkbox-item"
+                :class="{ active: currentFolderId === folder.id }"                
               >
                 <label>
                   <input
@@ -293,6 +300,9 @@
               <div v-if="folders.length === 0" class="no-folders">
                 Нет созданных папок
               </div>
+              <div v-else-if="filteredFolders.length === 0" class="no-folders">
+                Ничего не найдено
+              </div>              
             </div>
             <div class="modal-actions">
               <button class="btn-primary" @click="showManageBoardFoldersModal = false">
@@ -368,6 +378,7 @@ const showCreateFolderModal = ref(false)
 const showRenameFolderModal = ref(false)
 const showDeleteFolderModal = ref(false)
 const showManageBoardFoldersModal = ref(false)
+const manageFoldersSearch = ref('')  
 const selectedFolder = ref(null)
 const selectedBoard = ref(null)
 const newFolderName = ref('')
@@ -659,7 +670,13 @@ const uncategorizedBoards = computed(() => {
 
 const uncategorizedCount = computed(() => uncategorizedBoards.value.length)
 const allBoardsCount = computed(() => boards.value.length)
+const filteredFolders = computed(() => {
+  const query = manageFoldersSearch.value.trim().toLowerCase()
 
+  if (!query) return folders.value
+
+  return folders.value.filter(folder => folder.name.toLowerCase().includes(query))
+})
 // Computed для отображаемых досок в зависимости от выбранной папки
 const displayedBoards = computed(() => {
   if (currentFolderId.value === null) {
@@ -801,6 +818,7 @@ const showFolderContextMenu = (event, folder) => {
 const showBoardFolderMenu = (event, board) => {
   event.stopPropagation()
   selectedBoard.value = board
+  manageFoldersSearch.value = ''  
   showManageBoardFoldersModal.value = true
 }
 
@@ -1092,12 +1110,17 @@ onBeforeUnmount(() => {
 .folders-panel {
   background: white;
   border-right: 1px solid #e0e0e0;
-  overflow-y: auto;
-  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;  
 }
 
 .folders-list {
+  flex: 1;
+  min-height: 0;  
   padding: 16px 0;
+  overflow-y: auto;  
 }
 
 .folder-item {
@@ -1160,9 +1183,11 @@ onBeforeUnmount(() => {
 
 /* ПРАВАЯ ПАНЕЛЬ: Доски */
 .boards-panel {
+  display: flex;
+  flex-direction: column;  
   background: #f9f9f9;
   overflow-y: auto;
-  height: 100%;
+  min-height: 0;
   padding: 24px;
 }
 
@@ -1697,7 +1722,11 @@ onBeforeUnmount(() => {
 }
 
 /* === Управление папками доски === */
-.folders-list {
+.search-input {
+  margin: 0 0 12px 0;
+}
+
+.manage-folders-list {
   max-height: 300px;
   overflow-y: auto;
   margin-bottom: 20px;
@@ -1707,7 +1736,9 @@ onBeforeUnmount(() => {
   padding: 12px 0;
   border-bottom: 1px solid #f0f0f0;
 }
-
+.folder-checkbox-item.active {
+  background: linear-gradient(90deg, #f4f7ff 0%, #ffffff 100%);
+}
 .folder-checkbox-item:last-child {
   border-bottom: none;
 }
