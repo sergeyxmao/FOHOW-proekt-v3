@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { useBoardCommentsStore } from '../Panels/boardComments.js'
@@ -7,7 +7,9 @@ import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
 import { useBoardStore } from '../../stores/board.js'
 import { useSubscriptionStore } from '../../stores/subscription.js'
+import { useAuthStore } from '../../stores/auth.js'
 
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -22,6 +24,7 @@ const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
 const subscriptionStore = useSubscriptionStore()
+const authStore = useAuthStore()
 
 const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
 const {
@@ -35,9 +38,50 @@ const { placementMode } = storeToRefs(boardStore)
 const { currentBoardId } = storeToRefs(boardStore)
 const isGeolocationMenuOpen = ref(false)
 const isStickersMenuOpen = ref(false)
+const createDefaultCounters = () => ({
+  notes: 0,
+  images: '0/0',
+  comments: 0,
+  geolocation: 0,
+  stickers: 0
+})
+const counters = ref(createDefaultCounters())
+const countersLoading = ref(false)  
 // Проверка доступа к библиотеке изображений
 const canUseImages = computed(() => subscriptionStore.checkFeature('can_use_images'))
+const loadDiscussionCounters = async () => {
+  countersLoading.value = true
 
+  try {
+    if (!currentBoardId.value || !authStore.token) {
+      counters.value = createDefaultCounters()
+      return
+    }
+
+    const response = await fetch(
+      `${API_URL}/boards/${currentBoardId.value}/discussion-counters`,
+      {
+        headers: {
+          Authorization: `Bearer ${authStore.token}`
+        }
+      }
+    )
+
+    const data = await response.json()
+
+    if (response.ok && data?.success) {
+      counters.value = data.counters
+    }
+  } catch (error) {
+    console.error('Failed to load counters:', error)
+  } finally {
+    countersLoading.value = false
+  }
+}
+
+onMounted(() => {
+  loadDiscussionCounters()
+})
 const handleNotesToggle = () => {
   sidePanelsStore.toggleNotes()
   emit('request-close')
@@ -117,6 +161,10 @@ const handleAddSticker = () => {
       >
         {{ t('discussionMenu.notesList') }}
       </button>
+      <span class="discussion-menu__counter">
+        <template v-if="countersLoading">...</template>
+        <template v-else>{{ counters.notes }}</template>
+      </span>      
     </div>
 
     <div v-if="canUseImages" class="discussion-menu__item">
@@ -129,6 +177,10 @@ const handleAddSticker = () => {
       >
         Изображения
       </button>
+       <span class="discussion-menu__counter">
+        <template v-if="countersLoading">...</template>
+        <template v-else>{{ counters.images }}</template>
+      </span>     
     </div>
 
     <div class="discussion-menu__item">
@@ -141,6 +193,10 @@ const handleAddSticker = () => {
       >
         {{ t('discussionMenu.boardComments') }}
       </button>
+      <span class="discussion-menu__counter">
+        <template v-if="countersLoading">...</template>
+        <template v-else>{{ counters.comments }}</template>
+      </span>      
       <span
         v-if="hasBoardComments"
         class="discussion-menu__badge"
@@ -150,14 +206,20 @@ const handleAddSticker = () => {
     <div class="discussion-menu__item discussion-menu__item--has-children">
       <span class="discussion-menu__icon" aria-hidden="true">🧭</span>
       <div class="discussion-menu__item-content">
-        <button
-          type="button"
-          class="discussion-menu__action"
-          :class="{ 'discussion-menu__action--active': isAnchorsOpen || placementMode === 'anchor' }"
-          @click="toggleGeolocationMenu"
-        >
-          {{ t('discussionMenu.geolocation') }}
-        </button>
+        <div class="discussion-menu__item-header">
+          <button
+            type="button"
+            class="discussion-menu__action"
+            :class="{ 'discussion-menu__action--active': isAnchorsOpen || placementMode === 'anchor' }"
+            @click="toggleGeolocationMenu"
+          >
+            {{ t('discussionMenu.geolocation') }}
+          </button>
+          <span class="discussion-menu__counter">
+            <template v-if="countersLoading">...</template>
+            <template v-else>{{ counters.geolocation }}</template>
+          </span>
+        </div>
         <transition name="top-menu-fade">
           <div v-if="isGeolocationMenuOpen" class="discussion-menu__submenu">
             <button
@@ -184,14 +246,20 @@ const handleAddSticker = () => {
     <div class="discussion-menu__item discussion-menu__item--has-children">
       <span class="discussion-menu__icon" aria-hidden="true">📌</span>
       <div class="discussion-menu__item-content">
-        <button
-          type="button"
-          class="discussion-menu__action"
-          :class="{ 'discussion-menu__action--active': isStickerMessagesOpen }"
-          @click="toggleStickersMenu"
-        >
-          {{ t('discussionMenu.stickerMessages') }}
-        </button>
+        <div class="discussion-menu__item-header">
+          <button
+            type="button"
+            class="discussion-menu__action"
+            :class="{ 'discussion-menu__action--active': isStickerMessagesOpen }"
+            @click="toggleStickersMenu"
+          >
+            {{ t('discussionMenu.stickerMessages') }}
+          </button>
+          <span class="discussion-menu__counter">
+            <template v-if="countersLoading">...</template>
+            <template v-else>{{ counters.stickers }}</template>
+          </span>
+        </div>
         <transition name="top-menu-fade">
           <div v-if="isStickersMenuOpen" class="discussion-menu__submenu">
             <button
@@ -237,6 +305,11 @@ const handleAddSticker = () => {
   gap: 12px;
   position: relative;
 }
+.discussion-menu__item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 .discussion-menu__icon {
   display: grid;
@@ -280,6 +353,23 @@ const handleAddSticker = () => {
 }
 .discussion-menu__item-content {
   flex: 1;
+}
+.discussion-menu__counter {
+  margin-left: auto;
+  padding: 4px 10px;
+  min-width: 44px;
+  text-align: center;
+  background-color: #e5e7eb;
+  color: #111827;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.discussion-menu__counter:empty {
+  display: none;
 }
 
 .discussion-menu__submenu {
@@ -339,7 +429,11 @@ const handleAddSticker = () => {
   color: #e5f3ff;
   box-shadow: 0 18px 32px rgba(6, 11, 21, 0.58);
 }
-
+.discussion-menu--modern .discussion-menu__counter {
+  background: rgba(114, 182, 255, 0.14);
+  color: #e5f3ff;
+  border-color: rgba(96, 164, 255, 0.35);
+}
 .discussion-menu--modern .discussion-menu__action:not(:disabled):hover {
   background: rgba(96, 164, 255, 0.22);
   color: #0b1324;
