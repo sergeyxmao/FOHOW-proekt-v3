@@ -32,13 +32,15 @@ const {
   isCommentsOpen,
   isStickerMessagesOpen,
   isImagesOpen,
-  isAnchorsOpen
+  isAnchorsOpen,
+  isPartnersOpen
 } = storeToRefs(sidePanelsStore)
 const { placementMode } = storeToRefs(boardStore)
 const { currentBoardId } = storeToRefs(boardStore)
 const isGeolocationMenuOpen = ref(false)
 const isStickersMenuOpen = ref(false)
 const createDefaultCounters = () => ({
+  partners: 0,
   notes: 0,
   images: '0/0',
   comments: 0,
@@ -87,6 +89,11 @@ onMounted(() => {
 watch(currentBoardId, () => {
   loadDiscussionCounters()
 })  
+const handlePartnersToggle = () => {
+  sidePanelsStore.togglePartners()
+  emit('request-close')
+}
+
 const handleNotesToggle = () => {
   sidePanelsStore.toggleNotes()
   emit('request-close')
@@ -155,6 +162,32 @@ const handleAddSticker = () => {
     :class="{ 'discussion-menu--modern': props.isModernTheme }"
   >
     <div class="discussion-menu__title">{{ t('discussionMenu.title') }}</div>
+
+    <div class="discussion-menu__item">
+      <div class="discussion-menu__avatar-wrapper">
+        <img
+          v-if="authStore.user?.avatar_url"
+          :src="authStore.user.avatar_url"
+          alt="Avatar"
+          class="discussion-menu__avatar"
+        >
+        <div v-else class="discussion-menu__avatar-placeholder">
+          {{ (authStore.user?.username || authStore.user?.email || 'U').charAt(0).toUpperCase() }}
+        </div>
+      </div>
+      <button
+        type="button"
+        class="discussion-menu__action"
+        :class="{ 'discussion-menu__action--active': isPartnersOpen }"
+        @click="handlePartnersToggle"
+      >
+        Партнеры
+      </button>
+      <span class="discussion-menu__counter">
+        <template v-if="countersLoading">...</template>
+        <template v-else>{{ counters.partners }}</template>
+      </span>
+    </div>
 
     <div class="discussion-menu__item">
       <span class="discussion-menu__icon" aria-hidden="true">🗒️</span>
@@ -326,6 +359,35 @@ const handleAddSticker = () => {
   font-size: 20px;
 }
 
+.discussion-menu__avatar-wrapper {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+}
+
+.discussion-menu__avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+}
+
+.discussion-menu__avatar-placeholder {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  font-weight: 700;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+}
+
 .discussion-menu__action {
   flex: 1;
   text-align: left;
@@ -426,6 +488,15 @@ const handleAddSticker = () => {
 .discussion-menu--modern .discussion-menu__icon {
   background: rgba(114, 182, 255, 0.18);
   color: #e5f3ff;
+}
+
+.discussion-menu--modern .discussion-menu__avatar {
+  border-color: rgba(114, 182, 255, 0.5);
+}
+
+.discussion-menu--modern .discussion-menu__avatar-placeholder {
+  background: linear-gradient(135deg, #73c8ff 0%, #2563eb 100%);
+  border-color: rgba(114, 182, 255, 0.5);
 }
 
 .discussion-menu--modern .discussion-menu__action {

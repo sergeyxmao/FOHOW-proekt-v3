@@ -38,7 +38,8 @@ import NotesSidePanel from './components/Panels/NotesSidePanel.vue'
 import CommentsSidePanel from './components/Panels/CommentsSidePanel.vue'
 import StickerMessagesPanel from './components/Panels/StickerMessagesPanel.vue'
 import ImagesPanel from './components/Panels/ImagesPanel.vue'
-import BoardAnchorsPanel from './components/Panels/BoardAnchorsPanel.vue'  
+import BoardAnchorsPanel from './components/Panels/BoardAnchorsPanel.vue'
+import PartnersPanel from './components/Panels/PartnersPanel.vue'  
 import TheNotifications from './components/TheNotifications.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
 import { useNotificationsStore } from './stores/notifications'
@@ -75,7 +76,7 @@ const { isAuthenticated } = storeToRefs(authStore)
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMobileMode } = storeToRefs(mobileStore)
 const { headerColor, headerColorIndex } = storeToRefs(viewSettingsStore)
-const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen, isImagesOpen, isAnchorsOpen } = storeToRefs(sidePanelsStore)
+const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen, isImagesOpen, isAnchorsOpen, isPartnersOpen } = storeToRefs(sidePanelsStore)
 
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
@@ -1167,6 +1168,14 @@ onBeforeUnmount(() => {
     </Teleport>
 
     <!-- Side Panels -->
+    <transition name="side-panel-slide">
+      <PartnersPanel
+        v-if="isPartnersOpen && !isMobileMode"
+        class="no-print"
+        :is-modern-theme="isModernTheme"
+      />
+    </transition>
+
     <transition name="side-panel-slide">
       <NotesSidePanel
         v-if="isNotesOpen && !isMobileMode"
