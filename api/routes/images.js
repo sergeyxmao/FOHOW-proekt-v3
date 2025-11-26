@@ -983,14 +983,15 @@ export function registerImageRoutes(app) {
         // Проверить, что картинка ещё не в процессе модерации и не в общей библиотеке
         if (share_requested_at !== null) {
           return reply.code(409).send({
-            error: 'Изображение уже отправлено на модерацию',
-            code: 'ALREADY_REQUESTED'
+            error: 'Вы уже отправили это изображение на модерацию. Ожидайте решения администратора.',
+            code: 'ALREADY_REQUESTED',
+            share_requested_at: share_requested_at
           });
         }
 
         if (is_shared) {
           return reply.code(409).send({
-            error: 'Изображение уже находится в общей библиотеке',
+            error: 'Это изображение уже находится в общей библиотеке.',
             code: 'ALREADY_SHARED'
           });
         }

@@ -391,6 +391,18 @@ async function handleImageDelete(image) {
  * Отправить запрос на добавление в общую библиотеку
  */
 async function handleShareRequest(image) {
+  // Проверка: уже в общей библиотеке
+  if (image.is_shared) {
+    alert('Это изображение уже находится в общей библиотеке.')
+    return
+  }
+
+  // Проверка: уже отправлено на модерацию
+  if (image.share_requested_at !== null) {
+    alert('Вы уже отправили это изображение на модерацию. Ожидайте решения администратора.')
+    return
+  }
+
   if (!confirm(`Отправить изображение "${image.original_name}" на модерацию для добавления в общую библиотеку?`)) {
     return
   }
@@ -407,11 +419,7 @@ async function handleShareRequest(image) {
       }
     }
 
-    notificationsStore.addNotification({
-      message: 'Изображение успешно отправлено на модерацию!',
-      type: 'success',
-      duration: 5000
-    })
+    alert('Изображение успешно отправлено на модерацию!')
 
     console.log('✅ Запрос на модерацию отправлен:', image.id)
   } catch (error) {
@@ -420,16 +428,12 @@ async function handleShareRequest(image) {
     let errorMessage = `Ошибка отправки запроса: ${error.message}`
 
     if (error.code === 'ALREADY_REQUESTED') {
-      errorMessage = 'Изображение уже отправлено на модерацию'
+      errorMessage = 'Вы уже отправили это изображение на модерацию. Ожидайте решения администратора.'
     } else if (error.code === 'ALREADY_SHARED') {
-      errorMessage = 'Изображение уже находится в общей библиотеке'
+      errorMessage = 'Это изображение уже находится в общей библиотеке.'
     }
 
-    notificationsStore.addNotification({
-      message: errorMessage,
-      type: 'error',
-      duration: 6000
-    })
+    alert('Ошибка: ' + errorMessage)
   }
 }
 

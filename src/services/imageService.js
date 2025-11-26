@@ -276,15 +276,18 @@ export async function requestShareImage(imageId) {
       headers: getAuthHeaders()
     });
 
-    if (response.status === 409) {
-      const data = await response.json();
-      const error = new Error(data.error);
-      error.code = data.code;
-      throw error;
-    }
-
     if (!response.ok) {
-      await handleErrorResponse(response, 'Ошибка отправки запроса');
+      const errorData = await response.json();
+
+      // Специальная обработка для конфликта (409)
+      if (response.status === 409) {
+        const error = new Error(errorData.error || 'Изображение уже отправлено на модерацию');
+        error.code = errorData.code;
+        error.share_requested_at = errorData.share_requested_at;
+        throw error;
+      }
+
+      throw new Error(errorData.error || 'Ошибка отправки на модерацию');
     }
 
     return await response.json();

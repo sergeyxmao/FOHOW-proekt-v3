@@ -16,6 +16,21 @@ const props = defineProps({
 
 const emit = defineEmits(['click', 'delete', 'share-request'])
 
+/**
+ * Получить имя файла без расширения
+ * @param {string} filename - Полное имя файла (original_name)
+ * @returns {string} Имя без расширения
+ */
+const getFileNameWithoutExtension = (filename) => {
+  if (!filename) return ''
+
+  const lastDotIndex = filename.lastIndexOf('.')
+
+  if (lastDotIndex <= 0) return filename
+
+  return filename.substring(0, lastDotIndex)
+}
+
 // Используем composable для загрузки изображений с токеном
 const { getImageUrl } = useImageProxy()
 const imageSrc = ref('')
@@ -161,21 +176,25 @@ const handleDragStart = (event) => {
     </div>
 
     <!-- Информация -->
-    <div
-      v-if="!isMyLibrary && (image.author_full_name || image.author_personal_id)"
-      class="image-card__info"
-    >
-      <!-- Информация об авторе (для общей библиотеки) -->
-      <div class="image-card__author">
+    <div class="image-card__info">
+      <!-- Для моей библиотеки: показываем имя файла -->
+      <div v-if="isMyLibrary" class="image-card__filename">
+        <p class="image-card__filename-text">
+          {{ getFileNameWithoutExtension(image.original_name) }}
+        </p>
+      </div>
+
+      <!-- Для общей библиотеки: показываем автора и имя файла -->
+      <div v-else class="image-card__author">
         <span v-if="image.author_full_name" class="image-card__author-name">
           {{ image.author_full_name }}
         </span>
-        <span v-if="image.author_personal_id" class="image-card__author-id">
-          ID: {{ image.author_personal_id }}
+        <span class="image-card__filename-text">
+          {{ getFileNameWithoutExtension(image.original_name) }}
         </span>
       </div>
     </div>
-  </div>    
+  </div>
 </template>
 
 <style scoped>
@@ -276,6 +295,21 @@ const handleDragStart = (event) => {
 .image-card__author-id {
   font-size: 10px;
   color: #94a3b8;
+}
+
+.image-card__filename {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.image-card__filename-text {
+  margin: 0;
+  font-size: 13px;
+  color: #333;
+  word-break: break-word;
+  text-align: center;
+  line-height: 1.3;
 }
 
 .image-card__actions {
