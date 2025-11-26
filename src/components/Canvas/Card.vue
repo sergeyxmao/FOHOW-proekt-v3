@@ -882,23 +882,6 @@ watch(
     @click="handleCardClick"
     @pointerdown="handlePointerDown"
   >
-    <!-- Аватар пользователя (только для больших и Gold карточек) -->
-    <div v-if="isLargeCard && (avatarData.avatar_url || avatarData.initials)" class="card-avatar-container">
-      <div
-        v-if="avatarData.avatar_url"
-        class="card-avatar"
-        :style="{ backgroundImage: `url(${getAvatarUrl(avatarData.avatar_url)})` }"
-        :title="avatarData.full_name || avatarData.username"
-      ></div>
-      <div
-        v-else-if="avatarData.initials"
-        class="card-avatar card-avatar--placeholder"
-        :title="avatarData.full_name || avatarData.username"
-      >
-        {{ avatarData.initials }}
-      </div>
-    </div>
-
     <!-- Заголовок карточки -->
     <div
       class="card-header"
@@ -933,6 +916,28 @@ watch(
     
     <!-- Содержимое карточки -->
     <div class="card-body">
+      <!-- Аватар пользователя (только для больших и Gold карточек) -->
+      <div v-if="isLargeCard" class="card-avatar-container">
+        <div
+          v-if="avatarData.avatar_url"
+          class="card-avatar"
+          :style="{ backgroundImage: `url(${getAvatarUrl(avatarData.avatar_url)})` }"
+          :title="avatarData.full_name || avatarData.username"
+        ></div>
+        <div
+          v-else-if="avatarData.initials"
+          class="card-avatar card-avatar--placeholder"
+          :title="avatarData.full_name || avatarData.username"
+        >
+          {{ avatarData.initials }}
+        </div>
+        <div
+          v-else
+          class="card-avatar card-avatar--default"
+          title="Аватар по умолчанию"
+        ></div>
+      </div>
+
       <div
         class="active-pv-hidden"
         aria-hidden="true"
@@ -1384,12 +1389,10 @@ watch(
 
 /* Стили для аватара в карточке */
 .card-avatar-container {
-  position: absolute;
-  left: 15px;
-  top: 15px;
-  width: 60px;
-  height: 60px;
-  z-index: 10;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto 16px;
+  flex-shrink: 0;
 }
 
 .card-avatar {
@@ -1398,8 +1401,8 @@ watch(
   border-radius: 50%;
   background-size: cover;
   background-position: center;
-  border: 3px solid white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 4px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .card-avatar--placeholder {
@@ -1408,8 +1411,19 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 48px;
   font-weight: 700;
+}
+
+.card-avatar--default {
+  background-image: url('/Avatar.png');
+  background-size: cover;
+  background-position: center;
+  border: 4px solid white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  width: 100%;
+  height: 100%;
 }
 
 .label {
