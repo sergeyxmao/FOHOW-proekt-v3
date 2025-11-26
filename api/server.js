@@ -304,11 +304,23 @@ app.post('/api/register', async (req, reply) => {
     // 3. Создать нового пользователя БЕЗ тарифа
     const hash = await bcrypt.hash(password, 10);
 
+    // Настройки конфиденциальности по умолчанию (все поля закрыты)
+    const defaultSearchSettings = {
+      username: false,
+      phone: false,
+      city: false,
+      country: false,
+      office: false,
+      personal_id: false,
+      telegram_user: false,
+      instagram_profile: false
+    };
+
     const insertResult = await client.query(
-      `INSERT INTO users (email, password, email_verified, created_at)
-       VALUES ($1, $2, FALSE, NOW())
+      `INSERT INTO users (email, password, email_verified, created_at, search_settings)
+       VALUES ($1, $2, FALSE, NOW(), $3)
        RETURNING id, email`,
-      [email, hash]
+      [email, hash, JSON.stringify(defaultSearchSettings)]
     );
 
     const newUser = insertResult.rows[0];
@@ -1022,6 +1034,118 @@ app.post('/api/reset-password', async (req, reply) => {
         return reply.code(500).send({ error: 'Ошибка сервера', details: err.message });
       }
     });
+
+// === ОБНОВЛЕНИЕ НАСТРОЕК КОНФИДЕНЦИАЛЬНОСТИ ===
+app.put('/api/profile/privacy', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
+  try {
+    const userId = req.user.id;
+    const { search_settings } = req.body;
+
+    // Валидация: проверяем, что search_settings - это объект
+    if (!search_settings || typeof search_settings !== 'object') {
+      return reply.code(400).send({ error: 'Некорректный формат настроек конфиденциальности' });
+    }
+
+    // Список допустимых полей
+    const allowedFields = [
+      'username', 'phone', 'city', 'country', 'office',
+      'personal_id', 'telegram_user', 'instagram_profile'
+    ];
+
+    // Валидация: проверяем, что все ключи допустимы и значения boolean
+    for (const [key, value] of Object.entries(search_settings)) {
+      if (!allowedFields.includes(key)) {
+        return reply.code(400).send({
+          error: `Недопустимое поле: ${key}`,
+          field: key
+        });
+      }
+      if (typeof value !== 'boolean') {
+        return reply.code(400).send({
+          error: `Значение для поля ${key} должно быть true или false`,
+          field: key
+        });
+      }
+    }
+
+    // Обновляем настройки в базе данных
+    const updateResult = await pool.query(
+      `UPDATE users
+       SET search_settings = $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING search_settings`,
+      [JSON.stringify(search_settings), userId]
+    );
+
+    if (updateResult.rows.length === 0) {
+      return reply.code(404).send({ error: 'Пользователь не найден' });
+    }
+
+    console.log(`✅ Обновлены настройки конфиденциальности для пользователя ${userId}`);
+
+    return reply.send({
+      success: true,
+      search_settings: updateResult.rows[0].search_settings
+    });
+
+  } catch (err) {
+    console.error('❌ Ошибка обновления настроек конфиденциальности:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
+
+// === ПОИСК ПОЛЬЗОВАТЕЛЯ ПО КОМПЬЮТЕРНОМУ НОМЕРУ ===
+app.get('/api/users/search-by-personal-id/:personalId', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
+  try {
+    const { personalId } = req.params;
+
+    if (!personalId || !personalId.trim()) {
+      return reply.send({ found: false });
+    }
+
+    const normalizedPersonalId = personalId.trim().toUpperCase();
+
+    // Ищем пользователя с учетом настроек конфиденциальности
+    const result = await pool.query(
+      `SELECT
+        u.id,
+        u.avatar_url,
+        u.username,
+        u.full_name
+       FROM users u
+       WHERE u.personal_id = $1
+         AND u.is_verified = true
+         AND (u.search_settings->>'personal_id')::boolean = true
+       LIMIT 1`,
+      [normalizedPersonalId]
+    );
+
+    if (result.rows.length === 0) {
+      return reply.send({ found: false });
+    }
+
+    const user = result.rows[0];
+
+    return reply.send({
+      found: true,
+      user: {
+        id: user.id,
+        avatar_url: user.avatar_url,
+        username: user.username,
+        full_name: user.full_name
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Ошибка поиска пользователя по personal_id:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});
 
 // === УДАЛЕНИЕ АККАУНТА ===
 app.delete('/api/profile', {

@@ -41,6 +41,17 @@ const isEditingPv = ref(false);
 const editPvLeft = ref('');
 const pvLeftInput = ref(null);
 
+// Состояние для аватара пользователя по personal_id
+const avatarData = ref({
+  avatar_url: null,
+  username: null,
+  full_name: null,
+  initials: null
+});
+
+let searchTimeout = null;
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api';
+
 // Вычисляемое свойство для проверки, является ли карточка большой
 const isLargeCard = computed(() => {
   return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 543.4;
@@ -771,6 +782,88 @@ watch(
     }
   }
 );
+
+// Функции для работы с аватаром
+import { useAuthStore } from '../../stores/auth';
+
+const authStore = useAuthStore();
+
+// Получить инициалы из имени
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.split(' ');
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+}
+
+// Получить полный URL аватара
+function getAvatarUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `${API_URL.replace('/api', '')}${url}`;
+}
+
+// Обработчик ввода personal_id для поиска аватара
+async function handlePersonalIdInput(value) {
+  // Очищаем предыдущий таймер
+  if (searchTimeout) clearTimeout(searchTimeout);
+
+  // Если поле пустое - очищаем аватар
+  if (!value || value.trim() === '') {
+    avatarData.value = {
+      avatar_url: null,
+      username: null,
+      full_name: null,
+      initials: null
+    };
+    return;
+  }
+
+  // Debounce - ждем 500ms после последнего ввода
+  searchTimeout = setTimeout(async () => {
+    try {
+      const response = await fetch(`${API_URL}/users/search-by-personal-id/${value}`, {
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.found) {
+        avatarData.value = {
+          avatar_url: data.user.avatar_url,
+          username: data.user.username,
+          full_name: data.user.full_name,
+          initials: getInitials(data.user.full_name || data.user.username)
+        };
+      } else {
+        // Пользователь не найден или доступ запрещен
+        avatarData.value = {
+          avatar_url: null,
+          username: null,
+          full_name: null,
+          initials: null
+        };
+      }
+    } catch (err) {
+      console.error('Ошибка поиска пользователя:', err);
+    }
+  }, 500);
+}
+
+// Следим за изменением текста карточки для больших карточек
+watch(
+  () => props.card.text,
+  (newText) => {
+    if (isLargeCard.value) {
+      handlePersonalIdInput(newText);
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
@@ -789,6 +882,23 @@ watch(
     @click="handleCardClick"
     @pointerdown="handlePointerDown"
   >
+    <!-- Аватар пользователя (только для больших и Gold карточек) -->
+    <div v-if="isLargeCard && (avatarData.avatar_url || avatarData.initials)" class="card-avatar-container">
+      <div
+        v-if="avatarData.avatar_url"
+        class="card-avatar"
+        :style="{ backgroundImage: `url(${getAvatarUrl(avatarData.avatar_url)})` }"
+        :title="avatarData.full_name || avatarData.username"
+      ></div>
+      <div
+        v-else-if="avatarData.initials"
+        class="card-avatar card-avatar--placeholder"
+        :title="avatarData.full_name || avatarData.username"
+      >
+        {{ avatarData.initials }}
+      </div>
+    </div>
+
     <!-- Заголовок карточки -->
     <div
       class="card-header"
@@ -1270,6 +1380,36 @@ watch(
 
 .coin-icon--clickable:active {
   transform: scale(1.05);
+}
+
+/* Стили для аватара в карточке */
+.card-avatar-container {
+  position: absolute;
+  left: 15px;
+  top: 15px;
+  width: 60px;
+  height: 60px;
+  z-index: 10;
+}
+
+.card-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.card-avatar--placeholder {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
 }
 
 .label {
