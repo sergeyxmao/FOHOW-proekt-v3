@@ -57,10 +57,16 @@ export function registerDiscussionRoutes(app) {
         let partnersCount = 0
 
         if (boardContent && boardContent.cards && Array.isArray(boardContent.cards)) {
+           const normalizePersonalId = (value) =>
+            (value ?? '')
+              .toString()
+              .replace(/\s+/g, '')
+              .toUpperCase()
+          
           // Извлекаем personal_id из карточек типа 'large' или 'gold'
           const personalIds = boardContent.cards
             .filter((card) => card.type === 'large' || card.type === 'gold')
-            .map((card) => card.text)
+            .map((card) => normalizePersonalId(card.text))
             .filter((personalId) => personalId && personalId !== 'RUY68123456789') // Исключаем дефолтный номер
 
           // Оставляем только уникальные personal_id
@@ -69,7 +75,7 @@ export function registerDiscussionRoutes(app) {
           if (uniquePersonalIds.length > 0) {
             // Выполняем SQL-запрос для подсчёта верифицированных партнёров
             const partnersResult = await pool.query(
-              `SELECT COUNT(*) as count
+              `SELECT COUNT(*) as count, COALESCE(array_agg(DISTINCT personal_id), '{}') AS personal_ids
                FROM users
                WHERE personal_id = ANY($1)
                  AND is_verified = true
@@ -78,6 +84,21 @@ export function registerDiscussionRoutes(app) {
                  AND avatar_url != '/Avatar.png'`,
               [uniquePersonalIds]
             )
+
+            const foundPersonalIds = partnersResult.rows[0]?.personal_ids ?? []
+            const missingPersonalIds = uniquePersonalIds.filter(
+              (personalId) => !foundPersonalIds.includes(personalId)
+            )
+
+            if (missingPersonalIds.length > 0) {
+              req.log.warn(
+                {
+                  boardId,
+                  missingPersonalIds
+                },
+                'Не найдены верифицированные партнёры по указанным personal_id на доске'
+              )
+            }            
             partnersCount = Number(partnersResult.rows[0]?.count ?? 0)
           }
         }
