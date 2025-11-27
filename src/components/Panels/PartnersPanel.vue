@@ -120,16 +120,14 @@ const navigateToPartnerCard = (partner) => {
   cardsStore.highlightCard(targetCard.id)
 }
 
-// Выбор партнера для отображения деталей
-const selectPartner = (partner) => {
+// Открытие модального окна с деталями (БЕЗ фокусировки на карточке)
+const openPartnerDetails = (partner) => {
   if (selectedPartner.value?.id === partner.id) {
-    // Повторный клик - закрываем карточку, но всё равно центрируем
+    // Повторный клик - закрываем модалку
     selectedPartner.value = null
-    navigateToPartnerCard(partner)
   } else {
-    // Новый партнёр - открываем карточку + центрируем
+    // Открываем модалку
     selectedPartner.value = partner
-    navigateToPartnerCard(partner)
   }
 }
 
@@ -194,7 +192,9 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
       <img
         :src="getAvatarUrl(selectedPartner.avatar_url)"
         :alt="selectedPartner.full_name || selectedPartner.username"
-        class="partner-details-avatar"
+        class="partner-details-avatar partner-details-avatar--clickable"
+        @click="navigateToPartnerCard(selectedPartner)"
+        title="Нажмите, чтобы перейти к лицензии"
       />
       <div class="partner-details-info">
         <h4 class="partner-details-name">{{ selectedPartner.full_name || selectedPartner.username }}</h4>
@@ -255,7 +255,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
           :key="partner.id"
           class="partner-item"
           :class="{ 'partner-item--selected': selectedPartner?.id === partner.id }"
-          @click="selectPartner(partner)"
+          @click="openPartnerDetails(partner)"
         >
           <img
             :src="getAvatarUrl(partner.avatar_url)"
@@ -436,6 +436,16 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
   object-fit: cover;
   flex-shrink: 0;
   border: 2px solid #e0e0e0;
+}
+
+.partner-details-avatar--clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.partner-details-avatar--clickable:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 3px rgba(93, 139, 244, 0.3);
 }
 
 .partner-details-info {
