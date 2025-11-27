@@ -671,6 +671,23 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
           note: serializedNote
         }
       })
+    },
+
+    highlightCard(cardId) {
+      const card = this.cards.find(c => c.id === cardId)
+      if (!card) {
+        return false
+      }
+
+      // Устанавливаем флаг подсветки
+      card.highlighted = true
+
+      // Через 2 секунды снимаем подсветку
+      setTimeout(() => {
+        card.highlighted = false
+      }, 2000)
+
+      return true
     }
   }
 })

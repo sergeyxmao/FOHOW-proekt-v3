@@ -867,16 +867,17 @@ watch(
 </script>
 
 <template>
-  <div  
+  <div
     class="card"
-    :data-card-id="card.id"    
+    :data-card-id="card.id"
     :class="{
       'selected': isSelected,
       'connecting': isConnecting,
       'editing': isEditing,
       'card--large': isLargeCard,
       'card--gold': card.type === 'gold',
-      'note-active': isNoteVisible
+      'note-active': isNoteVisible,
+      'highlighted': card.highlighted
     }"
     :style="cardStyle"
     @click="handleCardClick"
@@ -1174,7 +1175,26 @@ watch(
   box-shadow: inset 0 -2px 0 rgba(225, 29, 72, 0.45);
 }
 
-  
+/* Анимация подсветки карточки при навигации от партнёра */
+@keyframes cardHighlight {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 215, 0, 0);
+  }
+  25% {
+    box-shadow: 0 0 0 6px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 215, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(255, 215, 0, 0.4), 0 0 40px rgba(255, 215, 0, 0.3);
+  }
+  75% {
+    box-shadow: 0 0 0 6px rgba(255, 215, 0, 0.6), 0 0 30px rgba(255, 215, 0, 0.4);
+  }
+}
+
+.card.highlighted {
+  animation: cardHighlight 2s ease-in-out;
+}
+
 .card-header {
   padding: 16px 48px 14px;
   position: relative;

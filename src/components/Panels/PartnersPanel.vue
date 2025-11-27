@@ -3,6 +3,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useBoardStore } from '../../stores/board.js'
 import { useAuthStore } from '../../stores/auth.js'
+import { useCardsStore } from '../../stores/cards.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -14,6 +15,7 @@ const props = defineProps({
 const sidePanelsStore = useSidePanelsStore()
 const boardStore = useBoardStore()
 const authStore = useAuthStore()
+const cardsStore = useCardsStore()
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
@@ -90,14 +92,44 @@ const handleSearch = () => {
   }, 300) // 300ms debounce
 }
 
+// Навигация к карточке партнёра на доске
+const navigateToPartnerCard = (partner) => {
+  // Нормализация personal_id (убрать пробелы, верхний регистр)
+  const normalizeId = (id) => id?.toString().replace(/\s+/g, '').toUpperCase()
+  const targetPersonalId = normalizeId(partner.personal_id)
+
+  // Найти карточку с этим personal_id
+  const targetCard = cardsStore.cards.find(card => {
+    if (card.type !== 'large' && card.type !== 'gold') return false
+    return normalizeId(card.text) === targetPersonalId
+  })
+
+  if (!targetCard) {
+    console.warn('Карточка для партнёра не найдена:', partner.personal_id)
+    return
+  }
+
+  // Вычислить центр карточки
+  const centerX = targetCard.x + (targetCard.width / 2)
+  const centerY = targetCard.y + (targetCard.height / 2)
+
+  // Центрировать камеру на карточке
+  boardStore.centerViewOnPoint(centerX, centerY)
+
+  // Подсветить карточку
+  cardsStore.highlightCard(targetCard.id)
+}
+
 // Выбор партнера для отображения деталей
 const selectPartner = (partner) => {
   if (selectedPartner.value?.id === partner.id) {
-    // Клик по тому же партнёру - закрываем
+    // Повторный клик - закрываем карточку, но всё равно центрируем
     selectedPartner.value = null
+    navigateToPartnerCard(partner)
   } else {
-    // Открываем данные нового партнёра
+    // Новый партнёр - открываем карточку + центрируем
     selectedPartner.value = partner
+    navigateToPartnerCard(partner)
   }
 }
 
