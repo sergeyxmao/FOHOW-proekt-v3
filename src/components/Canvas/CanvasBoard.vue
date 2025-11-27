@@ -67,7 +67,7 @@ const viewSettingsStore = useViewSettingsStore();
 const { cards } = storeToRefs(cardsStore);
 const { connections } = storeToRefs(connectionsStore);
 const { images } = storeToRefs(imagesStore);
-const { selectedAnchorId, pendingFocusAnchorId, placementMode } = storeToRefs(boardStore);
+const { selectedAnchorId, pendingFocusAnchorId, placementMode, targetViewPoint } = storeToRefs(boardStore);
 const { anchors } = storeToRefs(anchorsStore);
   
 const {
@@ -111,6 +111,32 @@ const viewportStore = useViewportStore();
 watch(zoomScale, (value) => {
   viewportStore.setZoomScale(value);
 }, { immediate: true });
+
+// Watch для центрирования на целевой точке
+watch(targetViewPoint, (newTarget) => {
+  if (!newTarget || !canvasContainerRef.value) {
+    return
+  }
+
+  const containerRect = canvasContainerRef.value.getBoundingClientRect()
+  const containerWidth = containerRect.width
+  const containerHeight = containerRect.height
+
+  // Устанавливаем zoom = 1.0
+  const targetScale = 1.0
+
+  // Вычисляем новые координаты translate так, чтобы точка (x, y) была в центре экрана
+  const newTranslateX = containerWidth / 2 - newTarget.x * targetScale
+  const newTranslateY = containerHeight / 2 - newTarget.y * targetScale
+
+  // Применяем transform через API usePanZoom
+  setZoomTransform({
+    scale: targetScale,
+    translateX: newTranslateX,
+    translateY: newTranslateY
+  })
+}, { deep: true })
+
 const canvasContentStyle = computed(() => {
   const translateX = Number.isFinite(zoomTranslateX.value) ? zoomTranslateX.value : 0;
   const translateY = Number.isFinite(zoomTranslateY.value) ? zoomTranslateY.value : 0;
