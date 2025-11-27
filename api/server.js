@@ -2533,17 +2533,20 @@ app.get('/api/boards/:boardId/partners', {
     const board = boardCheck.rows[0];
     const content = board.content || {};
     const cards = content.cards || [];
-
+    const normalizePersonalId = (value) =>
+      (value ?? '')
+        .toString()
+        .replace(/\s+/g, '')
+        .toUpperCase();
     // Фильтруем карточки типа large и gold
-    const largeAndGoldCards = cards.filter(card =>
-      card.type === 'large' || card.type === 'gold'
+    const largeAndGoldCards = cards.filter(
+      (card) => card.type === 'large' || card.type === 'gold'
     );
 
     // Извлекаем номера лицензий (personal_id) из card.text
     const personalIds = largeAndGoldCards
-      .map(card => card.text)
-      .filter(text => text && text !== 'RUY68123456789'); // Исключаем дефолтный номер
-
+      .map((card) => normalizePersonalId(card.text))
+      .filter((text) => text && text !== 'RUY68123456789'); // Исключаем дефолтный номер
     // Получаем уникальные personal_id
     const uniquePersonalIds = [...new Set(personalIds)];
 
@@ -2623,7 +2626,20 @@ app.get('/api/boards/:boardId/partners', {
     }
 
     const result = await pool.query(query, params);
+    const foundPersonalIds = result.rows.map((row) => normalizePersonalId(row.personal_id));
+    const missingPersonalIds = uniquePersonalIds.filter(
+      (personalId) => !foundPersonalIds.includes(personalId)
+    );
 
+    if (missingPersonalIds.length > 0) {
+      req.log.warn(
+        {
+          boardId,
+          missingPersonalIds
+        },
+        'На доске указаны personal_id без подходящих верифицированных партнёров'
+      );
+    }
     return reply.send({
       success: true,
       partners: result.rows
