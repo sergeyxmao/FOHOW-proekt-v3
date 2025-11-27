@@ -14,6 +14,7 @@ export const useBoardStore = defineStore('board', () => {
   const pendingEditAnchorId = ref(null)
   const placementMode = ref(null) // 'anchor' | null
   const isNavigating = ref(false) // Флаг для предотвращения конфликтов при программной навигации
+  const targetViewPoint = ref(null) // { x, y, timestamp } - целевая точка для центрирования
   const isCurrentBoard = computed(() => currentBoardId.value !== null)
   const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
@@ -101,45 +102,12 @@ export const useBoardStore = defineStore('board', () => {
   }
 
   function centerViewOnPoint(x, y) {
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-      return false
+    // Сохраняем целевую точку с timestamp для триггера watch
+    targetViewPoint.value = {
+      x,
+      y,
+      timestamp: Date.now()
     }
-
-    const canvasContainer = document.querySelector('.canvas-container')
-    const canvasContent = canvasContainer?.querySelector('.canvas-content')
-
-    if (!canvasContainer || !canvasContent) {
-      console.warn('Canvas container or content not found')
-      return false
-    }
-
-    // Установить флаг навигации
-    isNavigating.value = true
-
-    const containerRect = canvasContainer.getBoundingClientRect()
-    const containerWidth = containerRect.width
-    const containerHeight = containerRect.height
-
-    // Устанавливаем zoom = 1.0
-    const targetScale = 1.0
-
-    // Вычисляем новые координаты translate так, чтобы точка (x, y) была в центре экрана
-    const newTranslateX = containerWidth / 2 - x * targetScale
-    const newTranslateY = containerHeight / 2 - y * targetScale
-
-    // Применяем transform с небольшой задержкой для стабильности
-    setTimeout(() => {
-      canvasContent.style.transform = `translate(${newTranslateX}px, ${newTranslateY}px) scale(${targetScale})`
-      canvasContent.style.transition = 'transform 0.5s ease-out'
-
-      // Снять флаг после завершения анимации (500ms transition + 200ms запас)
-      setTimeout(() => {
-        isNavigating.value = false
-        // Убрать transition для последующих манипуляций
-        canvasContent.style.transition = ''
-      }, 700)
-    }, 100)
-
     return true
   }
 
@@ -221,6 +189,7 @@ export const useBoardStore = defineStore('board', () => {
     pendingEditAnchorId,
     placementMode,
     isNavigating,
+    targetViewPoint,
     setCurrentBoard,
     clearCurrentBoard,
     markAsChanged,
