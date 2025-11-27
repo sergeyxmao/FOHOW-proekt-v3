@@ -348,11 +348,6 @@ export const useCardsStore = defineStore('cards', {
       const hasCustomX = Object.prototype.hasOwnProperty.call(rawCardData, 'x')
       const hasCustomY = Object.prototype.hasOwnProperty.call(rawCardData, 'y')
       const { x: providedX, y: providedY, ...cardData } = rawCardData
-      const generateLicenseNumber = () => {
-        const prefix = 'RUY';
-        const number = Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
-        return prefix + number;
-      };
 
       // Пресеты для разных типов лицензий
       const presets = {
@@ -360,7 +355,7 @@ export const useCardsStore = defineStore('cards', {
           width: 543.4,
           height: 364,
           pv: '30/330pv',
-          text: generateLicenseNumber(),
+          text: 'RUY68123456789',
           historyText: 'Создана большая лицензия'
         },
         small: {
@@ -374,12 +369,12 @@ export const useCardsStore = defineStore('cards', {
           width: 543.4,
           height: 364,
           pv: '30/330pv',
-          text: generateLicenseNumber(),
+          text: 'RUY68123456789',
           historyText: 'Создана золотая лицензия',
           headerBg: '#d4af37',
           colorIndex: -1,
           bodyGradient: GOLD_BODY_GRADIENT,
-          fill: '#fffdf2'       
+          fill: '#fffdf2'
         }
       };
 
@@ -596,14 +591,8 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
         large: { width: 543.4, height: 364 },
         gold: { width: 543.4, height: 364 },
         small: { width: 418, height: 280 }
-      }     
+      }
       cardsData.forEach(cardData => {
-        const generateLicenseNumber = () => {
-          const prefix = 'RUY'
-          const number = Math.floor(Math.random() * 10000000000).toString().padStart(10, '0')
-          return prefix + number
-        }
-
         const detectedType = cardData.type
           || ((cardData.width && cardData.width >= 543.4) || (cardData.height && cardData.height >= 364)
             ? 'large'
@@ -621,14 +610,14 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
           ? cardData.colorIndex
           : (detectedType === 'gold' ? -1 : 0)
 
-        
+
         const noteState = ensureNoteStructure(cardData.note);
 
         const normalizedCard = {
           id: cardData.id || Date.now().toString(),
           x: Number.isFinite(cardData.x) ? cardData.x : 0,
           y: Number.isFinite(cardData.y) ? cardData.y : 0,
-          text: cardData.text || generateLicenseNumber(),
+          text: cardData.text || 'RUY68123456789',
           width,
           height,
           fill: cardData.fill || '#ffffff',
