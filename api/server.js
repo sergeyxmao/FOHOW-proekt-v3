@@ -2565,18 +2565,17 @@ app.get('/api/boards/:boardId/partners', {
         SELECT
           u.id,
           u.username,
-          u.full_name,
           u.personal_id,
           u.avatar_url,
-          u.phone,
-          u.city,
-          u.country,
-          u.office,
-          u.telegram_user,
-          u.instagram_profile,
           u.plan_id,
-          u.is_verified,
-          u.search_settings
+          u.search_settings,
+          CASE WHEN u.search_settings->>'full_name' = 'true' THEN u.full_name ELSE NULL END as full_name,
+          CASE WHEN u.search_settings->>'phone' = 'true' THEN u.phone ELSE NULL END as phone,
+          CASE WHEN u.search_settings->>'city' = 'true' THEN u.city ELSE NULL END as city,
+          CASE WHEN u.search_settings->>'country' = 'true' THEN u.country ELSE NULL END as country,
+          CASE WHEN u.search_settings->>'office' = 'true' THEN u.office ELSE NULL END as office,
+          CASE WHEN u.search_settings->>'telegram_user' = 'true' THEN u.telegram_user ELSE NULL END as telegram_user,
+          CASE WHEN u.search_settings->>'instagram_profile' = 'true' THEN u.instagram_profile ELSE NULL END as instagram_profile
         FROM users u
         WHERE u.personal_id = ANY($1)
           AND u.is_verified = true
@@ -2594,7 +2593,7 @@ app.get('/api/boards/:boardId/partners', {
             (u.search_settings->>'telegram_user' = 'true' AND LOWER(u.telegram_user) LIKE LOWER($2)) OR
             (u.search_settings->>'instagram_profile' = 'true' AND LOWER(u.instagram_profile) LIKE LOWER($2))
           )
-        ORDER BY u.full_name ASC
+        ORDER BY u.username ASC
       `;
       params = [uniquePersonalIds, searchTerm];
     } else {
@@ -2602,25 +2601,24 @@ app.get('/api/boards/:boardId/partners', {
         SELECT
           u.id,
           u.username,
-          u.full_name,
           u.personal_id,
           u.avatar_url,
-          u.phone,
-          u.city,
-          u.country,
-          u.office,
-          u.telegram_user,
-          u.instagram_profile,
           u.plan_id,
-          u.is_verified,
-          u.search_settings
+          u.search_settings,
+          CASE WHEN u.search_settings->>'full_name' = 'true' THEN u.full_name ELSE NULL END as full_name,
+          CASE WHEN u.search_settings->>'phone' = 'true' THEN u.phone ELSE NULL END as phone,
+          CASE WHEN u.search_settings->>'city' = 'true' THEN u.city ELSE NULL END as city,
+          CASE WHEN u.search_settings->>'country' = 'true' THEN u.country ELSE NULL END as country,
+          CASE WHEN u.search_settings->>'office' = 'true' THEN u.office ELSE NULL END as office,
+          CASE WHEN u.search_settings->>'telegram_user' = 'true' THEN u.telegram_user ELSE NULL END as telegram_user,
+          CASE WHEN u.search_settings->>'instagram_profile' = 'true' THEN u.instagram_profile ELSE NULL END as instagram_profile
         FROM users u
         WHERE u.personal_id = ANY($1)
           AND u.is_verified = true
           AND u.plan_id IN (6, 7)
           AND u.avatar_url IS NOT NULL
           AND u.avatar_url != '/Avatar.png'
-        ORDER BY u.full_name ASC
+        ORDER BY u.username ASC
       `;
       params = [uniquePersonalIds];
     }

@@ -191,46 +191,69 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
     >
       <img
         :src="getAvatarUrl(selectedPartner.avatar_url)"
-        :alt="selectedPartner.full_name || selectedPartner.username"
+        :alt="selectedPartner.username"
         class="partner-details-avatar partner-details-avatar--clickable"
         @click="navigateToPartnerCard(selectedPartner)"
         title="Нажмите, чтобы перейти к лицензии"
       />
       <div class="partner-details-info">
-        <h4 class="partner-details-name">{{ selectedPartner.full_name || selectedPartner.username }}</h4>
+        <!-- Полное имя - если разрешено -->
+        <h4 v-if="selectedPartner.full_name" class="partner-details-name">
+          {{ selectedPartner.full_name }}
+        </h4>
+        <h4 v-else class="partner-details-name partner-details-hidden">
+          🔒 Скрыто
+        </h4>
 
+        <!-- Компьютерный номер - всегда виден -->
         <div class="partner-details-field">
           <span class="partner-details-label">Номер:</span>
           <span>{{ selectedPartner.personal_id }}</span>
         </div>
 
-        <div v-if="selectedPartner.city || selectedPartner.country" class="partner-details-field">
+        <!-- Локация: город и/или страна -->
+        <div
+          v-if="selectedPartner.city || selectedPartner.country"
+          class="partner-details-field"
+        >
           <span class="partner-details-label">Локация:</span>
           <span>
-            <span v-if="selectedPartner.city">{{ selectedPartner.city }}</span>
-            <span v-if="selectedPartner.city && selectedPartner.country">, </span>
-            <span v-if="selectedPartner.country">{{ selectedPartner.country }}</span>
+            <template v-if="selectedPartner.city">{{ selectedPartner.city }}</template>
+            <template v-if="selectedPartner.city && selectedPartner.country">, </template>
+            <template v-if="selectedPartner.country">{{ selectedPartner.country }}</template>
           </span>
         </div>
+        <div v-else class="partner-details-field">
+          <span class="partner-details-label">Локация:</span>
+          <span class="partner-details-hidden">🔒 Скрыто</span>
+        </div>
 
-        <div v-if="selectedPartner.office" class="partner-details-field">
+        <!-- Представительство -->
+        <div class="partner-details-field">
           <span class="partner-details-label">Представительство:</span>
-          <span>{{ selectedPartner.office }}</span>
+          <span v-if="selectedPartner.office">{{ selectedPartner.office }}</span>
+          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
         </div>
 
-        <div v-if="selectedPartner.phone" class="partner-details-field">
+        <!-- Телефон -->
+        <div class="partner-details-field">
           <span class="partner-details-label">Телефон:</span>
-          <span>{{ selectedPartner.phone }}</span>
+          <span v-if="selectedPartner.phone">{{ selectedPartner.phone }}</span>
+          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
         </div>
 
-        <div v-if="selectedPartner.telegram_user" class="partner-details-field">
+        <!-- Telegram -->
+        <div class="partner-details-field">
           <span class="partner-details-label">Telegram:</span>
-          <span>{{ selectedPartner.telegram_user }}</span>
+          <span v-if="selectedPartner.telegram_user">{{ selectedPartner.telegram_user }}</span>
+          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
         </div>
 
-        <div v-if="selectedPartner.instagram_profile" class="partner-details-field">
+        <!-- Instagram -->
+        <div class="partner-details-field">
           <span class="partner-details-label">Instagram:</span>
-          <span>{{ selectedPartner.instagram_profile }}</span>
+          <span v-if="selectedPartner.instagram_profile">{{ selectedPartner.instagram_profile }}</span>
+          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
         </div>
       </div>
       <button @click="closeDetails" class="partner-details-close">×</button>
@@ -259,10 +282,10 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
         >
           <img
             :src="getAvatarUrl(partner.avatar_url)"
-            :alt="partner.full_name || partner.username"
+            :alt="partner.username"
             class="partner-avatar"
           />
-          <span class="partner-name">{{ partner.full_name || partner.username }}</span>
+          <span class="partner-name">{{ partner.username }}</span>
         </div>
       </div>
     </div>
@@ -473,6 +496,12 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
   font-weight: 500;
   color: #888;
   min-width: 120px;
+}
+
+.partner-details-hidden {
+  color: #999;
+  font-style: italic;
+  font-size: 12px;
 }
 
 .partner-details-close {
