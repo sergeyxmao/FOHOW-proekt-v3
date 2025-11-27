@@ -2580,7 +2580,6 @@ app.get('/api/boards/:boardId/partners', {
         FROM users u
         WHERE u.personal_id = ANY($1)
           AND u.is_verified = true
-          AND u.plan_id IN (6, 7)
           AND u.avatar_url IS NOT NULL
           AND u.avatar_url != '/Avatar.png'
           AND (
@@ -2617,7 +2616,6 @@ app.get('/api/boards/:boardId/partners', {
         FROM users u
         WHERE u.personal_id = ANY($1)
           AND u.is_verified = true
-          AND u.plan_id IN (6, 7)
           AND u.avatar_url IS NOT NULL
           AND u.avatar_url != '/Avatar.png'
         ORDER BY u.full_name ASC

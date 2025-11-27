@@ -79,7 +79,6 @@ export function registerDiscussionRoutes(app) {
                FROM users
                WHERE personal_id = ANY($1)
                  AND is_verified = true
-                 AND plan_id IN (6, 7)
                  AND avatar_url IS NOT NULL
                  AND avatar_url != '/Avatar.png'`,
               [uniquePersonalIds]
