@@ -402,44 +402,6 @@
                 {{ savingPersonal ? 'Сохранение...' : '💾 Сохранить изменения' }}
               </button>
             </form>
- 
-
-            <!-- Секция настроек конфиденциальности -->
-
-            <div class="privacy-settings-section">
-
-              <h3 class="privacy-settings-title">Настройки конфиденциальности</h3>
-
-              <p class="privacy-settings-hint">
-
-                Нажмите на замок рядом с любым полем, чтобы разрешить или запретить поиск по этому полю
-
-              </p>
-
- 
-
-              <div v-if="privacyError" class="error-message">{{ privacyError }}</div>
-
-              <div v-if="privacySuccess" class="success-message">{{ privacySuccess }}</div>
-
- 
-
-              <button
-
-                type="button"
-
-                class="btn-save btn-privacy"
-
-                :disabled="savingPrivacy"
-
-                @click="savePrivacySettings"
-
-              >
-
-                {{ savingPrivacy ? 'Сохранение...' : '🔒 Сохранить настройки конфиденциальности' }}
-              </button>
-
-            </div>			
           </div>
 
           <!-- ===== TAB 3: Соц. сети ===== -->
@@ -532,13 +494,253 @@
                 {{ savingSocial ? 'Сохранение...' : '💾 Сохранить изменения' }}
               </button>
             </form>
+          </div>
 
-            <!-- Секция настроек конфиденциальности -->
-            <div class="privacy-settings-section">
-              <h3 class="privacy-settings-title">Настройки конфиденциальности</h3>
+          <!-- ===== TAB 4: Настройки конфиденциальности ===== -->
+          <div v-if="activeTab === 'privacy'" class="tab-panel">
+            <div class="privacy-settings-main">
+              <h3 class="privacy-settings-title">Управление видимостью данных</h3>
               <p class="privacy-settings-hint">
-                Нажмите на замок рядом с любым полем, чтобы разрешить или запретить поиск по этому полю
+                Настройте, какие данные будут доступны для поиска другим пользователям.
+                Разрешенные поля (🔓) будут видны в результатах поиска, запрещенные (🔒) - скрыты.
               </p>
+
+              <div class="privacy-fields-grid">
+                <!-- Личная информация -->
+                <div class="privacy-section">
+                  <h4 class="privacy-section-title">📋 Личная информация</h4>
+
+                  <div class="privacy-field-item">
+                    <div class="privacy-field-info">
+                      <span class="privacy-field-label">Имя пользователя</span>
+                      <span class="privacy-field-value">{{ personalForm.username || 'Не указано' }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="privacy-toggle-btn"
+                      :class="{ 'privacy-toggle-btn--open': privacySettings.username, 'privacy-toggle-btn--closed': !privacySettings.username }"
+                      @click="togglePrivacy('username')"
+                    >
+                      <svg v-if="privacySettings.username" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <span class="privacy-toggle-text">{{ privacySettings.username ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                    </button>
+                  </div>
+
+                  <div class="privacy-field-item">
+                    <div class="privacy-field-info">
+                      <span class="privacy-field-label">Полное имя</span>
+                      <span class="privacy-field-value">{{ personalForm.full_name || 'Не указано' }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="privacy-toggle-btn"
+                      :class="{ 'privacy-toggle-btn--open': privacySettings.full_name, 'privacy-toggle-btn--closed': !privacySettings.full_name }"
+                      @click="togglePrivacy('full_name')"
+                    >
+                      <svg v-if="privacySettings.full_name" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <span class="privacy-toggle-text">{{ privacySettings.full_name ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                    </button>
+                  </div>
+
+                  <div class="privacy-field-item">
+                    <div class="privacy-field-info">
+                      <span class="privacy-field-label">Телефон</span>
+                      <span class="privacy-field-value">{{ personalForm.phone || 'Не указано' }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="privacy-toggle-btn"
+                      :class="{ 'privacy-toggle-btn--open': privacySettings.phone, 'privacy-toggle-btn--closed': !privacySettings.phone }"
+                      @click="togglePrivacy('phone')"
+                    >
+                      <svg v-if="privacySettings.phone" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <span class="privacy-toggle-text">{{ privacySettings.phone ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                    </button>
+                  </div>
+
+                  <div class="privacy-field-item">
+                    <div class="privacy-field-info">
+                      <span class="privacy-field-label">Город</span>
+                      <span class="privacy-field-value">{{ personalForm.city || 'Не указано' }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="privacy-toggle-btn"
+                      :class="{ 'privacy-toggle-btn--open': privacySettings.city, 'privacy-toggle-btn--closed': !privacySettings.city }"
+                      @click="togglePrivacy('city')"
+                    >
+                      <svg v-if="privacySettings.city" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <span class="privacy-toggle-text">{{ privacySettings.city ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                    </button>
+                  </div>
+
+                  <div class="privacy-field-item">
+                    <div class="privacy-field-info">
+                      <span class="privacy-field-label">Страна</span>
+                      <span class="privacy-field-value">{{ personalForm.country || 'Не указано' }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="privacy-toggle-btn"
+                      :class="{ 'privacy-toggle-btn--open': privacySettings.country, 'privacy-toggle-btn--closed': !privacySettings.country }"
+                      @click="togglePrivacy('country')"
+                    >
+                      <svg v-if="privacySettings.country" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <span class="privacy-toggle-text">{{ privacySettings.country ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                    </button>
+                  </div>
+
+                  <div class="privacy-field-item">
+                    <div class="privacy-field-info">
+                      <span class="privacy-field-label">Офис</span>
+                      <span class="privacy-field-value">{{ personalForm.office || 'Не указано' }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="privacy-toggle-btn"
+                      :class="{ 'privacy-toggle-btn--open': privacySettings.office, 'privacy-toggle-btn--closed': !privacySettings.office }"
+                      @click="togglePrivacy('office')"
+                    >
+                      <svg v-if="privacySettings.office" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <span class="privacy-toggle-text">{{ privacySettings.office ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                    </button>
+                  </div>
+
+                  <div class="privacy-field-item">
+                    <div class="privacy-field-info">
+                      <span class="privacy-field-label">Личный ID</span>
+                      <span class="privacy-field-value">{{ personalForm.personal_id || 'Не указано' }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="privacy-toggle-btn"
+                      :class="{ 'privacy-toggle-btn--open': privacySettings.personal_id, 'privacy-toggle-btn--closed': !privacySettings.personal_id }"
+                      @click="togglePrivacy('personal_id')"
+                    >
+                      <svg v-if="privacySettings.personal_id" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <span class="privacy-toggle-text">{{ privacySettings.personal_id ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Социальные сети -->
+                <div class="privacy-section">
+                  <h4 class="privacy-section-title">🌐 Социальные сети</h4>
+
+                  <div class="privacy-field-item">
+                    <div class="privacy-field-info">
+                      <span class="privacy-field-label">Telegram</span>
+                      <span class="privacy-field-value">{{ socialForm.telegram_user || 'Не указано' }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="privacy-toggle-btn"
+                      :class="{ 'privacy-toggle-btn--open': privacySettings.telegram_user, 'privacy-toggle-btn--closed': !privacySettings.telegram_user }"
+                      @click="togglePrivacy('telegram_user')"
+                    >
+                      <svg v-if="privacySettings.telegram_user" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <span class="privacy-toggle-text">{{ privacySettings.telegram_user ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                    </button>
+                  </div>
+
+                  <div class="privacy-field-item">
+                    <div class="privacy-field-info">
+                      <span class="privacy-field-label">Instagram</span>
+                      <span class="privacy-field-value">{{ socialForm.instagram_profile || 'Не указано' }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="privacy-toggle-btn"
+                      :class="{ 'privacy-toggle-btn--open': privacySettings.instagram_profile, 'privacy-toggle-btn--closed': !privacySettings.instagram_profile }"
+                      @click="togglePrivacy('instagram_profile')"
+                    >
+                      <svg v-if="privacySettings.instagram_profile" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <span class="privacy-toggle-text">{{ privacySettings.instagram_profile ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
 
               <div v-if="privacyError" class="error-message">{{ privacyError }}</div>
               <div v-if="privacySuccess" class="success-message">{{ privacySuccess }}</div>
@@ -554,7 +756,7 @@
             </div>
           </div>
 
-          <!-- ===== TAB 4: Лимиты / Используемые ресурсы ===== -->
+          <!-- ===== TAB 5: Лимиты / Используемые ресурсы ===== -->
           <div v-if="activeTab === 'limits'" class="tab-panel">
             <div class="limits-grid">
               <div class="limit-card">
@@ -983,6 +1185,7 @@ const tabs = [
   { id: 'basic', label: 'Основная информация', icon: 'ℹ️' },
   { id: 'personal', label: 'Личная информация', icon: '👤' },
   { id: 'social', label: 'Соц. сети', icon: '🌐' },
+  { id: 'privacy', label: 'Настройки конфиденциальности', icon: '🔒' },
   { id: 'limits', label: 'Лимиты', icon: '📊' }
 ]
 
@@ -1017,6 +1220,7 @@ const savingSocial = ref(false)
 // Настройки конфиденциальности
 const privacySettings = ref({
   username: false,
+  full_name: false,
   phone: false,
   city: false,
   country: false,
@@ -3685,5 +3889,124 @@ async function handleAvatarDelete() {
 .rejection-reason-history p {
   margin: 0;
   line-height: 1.5;
+}
+
+/* ========================================== */
+/* Стили для таба "Настройки конфиденциальности" */
+/* ========================================== */
+
+.privacy-settings-main {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.privacy-fields-grid {
+  display: grid;
+  gap: 24px;
+}
+
+.privacy-section {
+  background: var(--profile-input-bg);
+  border: 1px solid var(--profile-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.privacy-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--profile-text);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.privacy-field-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--profile-border);
+}
+
+.privacy-field-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.privacy-field-item:first-child {
+  padding-top: 0;
+}
+
+.privacy-field-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.privacy-field-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--profile-text);
+}
+
+.privacy-field-value {
+  font-size: 13px;
+  color: var(--profile-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.privacy-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--profile-border);
+  background: var(--profile-bg);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.privacy-toggle-btn:hover {
+  background: var(--profile-input-bg);
+  transform: translateY(-1px);
+}
+
+.privacy-toggle-btn--open {
+  border-color: #4CAF50;
+  color: #2E7D32;
+}
+
+.privacy-toggle-btn--closed {
+  border-color: #F44336;
+  color: #C62828;
+}
+
+.privacy-toggle-text {
+  white-space: nowrap;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 768px) {
+  .privacy-field-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .privacy-toggle-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
