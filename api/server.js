@@ -2532,14 +2532,14 @@ app.get('/api/boards/:boardId/partners', {
 
     const board = boardCheck.rows[0];
     const content = board.content || {};
-    const cards = content.cards || [];
+    const cardsArray = content?.cards || content?.objects || []
     const normalizePersonalId = (value) =>
       (value ?? '')
         .toString()
         .replace(/\s+/g, '')
         .toUpperCase();
     // Фильтруем карточки типа large и gold
-    const largeAndGoldCards = cards.filter(
+    const largeAndGoldCards = cardsArray.filter(
       (card) => card.type === 'large' || card.type === 'gold'
     );
 
