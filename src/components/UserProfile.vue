@@ -142,7 +142,27 @@
               </div>
 
               <div class="form-group">
-                <label for="full-name">Полное имя:</label>
+                <div class="form-group-header">
+                  <label for="full-name">Полное имя:</label>
+                  <button
+                    type="button"
+                    class="privacy-lock"
+                    :class="{ 'privacy-lock--open': privacySettings.full_name, 'privacy-lock--closed': !privacySettings.full_name }"
+                    @click="togglePrivacy('full_name')"
+                    :title="privacySettings.full_name ? 'Поиск разрешен' : 'Поиск запрещен'"
+                  >
+                    <svg v-if="privacySettings.full_name" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
+                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                      <circle cx="12" cy="16" r="1.5" fill="white"/>
+                    </svg>
+                  </button>
+                </div>
                 <input
                   id="full-name"
                   v-model="personalForm.full_name"
@@ -1302,6 +1322,7 @@ onMounted(async () => {
     if (user.value.search_settings) {
       privacySettings.value = {
         username: user.value.search_settings.username || false,
+        full_name: user.value.search_settings.full_name || false,
         phone: user.value.search_settings.phone || false,
         city: user.value.search_settings.city || false,
         country: user.value.search_settings.country || false,
