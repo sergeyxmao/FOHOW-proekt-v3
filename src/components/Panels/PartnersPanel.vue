@@ -20,6 +20,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api'
 const partners = ref([])
 const searchQuery = ref('')
 const loading = ref(false)
+const selectedPartner = ref(null)
 let searchTimeout = null
 
 const handleClose = () => {
@@ -89,6 +90,22 @@ const handleSearch = () => {
   }, 300) // 300ms debounce
 }
 
+// Выбор партнера для отображения деталей
+const selectPartner = (partner) => {
+  if (selectedPartner.value?.id === partner.id) {
+    // Клик по тому же партнёру - закрываем
+    selectedPartner.value = null
+  } else {
+    // Открываем данные нового партнёра
+    selectedPartner.value = partner
+  }
+}
+
+// Закрытие окна с деталями партнера
+const closeDetails = () => {
+  selectedPartner.value = null
+}
+
 // При монтировании загрузить партнёров
 onMounted(() => {
   if (boardStore.currentBoardId) {
@@ -136,6 +153,57 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
       />
     </div>
 
+    <!-- Модальное окно с данными партнера -->
+    <div
+      v-if="selectedPartner"
+      class="partner-details-card"
+      :class="{ 'partner-details-card--modern': props.isModernTheme }"
+    >
+      <img
+        :src="getAvatarUrl(selectedPartner.avatar_url)"
+        :alt="selectedPartner.full_name || selectedPartner.username"
+        class="partner-details-avatar"
+      />
+      <div class="partner-details-info">
+        <h4 class="partner-details-name">{{ selectedPartner.full_name || selectedPartner.username }}</h4>
+
+        <div class="partner-details-field">
+          <span class="partner-details-label">Номер:</span>
+          <span>{{ selectedPartner.personal_id }}</span>
+        </div>
+
+        <div v-if="selectedPartner.city || selectedPartner.country" class="partner-details-field">
+          <span class="partner-details-label">Локация:</span>
+          <span>
+            <span v-if="selectedPartner.city">{{ selectedPartner.city }}</span>
+            <span v-if="selectedPartner.city && selectedPartner.country">, </span>
+            <span v-if="selectedPartner.country">{{ selectedPartner.country }}</span>
+          </span>
+        </div>
+
+        <div v-if="selectedPartner.office" class="partner-details-field">
+          <span class="partner-details-label">Представительство:</span>
+          <span>{{ selectedPartner.office }}</span>
+        </div>
+
+        <div v-if="selectedPartner.phone" class="partner-details-field">
+          <span class="partner-details-label">Телефон:</span>
+          <span>{{ selectedPartner.phone }}</span>
+        </div>
+
+        <div v-if="selectedPartner.telegram_user" class="partner-details-field">
+          <span class="partner-details-label">Telegram:</span>
+          <span>{{ selectedPartner.telegram_user }}</span>
+        </div>
+
+        <div v-if="selectedPartner.instagram_profile" class="partner-details-field">
+          <span class="partner-details-label">Instagram:</span>
+          <span>{{ selectedPartner.instagram_profile }}</span>
+        </div>
+      </div>
+      <button @click="closeDetails" class="partner-details-close">×</button>
+    </div>
+
     <div class="partners-panel__content">
       <!-- Загрузка -->
       <div v-if="loading" class="loading-state">
@@ -148,31 +216,21 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
         <p v-else>На этой доске нет добавленных партнёров</p>
       </div>
 
-      <!-- Список партнёров -->
+      <!-- Список партнёров (сетка аватаров) -->
       <div v-else class="partners-list">
         <div
           v-for="partner in partners"
           :key="partner.id"
-          class="partner-card"
-          :class="{ 'partner-card--modern': props.isModernTheme }"
+          class="partner-item"
+          :class="{ 'partner-item--selected': selectedPartner?.id === partner.id }"
+          @click="selectPartner(partner)"
         >
           <img
             :src="getAvatarUrl(partner.avatar_url)"
             :alt="partner.full_name || partner.username"
             class="partner-avatar"
           />
-          <div class="partner-info">
-            <h4 class="partner-name">{{ partner.full_name || partner.username }}</h4>
-            <p class="partner-id">{{ partner.personal_id }}</p>
-            <div v-if="partner.city || partner.country" class="partner-location">
-              <span v-if="partner.city">{{ partner.city }}</span>
-              <span v-if="partner.city && partner.country">, </span>
-              <span v-if="partner.country">{{ partner.country }}</span>
-            </div>
-            <div v-if="partner.office" class="partner-office">
-              {{ partner.office }}
-            </div>
-          </div>
+          <span class="partner-name">{{ partner.full_name || partner.username }}</span>
         </div>
       </div>
     </div>
@@ -269,60 +327,132 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
   font-size: 14px;
 }
 
+/* Сетка аватаров партнеров */
 .partners-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 16px;
+  padding: 0;
+}
+
+.partner-item {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.partner-card {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  background: #f9f9f9;
-  border-radius: 8px;
-  transition: background 0.2s;
+  align-items: center;
   cursor: pointer;
+  transition: transform 0.2s ease;
 }
 
-.partner-card:hover {
-  background: #f0f0f0;
+.partner-item:hover {
+  transform: scale(1.05);
+}
+
+.partner-item--selected .partner-avatar {
+  border-color: #5D8BF4;
+  box-shadow: 0 0 0 3px rgba(93, 139, 244, 0.2);
 }
 
 .partner-avatar {
-  width: 56px;
-  height: 56px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   object-fit: cover;
-  flex-shrink: 0;
-}
-
-.partner-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  border: 2px solid #e0e0e0;
+  margin-bottom: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .partner-name {
-  margin: 0;
-  font-size: 15px;
+  font-size: 12px;
+  color: #333;
+  text-align: center;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Модальное окно с деталями партнера */
+.partner-details-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 0 20px 12px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 12px;
+  position: relative;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.partner-details-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid #e0e0e0;
+}
+
+.partner-details-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.partner-details-name {
+  font-size: 16px;
   font-weight: 600;
   color: #333;
+  margin: 0;
 }
 
-.partner-id {
-  margin: 0;
-  font-size: 12px;
-  color: #666;
-  font-family: monospace;
-}
-
-.partner-location,
-.partner-office {
-  margin: 0;
+.partner-details-field {
   font-size: 13px;
-  color: #777;
+  color: #666;
+  display: flex;
+  gap: 6px;
+}
+
+.partner-details-label {
+  font-weight: 500;
+  color: #888;
+  min-width: 120px;
+}
+
+.partner-details-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.partner-details-close:hover {
+  color: #000;
 }
 
 /* Modern Theme */
@@ -376,26 +506,48 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
   color: rgba(229, 243, 255, 0.6);
 }
 
-.partner-card--modern {
-  background: rgba(24, 34, 58, 0.92);
-  border: 1px solid rgba(96, 164, 255, 0.25);
+/* Modern Theme - Partner Item */
+.partners-panel--modern .partner-avatar {
+  border-color: rgba(96, 164, 255, 0.35);
 }
 
-.partner-card--modern:hover {
-  background: rgba(30, 41, 66, 0.95);
-  border-color: rgba(96, 164, 255, 0.4);
+.partners-panel--modern .partner-item--selected .partner-avatar {
+  border-color: rgba(96, 164, 255, 0.8);
+  box-shadow: 0 0 0 3px rgba(96, 164, 255, 0.3);
 }
 
-.partner-card--modern .partner-name {
+.partners-panel--modern .partner-name {
   color: #e5f3ff;
 }
 
-.partner-card--modern .partner-id {
+/* Modern Theme - Details Card */
+.partner-details-card--modern {
+  background: rgba(24, 34, 58, 0.92);
+  border-color: rgba(96, 164, 255, 0.35);
+  box-shadow: 0 2px 8px rgba(6, 11, 21, 0.4);
+}
+
+.partner-details-card--modern .partner-details-avatar {
+  border-color: rgba(96, 164, 255, 0.35);
+}
+
+.partner-details-card--modern .partner-details-name {
+  color: #e5f3ff;
+}
+
+.partner-details-card--modern .partner-details-field {
+  color: rgba(229, 243, 255, 0.8);
+}
+
+.partner-details-card--modern .partner-details-label {
+  color: rgba(229, 243, 255, 0.6);
+}
+
+.partner-details-card--modern .partner-details-close {
   color: rgba(229, 243, 255, 0.7);
 }
 
-.partner-card--modern .partner-location,
-.partner-card--modern .partner-office {
-  color: rgba(229, 243, 255, 0.6);
+.partner-details-card--modern .partner-details-close:hover {
+  color: #fca5a5;
 }
 </style>
