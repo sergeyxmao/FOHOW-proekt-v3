@@ -56,7 +56,8 @@ export function registerDiscussionRoutes(app) {
         // Запрос 6: Партнеры на доске
         let partnersCount = 0
 
-        if (boardContent && boardContent.cards && Array.isArray(boardContent.cards)) {
+        const cardsArray = boardContent?.cards || boardContent?.objects || []
+        if (Array.isArray(cardsArray) && cardsArray.length > 0) {
            const normalizePersonalId = (value) =>
             (value ?? '')
               .toString()
@@ -64,7 +65,7 @@ export function registerDiscussionRoutes(app) {
               .toUpperCase()
           
           // Извлекаем personal_id из карточек типа 'large' или 'gold'
-          const personalIds = boardContent.cards
+          const personalIds = cardsArray
             .filter((card) => card.type === 'large' || card.type === 'gold')
             .map((card) => normalizePersonalId(card.text))
             .filter((personalId) => personalId && personalId !== 'RUY68123456789') // Исключаем дефолтный номер
