@@ -13,6 +13,7 @@ export const useBoardStore = defineStore('board', () => {
   const pendingFocusAnchorId = ref(null)
   const pendingEditAnchorId = ref(null)
   const placementMode = ref(null) // 'anchor' | null
+  const isNavigating = ref(false) // Флаг для предотвращения конфликтов при программной навигации
   const isCurrentBoard = computed(() => currentBoardId.value !== null)
   const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
@@ -112,6 +113,9 @@ export const useBoardStore = defineStore('board', () => {
       return false
     }
 
+    // Установить флаг навигации
+    isNavigating.value = true
+
     const containerRect = canvasContainer.getBoundingClientRect()
     const containerWidth = containerRect.width
     const containerHeight = containerRect.height
@@ -123,8 +127,18 @@ export const useBoardStore = defineStore('board', () => {
     const newTranslateX = containerWidth / 2 - x * targetScale
     const newTranslateY = containerHeight / 2 - y * targetScale
 
-    // Применяем transform
-    canvasContent.style.transform = `translate(${newTranslateX}px, ${newTranslateY}px) scale(${targetScale})`
+    // Применяем transform с небольшой задержкой для стабильности
+    setTimeout(() => {
+      canvasContent.style.transform = `translate(${newTranslateX}px, ${newTranslateY}px) scale(${targetScale})`
+      canvasContent.style.transition = 'transform 0.5s ease-out'
+
+      // Снять флаг после завершения анимации (500ms transition + 200ms запас)
+      setTimeout(() => {
+        isNavigating.value = false
+        // Убрать transition для последующих манипуляций
+        canvasContent.style.transition = ''
+      }, 700)
+    }, 100)
 
     return true
   }
@@ -206,6 +220,7 @@ export const useBoardStore = defineStore('board', () => {
     pendingFocusAnchorId,
     pendingEditAnchorId,
     placementMode,
+    isNavigating,
     setCurrentBoard,
     clearCurrentBoard,
     markAsChanged,
