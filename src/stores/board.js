@@ -97,7 +97,38 @@ export const useBoardStore = defineStore('board', () => {
 
   function setPlacementMode(mode) {
     placementMode.value = mode
-  }  
+  }
+
+  function centerViewOnPoint(x, y) {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return false
+    }
+
+    const canvasContainer = document.querySelector('.canvas-container')
+    const canvasContent = canvasContainer?.querySelector('.canvas-content')
+
+    if (!canvasContainer || !canvasContent) {
+      console.warn('Canvas container or content not found')
+      return false
+    }
+
+    const containerRect = canvasContainer.getBoundingClientRect()
+    const containerWidth = containerRect.width
+    const containerHeight = containerRect.height
+
+    // Устанавливаем zoom = 1.0
+    const targetScale = 1.0
+
+    // Вычисляем новые координаты translate так, чтобы точка (x, y) была в центре экрана
+    const newTranslateX = containerWidth / 2 - x * targetScale
+    const newTranslateY = containerHeight / 2 - y * targetScale
+
+    // Применяем transform
+    canvasContent.style.transform = `translate(${newTranslateX}px, ${newTranslateY}px) scale(${targetScale})`
+
+    return true
+  }
+
   async function updateCurrentBoardName(newName) {
     const trimmedName = typeof newName === 'string' ? newName.trim() : ''
 
@@ -174,7 +205,7 @@ export const useBoardStore = defineStore('board', () => {
     selectedAnchorId,
     pendingFocusAnchorId,
     pendingEditAnchorId,
-    placementMode,    
+    placementMode,
     setCurrentBoard,
     clearCurrentBoard,
     markAsChanged,
@@ -188,6 +219,7 @@ export const useBoardStore = defineStore('board', () => {
     focusAnchor,
     requestAnchorEdit,
     clearPendingAnchorEdit,
-    setPlacementMode    
+    setPlacementMode,
+    centerViewOnPoint
   }
 })
