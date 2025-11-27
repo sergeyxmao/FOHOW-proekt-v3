@@ -62,20 +62,40 @@ export function registerDiscussionRoutes(app) {
               .toString()
               .replace(/\s+/g, '')
               .toUpperCase()
-          
+
           // Извлекаем personal_id из карточек типа 'large' или 'gold'
-          const personalIds = boardContent.cards
-            .filter((card) => card.type === 'large' || card.type === 'gold')
+          const largeGoldCards = boardContent.cards.filter((card) => card.type === 'large' || card.type === 'gold')
+
+          req.log.info({
+            boardId,
+            totalCards: boardContent.cards.length,
+            largeGoldCardsCount: largeGoldCards.length,
+            cardTypes: boardContent.cards.map(c => ({ id: c.id, type: c.type, text: c.text?.substring(0, 20) }))
+          }, 'Analyzing cards on board for partners')
+
+          const personalIds = largeGoldCards
             .map((card) => normalizePersonalId(card.text))
             .filter((personalId) => personalId && personalId !== 'RUY68123456789') // Исключаем дефолтный номер
 
           // Оставляем только уникальные personal_id
           const uniquePersonalIds = [...new Set(personalIds)]
 
+          req.log.info({
+            boardId,
+            uniquePersonalIds
+          }, 'Extracted unique personal_ids from cards')
+
           if (uniquePersonalIds.length > 0) {
             // Выполняем SQL-запрос для подсчёта верифицированных партнёров
             const partnersResult = await pool.query(
-              `SELECT COUNT(*) as count, COALESCE(array_agg(DISTINCT personal_id), '{}') AS personal_ids
+              `SELECT
+                COUNT(*) as count,
+                COALESCE(array_agg(DISTINCT personal_id), '{}') AS personal_ids,
+                array_agg(DISTINCT jsonb_build_object(
+                  'personal_id', personal_id,
+                  'is_verified', is_verified,
+                  'avatar_url', avatar_url
+                )) as users_info
                FROM users
                WHERE personal_id = ANY($1)
                  AND is_verified = true
@@ -84,21 +104,40 @@ export function registerDiscussionRoutes(app) {
               [uniquePersonalIds]
             )
 
+            req.log.info({
+              boardId,
+              queryResult: partnersResult.rows[0],
+              foundCount: partnersResult.rows[0]?.count
+            }, 'Partners query result')
+
             const foundPersonalIds = partnersResult.rows[0]?.personal_ids ?? []
             const missingPersonalIds = uniquePersonalIds.filter(
               (personalId) => !foundPersonalIds.includes(personalId)
             )
 
             if (missingPersonalIds.length > 0) {
+              // Check why these IDs are missing
+              const debugResult = await pool.query(
+                `SELECT personal_id, is_verified, avatar_url, plan_id
+                 FROM users
+                 WHERE personal_id = ANY($1)`,
+                [missingPersonalIds]
+              )
+
               req.log.warn(
                 {
                   boardId,
-                  missingPersonalIds
+                  missingPersonalIds,
+                  usersInDb: debugResult.rows
                 },
                 'Не найдены верифицированные партнёры по указанным personal_id на доске'
               )
-            }            
+            }
             partnersCount = Number(partnersResult.rows[0]?.count ?? 0)
+          } else {
+            req.log.info({
+              boardId
+            }, 'No valid personal_ids found on cards')
           }
         }
 
