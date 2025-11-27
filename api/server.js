@@ -2508,6 +2508,133 @@ app.delete('/api/comments/:commentId', {
   }
 });
 
+// ============================================
+// ПАРТНЕРЫ (PARTNERS)
+// ============================================
+
+// Получить список партнёров для доски
+app.get('/api/boards/:boardId/partners', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
+  try {
+    const { boardId } = req.params;
+    const { search } = req.query;
+
+    // Проверяем, что доска существует и принадлежит текущему пользователю
+    const boardCheck = await pool.query(
+      'SELECT id, content FROM boards WHERE id = $1 AND owner_id = $2',
+      [boardId, req.user.id]
+    );
+
+    if (boardCheck.rows.length === 0) {
+      return reply.code(404).send({ success: false, error: 'Board not found' });
+    }
+
+    const board = boardCheck.rows[0];
+    const content = board.content || {};
+    const cards = content.cards || [];
+
+    // Фильтруем карточки типа large и gold
+    const largeAndGoldCards = cards.filter(card =>
+      card.type === 'large' || card.type === 'gold'
+    );
+
+    // Извлекаем номера лицензий (personal_id) из card.text
+    const personalIds = largeAndGoldCards
+      .map(card => card.text)
+      .filter(text => text && text !== 'RUY68123456789'); // Исключаем дефолтный номер
+
+    // Получаем уникальные personal_id
+    const uniquePersonalIds = [...new Set(personalIds)];
+
+    // Если нет партнёров, возвращаем пустой массив
+    if (uniquePersonalIds.length === 0) {
+      return reply.send({ success: true, partners: [] });
+    }
+
+    // Формируем SQL-запрос с учётом поиска
+    let query;
+    let params;
+
+    if (search && search.trim()) {
+      const searchTerm = `%${search.trim()}%`;
+      query = `
+        SELECT
+          u.id,
+          u.username,
+          u.full_name,
+          u.personal_id,
+          u.avatar_url,
+          u.phone,
+          u.city,
+          u.country,
+          u.office,
+          u.telegram_user,
+          u.instagram_profile,
+          u.plan_id,
+          u.is_verified,
+          u.search_settings
+        FROM users u
+        WHERE u.personal_id = ANY($1)
+          AND u.is_verified = true
+          AND u.plan_id IN (6, 7)
+          AND u.avatar_url IS NOT NULL
+          AND u.avatar_url != '/Avatar.png'
+          AND (
+            (u.search_settings->>'username' = 'true' AND LOWER(u.username) LIKE LOWER($2)) OR
+            (u.search_settings->>'full_name' = 'true' AND LOWER(u.full_name) LIKE LOWER($2)) OR
+            (u.search_settings->>'phone' = 'true' AND u.phone LIKE $2) OR
+            (u.search_settings->>'city' = 'true' AND LOWER(u.city) LIKE LOWER($2)) OR
+            (u.search_settings->>'country' = 'true' AND LOWER(u.country) LIKE LOWER($2)) OR
+            (u.search_settings->>'office' = 'true' AND LOWER(u.office) LIKE LOWER($2)) OR
+            (u.search_settings->>'personal_id' = 'true' AND u.personal_id LIKE $2) OR
+            (u.search_settings->>'telegram_user' = 'true' AND LOWER(u.telegram_user) LIKE LOWER($2)) OR
+            (u.search_settings->>'instagram_profile' = 'true' AND LOWER(u.instagram_profile) LIKE LOWER($2))
+          )
+        ORDER BY u.full_name ASC
+      `;
+      params = [uniquePersonalIds, searchTerm];
+    } else {
+      query = `
+        SELECT
+          u.id,
+          u.username,
+          u.full_name,
+          u.personal_id,
+          u.avatar_url,
+          u.phone,
+          u.city,
+          u.country,
+          u.office,
+          u.telegram_user,
+          u.instagram_profile,
+          u.plan_id,
+          u.is_verified,
+          u.search_settings
+        FROM users u
+        WHERE u.personal_id = ANY($1)
+          AND u.is_verified = true
+          AND u.plan_id IN (6, 7)
+          AND u.avatar_url IS NOT NULL
+          AND u.avatar_url != '/Avatar.png'
+        ORDER BY u.full_name ASC
+      `;
+      params = [uniquePersonalIds];
+    }
+
+    const result = await pool.query(query, params);
+
+    return reply.send({
+      success: true,
+      partners: result.rows
+    });
+
+  } catch (err) {
+    console.error('❌ Ошибка получения партнёров:', err);
+    return reply.code(500).send({ success: false, error: 'Internal server error' });
+  }
+});
+
 const PORT = Number(process.env.PORT || 4000);
 const HOST = '127.0.0.1';
 /**
