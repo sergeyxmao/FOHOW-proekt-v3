@@ -1,3 +1,5 @@
+import { useAuthStore } from '../stores/auth.js';
+
 /**
  * Сервис для работы с API библиотеки изображений
  */
@@ -9,7 +11,12 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
  * @returns {Object}
  */
 function getAuthHeaders() {
-  const token = localStorage.getItem('token');
+  const authStore = useAuthStore();
+  const token = localStorage.getItem('token') || authStore.token;
+
+  if (!token) {
+    return {};
+  }
   return {
     'Authorization': `Bearer ${token}`
   };
