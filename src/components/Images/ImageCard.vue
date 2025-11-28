@@ -34,11 +34,23 @@ const getFileNameWithoutExtension = (filename) => {
 // Используем composable для загрузки изображений с токеном
 const { getImageUrl } = useImageProxy()
 const imageSrc = ref('')
-
+const placeholderSrc = computed(
+  () =>
+    props.image.preview_placeholder ||
+    props.image.preview_url ||
+    props.image.public_url ||
+    ''
+)
 // Загружаем изображение при монтировании и при изменении ID
 const loadImage = async () => {
+  if (placeholderSrc.value) {
+    imageSrc.value = placeholderSrc.value
+  }  
   if (props.image?.id) {
-    imageSrc.value = await getImageUrl(props.image.id)
+    const resolved = await getImageUrl(props.image.id)
+    if (resolved) {
+      imageSrc.value = resolved
+    }
   }
 }
 
