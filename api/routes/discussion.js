@@ -58,11 +58,34 @@ export function registerDiscussionRoutes(app) {
 
         const cardsArray = boardContent?.cards || boardContent?.objects || []
         if (Array.isArray(cardsArray) && cardsArray.length > 0) {
-           const normalizePersonalId = (value) =>
+          const normalizePersonalId = (value) =>
             (value ?? '')
               .toString()
               .replace(/\s+/g, '')
               .toUpperCase()
+
+          const avatarCards = cardsArray.filter(
+            (card) => card.type === 'avatar' && card.userId !== null
+          )
+
+          if (avatarCards.length > 0) {
+            const avatarUserIds = [
+              ...new Set(
+                avatarCards
+                  .map((card) => Number(card.userId))
+                  .filter((id) => Number.isFinite(id))
+              )
+            ]
+
+            if (avatarUserIds.length > 0) {
+              const partnersResult = await pool.query(
+                `SELECT COUNT(*) as count FROM users WHERE id = ANY($1) AND is_verified = true`,
+                [avatarUserIds]
+              )
+
+              partnersCount += Number(partnersResult.rows[0]?.count ?? 0)
+            }
+          }
           
           // Извлекаем personal_id из карточек типа 'large' или 'gold'
           const personalIds = cardsArray
@@ -99,8 +122,8 @@ export function registerDiscussionRoutes(app) {
                 },
                 'Не найдены верифицированные партнёры по указанным personal_id на доске'
               )
-            }            
-            partnersCount = Number(partnersResult.rows[0]?.count ?? 0)
+            }
+            partnersCount += Number(partnersResult.rows[0]?.count ?? 0)
           }
         }
 
