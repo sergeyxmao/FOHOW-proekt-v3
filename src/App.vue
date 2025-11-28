@@ -445,7 +445,10 @@ async function loadBoard(boardId) {
       ? content.connections
       : []
     connectionsStore.loadConnections(connectionsData)
-
+    const avatarConnectionsData = Array.isArray(content.avatarConnections)
+      ? content.avatarConnections
+      : []
+    connectionsStore.loadAvatarConnections(avatarConnectionsData)
     // Восстанавливаем стикеры из сохраненных данных
     const stickersData = Array.isArray(content.stickers)
       ? content.stickers
@@ -625,24 +628,44 @@ async function uploadBoardThumbnail(boardId) {
 
 function getCanvasState() {
   // Получаем все карточки и соединения из stores
-  const cardsData = cardsStore.cards.map(card => ({
-    id: card.id,
-    x: card.x,
-    y: card.y,
-    width: card.width,
-    height: card.height,
-    text: card.text,
-    fill: card.fill,
-    stroke: card.stroke,
-    strokeWidth: card.strokeWidth,
-    headerBg: card.headerBg,
-    colorIndex: card.colorIndex,
-    type: card.type,
-    bodyHTML: card.bodyHTML,
-    bodyGradient: card.bodyGradient,
-    pv: card.pv
-    // Заметки больше не сохраняются в составе карточки, они хранятся отдельно в таблице notes
-  }))
+  const cardsData = cardsStore.cards.map(card => {
+    if (card.type === 'avatar') {
+      return {
+        id: card.id,
+        type: card.type,
+        x: card.x,
+        y: card.y,
+        size: card.size,
+        diameter: card.diameter,
+        personalId: card.personalId,
+        userId: card.userId,
+        avatarUrl: card.avatarUrl,
+        username: card.username,
+        stroke: card.stroke,
+        strokeWidth: card.strokeWidth,
+        created_at: card.created_at
+      }
+    }
+
+    return {
+      id: card.id,
+      x: card.x,
+      y: card.y,
+      width: card.width,
+      height: card.height,
+      text: card.text,
+      fill: card.fill,
+      stroke: card.stroke,
+      strokeWidth: card.strokeWidth,
+      headerBg: card.headerBg,
+      colorIndex: card.colorIndex,
+      type: card.type,
+      bodyHTML: card.bodyHTML,
+      bodyGradient: card.bodyGradient,
+      pv: card.pv
+      // Заметки больше не сохраняются в составе карточки, они хранятся отдельно в таблице notes
+    }
+  })
 
   const connectionsData = connectionsStore.connections.map(conn => ({
     id: conn.id,
@@ -655,7 +678,19 @@ function getCanvasState() {
     highlightType: conn.highlightType,
     animationDuration: conn.animationDuration
   }))
-
+  const avatarConnectionsData = connectionsStore.avatarConnections.map(conn => ({
+    id: conn.id,
+    type: conn.type,
+    from: conn.from,
+    to: conn.to,
+    fromPointIndex: conn.fromPointIndex,
+    toPointIndex: conn.toPointIndex,
+    controlPoints: conn.controlPoints,
+    color: conn.color,
+    thickness: conn.thickness,
+    highlightType: conn.highlightType,
+    animationDuration: conn.animationDuration
+  }))
   // Сохраняем стикеры
   const stickersData = stickersStore.stickers.map(sticker => ({
     id: sticker.id,
@@ -681,6 +716,7 @@ function getCanvasState() {
     zoom: 1, // пока фиксированное значение
     objects: cardsData,
     connections: connectionsData,
+    avatarConnections: avatarConnectionsData,    
     stickers: stickersData,
     images: imagesData
   }
