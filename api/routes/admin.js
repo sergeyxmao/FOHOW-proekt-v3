@@ -12,6 +12,7 @@ import {
   uploadFile
 } from '../services/yandexDiskService.js';
 import { syncSharedFoldersWithYandexDisk } from '../services/sharedFoldersSync.js';
+import { generateImagePlaceholders } from '../utils/imagePlaceholders.js';
 import {
   getPendingVerifications,
   approveVerification,
@@ -1132,8 +1133,10 @@ export function registerAdminRoutes(app) {
           il.folder_name,
           il.yandex_path,
           il.public_url,
-          il.pending_yandex_path,          
+          il.pending_yandex_path,
           il.preview_url,
+          il.preview_placeholder,
+          il.blurhash,          
           il.width,
           il.height,
           il.file_size,
@@ -1243,7 +1246,15 @@ export function registerAdminRoutes(app) {
       const publishResult = await publishFile(newFilePath);
       const publicUrl = publishResult.public_url;
       const previewUrl = publishResult.preview_url || publishResult.public_url;
-      
+
+      const { preview_placeholder, blurhash } = await generateImagePlaceholders({
+        previewUrl,
+        buffer: null,
+        mimeType: 'image/webp'
+      });
+
+      const placeholderToStore = preview_placeholder || image.preview_placeholder;
+         
       console.log(`[ADMIN] Файл опубликован, public_url: ${publicUrl}`);
 
       // Создать новую запись для общей библиотеки
@@ -1256,6 +1267,8 @@ export function registerAdminRoutes(app) {
           yandex_path,
           public_url,
           preview_url,
+          preview_placeholder,
+          blurhash,          
           width,
           height,
           file_size,
@@ -1265,21 +1278,23 @@ export function registerAdminRoutes(app) {
           share_requested_at,
           share_approved_at,
           share_approved_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-        RETURNING id, user_id, original_name, public_url, preview_url, shared_folder_id, is_shared`,
-        [ 
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        RETURNING id, user_id, original_name, public_url, preview_url, preview_placeholder, blurhash, shared_folder_id, is_shared`,
+        [
           ownerId,
           original_name,
           filename,
-          null,          
+          null,
           newFilePath,
           publicUrl,
           previewUrl,
+          placeholderToStore,
+          blurhashToStore,          
           width,
           height,
           file_size,
           'approved',
-          true,          
+          true,
           shared_folder_id,
           null,
           new Date(),          
@@ -1598,6 +1613,12 @@ await pool.query(
       // Опубликовать файл и получить публичную ссылку
       const { public_url: originalPublicUrl, preview_url } = await publishFile(filePath);
       const publicUrl = preview_url || originalPublicUrl;
+
+      const { preview_placeholder, blurhash } = await generateImagePlaceholders({
+        previewUrl: publicUrl,
+        buffer,
+        mimeType
+      });
       
       console.log(`[ADMIN] Файл опубликован, public_url: ${publicUrl}`);
 
@@ -1610,6 +1631,8 @@ await pool.query(
           folder_name,
           yandex_path,
           public_url,
+          preview_placeholder,
+          blurhash,          
           width,
           height,
           file_size,
@@ -1619,11 +1642,12 @@ await pool.query(
           share_requested_at,
           share_approved_at,
           share_approved_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-        RETURNING
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)        RETURNING
           id,
           original_name,
           public_url,
+          preview_placeholder,
+          blurhash,          
           shared_folder_id,
           is_shared`,
         [
@@ -1633,6 +1657,8 @@ await pool.query(
           null,                 // folder_name - NULL для общей библиотеки
           filePath,             // yandex_path
           publicUrl,            // public_url
+          preview_placeholder,  // preview_placeholder
+          blurhash,             // blurhash          
           width,                // width
           height,               // height
           fileSize,             // file_size
