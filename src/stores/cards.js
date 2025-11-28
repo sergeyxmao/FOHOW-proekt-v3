@@ -789,6 +789,36 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
       historyStore.saveState()
 
       return true
+    },
+
+    updateAvatarUserData(avatarId, userData) {
+      const avatar = this.cards.find(c => c.id === avatarId && c.type === 'avatar')
+      if (!avatar) {
+        return false
+      }
+
+      if (userData === null) {
+        // Сброс на дефолтные значения
+        avatar.personalId = ''
+        avatar.userId = null
+        avatar.avatarUrl = '/Avatar.png'
+        avatar.username = ''
+      } else {
+        // Подстановка данных пользователя
+        avatar.personalId = userData.personalId || ''
+        avatar.userId = userData.id || null
+        avatar.avatarUrl = userData.avatarUrl || '/Avatar.png'
+        avatar.username = userData.username || ''
+      }
+
+      // Запись в историю
+      const historyStore = useHistoryStore()
+      historyStore.setActionMetadata('update', userData
+        ? `Привязан пользователь ${userData.username} к Аватару`
+        : 'Сброшена привязка пользователя к Аватару')
+      historyStore.saveState()
+
+      return true
     }
   }
 })

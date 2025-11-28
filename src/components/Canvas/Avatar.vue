@@ -18,6 +18,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'avatar-click',
+  'avatar-dblclick',
   'start-drag',
   'connection-point-click'
 ])
@@ -73,6 +74,11 @@ const handleAvatarClick = (event) => {
   }
 
   emit('avatar-click', event, props.avatar.id)
+}
+
+const handleAvatarDblClick = (event) => {
+  event.stopPropagation()
+  emit('avatar-dblclick', event, props.avatar.id)
 }
 
 const handlePointerDown = (event) => {
@@ -169,6 +175,10 @@ const adaptiveStrokeWidth = computed(() => {
   if (size <= 50) return baseStrokeWidth
   return baseStrokeWidth
 })
+
+const handleImageError = (event) => {
+  event.target.src = '/Avatar.png'
+}
 </script>
 
 <template>
@@ -176,6 +186,7 @@ const adaptiveStrokeWidth = computed(() => {
     class="avatar-object"
     :style="avatarStyle"
     @click="handleAvatarClick"
+    @dblclick="handleAvatarDblClick"
     @pointerdown="handlePointerDown"
   >
     <div class="avatar-circle" :style="circleStyle">
@@ -183,6 +194,7 @@ const adaptiveStrokeWidth = computed(() => {
         :src="avatar.avatarUrl || '/Avatar.png'"
         :alt="avatar.username || 'Avatar'"
         :style="imageStyle"
+        @error="handleImageError"
       />
     </div>
 

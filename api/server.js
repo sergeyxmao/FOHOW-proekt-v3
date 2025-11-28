@@ -1147,6 +1147,67 @@ app.get('/api/users/search-by-personal-id/:personalId', {
   }
 });
 
+// === ПРОВЕРКА КОМПЬЮТЕРНОГО НОМЕРА ДЛЯ АВАТАРА ===
+app.get('/api/users/by-personal-id/:personalId', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
+  try {
+    const { personalId } = req.params;
+
+    if (!personalId || !personalId.trim()) {
+      return reply.send({ success: false, error: 'NOT_FOUND' });
+    }
+
+    const normalizedPersonalId = personalId.trim().toUpperCase();
+
+    // Ищем пользователя
+    const result = await pool.query(
+      `SELECT
+        id,
+        username,
+        avatar_url,
+        is_verified,
+        search_settings
+       FROM users
+       WHERE personal_id = $1
+       LIMIT 1`,
+      [normalizedPersonalId]
+    );
+
+    // Пользователь не найден
+    if (result.rows.length === 0) {
+      return reply.send({ success: false, error: 'NOT_FOUND' });
+    }
+
+    const user = result.rows[0];
+
+    // Пользователь не верифицирован
+    if (!user.is_verified) {
+      return reply.send({ success: false, error: 'NOT_VERIFIED' });
+    }
+
+    // Проверяем настройки поиска
+    const searchSettings = user.search_settings || {};
+    if (searchSettings.personal_id === false) {
+      return reply.send({ success: false, error: 'SEARCH_DISABLED' });
+    }
+
+    // Успешный результат
+    return reply.send({
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        avatarUrl: user.avatar_url
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Ошибка проверки компьютерного номера:', err);
+    return reply.code(500).send({ success: false, error: 'SERVER_ERROR' });
+  }
+});
+
 // === УДАЛЕНИЕ АККАУНТА ===
 app.delete('/api/profile', {
   preHandler: [authenticateToken]
