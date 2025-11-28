@@ -13,6 +13,7 @@ import {
   copyFile
 } from '../services/yandexDiskService.js';
 import { syncSharedFoldersWithYandexDisk } from '../services/sharedFoldersSync.js';
+import { generateImagePlaceholders } from '../utils/imagePlaceholders.js';
 
 /**
  * Регистрация маршрутов для работы с библиотекой изображений
@@ -366,6 +367,8 @@ export function registerImageRoutes(app) {
               folder_name,
               public_url,
               preview_url,
+              preview_placeholder,
+              blurhash,              
               width,
               height,
               file_size,
@@ -388,6 +391,8 @@ export function registerImageRoutes(app) {
               folder_name,
               public_url,
               preview_url,
+              preview_placeholder,
+              blurhash,           
               width,
               height,
               file_size,
@@ -657,7 +662,11 @@ export function registerImageRoutes(app) {
         const publicUrl = publishResult.public_url;
         const previewUrl =
           publishResult.preview_url || publishResult.public_url;
-
+        const { preview_placeholder, blurhash } = await generateImagePlaceholders({
+          buffer,
+          mimeType,
+          previewUrl
+        });
         // Сохранить запись в БД
         const insertResult = await pool.query(
           `
@@ -668,13 +677,15 @@ export function registerImageRoutes(app) {
             folder_name,
             public_url,
             preview_url,
+            preview_placeholder,
+            blurhash,            
             width,
             height,
             file_size,
             yandex_path,
             moderation_status
           ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
           )
           RETURNING
             id,
@@ -683,6 +694,8 @@ export function registerImageRoutes(app) {
             folder_name,
             public_url,
             preview_url,
+            preview_placeholder,
+            blurhash,            
             width,
             height,
             file_size,
@@ -696,6 +709,8 @@ export function registerImageRoutes(app) {
             folderNameForDB,
             publicUrl,
             previewUrl,
+            preview_placeholder,
+            blurhash,            
             width,
             height,
             fileSize,
@@ -1156,6 +1171,8 @@ export function registerImageRoutes(app) {
               il.original_name,
               il.public_url,
               il.preview_url,
+              il.preview_placeholder,
+              il.blurhash,              
               il.width,
               il.height,
               il.file_size,
