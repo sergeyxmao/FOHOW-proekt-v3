@@ -62,13 +62,13 @@ async function handleErrorResponse(response, defaultMessage = 'Произошл�
         error.message = 'Нет прав доступа к этому ресурсу.';
       }
       break;
-    case 413:
     case 404:
       error.code = error.code || 'NOT_FOUND';
       if (!normalizedData.error) {
         error.message = 'Ресурс не найден или был удалён.';
       }
-      break;      
+      break;
+    case 413:
       error.code = error.code || 'FILE_TOO_LARGE';
       error.message = normalizedData.error || 'Файл слишком большой. Максимальный размер файла превышен.';
       break;
