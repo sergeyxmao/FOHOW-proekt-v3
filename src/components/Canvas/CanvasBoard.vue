@@ -242,6 +242,7 @@ const createSelectionBaseState = () => ({
 });
 let selectionBaseSelection = createSelectionBaseState();
 let suppressNextStageClick = false;
+const selectionCursorPosition = ref(null);
 
 const clearObjectSelections = ({ preserveCardSelection = false } = {}) => {
   if (!preserveCardSelection) {
@@ -1822,6 +1823,23 @@ const selectionBoxStyle = computed(() => {
     height: `${height}px`
   };
 });
+const selectionCounterStyle = computed(() => {
+  if (!selectionCursorPosition.value) {
+    return {};
+  }
+
+  const offset = 14;
+  return {
+    left: `${selectionCursorPosition.value.x + offset}px`,
+    top: `${selectionCursorPosition.value.y + offset}px`
+  };
+});
+
+const selectedObjectsCount = computed(() =>
+  cardsStore.selectedCardIds.length
+  + stickersStore.selectedStickerIds.length
+  + imagesStore.selectedImageIds.length
+);
 
 const connectionPaths = computed(() => {
   return connections.value
@@ -2413,7 +2431,8 @@ const applySelectionFromRect = (rect) => {
   const nextSelectionCardIds = new Set();
   const nextSelectionStickerIds = new Set();
   const nextSelectionImageIds = new Set();
-
+  
+  // Сохраняем существующее выделение, если оно ещё актуально
   selectionBaseSelection.cardIds.forEach((id) => {
     if (cardsStore.cards.some(card => card.id === id)) {
       nextSelectionCardIds.add(id);
@@ -2450,7 +2469,25 @@ const applySelectionFromRect = (rect) => {
         nextSelectionCardIds.add(cardId);
       }
     });
+    // Проверяем аватары
+    const avatarElements = canvasContainerRef.value.querySelectorAll('.avatar-object');
+    avatarElements.forEach((element) => {
+      const avatarId = element.dataset.avatarId;
+      if (!avatarId) {
+        return;
+      }
 
+      const avatarRect = element.getBoundingClientRect();
+      const intersects =
+        avatarRect.left < rect.right &&
+        avatarRect.right > rect.left &&
+        avatarRect.top < rect.bottom &&
+        avatarRect.bottom > rect.top;
+
+      if (intersects) {
+        nextSelectionCardIds.add(avatarId);
+      }
+    });
     // Проверяем стикеры
     const stickerElements = canvasContainerRef.value.querySelectorAll('.sticker');
     stickerElements.forEach((element) => {
@@ -2537,6 +2574,8 @@ const updateSelectionRectFromEvent = (event) => {
   };
 
   selectionRect.value = rect;
+  selectionCursorPosition.value = { x: event.clientX, y: event.clientY };
+
   applySelectionFromRect(rect);
 };
 
@@ -2547,6 +2586,7 @@ const finishSelection = () => {
   selectionRect.value = null;
   selectionStartPoint = null;
   selectionBaseSelection = createSelectionBaseState();
+  selectionCursorPosition.value = null;
 
   setTimeout(() => {
     suppressNextStageClick = false;
@@ -2585,6 +2625,7 @@ const startSelection = (event) => {
   suppressNextStageClick = true;
   isSelecting.value = true;
   selectionStartPoint = { x: event.clientX, y: event.clientY };
+    selectionCursorPosition.value = { ...selectionStartPoint };
 
   // Сохраняем базовое выделение (включая карточки и стикеры)
   if (event.ctrlKey || event.metaKey) {
@@ -4610,8 +4651,15 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       v-if="selectionRect"
       class="selection-box"
       :style="selectionBoxStyle"
-    ></div>  
-    <div class="canvas-content" :style="canvasContentStyle" @click="handleStageClick" @dragover.prevent="handleImageDragOver" @drop.prevent="handleImageDrop">
+    ></div>
+    <div
+      v-if="selectionRect && selectedObjectsCount > 0"
+      class="selection-counter"
+      :style="selectionCounterStyle"
+    >
+      {{ selectedObjectsCount }}
+    </div>
+  <div class="canvas-content" :style="canvasContentStyle" @click="handleStageClick" @dragover.prevent="handleImageDragOver" @drop.prevent="handleImageDrop">
       <div
         v-if="guidesEnabled && (activeGuides.vertical !== null || activeGuides.horizontal !== null)"
         class="guides-overlay"
@@ -5167,6 +5215,21 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   pointer-events: none;
   z-index: 4000;
 }
+.selection-counter {
+  position: fixed;
+  z-index: 4001;
+  min-width: 36px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.95);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+  pointer-events: none;
+}  
 @keyframes linePvFlow {
   0% {
     stroke-dashoffset: -18;
