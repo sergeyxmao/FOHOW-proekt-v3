@@ -16,6 +16,7 @@ import Sticker from './Sticker.vue';
 import CanvasImage from './CanvasImage.vue';
 import AnchorPoint from './AnchorPoint.vue';  
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
+import { useBezierCurves } from '../../composables/useBezierCurves';
 import { getHeaderColorRgb } from '../../utils/constants';
 import { batchDeleteCards } from '../../utils/historyOperations';
 import { usePanZoom } from '../../composables/usePanZoom';
@@ -66,7 +67,7 @@ const canvasStore = useCanvasStore();
 const viewSettingsStore = useViewSettingsStore();
 
 const { cards } = storeToRefs(cardsStore);
-const { connections } = storeToRefs(connectionsStore);
+const { connections, avatarConnections } = storeToRefs(connectionsStore);
 const { images } = storeToRefs(imagesStore);
 const { selectedAnchorId, pendingFocusAnchorId, placementMode, targetViewPoint } = storeToRefs(boardStore);
 const { anchors } = storeToRefs(anchorsStore);
@@ -204,6 +205,12 @@ const previewLine = ref(null);
 const previewLineWidth = computed(() => connectionsStore.defaultLineThickness || 2);
 const mousePosition = ref({ x: 0, y: 0 });
 const selectedConnectionIds = ref([]);
+const selectedAvatarConnectionIds = ref([]);
+const avatarConnectionStart = ref(null); // { avatarId, pointIndex, pointAngle }
+const draggingControlPoint = ref(null); // { connectionId, pointIndex }
+
+// Инициализация composable для кривых Безье
+const { buildBezierPath, getAvatarConnectionPoint, calculateMidpoint, findClosestPointOnBezier, isPointNearBezier } = useBezierCurves();
 const dragState = ref(null);
 
 // State для resize-операций изображений
@@ -1832,9 +1839,44 @@ const connectionPaths = computed(() => {
     .filter(Boolean);
 });
 
+// Пути для avatar-соединений с кривыми Безье
+const avatarConnectionPaths = computed(() => {
+  return avatarConnections.value
+    .map(connection => {
+      const fromAvatar = cards.value.find(card => card.id === connection.from && card.type === 'avatar');
+      const toAvatar = cards.value.find(card => card.id === connection.to && card.type === 'avatar');
+
+      if (!fromAvatar || !toAvatar) return null;
+
+      // Получить координаты точек соединения
+      const fromPoint = getAvatarConnectionPoint(fromAvatar, connection.fromPointIndex);
+      const toPoint = getAvatarConnectionPoint(toAvatar, connection.toPointIndex);
+
+      // Построить массив точек для кривой Безье
+      const points = [fromPoint, ...connection.controlPoints, toPoint];
+
+      // Построить SVG path
+      const d = buildBezierPath(points);
+
+      if (!d) return null;
+
+      return {
+        id: connection.id,
+        type: 'avatar-connection',
+        d,
+        points, // Сохраняем точки для отображения контрольных точек
+        color: connection.color || connectionsStore.defaultLineColor,
+        strokeWidth: connection.thickness || connectionsStore.defaultLineThickness,
+        highlightType: connection.highlightType || null,
+        animationDuration: connection.animationDuration ?? connectionsStore.defaultAnimationDuration
+      };
+    })
+    .filter(Boolean);
+});
+
 const previewLinePath = computed(() => {
   if (!isDrawingLine.value || !connectionStart.value) return null;
-  
+
   const fromCard = cards.value.find(card => card.id === connectionStart.value.cardId);
   if (!fromCard) return null;
 
@@ -1844,6 +1886,26 @@ const previewLinePath = computed(() => {
   return {
     d,
     color: '#ff9800',
+    strokeWidth: previewLineWidth.value,
+    strokeDasharray: '5,5'
+  };
+});
+
+// Preview линия для avatar-соединений
+const avatarPreviewLinePath = computed(() => {
+  if (!avatarConnectionStart.value) return null;
+
+  const fromAvatar = cards.value.find(card => card.id === avatarConnectionStart.value.avatarId && card.type === 'avatar');
+  if (!fromAvatar) return null;
+
+  const startPoint = getAvatarConnectionPoint(fromAvatar, avatarConnectionStart.value.pointIndex);
+  const endPoint = mousePosition.value;
+
+  const d = `M ${startPoint.x} ${startPoint.y} L ${endPoint.x} ${endPoint.y}`;
+
+  return {
+    d,
+    color: '#5D8BF4',
     strokeWidth: previewLineWidth.value,
     strokeDasharray: '5,5'
   };
@@ -3404,9 +3466,9 @@ const cancelDrawing = () => {
 
 const handleLineClick = (event, connectionId) => {
   event.stopPropagation();
-  
+
   const isCtrlPressed = event.ctrlKey || event.metaKey;
-  
+
   if (isCtrlPressed) {
     const index = selectedConnectionIds.value.indexOf(connectionId);
     if (index > -1) {
@@ -3421,10 +3483,165 @@ const handleLineClick = (event, connectionId) => {
       selectedConnectionIds.value = [connectionId];
     }
   }
-  
+
   cardsStore.deselectAllCards();
   selectedCardId.value = null;
   cancelDrawing();
+};
+
+// Обработчик клика на avatar-соединение
+const handleAvatarLineClick = (event, connectionId) => {
+  event.stopPropagation();
+
+  const isCtrlPressed = event.ctrlKey || event.metaKey;
+
+  if (isCtrlPressed) {
+    const index = selectedAvatarConnectionIds.value.indexOf(connectionId);
+    if (index > -1) {
+      selectedAvatarConnectionIds.value.splice(index, 1);
+    } else {
+      selectedAvatarConnectionIds.value.push(connectionId);
+    }
+  } else {
+    if (selectedAvatarConnectionIds.value.length === 1 && selectedAvatarConnectionIds.value[0] === connectionId) {
+      selectedAvatarConnectionIds.value = [];
+    } else {
+      selectedAvatarConnectionIds.value = [connectionId];
+    }
+  }
+
+  cardsStore.deselectAllCards();
+  selectedCardId.value = null;
+  selectedConnectionIds.value = [];
+  avatarConnectionStart.value = null;
+};
+
+// Обработчик клика на точку соединения аватара
+const handleAvatarConnectionPointClick = (data) => {
+  const { avatarId, pointIndex, pointAngle, event } = data;
+
+  // Если уже начато рисование линии от другого аватара
+  if (avatarConnectionStart.value && avatarConnectionStart.value.avatarId !== avatarId) {
+    // Проверка: нельзя соединить аватар с лицензией
+    const fromAvatar = cards.value.find(c => c.id === avatarConnectionStart.value.avatarId);
+    const toCard = cards.value.find(c => c.id === avatarId);
+
+    if (fromAvatar && toCard) {
+      if (fromAvatar.type === 'avatar' && toCard.type !== 'avatar') {
+        // Нельзя соединить аватар с лицензией
+        console.warn('Нельзя соединить аватар с лицензией');
+        avatarConnectionStart.value = null;
+        return;
+      }
+
+      // Создать соединение
+      const fromPoint = getAvatarConnectionPoint(fromAvatar, avatarConnectionStart.value.pointIndex);
+      const toPoint = getAvatarConnectionPoint(toCard, pointIndex);
+      const midpoint = calculateMidpoint(fromPoint, toPoint);
+
+      connectionsStore.addAvatarConnection(
+        avatarConnectionStart.value.avatarId,
+        avatarId,
+        {
+          fromPointIndex: avatarConnectionStart.value.pointIndex,
+          toPointIndex: pointIndex,
+          controlPoints: [midpoint]
+        }
+      );
+    }
+
+    avatarConnectionStart.value = null;
+  } else {
+    // Начать рисование линии от этого аватара
+    avatarConnectionStart.value = {
+      avatarId,
+      pointIndex,
+      pointAngle
+    };
+  }
+};
+
+// Обработчик двойного клика на avatar-линии (добавление точки изгиба)
+const handleAvatarLineDoubleClick = (event, connectionId) => {
+  event.stopPropagation();
+
+  const connection = avatarConnections.value.find(c => c.id === connectionId);
+  if (!connection) return;
+
+  // Найти ближайшую точку на кривой
+  const fromAvatar = cards.value.find(card => card.id === connection.from && card.type === 'avatar');
+  const toAvatar = cards.value.find(card => card.id === connection.to && card.type === 'avatar');
+
+  if (!fromAvatar || !toAvatar) return;
+
+  const fromPoint = getAvatarConnectionPoint(fromAvatar, connection.fromPointIndex);
+  const toPoint = getAvatarConnectionPoint(toAvatar, connection.toPointIndex);
+  const points = [fromPoint, ...connection.controlPoints, toPoint];
+
+  // Получить координаты клика относительно canvas
+  const rect = event.target.getBoundingClientRect();
+  const x = event.clientX - rect.left + event.target.closest('.canvas-content').scrollLeft;
+  const y = event.clientY - rect.top + event.target.closest('.canvas-content').scrollTop;
+
+  const closest = findClosestPointOnBezier(points, x, y);
+
+  if (closest && closest.index > 0) {
+    // Добавить контрольную точку в позицию closest.index
+    const newControlPoints = [...connection.controlPoints];
+    newControlPoints.splice(closest.index - 1, 0, { x: closest.x, y: closest.y });
+
+    connectionsStore.updateAvatarConnection(connectionId, {
+      controlPoints: newControlPoints
+    });
+  }
+};
+
+// Обработчик двойного клика на контрольной точке (удаление)
+const handleControlPointDoubleClick = (event, connectionId, pointIndex) => {
+  event.stopPropagation();
+
+  const connection = avatarConnections.value.find(c => c.id === connectionId);
+  if (!connection) return;
+
+  const newControlPoints = connection.controlPoints.filter((_, i) => i !== pointIndex);
+
+  connectionsStore.updateAvatarConnection(connectionId, {
+    controlPoints: newControlPoints
+  });
+};
+
+// Обработчик начала перетаскивания контрольной точки
+const handleControlPointDragStart = (event, connectionId, pointIndex) => {
+  event.stopPropagation();
+
+  draggingControlPoint.value = {
+    connectionId,
+    pointIndex
+  };
+};
+
+// Обработчик перетаскивания контрольной точки
+const handleControlPointDrag = (event) => {
+  if (!draggingControlPoint.value) return;
+
+  const connection = avatarConnections.value.find(c => c.id === draggingControlPoint.value.connectionId);
+  if (!connection) return;
+
+  const rect = event.target.getBoundingClientRect();
+  const x = event.clientX - rect.left + event.target.closest('.canvas-content').scrollLeft;
+  const y = event.clientY - rect.top + event.target.closest('.canvas-content').scrollTop;
+
+  const newControlPoints = [...connection.controlPoints];
+  newControlPoints[draggingControlPoint.value.pointIndex] = { x, y };
+
+  connectionsStore.updateAvatarConnection(draggingControlPoint.value.connectionId, {
+    controlPoints: newControlPoints
+  });
+};
+
+// Обработчик завершения перетаскивания контрольной точки
+const handleControlPointDragEnd = () => {
+  draggingControlPoint.value = null;
 };
 
 const handleCardClick = (event, cardId) => {
@@ -4341,6 +4558,63 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           />
         </g>
 
+        <!-- Avatar-соединения с кривыми Безье -->
+        <g
+          v-for="path in avatarConnectionPaths"
+          :key="path.id"
+          class="avatar-line-group"
+          :data-connection-id="path.id"
+          @click.stop="(event) => handleAvatarLineClick(event, path.id)"
+          @dblclick.stop="(event) => handleAvatarLineDoubleClick(event, path.id)"
+        >
+          <!-- Невидимая область для клика (hitbox) -->
+          <path
+            :d="path.d"
+            class="line-hitbox"
+            @click.stop="(event) => handleAvatarLineClick(event, path.id)"
+            @dblclick.stop="(event) => handleAvatarLineDoubleClick(event, path.id)"
+          />
+          <!-- Видимая линия -->
+          <path
+            :d="path.d"
+            :class="[
+              'line',
+              'avatar-line',
+              {
+                selected: selectedAvatarConnectionIds.includes(path.id)
+              }
+            ]"
+            :style="{
+              '--line-color': path.color,
+              '--line-width': `${path.strokeWidth}px`,
+              '--line-animation-duration': `${path.animationDuration}ms`,
+              color: path.color,
+              stroke: path.color,
+              strokeWidth: path.strokeWidth
+            }"
+          />
+
+          <!-- Контрольные точки (видны только когда линия выделена) -->
+          <g v-if="selectedAvatarConnectionIds.includes(path.id)">
+            <circle
+              v-for="(point, index) in path.points.slice(1, -1)"
+              :key="`control-${path.id}-${index}`"
+              :cx="point.x"
+              :cy="point.y"
+              r="5"
+              class="control-point"
+              :style="{
+                fill: '#ffffff',
+                stroke: path.color,
+                strokeWidth: '2px',
+                cursor: 'move'
+              }"
+              @mousedown.stop="(event) => handleControlPointDragStart(event, path.id, index)"
+              @dblclick.stop="(event) => handleControlPointDoubleClick(event, path.id, index)"
+            />
+          </g>
+        </g>
+
         <path
           v-if="previewLinePath"
           :d="previewLinePath.d"
@@ -4353,6 +4627,20 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           :stroke-dasharray="previewLinePath.strokeDasharray"
           marker-start="url(#marker-dot)"
           marker-end="url(#marker-dot)"
+        />
+
+        <!-- Preview линия для avatar-соединений -->
+        <path
+          v-if="avatarPreviewLinePath"
+          :d="avatarPreviewLinePath.d"
+          class="line line--preview avatar-preview-line"
+          :style="{
+            '--line-color': avatarPreviewLinePath.color,
+            '--line-width': `${avatarPreviewLinePath.strokeWidth}px`,
+            color: avatarPreviewLinePath.color,
+            stroke: avatarPreviewLinePath.color
+          }"
+          :stroke-dasharray="avatarPreviewLinePath.strokeDasharray"
         />
       </svg>
             <div class="anchors-layer">
@@ -4394,8 +4682,10 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           :key="avatar.id"
           :avatar="avatar"
           :is-selected="avatar.selected"
+          :is-drawing-line="!!avatarConnectionStart"
           @avatar-click="(event) => handleCardClick(event, avatar.id)"
           @start-drag="startDrag"
+          @connection-point-click="handleAvatarConnectionPointClick"
           style="pointer-events: auto;"
           />
       </div>
@@ -4546,6 +4836,42 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   stroke-width: var(--line-width, 2px);
   stroke-dasharray: 5 5;
   pointer-events: none;
+}
+
+/* Стили для avatar-линий */
+.avatar-line {
+  fill: none;
+  stroke: var(--line-color, #5D8BF4);
+  stroke-width: var(--line-width, 5px);
+  pointer-events: none;
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, .15));
+  transition: stroke-width 0.2s ease, filter 0.2s ease, stroke 0.2s ease;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.avatar-line.selected {
+  stroke: #5D8BF4 !important;
+  stroke-width: calc(var(--line-width, 5px) + 2px) !important;
+  filter: drop-shadow(0 0 12px rgba(93, 139, 244, 0.8));
+}
+
+.avatar-preview-line {
+  stroke: #5D8BF4;
+  stroke-width: var(--line-width, 2px);
+  stroke-dasharray: 5 5;
+  pointer-events: none;
+}
+
+/* Контрольные точки для avatar-линий */
+.control-point {
+  cursor: move;
+  transition: r 0.2s ease;
+}
+
+.control-point:hover {
+  r: 7;
+  filter: drop-shadow(0 0 4px rgba(93, 139, 244, 0.6));
 }
 
 .line--balance-highlight {
