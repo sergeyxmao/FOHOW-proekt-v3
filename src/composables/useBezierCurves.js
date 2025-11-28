@@ -44,7 +44,7 @@ export function buildBezierPath(points) {
 /**
  * Получить координаты точки соединения аватара
  * @param {Object} avatar - Объект аватара
- * @param {number} pointIndex - Индекс точки (1-9)
+ * @param {number} pointIndex - Индекс точки (1-10)
  * @returns {Object} Координаты {x, y}
  */
 export function getAvatarConnectionPoint(avatar, pointIndex) {
@@ -52,8 +52,8 @@ export function getAvatarConnectionPoint(avatar, pointIndex) {
   const radius = diameter / 2
   const offset = 5
 
-  // Углы для 9 точек (0°, 40°, 80°, 120°, 160°, 200°, 240°, 280°, 320°)
-  const angles = [0, 40, 80, 120, 160, 200, 240, 280, 320]
+  // Углы для 10 точек (0°, 40°, 80°, 120°, 160°, 180°, 200°, 240°, 280°, 320°)
+  const angles = [0, 40, 80, 120, 160, 180, 200, 240, 280, 320]
   const angle = angles[pointIndex - 1] || 0
 
   const angleRad = angle * Math.PI / 180
