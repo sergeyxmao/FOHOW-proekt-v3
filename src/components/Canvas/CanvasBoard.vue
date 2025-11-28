@@ -3425,14 +3425,27 @@ const handlePointerDown = (event) => {
 
   if (!isSelecting.value && !isDrawingLine.value) {
     const isCardTarget = event.target.closest('.card');
+    const isAvatarTarget = event.target.closest('.avatar-object');    
     const isStickerTarget = event.target.closest('.sticker');
     const isImageTarget = event.target.closest('.canvas-image');
     const isNoteTarget = event.target.closest('.note-window');
     const isAnchorTarget = event.target.closest('.anchor-point');
+    const isConnectionTarget = event.target.closest('.line-group, .avatar-line-group, .line');
+    const isControlPointTarget = event.target.closest('.control-point');    
     const interactiveTarget = event.target.closest('button, input, textarea, select, [contenteditable="true"], a[href]');
 
     // Начинаем выделение только если клик по пустой области
-    if (!isCardTarget && !isStickerTarget && !isImageTarget && !isNoteTarget && !isAnchorTarget && !interactiveTarget) {
+    if (
+      !isCardTarget &&
+      !isAvatarTarget &&
+      !isStickerTarget &&
+      !isImageTarget &&
+      !isNoteTarget &&
+      !isAnchorTarget &&
+      !isConnectionTarget &&
+      !isControlPointTarget &&
+      !interactiveTarget
+    ) {
       startSelection(event);
       return;
     }
@@ -3579,7 +3592,9 @@ const handleAvatarLineDoubleClick = (event, connectionId) => {
 
   const connection = avatarConnections.value.find(c => c.id === connectionId);
   if (!connection) return;
-
+  if (Array.isArray(connection.controlPoints) && connection.controlPoints.length >= 3) {
+    return;
+  }
   // Найти ближайшую точку на кривой
   const fromAvatar = cards.value.find(card => card.id === connection.from && card.type === 'avatar');
   const toAvatar = cards.value.find(card => card.id === connection.to && card.type === 'avatar');
@@ -3590,10 +3605,7 @@ const handleAvatarLineDoubleClick = (event, connectionId) => {
   const toPoint = getAvatarConnectionPoint(toAvatar, connection.toPointIndex);
   const points = [fromPoint, ...connection.controlPoints, toPoint];
 
-  // Получить координаты клика относительно canvas
-  const rect = event.target.getBoundingClientRect();
-  const x = event.clientX - rect.left + event.target.closest('.canvas-content').scrollLeft;
-  const y = event.clientY - rect.top + event.target.closest('.canvas-content').scrollTop;
+  const { x, y } = screenToCanvas(event.clientX, event.clientY);
 
   const closest = findClosestPointOnBezier(points, x, y);
 
@@ -3601,7 +3613,9 @@ const handleAvatarLineDoubleClick = (event, connectionId) => {
     // Добавить контрольную точку в позицию closest.index
     const newControlPoints = [...connection.controlPoints];
     newControlPoints.splice(closest.index - 1, 0, { x: closest.x, y: closest.y });
-
+    if (newControlPoints.length > 3) {
+      newControlPoints.length = 3;
+    }
     connectionsStore.updateAvatarConnection(connectionId, {
       controlPoints: newControlPoints
     });
@@ -3630,6 +3644,10 @@ const handleControlPointDragStart = (event, connectionId, pointIndex) => {
     connectionId,
     pointIndex
   };
+
+  window.addEventListener('pointermove', handleControlPointDrag, { passive: false });
+  window.addEventListener('pointerup', handleControlPointDragEnd);
+  window.addEventListener('pointercancel', handleControlPointDragEnd);  
 };
 
 // Обработчик перетаскивания контрольной точки
@@ -3639,9 +3657,9 @@ const handleControlPointDrag = (event) => {
   const connection = avatarConnections.value.find(c => c.id === draggingControlPoint.value.connectionId);
   if (!connection) return;
 
-  const rect = event.target.getBoundingClientRect();
-  const x = event.clientX - rect.left + event.target.closest('.canvas-content').scrollLeft;
-  const y = event.clientY - rect.top + event.target.closest('.canvas-content').scrollTop;
+  event.preventDefault();
+
+  const { x, y } = screenToCanvas(event.clientX, event.clientY);
 
   const newControlPoints = [...connection.controlPoints];
   newControlPoints[draggingControlPoint.value.pointIndex] = { x, y };
@@ -3654,6 +3672,9 @@ const handleControlPointDrag = (event) => {
 // Обработчик завершения перетаскивания контрольной точки
 const handleControlPointDragEnd = () => {
   draggingControlPoint.value = null;
+  window.removeEventListener('pointermove', handleControlPointDrag);
+  window.removeEventListener('pointerup', handleControlPointDragEnd);
+  window.removeEventListener('pointercancel', handleControlPointDragEnd);  
 };
 
 const handleCardClick = (event, cardId) => {
@@ -3982,7 +4003,18 @@ const deleteSelectedConnections = () => {
   selectedConnectionIds.value = [];
   console.log('Connections deleted');
 };
+const deleteSelectedAvatarConnections = () => {
+  if (selectedAvatarConnectionIds.value.length === 0) return;
 
+  console.log('Deleting avatar connections:', selectedAvatarConnectionIds.value);
+
+  selectedAvatarConnectionIds.value.forEach(connectionId => {
+    connectionsStore.removeAvatarConnection(connectionId);
+  });
+
+  selectedAvatarConnectionIds.value = [];
+  console.log('Avatar connections deleted');
+};
 const deleteSelectedImages = () => {
   if (imagesStore.selectedImageIds.length === 0) return;
 
@@ -4044,7 +4076,10 @@ const handleKeydown = (event) => {
     deleteSelectedImages();
     return;
   }
-
+  if (selectedAvatarConnectionIds.value.length > 0) {
+    deleteSelectedAvatarConnections();
+    return;
+  }
   if (selectedConnectionIds.value.length > 0) {
     deleteSelectedConnections();
     return;
