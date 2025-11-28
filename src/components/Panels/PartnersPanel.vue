@@ -18,6 +18,102 @@ const authStore = useAuthStore()
 const cardsStore = useCardsStore()
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
+// Подготовка ссылок на VK/Telegram/Instagram
+const normalizeHandle = (handle) => handle?.toString().trim().replace(/^@/, '') || ''
+
+const buildVkLink = (profileUrl) => {
+  if (!profileUrl) return ''
+
+  const trimmed = profileUrl.trim()
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed
+  }
+
+  if (/^www\./i.test(trimmed)) {
+    return `https://${trimmed}`
+  }
+
+  if (/^vk\.com/i.test(trimmed)) {
+    return `https://${trimmed}`
+  }
+
+  const username = normalizeHandle(trimmed)
+  return `https://vk.com/${username}`
+}
+
+// Телефонные утилиты
+const normalizePhone = (phone) => phone?.toString().replace(/[^+\d]/g, '').trim() || ''
+
+const isMobileDevice = () => /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
+const copyPhoneToClipboard = async (phone) => {
+  try {
+    await navigator.clipboard?.writeText(phone)
+  } catch (err) {
+    console.warn('Не удалось скопировать номер телефона', err)
+  }
+}
+
+const handlePhoneClick = async (phone) => {
+  const normalized = normalizePhone(phone)
+  if (!normalized) return
+
+  const telLink = `tel:${normalized}`
+  window.location.href = telLink
+
+  if (isMobileDevice()) {
+    setTimeout(() => {
+      copyPhoneToClipboard(phone)
+    }, 120)
+  }
+}
+
+const buildTelegramAppLink = (handle) => {
+  const username = normalizeHandle(handle)
+  return `tg://resolve?domain=${username}`
+}
+
+const buildTelegramWebLink = (handle) => {
+  const username = normalizeHandle(handle)
+  return `https://t.me/${username}`
+}
+
+const buildInstagramAppLink = (handle) => {
+  const username = normalizeHandle(handle)
+  return `instagram://user?username=${username}`
+}
+
+const buildInstagramWebLink = (handle) => {
+  const username = normalizeHandle(handle)
+  return `https://instagram.com/${username}`
+}
+
+const openTelegram = (handle) => {
+  const username = handle || '@sergeyxmao'
+  const appLink = buildTelegramAppLink(username)
+  const webLink = buildTelegramWebLink(username)
+
+  const appWindow = window.open(appLink, '_blank')
+  setTimeout(() => {
+    if (!appWindow || appWindow.closed) {
+      window.open(webLink, '_blank')
+    }
+  }, 150)
+}
+
+const openInstagram = (handle) => {
+  if (!handle) return
+
+  const appLink = buildInstagramAppLink(handle)
+  const webLink = buildInstagramWebLink(handle)
+
+  const appWindow = window.open(appLink, '_blank')
+  setTimeout(() => {
+    if (!appWindow || appWindow.closed) {
+      window.open(webLink, '_blank')
+    }
+  }, 150)
+}
 
 const partners = ref([])
 const searchQuery = ref('')
@@ -207,52 +303,113 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
 
         <!-- Компьютерный номер - всегда виден -->
         <div class="partner-details-field">
+          <span class="partner-details-icon" aria-hidden="true">🆔</span>          
           <span class="partner-details-label">Номер:</span>
           <span>{{ selectedPartner.personal_id }}</span>
         </div>
 
-        <!-- Локация: город и/или страна -->
-        <div
-          v-if="selectedPartner.city || selectedPartner.country"
-          class="partner-details-field"
-        >
-          <span class="partner-details-label">Локация:</span>
-          <span>
-            <template v-if="selectedPartner.city">{{ selectedPartner.city }}</template>
-            <template v-if="selectedPartner.city && selectedPartner.country">, </template>
-            <template v-if="selectedPartner.country">{{ selectedPartner.country }}</template>
-          </span>
-        </div>
-        <div v-else class="partner-details-field">
-          <span class="partner-details-label">Локация:</span>
-          <span class="partner-details-hidden">🔒 Скрыто</span>
-        </div>
-
         <!-- Представительство -->
         <div class="partner-details-field">
+          <span class="partner-details-icon" aria-hidden="true">🏢</span>          
           <span class="partner-details-label">Представительство:</span>
           <span v-if="selectedPartner.office">{{ selectedPartner.office }}</span>
           <span v-else class="partner-details-hidden">🔒 Скрыто</span>
         </div>
+        <!-- Страна -->
+        <div class="partner-details-field">
+          <span class="partner-details-icon" aria-hidden="true">🌍</span>
+          <span class="partner-details-label">Страна:</span>
+          <span v-if="selectedPartner.country">{{ selectedPartner.country }}</span>
+          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+        </div>
 
+        <!-- Город -->
+        <div class="partner-details-field">
+          <span class="partner-details-icon" aria-hidden="true">🏙️</span>
+          <span class="partner-details-label">Город:</span>
+          <span v-if="selectedPartner.city">{{ selectedPartner.city }}</span>
+          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+        </div>
         <!-- Телефон -->
         <div class="partner-details-field">
+          <span class="partner-details-icon" aria-hidden="true">📞</span>          
           <span class="partner-details-label">Телефон:</span>
-          <span v-if="selectedPartner.phone">{{ selectedPartner.phone }}</span>
+          <span v-if="selectedPartner.phone">
+            <a
+              :href="`tel:${normalizePhone(selectedPartner.phone)}`"
+              class="partner-details-link"
+              @click.prevent="handlePhoneClick(selectedPartner.phone)"
+            >
+              {{ selectedPartner.phone }}
+            </a>
+          </span>
+          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+        </div>
+
+        <!-- VK -->
+        <div class="partner-details-field">
+          <span class="partner-details-icon" aria-hidden="true">🟦</span>
+          <span class="partner-details-label">VK:</span>
+          <span v-if="selectedPartner.vk_profile">
+            <a
+              :href="buildVkLink(selectedPartner.vk_profile)"
+              class="partner-details-link"
+              target="_blank"
+              rel="noopener"
+            >
+              {{ selectedPartner.username || 'Профиль' }}
+            </a>
+          </span>
           <span v-else class="partner-details-hidden">🔒 Скрыто</span>
         </div>
 
         <!-- Telegram -->
         <div class="partner-details-field">
+          <span class="partner-details-icon" aria-hidden="true">✈️</span>          
           <span class="partner-details-label">Telegram:</span>
-          <span v-if="selectedPartner.telegram_user">{{ selectedPartner.telegram_user }}</span>
-          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+          <span v-if="selectedPartner.telegram_user">
+            <a
+              :href="buildTelegramWebLink(selectedPartner.telegram_user)"
+              class="partner-details-link"
+              target="_blank"
+              rel="noopener"
+              @click.prevent="openTelegram(selectedPartner.telegram_user)"
+            >
+              {{ selectedPartner.telegram_user.startsWith('@')
+                ? selectedPartner.telegram_user
+                : '@' + selectedPartner.telegram_user }}
+            </a>
+          </span>
+          <span v-else>
+            <a
+              :href="buildTelegramWebLink('@sergeyxmao')"
+              class="partner-details-link"
+              target="_blank"
+              rel="noopener"
+              @click.prevent="openTelegram('@sergeyxmao')"
+            >
+              @sergeyxmao
+            </a>
+          </span>
         </div>
 
         <!-- Instagram -->
         <div class="partner-details-field">
+          <span class="partner-details-icon" aria-hidden="true">📸</span>          
           <span class="partner-details-label">Instagram:</span>
-          <span v-if="selectedPartner.instagram_profile">{{ selectedPartner.instagram_profile }}</span>
+          <span v-if="selectedPartner.instagram_profile">
+            <a
+              :href="buildInstagramWebLink(selectedPartner.instagram_profile)"
+              class="partner-details-link"
+              target="_blank"
+              rel="noopener"
+              @click.prevent="openInstagram(selectedPartner.instagram_profile)"
+            >
+              {{ selectedPartner.instagram_profile.startsWith('@')
+                ? selectedPartner.instagram_profile
+                : '@' + selectedPartner.instagram_profile }}
+            </a>
+          </span>
           <span v-else class="partner-details-hidden">🔒 Скрыто</span>
         </div>
       </div>
@@ -491,6 +648,14 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
   display: flex;
   gap: 6px;
 }
+.partner-details-link {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.partner-details-link:hover {
+  text-decoration: underline;
+}
 
 .partner-details-label {
   font-weight: 500;
@@ -503,7 +668,13 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
   font-style: italic;
   font-size: 12px;
 }
-
+.partner-details-icon {
+  width: 18px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+}
 .partner-details-close {
   position: absolute;
   top: 12px;
