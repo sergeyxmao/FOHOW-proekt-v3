@@ -98,6 +98,9 @@ const stageConfig = ref({
   height: 0
 });
 const CANVAS_PADDING = 400;
+const IMAGE_CACHE_LIMIT = 120;
+const OFFSCREEN_CACHE_LIMIT = 80;
+const IMAGE_VIRTUALIZATION_OVERSCAN = 800;
 
 const canvasContainerRef = ref(null);
 const {
@@ -158,6 +161,39 @@ const canvasContentStyle = computed(() => {
 
   return style;
 });
+
+
+const createLruCache = (limit) => {
+  const map = new Map();
+
+  const touch = (key, value) => {
+    map.delete(key);
+    map.set(key, value);
+  };
+
+  return {
+    get(key) {
+      const value = map.get(key);
+      if (value !== undefined) {
+        touch(key, value);
+      }
+      return value;
+    },
+    set(key, value) {
+      touch(key, value);
+      if (map.size > limit) {
+        const oldestKey = map.keys().next().value;
+        map.delete(oldestKey);
+      }
+    },
+    delete(key) {
+      return map.delete(key);
+    },
+    clear() {
+      map.clear();
+    }
+  };
+};
   
 const anchorPoints = computed(() => Array.isArray(anchors.value) ? anchors.value : []);
   
@@ -204,14 +240,14 @@ const ACTIVE_PV_FLASH_MS = 650;
 // Canvas Rendering для изображений
 // ========================================
 const imagesCanvasRef = ref(null);
-const imageCache = new Map(); // key: dataUrl, value: { img: HTMLImageElement, loading: Promise, error: boolean }
+const imageCache = createLruCache(IMAGE_CACHE_LIMIT); // key: dataUrl, value: { img: HTMLImageElement, loading: Promise, error: boolean }
 
 // Оптимизация производительности: Lazy rendering с requestAnimationFrame
 let needsRedraw = false;
 let renderScheduled = false;
 
 // Оффскрин рендеринг: кэш для отрисованных изображений
-const offscreenCache = new Map(); // key: imageId, value: { canvas: HTMLCanvasElement, version: number }
+const offscreenCache = createLruCache(OFFSCREEN_CACHE_LIMIT); // key: imageId, value: { canvas: HTMLCanvasElement, version: number }
 const imageVersions = new Map(); // key: imageId, value: version (изменяется при изменении изображения)
 
 /**
@@ -219,8 +255,9 @@ const imageVersions = new Map(); // key: imageId, value: version (изменяе
  * @param {Object} imageObj - Объект изображения
  * @returns {string} - Версия изображения
  */
-const getImageVersion = (imageObj) => {
-  return `${imageObj.x}-${imageObj.y}-${imageObj.width}-${imageObj.height}-${imageObj.rotation || 0}-${imageObj.opacity || 1}-${imageObj.dataUrl.substring(0, 50)}`;
+const getImageVersion = (imageObj, source = 'primary') => {
+  const dataUrl = typeof imageObj.dataUrl === 'string' ? imageObj.dataUrl : '';
+  return `${imageObj.x}-${imageObj.y}-${imageObj.width}-${imageObj.height}-${imageObj.rotation || 0}-${imageObj.opacity || 1}-${dataUrl.substring(0, 50)}-${source}`;
 };
 
 /**
@@ -280,39 +317,35 @@ const createOffscreenCanvas = (imageObj, img) => {
  * @returns {Promise<HTMLImageElement>}
  */
 const loadImage = (dataUrl) => {
-  // Проверяем кэш
+  if (!dataUrl) {
+    return Promise.reject(new Error('Empty image url'));
+  }
   const cached = imageCache.get(dataUrl);
 
   if (cached) {
-    // Если изображение загружено успешно
     if (cached.img && !cached.error) {
       return Promise.resolve(cached.img);
     }
 
-    // Если идет загрузка
     if (cached.loading) {
       return cached.loading;
     }
 
-    // Если была ошибка, пробуем загрузить снова
     if (cached.error) {
       imageCache.delete(dataUrl);
     }
   }
 
-  // Создаем новый Promise для загрузки
   const loadingPromise = new Promise((resolve, reject) => {
     const img = new Image();
 
     img.onload = () => {
-      // Сохраняем загруженное изображение в кэш
       imageCache.set(dataUrl, { img, loading: null, error: false });
       console.log('✅ Изображение загружено:', dataUrl.substring(0, 50) + '...');
       resolve(img);
     };
 
     img.onerror = (error) => {
-      // Помечаем ошибку в кэше
       imageCache.set(dataUrl, { img: null, loading: null, error: true });
       console.error('❌ Ошибка загрузки изображения:', error);
       reject(new Error('Failed to load image'));
@@ -321,10 +354,48 @@ const loadImage = (dataUrl) => {
     img.src = dataUrl;
   });
 
-  // Сохраняем промис загрузки в кэш
   imageCache.set(dataUrl, { img: null, loading: loadingPromise, error: false });
 
   return loadingPromise;
+};
+
+const getRenderableImage = async (imageObj) => {
+  const primaryUrl = imageObj.dataUrl;
+  const previewUrl = imageObj.previewDataUrl && imageObj.previewDataUrl !== primaryUrl
+    ? imageObj.previewDataUrl
+    : null;
+
+  const cachedPrimary = primaryUrl ? imageCache.get(primaryUrl) : null;
+  if (cachedPrimary?.img && !cachedPrimary.error) {
+    return { img: cachedPrimary.img, source: 'primary' };
+  }
+
+  const cachedPreview = previewUrl ? imageCache.get(previewUrl) : null;
+  if (cachedPreview?.img && !cachedPreview.error) {
+    if (primaryUrl && (!cachedPrimary || cachedPrimary.error || cachedPrimary.loading)) {
+      loadImage(primaryUrl)
+        .then(() => scheduleRender())
+        .catch(() => {});
+    }
+    return { img: cachedPreview.img, source: 'preview' };
+  }
+
+  if (previewUrl) {
+    try {
+      const previewImg = await loadImage(previewUrl);
+      if (primaryUrl) {
+        loadImage(primaryUrl)
+          .then(() => scheduleRender())
+          .catch(() => {});
+      }
+      return { img: previewImg, source: 'preview' };
+    } catch (error) {
+      console.warn('⚠️ Не удалось загрузить превью, используем основной URL', error);
+    }
+  }
+
+  const img = await loadImage(primaryUrl);
+  return { img, source: 'primary' };
 };
 
 /**
@@ -334,8 +405,8 @@ const loadImage = (dataUrl) => {
  */
 const drawImageObject = async (ctx, imageObj) => {
   try {
-    const img = await loadImage(imageObj.dataUrl);
-    const currentVersion = getImageVersion(imageObj);
+    const { img, source } = await getRenderableImage(imageObj);
+    const currentVersion = getImageVersion(imageObj, source);
     const cachedVersion = imageVersions.get(imageObj.id);
 
     let offscreenCanvas = null;
@@ -720,6 +791,42 @@ const drawImageSelection = (ctx, imageObj) => {
   drawRotationHandle(ctx, imageObj);
 };
 
+const getVisibleCanvasRect = () => {
+  if (!canvasContainerRef.value) {
+    return null;
+  }
+
+  const rect = canvasContainerRef.value.getBoundingClientRect();
+  const topLeft = screenToCanvas(rect.left, rect.top);
+  const bottomRight = screenToCanvas(rect.right, rect.bottom);
+  const overscan = IMAGE_VIRTUALIZATION_OVERSCAN / (zoomScale.value || 1);
+
+  return {
+    left: Math.min(topLeft.x, bottomRight.x) - overscan,
+    right: Math.max(topLeft.x, bottomRight.x) + overscan,
+    top: Math.min(topLeft.y, bottomRight.y) - overscan,
+    bottom: Math.max(topLeft.y, bottomRight.y) + overscan
+  };
+};
+
+const isImageWithinViewport = (imageObj, viewportRect) => {
+  if (!viewportRect) {
+    return true;
+  }
+
+  const imageLeft = imageObj.x;
+  const imageRight = imageObj.x + imageObj.width;
+  const imageTop = imageObj.y;
+  const imageBottom = imageObj.y + imageObj.height;
+
+  return (
+    imageRight >= viewportRect.left &&
+    imageLeft <= viewportRect.right &&
+    imageBottom >= viewportRect.top &&
+    imageTop <= viewportRect.bottom
+  );
+};
+
 /**
  * Рендеринг всех изображений на canvas
  */
@@ -742,6 +849,8 @@ const renderAllImages = async () => {
   // Очищаем canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  const visibleRect = getVisibleCanvasRect();
+
   // Сортируем изображения по zIndex (от меньшего к большему)
   const sortedImages = [...images.value].sort((a, b) => {
     const zIndexA = a.zIndex !== undefined ? a.zIndex : 0;
@@ -749,13 +858,17 @@ const renderAllImages = async () => {
     return zIndexA - zIndexB;
   });
 
+  const visibleImages = visibleRect
+    ? sortedImages.filter((image) => isImageWithinViewport(image, visibleRect))
+    : sortedImages;
+
   // Отрисовываем изображения
-  for (const image of sortedImages) {
+  for (const image of visibleImages) {
     await drawImageObject(ctx, image);
   }
 
   // Отрисовываем выделение поверх всех изображений
-  for (const image of sortedImages) {
+  for (const image of visibleImages) {
     drawImageSelection(ctx, image);
   }
 
@@ -793,6 +906,10 @@ const scheduleRender = () => {
 watch(images, () => {
   scheduleRender();
 }, { deep: true });
+
+watch([zoomScale, zoomTranslateX, zoomTranslateY], () => {
+  scheduleRender();
+});
 
 // Следим за изменениями размеров stage и планируем перерисовку
 watch(stageConfig, () => {
