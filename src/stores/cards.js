@@ -220,7 +220,11 @@ export const useCardsStore = defineStore('cards', {
   state: () => ({
     cards: [],
     selectedCardIds: [],
-    calculationMeta: createEmptyMeta()
+    calculationMeta: createEmptyMeta(),
+    incompatibilityWarning: {
+      visible: false,
+      type: null
+    }
   }),
   
   getters: {
@@ -345,6 +349,14 @@ export const useCardsStore = defineStore('cards', {
     },
     addCard(options = {}) {
       const { type = 'large', ...rawCardData } = options;
+      if (['small', 'large', 'gold'].includes(type)) {
+        const hasAvatars = this.cards.some(card => card.type === 'avatar')
+
+        if (hasAvatars) {
+          this.showIncompatibilityWarning('license')
+          return false
+        }
+      }      
       const hasCustomX = Object.prototype.hasOwnProperty.call(rawCardData, 'x')
       const hasCustomY = Object.prototype.hasOwnProperty.call(rawCardData, 'y')
       const { x: providedX, y: providedY, ...cardData } = rawCardData
@@ -443,6 +455,14 @@ export const useCardsStore = defineStore('cards', {
     },
 
     addAvatar(options = {}) {
+         const hasLicenses = this.cards.some(card =>
+        ['small', 'large', 'gold'].includes(card.type)
+      )
+
+      if (hasLicenses) {
+        this.showIncompatibilityWarning('avatar')
+        return false
+      }   
       const { ...avatarData } = options
       const hasCustomX = Object.prototype.hasOwnProperty.call(avatarData, 'x')
       const hasCustomY = Object.prototype.hasOwnProperty.call(avatarData, 'y')
@@ -761,7 +781,20 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
 
       return true
     },
+    highlightAvatar(avatarId) {
+      const avatar = this.cards.find(c => c.id === avatarId && c.type === 'avatar')
+      if (!avatar) {
+        return false
+      }
 
+      avatar.highlighted = true
+
+      setTimeout(() => {
+        avatar.highlighted = false
+      }, 2000)
+
+      return true
+    },
     resizeAvatar(avatarId, sizePercent) {
       const avatar = this.cards.find(c => c.id === avatarId)
       if (!avatar || avatar.type !== 'avatar') {
@@ -819,6 +852,16 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
       historyStore.saveState()
 
       return true
+    },
+
+    showIncompatibilityWarning(type) {
+      this.incompatibilityWarning.visible = true
+      this.incompatibilityWarning.type = type
+    },
+
+    hideIncompatibilityWarning() {
+      this.incompatibilityWarning.visible = false
+      this.incompatibilityWarning.type = null      
     }
   }
 })
