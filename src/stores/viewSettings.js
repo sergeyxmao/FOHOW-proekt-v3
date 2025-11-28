@@ -67,7 +67,7 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       this.lineColor = color
       const connectionsStore = useConnectionsStore()
       if (this.isGlobalLineMode) {
-        connectionsStore.updateAllConnectionsColor(color)
+        connectionsStore.updateAllConnectionsColorIncludingAvatars(color)
       }
     },
 
@@ -76,7 +76,7 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       this.lineThickness = normalized
       const connectionsStore = useConnectionsStore()
       if (this.isGlobalLineMode) {
-        connectionsStore.updateAllConnectionsThickness(normalized)
+        connectionsStore.updateAllConnectionsThicknessIncludingAvatars(normalized)
       }
     },
 
@@ -89,7 +89,7 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       this.animationSeconds = seconds
       const connectionsStore = useConnectionsStore()
       if (this.isGlobalLineMode) {
-        connectionsStore.updateAllConnections({ animationDuration: seconds * 1000 })
+        connectionsStore.updateAllConnectionsIncludingAvatars({ animationDuration: seconds * 1000 })
       }
       connectionsStore.setDefaultConnectionParameters(this.lineColor, this.lineThickness, seconds * 1000)
     },
