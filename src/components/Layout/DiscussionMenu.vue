@@ -8,6 +8,7 @@ import { useStickersStore } from '../../stores/stickers.js'
 import { useBoardStore } from '../../stores/board.js'
 import { useSubscriptionStore } from '../../stores/subscription.js'
 import { useAuthStore } from '../../stores/auth.js'
+import { useCardsStore } from '../../stores/cards.js'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 const props = defineProps({
@@ -25,6 +26,7 @@ const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
 const subscriptionStore = useSubscriptionStore()
 const authStore = useAuthStore()
+const cardsStore = useCardsStore()
 
 const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
 const {
@@ -39,6 +41,7 @@ const { placementMode } = storeToRefs(boardStore)
 const { currentBoardId } = storeToRefs(boardStore)
 const isGeolocationMenuOpen = ref(false)
 const isStickersMenuOpen = ref(false)
+const isAvatarBoard = computed(() => cardsStore.cards.some(card => card.type === 'avatar'))  
 const createDefaultCounters = () => ({
   partners: 0,
   notes: 0,
@@ -100,6 +103,9 @@ const handlePartnersToggle = () => {
 }
 
 const handleNotesToggle = () => {
+  if (isAvatarBoard.value) {
+    return
+  }  
   sidePanelsStore.toggleNotes()
   emit('request-close')
 }
@@ -114,6 +120,9 @@ const handleImagesToggle = () => {
 }
 
 const toggleGeolocationMenu = () => {
+  if (isAvatarBoard.value) {
+    return
+  }  
   isGeolocationMenuOpen.value = !isGeolocationMenuOpen.value
   if (isGeolocationMenuOpen.value) {
     isStickersMenuOpen.value = false
@@ -133,6 +142,9 @@ const handleStickerMessagesToggle = () => {
   emit('request-close')
 }
 const handleAnchorsToggle = () => {
+  if (isAvatarBoard.value) {
+    return
+  }  
   const nextMode = placementMode.value === 'anchor' ? null : 'anchor'
   boardStore.setPlacementMode(nextMode)
   if (nextMode) {
@@ -143,10 +155,24 @@ const handleAnchorsToggle = () => {
 }
 
 const handleAnchorsPanelOpen = () => {
+  if (isAvatarBoard.value) {
+    return
+  }  
   sidePanelsStore.openAnchors()
   isGeolocationMenuOpen.value = false
   emit('request-close')
 }
+watch(isAvatarBoard, (isAvatarMode) => {
+  if (!isAvatarMode) {
+    return
+  }
+
+  isGeolocationMenuOpen.value = false
+  isStickersMenuOpen.value = false
+  if (placementMode.value === 'anchor') {
+    boardStore.setPlacementMode(null)
+  }
+})
 
 const handleAddSticker = () => {
   if (!currentBoardId.value) {
@@ -200,6 +226,7 @@ const handleAddSticker = () => {
         type="button"
         class="discussion-menu__action"
         :class="{ 'discussion-menu__action--active': isNotesOpen }"
+        :disabled="isAvatarBoard"        
         @click="handleNotesToggle"
       >
         {{ t('discussionMenu.notesList') }}
@@ -220,10 +247,10 @@ const handleAddSticker = () => {
       >
         Изображения
       </button>
-       <span class="discussion-menu__counter">
+      <span class="discussion-menu__counter">
         <template v-if="countersLoading">...</template>
         <template v-else>{{ counters.images }}</template>
-      </span>     
+      </span>
     </div>
 
     <div class="discussion-menu__item">
@@ -253,6 +280,7 @@ const handleAddSticker = () => {
           <button
             type="button"
             class="discussion-menu__action"
+            :disabled="isAvatarBoard"          
             :class="{ 'discussion-menu__action--active': isAnchorsOpen || placementMode === 'anchor' }"
             @click="toggleGeolocationMenu"
           >
@@ -269,6 +297,7 @@ const handleAddSticker = () => {
               type="button"
               class="discussion-menu__subaction"
               :class="{ 'discussion-menu__subaction--active': placementMode === 'anchor' }"
+               :disabled="isAvatarBoard"            
               @click="handleAnchorsToggle"
             >
               {{ t('discussionMenu.setAnchor') }}
@@ -277,6 +306,7 @@ const handleAddSticker = () => {
               type="button"
               class="discussion-menu__subaction"
               :class="{ 'discussion-menu__subaction--active': isAnchorsOpen }"
+               :disabled="isAvatarBoard"             
               @click="handleAnchorsPanelOpen"
             >
               {{ t('discussionMenu.boardAnchors') }}
