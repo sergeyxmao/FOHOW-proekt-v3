@@ -42,8 +42,11 @@ const sizes = [
   { percent: 25, label: 'x25%', diameter: 104.5 },
   { percent: 50, label: 'x50%', diameter: 209 },
   { percent: 75, label: 'x75%', diameter: 313.5 },
-  { percent: 100, label: 'x100%', diameter: 418 }
-]
+  { percent: 100, label: 'x100%', diameter: 418 },
+  { percent: 125, label: 'x125%', diameter: 522.5 },
+  { percent: 150, label: 'x150%', diameter: 627 },
+  { percent: 175, label: 'x175%', diameter: 731.5 },
+  { percent: 200, label: 'x200%', diameter: 836 }]
 
 // Обработчик изменения размера
 const setSize = (sizePercent) => {
