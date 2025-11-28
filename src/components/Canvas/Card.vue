@@ -1580,10 +1580,10 @@ watch(
 /* Соединительные точки */
 .connection-point {
   position: absolute;
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   background: #fff;
-  border: 3px solid rgb(93, 139, 244);
+  border: 4px solid rgb(93, 139, 244);
   border-radius: 50%;
   cursor: pointer;
   transform: translate(-50%, -50%);
