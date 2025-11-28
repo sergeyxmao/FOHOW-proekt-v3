@@ -14,6 +14,7 @@ import Avatar from './Avatar.vue';
 import AvatarContextMenu from './AvatarContextMenu.vue';
 import AvatarNumberInputModal from '../Modals/AvatarNumberInputModal.vue';
 import NoteWindow from './NoteWindow.vue';
+import IncompatibilityWarningModal from '../Modals/IncompatibilityWarningModal.vue';  
 import Sticker from './Sticker.vue';
 import CanvasImage from './CanvasImage.vue';
 import AnchorPoint from './AnchorPoint.vue';  
@@ -4812,6 +4813,12 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       @close="closeAvatarNumberModal"
       @apply="handleAvatarNumberApply"
     />
+
+    <IncompatibilityWarningModal
+      v-if="cardsStore.incompatibilityWarning.visible"
+      :type="cardsStore.incompatibilityWarning.type"
+      @close="cardsStore.hideIncompatibilityWarning()"
+    />  
   </div>
 </template>
 
