@@ -51,7 +51,8 @@ const counters = ref(createDefaultCounters())
 const countersLoading = ref(false)
 // Проверка доступа к библиотеке изображений
 const canUseImages = computed(() => subscriptionStore.checkFeature('can_use_images'))
-const loadDiscussionCounters = async () => {
+const hasPartners = computed(() => Number(counters.value.partners || 0) > 0)
+  const loadDiscussionCounters = async () => {
   countersLoading.value = true
 
   try {
@@ -90,6 +91,10 @@ watch(currentBoardId, () => {
   loadDiscussionCounters()
 })  
 const handlePartnersToggle = () => {
+  if (!hasPartners.value && !countersLoading.value) {
+    alert('На доске нет партнёров')
+    return
+  }  
   sidePanelsStore.togglePartners()
   emit('request-close')
 }
