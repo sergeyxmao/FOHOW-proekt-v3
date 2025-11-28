@@ -451,6 +451,7 @@ export function registerImageRoutes(app) {
         const imagesResult = await pool.query(query, queryParams);
 
         return reply.send({
+          success: true,
           items: imagesResult.rows,
           pagination: {
             page,
