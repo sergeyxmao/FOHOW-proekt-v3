@@ -802,9 +802,9 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
       }
 
       // Проверяем корректность размера
-      const validSizes = [25, 50, 75, 100]
+      const validSizes = [25, 50, 75, 100, 125, 150, 175, 200]
       if (!validSizes.includes(sizePercent)) {
-        console.error('Некорректный размер. Допустимые значения: 25, 50, 75, 100')
+        console.error('Некорректный размер. Допустимые значения: 25, 50, 75, 100, 125, 150, 175, 200')
         return false
       }
 
