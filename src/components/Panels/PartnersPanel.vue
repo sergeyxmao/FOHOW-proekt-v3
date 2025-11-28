@@ -120,6 +120,14 @@ const searchQuery = ref('')
 const loading = ref(false)
 const selectedPartner = ref(null)
 let searchTimeout = null
+const boardType = computed(() => {
+  const hasLicenses = cardsStore.cards.some(card => ['large', 'gold'].includes(card.type))
+  const hasAvatars = cardsStore.cards.some(card => card.type === 'avatar')
+
+  if (hasLicenses) return 'licenses'
+  if (hasAvatars) return 'avatars'
+  return null
+})
 
 const handleClose = () => {
   sidePanelsStore.closePanel()
@@ -144,6 +152,10 @@ const loadPartners = async () => {
     console.warn('Нет активной доски')
     return
   }
+  if (!boardType.value) {
+    partners.value = []
+    return
+  }
 
   loading.value = true
 
@@ -153,8 +165,10 @@ const loadPartners = async () => {
       throw new Error('Не авторизован')
     }
 
-    let url = `${API_URL}/boards/${boardId}/partners`
-    if (searchQuery.value.trim()) {
+    let url = boardType.value === 'avatars'
+      ? `${API_URL}/boards/${boardId}/avatar-partners`
+      : `${API_URL}/boards/${boardId}/partners`
+      if (searchQuery.value.trim()) {
       url += `?search=${encodeURIComponent(searchQuery.value.trim())}`
     }
 
@@ -190,6 +204,10 @@ const handleSearch = () => {
 
 // Навигация к карточке партнёра на доске
 const navigateToPartnerCard = (partner) => {
+  if (boardType.value === 'avatars') {
+    navigateToAvatarPartner(partner)
+    return
+  }  
   // Нормализация personal_id (убрать пробелы, верхний регистр)
   const normalizeId = (id) => id?.toString().replace(/\s+/g, '').toUpperCase()
   const targetPersonalId = normalizeId(partner.personal_id)
@@ -214,6 +232,21 @@ const navigateToPartnerCard = (partner) => {
 
   // Подсветить карточку
   cardsStore.highlightCard(targetCard.id)
+}
+const navigateToAvatarPartner = (partner) => {
+  const avatar = cardsStore.cards.find(card => card.id === partner.avatarObjectId)
+
+  if (!avatar) {
+    console.warn('Аватар партнёра не найден на доске:', partner.avatarObjectId)
+    return
+  }
+
+  const diameter = avatar.diameter || 418
+  const centerX = avatar.x + diameter / 2
+  const centerY = avatar.y + diameter / 2
+
+  boardStore.centerViewOnPoint(centerX, centerY)
+  cardsStore.highlightAvatar(avatar.id)
 }
 
 // Открытие модального окна с деталями (БЕЗ фокусировки на карточке)
@@ -242,6 +275,11 @@ onMounted(() => {
 // Следить за изменениями boardId
 watch(() => boardStore.currentBoardId, (newBoardId) => {
   if (newBoardId) {
+    loadPartners()
+  }
+})
+watch(boardType, () => {
+  if (boardStore.currentBoardId) {
     loadPartners()
   }
 })
