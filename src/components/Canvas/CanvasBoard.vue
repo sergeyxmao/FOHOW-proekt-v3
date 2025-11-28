@@ -12,6 +12,7 @@ import { useAnchorsStore } from '../../stores/anchors';
 import Card from './Card.vue';
 import Avatar from './Avatar.vue';
 import AvatarContextMenu from './AvatarContextMenu.vue';
+import AvatarNumberInputModal from '../Modals/AvatarNumberInputModal.vue';
 import NoteWindow from './NoteWindow.vue';
 import Sticker from './Sticker.vue';
 import CanvasImage from './CanvasImage.vue';
@@ -213,6 +214,11 @@ const draggingControlPoint = ref(null); // { connectionId, pointIndex }
 // Контекстное меню для аватара
 const avatarContextMenu = ref(null); // { avatarId }
 const avatarContextMenuPosition = ref({ x: 0, y: 0 })
+
+// Модальное окно для ввода компьютерного номера
+const avatarNumberModalVisible = ref(false)
+const avatarNumberModalAvatarId = ref(null)
+const avatarNumberModalCurrentId = ref('')
 
 // Инициализация composable для кривых Безье
 const { buildBezierPath, getAvatarConnectionPoint, calculateMidpoint, findClosestPointOnBezier, isPointNearBezier } = useBezierCurves();
@@ -3702,6 +3708,36 @@ const closeAvatarContextMenu = () => {
   avatarContextMenu.value = null;
 };
 
+// Обработчик двойного клика на аватаре
+const handleAvatarDoubleClick = (event, avatarId) => {
+  event.stopPropagation();
+
+  const avatar = cardsStore.cards.find(c => c.id === avatarId && c.type === 'avatar');
+  if (!avatar) return;
+
+  avatarNumberModalAvatarId.value = avatarId;
+  avatarNumberModalCurrentId.value = avatar.personalId || '';
+  avatarNumberModalVisible.value = true;
+};
+
+// Обработчик применения данных из модального окна
+const handleAvatarNumberApply = ({ avatarId, userData }) => {
+  if (userData === null) {
+    // Сброс данных аватара
+    cardsStore.updateAvatarUserData(avatarId, null);
+  } else {
+    // Применение данных пользователя
+    cardsStore.updateAvatarUserData(avatarId, userData);
+  }
+};
+
+// Закрытие модального окна
+const closeAvatarNumberModal = () => {
+  avatarNumberModalVisible.value = false;
+  avatarNumberModalAvatarId.value = null;
+  avatarNumberModalCurrentId.value = '';
+};
+
 const handleStickerClick = (event, stickerId) => {
   // Останавливаем всплытие события
   event.stopPropagation();
@@ -4713,6 +4749,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           :is-selected="avatar.selected"
           :is-drawing-line="!!avatarConnectionStart"
           @avatar-click="(event) => handleCardClick(event, avatar.id)"
+          @avatar-dblclick="(event) => handleAvatarDoubleClick(event, avatar.id)"
           @start-drag="startDrag"
           @connection-point-click="handleAvatarConnectionPointClick"
           @contextmenu.native="(event) => handleAvatarContextMenu(event, avatar.id)"
@@ -4765,6 +4802,15 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       :avatar="cardsStore.cards.find(c => c.id === avatarContextMenu.avatarId)"
       :position="avatarContextMenuPosition"
       @close="closeAvatarContextMenu"
+    />
+
+    <!-- Модальное окно для ввода компьютерного номера -->
+    <AvatarNumberInputModal
+      :is-open="avatarNumberModalVisible"
+      :avatar-id="avatarNumberModalAvatarId"
+      :current-personal-id="avatarNumberModalCurrentId"
+      @close="closeAvatarNumberModal"
+      @apply="handleAvatarNumberApply"
     />
   </div>
 </template>
