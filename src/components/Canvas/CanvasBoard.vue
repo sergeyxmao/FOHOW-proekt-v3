@@ -4168,6 +4168,7 @@ const fitToContent = (options = {}) => {
   const padding = Number.isFinite(options.padding) ? Math.max(0, options.padding) : 120;
   const cardsList = cards.value;
   const connectionsList = connections.value;
+  const avatarConnectionsList = avatarConnections.value;  
   const imagesList = images.value;
   const stickersList = stickersStore.stickers;
   
@@ -4176,7 +4177,7 @@ const fitToContent = (options = {}) => {
   let maxX = -Infinity;
   let maxY = -Infinity;
   let hasContent = false;
-  const updateBounds = (left, top, width, height) => {
+  const updateBounds = (left, top, width, height) => {    
     minX = Math.min(minX, left);
     minY = Math.min(minY, top);
     maxX = Math.max(maxX, left + width);
@@ -4191,8 +4192,13 @@ const fitToContent = (options = {}) => {
 
     const left = Number.isFinite(card.x) ? card.x : 0;
     const top = Number.isFinite(card.y) ? card.y : 0;
-    const width = Number.isFinite(card.width) ? card.width : 0;
-    const height = Number.isFinite(card.height) ? card.height : 0;
+    const isAvatar = card.type === 'avatar';
+    const width = isAvatar
+      ? (Number.isFinite(card.diameter) ? card.diameter : 0)
+      : (Number.isFinite(card.width) ? card.width : 0);
+    const height = isAvatar
+      ? (Number.isFinite(card.diameter) ? card.diameter : 0)
+      : (Number.isFinite(card.height) ? card.height : 0);
 
     updateBounds(left, top, width, height);
   });
@@ -4259,7 +4265,41 @@ const fitToContent = (options = {}) => {
       hasContent = true;
     });
   }
+  if (Array.isArray(avatarConnectionsList) && avatarConnectionsList.length > 0) {
+    const defaultThickness = connectionsStore.defaultLineThickness || 0;
 
+    avatarConnectionsList.forEach(connection => {
+      const fromAvatar = cardsList.find(card => card.id === connection.from && card.type === 'avatar');
+      const toAvatar = cardsList.find(card => card.id === connection.to && card.type === 'avatar');
+
+      if (!fromAvatar || !toAvatar) {
+        return;
+      }
+
+      const startPoint = getAvatarConnectionPoint(fromAvatar, connection.fromPointIndex);
+      const endPoint = getAvatarConnectionPoint(toAvatar, connection.toPointIndex);
+      const controlPoints = Array.isArray(connection.controlPoints) ? connection.controlPoints : [];
+      const points = [startPoint, ...controlPoints, endPoint].filter(Boolean);
+
+      const strokeWidth = Number.isFinite(connection.thickness)
+        ? connection.thickness
+        : defaultThickness;
+      const markerRadius = Math.max(strokeWidth, 8) / 2;
+
+      points.forEach(point => {
+        if (!point) {
+          return;
+        }
+
+        minX = Math.min(minX, point.x - markerRadius);
+        minY = Math.min(minY, point.y - markerRadius);
+        maxX = Math.max(maxX, point.x + markerRadius);
+        maxY = Math.max(maxY, point.y + markerRadius);
+      });
+
+      hasContent = true;
+    });
+  }
   if (!hasContent || !Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {    resetZoomTransform();
     return;
   }
