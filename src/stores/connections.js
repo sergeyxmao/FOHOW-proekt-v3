@@ -15,6 +15,7 @@ function clampAnimationDuration(duration) {
 export const useConnectionsStore = defineStore('connections', {
   state: () => ({
     connections: [],
+    avatarConnections: [], // Новый массив для соединений между аватарами
     defaultLineColor: '#0f62fe',
     defaultLineThickness: 5,
     defaultHighlightType: null,
@@ -257,7 +258,7 @@ export const useConnectionsStore = defineStore('connections', {
     },
     removeMultipleConnections(connectionIds) {
       const removedConnections = []
-      
+
       connectionIds.forEach(id => {
         const index = this.connections.findIndex(conn => conn.id === id)
         if (index !== -1) {
@@ -271,8 +272,188 @@ export const useConnectionsStore = defineStore('connections', {
         historyStore.setActionMetadata('delete', `Удалено ${removedConnections.length} соединений`)
         historyStore.saveState()
       }
-      
+
       return removedConnections
+    },
+
+    // ========== Методы для Avatar-соединений ==========
+
+    addAvatarConnection(fromAvatarId, toAvatarId, options = {}) {
+      const existingConnection = this.avatarConnections.find(
+        conn => (conn.from === fromAvatarId && conn.to === toAvatarId) ||
+                (conn.from === toAvatarId && conn.to === fromAvatarId)
+      )
+
+      if (existingConnection) {
+        return null
+      }
+
+      const animationDuration = clampAnimationDuration(
+        options.animationDuration ?? this.defaultAnimationDuration
+      )
+
+      // Начальная позиция контрольной точки - посередине между начальной и конечной точками
+      const controlPoints = options.controlPoints || []
+
+      const newConnection = {
+        id: `avatar-${Date.now().toString()}-${Math.random().toString(36).slice(2, 9)}`,
+        type: 'avatar-connection',
+        from: fromAvatarId,
+        to: toAvatarId,
+        fromPointIndex: options.fromPointIndex || 1,
+        toPointIndex: options.toPointIndex || 1,
+        controlPoints,
+        color: options.color || this.defaultLineColor,
+        thickness: options.thickness || this.defaultLineThickness,
+        animationDuration,
+        highlightType: options.highlightType ?? this.defaultHighlightType
+      }
+
+      this.avatarConnections.push(newConnection)
+
+      const historyStore = useHistoryStore()
+      historyStore.setActionMetadata('create', `Создано соединение между аватарами`)
+      historyStore.saveState()
+
+      return newConnection
+    },
+
+    removeAvatarConnection(connectionId) {
+      const index = this.avatarConnections.findIndex(conn => conn.id === connectionId)
+      if (index !== -1) {
+        const historyStore = useHistoryStore()
+        historyStore.setActionMetadata('delete', `Удалено соединение аватаров`)
+
+        this.avatarConnections.splice(index, 1)
+        historyStore.saveState()
+        return true
+      }
+      return false
+    },
+
+    removeAvatarConnectionsByAvatarId(avatarId, options = { saveToHistory: true }) {
+      const removedCount = this.avatarConnections.filter(
+        conn => conn.from === avatarId || conn.to === avatarId
+      ).length
+
+      if (removedCount > 0) {
+        this.avatarConnections = this.avatarConnections.filter(
+          conn => conn.from !== avatarId && conn.to !== avatarId
+        )
+
+        if (options.saveToHistory) {
+          const historyStore = useHistoryStore()
+          historyStore.setActionMetadata('delete', `Удалено ${removedCount} соединений аватаров`)
+          historyStore.saveState()
+        }
+      }
+
+      return removedCount
+    },
+
+    updateAvatarConnection(connectionId, updates) {
+      const connection = this.avatarConnections.find(conn => conn.id === connectionId)
+      if (connection) {
+        const normalizedUpdates = { ...updates }
+
+        if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'animationDuration')) {
+          normalizedUpdates.animationDuration = clampAnimationDuration(normalizedUpdates.animationDuration)
+        }
+
+        Object.assign(connection, normalizedUpdates)
+
+        const historyStore = useHistoryStore()
+        historyStore.setActionMetadata('update', 'Изменены свойства соединения аватаров')
+        historyStore.saveState()
+      }
+      return connection
+    },
+
+    // Обновить цвет всех соединений (включая avatar-соединения)
+    updateAllConnectionsColorIncludingAvatars(color) {
+      this.updateAllConnectionsColor(color)
+
+      this.avatarConnections.forEach(connection => {
+        connection.color = color
+      })
+
+      return { connections: this.connections.length, avatarConnections: this.avatarConnections.length }
+    },
+
+    // Обновить толщину всех соединений (включая avatar-соединения)
+    updateAllConnectionsThicknessIncludingAvatars(thickness) {
+      this.updateAllConnectionsThickness(thickness)
+
+      this.avatarConnections.forEach(connection => {
+        connection.thickness = thickness
+      })
+
+      return { connections: this.connections.length, avatarConnections: this.avatarConnections.length }
+    },
+
+    // Обновить все соединения (включая avatar-соединения)
+    updateAllConnectionsIncludingAvatars(updates) {
+      this.updateAllConnections(updates)
+
+      this.avatarConnections.forEach(connection => {
+        const normalizedUpdates = { ...updates }
+
+        if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'animationDuration')) {
+          normalizedUpdates.animationDuration = clampAnimationDuration(normalizedUpdates.animationDuration)
+        }
+
+        Object.assign(connection, normalizedUpdates)
+      })
+
+      return { connections: this.connections.length, avatarConnections: this.avatarConnections.length }
+    },
+
+    loadAvatarConnections(connectionsData = []) {
+      if (!Array.isArray(connectionsData)) {
+        this.avatarConnections = []
+        return this.avatarConnections
+      }
+
+      const normalizedConnections = connectionsData
+        .map(connection => {
+          if (!connection || typeof connection !== 'object') {
+            return null
+          }
+
+          if (!connection.from || !connection.to) {
+            return null
+          }
+
+          const thickness = typeof connection.thickness === 'number' && !Number.isNaN(connection.thickness)
+            ? connection.thickness
+            : this.defaultLineThickness
+
+          const animationDuration = clampAnimationDuration(
+            typeof connection.animationDuration === 'number' && !Number.isNaN(connection.animationDuration)
+              ? connection.animationDuration
+              : this.defaultAnimationDuration
+          )
+
+          return {
+            id: connection.id || `avatar-${Date.now().toString()}-${Math.random().toString(36).slice(2, 9)}`,
+            type: 'avatar-connection',
+            from: connection.from,
+            to: connection.to,
+            fromPointIndex: connection.fromPointIndex || 1,
+            toPointIndex: connection.toPointIndex || 1,
+            controlPoints: Array.isArray(connection.controlPoints) ? connection.controlPoints : [],
+            color: connection.color || this.defaultLineColor,
+            thickness,
+            highlightType: Object.prototype.hasOwnProperty.call(connection, 'highlightType')
+              ? connection.highlightType
+              : this.defaultHighlightType,
+            animationDuration
+          }
+        })
+        .filter(Boolean)
+
+      this.avatarConnections = normalizedConnections
+      return this.avatarConnections
     }
   }
 })

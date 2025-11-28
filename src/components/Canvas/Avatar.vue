@@ -9,12 +9,17 @@ const props = defineProps({
   isSelected: {
     type: Boolean,
     default: false
+  },
+  isDrawingLine: {
+    type: Boolean,
+    default: false
   }
 })
 
 const emit = defineEmits([
   'avatar-click',
-  'start-drag'
+  'start-drag',
+  'connection-point-click'
 ])
 
 const ignoreNextClick = ref(false)
@@ -96,6 +101,54 @@ const handlePointerDown = (event) => {
 
   emit('start-drag', event, props.avatar.id)
 }
+
+// Определение 9 точек соединения с углами (0°, 40°, 80°, 120°, 160°, 200°, 240°, 280°, 320°)
+const connectionPoints = computed(() => {
+  const diameter = props.avatar.diameter || 418
+  const radius = diameter / 2
+  const offset = 5 // Отступ точки от края
+
+  const points = [
+    { index: 1, angle: 0, name: 'top', size: 16 },           // 12 часов
+    { index: 2, angle: 40, name: 'top-right-1', size: 8 },   // ~1:20
+    { index: 3, angle: 80, name: 'right-top', size: 8 },     // ~2:40
+    { index: 4, angle: 120, name: 'right-bottom', size: 8 }, // 4 часа
+    { index: 5, angle: 160, name: 'bottom-right', size: 8 }, // ~5:20
+    { index: 6, angle: 200, name: 'bottom-left', size: 8 },  // ~6:40
+    { index: 7, angle: 240, name: 'left-bottom', size: 8 },  // 8 часов
+    { index: 8, angle: 280, name: 'left-top', size: 8 },     // ~9:20
+    { index: 9, angle: 320, name: 'top-left', size: 8 }      // ~10:40
+  ]
+
+  return points.map(point => {
+    const angleRad = point.angle * Math.PI / 180
+    const centerX = diameter / 2
+    const centerY = diameter / 2
+
+    const pointX = centerX + (radius + offset) * Math.sin(angleRad)
+    const pointY = centerY - (radius + offset) * Math.cos(angleRad)
+
+    return {
+      ...point,
+      x: pointX - point.size / 2,
+      y: pointY - point.size / 2
+    }
+  })
+})
+
+const handleConnectionPointClick = (event, pointIndex, pointAngle) => {
+  event.stopPropagation()
+  emit('connection-point-click', {
+    avatarId: props.avatar.id,
+    pointIndex,
+    pointAngle,
+    event
+  })
+}
+
+const shouldShowConnectionPoints = computed(() => {
+  return props.isSelected || props.isDrawingLine
+})
 </script>
 
 <template>
@@ -117,19 +170,24 @@ const handlePointerDown = (event) => {
       {{ avatar.username }}
     </div>
 
-    <!-- 9 точек соединения (будут реализованы в Шаге 2) -->
-    <!-- Пока оставляем заглушки для будущей реализации -->
-    <template v-if="false">
-      <div class="connection-point connection-point--top"></div>
-      <div class="connection-point connection-point--top-right"></div>
-      <div class="connection-point connection-point--right"></div>
-      <div class="connection-point connection-point--bottom-right"></div>
-      <div class="connection-point connection-point--bottom"></div>
-      <div class="connection-point connection-point--bottom-left"></div>
-      <div class="connection-point connection-point--left"></div>
-      <div class="connection-point connection-point--top-left"></div>
-      <div class="connection-point connection-point--center"></div>
-    </template>
+    <!-- 9 точек соединения равномерно распределены по кругу -->
+    <div
+      v-for="point in connectionPoints"
+      :key="point.index"
+      class="connection-point"
+      :class="{ 'connection-point--visible': shouldShowConnectionPoints }"
+      :style="{
+        left: `${point.x}px`,
+        top: `${point.y}px`,
+        width: `${point.size}px`,
+        height: `${point.size}px`
+      }"
+      :data-avatar-id="avatar.id"
+      :data-point-index="point.index"
+      :data-point-angle="point.angle"
+      @click="handleConnectionPointClick($event, point.index, point.angle)"
+      @pointerdown.stop
+    ></div>
   </div>
 </template>
 
@@ -162,11 +220,9 @@ const handlePointerDown = (event) => {
   padding: 0 8px;
 }
 
-/* Точки соединения (будут использоваться в Шаге 2) */
+/* Точки соединения */
 .connection-point {
   position: absolute;
-  width: 12px;
-  height: 12px;
   background-color: #5D8BF4;
   border: 2px solid #ffffff;
   border-radius: 50%;
@@ -174,60 +230,13 @@ const handlePointerDown = (event) => {
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
+  z-index: 20;
 }
 
-.avatar-object:hover .connection-point {
+/* Показать точки при наведении на аватар */
+.avatar-object:hover .connection-point,
+.connection-point--visible {
   opacity: 1;
   pointer-events: auto;
-}
-
-.connection-point--top {
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.connection-point--top-right {
-  top: 10%;
-  right: 10%;
-}
-
-.connection-point--right {
-  top: 50%;
-  right: -6px;
-  transform: translateY(-50%);
-}
-
-.connection-point--bottom-right {
-  bottom: 10%;
-  right: 10%;
-}
-
-.connection-point--bottom {
-  bottom: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.connection-point--bottom-left {
-  bottom: 10%;
-  left: 10%;
-}
-
-.connection-point--left {
-  top: 50%;
-  left: -6px;
-  transform: translateY(-50%);
-}
-
-.connection-point--top-left {
-  top: 10%;
-  left: 10%;
-}
-
-.connection-point--center {
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 </style>
