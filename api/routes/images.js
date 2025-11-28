@@ -300,6 +300,48 @@ export function registerImageRoutes(app) {
     async (req, reply) => {
       try {
         const userId = req.user.id;
+        const userRole = req.user.role;
+
+        // Получаем тариф пользователя и проверяем доступ к библиотеке изображений
+        const userResult = await pool.query(
+          `
+          SELECT
+            u.plan_id,
+            sp.features,
+            sp.name AS plan_name
+          FROM users u
+          JOIN subscription_plans sp ON u.plan_id = sp.id
+          WHERE u.id = $1
+        `,
+          [userId]
+        );
+
+        if (userResult.rows.length === 0) {
+          return reply.code(403).send({
+            error: 'Не удалось определить тарифный план пользователя.'
+          });
+        }
+
+        const user = userResult.rows[0];
+        const features = user.features || {};
+        const planName = user.plan_name;
+
+        // Проверка права доступа к библиотеке изображений (кроме админов)
+        if (userRole !== 'admin') {
+          const canUseImages =
+            typeof features.can_use_images === 'boolean'
+              ? features.can_use_images
+              : false;
+
+          if (!canUseImages) {
+            return reply.code(403).send({
+              error: `Доступ к библиотеке изображений запрещён для вашего тарифа "${planName}".`,
+              code: 'IMAGE_LIBRARY_ACCESS_DENIED',
+              upgradeRequired: true
+            });
+          }
+        }
+
         const page = parseInt(req.query.page || '1', 10);
         const limit = parseInt(req.query.limit || '20', 10);
         const folderRaw = req.query.folder ?? ''; // undefined / 'Все папки' / имя папки
