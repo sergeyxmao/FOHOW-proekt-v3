@@ -301,12 +301,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
           🔒 Скрыто
         </h4>
 
-        <!-- Компьютерный номер - всегда виден -->
-        <div class="partner-details-field">
-          <span class="partner-details-icon" aria-hidden="true">🆔</span>          
-          <span class="partner-details-label">Номер:</span>
-          <span>{{ selectedPartner.personal_id }}</span>
-        </div>
+        <p class="partner-details-number">{{ selectedPartner.personal_id }}</p>
 
         <!-- Представительство -->
         <div class="partner-details-field">
@@ -641,7 +636,13 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
   color: #333;
   margin: 0;
 }
-
+.partner-details-number {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  text-align: center;
+}
 .partner-details-field {
   font-size: 13px;
   color: #666;
@@ -776,7 +777,9 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
 .partner-details-card--modern .partner-details-name {
   color: #e5f3ff;
 }
-
+.partner-details-card--modern .partner-details-number {
+  color: #e5f3ff;
+}
 .partner-details-card--modern .partner-details-field {
   color: rgba(229, 243, 255, 0.8);
 }
