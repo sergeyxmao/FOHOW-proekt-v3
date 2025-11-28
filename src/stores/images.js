@@ -130,8 +130,8 @@ export const useImagesStore = defineStore('images', {
         id,
         type: 'image',
         imageId: imageData.imageId, // ID из библиотеки
-        dataUrl: resolvedDataUrl, // Blob URL для отображения
-        x: imageData.x,
+        dataUrl: resolvedDataUrl || imageData.previewDataUrl || imageData.preview_url || imageData.thumbnail || '', // Blob URL для отображения
+        previewDataUrl: imageData.previewDataUrl || imageData.preview_url || imageData.thumbnail || null,        x: imageData.x,
         y: imageData.y,
         width: displaySize.width,
         height: displaySize.height,
@@ -480,6 +480,7 @@ export const useImagesStore = defineStore('images', {
           type: 'image',
           imageId: imageId, // Сохраняем imageId из библиотеки
           dataUrl: dataUrl,
+           previewDataUrl: imageData.previewDataUrl || imageData.preview_url || imageData.thumbnail || null,         
           x: Number.isFinite(imageData.x) ? imageData.x : 0,
           y: Number.isFinite(imageData.y) ? imageData.y : 0,
           width: Number.isFinite(imageData.width) ? imageData.width : 100,
