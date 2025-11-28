@@ -184,7 +184,9 @@ const handleImageError = (event) => {
 <template>
   <div
     class="avatar-object"
+    :class="{ 'avatar-highlight': avatar.highlighted }"    
     :style="avatarStyle"
+    :data-avatar-id="avatar.id"    
     @click="handleAvatarClick"
     @dblclick="handleAvatarDblClick"
     @pointerdown="handlePointerDown"
@@ -275,4 +277,19 @@ const handleImageError = (event) => {
   opacity: 1;
   pointer-events: auto;
 }
+
+.avatar-highlight {
+  animation: avatar-pulse 2s ease-in-out;
+  box-shadow: 0 0 0 4px rgba(93, 139, 244, 0.8) !important;
+  z-index: 1000 !important;
+}
+
+@keyframes avatar-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(93, 139, 244, 0.8);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(93, 139, 244, 0.3);
+  }
+}  
 </style>
