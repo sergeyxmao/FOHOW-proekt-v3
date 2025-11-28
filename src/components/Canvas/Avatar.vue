@@ -27,13 +27,22 @@ const ignoreNextClick = ref(false)
 
 const avatarStyle = computed(() => {
   const diameter = props.avatar.diameter || 418
-  const strokeWidth = props.avatar.strokeWidth || 3
-
+  
   return {
     position: 'absolute',
     left: `${props.avatar.x}px`,
     top: `${props.avatar.y}px`,
     width: `${diameter}px`,
+    height: 'auto'
+  }
+})
+
+const shapeStyle = computed(() => {
+  const diameter = props.avatar.diameter || 418
+
+  return {
+    position: 'relative',
+    width: `${diameter}px`,    
     height: `${diameter}px`
   }
 })
@@ -108,7 +117,7 @@ const handlePointerDown = (event) => {
   emit('start-drag', event, props.avatar.id)
 }
 
-// Определение 9 точек соединения с углами (0°, 40°, 80°, 120°, 160°, 200°, 240°, 280°, 320°)
+// Определение 10 точек соединения с углами (0°, 40°, 80°, 120°, 160°, 180°, 200°, 240°, 280°, 320°)
 const connectionPoints = computed(() => {
   const diameter = props.avatar.diameter || 418
   const radius = diameter / 2
@@ -120,10 +129,11 @@ const connectionPoints = computed(() => {
     { index: 3, angle: 80, name: 'right-top', size: 8 },     // ~2:40
     { index: 4, angle: 120, name: 'right-bottom', size: 8 }, // 4 часа
     { index: 5, angle: 160, name: 'bottom-right', size: 8 }, // ~5:20
-    { index: 6, angle: 200, name: 'bottom-left', size: 8 },  // ~6:40
-    { index: 7, angle: 240, name: 'left-bottom', size: 8 },  // 8 часов
-    { index: 8, angle: 280, name: 'left-top', size: 8 },     // ~9:20
-    { index: 9, angle: 320, name: 'top-left', size: 8 }      // ~10:40
+    { index: 6, angle: 180, name: 'bottom', size: 16 },      // 6 часов
+    { index: 7, angle: 200, name: 'bottom-left', size: 8 },  // ~6:40
+    { index: 8, angle: 240, name: 'left-bottom', size: 8 },  // 8 часов
+    { index: 9, angle: 280, name: 'left-top', size: 8 },     // ~9:20
+    { index: 10, angle: 320, name: 'top-left', size: 8 }     // ~10:40
   ]
 
   return points.map(point => {
@@ -184,20 +194,41 @@ const handleImageError = (event) => {
 <template>
   <div
     class="avatar-object"
-    :class="{ 'avatar-highlight': avatar.highlighted }"    
+    :class="{ 'avatar-highlight': avatar.highlighted }"
     :style="avatarStyle"
-    :data-avatar-id="avatar.id"    
+    :data-avatar-id="avatar.id"
     @click="handleAvatarClick"
     @dblclick="handleAvatarDblClick"
     @pointerdown="handlePointerDown"
   >
-    <div class="avatar-circle" :style="circleStyle">
-      <img
-        :src="avatar.avatarUrl || '/Avatar.png'"
-        :alt="avatar.username || 'Avatar'"
-        :style="imageStyle"
-        @error="handleImageError"
-      />
+    <div class="avatar-shape" :style="shapeStyle">
+      <div class="avatar-circle" :style="circleStyle">
+        <img
+          :src="avatar.avatarUrl || '/Avatar.png'"
+          :alt="avatar.username || 'Avatar'"
+          :style="imageStyle"
+          @error="handleImageError"
+        />
+      </div>
+
+      <!-- 10 точек соединения равномерно распределены по кругу -->
+      <div
+        v-for="point in connectionPoints"
+        :key="point.index"
+        class="connection-point"
+        :class="{ 'connection-point--visible': shouldShowConnectionPoints }"
+        :style="{
+          left: `${point.x}px`,
+          top: `${point.y}px`,
+          width: `${point.size}px`,
+          height: `${point.size}px`
+        }"
+        :data-avatar-id="avatar.id"
+        :data-point-index="point.index"
+        :data-point-angle="point.angle"
+        @click="handleConnectionPointClick($event, point.index, point.angle)"
+        @pointerdown.stop
+      ></div>
     </div>
 
     <div
@@ -207,25 +238,6 @@ const handleImageError = (event) => {
     >
       {{ avatar.username }}
     </div>
-
-    <!-- 9 точек соединения равномерно распределены по кругу -->
-    <div
-      v-for="point in connectionPoints"
-      :key="point.index"
-      class="connection-point"
-      :class="{ 'connection-point--visible': shouldShowConnectionPoints }"
-      :style="{
-        left: `${point.x}px`,
-        top: `${point.y}px`,
-        width: `${point.size}px`,
-        height: `${point.size}px`
-      }"
-      :data-avatar-id="avatar.id"
-      :data-point-index="point.index"
-      :data-point-angle="point.angle"
-      @click="handleConnectionPointClick($event, point.index, point.angle)"
-      @pointerdown.stop
-    ></div>
   </div>
 </template>
 
@@ -237,6 +249,9 @@ const handleImageError = (event) => {
   flex-direction: column;
   align-items: center;
   z-index: 10;
+}
+.avatar-shape {
+  position: relative;
 }
 
 .avatar-circle {
@@ -266,7 +281,8 @@ const handleImageError = (event) => {
   border-radius: 50%;
   cursor: crosshair;
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transform: scale(1);
+  transition: opacity 0.2s ease, transform 0.2s ease;
   pointer-events: none;
   z-index: 20;
 }
@@ -277,7 +293,9 @@ const handleImageError = (event) => {
   opacity: 1;
   pointer-events: auto;
 }
-
+.avatar-object:hover .connection-point {
+  transform: scale(1.25);
+}
 .avatar-highlight {
   animation: avatar-pulse 2s ease-in-out;
   box-shadow: 0 0 0 4px rgba(93, 139, 244, 0.8) !important;
