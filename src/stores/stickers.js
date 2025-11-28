@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
+import { useAuthStore } from './auth.js';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api';
 
@@ -45,7 +46,14 @@ export const useStickersStore = defineStore('stickers', () => {
    * Получить заголовки для API запросов с авторизацией
    */
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
+    const authStore = useAuthStore();
+    const token = localStorage.getItem('token') || authStore.token;
+
+    if (!token) {
+      return {
+        'Content-Type': 'application/json'
+      };
+    }
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
