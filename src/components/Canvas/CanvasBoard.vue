@@ -11,6 +11,7 @@ import { useImagesStore } from '../../stores/images';
 import { useAnchorsStore } from '../../stores/anchors';  
 import Card from './Card.vue';
 import Avatar from './Avatar.vue';
+import AvatarContextMenu from './AvatarContextMenu.vue';
 import NoteWindow from './NoteWindow.vue';
 import Sticker from './Sticker.vue';
 import CanvasImage from './CanvasImage.vue';
@@ -208,6 +209,10 @@ const selectedConnectionIds = ref([]);
 const selectedAvatarConnectionIds = ref([]);
 const avatarConnectionStart = ref(null); // { avatarId, pointIndex, pointAngle }
 const draggingControlPoint = ref(null); // { connectionId, pointIndex }
+
+// Контекстное меню для аватара
+const avatarContextMenu = ref(null); // { avatarId }
+const avatarContextMenuPosition = ref({ x: 0, y: 0 })
 
 // Инициализация composable для кривых Безье
 const { buildBezierPath, getAvatarConnectionPoint, calculateMidpoint, findClosestPointOnBezier, isPointNearBezier } = useBezierCurves();
@@ -3673,6 +3678,30 @@ const handleCardClick = (event, cardId) => {
   selectedCardId.value = cardId;
 };
 
+// Обработчик правого клика мыши на аватаре для открытия контекстного меню
+const handleAvatarContextMenu = (event, avatarId) => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  // Закрываем другие контекстные меню (если они есть)
+  closeAvatarContextMenu();
+
+  // Открываем контекстное меню для аватара
+  const avatar = cardsStore.cards.find(c => c.id === avatarId);
+  if (avatar && avatar.type === 'avatar') {
+    avatarContextMenu.value = { avatarId };
+    avatarContextMenuPosition.value = {
+      x: event.clientX,
+      y: event.clientY
+    };
+  }
+};
+
+// Закрытие контекстного меню аватара
+const closeAvatarContextMenu = () => {
+  avatarContextMenu.value = null;
+};
+
 const handleStickerClick = (event, stickerId) => {
   // Останавливаем всплытие события
   event.stopPropagation();
@@ -4686,6 +4715,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           @avatar-click="(event) => handleCardClick(event, avatar.id)"
           @start-drag="startDrag"
           @connection-point-click="handleAvatarConnectionPointClick"
+          @contextmenu.native="(event) => handleAvatarContextMenu(event, avatar.id)"
           style="pointer-events: auto;"
           />
       </div>
@@ -4718,7 +4748,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       />
     </div>
     <a
-      v-if="!isMobileMode"      
+      v-if="!isMobileMode"
       class="marketing-watermark"
       :class="{ 'marketing-watermark--modern': props.isModernTheme }"
       href="https://t.me/MarketingFohow"
@@ -4728,6 +4758,14 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     >
       @MarketingFohow
     </a>
+
+    <!-- Контекстное меню для аватара -->
+    <AvatarContextMenu
+      v-if="avatarContextMenu"
+      :avatar="cardsStore.cards.find(c => c.id === avatarContextMenu.avatarId)"
+      :position="avatarContextMenuPosition"
+      @close="closeAvatarContextMenu"
+    />
   </div>
 </template>
 

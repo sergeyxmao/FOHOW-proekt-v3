@@ -39,7 +39,7 @@ const avatarStyle = computed(() => {
 
 const circleStyle = computed(() => {
   const diameter = props.avatar.diameter || 418
-  const strokeWidth = props.avatar.strokeWidth || 3
+  const strokeWidth = adaptiveStrokeWidth.value
   const stroke = props.avatar.stroke || '#5D8BF4'
 
   return {
@@ -51,7 +51,7 @@ const circleStyle = computed(() => {
     overflow: 'hidden',
     position: 'relative',
     boxShadow: props.isSelected ? '0 0 0 3px rgba(93, 139, 244, 0.3)' : 'none',
-    transition: 'box-shadow 0.2s ease'
+    transition: 'all 0.2s ease'
   }
 })
 
@@ -149,6 +149,26 @@ const handleConnectionPointClick = (event, pointIndex, pointAngle) => {
 const shouldShowConnectionPoints = computed(() => {
   return props.isSelected || props.isDrawingLine
 })
+
+// Вычисление размера шрифта для имени пользователя в зависимости от размера аватара
+const usernameFontSize = computed(() => {
+  const size = props.avatar.size || 100
+
+  if (size <= 25) return '10px'
+  if (size <= 50) return '12px'
+  if (size <= 75) return '14px'
+  return '16px'
+})
+
+// Вычисление ширины обводки в зависимости от размера аватара
+const adaptiveStrokeWidth = computed(() => {
+  const size = props.avatar.size || 100
+  const baseStrokeWidth = props.avatar.strokeWidth || 3
+
+  if (size <= 25) return Math.max(2, baseStrokeWidth - 1)
+  if (size <= 50) return baseStrokeWidth
+  return baseStrokeWidth
+})
 </script>
 
 <template>
@@ -166,7 +186,11 @@ const shouldShowConnectionPoints = computed(() => {
       />
     </div>
 
-    <div v-if="avatar.username" class="avatar-username">
+    <div
+      v-if="avatar.username"
+      class="avatar-username"
+      :style="{ fontSize: usernameFontSize }"
+    >
       {{ avatar.username }}
     </div>
 
