@@ -110,27 +110,7 @@
           <div v-if="activeTab === 'personal'" class="tab-panel">
             <form @submit.prevent="savePersonalInfo" class="info-form">
               <div class="form-group">
-                <div class="form-group-header">
-                  <label for="username">Имя пользователя:</label>
-                  <button
-                    type="button"
-                    class="privacy-lock"
-                    :class="{ 'privacy-lock--open': privacySettings.username, 'privacy-lock--closed': !privacySettings.username }"
-                    @click="togglePrivacy('username')"
-                    :title="privacySettings.username ? 'Поиск разрешен' : 'Поиск запрещен'"
-                  >
-                    <svg v-if="privacySettings.username" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                  </button>
-                </div>
+                <label for="username">Имя пользователя:</label>
                 <input
                   id="username"
                   v-model="personalForm.username"
@@ -142,27 +122,7 @@
               </div>
 
               <div class="form-group">
-                <div class="form-group-header">
-                  <label for="full-name">Полное имя:</label>
-                  <button
-                    type="button"
-                    class="privacy-lock"
-                    :class="{ 'privacy-lock--open': privacySettings.full_name, 'privacy-lock--closed': !privacySettings.full_name }"
-                    @click="togglePrivacy('full_name')"
-                    :title="privacySettings.full_name ? 'Поиск разрешен' : 'Поиск запрещен'"
-                  >
-                    <svg v-if="privacySettings.full_name" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                  </button>
-                </div>
+                <label for="full-name">Полное имя:</label>
                 <input
                   id="full-name"
                   v-model="personalForm.full_name"
@@ -172,27 +132,7 @@
               </div>
 
               <div class="form-group">
-                <div class="form-group-header">
-                  <label for="phone">Телефон:</label>
-                  <button
-                    type="button"
-                    class="privacy-lock"
-                    :class="{ 'privacy-lock--open': privacySettings.phone, 'privacy-lock--closed': !privacySettings.phone }"
-                    @click="togglePrivacy('phone')"
-                    :title="privacySettings.phone ? 'Поиск разрешен' : 'Поиск запрещен'"
-                  >
-                    <svg v-if="privacySettings.phone" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                  </button>
-                </div>
+                <label for="phone">Телефон:</label>
                 <input
                   id="phone"
                   v-model="personalForm.phone"
@@ -202,27 +142,7 @@
               </div>
 
               <div class="form-group">
-                <div class="form-group-header">
-                  <label for="city">Город:</label>
-                  <button
-                    type="button"
-                    class="privacy-lock"
-                    :class="{ 'privacy-lock--open': privacySettings.city, 'privacy-lock--closed': !privacySettings.city }"
-                    @click="togglePrivacy('city')"
-                    :title="privacySettings.city ? 'Поиск разрешен' : 'Поиск запрещен'"
-                  >
-                    <svg v-if="privacySettings.city" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                  </button>
-                </div>
+                <label for="city">Город:</label>
                 <input
                   id="city"
                   v-model="personalForm.city"
@@ -232,27 +152,7 @@
               </div>
 
               <div class="form-group">
-                <div class="form-group-header">
-                  <label for="country">Страна:</label>
-                  <button
-                    type="button"
-                    class="privacy-lock"
-                    :class="{ 'privacy-lock--open': privacySettings.country, 'privacy-lock--closed': !privacySettings.country }"
-                    @click="togglePrivacy('country')"
-                    :title="privacySettings.country ? 'Поиск разрешен' : 'Поиск запрещен'"
-                  >
-                    <svg v-if="privacySettings.country" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                  </button>
-                </div>
+                <label for="country">Страна:</label>
                 <input
                   id="country"
                   v-model="personalForm.country"
@@ -262,27 +162,7 @@
               </div>
 
               <div class="form-group">
-                <div class="form-group-header">
-                  <label for="office">Представительство:</label>
-                  <button
-                    type="button"
-                    class="privacy-lock"
-                    :class="{ 'privacy-lock--open': privacySettings.office, 'privacy-lock--closed': !privacySettings.office }"
-                    @click="togglePrivacy('office')"
-                    :title="privacySettings.office ? 'Поиск разрешен' : 'Поиск запрещен'"
-                  >
-                    <svg v-if="privacySettings.office" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                  </button>
-                </div>
+                <label for="office">Представительство:</label>
                 <input
                   id="office"
                   v-model="personalForm.office"
@@ -295,33 +175,13 @@
               </div>
 
               <div class="form-group">
-                <div class="form-group-header">
-                  <label
-                    for="personal-id-input"
-                    :class="{ 'verified-label': user.is_verified }"
-                  >
-                    Компьютерный номер:
-                    <span v-if="user.is_verified" class="verified-icon" title="Верифицирован">⭐</span>
-                  </label>
-                  <button
-                    type="button"
-                    class="privacy-lock"
-                    :class="{ 'privacy-lock--open': privacySettings.personal_id, 'privacy-lock--closed': !privacySettings.personal_id }"
-                    @click="togglePrivacy('personal_id')"
-                    :title="privacySettings.personal_id ? 'Поиск разрешен' : 'Поиск запрещен'"
-                  >
-                    <svg v-if="privacySettings.personal_id" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                  </button>
-                </div>
+                <label
+                  for="personal-id-input"
+                  :class="{ 'verified-label': user.is_verified }"
+                >
+                  Компьютерный номер:
+                  <span v-if="user.is_verified" class="verified-icon" title="Верифицирован">⭐</span>
+                </label>
                 <div
                   :class="[
                     'personal-id-input-container',
@@ -408,27 +268,7 @@
           <div v-if="activeTab === 'social'" class="tab-panel">
             <form @submit.prevent="saveSocialInfo" class="info-form">
               <div class="form-group">
-                <div class="form-group-header">
-                  <label for="telegram">Telegram (@username):</label>
-                  <button
-                    type="button"
-                    class="privacy-lock"
-                    :class="{ 'privacy-lock--open': privacySettings.telegram_user, 'privacy-lock--closed': !privacySettings.telegram_user }"
-                    @click="togglePrivacy('telegram_user')"
-                    :title="privacySettings.telegram_user ? 'Поиск разрешен' : 'Поиск запрещен'"
-                  >
-                    <svg v-if="privacySettings.telegram_user" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                  </button>
-                </div>
+                <label for="telegram">Telegram (@username):</label>
                 <input
                   id="telegram"
                   v-model="socialForm.telegram_user"
@@ -448,27 +288,7 @@
               </div>
 
               <div class="form-group">
-                <div class="form-group-header">
-                  <label for="instagram">Instagram (@username):</label>
-                  <button
-                    type="button"
-                    class="privacy-lock"
-                    :class="{ 'privacy-lock--open': privacySettings.instagram_profile, 'privacy-lock--closed': !privacySettings.instagram_profile }"
-                    @click="togglePrivacy('instagram_profile')"
-                    :title="privacySettings.instagram_profile ? 'Поиск разрешен' : 'Поиск запрещен'"
-                  >
-                    <svg v-if="privacySettings.instagram_profile" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                    <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
-                      <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="12" cy="16" r="1.5" fill="white"/>
-                    </svg>
-                  </button>
-                </div>
+                <label for="instagram">Instagram (@username):</label>
                 <input
                   id="instagram"
                   v-model="socialForm.instagram_profile"
