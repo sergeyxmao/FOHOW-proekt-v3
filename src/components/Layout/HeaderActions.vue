@@ -127,6 +127,10 @@ function addGoldCard() {
   })
 }
 
+function addAvatar() {
+  cardsStore.addAvatar()
+}
+
 function closeTemplateMenu() {
   isTemplateMenuOpen.value = false
 }
@@ -312,6 +316,15 @@ function handleToggleTheme() {
           <span class="header-actions__icon" aria-hidden="true">★</span>
           <span class="visually-hidden">Добавить Gold лицензию</span>
         </button>
+        <button
+          class="header-actions__grid-button header-actions__grid-button--avatar"
+          type="button"
+          title="Добавить Аватар"
+          @click="addAvatar"
+        >
+          <img src="/Avatar.png" alt="" class="header-actions__avatar-icon" aria-hidden="true" />
+          <span class="visually-hidden">Добавить Аватар</span>
+        </button>
         <div ref="templateAnchorRef" class="header-actions__grid-item header-actions__grid-item--template">
           <button
             class="header-actions__grid-button"
@@ -385,6 +398,15 @@ function handleToggleTheme() {
         >
           <span class="header-actions__icon" aria-hidden="true">★</span>
           <span class="visually-hidden">Добавить Gold лицензию</span>
+        </button>
+        <button
+          class="header-actions__button header-actions__button--avatar"
+          type="button"
+          title="Добавить Аватар"
+          @click="addAvatar"
+        >
+          <img src="/Avatar.png" alt="" class="header-actions__avatar-icon" aria-hidden="true" />
+          <span class="visually-hidden">Добавить Аватар</span>
         </button>
         <div ref="templateAnchorRef" class="header-actions__templates">
           <button
@@ -755,5 +777,29 @@ function handleToggleTheme() {
 .header-actions-menu-leave-to {
   opacity: 0;
   transform: translateY(-6px);
+}
+
+/* Avatar button styles */
+.header-actions__grid-button--avatar,
+.header-actions__button--avatar {
+  background: var(--header-button-bg);
+  border-color: var(--header-button-border);
+  padding: 4px;
+}
+
+.header-actions__grid-button--avatar:hover:not(:disabled),
+.header-actions__grid-button--avatar:focus-visible:not(:disabled),
+.header-actions__button--avatar:hover:enabled,
+.header-actions__button--avatar:focus-visible:enabled {
+  background: #0f62fe;
+  border-color: rgba(15, 98, 254, 0.82);
+}
+
+.header-actions__avatar-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 </style>

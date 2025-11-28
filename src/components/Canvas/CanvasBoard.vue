@@ -10,6 +10,7 @@ import { useViewSettingsStore } from '../../stores/viewSettings';
 import { useImagesStore } from '../../stores/images';
 import { useAnchorsStore } from '../../stores/anchors';  
 import Card from './Card.vue';
+import Avatar from './Avatar.vue';
 import NoteWindow from './NoteWindow.vue';
 import Sticker from './Sticker.vue';
 import CanvasImage from './CanvasImage.vue';
@@ -4260,7 +4261,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         @dragstart.prevent
       >
           <Card
-          v-for="card in cards"
+          v-for="card in cards.filter(c => c.type !== 'avatar')"
           :key="card.id"
           :card="card"
           :is-selected="card.selected"
@@ -4268,7 +4269,16 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           @card-click="(event) => handleCardClick(event, card.id)"
           @start-drag="startDrag"
           @add-note="handleAddNoteClick"
-          @pv-changed="handlePvChanged"         
+          @pv-changed="handlePvChanged"
+          style="pointer-events: auto;"
+          />
+          <Avatar
+          v-for="avatar in cards.filter(c => c.type === 'avatar')"
+          :key="avatar.id"
+          :avatar="avatar"
+          :is-selected="avatar.selected"
+          @avatar-click="(event) => handleCardClick(event, avatar.id)"
+          @start-drag="startDrag"
           style="pointer-events: auto;"
           />
       </div>

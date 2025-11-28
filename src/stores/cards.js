@@ -441,7 +441,52 @@ export const useCardsStore = defineStore('cards', {
       
       return newCard;
     },
-    
+
+    addAvatar(options = {}) {
+      const { ...avatarData } = options
+      const hasCustomX = Object.prototype.hasOwnProperty.call(avatarData, 'x')
+      const hasCustomY = Object.prototype.hasOwnProperty.call(avatarData, 'y')
+      const { x: providedX, y: providedY, ...restData } = avatarData
+
+      // Базовый диаметр = ширина малой лицензии
+      const baseDiameter = 418
+      const size = avatarData.size || 100
+      const diameter = (baseDiameter * size) / 100
+
+      // Позиционирование в центре видимой области
+      const viewportPosition = getViewportAnchoredPosition(diameter, diameter)
+      const defaultX = viewportPosition?.x ?? 320
+      const defaultY = viewportPosition?.y ?? 160
+      const normalizedX = hasCustomX ? providedX : defaultX
+      const normalizedY = hasCustomY ? providedY : defaultY
+
+      const newAvatar = {
+        id: 'avatar_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9),
+        type: 'avatar',
+        x: normalizedX,
+        y: normalizedY,
+        size: size,
+        diameter: diameter,
+        personalId: '',
+        userId: null,
+        avatarUrl: '/Avatar.png',
+        username: '',
+        stroke: '#5D8BF4',
+        strokeWidth: 3,
+        selected: false,
+        created_at: new Date().toISOString(),
+        ...restData
+      }
+
+      this.cards.push(newAvatar)
+
+      const historyStore = useHistoryStore()
+      historyStore.setActionMetadata('create', 'Добавлен Аватар')
+      historyStore.saveState()
+
+      return newAvatar
+    },
+
 async removeCard(cardId) {
       const connectionsStore = useConnectionsStore()
       const boardStore = useBoardStore()
