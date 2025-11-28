@@ -638,6 +638,33 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
         small: { width: 418, height: 280 }
       }
       cardsData.forEach(cardData => {
+        // Если это аватар, обрабатываем его отдельно
+        if (cardData.type === 'avatar') {
+          const size = Number.isFinite(cardData.size) ? cardData.size : 100
+          const diameter = Number.isFinite(cardData.diameter) ? cardData.diameter : (418 * size / 100)
+
+          const normalizedAvatar = {
+            id: cardData.id || 'avatar_' + Date.now().toString(),
+            type: 'avatar',
+            x: Number.isFinite(cardData.x) ? cardData.x : 0,
+            y: Number.isFinite(cardData.y) ? cardData.y : 0,
+            size: size,
+            diameter: diameter,
+            personalId: cardData.personalId || '',
+            userId: cardData.userId || null,
+            avatarUrl: cardData.avatarUrl || '/Avatar.png',
+            username: cardData.username || '',
+            stroke: cardData.stroke || '#5D8BF4',
+            strokeWidth: Number.isFinite(cardData.strokeWidth) ? cardData.strokeWidth : 3,
+            selected: false,
+            created_at: cardData.created_at || new Date().toISOString()
+          }
+
+          this.cards.push(normalizedAvatar)
+          return
+        }
+
+        // Обработка обычных карточек (лицензий)
         const detectedType = cardData.type
           || ((cardData.width && cardData.width >= 543.4) || (cardData.height && cardData.height >= 364)
             ? 'large'
@@ -731,6 +758,35 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
       setTimeout(() => {
         card.highlighted = false
       }, 2000)
+
+      return true
+    },
+
+    resizeAvatar(avatarId, sizePercent) {
+      const avatar = this.cards.find(c => c.id === avatarId)
+      if (!avatar || avatar.type !== 'avatar') {
+        return false
+      }
+
+      // Проверяем корректность размера
+      const validSizes = [25, 50, 75, 100]
+      if (!validSizes.includes(sizePercent)) {
+        console.error('Некорректный размер. Допустимые значения: 25, 50, 75, 100')
+        return false
+      }
+
+      // Базовый диаметр (100%)
+      const BASE_DIAMETER = 418
+      const newDiameter = BASE_DIAMETER * (sizePercent / 100)
+
+      // Обновляем размер и диаметр
+      avatar.size = sizePercent
+      avatar.diameter = newDiameter
+
+      // Записываем в историю
+      const historyStore = useHistoryStore()
+      historyStore.setActionMetadata('update', `Изменён размер Аватара на ${sizePercent}%`)
+      historyStore.saveState()
 
       return true
     }
