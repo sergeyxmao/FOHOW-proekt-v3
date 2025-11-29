@@ -309,7 +309,17 @@ const handleImageError = (event) => {
 .avatar-object.avatar--animated .avatar-shape {
   position: relative;
 }
-
+.avatar-object.avatar--animated .avatar-shape::before {
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  pointer-events: none;
+  border: 2px solid rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.55);
+  animation: avatar-pulse-slow calc(var(--avatar-animation-duration, 2000ms) * 1.6) ease-in-out infinite;
+  z-index: 4;
+  transform-origin: center;
+}
 .avatar-object.avatar--animated .avatar-circle {
   border-color: rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 1);
 }
@@ -323,7 +333,22 @@ const handleImageError = (event) => {
   box-shadow: 0 0 18px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.9);
   border: 3px solid rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 1);
   animation: avatar-glow var(--avatar-animation-duration, 2s) ease-in-out infinite;
-  z-index: 5;  
+  z-index: 5;
+}
+
+@keyframes avatar-pulse-slow {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.65;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(0.92);
+    opacity: 0.65;
+  }
 }
 
 @keyframes avatar-glow {
