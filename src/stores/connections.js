@@ -351,7 +351,7 @@ export const useConnectionsStore = defineStore('connections', {
       return removedCount
     },
 
-    updateAvatarConnection(connectionId, updates) {
+    updateAvatarConnection(connectionId, updates, options = { saveToHistory: true }) {
       const connection = this.avatarConnections.find(conn => conn.id === connectionId)
       if (connection) {
         const normalizedUpdates = { ...updates }
@@ -362,9 +362,11 @@ export const useConnectionsStore = defineStore('connections', {
 
         Object.assign(connection, normalizedUpdates)
 
-        const historyStore = useHistoryStore()
-        historyStore.setActionMetadata('update', 'Изменены свойства соединения аватаров')
-        historyStore.saveState()
+        if (options.saveToHistory) {
+          const historyStore = useHistoryStore()
+          historyStore.setActionMetadata('update', 'Изменены свойства соединения аватаров')
+          historyStore.saveState()
+        }
       }
       return connection
     },
