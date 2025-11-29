@@ -68,6 +68,9 @@ const circleStyle = computed(() => {
     transition: 'all 0.2s ease'
   }
 })
+const ringSize = computed(() => props.avatar.diameter || 418)
+const ringStrokeWidth = computed(() => Math.max(3, (props.avatar.strokeWidth || 3) * 1.6))
+const ringRadius = computed(() => ringSize.value / 2 - ringStrokeWidth.value - 2)
 
 const imageStyle = computed(() => {
   return {
@@ -233,6 +236,23 @@ const handleImageError = (event) => {
         @click="handleConnectionPointClick($event, point.index, point.angle)"
         @pointerdown.stop
       ></div>
+
+      <svg
+        class="avatar-connection-ring"
+        :class="{ 'avatar-connection-ring--active': isAnimated }"
+        :width="ringSize"
+        :height="ringSize"
+        :viewBox="`0 0 ${ringSize} ${ringSize}`"
+        aria-hidden="true"
+      >
+        <circle
+          class="avatar-connection-ring__circle"
+          :cx="ringSize / 2"
+          :cy="ringSize / 2"
+          :r="ringRadius"
+          :stroke-width="ringStrokeWidth"
+        />
+      </svg>      
     </div>
 
     <div
@@ -290,7 +310,27 @@ const handleImageError = (event) => {
   pointer-events: none;
   z-index: 20;
 }
+.avatar-connection-ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 12;
+  transform-origin: center;
+}
 
+.avatar-connection-ring__circle {
+  fill: none;
+  stroke: var(--avatar-animation-color, rgb(var(--avatar-animation-color-rgb, 93, 139, 244)));
+  stroke-dasharray: 18 12;
+  stroke-linecap: round;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.avatar-connection-ring--active .avatar-connection-ring__circle {
+  opacity: 1;
+  animation: avatar-ring-flow calc(var(--avatar-animation-duration, 2000ms) / 1.6) linear infinite;
+}
 /* Показать точки при наведении на аватар */
 .avatar-object:hover .connection-point,
 .connection-point--visible {
@@ -358,7 +398,16 @@ const handleImageError = (event) => {
   50% {
     box-shadow: 0 0 18px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.9);
   }
-}  
+}
+
+@keyframes avatar-ring-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -64;
+  }
+}
 @keyframes avatar-pulse {
   0%, 100% {
     box-shadow: 0 0 0 4px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.8);
