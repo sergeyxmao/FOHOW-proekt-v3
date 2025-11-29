@@ -21,6 +21,8 @@ const {
   lineColor,
   lineThickness,
   animationSeconds,
+  animationColor,
+  isAnimationEnabled,  
   headerColor,
   headerColorIndex,
   backgroundGradient,
@@ -29,6 +31,7 @@ const {
 
 const openSubmenuId = ref(null)
 const lineColorPickerRef = ref(null)
+const animationColorPickerRef = ref(null)  
 const headerColorPickerRef = ref(null)
 const backgroundPickerRef = ref(null)
 
@@ -78,7 +81,9 @@ function handleBackgroundChange(event) {
 function openLineColorPicker() {
   lineColorPickerRef.value?.click()
 }
-
+function openAnimationColorPicker() {
+  animationColorPickerRef.value?.click()
+}
 function openHeaderColorPicker() {
   headerColorPickerRef.value?.click()
 }
@@ -93,6 +98,13 @@ function toggleGlobalLineMode() {
 
 function handleAnimationChange(value) {
   viewSettingsStore.setAnimationSeconds(value)
+}
+function handleAnimationColorChange(event) {
+  viewSettingsStore.setAnimationColor(event.target.value)
+}
+
+function toggleAnimation() {
+  viewSettingsStore.toggleAnimation()
 }
 
 function cycleHeaderColor() {
@@ -215,6 +227,23 @@ function changeLocale(newLocale) {
           <span class="view-menu__caret" aria-hidden="true">›</span>
         </button>
         <div v-if="openSubmenuId === 'animation'" class="view-menu__submenu">
+          <div class="view-menu__controls">
+            <button
+              type="button"
+              class="view-menu__control"
+              :class="{ 'view-menu__control--active': isAnimationEnabled }"
+              @click.stop="toggleAnimation"
+            >
+              {{ isAnimationEnabled ? t('viewMenu.animationEnabled') : t('viewMenu.animationDisabled') }}
+            </button>
+            <button
+              type="button"
+              class="view-menu__swatch"
+              :style="{ backgroundColor: animationColor }"
+              @click.stop="openAnimationColorPicker"
+              :aria-label="t('viewMenu.selectAnimationColor')"
+            ></button>
+          </div>          
           <label class="view-menu__field" for="view-menu-animation">
             <span class="view-menu__field-label">{{ t('viewMenu.duration') }}</span>
             <input
@@ -229,6 +258,13 @@ function changeLocale(newLocale) {
             >
             <span class="view-menu__field-suffix">{{ t('viewMenu.seconds') }}</span>
           </label>
+          <input
+            ref="animationColorPickerRef"
+            type="color"
+            :value="animationColor"
+            class="view-menu__hidden-input"
+            @input="handleAnimationColorChange"
+          >          
         </div>
       </div>
 
