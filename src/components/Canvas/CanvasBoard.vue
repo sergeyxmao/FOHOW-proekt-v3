@@ -220,6 +220,33 @@ const avatarContextMenuPosition = ref({ x: 0, y: 0 })
 const avatarNumberModalVisible = ref(false)
 const avatarNumberModalAvatarId = ref(null)
 const avatarNumberModalCurrentId = ref('')
+// Анимация выделения аватаров и их линий
+const animatedAvatarIds = ref(new Set())
+const animatedAvatarConnectionIds = ref(new Set())
+const avatarAnimationTimers = ref([])
+const avatarAnimationRootId = ref(null)
+const avatarAnimationDuration = computed(() => viewSettingsStore.animationDurationMs || 2000)
+const toRgbString = (color) => {
+  if (typeof color !== 'string') return null
+  const hex = color.replace('#', '')
+  if (![3, 6].includes(hex.length)) return null
+  const normalized = hex.length === 3
+    ? hex.split('').map(ch => ch + ch).join('')
+    : hex
+
+  const int = Number.parseInt(normalized, 16)
+  if (!Number.isFinite(int)) return null
+
+  const r = (int >> 16) & 255
+  const g = (int >> 8) & 255
+  const b = int & 255
+
+  return `${r}, ${g}, ${b}`
+}
+
+const avatarAnimationColor = computed(() => viewSettingsStore.animationColor || '#5D8BF4')
+const avatarAnimationColorRgb = computed(() => toRgbString(avatarAnimationColor.value) || '93, 139, 244')
+const isAvatarAnimationEnabled = computed(() => viewSettingsStore.isAnimationEnabled !== false)
 
 // Инициализация composable для кривых Безье
 const { buildBezierPath, getAvatarConnectionPoint, calculateMidpoint, findClosestPointOnBezier, isPointNearBezier } = useBezierCurves();
@@ -251,6 +278,7 @@ const clearObjectSelections = ({ preserveCardSelection = false } = {}) => {
   }
   stickersStore.deselectAllStickers();
   imagesStore.deselectAllImages();
+  stopAvatarSelectionAnimation();  
 };
 
 const noteWindowRefs = new Map();
@@ -1940,7 +1968,129 @@ const avatarPreviewLinePath = computed(() => {
     strokeDasharray: '5,5'
   };
 });
+const addAnimatedItem = (setRef, id) => {
+  const next = new Set(setRef.value);
+  next.add(id);
+  setRef.value = next;
+};
 
+const removeAnimatedItem = (setRef, id) => {
+  const next = new Set(setRef.value);
+  next.delete(id);
+  setRef.value = next;
+};
+
+const stopAvatarSelectionAnimation = () => {
+  avatarAnimationTimers.value.forEach(timerId => window.clearTimeout(timerId));
+  avatarAnimationTimers.value = [];
+  animatedAvatarIds.value = new Set();
+  animatedAvatarConnectionIds.value = new Set();
+  avatarAnimationRootId.value = null;
+};
+
+watch(isAvatarAnimationEnabled, (enabled) => {
+  if (!enabled) {
+    stopAvatarSelectionAnimation();
+  }
+});
+
+const findNextAvatarUp = (avatarId, visited = new Set()) => {
+  const candidates = avatarConnections.value.filter(connection => (
+    connection.from === avatarId && connection.fromPointIndex === 1
+  ) || (
+    connection.to === avatarId && connection.toPointIndex === 1
+  ));
+
+  const scored = candidates
+    .map(connection => {
+      const nextAvatarId = connection.from === avatarId ? connection.to : connection.from;
+      const nextAvatar = cards.value.find(card => card.id === nextAvatarId && card.type === 'avatar');
+
+      if (!nextAvatar || visited.has(nextAvatarId)) {
+        return null;
+      }
+
+      return { connection, nextAvatar };
+    })
+    .filter(Boolean);
+
+  if (!scored.length) {
+    return null;
+  }
+
+  scored.sort((a, b) => a.nextAvatar.y - b.nextAvatar.y);
+  const { connection, nextAvatar } = scored[0];
+
+  return {
+    connectionId: connection.id,
+    nextAvatarId: nextAvatar.id
+  };
+};
+
+const buildAvatarAnimationSequence = (startAvatarId) => {
+  const sequence = [];
+  const visited = new Set([startAvatarId]);
+  let currentId = startAvatarId;
+
+  sequence.push({ type: 'avatar', id: startAvatarId });
+
+  while (true) {
+    const next = findNextAvatarUp(currentId, visited);
+    if (!next) break;
+
+    sequence.push({ type: 'connection', id: next.connectionId });
+    sequence.push({ type: 'avatar', id: next.nextAvatarId });
+    visited.add(next.nextAvatarId);
+    currentId = next.nextAvatarId;
+  }
+
+  return sequence;
+};
+
+const startAvatarSelectionAnimation = (avatarId) => {
+  const avatar = cards.value.find(card => card.id === avatarId && card.type === 'avatar');
+  if (!avatar) {
+    stopAvatarSelectionAnimation();
+    return;
+  }
+
+  stopAvatarSelectionAnimation();
+  avatarAnimationRootId.value = avatarId;
+
+  const sequence = buildAvatarAnimationSequence(avatarId);
+  const stepDuration = avatarAnimationDuration.value;
+
+  sequence.forEach((item, index) => {
+    const startAt = stepDuration * index;
+
+    const startTimer = window.setTimeout(() => {
+      if (avatarAnimationRootId.value !== avatarId) return;
+      if (item.type === 'avatar') {
+        addAnimatedItem(animatedAvatarIds, item.id);
+      } else {
+        addAnimatedItem(animatedAvatarConnectionIds, item.id);
+      }
+    }, startAt);
+
+    const endTimer = window.setTimeout(() => {
+      if (avatarAnimationRootId.value !== avatarId) return;
+      if (item.type === 'avatar') {
+        removeAnimatedItem(animatedAvatarIds, item.id);
+      } else {
+        removeAnimatedItem(animatedAvatarConnectionIds, item.id);
+      }
+    }, startAt + stepDuration);
+
+    avatarAnimationTimers.value.push(startTimer, endTimer);
+  });
+
+  const finalTimer = window.setTimeout(() => {
+    if (avatarAnimationRootId.value !== avatarId) return;
+    stopAvatarSelectionAnimation();
+  }, stepDuration * sequence.length);
+
+  avatarAnimationTimers.value.push(finalTimer);
+};
 const findCardById = (cardId) => cards.value.find(card => card.id === cardId);
 
 const getCardElementRect = (cardId) => {
@@ -3745,6 +3895,16 @@ const handleCardClick = (event, cardId) => {
     }
   }
   selectedCardId.value = cardId;
+
+  const clickedCard = cardsStore.cards.find(c => c.id === cardId);
+  const isAvatarCard = clickedCard?.type === 'avatar';
+  const isNowSelected = cardsStore.selectedCardIds.includes(cardId);
+
+  if (isAvatarCard && isNowSelected && isAvatarAnimationEnabled.value) {
+    startAvatarSelectionAnimation(cardId);
+  } else {
+    stopAvatarSelectionAnimation();
+  }  
 };
 
 // Обработчик правого клика мыши на аватаре для открытия контекстного меню
@@ -4740,6 +4900,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
               '--line-color': path.color,
               '--line-width': `${path.strokeWidth}px`,
               '--line-animation-duration': `${path.animationDuration}ms`,
+              '--line-animation-rgb': avatarAnimationColorRgb,              
               color: path.color,
               stroke: path.color,
               strokeWidth: path.strokeWidth
@@ -4770,8 +4931,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
               'line',
               'avatar-line',
               {
-                selected: selectedAvatarConnectionIds.includes(path.id)
-              }
+                selected: selectedAvatarConnectionIds.includes(path.id),
+                'avatar-line--animated': animatedAvatarConnectionIds.has(path.id)              }
             ]"
             :style="{
               '--line-color': path.color,
@@ -4872,13 +5033,18 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           :avatar="avatar"
           :is-selected="avatar.selected"
           :is-drawing-line="!!avatarConnectionStart"
+          :is-animated="animatedAvatarIds.has(avatar.id)"            
           @avatar-click="(event) => handleCardClick(event, avatar.id)"
           @avatar-dblclick="(event) => handleAvatarDoubleClick(event, avatar.id)"
           @start-drag="startDrag"
           @connection-point-click="handleAvatarConnectionPointClick"
           @contextmenu.native="(event) => handleAvatarContextMenu(event, avatar.id)"
-          style="pointer-events: auto;"
-          />
+          :style="{
+            '--avatar-animation-duration': `${avatarAnimationDuration}ms`,
+            '--avatar-animation-color-rgb': avatarAnimationColorRgb,
+            pointerEvents: 'auto'
+          }"
+            />
       </div>
       <NoteWindow
         v-for="card in cardsWithVisibleNotes"
@@ -5063,7 +5229,12 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-
+.avatar-line--animated {
+  stroke-dasharray: 14;
+  stroke-linecap: round;
+  animation: avatarLineFlow var(--line-animation-duration, 2000ms) ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(var(--line-animation-rgb, 93, 139, 244), 0.6));
+}
 .avatar-line.selected {
   stroke: #5D8BF4 !important;
   stroke-width: calc(var(--line-width, 5px) + 2px) !important;
@@ -5256,7 +5427,19 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.6));
   animation: balancePropagationFlow var(--line-animation-duration, 2000ms) ease-in-out infinite;
 }
-
+@keyframes avatarLineFlow {
+  0% {
+    stroke-dashoffset: -18;
+    stroke: var(--line-color, #5D8BF4);
+  }
+  50% {
+    stroke: #5D8BF4;
+  }
+  100% {
+    stroke-dashoffset: 18;
+    stroke: var(--line-color, #5D8BF4);
+  }
+}
 @keyframes balancePropagationFlow {
   0% {
     stroke-dashoffset: 0;
