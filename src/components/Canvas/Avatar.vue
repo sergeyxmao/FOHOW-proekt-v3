@@ -10,6 +10,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  isAnimated: {
+    type: Boolean,
+    default: false
+  },  
   isDrawingLine: {
     type: Boolean,
     default: false
@@ -194,7 +198,7 @@ const handleImageError = (event) => {
 <template>
   <div
     class="avatar-object"
-    :class="{ 'avatar-highlight': avatar.highlighted }"
+    :class="{ 'avatar-highlight': avatar.highlighted || isAnimated, 'avatar-animated': isAnimated }"
     :style="avatarStyle"
     :data-avatar-id="avatar.id"
     @click="handleAvatarClick"
@@ -298,16 +302,18 @@ const handleImageError = (event) => {
 }
 .avatar-highlight {
   animation: avatar-pulse 2s ease-in-out;
-  box-shadow: 0 0 0 4px rgba(93, 139, 244, 0.8) !important;
-  z-index: 1000 !important;
+  box-shadow: 0 0 0 4px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.8) !important;  z-index: 1000 !important;
 }
-
+.avatar-animated {
+  animation: avatar-pulse var(--avatar-animation-duration, 2s) ease-in-out infinite;
+  box-shadow: 0 0 0 4px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.8) !important;
+}
 @keyframes avatar-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 4px rgba(93, 139, 244, 0.8);
+    box-shadow: 0 0 0 4px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.8);
   }
   50% {
-    box-shadow: 0 0 0 12px rgba(93, 139, 244, 0.3);
+    box-shadow: 0 0 0 12px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.3);
   }
-}  
+}
 </style>
