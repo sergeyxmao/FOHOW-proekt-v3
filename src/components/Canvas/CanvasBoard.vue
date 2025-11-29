@@ -225,7 +225,7 @@ const animatedAvatarIds = ref(new Set())
 const animatedAvatarConnectionIds = ref(new Set())
 const avatarAnimationTimers = ref([])
 const avatarAnimationRootId = ref(null)
-const avatarAnimationDuration = computed(() => viewSettingsStore.animationDurationMs || 2000)
+const avatarAnimationDuration = computed(() => 2000)
 const toRgbString = (color) => {
   if (typeof color !== 'string') return null
   const hex = color.replace('#', '')
@@ -251,7 +251,23 @@ const isAvatarAnimationEnabled = computed(() => viewSettingsStore.isAnimationEna
 // Инициализация composable для кривых Безье
 const { buildBezierPath, getAvatarConnectionPoint, calculateMidpoint, findClosestPointOnBezier, isPointNearBezier } = useBezierCurves();
 const dragState = ref(null);
+const collectAvatarConnectionSnapshots = (movingIds) => {
+  if (!movingIds || movingIds.size === 0) {
+    return [];
+  }
 
+  return avatarConnections.value
+    .filter(connection =>
+      movingIds.has(connection.from)
+      && movingIds.has(connection.to)
+      && Array.isArray(connection.controlPoints)
+      && connection.controlPoints.length > 0
+    )
+    .map(connection => ({
+      id: connection.id,
+      controlPoints: connection.controlPoints.map(point => ({ ...point }))
+    }));
+};
 // State для resize-операций изображений
 const resizeState = ref(null); // { imageId, initialWidth, initialHeight, aspectRatio, keepAspectRatio, interactionType, startX, startY }
 
@@ -1913,7 +1929,14 @@ const avatarConnectionPaths = computed(() => {
 
       // Построить массив точек для кривой Безье
       const points = [fromPoint, ...connection.controlPoints, toPoint];
+      const handlePoints = connection.controlPoints.map(point => {
+        const closest = findClosestPointOnBezier(points, point.x, point.y, 200);
+        if (!closest) {
+          return point;
+        }
 
+        return { x: closest.x, y: closest.y };
+      });
       // Построить SVG path
       const d = buildBezierPath(points);
 
@@ -1924,6 +1947,7 @@ const avatarConnectionPaths = computed(() => {
         type: 'avatar-connection',
         d,
         points, // Сохраняем точки для отображения контрольных точек
+        handlePoints, 
         color: connection.color || connectionsStore.defaultLineColor,
         strokeWidth: connection.thickness || connectionsStore.defaultLineThickness,
         highlightType: connection.highlightType || null,
@@ -2882,18 +2906,20 @@ const startDrag = (event, cardId) => {
 
   const movingIds = new Set(itemsToDrag.map(item => item.id));
   const primaryEntry = itemsToDrag.find(item => item.id === cardId) || itemsToDrag[0] || null;
+  const avatarConnectionSnapshots = collectAvatarConnectionSnapshots(movingIds);
 
   dragState.value = {
     cards: cardsToDrag,
-    stickers: stickersToDrag,
-    images: imagesToDrag,    
+    stickers: stickersToDrag, 
+    images: imagesToDrag,
     items: itemsToDrag,
     startPointer: canvasPos,
     hasMoved: false,
     movingIds,
     primaryCardId: primaryEntry ? primaryEntry.id : null,
     primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
-    axisLock: null
+    axisLock: null,
+    avatarConnectionSnapshots
   };
   resetActiveGuides();
 
@@ -2983,18 +3009,20 @@ const startStickerDrag = (event, stickerId) => {
 
   const movingIds = new Set(itemsToDrag.map(item => item.id));
   const primaryEntry = itemsToDrag.find(item => item.id === stickerId) || itemsToDrag[0] || null;
-
+  const avatarConnectionSnapshots = collectAvatarConnectionSnapshots(movingIds);
+	
   dragState.value = {
     cards: cardsToDrag,
     stickers: stickersToDrag,
-    images: imagesToDrag,    
+    images: imagesToDrag,
     items: itemsToDrag,
     startPointer: canvasPos,
     hasMoved: false,
     movingIds,
     primaryCardId: primaryEntry ? primaryEntry.id : null,
     primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
-    axisLock: null
+    axisLock: null,
+    avatarConnectionSnapshots
   };
   resetActiveGuides();
 
@@ -3130,8 +3158,10 @@ const startImageDrag = ({ event, imageId, interactionType = 'move' }) => {
     hasMoved: false,
     movingIds,
     primaryCardId: primaryEntry ? primaryEntry.id : null,
+    const avatarConnectionSnapshots = collectAvatarConnectionSnapshots(movingIds);	  
     primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
-    axisLock: null
+    axisLock: null,
+    avatarConnectionSnapshots
   };
   resetActiveGuides();
 
@@ -3352,6 +3382,22 @@ const handleImageResizeInternal = (event) => {
 
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
   const deltaX = canvasPos.x - resizeState.value.startPointer.x;
+  if (Array.isArray(dragState.value.avatarConnectionSnapshots) && dragState.value.avatarConnectionSnapshots.length > 0) {
+    dragState.value.avatarConnectionSnapshots.forEach(snapshot => {
+      const connection = connectionsStore.avatarConnections.find(c => c.id === snapshot.id);
+
+      if (!connection) {
+        return;
+      }
+
+      const newControlPoints = snapshot.controlPoints.map(point => ({
+        x: point.x + finalDx,
+        y: point.y + finalDy
+      }));
+
+      connectionsStore.updateAvatarConnection(connection.id, { controlPoints: newControlPoints }, { saveToHistory: false });
+    });
+  }	
   const deltaY = canvasPos.y - resizeState.value.startPointer.y;
 
   const image = imagesStore.images.find(img => img.id === resizeState.value.imageId);
@@ -4949,15 +4995,15 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           <!-- Контрольные точки (видны только когда линия выделена) -->
           <g v-if="selectedAvatarConnectionIds.includes(path.id)">
             <circle
-              v-for="(point, index) in path.points.slice(1, -1)"
+              v-for="(point, index) in path.handlePoints"
               :key="`control-${path.id}-${index}`"
               :cx="point.x"
               :cy="point.y"
               r="5"
               class="control-point"
               :style="{
-                fill: '#ffffff',
-                stroke: path.color,
+                fill: '#ff4d4f',
+                stroke: '#ff4d4f',
                 strokeWidth: '2px',
                 cursor: 'move'
               }"
