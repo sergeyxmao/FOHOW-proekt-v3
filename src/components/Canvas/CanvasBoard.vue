@@ -5035,7 +5035,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           :avatar="avatar"
           :is-selected="avatar.selected"
           :is-drawing-line="!!avatarConnectionStart"
-          :is-animated="animatedAvatarIds.has(avatar.id)"            
+          :is-animated="animatedAvatarIds.has(avatar.id)"
           @avatar-click="(event) => handleCardClick(event, avatar.id)"
           @avatar-dblclick="(event) => handleAvatarDoubleClick(event, avatar.id)"
           @start-drag="startDrag"
@@ -5043,6 +5043,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           @contextmenu.native="(event) => handleAvatarContextMenu(event, avatar.id)"
           :style="{
             '--avatar-animation-duration': `${avatarAnimationDuration}ms`,
+            '--avatar-animation-color': avatarAnimationColor.value,			  
             '--avatar-animation-color-rgb': avatarAnimationColorRgb,
             pointerEvents: 'auto'
           }"
