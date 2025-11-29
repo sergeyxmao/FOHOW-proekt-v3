@@ -2065,38 +2065,29 @@ const startAvatarSelectionAnimation = (avatarId) => {
   avatarAnimationRootId.value = avatarId;
 
   const sequence = buildAvatarAnimationSequence(avatarId);
-  const stepDuration = avatarAnimationDuration.value;
+  const nextAvatarIds = new Set();
+  const nextConnectionIds = new Set();
 
-  sequence.forEach((item, index) => {
-    const startAt = stepDuration * index;
-
-    const startTimer = window.setTimeout(() => {
-      if (avatarAnimationRootId.value !== avatarId) return;
-      if (item.type === 'avatar') {
-        addAnimatedItem(animatedAvatarIds, item.id);
-      } else {
-        addAnimatedItem(animatedAvatarConnectionIds, item.id);
-      }
-    }, startAt);
-
-    const endTimer = window.setTimeout(() => {
-      if (avatarAnimationRootId.value !== avatarId) return;
-      if (item.type === 'avatar') {
-        removeAnimatedItem(animatedAvatarIds, item.id);
-      } else {
-        removeAnimatedItem(animatedAvatarConnectionIds, item.id);
-      }
-    }, startAt + stepDuration);
-
-    avatarAnimationTimers.value.push(startTimer, endTimer);
+  sequence.forEach(item => {
+    if (item.type === 'avatar') {
+      nextAvatarIds.add(item.id);
+    } else if (item.type === 'connection') {
+      nextConnectionIds.add(item.id);
+    }
   });
 
-  const finalTimer = window.setTimeout(() => {
+  animatedAvatarIds.value = nextAvatarIds;
+  animatedAvatarConnectionIds.value = nextConnectionIds;
+
+  const duration = avatarAnimationDuration.value;
+
+
+  const timerId = window.setTimeout(() => {
     if (avatarAnimationRootId.value !== avatarId) return;
     stopAvatarSelectionAnimation();
-  }, stepDuration * sequence.length);
+  }, duration);
 
-  avatarAnimationTimers.value.push(finalTimer);
+  avatarAnimationTimers.value.push(timerId);
 };
 const findCardById = (cardId) => cards.value.find(card => card.id === cardId);
 
