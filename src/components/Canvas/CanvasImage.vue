@@ -123,6 +123,7 @@ function handleDragStart(event) {
 function handleContextMenu(event) {
   event.preventDefault()
   event.stopPropagation()
+  emit('image-click', { event, imageId: props.image.id })
 
   const position = calculateContextMenuPosition(event.clientX, event.clientY)
   
