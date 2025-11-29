@@ -1891,8 +1891,9 @@ const connectionPaths = computed(() => {
         color: connection.color || connectionsStore.defaultLineColor,
         strokeWidth: connection.thickness || connectionsStore.defaultLineThickness,
         highlightType: connection.highlightType || null,
-        animationDuration: connection.animationDuration ?? connectionsStore.defaultAnimationDuration
-      };
+        animationDuration: connection.animationDuration ?? connectionsStore.defaultAnimationDuration,
+        flowDirection: 1
+		};
     })
     .filter(Boolean);
 });
@@ -4932,17 +4933,18 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
                 selected: selectedAvatarConnectionIds.includes(path.id),
                 'avatar-line--animated': animatedAvatarConnectionIds.has(path.id)              }
             ]"
-            :style="{
-              '--line-color': path.color,
-              '--line-width': `${path.strokeWidth}px`,
-              '--line-animation-duration': `${avatarAnimationDuration.value}ms`,
-              '--line-animation-rgb': avatarAnimationColorRgb,
-              '--line-animation-color': avatarAnimationColor.value,
-              color: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
-              stroke: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
-              strokeWidth: path.strokeWidth
-            }"
-          />
+          :style="{
+            '--line-color': path.color,
+            '--line-width': `${path.strokeWidth}px`,
+            '--line-animation-duration': `${avatarAnimationDuration.value}ms`,
+            '--line-animation-rgb': avatarAnimationColorRgb,
+            '--line-animation-color': avatarAnimationColor.value,
+            '--line-flow-direction': path.flowDirection,
+            color: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
+            stroke: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
+            strokeWidth: path.strokeWidth
+          }"
+        />
 
           <!-- Контрольные точки (видны только когда линия выделена) -->
           <g v-if="selectedAvatarConnectionIds.includes(path.id)">
@@ -5230,11 +5232,14 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   stroke-linejoin: round;
 }
 .avatar-line--animated {
-  stroke-dasharray: 14;
+  --avatar-line-highlight: rgba(var(--line-animation-rgb, 93, 139, 244), 0.55);
+  --line-flow-direction: var(--line-flow-direction, 1);
+  stroke-dasharray: 16 12;
   stroke-linecap: round;
-  animation: avatarLineFlow var(--line-animation-duration, 2000ms) ease-in-out infinite;
-  filter: drop-shadow(0 0 10px rgba(var(--line-animation-rgb, 93, 139, 244), 0.6));
-  stroke: var(--line-animation-color, var(--line-color, #5D8BF4));  
+  animation: avatarLineFlow var(--line-animation-duration, 2000ms) linear infinite;
+  filter: drop-shadow(0 0 10px var(--avatar-line-highlight));
+  stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
+  color: var(--line-animation-color, var(--line-color, #5D8BF4)); 
 }
 .avatar-line.selected {
   stroke: #5D8BF4 !important;
@@ -5404,18 +5409,18 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 }  
 @keyframes linePvFlow {
   0% {
-    stroke-dashoffset: -18;
-    stroke: var(--line-color, currentColor);
-    color: var(--line-color, currentColor);
+    stroke-dashoffset: calc(var(--line-flow-direction, 1) * -24px);
+    stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
+    color: var(--line-animation-color, var(--line-color, #5D8BF4));
   }
   50% {
-    stroke: #0f62fe;
-    color: #0f62fe;
+    stroke: rgba(var(--line-animation-rgb, 93, 139, 244), 0.9);
+    color: rgba(var(--line-animation-rgb, 93, 139, 244), 0.9);
   }
   100% {
-    stroke-dashoffset: 18;
-    stroke: var(--line-color, currentColor);
-    color: var(--line-color, currentColor);
+    stroke-dashoffset: calc(var(--line-flow-direction, 1) * 24px);
+    stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
+    color: var(--line-animation-color, var(--line-color, #5D8BF4));
   }
 }
 
