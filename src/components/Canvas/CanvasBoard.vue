@@ -4937,8 +4937,9 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
               '--line-width': `${path.strokeWidth}px`,
               '--line-animation-duration': `${avatarAnimationDuration.value}ms`,
               '--line-animation-rgb': avatarAnimationColorRgb,
-              color: path.color,
-              stroke: path.color,
+              '--line-animation-color': avatarAnimationColor.value,
+              color: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
+              stroke: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
               strokeWidth: path.strokeWidth
             }"
           />
@@ -5233,6 +5234,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   stroke-linecap: round;
   animation: avatarLineFlow var(--line-animation-duration, 2000ms) ease-in-out infinite;
   filter: drop-shadow(0 0 10px rgba(var(--line-animation-rgb, 93, 139, 244), 0.6));
+  stroke: var(--line-animation-color, var(--line-color, #5D8BF4));  
 }
 .avatar-line.selected {
   stroke: #5D8BF4 !important;
@@ -5428,15 +5430,15 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 }
 @keyframes avatarLineFlow {
   0% {
-    stroke-dashoffset: -18;
-    stroke: var(--line-color, #5D8BF4);
+    stroke-dashoffset: 0;
+    stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
   }
   50% {
-    stroke: #5D8BF4;
+    stroke: rgba(var(--line-animation-rgb, 93, 139, 244), 0.9);
   }
   100% {
-    stroke-dashoffset: 18;
-    stroke: var(--line-color, #5D8BF4);
+    stroke-dashoffset: -32;
+    stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
   }
 }
 @keyframes balancePropagationFlow {
