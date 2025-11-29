@@ -742,7 +742,7 @@ app.get('/api/profile', {
             u.country, u.city, u.office, u.personal_id, u.phone, u.full_name,
             u.telegram_user, u.telegram_channel, u.vk_profile, u.ok_profile,
             u.instagram_profile, u.whatsapp_contact,
-            u.visibility_settings, u.search_settings,
+            u.visibility_settings, u.search_settings, u.ui_preferences,
             u.subscription_started_at, u.subscription_expires_at,
             u.is_verified, u.verified_at,
             sp.id as plan_id, sp.name as plan_name, sp.features
@@ -780,6 +780,7 @@ app.get('/api/profile', {
       whatsapp_contact: userData.whatsapp_contact,
       visibility_settings: userData.visibility_settings,
       search_settings: userData.search_settings,
+      ui_preferences: userData.ui_preferences,      
       subscription_started_at: userData.subscription_started_at,
       subscription_expires_at: userData.subscription_expires_at,
       is_verified: userData.is_verified || false,
@@ -895,6 +896,7 @@ app.post('/api/reset-password', async (req, reply) => {
           country, city, office, personal_id, phone, full_name,
           telegram_user, telegram_channel, vk_profile, ok_profile,
           instagram_profile, whatsapp_contact
+          , ui_preferences          
         } = req.body;
         const normalizedOffice = typeof office === 'string' ? office.trim().toUpperCase() : null;
         const normalizedPersonalId = typeof personal_id === 'string' ? personal_id.trim().toUpperCase() : null;
@@ -904,8 +906,56 @@ app.post('/api/reset-password', async (req, reply) => {
           return reply.code(404).send({ error: 'Пользователь не найден' });
         }
         const user = userResult.rows[0];
+        const existingUiPreferences = user.ui_preferences || {};        
         const currentOffice = user.office ? user.office.toUpperCase() : '';
         const currentPersonalId = user.personal_id ? user.personal_id.toUpperCase() : null;
+        const allowedUiPreferenceFields = [
+          'animationColor',
+          'isAnimationEnabled',
+          'lineColor',
+          'lineThickness',
+          'backgroundGradient'
+        ];
+        let normalizedUiPreferences = null;
+
+        if (ui_preferences && typeof ui_preferences === 'object') {
+          normalizedUiPreferences = { ...existingUiPreferences };
+
+          for (const key of allowedUiPreferenceFields) {
+            if (!Object.prototype.hasOwnProperty.call(ui_preferences, key)) {
+              continue;
+            }
+
+            if (key === 'animationColor' && typeof ui_preferences[key] === 'string' && ui_preferences[key].length > 0) {
+              normalizedUiPreferences[key] = ui_preferences[key];
+            }
+
+            if (key === 'isAnimationEnabled' && typeof ui_preferences[key] === 'boolean') {
+              normalizedUiPreferences[key] = ui_preferences[key];
+            }
+
+            if (key === 'lineColor' && typeof ui_preferences[key] === 'string' && ui_preferences[key].length > 0) {
+              normalizedUiPreferences[key] = ui_preferences[key];
+            }
+
+            if (key === 'lineThickness') {
+              const numericValue = Number(ui_preferences[key]);
+              if (Number.isFinite(numericValue)) {
+                const clamped = Math.min(Math.max(Math.round(numericValue), 1), 20);
+                normalizedUiPreferences[key] = clamped;
+              }
+            }
+
+            if (key === 'backgroundGradient' && typeof ui_preferences[key] === 'string' && ui_preferences[key].length > 0) {
+              normalizedUiPreferences[key] = ui_preferences[key];
+            }
+          }
+
+          const hasUpdates = Object.keys(normalizedUiPreferences).length > 0;
+          if (!hasUpdates) {
+            normalizedUiPreferences = null;
+          }
+        }
 
         const targetOffice = normalizedOffice ?? currentOffice;
         const targetPersonalId = normalizedPersonalId ?? currentPersonalId;
@@ -995,8 +1045,9 @@ app.post('/api/reset-password', async (req, reply) => {
              telegram_user = COALESCE($10, telegram_user), telegram_channel = COALESCE($11, telegram_channel),
              vk_profile = COALESCE($12, vk_profile), ok_profile = COALESCE($13, ok_profile),
              instagram_profile = COALESCE($14, instagram_profile), whatsapp_contact = COALESCE($15, whatsapp_contact),
+             ui_preferences = COALESCE($16, ui_preferences),             
              updated_at = CURRENT_TIMESTAMP
-           WHERE id = $16
+           WHERE id = $17
            RETURNING *`;
         
         const queryParams = [
@@ -1004,6 +1055,7 @@ app.post('/api/reset-password', async (req, reply) => {
             country || null, city || null, normalizedOffice || null, normalizedPersonalId || null, phone || null, full_name || null,
             telegram_user || null, telegram_channel || null, vk_profile || null, ok_profile || null,
             instagram_profile || null, whatsapp_contact || null,
+            normalizedUiPreferences ? JSON.stringify(normalizedUiPreferences) : null,          
             userId
         ];
         
