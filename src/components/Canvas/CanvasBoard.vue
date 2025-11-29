@@ -2007,8 +2007,7 @@ const findNextAvatarUp = (avatarId, visited = new Set()) => {
     const currentPointIndex = isFromCurrent ? connection.fromPointIndex : connection.toPointIndex;
     const otherPointIndex = isFromCurrent ? connection.toPointIndex : connection.fromPointIndex;
 
-    // Движемся только по цепочке, где линия подключена к верхней точке обоих аватаров
-    return currentPointIndex === 1 && otherPointIndex === 1;
+    return currentPointIndex === 1 && otherPointIndex !== undefined && otherPointIndex !== 1;
   });
 
   const scored = candidates
@@ -2019,11 +2018,6 @@ const findNextAvatarUp = (avatarId, visited = new Set()) => {
       if (!nextAvatar || visited.has(nextAvatarId)) {
         return null;
       }
-      // Учитываем только аватары, которые расположены выше текущего
-      const isAbove = nextAvatar.y < currentAvatar.y;
-      if (!isAbove) {
-        return null;
-      }
       return { connection, nextAvatar };
     })
     .filter(Boolean);
@@ -2032,7 +2026,6 @@ const findNextAvatarUp = (avatarId, visited = new Set()) => {
     return null;
   }
 
-  scored.sort((a, b) => a.nextAvatar.y - b.nextAvatar.y);
   const { connection, nextAvatar } = scored[0];
 
   return {
@@ -4951,7 +4944,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
             :style="{
               '--line-color': path.color,
               '--line-width': `${path.strokeWidth}px`,
-              '--line-animation-duration': `${path.animationDuration}ms`,
+              '--line-animation-duration': `${avatarAnimationDuration.value}ms`,
+              '--line-animation-rgb': avatarAnimationColorRgb,
               color: path.color,
               stroke: path.color,
               strokeWidth: path.strokeWidth
