@@ -95,16 +95,38 @@ export function findClosestPointOnBezier(points, x, y, samples = 100) {
   let closestT = 0
   let insertIndex = 1
 
-  // Разбиваем кривую на сегменты и ищем ближайшую точку
-  for (let i = 0; i < points.length - 1; i++) {
-    const p0 = points[i]
-    const p1 = points[i + 1]
+  const segments = []
 
-    for (let j = 0; j <= samples; j++) {
-      const t = j / samples
-      // Линейная интерполяция для простоты
-      const px = p0.x + (p1.x - p0.x) * t
-      const py = p0.y + (p1.y - p0.y) * t
+  if (points.length === 2) {
+    segments.push({ start: points[0], control: points[0], end: points[1], insertIndex: 1 })
+  } else if (points.length === 3) {
+    segments.push({ start: points[0], control: points[1], end: points[2], insertIndex: 1 })
+  } else {
+    let currentStart = points[0]
+    for (let i = 1; i < points.length - 1; i++) {
+      const cp = points[i]
+      const next = points[i + 1]
+      const isLastControl = i === points.length - 2
+      const end = isLastControl ? points[points.length - 1] : { x: (cp.x + next.x) / 2, y: (cp.y + next.y) / 2 }
+
+      segments.push({ start: currentStart, control: cp, end, insertIndex: i })
+      currentStart = end
+    }
+  }
+
+  const samplesPerSegment = Math.max(5, Math.round(samples / Math.max(1, segments.length)))
+
+  segments.forEach((segment, segmentIndex) => {
+    for (let j = 0; j <= samplesPerSegment; j++) {
+      const t = j / samplesPerSegment
+      const oneMinusT = 1 - t
+
+      const px = (oneMinusT ** 2) * segment.start.x
+        + 2 * oneMinusT * t * segment.control.x
+        + (t ** 2) * segment.end.x
+      const py = (oneMinusT ** 2) * segment.start.y
+        + 2 * oneMinusT * t * segment.control.y
+        + (t ** 2) * segment.end.y
 
       const dist = Math.sqrt((px - x) ** 2 + (py - y) ** 2)
 
@@ -112,10 +134,10 @@ export function findClosestPointOnBezier(points, x, y, samples = 100) {
         minDist = dist
         closestPoint = { x: px, y: py }
         closestT = t
-        insertIndex = i + 1
+        insertIndex = segmentIndex + 1
       }
     }
-  }
+  })
 
   return { ...closestPoint, t: closestT, index: insertIndex }
 }
