@@ -198,7 +198,7 @@ const handleImageError = (event) => {
 <template>
   <div
     class="avatar-object"
-    :class="{ 'avatar-highlight': avatar.highlighted || isAnimated, 'avatar-animated': isAnimated }"
+    :class="{ 'avatar-highlight': avatar.highlighted, 'avatar--animated': isAnimated }"
     :style="avatarStyle"
     :data-avatar-id="avatar.id"
     @click="handleAvatarClick"
@@ -302,12 +302,38 @@ const handleImageError = (event) => {
 }
 .avatar-highlight {
   animation: avatar-pulse 2s ease-in-out;
-  box-shadow: 0 0 0 4px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.8) !important;  z-index: 1000 !important;
-}
-.avatar-animated {
-  animation: avatar-pulse var(--avatar-animation-duration, 2s) ease-in-out infinite;
   box-shadow: 0 0 0 4px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.8) !important;
+  z-index: 1000 !important;
 }
+
+.avatar-object.avatar--animated .avatar-shape {
+  position: relative;
+}
+
+.avatar-object.avatar--animated .avatar-circle {
+  border-color: rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 1);
+}
+
+.avatar-object.avatar--animated .avatar-shape::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 18px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.9);
+  border: 3px solid rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 1);
+  animation: avatar-glow var(--avatar-animation-duration, 2s) ease-in-out infinite;
+  z-index: 5;  
+}
+
+@keyframes avatar-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.6);
+  }
+  50% {
+    box-shadow: 0 0 18px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.9);
+  }
+}  
 @keyframes avatar-pulse {
   0%, 100% {
     box-shadow: 0 0 0 4px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.8);
