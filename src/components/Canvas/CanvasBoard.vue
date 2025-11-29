@@ -1995,11 +1995,21 @@ watch(isAvatarAnimationEnabled, (enabled) => {
 });
 
 const findNextAvatarUp = (avatarId, visited = new Set()) => {
-  const candidates = avatarConnections.value.filter(connection => (
-    connection.from === avatarId && connection.fromPointIndex === 1
-  ) || (
-    connection.to === avatarId && connection.toPointIndex === 1
-  ));
+  const currentAvatar = cards.value.find(card => card.id === avatarId && card.type === 'avatar');
+  if (!currentAvatar) return null;
+
+  const candidates = avatarConnections.value.filter(connection => {
+    const isFromCurrent = connection.from === avatarId;
+    const isToCurrent = connection.to === avatarId;
+
+    if (!isFromCurrent && !isToCurrent) return false;
+
+    const currentPointIndex = isFromCurrent ? connection.fromPointIndex : connection.toPointIndex;
+    const otherPointIndex = isFromCurrent ? connection.toPointIndex : connection.fromPointIndex;
+
+    // Движемся только по цепочке, где линия подключена к верхней точке обоих аватаров
+    return currentPointIndex === 1 && otherPointIndex === 1;
+  });
 
   const scored = candidates
     .map(connection => {
@@ -2009,7 +2019,11 @@ const findNextAvatarUp = (avatarId, visited = new Set()) => {
       if (!nextAvatar || visited.has(nextAvatarId)) {
         return null;
       }
-
+      // Учитываем только аватары, которые расположены выше текущего
+      const isAbove = nextAvatar.y < currentAvatar.y;
+      if (!isAbove) {
+        return null;
+      }
       return { connection, nextAvatar };
     })
     .filter(Boolean);
