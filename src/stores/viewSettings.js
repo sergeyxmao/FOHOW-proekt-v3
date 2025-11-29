@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useCanvasStore } from './canvas'
 import { useConnectionsStore } from './connections'
 import { useCardsStore } from './cards'
+import { useAuthStore } from './auth'
 import { HEADER_COLORS, getHeaderColorRgb } from '../utils/constants'
 
 const MIN_LINE_THICKNESS = 1
@@ -29,6 +30,17 @@ export const useViewSettingsStore = defineStore('viewSettings', {
   state: () => {
     const connectionsStore = useConnectionsStore()
     const canvasStore = useCanvasStore()
+    const authStore = useAuthStore()
+    let cachedUser = null
+
+    try {
+      const cachedUserRaw = localStorage.getItem('user')
+      cachedUser = cachedUserRaw ? JSON.parse(cachedUserRaw) : null
+    } catch (error) {
+      console.error('[ViewSettings] Ошибка чтения user из localStorage:', error)
+    }
+
+    const uiPreferencesSource = authStore?.user?.ui_preferences || cachedUser?.ui_preferences || {}    
     const initialAnimation = connectionsStore.defaultAnimationDuration || (MIN_ANIMATION_SECONDS * 1000)
     const initialBackground = typeof canvasStore.backgroundColor === 'string'
       ? canvasStore.backgroundColor
@@ -36,15 +48,33 @@ export const useViewSettingsStore = defineStore('viewSettings', {
     const fallbackBackground = typeof initialBackground === 'string' && initialBackground.length > 0
       ? initialBackground
       : '#b9c4da'
+    const animationColorFromProfile = typeof uiPreferencesSource.animationColor === 'string'
+      ? uiPreferencesSource.animationColor
+      : '#5D8BF4'
+    const animationEnabledFromProfile = typeof uiPreferencesSource.isAnimationEnabled === 'boolean'
+      ? uiPreferencesSource.isAnimationEnabled
+      : true
+
+    const lineColorFromProfile = typeof uiPreferencesSource.lineColor === 'string'
+      ? uiPreferencesSource.lineColor
+      : connectionsStore.defaultLineColor || '#0f62fe'
+    const lineThicknessFromProfile = Number.isFinite(Number(uiPreferencesSource.lineThickness))
+      ? clampThickness(uiPreferencesSource.lineThickness)
+      : null
+    const backgroundFromProfile = typeof uiPreferencesSource.backgroundGradient === 'string'
+      ? uiPreferencesSource.backgroundGradient
+      : undefined
 
     return {
-      lineColor: connectionsStore.defaultLineColor || '#0f62fe',
-      lineThickness: connectionsStore.defaultLineThickness || 5,
+      lineColor: lineColorFromProfile,
+      lineThickness: lineThicknessFromProfile || connectionsStore.defaultLineThickness || 5,
       isGlobalLineMode: false,
+      animationColor: animationColorFromProfile,
+      isAnimationEnabled: animationEnabledFromProfile,      
       animationSeconds: clampAnimationSeconds(initialAnimation / 1000),
       headerColor: '#5D8BF4',
       headerColorIndex: 0,
-      backgroundGradient: fallbackBackground
+      backgroundGradient: backgroundFromProfile || fallbackBackground
     }
   },
 
@@ -60,7 +90,26 @@ export const useViewSettingsStore = defineStore('viewSettings', {
   },
 
   actions: {
-    setLineColor(color) {
+    async persistUiPreferences(partialPreferences) {
+      const authStore = useAuthStore()
+
+      if (!authStore?.isAuthenticated) {
+        return
+      }
+
+      try {
+        const mergedPreferences = {
+          ...(authStore.user?.ui_preferences || {}),
+          ...partialPreferences
+        }
+
+        await authStore.updateProfile({ ui_preferences: mergedPreferences })
+      } catch (error) {
+        console.error('[ViewSettings] Не удалось сохранить UI-настройки в профиле:', error)
+      }
+    },
+
+    async setLineColor(color) {
       if (typeof color !== 'string' || color.length === 0) {
         return
       }
@@ -69,15 +118,18 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       if (this.isGlobalLineMode) {
         connectionsStore.updateAllConnectionsColorIncludingAvatars(color)
       }
+      await this.persistUiPreferences({ lineColor: color })      
     },
 
-    setLineThickness(value) {
+    async setLineThickness(value) {
       const normalized = clampThickness(value)
       this.lineThickness = normalized
       const connectionsStore = useConnectionsStore()
       if (this.isGlobalLineMode) {
         connectionsStore.updateAllConnectionsThicknessIncludingAvatars(normalized)
       }
+
+      await this.persistUiPreferences({ lineThickness: normalized })      
     },
 
     toggleGlobalLineMode() {
@@ -93,7 +145,25 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       }
       connectionsStore.setDefaultConnectionParameters(this.lineColor, this.lineThickness, seconds * 1000)
     },
+    async setAnimationColor(color) {
+      if (typeof color !== 'string' || color.length === 0) {
+        return
+      }
+      this.animationColor = color
 
+      await this.persistUiPreferences({ animationColor: color })
+    },
+
+    async toggleAnimation(forceValue) {
+      if (typeof forceValue === 'boolean') {
+        this.isAnimationEnabled = forceValue
+        await this.persistUiPreferences({ isAnimationEnabled: this.isAnimationEnabled })
+        return
+      }
+
+      this.isAnimationEnabled = !this.isAnimationEnabled
+      await this.persistUiPreferences({ isAnimationEnabled: this.isAnimationEnabled })
+    },
     setHeaderColor(color) {
       if (typeof color !== 'string' || color.length === 0) {
         return
@@ -127,13 +197,15 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       }
     },
 
-    setBackground(gradient) {
+    async setBackground(gradient) {
       if (typeof gradient !== 'string' || gradient.length === 0) {
         return
       }
       this.backgroundGradient = gradient
       const canvasStore = useCanvasStore()
       canvasStore.setBackgroundGradient(gradient)
+
+      await this.persistUiPreferences({ backgroundGradient: gradient })      
     }
   }
 })
