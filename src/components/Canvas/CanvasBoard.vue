@@ -3148,6 +3148,7 @@ const startImageDrag = ({ event, imageId, interactionType = 'move' }) => {
 
   const movingIds = new Set(itemsToDrag.map(item => item.id));
   const primaryEntry = itemsToDrag.find(item => item.id === imageId) || itemsToDrag[0] || null;
+  const avatarConnectionSnapshots = collectAvatarConnectionSnapshots(movingIds);
 
   dragState.value = {
     cards: cardsToDrag,
@@ -3158,7 +3159,6 @@ const startImageDrag = ({ event, imageId, interactionType = 'move' }) => {
     hasMoved: false,
     movingIds,
     primaryCardId: primaryEntry ? primaryEntry.id : null,
-    const avatarConnectionSnapshots = collectAvatarConnectionSnapshots(movingIds);	  
     primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
     axisLock: null,
     avatarConnectionSnapshots
