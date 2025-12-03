@@ -2098,17 +2098,17 @@ app.register(verificationRoutes);
 // ============================================
 // ПАРТНЁРЫ FOGRUP (FOGRUP PARTNERS)
 // ============================================
-registerPartnerRoutes(app);
+registerPartnerRoutes(app, pool, authenticateToken);
 
 // ============================================
 // СВЯЗИ FOGRUP (FOGRUP RELATIONSHIPS)
 // ============================================
-registerRelationshipRoutes(app);
+registerRelationshipRoutes(app, pool, authenticateToken);
 
 // ============================================
 // ПОЛЬЗОВАТЕЛИ FOGRUP (FOGRUP USERS)
 // ============================================
-registerUserRoutes(app);
+registerUserRoutes(app, pool, authenticateToken);
 
 // ============================================
 // СТИКЕРЫ (STICKERS)
