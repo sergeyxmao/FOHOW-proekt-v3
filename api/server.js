@@ -25,6 +25,9 @@ import { registerAnchorRoutes } from './routes/anchors.js';
 import { registerBoardFolderRoutes } from './routes/boardFolders.js';
 import { registerDiscussionRoutes } from './routes/discussion.js';
 import verificationRoutes from './routes/verification.js';
+import { registerPartnerRoutes } from './routes/partners.js';
+import { registerRelationshipRoutes } from './routes/relationships.js';
+import { registerUserRoutes } from './routes/users.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
 import {
@@ -2091,6 +2094,21 @@ registerDiscussionRoutes(app);
 // ВЕРИФИКАЦИЯ (VERIFICATION)
 // ============================================
 app.register(verificationRoutes);
+
+// ============================================
+// ПАРТНЁРЫ FOGRUP (FOGRUP PARTNERS)
+// ============================================
+registerPartnerRoutes(app);
+
+// ============================================
+// СВЯЗИ FOGRUP (FOGRUP RELATIONSHIPS)
+// ============================================
+registerRelationshipRoutes(app);
+
+// ============================================
+// ПОЛЬЗОВАТЕЛИ FOGRUP (FOGRUP USERS)
+// ============================================
+registerUserRoutes(app);
 
 // ============================================
 // СТИКЕРЫ (STICKERS)
