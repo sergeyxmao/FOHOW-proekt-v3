@@ -15,7 +15,10 @@ export function registerPartnerRoutes(app) {
         SELECT
           u.id, u.personal_id, u.full_name, u.city, u.country,
           u.rank, u.fohow_role, u.avatar_url, u.is_verified,
-          u.visibility_settings, u.phone, u.email, u.blocked_users
+          u.visibility_settings, u.phone, u.email, u.blocked_users,
+          u.telegram_user, u.vk_profile, u.instagram_profile,
+          u.whatsapp_contact, u.ok_profile, u.telegram_channel,
+          u.search_settings
         FROM users u
         WHERE u.is_verified = TRUE
           AND u.fohow_role = 'partner'
@@ -67,7 +70,10 @@ export function registerPartnerRoutes(app) {
         `SELECT
           u.id, u.personal_id, u.full_name, u.city, u.country,
           u.rank, u.fohow_role, u.avatar_url, u.is_verified,
-          u.visibility_settings, u.phone, u.email, u.blocked_users
+          u.visibility_settings, u.phone, u.email, u.blocked_users,
+          u.telegram_user, u.vk_profile, u.instagram_profile,
+          u.whatsapp_contact, u.ok_profile, u.telegram_channel,
+          u.search_settings
         FROM users u
         WHERE u.id = $1 AND u.is_verified = TRUE AND u.fohow_role = 'partner'`,
         [req.params.id]
