@@ -57,6 +57,32 @@ export async function registerRelationshipRoutes(app) {
           type: row.type,
           status: row.status
         }
+		// DELETE /api/relationships/:targetId - Удалить связь
+  app.delete('/api/relationships/:targetId', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    const { targetId } = req.params;
+    const userId = req.user.id;
+
+    try {
+      // Удаляем связь в обе стороны (где я инициатор ИЛИ где я цель)
+      const result = await pool.query(
+        `DELETE FROM relationships 
+         WHERE (initiator_id = $1 AND target_id = $2) 
+            OR (initiator_id = $2 AND target_id = $1)
+         RETURNING id`,
+        [userId, targetId]
+      );
+
+      if (result.rowCount === 0) {
+        return reply.code(404).send({ error: 'Связь не найдена' });
+      }
+
+      return reply.send({ success: true, message: 'Связь удалена' });
+    } catch (err) {
+      console.error('[RELATIONSHIPS] Ошибка удаления:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
       });
 
     } catch (err) {
