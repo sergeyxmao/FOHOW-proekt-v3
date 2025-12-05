@@ -58,11 +58,11 @@ export async function registerUserRoutes(app) {
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
-      const settings = req.body; // Берем объект настроек напрямую
+      const settings = req.body; // Ожидаем { showPhone: true, ... }
 
       // Валидация
       if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
-        return reply.code(400).send({ error: 'Ожидается JSON объект настроек' });
+        return reply.code(400).send({ error: 'Некорректный формат настроек' });
       }
 
       const allowedFields = [
@@ -70,16 +70,14 @@ export async function registerUserRoutes(app) {
         'showInstagram', 'showWhatsApp', 'allowCrossLineMessages'
       ];
 
-      // Проверка на лишние поля
+      // Удаляем лишние поля из объекта
       for (const key of Object.keys(settings)) {
         if (!allowedFields.includes(key)) {
-             // Можно игнорировать, но лучше сообщить для отладки
-             console.warn(`[Privacy] Игнорируется неизвестное поле: ${key}`);
              delete settings[key];
         }
       }
 
-      // Используем оператор || для слияния (merge) jsonb
+      // Обновляем в БД (слияние jsonb)
       const updateResult = await pool.query(
         `UPDATE users
          SET visibility_settings = COALESCE(visibility_settings, '{}'::jsonb) || $1::jsonb,
@@ -92,8 +90,6 @@ export async function registerUserRoutes(app) {
       if (updateResult.rows.length === 0) {
         return reply.code(404).send({ error: 'Пользователь не найден' });
       }
-
-      console.log(`✅ [Privacy] Обновлено User ${userId}:`, settings);
 
       return reply.send({
         success: true,
@@ -112,10 +108,10 @@ export async function registerUserRoutes(app) {
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
-      const settings = req.body; // Берем объект напрямую
+      const settings = req.body; // Ожидаем { searchByName: true, ... }
 
       if (!settings || typeof settings !== 'object') {
-        return reply.code(400).send({ error: 'Ожидается JSON объект настроек' });
+        return reply.code(400).send({ error: 'Некорректный формат настроек' });
       }
 
       const allowedFields = [
@@ -123,14 +119,12 @@ export async function registerUserRoutes(app) {
         'searchByPersonalId', 'searchByOffice'
       ];
 
-      // Очистка от лишнего
       for (const key of Object.keys(settings)) {
          if (!allowedFields.includes(key)) {
              delete settings[key];
          }
       }
 
-      // Обновляем настройки в базе данных
       const updateResult = await pool.query(
         `UPDATE users
          SET search_settings = COALESCE(search_settings, '{}'::jsonb) || $1::jsonb,
@@ -144,15 +138,13 @@ export async function registerUserRoutes(app) {
         return reply.code(404).send({ error: 'Пользователь не найден' });
       }
 
-      console.log(`✅ [Search] Обновлено User ${userId}:`, settings);
-
       return reply.send({
         success: true,
         search_settings: updateResult.rows[0].search_settings
       });
 
     } catch (err) {
-      console.error('[USERS] Ошибка обновления настроек поиска:', err);
+      console.error('[USERS] Ошибка обновления search settings:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });
