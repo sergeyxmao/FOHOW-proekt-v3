@@ -2,16 +2,14 @@
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
-export function registerUserRoutes(app) {
+export async function registerUserRoutes(app) {
+
   // POST /api/users/block - Заблокировать пользователя
   app.post('/api/users/block', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     const { user_id } = req.body;
-
-    if (!user_id) {
-      return reply.code(400).send({ error: 'user_id обязателен' });
-    }
+    if (!user_id) return reply.code(400).send({ error: 'user_id обязателен' });
 
     try {
       const result = await pool.query(
@@ -24,7 +22,6 @@ export function registerUserRoutes(app) {
          RETURNING blocked_users`,
         [JSON.stringify([user_id]), req.user.id]
       );
-
       return reply.send({ success: true, blocked_users: result.rows[0].blocked_users });
     } catch (err) {
       console.error('[USERS] Ошибка блокировки:', err);
@@ -37,7 +34,6 @@ export function registerUserRoutes(app) {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     const { id } = req.params;
-
     try {
       await pool.query(
         `UPDATE users
@@ -49,7 +45,6 @@ export function registerUserRoutes(app) {
          WHERE id = $2`,
         [parseInt(id), req.user.id]
       );
-
       return reply.send({ success: true });
     } catch (err) {
       console.error('[USERS] Ошибка разблокировки:', err);
@@ -57,47 +52,34 @@ export function registerUserRoutes(app) {
     }
   });
 
-// PUT /api/users/visibility - Обновление настроек видимости
+  // PUT /api/users/visibility - Обновление настроек видимости
   app.put('/api/users/visibility', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
-      // Берем настройки прямо из корня body
-      const settings = req.body;
+      const settings = req.body; // Берем объект настроек напрямую
 
-      // Валидация: проверяем, что settings - это объект
+      // Валидация
       if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
-        return reply.code(400).send({ error: 'Некорректный формат настроек. Ожидается JSON объект.' });
+        return reply.code(400).send({ error: 'Ожидается JSON объект настроек' });
       }
 
-      // Список допустимых полей согласно ТЗ (пункт 3.2)
       const allowedFields = [
-        'showPhone', 
-        'showEmail', 
-        'showTelegram', 
-        'showVK',
-        'showInstagram', 
-        'showWhatsApp'
+        'showPhone', 'showEmail', 'showTelegram', 'showVK', 
+        'showInstagram', 'showWhatsApp', 'allowCrossLineMessages'
       ];
 
-      // Валидация ключей и значений
-      for (const [key, value] of Object.entries(settings)) {
+      // Проверка на лишние поля
+      for (const key of Object.keys(settings)) {
         if (!allowedFields.includes(key)) {
-           // Игнорируем лишние поля или возвращаем ошибку. 
-           // Для строгости вернем ошибку, чтобы фронтенд слал то что нужно.
-           return reply.code(400).send({ 
-             error: `Недопустимое поле настройки: ${key}`,
-             allowed: allowedFields 
-           });
-        }
-        if (typeof value !== 'boolean') {
-          return reply.code(400).send({ error: `Поле ${key} должно быть true или false` });
+             // Можно игнорировать, но лучше сообщить для отладки
+             console.warn(`[Privacy] Игнорируется неизвестное поле: ${key}`);
+             delete settings[key];
         }
       }
 
       // Используем оператор || для слияния (merge) jsonb
-      // Это позволит обновлять только одну настройку, не затирая остальные
       const updateResult = await pool.query(
         `UPDATE users
          SET visibility_settings = COALESCE(visibility_settings, '{}'::jsonb) || $1::jsonb,
@@ -111,7 +93,7 @@ export function registerUserRoutes(app) {
         return reply.code(404).send({ error: 'Пользователь не найден' });
       }
 
-      console.log(`✅ [Privacy] Обновлены настройки для User ${userId}:`, settings);
+      console.log(`✅ [Privacy] Обновлено User ${userId}:`, settings);
 
       return reply.send({
         success: true,
@@ -130,50 +112,39 @@ export function registerUserRoutes(app) {
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
-      const { search_settings } = req.body;
+      const settings = req.body; // Берем объект напрямую
 
-      // Валидация: проверяем, что search_settings - это объект
-      if (!search_settings || typeof search_settings !== 'object') {
-        return reply.code(400).send({ error: 'Некорректный формат настроек поиска' });
+      if (!settings || typeof settings !== 'object') {
+        return reply.code(400).send({ error: 'Ожидается JSON объект настроек' });
       }
 
-      // Список допустимых полей для поиска
       const allowedFields = [
-        'username', 'full_name', 'phone', 'city', 'country', 'office',
-        'personal_id', 'telegram_user', 'instagram_profile'
+        'searchByName', 'searchByCity', 'searchByCountry', 
+        'searchByPersonalId', 'searchByOffice'
       ];
 
-      // Валидация: проверяем, что все ключи допустимы и значения boolean
-      for (const [key, value] of Object.entries(search_settings)) {
-        if (!allowedFields.includes(key)) {
-          return reply.code(400).send({
-            error: `Недопустимое поле: ${key}`,
-            field: key
-          });
-        }
-        if (typeof value !== 'boolean') {
-          return reply.code(400).send({
-            error: `Значение для поля ${key} должно быть true или false`,
-            field: key
-          });
-        }
+      // Очистка от лишнего
+      for (const key of Object.keys(settings)) {
+         if (!allowedFields.includes(key)) {
+             delete settings[key];
+         }
       }
 
       // Обновляем настройки в базе данных
       const updateResult = await pool.query(
         `UPDATE users
-         SET search_settings = $1,
+         SET search_settings = COALESCE(search_settings, '{}'::jsonb) || $1::jsonb,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $2
          RETURNING search_settings`,
-        [JSON.stringify(search_settings), userId]
+        [JSON.stringify(settings), userId]
       );
 
       if (updateResult.rows.length === 0) {
         return reply.code(404).send({ error: 'Пользователь не найден' });
       }
 
-      console.log(`✅ Обновлены настройки поиска для пользователя ${userId}`);
+      console.log(`✅ [Search] Обновлено User ${userId}:`, settings);
 
       return reply.send({
         success: true,
