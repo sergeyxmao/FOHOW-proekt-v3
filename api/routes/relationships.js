@@ -4,16 +4,16 @@ import { authenticateToken } from '../middleware/auth.js';
 
 export async function registerRelationshipRoutes(app) {
   
-  // POST /api/relationships - Создать запрос на связь
+  // 1. POST - Создать запрос на связь
   app.post('/api/relationships', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
-    // Фронтенд шлет targetId, мы это учитываем
     const { targetId, type } = req.body;
-    const target_id = targetId; // Маппинг для БД
+    // Маппинг targetId -> target_id
+    const target_id = targetId;
 
     if (!target_id || !['mentor', 'downline'].includes(type)) {
-      return reply.code(400).send({ error: 'Неверные параметры. Требуется targetId и type.' });
+      return reply.code(400).send({ error: 'Неверные параметры' });
     }
 
     if (target_id == req.user.id) {
@@ -21,22 +21,18 @@ export async function registerRelationshipRoutes(app) {
     }
 
     try {
-      // Проверка существования
       const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [target_id]);
       if (userCheck.rows.length === 0) {
         return reply.code(404).send({ error: 'Пользователь не найден' });
       }
 
-      // Создание связи
       const result = await pool.query(
         'INSERT INTO relationships (initiator_id, target_id, type, status) VALUES ($1, $2, $3, $4) RETURNING *',
         [req.user.id, target_id, type, 'pending']
       );
 
-      // Уведомление
       const senderInfo = await pool.query('SELECT full_name FROM users WHERE id = $1', [req.user.id]);
       const senderName = senderInfo.rows[0]?.full_name || 'Пользователь';
-
       const notifText = type === 'mentor'
         ? `${senderName} хочет добавить вас как наставника`
         : `${senderName} хочет добавить вас в свою структуру`;
@@ -46,7 +42,6 @@ export async function registerRelationshipRoutes(app) {
         [target_id, 'relationship_request', req.user.id, result.rows[0].id, notifText]
       );
 
-      // Возвращаем в формате для фронтенда (camelCase)
       const row = result.rows[0];
       return reply.send({ 
         success: true, 
@@ -57,34 +52,7 @@ export async function registerRelationshipRoutes(app) {
           type: row.type,
           status: row.status
         }
-		// DELETE /api/relationships/:targetId - Удалить связь
-  app.delete('/api/relationships/:targetId', {
-    preHandler: [authenticateToken]
-  }, async (req, reply) => {
-    const { targetId } = req.params;
-    const userId = req.user.id;
-
-    try {
-      // Удаляем связь в обе стороны (где я инициатор ИЛИ где я цель)
-      const result = await pool.query(
-        `DELETE FROM relationships 
-         WHERE (initiator_id = $1 AND target_id = $2) 
-            OR (initiator_id = $2 AND target_id = $1)
-         RETURNING id`,
-        [userId, targetId]
-      );
-
-      if (result.rowCount === 0) {
-        return reply.code(404).send({ error: 'Связь не найдена' });
-      }
-
-      return reply.send({ success: true, message: 'Связь удалена' });
-    } catch (err) {
-      console.error('[RELATIONSHIPS] Ошибка удаления:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
       });
-
     } catch (err) {
       if (err.code === '23505') {
         return reply.code(409).send({ error: 'Связь уже существует' });
@@ -94,34 +62,30 @@ export async function registerRelationshipRoutes(app) {
     }
   });
 
-  // PUT /api/relationships/:id - Ответить на запрос (принимаем status)
+  // 2. PUT - Ответить на запрос
   app.put('/api/relationships/:id', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     const { id } = req.params;
-    const { status } = req.body; // Фронтенд шлет confirmed или rejected
+    const { status } = req.body;
 
     if (!['confirmed', 'rejected'].includes(status)) {
       return reply.code(400).send({ error: 'Неверный статус' });
     }
 
     try {
-      // Обновляем только если пользователь является ЦЕЛЬЮ запроса (target_id)
       const result = await pool.query(
         'UPDATE relationships SET status = $1, updated_at = NOW() WHERE id = $2 AND target_id = $3 RETURNING *',
         [status, id, req.user.id]
       );
 
       if (result.rows.length === 0) {
-        return reply.code(404).send({ error: 'Связь не найдена или вы не можете её подтвердить' });
+        return reply.code(404).send({ error: 'Связь не найдена' });
       }
 
       const row = result.rows[0];
-
-      // Уведомление инициатору
       const responderInfo = await pool.query('SELECT full_name FROM users WHERE id = $1', [req.user.id]);
       const responderName = responderInfo.rows[0]?.full_name || 'Пользователь';
-      
       const notifText = status === 'confirmed'
         ? `${responderName} подтвердил(а) связь`
         : `${responderName} отклонил(а) связь`;
@@ -147,19 +111,45 @@ export async function registerRelationshipRoutes(app) {
     }
   });
 
-  // GET /api/relationships/my - Получить ВСЕ связи (и активные, и заявки)
+  // 3. DELETE - Удалить связь (ВОТ ЭТОТ БЛОК БЫЛ ВСТАВЛЕН НЕ ТУДА)
+  app.delete('/api/relationships/:targetId', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    const { targetId } = req.params;
+    const userId = req.user.id;
+
+    try {
+      // Удаляем связь в обе стороны
+      const result = await pool.query(
+        `DELETE FROM relationships 
+         WHERE (initiator_id = $1 AND target_id = $2) 
+            OR (initiator_id = $2 AND target_id = $1)
+         RETURNING id`,
+        [userId, targetId]
+      );
+
+      if (result.rowCount === 0) {
+        return reply.code(404).send({ error: 'Связь не найдена' });
+      }
+
+      return reply.send({ success: true, message: 'Связь удалена' });
+    } catch (err) {
+      console.error('[RELATIONSHIPS] Ошибка удаления:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  // 4. GET - Получить все связи
   app.get('/api/relationships/my', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
-      // Выбираем все связи, где пользователь либо инициатор, либо цель
       const result = await pool.query(`
         SELECT id, initiator_id, target_id, type, status, created_at
         FROM relationships
         WHERE initiator_id = $1 OR target_id = $1
       `, [req.user.id]);
 
-      // Преобразуем в формат для фронтенда (camelCase)
       const relationships = result.rows.map(row => ({
         id: row.id.toString(),
         initiatorId: row.initiator_id.toString(),
