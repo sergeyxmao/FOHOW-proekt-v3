@@ -4,29 +4,18 @@ import { authenticateToken } from '../middleware/auth.js';
 
 export async function registerUserRoutes(app) {
 
-  // GET /api/users/me - Получить свои данные (для синхронизации)
+  // GET /api/users/me - ЭТОГО НЕ ХВАТАЛО ДЛЯ СИНХРОНИЗАЦИИ
   app.get('/api/users/me', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
       const result = await pool.query(`
-        SELECT
-          id, personal_id, email, fohow_role, is_verified, full_name,
-          username, rank, city, country, phone, avatar_url, bio, office,
-          telegram_user, telegram_channel, vk_profile, ok_profile,
-          instagram_profile, whatsapp_contact,
-          visibility_settings, search_settings, blocked_users
-        FROM users
-        WHERE id = $1
+        SELECT * FROM users WHERE id = $1
       `, [req.user.id]);
 
-      if (result.rows.length === 0) {
-        return reply.code(404).send({ error: 'User not found' });
-      }
-
+      if (result.rows.length === 0) return reply.code(404).send({ error: 'Not found' });
       return reply.send({ success: true, user: result.rows[0] });
     } catch (err) {
-      console.error(err);
       return reply.code(500).send({ error: 'Server error' });
     }
   });
@@ -85,9 +74,8 @@ export async function registerUserRoutes(app) {
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
-      const settings = req.body;
+      const settings = req.body; 
 
-      // Валидация
       if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
         return reply.code(400).send({ error: 'Ожидается JSON объект настроек' });
       }
@@ -98,9 +86,7 @@ export async function registerUserRoutes(app) {
       ];
 
       for (const key of Object.keys(settings)) {
-        if (!allowedFields.includes(key)) {
-             delete settings[key];
-        }
+        if (!allowedFields.includes(key)) delete settings[key];
       }
 
       const updateResult = await pool.query(
@@ -112,9 +98,7 @@ export async function registerUserRoutes(app) {
         [JSON.stringify(settings), userId]
       );
 
-      if (updateResult.rows.length === 0) {
-        return reply.code(404).send({ error: 'Пользователь не найден' });
-      }
+      if (updateResult.rows.length === 0) return reply.code(404).send({ error: 'Пользователь не найден' });
 
       return reply.send({
         success: true,
@@ -133,7 +117,7 @@ export async function registerUserRoutes(app) {
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
-      const settings = req.body;
+      const settings = req.body; 
 
       if (!settings || typeof settings !== 'object') {
         return reply.code(400).send({ error: 'Некорректный формат настроек' });
@@ -145,9 +129,7 @@ export async function registerUserRoutes(app) {
       ];
 
       for (const key of Object.keys(settings)) {
-         if (!allowedFields.includes(key)) {
-             delete settings[key];
-         }
+         if (!allowedFields.includes(key)) delete settings[key];
       }
 
       const updateResult = await pool.query(
@@ -159,9 +141,7 @@ export async function registerUserRoutes(app) {
         [JSON.stringify(settings), userId]
       );
 
-      if (updateResult.rows.length === 0) {
-        return reply.code(404).send({ error: 'Пользователь не найден' });
-      }
+      if (updateResult.rows.length === 0) return reply.code(404).send({ error: 'Пользователь не найден' });
 
       return reply.send({
         success: true,
@@ -174,7 +154,7 @@ export async function registerUserRoutes(app) {
     }
   });
 
-  // PUT /api/users/profile - Обновление данных профиля (НОВЫЙ МАРШРУТ)
+  // PUT /api/users/profile - Обновление данных профиля
   app.put('/api/users/profile', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
@@ -210,9 +190,7 @@ export async function registerUserRoutes(app) {
       addField('ok_profile', ok_profile);
       addField('telegram_channel', telegram_channel);
 
-      if (fields.length === 0) {
-        return reply.code(400).send({ error: 'Нет данных для обновления' });
-      }
+      if (fields.length === 0) return reply.code(400).send({ error: 'Нет данных для обновления' });
 
       fields.push(`updated_at = CURRENT_TIMESTAMP`);
       values.push(userId);
@@ -228,11 +206,8 @@ export async function registerUserRoutes(app) {
 
       const result = await pool.query(query, values);
 
-      if (result.rows.length === 0) {
-        return reply.code(404).send({ error: 'Пользователь не найден' });
-      }
+      if (result.rows.length === 0) return reply.code(404).send({ error: 'Пользователь не найден' });
 
-      console.log(`✅ [Profile] Профиль обновлен для User ${userId}`);
       return reply.send({ success: true, user: result.rows[0] });
 
     } catch (err) {
