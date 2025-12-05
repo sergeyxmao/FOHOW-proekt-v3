@@ -3,19 +3,20 @@ import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 export async function registerNotificationRoutes(app) {
-
-  // GET: Только непрочитанные уведомления
-  app.get('/api/fogrup/notifications', {
+  
+  // GET /api/notifications - Получить непрочитанные уведомления
+  // (УБРАЛИ /fogrup ИЗ ПУТИ)
+  app.get('/api/notifications', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
       const result = await pool.query(`
-        SELECT
+        SELECT 
           n.id, n.type, n.text, n.is_read, n.created_at,
           n.from_user_id, n.relationship_id
         FROM fogrup_notifications n
-        WHERE n.user_id = $1
-          AND n.is_read = FALSE
+        WHERE n.user_id = $1 
+          AND n.is_read = FALSE 
         ORDER BY n.created_at DESC
         LIMIT 50
       `, [req.user.id]);
@@ -24,7 +25,7 @@ export async function registerNotificationRoutes(app) {
         id: row.id.toString(),
         type: row.type,
         text: row.text,
-        read: row.is_read, // важно: поле в БД is_read
+        read: row.is_read,
         timestamp: new Date(row.created_at).getTime(),
         fromUserId: row.from_user_id ? row.from_user_id.toString() : null,
         relationshipId: row.relationship_id ? row.relationship_id.toString() : null
@@ -37,8 +38,9 @@ export async function registerNotificationRoutes(app) {
     }
   });
 
-  // PUT: Пометить прочитанным
-  app.put('/api/fogrup/notifications/:id/read', {
+  // PUT /api/notifications/:id/read - Отметить как прочитанное
+  // (УБРАЛИ /fogrup ИЗ ПУТИ)
+  app.put('/api/notifications/:id/read', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     const { id } = req.params;
