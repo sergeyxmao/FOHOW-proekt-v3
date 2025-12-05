@@ -19,7 +19,8 @@ export async function registerNotificationRoutes(app) {
           n.from_user_id,
           n.relationship_id
         FROM fogrup_notifications n
-        WHERE n.user_id = $1
+        WHERE n.user_id = $1 
+          AND n.is_read = FALSE  -- <--- ИЗМЕНЕНИЕ: Только непрочитанные
         ORDER BY n.created_at DESC
         LIMIT 50
       `, [req.user.id]);
