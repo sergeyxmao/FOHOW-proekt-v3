@@ -57,56 +57,61 @@ export function registerUserRoutes(app) {
     }
   });
 
-  // PUT /api/users/visibility - Обновление настроек видимости
+// PUT /api/users/visibility - Обновление настроек видимости
   app.put('/api/users/visibility', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
-      const { visibility_settings } = req.body;
+      // Берем настройки прямо из корня body
+      const settings = req.body;
 
-      // Валидация: проверяем, что visibility_settings - это объект
-      if (!visibility_settings || typeof visibility_settings !== 'object') {
-        return reply.code(400).send({ error: 'Некорректный формат настроек видимости' });
+      // Валидация: проверяем, что settings - это объект
+      if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+        return reply.code(400).send({ error: 'Некорректный формат настроек. Ожидается JSON объект.' });
       }
 
-      // Список допустимых полей для видимости
+      // Список допустимых полей согласно ТЗ (пункт 3.2)
       const allowedFields = [
-        'username', 'full_name', 'avatar_url', 'personal_id', 'phone',
-        'city', 'country', 'office', 'telegram_user', 'instagram_profile'
+        'showPhone', 
+        'showEmail', 
+        'showTelegram', 
+        'showVK',
+        'showInstagram', 
+        'showWhatsApp'
       ];
 
-      // Валидация: проверяем, что все ключи допустимы и значения boolean
-      for (const [key, value] of Object.entries(visibility_settings)) {
+      // Валидация ключей и значений
+      for (const [key, value] of Object.entries(settings)) {
         if (!allowedFields.includes(key)) {
-          return reply.code(400).send({
-            error: `Недопустимое поле: ${key}`,
-            field: key
-          });
+           // Игнорируем лишние поля или возвращаем ошибку. 
+           // Для строгости вернем ошибку, чтобы фронтенд слал то что нужно.
+           return reply.code(400).send({ 
+             error: `Недопустимое поле настройки: ${key}`,
+             allowed: allowedFields 
+           });
         }
         if (typeof value !== 'boolean') {
-          return reply.code(400).send({
-            error: `Значение для поля ${key} должно быть true или false`,
-            field: key
-          });
+          return reply.code(400).send({ error: `Поле ${key} должно быть true или false` });
         }
       }
 
-      // Обновляем настройки в базе данных
+      // Используем оператор || для слияния (merge) jsonb
+      // Это позволит обновлять только одну настройку, не затирая остальные
       const updateResult = await pool.query(
         `UPDATE users
-         SET visibility_settings = $1,
+         SET visibility_settings = COALESCE(visibility_settings, '{}'::jsonb) || $1::jsonb,
              updated_at = CURRENT_TIMESTAMP
          WHERE id = $2
          RETURNING visibility_settings`,
-        [JSON.stringify(visibility_settings), userId]
+        [JSON.stringify(settings), userId]
       );
 
       if (updateResult.rows.length === 0) {
         return reply.code(404).send({ error: 'Пользователь не найден' });
       }
 
-      console.log(`✅ Обновлены настройки видимости для пользователя ${userId}`);
+      console.log(`✅ [Privacy] Обновлены настройки для User ${userId}:`, settings);
 
       return reply.send({
         success: true,
@@ -114,7 +119,7 @@ export function registerUserRoutes(app) {
       });
 
     } catch (err) {
-      console.error('[USERS] Ошибка обновления настроек видимости:', err);
+      console.error('[USERS] Ошибка обновления visibility:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });
