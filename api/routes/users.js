@@ -58,11 +58,11 @@ export async function registerUserRoutes(app) {
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
-      const settings = req.body; // Ожидаем { showPhone: true, ... }
+      const settings = req.body;
 
       // Валидация
       if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
-        return reply.code(400).send({ error: 'Некорректный формат настроек' });
+        return reply.code(400).send({ error: 'Ожидается JSON объект настроек' });
       }
 
       const allowedFields = [
@@ -70,14 +70,12 @@ export async function registerUserRoutes(app) {
         'showInstagram', 'showWhatsApp', 'allowCrossLineMessages'
       ];
 
-      // Удаляем лишние поля из объекта
       for (const key of Object.keys(settings)) {
         if (!allowedFields.includes(key)) {
              delete settings[key];
         }
       }
 
-      // Обновляем в БД (слияние jsonb)
       const updateResult = await pool.query(
         `UPDATE users
          SET visibility_settings = COALESCE(visibility_settings, '{}'::jsonb) || $1::jsonb,
@@ -108,7 +106,7 @@ export async function registerUserRoutes(app) {
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
-      const settings = req.body; // Ожидаем { searchByName: true, ... }
+      const settings = req.body;
 
       if (!settings || typeof settings !== 'object') {
         return reply.code(400).send({ error: 'Некорректный формат настроек' });
@@ -145,6 +143,73 @@ export async function registerUserRoutes(app) {
 
     } catch (err) {
       console.error('[USERS] Ошибка обновления search settings:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  // PUT /api/users/profile - Обновление данных профиля (НОВЫЙ МАРШРУТ)
+  app.put('/api/users/profile', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const userId = req.user.id;
+      const {
+        full_name, city, country, phone, office, bio,
+        telegram_user, whatsapp_contact, vk_profile, 
+        instagram_profile, ok_profile, telegram_channel
+      } = req.body;
+      
+      const fields = [];
+      const values = [];
+      let paramIndex = 1;
+
+      const addField = (key, value) => {
+        if (value !== undefined) {
+          fields.push(`${key} = $${paramIndex++}`);
+          values.push(value);
+        }
+      };
+
+      addField('full_name', full_name);
+      addField('city', city);
+      addField('country', country);
+      addField('phone', phone);
+      addField('office', office);
+      addField('bio', bio);
+      addField('telegram_user', telegram_user);
+      addField('whatsapp_contact', whatsapp_contact);
+      addField('vk_profile', vk_profile);
+      addField('instagram_profile', instagram_profile);
+      addField('ok_profile', ok_profile);
+      addField('telegram_channel', telegram_channel);
+
+      if (fields.length === 0) {
+        return reply.code(400).send({ error: 'Нет данных для обновления' });
+      }
+
+      fields.push(`updated_at = CURRENT_TIMESTAMP`);
+      values.push(userId);
+
+      const query = `
+        UPDATE users
+        SET ${fields.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING id, full_name, email, city, country, phone, office, bio, 
+                  telegram_user, whatsapp_contact, vk_profile, instagram_profile, 
+                  ok_profile, telegram_channel, avatar_url
+      `;
+
+      const result = await pool.query(query, values);
+
+      if (result.rows.length === 0) {
+        return reply.code(404).send({ error: 'Пользователь не найден' });
+      }
+
+      console.log(`✅ [Profile] Профиль обновлен для User ${userId}`);
+      return reply.send({ success: true, user: result.rows[0] });
+
+    } catch (err) {
+      console.error('[USERS] Ошибка обновления профиля:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });
