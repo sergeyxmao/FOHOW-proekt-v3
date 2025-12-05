@@ -3,34 +3,28 @@ import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 export async function registerNotificationRoutes(app) {
-  
-  // GET /api/fogrup/notifications - Получить список уведомлений
+
+  // GET: Только непрочитанные уведомления
   app.get('/api/fogrup/notifications', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
       const result = await pool.query(`
-        SELECT 
-          n.id, 
-          n.type, 
-          n.text, 
-          n.is_read as read, 
-          n.created_at,
-          n.from_user_id,
-          n.relationship_id
+        SELECT
+          n.id, n.type, n.text, n.is_read, n.created_at,
+          n.from_user_id, n.relationship_id
         FROM fogrup_notifications n
-        WHERE n.user_id = $1 
-          AND n.is_read = FALSE  -- <--- ИЗМЕНЕНИЕ: Только непрочитанные
+        WHERE n.user_id = $1
+          AND n.is_read = FALSE
         ORDER BY n.created_at DESC
         LIMIT 50
       `, [req.user.id]);
 
-      // Приводим к формату фронтенда
       const notifications = result.rows.map(row => ({
         id: row.id.toString(),
         type: row.type,
         text: row.text,
-        read: row.read,
+        read: row.is_read, // важно: поле в БД is_read
         timestamp: new Date(row.created_at).getTime(),
         fromUserId: row.from_user_id ? row.from_user_id.toString() : null,
         relationshipId: row.relationship_id ? row.relationship_id.toString() : null
@@ -38,23 +32,25 @@ export async function registerNotificationRoutes(app) {
 
       return reply.send({ success: true, notifications });
     } catch (err) {
-      console.error('[NOTIFICATIONS] Ошибка:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
+      console.error('[NOTIFICATIONS GET] Error:', err);
+      return reply.code(500).send({ error: 'Server error' });
     }
   });
 
-  // PUT /api/fogrup/notifications/:id/read - Отметить как прочитанное
+  // PUT: Пометить прочитанным
   app.put('/api/fogrup/notifications/:id/read', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
+    const { id } = req.params;
     try {
       await pool.query(
         'UPDATE fogrup_notifications SET is_read = TRUE WHERE id = $1 AND user_id = $2',
-        [req.params.id, req.user.id]
+        [id, req.user.id]
       );
       return reply.send({ success: true });
     } catch (err) {
-      return reply.code(500).send({ error: 'Ошибка' });
+      console.error('[NOTIFICATIONS READ] Error:', err);
+      return reply.code(500).send({ error: 'Error' });
     }
   });
 }

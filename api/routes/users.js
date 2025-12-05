@@ -4,6 +4,33 @@ import { authenticateToken } from '../middleware/auth.js';
 
 export async function registerUserRoutes(app) {
 
+  // GET /api/users/me - Получить свои данные (для синхронизации)
+  app.get('/api/users/me', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const result = await pool.query(`
+        SELECT
+          id, personal_id, email, fohow_role, is_verified, full_name,
+          username, rank, city, country, phone, avatar_url, bio, office,
+          telegram_user, telegram_channel, vk_profile, ok_profile,
+          instagram_profile, whatsapp_contact,
+          visibility_settings, search_settings, blocked_users
+        FROM users
+        WHERE id = $1
+      `, [req.user.id]);
+
+      if (result.rows.length === 0) {
+        return reply.code(404).send({ error: 'User not found' });
+      }
+
+      return reply.send({ success: true, user: result.rows[0] });
+    } catch (err) {
+      console.error(err);
+      return reply.code(500).send({ error: 'Server error' });
+    }
+  });
+
   // POST /api/users/block - Заблокировать пользователя
   app.post('/api/users/block', {
     preHandler: [authenticateToken]
