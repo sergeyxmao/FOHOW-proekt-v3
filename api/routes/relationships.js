@@ -2,19 +2,26 @@
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 
-export function registerRelationshipRoutes(app) {
+export async function registerRelationshipRoutes(app) {
+  
   // POST /api/relationships - Создать запрос на связь
   app.post('/api/relationships', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
-    const { target_id, type } = req.body;
+    // Фронтенд шлет targetId, мы это учитываем
+    const { targetId, type } = req.body;
+    const target_id = targetId; // Маппинг для БД
 
     if (!target_id || !['mentor', 'downline'].includes(type)) {
-      return reply.code(400).send({ error: 'Неверные параметры' });
+      return reply.code(400).send({ error: 'Неверные параметры. Требуется targetId и type.' });
+    }
+
+    if (target_id == req.user.id) {
+      return reply.code(400).send({ error: 'Нельзя создать связь с самим собой' });
     }
 
     try {
-      // Проверка существования пользователя
+      // Проверка существования
       const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [target_id]);
       if (userCheck.rows.length === 0) {
         return reply.code(404).send({ error: 'Пользователь не найден' });
@@ -26,7 +33,7 @@ export function registerRelationshipRoutes(app) {
         [req.user.id, target_id, type, 'pending']
       );
 
-      // Создание уведомления
+      // Уведомление
       const senderInfo = await pool.query('SELECT full_name FROM users WHERE id = $1', [req.user.id]);
       const senderName = senderInfo.rows[0]?.full_name || 'Пользователь';
 
@@ -39,7 +46,19 @@ export function registerRelationshipRoutes(app) {
         [target_id, 'relationship_request', req.user.id, result.rows[0].id, notifText]
       );
 
-      return reply.send({ success: true, relationship: result.rows[0] });
+      // Возвращаем в формате для фронтенда (camelCase)
+      const row = result.rows[0];
+      return reply.send({ 
+        success: true, 
+        relationship: {
+          id: row.id,
+          initiatorId: row.initiator_id,
+          targetId: row.target_id,
+          type: row.type,
+          status: row.status
+        }
+      });
+
     } catch (err) {
       if (err.code === '23505') {
         return reply.code(409).send({ error: 'Связь уже существует' });
@@ -49,86 +68,83 @@ export function registerRelationshipRoutes(app) {
     }
   });
 
-  // PUT /api/relationships/:id - Ответить на запрос
+  // PUT /api/relationships/:id - Ответить на запрос (принимаем status)
   app.put('/api/relationships/:id', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     const { id } = req.params;
-    const { action } = req.body;
+    const { status } = req.body; // Фронтенд шлет confirmed или rejected
 
-    if (!['confirm', 'reject'].includes(action)) {
-      return reply.code(400).send({ error: 'Неверное действие' });
+    if (!['confirmed', 'rejected'].includes(status)) {
+      return reply.code(400).send({ error: 'Неверный статус' });
     }
 
-    const newStatus = action === 'confirm' ? 'confirmed' : 'rejected';
-
     try {
+      // Обновляем только если пользователь является ЦЕЛЬЮ запроса (target_id)
       const result = await pool.query(
         'UPDATE relationships SET status = $1, updated_at = NOW() WHERE id = $2 AND target_id = $3 RETURNING *',
-        [newStatus, id, req.user.id]
+        [status, id, req.user.id]
       );
 
       if (result.rows.length === 0) {
-        return reply.code(404).send({ error: 'Связь не найдена или у вас нет прав' });
+        return reply.code(404).send({ error: 'Связь не найдена или вы не можете её подтвердить' });
       }
+
+      const row = result.rows[0];
 
       // Уведомление инициатору
       const responderInfo = await pool.query('SELECT full_name FROM users WHERE id = $1', [req.user.id]);
       const responderName = responderInfo.rows[0]?.full_name || 'Пользователь';
-
-      const notifText = action === 'confirm'
-        ? `${responderName} подтвердил(а) вашу заявку`
-        : `${responderName} отклонил(а) вашу заявку`;
+      
+      const notifText = status === 'confirmed'
+        ? `${responderName} подтвердил(а) связь`
+        : `${responderName} отклонил(а) связь`;
 
       await pool.query(
         'INSERT INTO fogrup_notifications (user_id, type, from_user_id, relationship_id, text) VALUES ($1, $2, $3, $4, $5)',
-        [result.rows[0].initiator_id, 'relationship_response', req.user.id, id, notifText]
+        [row.initiator_id, 'relationship_response', req.user.id, id, notifText]
       );
 
-      return reply.send({ success: true, relationship: result.rows[0] });
+      return reply.send({ 
+        success: true, 
+        relationship: {
+          id: row.id,
+          initiatorId: row.initiator_id,
+          targetId: row.target_id,
+          type: row.type,
+          status: row.status
+        }
+      });
     } catch (err) {
       console.error('[RELATIONSHIPS] Ошибка:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });
 
-  // GET /api/relationships/my - Мои связи
+  // GET /api/relationships/my - Получить ВСЕ связи (и активные, и заявки)
   app.get('/api/relationships/my', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
-    const { type = 'all' } = req.query;
-
     try {
-      let mentors = [];
-      let downline = [];
+      // Выбираем все связи, где пользователь либо инициатор, либо цель
+      const result = await pool.query(`
+        SELECT id, initiator_id, target_id, type, status, created_at
+        FROM relationships
+        WHERE initiator_id = $1 OR target_id = $1
+      `, [req.user.id]);
 
-      if (type === 'mentor' || type === 'all') {
-        const mentorResult = await pool.query(`
-          SELECT
-            r.id as relationship_id, r.status, r.created_at,
-            u.id, u.personal_id, u.full_name, u.city, u.rank, u.avatar_url
-          FROM relationships r
-          JOIN users u ON u.id = r.target_id
-          WHERE r.initiator_id = $1 AND r.type = 'mentor' AND r.status = 'confirmed'
-        `, [req.user.id]);
-        mentors = mentorResult.rows;
-      }
+      // Преобразуем в формат для фронтенда (camelCase)
+      const relationships = result.rows.map(row => ({
+        id: row.id.toString(),
+        initiatorId: row.initiator_id.toString(),
+        targetId: row.target_id.toString(),
+        type: row.type,
+        status: row.status
+      }));
 
-      if (type === 'downline' || type === 'all') {
-        const downlineResult = await pool.query(`
-          SELECT
-            r.id as relationship_id, r.status, r.created_at,
-            u.id, u.personal_id, u.full_name, u.city, u.rank, u.avatar_url
-          FROM relationships r
-          JOIN users u ON u.id = r.target_id
-          WHERE r.initiator_id = $1 AND r.type = 'downline' AND r.status = 'confirmed'
-        `, [req.user.id]);
-        downline = downlineResult.rows;
-      }
-
-      return reply.send({ success: true, mentors, downline });
+      return reply.send({ success: true, relationships });
     } catch (err) {
-      console.error('[RELATIONSHIPS] Ошибка:', err);
+      console.error('[RELATIONSHIPS] Ошибка загрузки:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });
