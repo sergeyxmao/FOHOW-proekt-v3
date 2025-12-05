@@ -28,6 +28,7 @@ import verificationRoutes from './routes/verification.js';
 import { registerPartnerRoutes } from './routes/partners.js';
 import { registerRelationshipRoutes } from './routes/relationships.js';
 import { registerUserRoutes } from './routes/users.js';
+import { registerNotificationRoutes } from './routes/notifications.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
 import {
@@ -2109,6 +2110,11 @@ registerRelationshipRoutes(app, pool, authenticateToken);
 // ПОЛЬЗОВАТЕЛИ FOGRUP (FOGRUP USERS)
 // ============================================
 registerUserRoutes(app, pool, authenticateToken);
+
+// ============================================
+// УВЕДОМЛЕНИЯ FOGRUP (ДОБАВЛЕНО)
+// ============================================
+registerNotificationRoutes(app); // <--- ДОБАВИТЬ ЭТУ СТРОКУ
 
 // ============================================
 // СТИКЕРЫ (STICKERS)
