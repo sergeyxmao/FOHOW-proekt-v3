@@ -198,5 +198,67 @@ export async function registerChatRoutes(app) {
       console.error('[CHATS] Ошибка отметки как прочитанных:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
-  });  
+  });
+// POST /api/chats/broadcast - Групповая рассылка
+app.post('/api/chats/broadcast', {
+  preHandler: [authenticateToken]
+}, async (req, reply) => {
+  const { recipientIds, text } = req.body;
+
+  if (!recipientIds || recipientIds.length === 0) {
+    return reply.code(400).send({ error: 'Список получателей пуст' });
+  }
+
+  if (!text || text.trim().length === 0) {
+    return reply.code(400).send({ error: 'Текст сообщения пустой' });
+  }
+
+  try {
+    let successCount = 0;
+    let errors = [];
+
+    // Отправляем сообщение каждому получателю в отдельный приватный чат
+    for (const recipientId of recipientIds) {
+      try {
+        // Получить или создать приватный чат
+        const chatResult = await pool.query(
+          'SELECT get_or_create_private_chat($1, $2) as chat_id',
+          [req.user.id, recipientId]
+        );
+        
+        const chatId = chatResult.rows[0].chat_id;
+
+        // Отправить сообщение
+        await pool.query(
+          'INSERT INTO fogrup_messages (chat_id, sender_id, text) VALUES ($1, $2, $3)',
+          [chatId, req.user.id, text.trim()]
+        );
+
+        // Создать уведомление
+        const sender = await pool.query('SELECT full_name FROM users WHERE id = $1', [req.user.id]);
+        const senderName = sender.rows[0]?.full_name || 'Пользователь';
+
+        await pool.query(
+          'INSERT INTO fogrup_notifications (user_id, type, from_user_id, text) VALUES ($1, $2, $3, $4)',
+          [recipientId, 'message', req.user.id, `Новое сообщение от ${senderName}`]
+        );
+
+        successCount++;
+      } catch (err) {
+        console.error(`[BROADCAST] Error sending to user ${recipientId}:`, err);
+        errors.push(recipientId);
+      }
+    }
+
+    return reply.send({ 
+      success: true, 
+      sent: successCount,
+      failed: errors.length,
+      failedUsers: errors
+    });
+  } catch (err) {
+    console.error('[BROADCAST] Error:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});  
 }
