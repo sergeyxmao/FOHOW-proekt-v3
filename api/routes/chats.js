@@ -138,25 +138,44 @@ export async function registerChatRoutes(app) {
         return reply.code(403).send({ error: 'Нет доступа к чату' });
       }
 
-      // Сохраняем сообщение (триггер сам обновит last_message_at в чате)
+      // Отправить сообщение
       const result = await pool.query(
-        `INSERT INTO fogrup_messages (chat_id, sender_id, text)
-         VALUES ($1, $2, $3)
-         RETURNING id, created_at`,
-        [id, req.user.id, text]
+        'INSERT INTO fogrup_messages (chat_id, sender_id, text) VALUES ($1, $2, $3) RETURNING *',
+        [id, req.user.id, text.trim()]
       );
 
-      const row = result.rows[0];
+      // WebSocket уведомление
+      const participants = await pool.query(
+        'SELECT user_id FROM fogrup_chat_participants WHERE chat_id = $1',
+        [id]
+      );
+      const participantIds = participants.rows.map(p => p.user_id);
       
+      if (req.server.io) {
+        req.server.io.to(`chat:${id}`).emit('new_message', {
+          chatId: id,
+          message: {
+            id: result.rows[0].id.toString(),
+            senderId: req.user.id.toString(),
+            text: text.trim(),
+            timestamp: Date.now()
+          }
+        });
+        
+        // Обновить список чатов для всех участников
+        participantIds.forEach(userId => {
+          req.server.io.to(`user:${userId}`).emit('chats_updated');
+        });
+      }
       // TODO: Здесь можно добавить отправку уведомления получателю (fogrup_notifications)
 
-      return reply.send({ 
-        success: true, 
+      return reply.send({
+        success: true,
         message: {
-            id: row.id.toString(),
+            id: result.rows[0].id.toString(),
             senderId: req.user.id.toString(),
-            text: text,
-            timestamp: new Date(row.created_at).getTime()
+            text: text.trim(),
+            timestamp: new Date(result.rows[0].created_at).getTime()
         }
       });
 
