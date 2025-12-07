@@ -2988,11 +2988,13 @@ async function initializeYandexDiskFolders() {
 await initializeYandexDiskFolders();
 
 try {
-  const server = await app.listen({ port: PORT, host: HOST });
-
-  // Инициализация WebSocket
-  const io = setupWebSocket(server);
+  await app.listen({ port: PORT, host: HOST });
+  
+  // Инициализация WebSocket через HTTP сервер Fastify
+  const io = setupWebSocket(app.server);
   app.decorate('io', io);
+  
+  console.log(`🔌 WebSocket server initialized`);
 
   console.log(`🔌 WebSocket server initialized`); 
   app.log.info(`API listening on http://${HOST}:${PORT}`);
