@@ -10,32 +10,44 @@ export async function registerChatRoutes(app) {
   }, async (req, reply) => {
     try {
       // Получаем чаты, сортируем по последнему сообщению
-      // Также подтягиваем данные собеседника (для личных чатов)
+      // Также подтягиваем данные собеседника и количество непрочитанных сообщений
       const result = await pool.query(`
-        SELECT 
-          c.id, 
-          c.chat_type, 
-          c.last_message_at,
-          -- Массив участников (ID)
-          array_agg(p.user_id) as participant_ids,
-          -- Последнее сообщение (текст)
-          (SELECT text FROM fogrup_messages m WHERE m.chat_id = c.id ORDER BY m.created_at DESC LIMIT 1) as last_message_text
+        SELECT
+          c.id, c.updated_at,
+          json_agg(json_build_object(
+            'user_id', u.id,
+            'full_name', u.full_name,
+            'avatar_url', u.avatar_url
+          )) as participants,
+          (SELECT text FROM fogrup_messages WHERE chat_id = c.id ORDER BY created_at DESC LIMIT 1) as last_message,
+          (SELECT COUNT(*) FROM fogrup_messages 
+           WHERE chat_id = c.id 
+           AND sender_id != $1 
+           AND status != 'read'
+          ) as unread_count
         FROM fogrup_chats c
-        JOIN fogrup_chat_participants p ON p.chat_id = c.id
+        JOIN fogrup_chat_participants cp ON cp.chat_id = c.id
+        JOIN users u ON u.id = cp.user_id
         WHERE c.id IN (
-            SELECT chat_id FROM fogrup_chat_participants WHERE user_id = $1
-        )
+          SELECT chat_id FROM fogrup_chat_participants WHERE user_id = $1
+          )
         GROUP BY c.id
-        ORDER BY c.last_message_at DESC
-      `, [req.user.id]);
+        ORDER BY c.updated_at DESC
+        `, [req.user.id]);
 
       // Преобразуем для фронтенда
       const chats = result.rows.map(row => ({
         id: row.id.toString(),
-        participantIds: row.participant_ids.map(id => id.toString()),
+        participantIds: row.participants.map(p => p.user_id.toString()),
+        participants: row.participants.map(p => ({
+          userId: p.user_id.toString(),
+          fullName: p.full_name,
+          avatarUrl: p.avatar_url
+        })),
         messages: [], // Сообщения грузим отдельно при открытии чата
-        lastMessageTime: new Date(row.last_message_at).getTime(),
-        lastMessagePreview: row.last_message_text
+        lastMessageTime: new Date(row.updated_at).getTime(),
+        lastMessagePreview: row.last_message,
+        unreadCount: Number(row.unread_count)
       }));
 
       return reply.send({ success: true, chats });
@@ -153,4 +165,38 @@ export async function registerChatRoutes(app) {
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });
+
+  // POST /api/chats/:id/read - Отметить все входящие сообщения прочитанными
+  app.post('/api/chats/:id/read', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    const { id } = req.params;
+
+    try {
+      // Проверка доступа к чату
+      const accessCheck = await pool.query(
+        'SELECT 1 FROM fogrup_chat_participants WHERE chat_id = $1 AND user_id = $2',
+        [id, req.user.id]
+      );
+      if (accessCheck.rows.length === 0) {
+        return reply.code(403).send({ error: 'Нет доступа к чату' });
+      }
+
+      // Массово отмечаем непрочитанные входящие сообщения как прочитанные
+      const updateResult = await pool.query(
+        `UPDATE fogrup_messages
+         SET status = 'read'
+         WHERE chat_id = $1
+           AND sender_id != $2
+           AND status != 'read'
+         RETURNING id`,
+        [id, req.user.id]
+      );
+
+      return reply.send({ success: true, updatedCount: updateResult.rowCount });
+    } catch (err) {
+      console.error('[CHATS] Ошибка отметки как прочитанных:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });  
 }
