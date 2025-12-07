@@ -2988,9 +2988,13 @@ async function initializeYandexDiskFolders() {
 await initializeYandexDiskFolders();
 
 try {
-  await app.listen({ port: PORT, host: HOST });
-  const io = setupWebSocket(app.server);
-  app.decorate('io', io);  
+  const server = await app.listen({ port: PORT, host: HOST });
+
+  // Инициализация WebSocket
+  const io = setupWebSocket(server);
+  app.decorate('io', io);
+
+  console.log(`🔌 WebSocket server initialized`); 
   app.log.info(`API listening on http://${HOST}:${PORT}`);
 
   // Инициализируем крон-задачи после успешного запуска сервера
