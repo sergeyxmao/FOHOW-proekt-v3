@@ -33,6 +33,7 @@ import { registerChatRoutes } from './routes/chats.js';
 import { registerFavoriteRoutes } from './routes/favorites.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
+import { setupWebSocket, notifyNewMessage, notifyChatsUpdate } from './socket.js';
 import {
   ensureFolderExists,
   getSharedRootPath,
@@ -2988,6 +2989,8 @@ await initializeYandexDiskFolders();
 
 try {
   await app.listen({ port: PORT, host: HOST });
+  const io = setupWebSocket(app.server);
+  app.decorate('io', io);  
   app.log.info(`API listening on http://${HOST}:${PORT}`);
 
   // Инициализируем крон-задачи после успешного запуска сервера
