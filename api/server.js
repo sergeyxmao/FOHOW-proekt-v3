@@ -30,7 +30,7 @@ import { registerRelationshipRoutes } from './routes/relationships.js';
 import { registerUserRoutes } from './routes/users.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
 import { registerChatRoutes } from './routes/chats.js';
-import favoritesRoutes from './routes/favorites.js';
+import { registerFavoriteRoutes } from './routes/favorites.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
 import {
@@ -2126,7 +2126,7 @@ registerChatRoutes(app); // <--- ВОТ ЭТУ СТРОКУ ВСТАВИТЬ С�
 // ============================================
 // ИЗБРАННОЕ FOGRUP
 // ============================================
-favoritesRoutes(app, pool);
+registerFavoriteRoutes(app, pool, authenticateToken);
 
 // ============================================
 // СТИКЕРЫ (STICKERS)
