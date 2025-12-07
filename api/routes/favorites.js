@@ -1,55 +1,57 @@
-module.exports = function(app, pool) {
+export function registerFavoriteRoutes(app, pool, authenticateToken) {
   // Получить избранное
-  app.get('/api/favorites', async (req, res) => {
+  app.get('/api/favorites', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
     try {
-      const userId = req.userId;
       const result = await pool.query(
         'SELECT favorite_user_id FROM favorites WHERE user_id = $1',
-        [userId]
+        [req.user.id]
       );
-      res.json({ 
-        success: true, 
+      return reply.send({
+        success: true,
         favorites: result.rows.map(r => String(r.favorite_user_id))
       });
     } catch (e) {
-      console.error('GET /api/favorites error:', e);
-      res.status(500).json({ error: 'Failed to load favorites' });
+      req.log.error('[FAVORITES] Load error:', e);
+      return reply.code(500).send({ error: 'Failed to load favorites' });
     }
   });
 
   // Добавить в избранное
-  app.post('/api/favorites', async (req, res) => {
+  app.post('/api/favorites', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    const { favoriteUserId } = req.body || {};
+    if (!favoriteUserId) {
+      return reply.code(400).send({ error: 'favoriteUserId is required' });
+    }
     try {
-      const userId = req.userId;
-      const { favoriteUserId } = req.body;
-      
       await pool.query(
         'INSERT INTO favorites (user_id, favorite_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [userId, favoriteUserId]
+        [req.user.id, favoriteUserId]
       );
-      
-      res.json({ success: true });
+      return reply.send({ success: true });
     } catch (e) {
-      console.error('POST /api/favorites error:', e);
-      res.status(500).json({ error: 'Failed to add favorite' });
+      req.log.error('[FAVORITES] Add error:', e);
+      return reply.code(500).send({ error: 'Failed to add favorite' });
     }
   });
 
   // Удалить из избранного
-  app.delete('/api/favorites/:favoriteUserId', async (req, res) => {
+  app.delete('/api/favorites/:favoriteUserId', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    const { favoriteUserId } = req.params;
     try {
-      const userId = req.userId;
-      const { favoriteUserId } = req.params;
-      
       await pool.query(
         'DELETE FROM favorites WHERE user_id = $1 AND favorite_user_id = $2',
-        [userId, favoriteUserId]
+        [req.user.id, favoriteUserId]
       );
-      
-      res.json({ success: true });
+      return reply.send({ success: true });
     } catch (e) {
-      console.error('DELETE /api/favorites error:', e);
-      res.status(500).json({ error: 'Failed to remove favorite' });
+      req.log.error('[FAVORITES] Remove error:', e);
+      return reply.code(500).send({ error: 'Failed to remove favorite' });
     }
   });
-};
+}
