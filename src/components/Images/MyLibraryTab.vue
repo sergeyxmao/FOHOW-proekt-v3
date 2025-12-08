@@ -3,15 +3,15 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useStickersStore } from '../../stores/stickers'
 import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
-import { getMyFolders, getMyImages, uploadImage, deleteImage, requestShareImage, renameImage } from '../../services/imageService'
+import { getMyFolders, getMyImages, uploadImage, deleteImage, requestShareImage, renameImage, createFolder } from '../../services/imageService'
 import { convertToWebP, isImageFile } from '../../utils/imageUtils'
 import ImageCard from './ImageCard.vue'
 
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
 const notificationsStore = useNotificationsStore()
- const props = defineProps({
-  placementTarget: {
+const props = defineProps({
+ placementTarget: {
     type: String,
     default: 'board'
   }
@@ -22,6 +22,11 @@ const selectedFolder = ref('')
 const searchQuery = ref('')
 const images = ref([])
 const error = ref(null)
+const isCreateFolderModalOpen = ref(false)
+const newFolderName = ref('')
+const createFolderError = ref('')
+const isCreatingFolder = ref(false)
+const folderNameInputRef = ref(null) 
 const pagination = ref({
   page: 1,
   limit: 40,
@@ -34,8 +39,14 @@ const gridRef = ref(null)
 const gridWrapperRef = ref(null)
 const indicatorRef = ref(null)  
 const scrollContainerRef = gridRef
-let hideTimeout = null  
-// Локальное состояние для загрузки файлов
+let hideTimeout = null
+
+watch(newFolderName, () => {
+  if (createFolderError.value) {
+    createFolderError.value = ''
+  }
+})
+ // Локальное состояние для загрузки файлов
 const isUploading = ref(false)
 const fileInputRef = ref(null)
 function onWheel(e) {
@@ -69,8 +80,14 @@ const filteredImages = computed(() => {
   })
 })
 
-// Placeholder для пустой папки (показывать все изображения)
-const folderPlaceholder = 'Все папки или введите новую'
+// Опции для выпадающего списка папок
+const folderOptions = computed(() => [
+  { value: '', label: 'Все папки' },
+  ...folders.value.map(folderName => ({
+    value: folderName,
+    label: folderName || 'Без названия'
+  }))
+])
 
 // Методы
 
@@ -195,7 +212,70 @@ function handleFolderChange() {
   pagination.value.page = 1
   loadInitialImages()
 }
+/**
+ * Создать новую папку
+ */
+function handleCreateFolder() {
+  newFolderName.value = ''
+  createFolderError.value = ''
+  isCreateFolderModalOpen.value = true
 
+  nextTick(() => {
+    folderNameInputRef.value?.focus()
+  })
+}
+
+function closeCreateFolderModal() {
+  isCreateFolderModalOpen.value = false
+  createFolderError.value = ''
+  newFolderName.value = ''
+}
+
+async function confirmCreateFolder() {
+  const trimmedName = newFolderName.value.trim()
+
+  if (!trimmedName) {
+    createFolderError.value = 'Введите название папки'
+    return
+  }
+
+  const duplicate = folders.value.find(folder => folder.toLowerCase() === trimmedName.toLowerCase())
+  if (duplicate) {
+    createFolderError.value = 'Такая папка уже существует'
+    selectedFolder.value = duplicate
+    handleFolderChange()
+    return
+  }
+
+  isCreatingFolder.value = true
+  createFolderError.value = ''
+
+  try {
+    const createdFolder = await createFolder(trimmedName)
+    const createdName = createdFolder?.folder?.name || createdFolder?.name || trimmedName
+    await loadFolders()
+
+    selectedFolder.value = createdName
+    handleFolderChange()
+    isCreateFolderModalOpen.value = false
+
+    notificationsStore.addNotification({
+      message: `Папка "${createdName}" создана`,
+      type: 'success',
+      duration: 4000
+    })
+  } catch (error) {
+    createFolderError.value = error.message || 'Не удалось создать папку'
+
+    notificationsStore.addNotification({
+      message: `Ошибка создания папки: ${error.message}`,
+      type: 'error',
+      duration: 6000
+    })
+  } finally {
+    isCreatingFolder.value = false
+  }
+}
 /**
  * Открыть диалог выбора файлов
  */
@@ -569,24 +649,43 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
   <div class="my-library-tab">
     <!-- Верхняя панель управления -->
     <div class="my-library-tab__controls">
-      <!-- Input с автодополнением для папок -->
-      <input
+      <!-- Выпадающий список папок -->
+      <select
         v-model="selectedFolder"
-        type="text"
-        list="my-library-folder-list"
-        :placeholder="folderPlaceholder"
         class="my-library-tab__select"
         @change="handleFolderChange"
-        maxlength="50"
-      />
-      <datalist id="my-library-folder-list">
-        <option value="">Все папки</option>
+      >
         <option
-          v-for="folder in folders"
-          :key="folder"
-          :value="folder"
-        />
-      </datalist>
+          v-for="option in folderOptions"
+          :key="option.value || 'all'"
+          :value="option.value"
+        >
+          {{ option.label }}
+        </option>
+      </select>
+
+      <!-- Кнопка создания папки -->
+      <button
+        type="button"
+        class="my-library-tab__create-folder"
+        @click="handleCreateFolder"
+      >
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path
+            d="M10 4H4C2.89543 4 2 4.89543 2 6V18C2 19.1046 2.89543 20 4 20H20C21.1046 20 22 19.1046 22 18V8C22 6.89543 21.1046 6 20 6H12L10 4Z"
+            fill="currentColor"
+            fill-opacity="0.12"
+          />
+          <path
+            d="M12 11V15M10 13H14"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <span>Папка</span>
+      </button>
 
       <!-- Кнопка загрузки -->
       <button
@@ -612,7 +711,49 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
         @change="handleFileSelect"
       />
     </div>
+    <div
+      v-if="isCreateFolderModalOpen"
+      class="my-library-tab__modal-backdrop"
+      @click.self="closeCreateFolderModal"
+    >
+      <div class="my-library-tab__modal">
+        <header class="my-library-tab__modal-header">
+          <h3>Создать новую папку</h3>
+          <button class="my-library-tab__modal-close" @click="closeCreateFolderModal" aria-label="Закрыть диалог">
+            ×
+          </button>
+        </header>
 
+        <div class="my-library-tab__modal-body">
+          <label class="my-library-tab__modal-label" for="my-library-folder-name">Название папки</label>
+          <input
+            id="my-library-folder-name"
+            ref="folderNameInputRef"
+            v-model="newFolderName"
+            type="text"
+            maxlength="255"
+            class="my-library-tab__modal-input"
+            placeholder="Введите название"
+            @keyup.enter="confirmCreateFolder"
+          />
+          <p v-if="createFolderError" class="my-library-tab__modal-error">{{ createFolderError }}</p>
+        </div>
+
+        <footer class="my-library-tab__modal-footer">
+          <button type="button" class="my-library-tab__modal-btn my-library-tab__modal-btn--secondary" @click="closeCreateFolderModal">
+            Отмена
+          </button>
+          <button
+            type="button"
+            class="my-library-tab__modal-btn my-library-tab__modal-btn--primary"
+            :disabled="isCreatingFolder || !newFolderName.trim()"
+            @click="confirmCreateFolder"
+          >
+            {{ isCreatingFolder ? 'Создание...' : 'Создать' }}
+          </button>
+        </footer>
+      </div>
+    </div>
     <!-- Поле поиска -->
     <div class="my-library-tab__search">
       <input
@@ -709,7 +850,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
   background: #ffffff;
   font-size: 14px;
   color: #0f172a;
-  cursor: text;
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
@@ -725,6 +866,36 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
 
 .my-library-tab__select::placeholder {
   color: #94a3b8;
+}
+.my-library-tab__create-folder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.my-library-tab__create-folder svg {
+  width: 18px;
+  height: 18px;
+  color: #2196f3;
+}
+
+.my-library-tab__create-folder:hover {
+  border-color: rgba(15, 23, 42, 0.24);
+  background: rgba(33, 150, 243, 0.06);
+}
+
+.my-library-tab__create-folder:active {
+  transform: scale(0.98);
 }
 
 .my-library-tab__upload-btn {
@@ -947,4 +1118,129 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
 .my-library-tab__grid::-webkit-scrollbar-thumb:hover {
   background: rgba(15, 23, 42, 0.3);
 }
+
+.my-library-tab__modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.my-library-tab__modal {
+  background: #fff;
+  border-radius: 12px;
+  width: min(460px, 100%);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.my-library-tab__modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.my-library-tab__modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.my-library-tab__modal-close {
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  line-height: 1;
+}
+
+.my-library-tab__modal-close:hover {
+  color: #0f172a;
+}
+
+.my-library-tab__modal-body {
+  padding: 20px 24px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.my-library-tab__modal-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.my-library-tab__modal-input {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.my-library-tab__modal-input:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.12);
+}
+
+.my-library-tab__modal-error {
+  margin: 4px 0 0;
+  color: #ef4444;
+  font-size: 13px;
+}
+
+.my-library-tab__modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.my-library-tab__modal-btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.my-library-tab__modal-btn--secondary {
+  background: #fff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.my-library-tab__modal-btn--secondary:hover {
+  background: #f3f4f6;
+}
+
+.my-library-tab__modal-btn--primary {
+  background: #2196f3;
+  color: #fff;
+  border-color: #2196f3;
+}
+
+.my-library-tab__modal-btn--primary:hover:not(:disabled) {
+  background: #1976d2;
+  border-color: #1976d2;
+}
+
+.my-library-tab__modal-btn--primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+} 
 </style>
