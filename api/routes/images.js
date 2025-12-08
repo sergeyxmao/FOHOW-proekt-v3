@@ -1240,6 +1240,144 @@ export function registerImageRoutes(app) {
       }
     }
   );
+  /**
+   * PATCH /api/images/:id/rename - Переименовать изображение в личной библиотеке
+   */
+  app.patch(
+    '/api/images/:id/rename',
+    {
+      preHandler: [authenticateToken]
+    },
+    async (req, reply) => {
+      try {
+        const userId = req.user.id;
+        const imageId = parseInt(req.params.id, 10);
+        const { new_name } = req.body;
+
+        // Валидация
+        if (!Number.isInteger(imageId) || imageId <= 0) {
+          return reply.code(400).send({
+            error: 'Некорректный ID изображения',
+            code: 'INVALID_INPUT',
+            suggestion: 'Обновите страницу и повторите попытку или выберите корректный файл.'
+          });
+        }
+
+        if (!new_name || typeof new_name !== 'string' || new_name.trim().length === 0) {
+          return reply.code(400).send({
+            error: 'Новое имя файла не может быть пустым',
+            code: 'INVALID_INPUT',
+            suggestion: 'Укажите непустое имя файла.'
+          });
+        }
+
+        const trimmedName = new_name.trim();
+
+        if (trimmedName.length > 200) {
+          return reply.code(400).send({
+            error: 'Имя файла слишком длинное (максимум 200 символов)',
+            code: 'INVALID_INPUT',
+            suggestion: 'Сократите имя файла до 200 символов.'
+          });
+        }
+
+        // Получаем изображение
+        const imageResult = await pool.query(
+          `SELECT id, user_id, original_name, is_shared, folder_name
+           FROM image_library
+           WHERE id = $1`,
+          [imageId]
+        );
+
+        if (imageResult.rows.length === 0) {
+          return reply.code(404).send({
+            error: 'Изображение не найдено',
+            code: 'NOT_FOUND',
+            suggestion: 'Обновите список изображений и выберите актуальный файл.'
+          });
+        }
+
+        const image = imageResult.rows[0];
+
+        // Проверяем права доступа
+        if (image.user_id !== userId) {
+          return reply.code(403).send({
+            error: 'Нет прав для переименования этого изображения',
+            code: 'FORBIDDEN',
+            suggestion: 'Выполните вход под аккаунтом владельца изображения.'
+          });
+        }
+
+        // Нельзя переименовывать изображения в общей библиотеке
+        if (image.is_shared) {
+          return reply.code(403).send({
+            error: 'Нельзя переименовать изображение, которое находится в общей библиотеке',
+            code: 'SHARED_IMAGE',
+            suggestion: 'Скопируйте файл в личную папку, чтобы переименовать его.'
+          });
+        }
+
+        // Определяем расширение из оригинального имени
+        const extension = image.original_name.match(/\.[^/.]+$/)?.[0] || '.webp';
+        const newFullName = trimmedName + extension;
+
+        // Проверяем дубли в папке пользователя
+        const duplicateCheck = await pool.query(
+          `SELECT id
+           FROM image_library
+           WHERE user_id = $1
+             AND is_shared = FALSE
+             AND id <> $2
+             AND original_name = $3
+             AND (
+               (folder_name IS NULL AND $4 IS NULL)
+               OR folder_name = $4
+             )
+           LIMIT 1`,
+          [userId, imageId, newFullName, image.folder_name || null]
+        );
+
+        if (duplicateCheck.rows.length > 0) {
+          return reply.code(409).send({
+            error: 'Файл с таким именем уже существует в этой папке',
+            code: 'DUPLICATE_NAME',
+            suggestion: 'Попробуйте добавить номер или дату в название файла.'
+          });
+        }
+
+        // Обновляем имя в БД
+        await pool.query(
+          `UPDATE image_library
+           SET original_name = $1, updated_at = NOW()
+           WHERE id = $2`,
+          [newFullName, imageId]
+        );
+
+        // Логируем переименование для аудита
+        await pool.query(
+          `INSERT INTO image_rename_audit (image_id, user_id, old_name, new_name, folder_name)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [imageId, userId, image.original_name, newFullName, image.folder_name || null]
+        );
+
+        console.log(`✅ Изображение ${imageId} переименовано: "${image.original_name}" → "${newFullName}"`);
+
+        return reply.send({
+          success: true,
+          message: 'Изображение успешно переименовано',
+          new_name: newFullName
+        });
+
+      } catch (err) {
+        console.error('❌ Ошибка переименования изображения:', err);
+        return reply.code(500).send({
+          error: 'Ошибка сервера при переименовании изображения',
+          code: 'SERVER_ERROR',
+          suggestion: 'Повторите попытку позже или обратитесь в поддержку.'
+        });
+      }
+    }
+  );
 
   /**
    * GET /api/images/proxy/:id - Прокси для получения изображения
