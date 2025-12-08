@@ -459,6 +459,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка загрузки изображений на модерации')
+
+          return          
         }
 
         const data = await response.json()
@@ -509,6 +511,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка загрузки папок общей библиотеки')
+
+          return          
         }
 
         const data = await response.json()
@@ -549,6 +553,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка одобрения изображения')
+
+          return          
         }
 
         const data = await response.json()
@@ -591,6 +597,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка отклонения изображения')
+
+          return          
         }
 
         const data = await response.json()
@@ -631,6 +639,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка загрузки папок общей библиотеки')
+
+          return          
         }
 
         const data = await response.json()
@@ -667,6 +677,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка создания папки')
+
+          return          
         }
 
         const newFolder = await response.json()
@@ -696,7 +708,7 @@ export const useAdminStore = defineStore('admin', {
       try {
         const authStore = useAuthStore()
         const response = await fetch(`${API_URL}/admin/shared-folders/${folderId}`, {
-          method: 'PUT',
+          method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${authStore.token}`,
             'Content-Type': 'application/json'
@@ -706,6 +718,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка переименования папки')
+
+          return          
         }
 
         const updatedFolder = await response.json()
@@ -792,6 +806,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка загрузки изображений')
+
+          return          
         }
 
         const data = await response.json()
@@ -839,6 +855,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка загрузки изображения')
+
+          return          
         }
 
         const newImage = await response.json()
@@ -888,6 +906,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка перемещения изображения')
+
+          return          
         }
 
         const data = await response.json()
@@ -984,6 +1004,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка переименования изображения')
+
+           return         
         }
 
         const data = await response.json()
@@ -1018,6 +1040,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка загрузки заявок на верификацию')
+
+           return         
         }
 
         const data = await response.json()
@@ -1055,6 +1079,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка одобрения заявки')
+
+          return          
         }
 
         const data = await response.json()
@@ -1097,6 +1123,8 @@ export const useAdminStore = defineStore('admin', {
 
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка отклонения заявки')
+
+          return         
         }
 
         const data = await response.json()
