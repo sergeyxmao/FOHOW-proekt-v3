@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useStickersStore } from '../../stores/stickers'
 import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
-import { getMyFolders, getMyImages, getMyStats, uploadImage, deleteImage, requestShareImage } from '../../services/imageService'
+import { getMyFolders, getMyImages, getMyStats, uploadImage, deleteImage, requestShareImage, renameImage } from '../../services/imageService'
 import { convertToWebP, isImageFile } from '../../utils/imageUtils'
 import ImageCard from './ImageCard.vue'
 import LimitsDisplay from './LimitsDisplay.vue'
@@ -424,7 +424,56 @@ async function handleShareRequest(image) {
     alert('Ошибка: ' + errorMessage)
   }
 }
+/**
+ * Переименовать изображение
+ */
+async function handleRename(image) {
+  const currentName = image.original_name.replace(/\.[^/.]+$/, '') // Убираем расширение
+  const newName = prompt(`Введите новое имя для изображения:`, currentName)
 
+  if (!newName || newName.trim() === '') {
+    return
+  }
+
+  if (newName.trim() === currentName) {
+    notificationsStore.addNotification({
+      message: 'Имя не изменилось',
+      type: 'info',
+      duration: 3000
+    })
+    return
+  }
+
+  try {
+    await renameImage(image.id, newName.trim())
+
+    // Обновляем имя изображения локально
+    const index = images.value.findIndex(img => img.id === image.id)
+    if (index !== -1) {
+      const extension = image.original_name.match(/\.[^/.]+$/)?.[0] || '.webp'
+      images.value[index] = {
+        ...images.value[index],
+        original_name: newName.trim() + extension
+      }
+    }
+
+    notificationsStore.addNotification({
+      message: `Изображение успешно переименовано в "${newName}"`,
+      type: 'success',
+      duration: 4000
+    })
+
+    console.log('✅ Изображение успешно переименовано:', image.id)
+  } catch (error) {
+    console.error('Ошибка переименования изображения:', error)
+
+    notificationsStore.addNotification({
+      message: `Ошибка переименования: ${error.message}`,
+      type: 'error',
+      duration: 6000
+    })
+  }
+}
 /**
  * Загрузить статистику использования библиотеки
  */
@@ -643,6 +692,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
           @click="handleImageClick"
           @delete="handleImageDelete"
           @share-request="handleShareRequest"
+          @rename="handleRename"         
         />
       </div>
     </div>
