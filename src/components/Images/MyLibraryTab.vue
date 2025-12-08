@@ -391,18 +391,6 @@ async function handleImageDelete(image) {
  * Отправить запрос на добавление в общую библиотеку
  */
 async function handleShareRequest(image) {
-  // Проверка: уже в общей библиотеке
-  if (image.is_shared) {
-    alert('Это изображение уже находится в общей библиотеке.')
-    return
-  }
-
-  // Проверка: уже отправлено на модерацию
-  if (image.share_requested_at !== null) {
-    alert('Вы уже отправили это изображение на модерацию. Ожидайте решения администратора.')
-    return
-  }
-
   if (!confirm(`Отправить изображение "${image.original_name}" на модерацию для добавления в общую библиотеку?`)) {
     return
   }
