@@ -14,8 +14,8 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['click', 'delete', 'share-request'])
-
+const emit = defineEmits(['click', 'delete', 'share-request', 'rename'])
+  
 /**
  * Получить имя файла без расширения
  * @param {string} filename - Полное имя файла (original_name)
@@ -103,6 +103,10 @@ const handleShareRequest = (e) => {
   e.stopPropagation()
   emit('share-request', props.image)
 }
+const handleRename = (e) => {
+  e.stopPropagation()
+  emit('rename', props.image)
+}
 
 // Проверяем, можно ли отправить на модерацию
 const canShareRequest = computed(() => {
@@ -172,6 +176,17 @@ const handleDragStart = (event) => {
         </div>
 
         <div class="image-card__actions-row image-card__actions-row--bottom">
+          <!-- Кнопка переименования -->
+          <button
+            type="button"
+            class="image-card__action image-card__action--rename"
+            title="Переименовать"
+            @click="handleRename"
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z" fill="currentColor"/>
+            </svg>
+          </button>          
           <!-- Кнопка удаления -->
           <button
             type="button"
@@ -388,7 +403,10 @@ const handleDragStart = (event) => {
   background: rgba(244, 67, 54, 0.1);
   color: #ffffff;
 }
-
+.image-card__action--rename:hover {
+  background: rgba(33, 150, 243, 0.1);
+  color: #ffffff;
+}
 .image-card__action--share:hover {
   background: rgba(33, 150, 243, 0.1);
   color: #ffffff;
