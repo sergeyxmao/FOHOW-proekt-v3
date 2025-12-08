@@ -349,3 +349,35 @@ export async function getSharedLibrary({ page, limit } = {}) {
     throw error;
   }
 }
+/**
+ * Переименовать изображение
+ * @param {number} imageId - ID изображения
+ * @param {string} newName - Новое имя файла (без расширения)
+ * @returns {Promise<Object>}
+ */
+export async function renameImage(imageId, newName) {
+  try {
+    const response = await fetch(`${API_URL}/images/${imageId}/rename`, {
+      method: 'PATCH',
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ new_name: newName })
+    });
+
+    if (!response.ok) {
+      await handleErrorResponse(response, 'Ошибка переименования изображения');
+    }
+
+    return await response.json();
+  } catch (error) {
+    // Обработка сетевых ошибок
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      const networkError = new Error('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+      networkError.code = 'NETWORK_ERROR';
+      throw networkError;
+    }
+    throw error;
+  }
+}
