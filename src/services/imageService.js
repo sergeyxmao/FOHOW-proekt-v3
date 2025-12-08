@@ -120,7 +120,36 @@ export async function getMyFolders() {
     throw error;
   }
 }
+/**
+ * Создать папку в личной библиотеке
+ * @param {string} folderName - Название новой папки
+ * @returns {Promise<Object>}
+ */
+export async function createFolder(folderName) {
+  try {
+    const response = await fetch(`${API_URL}/images/my/folders`, {
+      method: 'POST',
+      headers: {
+        ...getAuthHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ folder_name: folderName })
+    });
 
+    if (!response.ok) {
+      await handleErrorResponse(response, 'Ошибка создания папки');
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      const networkError = new Error('Ошибка подключения к серверу. Проверьте интернет-соединение.');
+      networkError.code = 'NETWORK_ERROR';
+      throw networkError;
+    }
+    throw error;
+  }
+}
 /**
  * Получить статистику использования библиотеки
  * @returns {Promise<{usage: Object, limits: Object, planName: string}>}
