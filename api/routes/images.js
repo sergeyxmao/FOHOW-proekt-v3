@@ -1281,12 +1281,14 @@ export function registerImageRoutes(app) {
         }
 
         const image = result.rows[0];
+        
+        const isAdmin = req.user.role === 'admin'
 
         // Проверка прав доступа:
         // 1. Общие изображения (is_shared = TRUE) доступны всем авторизованным пользователям
         // 2. Одобренные изображения (moderation_status = 'approved') доступны всем (для работы на shared досках)
-        // 3. Личные изображения (is_shared = FALSE) доступны только владельцу
-        if (!image.is_shared && image.moderation_status !== 'approved' && image.user_id !== userId) {
+        // 3. Личные изображения (is_shared = FALSE) доступны только владельцу, кроме администратора
+        if (!isAdmin && !image.is_shared && image.moderation_status !== 'approved' && image.user_id !== userId) {
           return reply.code(403).send({ error: 'Доступ запрещен' });
         }
 
