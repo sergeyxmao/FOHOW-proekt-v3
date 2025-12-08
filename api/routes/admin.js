@@ -1122,7 +1122,13 @@ export function registerAdminRoutes(app) {
           error: 'Имя папки не должно превышать 50 символов'
         });
       }
-
+      // Проверка допустимых символов (только буквы, цифры, пробелы, тире и нижнее подчеркивание)
+      const allowedFolderName = /^[\p{L}\d _-]+$/u;
+      if (!allowedFolderName.test(folderNameClean)) {
+        return reply.code(400).send({
+          error: 'Имя папки может содержать только буквы, цифры, пробелы, тире и нижнее подчеркивание'
+        });
+      }
       // Найти запись image_library по id
       const imageResult = await pool.query(
         `SELECT
