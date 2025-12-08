@@ -190,19 +190,13 @@ export function registerImageRoutes(app) {
           });
         }
 
-        // Получаем personal_id и тариф пользователя
         const userResult = await pool.query(
-          `SELECT u.personal_id, u.plan_id, sp.features, sp.name AS plan_name
-           FROM users u
-           JOIN subscription_plans sp ON u.plan_id = sp.id
-           WHERE u.id = $1`,
+          `SELECT u.personal_id, u.plan_id, sp.features, sp.name AS plan_name FROM users u JOIN subscription_plans sp ON u.plan_id = sp.id WHERE u.id = $1`,
           [userId]
         );
 
         if (userResult.rows.length === 0) {
-          return reply.code(403).send({
-            error: 'Не удалось определить тарифный план пользователя.'
-          });
+          return reply.code(403).send({ error: 'Не удалось определить тарифный план пользователя.' });
         }
 
         const user = userResult.rows[0];
@@ -210,10 +204,8 @@ export function registerImageRoutes(app) {
         const features = user.features || {};
         const planName = user.plan_name;
 
-        // Проверка права доступа к библиотеке изображений (кроме админов)
         if (userRole !== 'admin') {
           const canUseImages = typeof features.can_use_images === 'boolean' ? features.can_use_images : false;
-
           if (!canUseImages) {
             return reply.code(403).send({
               error: `Доступ к библиотеке изображений запрещён для вашего тарифа "${planName}".`,
@@ -223,18 +215,13 @@ export function registerImageRoutes(app) {
           }
         }
 
-        // Проверяем лимит папок
         const maxFolders = features.image_library_max_folders;
         if (typeof maxFolders === 'number') {
           const currentFoldersResult = await pool.query(
-            `SELECT COUNT(DISTINCT folder_name) AS folder_count
-             FROM image_library
-             WHERE user_id = $1 AND is_shared = FALSE AND folder_name IS NOT NULL AND folder_name <> ''`,
+            `SELECT COUNT(DISTINCT folder_name) AS folder_count FROM image_library WHERE user_id = $1 AND is_shared = FALSE AND folder_name IS NOT NULL AND folder_name <> ''`,
             [userId]
           );
-
           const currentCount = parseInt(currentFoldersResult.rows[0]?.folder_count || 0, 10);
-
           if (currentCount >= maxFolders) {
             return reply.code(403).send({
               error: `Достигнут лимит папок (${maxFolders}) для вашего тарифа "${planName}".`,
@@ -244,11 +231,8 @@ export function registerImageRoutes(app) {
           }
         }
 
-        // Проверяем, не существует ли папка с таким именем
         const existingFolder = await pool.query(
-          `SELECT 1 FROM image_library
-           WHERE user_id = $1 AND is_shared = FALSE AND folder_name = $2
-           LIMIT 1`,
+          `SELECT 1 FROM image_library WHERE user_id = $1 AND is_shared = FALSE AND folder_name = $2 LIMIT 1`,
           [userId, trimmedFolderName]
         );
 
@@ -259,7 +243,6 @@ export function registerImageRoutes(app) {
           });
         }
 
-        // Создаём папку на Яндекс.Диске
         const libraryRootPath = getUserLibraryFolderPath(userId, personalId, null);
         const folderPath = `${libraryRootPath}/${trimmedFolderName}`;
 
@@ -275,9 +258,7 @@ export function registerImageRoutes(app) {
 
         return reply.code(201).send({
           success: true,
-          folder: {
-            name: trimmedFolderName
-          }
+          folder: { name: trimmedFolderName }
         });
       } catch (err) {
         console.error('❌ Ошибка создания папки:', err);
@@ -289,114 +270,6 @@ export function registerImageRoutes(app) {
   );
 
   /**
-   * POST /api/images/my/folders - Создать новую папку в личной библиотеке
-   */
-  app.post(
-    '/api/images/my/folders',
-    {
-      preHandler: [authenticateToken]
-    },
-    async (req, reply) => {
-      try {
-        const userId = req.user.id;
-        const userRole = req.user.role;
-        const { folder_name } = req.body;
-
-        // Валидация названия папки
-        if (!folder_name || typeof folder_name !== 'string' || !folder_name.trim()) {
-          return reply.code(400).send({
-            error: 'Название папки не может быть пустым',
-            code: 'INVALID_FOLDER_NAME'
-          });
-        }
-
-        const trimmedFolderName = folder_name.trim();
-
-        if (trimmedFolderName.length > 255) {
-          return reply.code(400).send({
-            error: 'Название папки слишком длинное (макс. 255 символов)',
-            code: 'FOLDER_NAME_TOO_LONG'
-          });
-        }
-
-        // Получаем personal_id и тариф пользователя
-        const userResult = await pool.query(
-          `SELECT u.personal_id, u.plan_id, sp.features, sp.name AS plan_name
-           FROM users u
-           JOIN subscription_plans sp ON u.plan_id = sp.id
-           WHERE u.id = $1`,
-          [userId]
-        );
-
-        if (userResult.rows.length === 0) {
-          return reply.code(403).send({
-            error: 'Не удалось определить тарифный план пользователя.'
-          });
-        }
-
-        const user = userResult.rows[0];
-        const personalId = user.personal_id;
-        const features = user.features || {};
-        const planName = user.plan_name;
-
-        // Проверка права доступа к библиотеке изображений (кроме админов)
-        if (userRole !== 'admin') {
-          const canUseImages = typeof features.can_use_images === 'boolean' ? features.can_use_images : false;
-
-          if (!canUseImages) {
-            return reply.code(403).send({
-              error: `Доступ к библиотеке изображений запрещён для вашего тарифа "${planName}".`,
-              code: 'IMAGE_LIBRARY_ACCESS_DENIED',
-              upgradeRequired: true
-            });
-          }
-        }
-
-        // Проверяем лимит папок
-        const maxFolders = features.image_library_max_folders;
-        if (typeof maxFolders === 'number') {
-          const currentFoldersResult = await pool.query(
-            `SELECT COUNT(DISTINCT folder_name) AS folder_count
-             FROM image_library
-             WHERE user_id = $1 AND is_shared = FALSE AND folder_name IS NOT NULL AND folder_name <> ''`,
-            [userId]
-          );
-
-          const currentCount = parseInt(currentFoldersResult.rows[0]?.folder_count || 0, 10);
-
-          if (currentCount >= maxFolders) {
-            return reply.code(403).send({
-              error: `Достигнут лимит папок (${maxFolders}) для вашего тарифа "${planName}".`,
-              code: 'FOLDERS_LIMIT_REACHED',
-              upgradeRequired: true
-            });
-          }
-        }
-
-        // Проверяем, не существует ли папка с таким именем
-        const existingFolder = await pool.query(
-          `SELECT 1 FROM image_library
-           WHERE user_id = $1 AND is_shared = FALSE AND folder_name = $2
-           LIMIT 1`,
-          [userId, trimmedFolderName]
-        );
-
-        if (existingFolder.rows.length > 0) {
-          return reply.code(409).send({
-            error: 'Папка с таким названием уже существует',
-            code: 'FOLDER_ALREADY_EXISTS'
-          });
-        }
-
-        // Создаём папку на Яндекс.Диске
-        const libraryRootPath = getUserLibraryFolderPath(userId, personalId, null);
-        const folderPath = `${libraryRootPath}/${trimmedFolderName}`;
-
-        try {
-          await createYandexFolder(folderPath);
-        } catch (error) {
-          console.error('❌ Ошибка создания папки на Яндекс.Диске:', error);
-          return reply.code(500).send({
             error: 'Не удалось создать папку на облачном хранилище',
             code: 'YANDEX_DISK_ERROR'
           });
