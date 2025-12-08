@@ -578,6 +578,9 @@
 
           <!-- ===== TAB 5: Лимиты / Используемые ресурсы ===== -->
           <div v-if="activeTab === 'limits'" class="tab-panel">
+            <div v-if="imageStatsError" class="limit-error">
+              {{ imageStatsError }}
+            </div>            
             <div class="limits-grid">
               <div class="limit-card">
                 <div class="limit-card-header">
@@ -678,6 +681,66 @@
                   </div>
                 </div>
               </div>
+
+              <div v-if="imageLibraryStats" class="limit-card">
+                <div class="limit-card-header">
+                  <span class="limit-icon">🖼️</span>
+                  <span class="limit-title">Файлы изображений</span>
+                </div>
+                <div class="limit-card-body">
+                  <div class="limit-stats">
+                    <span class="limit-current">{{ getImageLimitInfo('files').currentDisplay }}</span>
+                    <span class="limit-separator">/</span>
+                    <span class="limit-max">{{ getImageLimitInfo('files').maxDisplay }}</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div
+                      class="progress-fill"
+                      :style="{ width: getImageLimitInfo('files').percentage + '%', backgroundColor: getLimitColor(getImageLimitInfo('files').percentage) }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="imageLibraryStats" class="limit-card">
+                <div class="limit-card-header">
+                  <span class="limit-icon">📁</span>
+                  <span class="limit-title">Папки библиотеки</span>
+                </div>
+                <div class="limit-card-body">
+                  <div class="limit-stats">
+                    <span class="limit-current">{{ getImageLimitInfo('folders').currentDisplay }}</span>
+                    <span class="limit-separator">/</span>
+                    <span class="limit-max">{{ getImageLimitInfo('folders').maxDisplay }}</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div
+                      class="progress-fill"
+                      :style="{ width: getImageLimitInfo('folders').percentage + '%', backgroundColor: getLimitColor(getImageLimitInfo('folders').percentage) }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="imageLibraryStats" class="limit-card">
+                <div class="limit-card-header">
+                  <span class="limit-icon">💾</span>
+                  <span class="limit-title">Объём хранилища</span>
+                </div>
+                <div class="limit-card-body">
+                  <div class="limit-stats">
+                    <span class="limit-current">{{ getImageLimitInfo('storageMB').currentDisplay }}</span>
+                    <span class="limit-separator">/</span>
+                    <span class="limit-max">{{ getImageLimitInfo('storageMB').maxDisplay }}</span>
+                  </div>
+                  <div class="progress-bar">
+                    <div
+                      class="progress-fill"
+                      :style="{ width: getImageLimitInfo('storageMB').percentage + '%', backgroundColor: getLimitColor(getImageLimitInfo('storageMB').percentage) }"
+                    ></div>
+                  </div>
+                </div>
+              </div>              
             </div>
           </div>
         </div>
@@ -975,7 +1038,8 @@ import 'cropperjs/dist/cropper.css'
 import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscription'
 import TelegramLinkWidget from '@/components/TelegramLinkWidget.vue'
-
+import { getMyStats } from '@/services/imageService'
+  
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -1320,6 +1384,8 @@ onMounted(async () => {
     await authStore.fetchProfile()
     // Загружаем план подписки
     await subscriptionStore.loadPlan()
+    // Загружаем лимиты библиотеки изображений
+    await loadImageLibraryStats()    
     // Загружаем статус верификации
     await loadVerificationStatus()
   } catch (error) {
@@ -1451,6 +1517,9 @@ function getExpiryDate() {
   if (!expiresAt) return 'Бессрочно'
   return formatDate(expiresAt)
 }
+// Статистика библиотеки изображений
+const imageLibraryStats = ref(null)
+const imageStatsError = ref('')
 
 // Информация о лимитах
 function getLimitInfo(resourceType) {
@@ -1465,14 +1534,45 @@ function getLimitInfo(resourceType) {
     percentage
   }
 }
+function getImageLimitInfo(resourceKey) {
+  const usage = imageLibraryStats.value?.usage || {}
+  const limits = imageLibraryStats.value?.limits || {}
 
+  const currentRaw = Number(usage[resourceKey] ?? 0)
+  const limitRaw = limits[resourceKey]
+  const isUnlimited = limitRaw === -1
+
+  const currentDisplay = resourceKey === 'storageMB'
+    ? `${currentRaw.toFixed(2)} МБ`
+    : currentRaw
+
+  const maxDisplay = isUnlimited
+    ? '∞'
+    : resourceKey === 'storageMB'
+      ? `${Number(limitRaw ?? 0)} МБ`
+      : Number(limitRaw ?? 0)
+
+  const percentage = (!isUnlimited && Number(limitRaw) > 0)
+    ? Math.min(100, Math.round((currentRaw / Number(limitRaw)) * 100))
+    : 0
+
+  return { currentDisplay, maxDisplay, percentage }
+}
 // Цвет прогресс-бара
 function getLimitColor(percentage) {
   if (percentage < 70) return '#4caf50' // Зелёный
   if (percentage < 90) return '#ffc107' // Оранжевый
   return '#f44336' // Красный
 }
-
+async function loadImageLibraryStats() {
+  try {
+    imageStatsError.value = ''
+    imageLibraryStats.value = await getMyStats()
+  } catch (error) {
+    console.error('Ошибка загрузки лимитов библиотеки изображений:', error)
+    imageStatsError.value = error.message || 'Не удалось загрузить лимиты библиотеки изображений'
+  }
+}
 
 // Загрузка статуса верификации
 async function loadVerificationStatus() {
@@ -2882,7 +2982,15 @@ async function handleAvatarDelete() {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
 }
-
+.limit-error {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(244, 67, 54, 0.2);
+  background: rgba(244, 67, 54, 0.08);
+  color: #c62828;
+  font-weight: 600;
+}
 .limit-card {
   background: var(--profile-input-bg);
   border: 2px solid var(--profile-border);
