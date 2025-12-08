@@ -263,6 +263,12 @@ function validateFolderName(folderName) {
   if (trimmedName.length < 1 || trimmedName.length > 50) {
     return 'Название папки должно быть от 1 до 50 символов'
   }
+  // Разрешаем только буквы, цифры, пробелы, тире и нижнее подчеркивание,
+  // чтобы избежать ошибок при создании папок на Яндекс.Диске
+  const allowedFolderName = /^[\p{L}\d _-]+$/u
+  if (!allowedFolderName.test(trimmedName)) {
+    return 'Используйте только буквы, цифры, пробелы, тире и нижнее подчеркивание'
+  }
 
   return null // Валидация пройдена
 }
