@@ -1289,7 +1289,7 @@ export function registerAdminRoutes(app) {
           publicUrl,
           previewUrl,
           placeholderToStore,
-          blurhashToStore,          
+          blurhash,          
           width,
           height,
           file_size,
