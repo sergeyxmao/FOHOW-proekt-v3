@@ -3,10 +3,9 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useStickersStore } from '../../stores/stickers'
 import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
-import { getMyFolders, getMyImages, getMyStats, uploadImage, deleteImage, requestShareImage, renameImage } from '../../services/imageService'
+import { getMyFolders, getMyImages, uploadImage, deleteImage, requestShareImage, renameImage } from '../../services/imageService'
 import { convertToWebP, isImageFile } from '../../utils/imageUtils'
 import ImageCard from './ImageCard.vue'
-import LimitsDisplay from './LimitsDisplay.vue'
 
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
@@ -36,9 +35,6 @@ const gridWrapperRef = ref(null)
 const indicatorRef = ref(null)  
 const scrollContainerRef = gridRef
 let hideTimeout = null  
-  // Статистика и лимиты
-const stats = ref(null)
-
 // Локальное состояние для загрузки файлов
 const isUploading = ref(false)
 const fileInputRef = ref(null)
@@ -367,9 +363,6 @@ async function handleImageDelete(image) {
     })
 
     console.log('✅ Изображение успешно удалено:', image.id)
-
-    // Обновляем статистику
-    await loadStats()
   } catch (error) {
     console.error('Ошибка удаления изображения:', error)
 
@@ -380,9 +373,6 @@ async function handleImageDelete(image) {
     }
 
     notificationsStore.addNotification({
-      message: errorMessage,
-      type: 'error',
-      duration: 7000
     })
   }
 }
@@ -474,18 +464,6 @@ async function handleRename(image) {
     })
   }
 }
-/**
- * Загрузить статистику использования библиотеки
- */
-async function loadStats() {
-  try {
-    stats.value = await getMyStats()
-  } catch (err) {
-    console.error('Ошибка загрузки статистики:', err)
-    // Не показываем уведомление, т.к. это не критично
-  }
-}
-
 function updateIndicator() {
   const el = gridRef.value
   const ind = indicatorRef.value
@@ -560,7 +538,6 @@ defineExpose({
 onMounted(async () => {
   await Promise.all([
     loadFolders(),
-    loadStats(),
     loadInitialImages()
   ])
 
@@ -635,14 +612,6 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
         @change="handleFileSelect"
       />
     </div>
-
-    <!-- Отображение лимитов -->
-    <LimitsDisplay
-      v-if="stats"
-      :usage="stats.usage"
-      :limits="stats.limits"
-      :plan-name="stats.planName"
-    />
 
     <!-- Поле поиска -->
     <div class="my-library-tab__search">
