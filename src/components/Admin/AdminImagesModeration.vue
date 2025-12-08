@@ -156,19 +156,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useAdminStore } from '../../stores/admin'
 import { useNotificationsStore } from '../../stores/notifications'
 import { useImageProxy } from '../../composables/useImageProxy'
 
 const adminStore = useAdminStore()
 const notificationsStore = useNotificationsStore()
-const { getImageUrl } = useImageProxy()
+const { getImageUrl, clearCache } = useImageProxy()
 const processingId = ref(null)
 const selectedFolders = ref({})
 const selectedImageForPreview = ref(null)
 const imageUrls = ref({})
+const autoRefreshTimerId = ref(null)
 
+const AUTO_REFRESH_INTERVAL_MS = 60000
 /**
  * Вычисляемое свойство для количества изображений в очереди
  */
@@ -182,17 +184,32 @@ const pendingCount = computed(() => {
 async function loadImages() {
   try {
     await adminStore.fetchPendingImages()
+    clearCache()    
     // Загружаем blob URLs для изображений
     await loadImageUrls()
   } catch (err) {
     console.error('[MODERATION] Ошибка загрузки изображений:', err)
   }
 }
+function stopAutoRefresh() {
+  if (autoRefreshTimerId.value) {
+    clearInterval(autoRefreshTimerId.value)
+    autoRefreshTimerId.value = null
+  }
+}
+
+function startAutoRefresh() {
+  stopAutoRefresh()
+  autoRefreshTimerId.value = setInterval(async () => {
+    await loadImages()
+  }, AUTO_REFRESH_INTERVAL_MS)
+}
 
 /**
  * Загрузить blob URLs для всех изображений
  */
 async function loadImageUrls() {
+  clearCache()  
   const urls = {}
   for (const image of adminStore.pendingImages || []) {
     urls[image.id] = await getImageUrl(image.id)
@@ -204,6 +221,9 @@ async function loadImageUrls() {
 watch(() => adminStore.pendingImages, async (newImages) => {
   if (newImages && newImages.length > 0) {
     await loadImageUrls()
+  } else {
+    clearCache()
+    imageUrls.value = {}    
   }
 }, { deep: true })
 
@@ -407,6 +427,11 @@ onMounted(async () => {
     loadImages(),
     loadFolders()
   ])
+  startAutoRefresh()
+})
+
+onUnmounted(() => {
+  stopAutoRefresh()  
 })
 </script>
 
