@@ -9,8 +9,8 @@ export function usePanZoom(canvasElement) {
   const MAX_SCALE = 5     // Максимальное увеличение - 500%
 
   const PAN_CURSOR_CLASS = 'canvas-container--panning'
-    const PAN_EXCLUDE_SELECTOR = [
-    '.card',
+  const PAN_EXCLUDE_SELECTOR = [
+	'.card',
     '.note-window',
     '.card-controls',
     '.card-header',
@@ -24,7 +24,17 @@ export function usePanZoom(canvasElement) {
     '.mobile-header',
     '[data-prevent-pan]'
   ].join(', ')
-
+	
+  const WHEEL_EXCLUDE_SELECTOR = [
+    '.partners-panel',
+    '.images-panel',
+    '.notes-side-panel',
+    '.comments-side-panel',
+    '.sticker-messages-panel',
+    '.sticker-messages',
+    '.board-anchors-panel'
+  ].join(', ')
+	
   let isPanning = false
   let startX = 0
   let startY = 0
@@ -171,6 +181,53 @@ export function usePanZoom(canvasElement) {
     translateY.value = 0
     updateTransform()
   }
+
+  const hasScrollableParent = (element) => {
+    if (typeof window === 'undefined' || !element) {
+      return false
+    }
+
+    let current = element
+
+    while (current && current !== document.body) {
+      if (canvasElement.value && current === canvasElement.value) {
+        break
+      }
+
+      const style = window.getComputedStyle(current)
+      const overflowY = style?.overflowY || style?.overflow
+      const overflow = style?.overflow
+      const canScroll = current.scrollHeight > current.clientHeight
+
+      if (
+        canScroll &&
+        [overflowY, overflow].some(value => value === 'auto' || value === 'scroll')
+      ) {
+        return true
+      }
+
+      current = current.parentElement
+    }
+
+    return false
+  }
+
+  const shouldIgnoreWheel = (target) => {
+    if (!target || typeof target.closest !== 'function') {
+      return false
+    }
+
+    if (target.closest(WHEEL_EXCLUDE_SELECTOR)) {
+      return true
+    }
+
+    if (target.closest('.note-window')) {
+      return true
+    }
+
+    return hasScrollableParent(target)
+  }
+	
   const handleWheel = (event) => {
     if (!canvasElement.value) return
 
@@ -183,8 +240,8 @@ export function usePanZoom(canvasElement) {
     if (
       event.target.closest('.ui-panel-left') ||
       event.target.closest('.ui-panel-right') ||
-      event.target.closest('.note-window')
-    ) {
+      shouldIgnoreWheel(event.target)
+	) {
       return
     }
     
