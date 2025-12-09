@@ -754,18 +754,10 @@ ${connectionPathsSvg}
   }
 
   const handleExportPNG = async (exportSettings = null) => {
-    const canvasContainer = document.querySelector('.canvas-container')
-    const canvasContent = canvasContainer?.querySelector('.canvas-content')
-    const canvasContentStyle = canvasContent ? window.getComputedStyle(canvasContent) : null
-    const tempStyles = []
-    const restoreTransform = {
-      node: canvasContent,
-      value: canvasContent?.style.transform
-    }
-    let contentCanvas = null
-
     try {
-      if (!canvasContainer) {
+      const canvasContainer = document.querySelector('.canvas-container')
+      const canvasContent = canvasContainer?.querySelector('.canvas-content')
+      if (!canvasContainer || !canvasContent) {
         alert('Не удалось найти содержимое холста для экспорта.')
         return
       }
@@ -779,16 +771,15 @@ ${connectionPathsSvg}
       canvasContainer.classList.add('canvas-container--capturing')
 
       // Apply export options
+       const tempStyles = []
+           
       // Option "Скрыть содержимое"
       if (exportSettings?.hideContent) {
-        // Hide card titles, body, and html content
         const elementsToHide = canvasContainer.querySelectorAll('.card-title, .card-body, .card-body-html')
         elementsToHide.forEach(el => {
           tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
           el.style.visibility = 'hidden'
         })
-
-        // Hide only values (numbers), keep labels (text like "Баланс:", "Актив - заказы:", etc.)
         const values = canvasContainer.querySelectorAll('.value')
         values.forEach(el => {
           tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
@@ -805,7 +796,6 @@ ${connectionPathsSvg}
 
       // Option "Ч/Б (контур)"
       if (exportSettings?.blackAndWhite) {
-        // Set white background for cards and a black border
         const cards = canvasContainer.querySelectorAll('.card')
         cards.forEach(card => {
           tempStyles.push({ element: card, property: 'background', originalValue: card.style.background })
@@ -818,7 +808,6 @@ ${connectionPathsSvg}
           card.style.border = '2px solid #000000'
         })
 
-        // Set a white background for card headers without borders
         const cardHeaders = canvasContainer.querySelectorAll('.card-header, .card-title')
         cardHeaders.forEach(header => {
           tempStyles.push({ element: header, property: 'background', originalValue: header.style.background })
@@ -831,14 +820,12 @@ ${connectionPathsSvg}
           header.style.color = '#000000'
         })
 
-        // Hide colored elements (icons, badges)
         const coloredElements = canvasContainer.querySelectorAll('.coin-icon, .slf-badge, .fendou-badge, .rank-badge')
         coloredElements.forEach(el => {
           tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
           el.style.visibility = 'hidden'
         })
 
-        // Make all connection lines black
         const lines = canvasContainer.querySelectorAll('.line')
         lines.forEach(line => {
           tempStyles.push({ element: line, property: 'stroke', originalValue: line.style.stroke })
@@ -846,104 +833,112 @@ ${connectionPathsSvg}
         })
       }
 
-      const { width: containerWidth, height: containerHeight } = canvasContainer.getBoundingClientRect()
-      const captureOnlyViewport = exportSettings?.visibleOnly !== false
-      const targetBackground = exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff')
-
-      const getContentSize = () => {
-        const parsedWidth = canvasContentStyle ? parseFloat(canvasContentStyle.width) : null
-        const parsedHeight = canvasContentStyle ? parseFloat(canvasContentStyle.height) : null
-
-        return {
-          width: Number.isFinite(parsedWidth) ? parsedWidth : containerWidth,
-          height: Number.isFinite(parsedHeight) ? parsedHeight : containerHeight
-        }
-      }
-
-      // Determine the export parameters based on the visible area
-      const { width: fullContentWidth, height: fullContentHeight } = getContentSize()
-
-      let captureWidth = Math.max(1, Math.round(containerWidth))
-      let captureHeight = Math.max(1, Math.round(containerHeight))
-
-      if (!captureOnlyViewport) {
-        captureWidth = Math.max(1, Math.round(fullContentWidth))
-        captureHeight = Math.max(1, Math.round(fullContentHeight))
-        if (canvasContent) {
-          canvasContent.style.transform = 'translate(0px, 0px) scale(1)'
-        }
-      }
-
-      let finalWidth = captureWidth
-      let finalHeight = captureHeight
-      let renderScale = 2 // default upscale for better quality in original mode
+      // ========== ИСПРАВЛЕНИЕ: Экспортировать ТОЛЬКО видимую область ==========
       
+      // Получаем размеры видимой области
+      const containerRect = canvasContainer.getBoundingClientRect()
+      const visibleWidth = containerRect.width
+      const visibleHeight = containerRect.height
+      
+      // Получаем текущий трансформ
+      const originalTransform = canvasContent.style.transform
+      const transformValues = parseTransform(originalTransform)
+      const { x: offsetX, y: offsetY, scale: currentScale } = transformValues
+      
+      // Координаты видимой области в пространстве контента
+      const visibleMinX = -offsetX / currentScale
+      const visibleMinY = -offsetY / currentScale
+      const visibleMaxX = visibleMinX + (visibleWidth / currentScale)
+      const visibleMaxY = visibleMinY + (visibleHeight / currentScale)
+
+      // Размеры видимой области в координатах контента
+      const contentWidth = visibleMaxX - visibleMinX
+      const contentHeight = visibleMaxY - visibleMinY
+
+      // ========== КОНЕЦ ИСПРАВЛЕНИЯ ==========
+
+      // Reset the transform to capture at a 1:1 scale
+      canvasContent.style.transform = 'matrix(1, 0, 0, 1, 0, 0)'
+
+      // Set the position of canvas-content to capture the visible area
+      const originalLeft = canvasContent.style.left
+      const originalTop = canvasContent.style.top
+      canvasContent.style.left = `${-visibleMinX}px`
+      canvasContent.style.top = `${-visibleMinY}px`
+
+      // Determine the export parameters
+      let finalWidth, finalHeight, scale
+ 
       if (exportSettings && exportSettings.format !== 'original') {
-        // Calculate the dimensions in pixels based on format and DPI
         let pageWidthMm = exportSettings.width
         let pageHeightMm = exportSettings.height
 
-        // Apply orientation
         if (exportSettings.orientation === 'landscape') {
           [pageWidthMm, pageHeightMm] = [pageHeightMm, pageWidthMm]
         }
 
-        // Convert millimeters to pixels: pixels = (mm / 25.4) * DPI
         finalWidth = Math.round((pageWidthMm / 25.4) * exportSettings.dpi)
         finalHeight = Math.round((pageHeightMm / 25.4) * exportSettings.dpi)
-
-        renderScale = 1
+        scale = 1 // ИСПРАВЛЕНО: используем scale=1, размер уже в пиксели
+      } else {
+        finalWidth = Math.round(contentWidth)
+        finalHeight = Math.round(contentHeight)
+        scale = 2
       }
 
       // Capture the content image
-      contentCanvas = await html2canvas(captureOnlyViewport ? canvasContainer : canvasContent || canvasContainer, {
-        backgroundColor: targetBackground,
+      const contentCanvas = await html2canvas(canvasContainer, {
+        backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
         logging: false,
         useCORS: true,
-        scale: renderScale,
-        width: captureWidth,
-        height: captureHeight,
-        windowWidth: captureWidth,
-        windowHeight: captureHeight,
-        scrollX: 0,
-        scrollY: 0
+        scale: scale,
+        width: Math.round(contentWidth * (exportSettings?.dpi ? 1 : scale)),
+        height: Math.round(contentHeight * (exportSettings?.dpi ? 1 : scale)),
+        windowWidth: Math.round(contentWidth * (exportSettings?.dpi ? 1 : scale)),
+        windowHeight: Math.round(contentHeight * (exportSettings?.dpi ? 1 : scale))
+      })
+
+      // Restore original values
+      canvasContent.style.transform = originalTransform
+      canvasContent.style.left = originalLeft
+      canvasContent.style.top = originalTop
+      canvasContainer.classList.remove('canvas-container--capturing')
+
+      // Restore temporary styles
+      tempStyles.forEach(({ element, property, originalValue }) => {
+        if (originalValue) {
+          element.style[property] = originalValue
+        } else {
+          element.style[property] = ''
+        }
       })
 
       let finalCanvas
 
       if (exportSettings && exportSettings.format !== 'original') {
-        // Create the final canvas with the specified dimensions
         finalCanvas = document.createElement('canvas')
         finalCanvas.width = finalWidth
         finalCanvas.height = finalHeight
-
         const ctx = finalCanvas.getContext('2d')
 
-        // Fill the background
         ctx.fillStyle = exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff')
         ctx.fillRect(0, 0, finalWidth, finalHeight)
 
-        // Calculate the scale to fit the content within the final size
         const scaleX = finalWidth / contentCanvas.width
         const scaleY = finalHeight / contentCanvas.height
         const fitScale = Math.min(scaleX, scaleY)
 
-        // Calculate the dimensions of the scaled content
         const scaledWidth = contentCanvas.width * fitScale
         const scaledHeight = contentCanvas.height * fitScale
-
-        // Center the image
-        const offsetX = (finalWidth - scaledWidth) / 2
-        const offsetY = (finalHeight - scaledHeight) / 2
-
-        // Draw the scaled and centered image
+        const offsetXPos = (finalWidth - scaledWidth) / 2
+        const offsetYPos = (finalHeight - scaledHeight) / 2
+        
         ctx.drawImage(
           contentCanvas,
           0, 0, contentCanvas.width, contentCanvas.height,
-          offsetX, offsetY, scaledWidth, scaledHeight
+          offsetXPos, offsetYPos, scaledWidth, scaledHeight
         )
       } else {
-        // Use the original canvas
         finalCanvas = contentCanvas
       }
 
@@ -954,7 +949,6 @@ ${connectionPathsSvg}
           return
         }
 
-        // Add DPI metadata to the PNG file
         let finalBlob = blob
         if (exportSettings?.dpi) {
           finalBlob = await addPngDpiMetadata(blob, exportSettings.dpi)
@@ -963,7 +957,6 @@ ${connectionPathsSvg}
         const url = URL.createObjectURL(finalBlob)
         const link = document.createElement('a')
 
-        // Form the file name: project name + date and time
         const now = new Date()
         const dateStr = now.getFullYear() + '-' +
           String(now.getMonth() + 1).padStart(2, '0') + '-' +
@@ -974,35 +967,19 @@ ${connectionPathsSvg}
 
         const baseFileName = formatProjectFileName(normalizedProjectName.value || projectStore.projectName, 'scheme')
 
-        // Add format information to the file name if not the original size
         let formatSuffix = ''
         if (exportSettings && exportSettings.format !== 'original') {
           formatSuffix = `_${exportSettings.format.toUpperCase()}_${exportSettings.orientation === 'portrait' ? 'P' : 'L'}_${exportSettings.dpi}dpi`
         }
 
         link.download = `${baseFileName}${formatSuffix}_${dateStr}_${timeStr}.png`
-
         link.href = url
         link.click()
         URL.revokeObjectURL(url)
       }, 'image/png')
     } catch (error) {
       console.error('Ошибка при экспорте в PNG:', error)
-      alert('Экспорт в PNG завершился ошибкой. Подробности в консоли.')
-    } finally {
-      canvasContainer?.classList.remove('canvas-container--capturing')
-
-      tempStyles.forEach(({ element, property, originalValue }) => {
-        if (originalValue) {
-          element.style[property] = originalValue
-        } else {
-          element.style[property] = ''
-        }
-      })
-
-      if (restoreTransform.node) {
-        restoreTransform.node.style.transform = restoreTransform.value || ''
-      }      
+      alert('Экспорт в PNG завершился ошибкой. Подробности в консоли.')   
     }
   }
 
