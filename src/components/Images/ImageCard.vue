@@ -160,45 +160,42 @@ const handleDragStart = (event) => {
       </div>
       
       <div v-if="isMyLibrary" class="image-card__actions">
-        <div class="image-card__actions-row image-card__actions-row--top">
-          <!-- Кнопка "Предложить для общего доступа" -->
-          <button
-            v-if="canShareRequest"
-            type="button"
-            class="image-card__action image-card__action--share"
-            title="Предложить для общего доступа"
-            @click="handleShareRequest"
-          >
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 8C19.6569 8 21 6.65685 21 5C21 3.34315 19.6569 2 18 2C16.3431 2 15 3.34315 15 5C15 5.12549 15.0077 15.291 15.0227 15.3715L8.08261 11.9015C7.54305 11.3453 6.81024 11 6 11C4.34315 11 3 12.3431 3 14C3 15.6569 4.34315 17 6 17C6.81024 17 7.54305 16.6547 8.08261 16.0985L15.0227 19.5685C15.0077 19.6909 15 19.8155 15 19.941C15 21.5979 16.3431 22.941 18 22.941C19.6569 22.941 21 21.5979 21 19.941C21 18.2841 19.6569 16.941 18 16.941C17.1898 16.941 16.457 17.2863 15.9174 17.8425L8.97733 14.3725C8.99229 14.2501 9 14.1255 9 14C9 13.8745 8.99229 13.7499 8.97733 13.6275L15.9174 10.1575C16.457 10.7137 17.1898 11.059 18 11.059C19.6569 11.059 21 9.71585 21 8.059C21 6.40215 19.6569 5.059 18 5.059V8Z" fill="currentColor"/>
-            </svg>
-          </button>
-        </div>
+        <!-- Кнопка "Предложить для общего доступа" -->
+        <button
+          v-if="canShareRequest"
+          type="button"
+          class="image-card__action image-card__action--share"
+          title="Предложить для общего доступа"
+          @click="handleShareRequest"
+        >
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M18 8C19.6569 8 21 6.65685 21 5C21 3.34315 19.6569 2 18 2C16.3431 2 15 3.34315 15 5C15 5.12549 15.0077 15.291 15.0227 15.3715L8.08261 11.9015C7.54305 11.3453 6.81024 11 6 11C4.34315 11 3 12.3431 3 14C3 15.6569 4.34315 17 6 17C6.81024 17 7.54305 16.6547 8.08261 16.0985L15.0227 19.5685C15.0077 19.6909 15 19.8155 15 19.941C15 21.5979 16.3431 22.941 18 22.941C19.6569 22.941 21 21.5979 21 19.941C21 18.2841 19.6569 16.941 18 16.941C17.1898 16.941 16.457 17.2863 15.9174 17.8425L8.97733 14.3725C8.99229 14.2501 9 14.1255 9 14C9 13.8745 8.99229 13.7499 8.97733 13.6275L15.9174 10.1575C16.457 10.7137 17.1898 11.059 18 11.059C19.6569 11.059 21 9.71585 21 8.059C21 6.40215 19.6569 5.059 18 5.059V8Z" fill="currentColor"/>
+          </svg>
+        </button>
 
-        <div class="image-card__actions-row image-card__actions-row--bottom">
-          <!-- Кнопка переименования -->
-          <button
-            type="button"
-            class="image-card__action image-card__action--rename"
-            title="Переименовать"
-            @click="handleRename"
-          >
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z" fill="currentColor"/>
-            </svg>
-          </button>          
-          <!-- Кнопка удаления -->
-          <button
-            type="button"
-            class="image-card__action image-card__action--delete"
-            title="Удалить"
-            @click="handleDelete"
-          >
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM19 4H15.5L14.5 3H9.5L8.5 4H5V6H19V4Z" fill="currentColor"/>
-            </svg>
-          </button>
-        </div>
+        <!-- Кнопка переименования -->
+        <button
+          type="button"
+          class="image-card__action image-card__action--rename"
+          title="Переименовать"
+          @click="handleRename"
+        >
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z" fill="currentColor"/>
+          </svg>
+        </button>
+
+        <!-- Кнопка удаления -->
+        <button
+          type="button"
+          class="image-card__action image-card__action--delete"
+          title="Удалить"
+          @click="handleDelete"
+        >
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7H6V19ZM19 4H15.5L14.5 3H9.5L8.5 4H5V6H19V4Z" fill="currentColor"/>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -359,16 +356,6 @@ const handleDragStart = (event) => {
 .image-card:hover .image-card__actions {
   opacity: 1;
   pointer-events: auto;
-}
-.image-card__actions-row {
-  display: flex;
-  justify-content: flex-end;
-  width: 100%;
-  pointer-events: none;
-}
-
-.image-card__actions-row--bottom {
-  align-items: flex-end;
 }
 .image-card__action {
   width: 32px;
