@@ -410,6 +410,71 @@ async function renameUserRootFolder(userId, oldPersonalId, newPersonalId) {
 }
 
 // Экспорт всех функций и констант
+/**
+ * Проверить существование файла или папки на Яндекс.Диске
+ */
+async function checkPathExists(path) {
+  try {
+    const response = await makeYandexDiskRequest(
+      `/resources?path=${encodeURIComponent(path)}`,
+      { method: 'GET' },
+      'checkPathExists'
+    );
+    return response.ok;
+  } catch (error) {
+    if (error.status === 404) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Получить список всех файлов в папке (не только директории)
+ */
+async function listFolderContents(path) {
+  try {
+    const response = await makeYandexDiskRequest(
+      `/resources?path=${encodeURIComponent(path)}&limit=1000`,
+      { method: 'GET' },
+      'listFolderContents'
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to list folder contents: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data._embedded?.items || [];
+  } catch (error) {
+    console.error(`❌ Ошибка получения содержимого папки ${path}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Удалить папку с Яндекс.Диска
+ */
+async function deleteFolder(path) {
+  try {
+    const response = await makeYandexDiskRequest(
+      `/resources?path=${encodeURIComponent(path)}&permanently=true`,
+      { method: 'DELETE' },
+      'deleteFolder'
+    );
+
+    if (!response.ok && response.status !== 404) {
+      throw new Error(`Failed to delete folder: ${response.statusText}`);
+    }
+
+    console.log(`✅ Папка удалена: ${path}`);
+    return true;
+  } catch (error) {
+    console.error(`❌ Ошибка удаления папки ${path}:`, error);
+    throw error;
+  }
+}
+
 export {
   // Константы
   YANDEX_DISK_TOKEN,
@@ -429,6 +494,9 @@ export {
   deleteFile,
   moveFile,
   copyFile,
+  listFolderContents,
+  checkPathExists,
+  deleteFolder,
   listFolderDirectories,
   renameUserRootFolder
 };

@@ -10,7 +10,10 @@ import {
   uploadFile,
   publishFile,
   deleteFile,
-  copyFile
+  copyFile,
+  listFolderContents,
+  checkPathExists,
+  deleteFolder,
 } from '../services/yandexDiskService.js';
 import { syncSharedFoldersWithYandexDisk } from '../services/sharedFoldersSync.js';
 
@@ -90,15 +93,11 @@ export function registerImageRoutes(app) {
         try {
           yandexFolders = await listFolderDirectories(libraryRootPath);
         } catch (error) {
-          console.error(
-            '❌ Ошибка получения списка папок на Яндекс.Диске:',
-            error
-          );
+          console.error('❌ Ошибка получения списка папок на Яндекс.Диске:', error);
           return reply.code(500).send({
-            error:
-              process.env.NODE_ENV === 'development'
-                ? `Ошибка сервера (Yandex.Disk): ${error.message}`
-                : 'Ошибка сервера. Попробуйте позже'
+            error: process.env.NODE_ENV === 'development'
+              ? `Ошибка сервера (Yandex.Disk): ${error.message}`
+              : 'Ошибка сервера. Попробуйте позже'
           });
         }
 
@@ -132,7 +131,44 @@ export function registerImageRoutes(app) {
           });
         }
 
-        // Добавляем папки, которые есть на Я.Диске, но ещё нет записей в БД
+        // СИНХРОНИЗАЦИЯ: Удаляем папки из БД, которых нет на Яндекс.Диске
+        for (const [folderName] of foldersMap) {
+          if (!yandexFolders.includes(folderName)) {
+            console.log(`⚠️ Папка "${folderName}" есть в БД, но отсутствует на Яндекс.Диске. Удаляем записи из БД...`);
+            await pool.query(
+              `DELETE FROM image_library WHERE user_id = $1 AND folder_name = $2 AND is_shared = FALSE`,
+              [userId, folderName]
+            );
+            foldersMap.delete(folderName);
+          }
+        }
+
+        // Проверяем файлы в каждой папке на существование
+        for (const [folderName, folderData] of foldersMap) {
+          const folderPath = getUserLibraryFolderPath(userId, personalId, folderName);
+          try {
+            const yandexFiles = await listFolderContents(folderPath);
+            const yandexFilenames = new Set(yandexFiles.map(f => f.name));
+            const filesInDB = await pool.query(
+              `SELECT id, filename FROM image_library WHERE user_id = $1 AND folder_name = $2 AND is_shared = FALSE`,
+              [userId, folderName]
+            );
+            for (const file of filesInDB.rows) {
+              if (!yandexFilenames.has(file.filename)) {
+                console.log(`⚠️ Файл "${file.filename}" из папки "${folderName}" отсутствует на Яндекс.Диске. Удаляем из БД...`);
+                await pool.query(`DELETE FROM image_library WHERE id = $1`, [file.id]);
+                folderData.images_count = Math.max(0, folderData.images_count - 1);
+              }
+            }
+            if (folderData.images_count === 0) {
+              foldersMap.delete(folderName);
+            }
+          } catch (error) {
+            console.error(`❌ Ошибка синхронизации папки "${folderName}":`, error);
+          }
+        }
+
+        // Добавляем папки, которые есть на Яндекс.Диске, но ещё нет в БД
         for (const folderName of yandexFolders) {
           if (!foldersMap.has(folderName)) {
             foldersMap.set(folderName, {
@@ -972,6 +1008,27 @@ export function registerImageRoutes(app) {
         `,
           [imageId, userId]
         );
+
+        // Проверяем, осталась ли папка пустой после удаления
+        if (folder_name) {
+          const remainingFiles = await pool.query(
+            `SELECT COUNT(*) as count FROM image_library WHERE user_id = $1 AND folder_name = $2 AND is_shared = FALSE`,
+            [userId, folder_name]
+          );
+          
+          const count = parseInt(remainingFiles.rows[0]?.count || 0, 10);
+          
+          if (count === 0) {
+            console.log(`📁 Папка "${folder_name}" пуста. Удаляем с Яндекс.Диска...`);
+            const folderPath = getUserLibraryFolderPath(userId, personal_id, folder_name);
+            try {
+              await deleteFolder(folderPath);
+              console.log(`✅ Пустая папка "${folder_name}" успешно удалена`);
+            } catch (error) {
+              console.error(`⚠️ Не удалось удалить пустую папку "${folder_name}":`, error);
+            }
+          }
+        }
 
         return reply.code(200).send({
           success: true
