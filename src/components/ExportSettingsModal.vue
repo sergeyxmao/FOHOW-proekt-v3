@@ -1,8 +1,11 @@
 <script setup>
-import { ref } from 'vue'
-
+import { computed, ref } from 'vue'
+import { useCardsStore } from '../stores/cards.js'
+  
 const emit = defineEmits(['close', 'export'])
-
+const cardsStore = useCardsStore()
+const PADDING = 50
+  
 // Форматы листа с размерами в миллиметрах
 const pageFormats = [
   { id: 'original', label: 'Оригинальный размер', width: null, height: null },
@@ -26,6 +29,75 @@ const selectedOrientation = ref('portrait') // 'portrait' или 'landscape'
 const selectedDPI = ref(300)
 const hideContent = ref(false) // Скрыть содержимое
 const blackAndWhite = ref(false) // Ч/Б (контур)
+const mmToPixels = (mm, dpi) => Math.round((mm / 25.4) * dpi)
+
+const contentSize = computed(() => {
+  if (!cardsStore.cards.length) {
+    return { width: 0, height: 0, isEmpty: true }
+  }
+
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  cardsStore.cards.forEach(card => {
+    const left = card.x || 0
+    const top = card.y || 0
+    const width = card.width || 0
+    const height = card.height || 0
+
+    minX = Math.min(minX, left)
+    minY = Math.min(minY, top)
+    maxX = Math.max(maxX, left + width)
+    maxY = Math.max(maxY, top + height)
+  })
+
+  const width = maxX - minX + PADDING * 2
+  const height = maxY - minY + PADDING * 2
+
+  return {
+    width,
+    height,
+    isEmpty: false
+  }
+})
+
+const targetResolution = computed(() => {
+  if (selectedFormat.value !== 'original') {
+    const format = pageFormats.find(f => f.id === selectedFormat.value)
+    if (!format) return null
+
+    const widthMm = selectedOrientation.value === 'portrait' ? format.width : format.height
+    const heightMm = selectedOrientation.value === 'portrait' ? format.height : format.width
+
+    return {
+      width: mmToPixels(widthMm, selectedDPI.value),
+      height: mmToPixels(heightMm, selectedDPI.value),
+      dpi: selectedDPI.value,
+      mode: 'format'
+    }
+  }
+
+  if (contentSize.value.isEmpty) {
+    return null
+  }
+
+  return {
+    width: Math.round(contentSize.value.width * 2),
+    height: Math.round(contentSize.value.height * 2),
+    dpi: 192, // Масштаб 2x от базовых 96 DPI
+    mode: 'original'
+  }
+})
+
+const estimatedFileSize = computed(() => {
+  if (!targetResolution.value) return null
+  const pixels = targetResolution.value.width * targetResolution.value.height
+  const bytes = pixels * 4 // RGBA без учёта сжатия
+  const megabytes = bytes / (1024 * 1024)
+  return megabytes
+})
 
 const handleExport = () => {
   const format = pageFormats.find(f => f.id === selectedFormat.value)
@@ -146,21 +218,20 @@ const handleClose = () => {
       </div>
 
       <!-- Информация о размере -->
-      <div v-if="selectedFormat !== 'original'" class="info-box">
-        <p class="info-text">
-          <strong>Размер изображения:</strong>
-          {{
-            selectedOrientation === 'portrait'
-              ? Math.round((pageFormats.find(f => f.id === selectedFormat).width / 25.4) * selectedDPI)
-              : Math.round((pageFormats.find(f => f.id === selectedFormat).height / 25.4) * selectedDPI)
-          }}
-          ×
-          {{
-            selectedOrientation === 'portrait'
-              ? Math.round((pageFormats.find(f => f.id === selectedFormat).height / 25.4) * selectedDPI)
-              : Math.round((pageFormats.find(f => f.id === selectedFormat).width / 25.4) * selectedDPI)
-          }}
-          пикселей
+      <div class="info-box">
+        <template v-if="targetResolution">
+          <p class="info-text">
+            <strong>Итоговое разрешение:</strong>
+            {{ targetResolution.width }} × {{ targetResolution.height }} пикселей
+            <span class="info-hint">({{ targetResolution.dpi }} DPI{{ targetResolution.mode === 'original' ? ', масштаб 2x' : '' }})</span>
+          </p>
+          <p v-if="estimatedFileSize !== null" class="info-text info-text--muted">
+            <strong>Оценочный размер файла:</strong>
+            ~{{ estimatedFileSize.toFixed(1) }} МБ (до сжатия PNG)
+          </p>
+        </template>
+        <p v-else class="info-text info-text--muted">
+          На доске нет элементов для экспорта.
         </p>
       </div>
     </div>
@@ -381,6 +452,16 @@ const handleClose = () => {
   font-size: 13px;
   color: #1e40af;
   line-height: 1.5;
+}
+.info-text--muted {
+  color: #475569;
+}
+
+.info-hint {
+  display: inline-block;
+  margin-left: 6px;
+  color: #475569;
+  font-size: 12px;
 }
 
 .export-settings-panel__footer {
