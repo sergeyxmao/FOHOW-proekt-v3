@@ -1430,21 +1430,37 @@ export function registerImageRoutes(app) {
         const extension = image.original_name.match(/\.[^/.]+$/)?.[0] || '.webp';
         const newFullName = trimmedName + extension;
 
-        // Проверяем дубли в папке пользователя
-        const duplicateCheck = await pool.query(
-          `SELECT id
-           FROM image_library
-           WHERE user_id = $1
-             AND is_shared = FALSE
-             AND id <> $2
-             AND original_name = $3
-             AND (
-               (folder_name IS NULL AND $4 IS NULL)
-               OR folder_name = $4
-             )
-           LIMIT 1`,
-          [userId, imageId, newFullName, image.folder_name || null]
-        );
+// ИСПРАВЛЕНО: Проверяем дубли в папке пользователя
+// Разделяем на два случая: с папкой и без папки
+let duplicateCheck;
+
+if (image.folder_name === null || image.folder_name === '') {
+  // Случай 1: Изображение в корне (без папки)
+  duplicateCheck = await pool.query(
+    `SELECT id
+     FROM image_library
+     WHERE user_id = $1
+       AND is_shared = FALSE
+       AND id <> $2
+       AND original_name = $3
+       AND folder_name IS NULL
+     LIMIT 1`,
+    [userId, imageId, newFullName]
+  );
+} else {
+  // Случай 2: Изображение в конкретной папке
+  duplicateCheck = await pool.query(
+    `SELECT id
+     FROM image_library
+     WHERE user_id = $1
+       AND is_shared = FALSE
+       AND id <> $2
+       AND original_name = $3
+       AND folder_name = $4::text
+     LIMIT 1`,
+    [userId, imageId, newFullName, image.folder_name]
+  );
+}
 
         if (duplicateCheck.rows.length > 0) {
           return reply.code(409).send({
