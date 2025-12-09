@@ -1,10 +1,9 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useCardsStore } from '../stores/cards.js'
   
 const emit = defineEmits(['close', 'export'])
 const cardsStore = useCardsStore()
-const PADDING = 50
   
 // Форматы листа с размерами в миллиметрах
 const pageFormats = [
@@ -27,40 +26,53 @@ const dpiOptions = [
 const selectedFormat = ref('a4')
 const selectedOrientation = ref('portrait') // 'portrait' или 'landscape'
 const selectedDPI = ref(300)
+const exportVisibleOnly = ref(true)  
 const hideContent = ref(false) // Скрыть содержимое
 const blackAndWhite = ref(false) // Ч/Б (контур)
 const mmToPixels = (mm, dpi) => Math.round((mm / 25.4) * dpi)
 
-const contentSize = computed(() => {
-  if (!cardsStore.cards.length) {
-    return { width: 0, height: 0, isEmpty: true }
+const viewportSize = ref({ width: 0, height: 0 })
+const contentSize = ref({ width: 0, height: 0 })
+
+const updateViewportSize = () => {
+  const container = document.querySelector('.canvas-container')
+  if (!container) {
+    viewportSize.value = { width: 0, height: 0 }
+    return
   }
 
-  let minX = Infinity
-  let minY = Infinity
-  let maxX = -Infinity
-  let maxY = -Infinity
-
-  cardsStore.cards.forEach(card => {
-    const left = card.x || 0
-    const top = card.y || 0
-    const width = card.width || 0
-    const height = card.height || 0
-
-    minX = Math.min(minX, left)
-    minY = Math.min(minY, top)
-    maxX = Math.max(maxX, left + width)
-    maxY = Math.max(maxY, top + height)
-  })
-
-  const width = maxX - minX + PADDING * 2
-  const height = maxY - minY + PADDING * 2
-
-  return {
-    width,
-    height,
-    isEmpty: false
+  const rect = container.getBoundingClientRect()
+  viewportSize.value = {
+    width: rect.width,
+    height: rect.height
   }
+}
+
+const updateContentSize = () => {
+  const content = document.querySelector('.canvas-content')
+  if (!content) {
+    contentSize.value = { width: 0, height: 0 }
+    return
+  }
+
+  const style = window.getComputedStyle(content)
+  const width = parseFloat(style.width)
+  const height = parseFloat(style.height)
+
+  contentSize.value = {
+    width: Number.isFinite(width) ? width : 0,
+    height: Number.isFinite(height) ? height : 0
+  }
+}
+
+onMounted(() => {
+  updateViewportSize()
+  updateContentSize()
+  window.addEventListener('resize', updateViewportSize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateViewportSize)
 })
 
 const targetResolution = computed(() => {
@@ -79,24 +91,21 @@ const targetResolution = computed(() => {
     }
   }
 
-  if (contentSize.value.isEmpty) {
+  if (cardsStore.cards.length === 0 || !viewportSize.value.width || !viewportSize.value.height) {
+    return null
+  }
+
+  const areaSize = exportVisibleOnly.value ? viewportSize.value : contentSize.value
+  if (!areaSize.width || !areaSize.height) {
     return null
   }
 
   return {
-    width: Math.round(contentSize.value.width * 2),
-    height: Math.round(contentSize.value.height * 2),
+    width: Math.round(areaSize.width * 2),
+    height: Math.round(areaSize.height * 2),
     dpi: 192, // Масштаб 2x от базовых 96 DPI
     mode: 'original'
   }
-})
-
-const estimatedFileSize = computed(() => {
-  if (!targetResolution.value) return null
-  const pixels = targetResolution.value.width * targetResolution.value.height
-  const bytes = pixels * 4 // RGBA без учёта сжатия
-  const megabytes = bytes / (1024 * 1024)
-  return megabytes
 })
 
 const handleExport = () => {
@@ -108,6 +117,7 @@ const handleExport = () => {
     height: format.height,
     orientation: selectedOrientation.value,
     dpi: selectedDPI.value,
+    visibleOnly: exportVisibleOnly.value,    
     hideContent: hideContent.value,
     blackAndWhite: blackAndWhite.value
   })
@@ -214,6 +224,14 @@ const handleClose = () => {
             />
             <span class="checkbox-text">Ч/Б (контур)</span>
           </label>
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              v-model="exportVisibleOnly"
+              class="checkbox-input"
+            />
+            <span class="checkbox-text">Экспортировать только видимую область</span>
+          </label>          
         </div>
       </div>
 
@@ -224,10 +242,6 @@ const handleClose = () => {
             <strong>Итоговое разрешение:</strong>
             {{ targetResolution.width }} × {{ targetResolution.height }} пикселей
             <span class="info-hint">({{ targetResolution.dpi }} DPI{{ targetResolution.mode === 'original' ? ', масштаб 2x' : '' }})</span>
-          </p>
-          <p v-if="estimatedFileSize !== null" class="info-text info-text--muted">
-            <strong>Оценочный размер файла:</strong>
-            ~{{ estimatedFileSize.toFixed(1) }} МБ (до сжатия PNG)
           </p>
         </template>
         <p v-else class="info-text info-text--muted">
