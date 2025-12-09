@@ -885,7 +885,9 @@ ${connectionPathsSvg}
 
       // Determine the export parameters
       let finalWidth, finalHeight, scale
-
+      let captureWidth = contentWidth
+      let captureHeight = contentHeight
+      
       if (exportSettings && exportSettings.format !== 'original') {
         // Calculate the dimensions in pixels based on format and DPI
         let pageWidthMm = exportSettings.width
@@ -900,9 +902,10 @@ ${connectionPathsSvg}
         finalWidth = Math.round((pageWidthMm / 25.4) * exportSettings.dpi)
         finalHeight = Math.round((pageHeightMm / 25.4) * exportSettings.dpi)
 
-        // Calculate the scale for html2canvas based on DPI
-        // The base resolution is 96 DPI
-        scale = exportSettings.dpi / 96
+        // Use a scale of 1 because dimensions already account for DPI
+        scale = 1
+        captureWidth = finalWidth
+        captureHeight = finalHeight
       } else {
         // Original size
         finalWidth = contentWidth
@@ -916,10 +919,10 @@ ${connectionPathsSvg}
         logging: false,
         useCORS: true,
         scale: scale,
-        width: contentWidth,
-        height: contentHeight,
-        windowWidth: contentWidth,
-        windowHeight: contentHeight
+        width: captureWidth,
+        height: captureHeight,
+        windowWidth: captureWidth,
+        windowHeight: captureHeight
       })
 
       // Restore original values
