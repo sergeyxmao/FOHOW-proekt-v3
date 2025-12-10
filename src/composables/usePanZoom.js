@@ -485,15 +485,16 @@ export function usePanZoom(canvasElement) {
       event.preventDefault()
     }
   }
-
+  const POINTER_EVENT_OPTIONS = { capture: true }
+	
   onMounted(() => {
     if (!canvasElement.value) return
 
     window.addEventListener('wheel', handleWheel, { passive: false })
-    window.addEventListener('pointerdown', handlePointerDown)
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp)
-    window.addEventListener('pointercancel', handlePointerUp)
+    window.addEventListener('pointerdown', handlePointerDown, POINTER_EVENT_OPTIONS)
+    window.addEventListener('pointermove', handlePointerMove, POINTER_EVENT_OPTIONS)
+    window.addEventListener('pointerup', handlePointerUp, POINTER_EVENT_OPTIONS)
+    window.addEventListener('pointercancel', handlePointerUp, POINTER_EVENT_OPTIONS)
     window.addEventListener('mousedown', handleMouseDown)
     window.addEventListener('auxclick', handleAuxClick)
 
@@ -502,10 +503,10 @@ export function usePanZoom(canvasElement) {
   
   onUnmounted(() => {
     window.removeEventListener('wheel', handleWheel)
-    window.removeEventListener('pointerdown', handlePointerDown)
-    window.removeEventListener('pointermove', handlePointerMove)
-    window.removeEventListener('pointerup', handlePointerUp)
-    window.removeEventListener('pointercancel', handlePointerUp)
+    window.removeEventListener('pointerdown', handlePointerDown, POINTER_EVENT_OPTIONS)
+    window.removeEventListener('pointermove', handlePointerMove, POINTER_EVENT_OPTIONS)
+    window.removeEventListener('pointerup', handlePointerUp, POINTER_EVENT_OPTIONS)
+    window.removeEventListener('pointercancel', handlePointerUp, POINTER_EVENT_OPTIONS)
     window.removeEventListener('mousedown', handleMouseDown)
     window.removeEventListener('auxclick', handleAuxClick)
     setBodyCursor()
