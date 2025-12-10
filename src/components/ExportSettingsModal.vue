@@ -1,9 +1,12 @@
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useCardsStore } from '../stores/cards.js'
+import { useAuthStore } from '../stores/auth.js'
   
 const emit = defineEmits(['close', 'export'])
 const cardsStore = useCardsStore()
+const authStore = useAuthStore()
+const isAdmin = computed(() => authStore.user?.role === 'admin')  
   
 // Форматы листа с размерами в миллиметрах
 const pageFormats = [
@@ -27,6 +30,9 @@ const selectedFormat = ref('a4')
 const selectedOrientation = ref('portrait') // 'portrait' или 'landscape'
 const selectedDPI = ref(300)
 const exportOnlyVisible = ref(true)
+const effectiveExportOnlyVisible = computed(() => (
+  isAdmin.value ? exportOnlyVisible.value : true
+))  
 const hideContent = ref(false) // Скрыть содержимое
 const blackAndWhite = ref(false) // Ч/Б (контур)
 const mmToPixels = (mm, dpi) => Math.round((mm / 25.4) * dpi)
@@ -95,8 +101,8 @@ const targetResolution = computed(() => {
     return null
   }
 
-  const areaSize = exportOnlyVisible.value ? viewportSize.value : contentSize.value
-  if (!areaSize.width || !areaSize.height) {
+  const areaSize = effectiveExportOnlyVisible.value ? viewportSize.value : contentSize.value
+    if (!areaSize.width || !areaSize.height) {
     return null
   }
 
@@ -117,7 +123,7 @@ const handleExport = () => {
     height: format.height,
     orientation: selectedOrientation.value,
     dpi: selectedDPI.value,
-    exportOnlyVisible: exportOnlyVisible.value,
+    exportOnlyVisible: effectiveExportOnlyVisible.value,
     hideContent: hideContent.value,
     blackAndWhite: blackAndWhite.value
   })
@@ -224,7 +230,10 @@ const handleClose = () => {
             />
             <span class="checkbox-text">Ч/Б (контур)</span>
           </label>
-          <label class="checkbox-label">
+          <label
+            v-if="isAdmin"
+            class="checkbox-label"
+          >
             <input
               type="checkbox"
               v-model="exportOnlyVisible"
@@ -232,6 +241,12 @@ const handleClose = () => {
             />
             <span class="checkbox-text">Экспортировать только видимую область</span>
           </label>
+          <div
+            v-else
+            class="checkbox-label checkbox-label--info"
+          >
+            <span class="checkbox-text">Экспортирует только видимую область (фиксировано вашим тарифом)</span>
+          </div>          
         </div>
       </div>
 
@@ -550,7 +565,17 @@ const handleClose = () => {
   transition: all 0.2s ease;
   user-select: none;
 }
+.checkbox-label--info {
+  cursor: default;
+  background: rgba(248, 250, 252, 0.5);
+  border-style: dashed;
+  color: #475569;
+}
 
+.checkbox-label--info .checkbox-text {
+  font-weight: 500;
+  color: inherit;
+}
 .checkbox-label:hover {
   background: rgba(255, 255, 255, 1);
   border-color: rgba(59, 130, 246, 0.4);
