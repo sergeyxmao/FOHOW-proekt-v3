@@ -941,6 +941,69 @@ const renderAllImages = async () => {
 };
 
 /**
+ * Рендеринг ВСЕХ изображений на canvas для экспорта PNG
+ * В отличие от renderAllImages, эта функция не фильтрует по viewport
+ * и рендерит абсолютно все изображения
+ */
+const renderAllImagesForExport = async (exportBounds) => {
+  if (!imagesCanvasRef.value) {
+    return;
+  }
+
+  const canvas = imagesCanvasRef.value;
+  const ctx = canvas.getContext('2d', { alpha: true, willReadFrequently: false });
+
+  if (!ctx) {
+    return;
+  }
+
+  // Расширяем размеры canvas для экспорта всего контента
+  const newWidth = Math.max(stageConfig.value.width, exportBounds?.contentWidth || 0, exportBounds?.maxX || 0);
+  const newHeight = Math.max(stageConfig.value.height, exportBounds?.contentHeight || 0, exportBounds?.maxY || 0);
+
+  canvas.width = newWidth;
+  canvas.height = newHeight;
+
+  // Очищаем canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Сортируем изображения по zIndex (от меньшего к большему)
+  const sortedImages = [...images.value].sort((a, b) => {
+    const zIndexA = a.zIndex !== undefined ? a.zIndex : 0;
+    const zIndexB = b.zIndex !== undefined ? b.zIndex : 0;
+    return zIndexA - zIndexB;
+  });
+
+  // Отрисовываем ВСЕ изображения (без фильтрации по viewport)
+  for (const image of sortedImages) {
+    await drawImageObject(ctx, image);
+  }
+
+  // Не отрисовываем выделение при экспорте
+};
+
+/**
+ * Обработчик события для рендеринга всех изображений при экспорте PNG
+ */
+const handlePngExportRenderAllImages = async (event) => {
+  const exportBounds = event.detail;
+  await renderAllImagesForExport(exportBounds);
+};
+
+/**
+ * Обработчик события завершения экспорта PNG - восстанавливает обычный рендеринг
+ */
+const handlePngExportRenderComplete = () => {
+  // Восстанавливаем размеры canvas
+  if (imagesCanvasRef.value) {
+    imagesCanvasRef.value.width = stageConfig.value.width;
+    imagesCanvasRef.value.height = stageConfig.value.height;
+  }
+  // Перерисовываем изображения в viewport режиме
+  scheduleRender();
+};
+
+/**
  * Планирование рендеринга с использованием requestAnimationFrame (Lazy rendering)
  * Гарантирует, что рендеринг будет выполнен только один раз за frame
  */
@@ -4367,6 +4430,10 @@ onMounted(() => {
   window.addEventListener('keyup', handleKeyup);
   window.addEventListener('scroll', handleViewportChange, true);
 
+  // Подписываемся на события PNG экспорта для рендеринга всех изображений
+  window.addEventListener('png-export-render-all-images', handlePngExportRenderAllImages);
+  window.addEventListener('png-export-render-complete', handlePngExportRenderComplete);
+
   // Загружаем стикеры для текущей доски
   if (boardStore.currentBoardId) {
     stickersStore.fetchStickers(boardStore.currentBoardId).catch(err => {
@@ -4428,6 +4495,9 @@ onBeforeUnmount(() => {
   window.removeEventListener('mouseup', endDrag);
   removeSelectionListeners();
 
+  // Отписываемся от событий PNG экспорта
+  window.removeEventListener('png-export-render-all-images', handlePngExportRenderAllImages);
+  window.removeEventListener('png-export-render-complete', handlePngExportRenderComplete);
 });
 
 watch(isDrawingLine, (isActive) => {
