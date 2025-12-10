@@ -392,26 +392,31 @@ export function usePanZoom(canvasElement) {
       return
     }
     // Панорамирование по средней кнопке мыши (колесико)
-    if (event.button === 1) {
+    // button === 1 - средняя кнопка мыши
+    if (event.button === 1 && event.pointerType !== 'touch') {
+      // Проверяем, что клик внутри canvas-элемента
       if (!canvasElement.value.contains(event.target)) {
         return
       }
 
       // Отключаем панорамирование, если активен режим размещения стикера
       if (canvasElement.value.classList.contains('canvas-container--sticker-placement')) {
-
         return
-
       }
- 
+
       // Проверяем, что клик не на исключенных элементах (карточки, заметки и т.д.)
       const target = event?.target
-      if (target && typeof target.closest === 'function' && PAN_EXCLUDE_SELECTOR && target.closest(PAN_EXCLUDE_SELECTOR)) {		  
+      if (target && typeof target.closest === 'function' && PAN_EXCLUDE_SELECTOR && target.closest(PAN_EXCLUDE_SELECTOR)) {
         return
       }
 
+      // Предотвращаем стандартное поведение браузера (автоскролл)
       event.preventDefault()
+      event.stopPropagation()
+
+      // Запускаем режим панорамирования
       startPan(event)
+      return
     }
   }
   
@@ -476,11 +481,21 @@ export function usePanZoom(canvasElement) {
   const handleMouseDown = (event) => {
     if (event.button === 1) {
       event.preventDefault()
+      event.stopPropagation()
     }
   }
 
   const handleAuxClick = (event) => {
     if (event.button === 1) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+  }
+
+  // Предотвращаем контекстное меню при использовании средней кнопки
+  const handleContextMenu = (event) => {
+    // Если средняя кнопка была нажата, блокируем контекстное меню
+    if (isPanning) {
       event.preventDefault()
     }
   }
@@ -495,6 +510,7 @@ export function usePanZoom(canvasElement) {
     window.addEventListener('pointercancel', handlePointerUp)
     window.addEventListener('mousedown', handleMouseDown)
     window.addEventListener('auxclick', handleAuxClick)
+    window.addEventListener('contextmenu', handleContextMenu)
 
     updateTransform()
   })
@@ -507,6 +523,7 @@ export function usePanZoom(canvasElement) {
     window.removeEventListener('pointercancel', handlePointerUp)
     window.removeEventListener('mousedown', handleMouseDown)
     window.removeEventListener('auxclick', handleAuxClick)
+    window.removeEventListener('contextmenu', handleContextMenu)
     setBodyCursor()
     if (canvasElement.value) {
       canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
