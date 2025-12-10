@@ -770,45 +770,77 @@ const handleExportPNG = async (exportSettings = null) => {
     // Add a class to hide UI elements
     canvasContainer.classList.add('canvas-container--capturing')
 
-    // **НОВОЕ: Создаём временный canvas для SVG-линий**
-    const svgLayer = canvasContainer.querySelector('.svg-layer')
-    const svgCanvas = await renderSVGToCanvas(svgLayer)
-
     // Apply export options
     const tempStyles = []
 
-    // ... (остальные опции экспорта остаются без изменений)
-
     // Save the original transform
     const originalTransform = canvasContent.style.transform
-    
+
     // Reset the transform to capture at a 1:1 scale
     canvasContent.style.transform = 'matrix(1, 0, 0, 1, 0, 0)'
 
-    // Calculate the boundaries of all cards
+    // Calculate the boundaries
     const cards = cardsStore.cards
     let minX = Infinity
     let minY = Infinity
     let maxX = -Infinity
     let maxY = -Infinity
 
-    cards.forEach(card => {
-      const left = card.x || 0
-      const top = card.y || 0
-      const width = card.width || 0
-      const height = card.height || 0
-      minX = Math.min(minX, left)
-      minY = Math.min(minY, top)
-      maxX = Math.max(maxX, left + width)
-      maxY = Math.max(maxY, top + height)
-    })
+    // Определяем, экспортируем ли только видимую область
+    const visibleOnly = exportSettings?.visibleOnly === true
 
-    // Add padding
-    const PADDING = 50
-    minX -= PADDING
-    minY -= PADDING
-    maxX += PADDING
-    maxY += PADDING
+    if (visibleOnly) {
+      // Получаем текущий viewport пользователя
+      const containerRect = canvasContainer.getBoundingClientRect()
+
+      // Получаем текущую матрицу трансформации
+      const transformMatrix = window.getComputedStyle(canvasContent).transform
+      let offsetX = 0, offsetY = 0, currentScale = 1
+
+      if (transformMatrix && transformMatrix !== 'none') {
+        const matrixValues = transformMatrix.match(/matrix\(([^)]+)\)/)
+        if (matrixValues) {
+          const values = matrixValues[1].split(',').map(v => parseFloat(v.trim()))
+          currentScale = values[0] || 1
+          offsetX = values[4] || 0
+          offsetY = values[5] || 0
+        }
+      }
+
+      // Используем сохранённые значения из originalTransform
+      const origMatrixValues = originalTransform?.match(/matrix\(([^)]+)\)/)
+      if (origMatrixValues) {
+        const values = origMatrixValues[1].split(',').map(v => parseFloat(v.trim()))
+        currentScale = values[0] || 1
+        offsetX = values[4] || 0
+        offsetY = values[5] || 0
+      }
+
+      // Вычисляем видимую область в координатах контента
+      minX = -offsetX / currentScale
+      minY = -offsetY / currentScale
+      maxX = minX + containerRect.width / currentScale
+      maxY = minY + containerRect.height / currentScale
+    } else {
+      // Экспорт всего контента - вычисляем границы всех карточек
+      cards.forEach(card => {
+        const left = card.x || 0
+        const top = card.y || 0
+        const width = card.width || 0
+        const height = card.height || 0
+        minX = Math.min(minX, left)
+        minY = Math.min(minY, top)
+        maxX = Math.max(maxX, left + width)
+        maxY = Math.max(maxY, top + height)
+      })
+
+      // Add padding only for full content export
+      const PADDING = 50
+      minX -= PADDING
+      minY -= PADDING
+      maxX += PADDING
+      maxY += PADDING
+    }
 
     const contentWidth = maxX - minX
     const contentHeight = maxY - minY
@@ -843,7 +875,8 @@ const handleExportPNG = async (exportSettings = null) => {
       scale = 2
     }
 
-    // **КРИТИЧНО: Временно скрываем SVG-слой перед захватом**
+    // **КРИТИЧНО: Скрываем SVG-слой перед захватом html2canvas**
+    const svgLayer = canvasContainer.querySelector('.svg-layer')
     if (svgLayer) {
       svgLayer.style.display = 'none'
     }
@@ -864,6 +897,9 @@ const handleExportPNG = async (exportSettings = null) => {
     if (svgLayer) {
       svgLayer.style.display = ''
     }
+
+    // **РЕНДЕРИМ SVG-линии в Canvas с правильным смещением**
+    const svgCanvas = await renderSVGToCanvas(svgLayer, minX, minY, contentWidth, contentHeight, scale)
 
     // Restore original values
     canvasContent.style.transform = originalTransform
@@ -918,7 +954,7 @@ const handleExportPNG = async (exportSettings = null) => {
       }
     } else {
       finalCanvas = contentCanvas
-      
+
       // **НАКЛАДЫВАЕМ SVG-линии для оригинального размера**
       if (svgCanvas) {
         const ctx = finalCanvas.getContext('2d')
@@ -967,20 +1003,154 @@ const handleExportPNG = async (exportSettings = null) => {
   }
 }
 
-// **НОВАЯ вспомогательная функция для рендеринга SVG в Canvas**
-const renderSVGToCanvas = async (svgElement) => {
+// **Функция для сбора стилей из оригинального SVG**
+const collectSVGStyles = (svgOriginal) => {
+  const stylesMap = new Map()
+
+  // Собираем стили для всех линий в оригинальном SVG
+  const originalLines = svgOriginal.querySelectorAll('.line, .avatar-line')
+  originalLines.forEach((line, index) => {
+    const computedStyle = window.getComputedStyle(line)
+    // Получаем цвет из inline style или computed style
+    let color = line.style.stroke || line.getAttribute('stroke')
+    if (!color || color === 'currentcolor' || color === 'currentColor') {
+      color = computedStyle.stroke
+    }
+    if (!color || color === 'none' || color === 'currentcolor') {
+      color = '#0f62fe'
+    }
+
+    let strokeWidth = line.style.strokeWidth || line.getAttribute('stroke-width')
+    if (!strokeWidth) {
+      strokeWidth = computedStyle.strokeWidth
+    }
+    if (!strokeWidth || strokeWidth === 'none') {
+      strokeWidth = '5px'
+    }
+
+    stylesMap.set(index, { color, strokeWidth })
+  })
+
+  return stylesMap
+}
+
+// **Функция для инлайнинга CSS стилей в SVG элементы**
+const inlineSVGStyles = (svgClone, stylesMap) => {
+  // Обрабатываем все path элементы с классом line
+  const lines = svgClone.querySelectorAll('.line, .avatar-line')
+  lines.forEach((line, index) => {
+    const styles = stylesMap.get(index) || { color: '#0f62fe', strokeWidth: '5px' }
+    const color = styles.color
+    const strokeWidth = styles.strokeWidth
+
+    line.setAttribute('stroke', color)
+    line.setAttribute('stroke-width', strokeWidth)
+    line.setAttribute('fill', 'none')
+    line.setAttribute('stroke-linecap', 'round')
+    line.setAttribute('stroke-linejoin', 'round')
+
+    // Удаляем CSS переменные из style
+    line.removeAttribute('style')
+    line.setAttribute('style', `stroke: ${color}; stroke-width: ${strokeWidth}; fill: none;`)
+  })
+
+  // Обрабатываем hitbox линии - делаем их полностью прозрачными
+  const hitboxes = svgClone.querySelectorAll('.line-hitbox')
+  hitboxes.forEach(hitbox => {
+    hitbox.setAttribute('stroke', 'transparent')
+    hitbox.setAttribute('stroke-opacity', '0')
+    hitbox.setAttribute('fill', 'none')
+  })
+
+  // Обрабатываем маркеры - заменяем currentColor на конкретный цвет
+  const markers = svgClone.querySelectorAll('marker')
+  markers.forEach(marker => {
+    marker.setAttribute('fill', '#0f62fe')
+    const circles = marker.querySelectorAll('circle')
+    circles.forEach(circle => {
+      circle.setAttribute('fill', 'inherit')
+    })
+  })
+
+  // Скрываем контрольные точки при экспорте
+  const controlPoints = svgClone.querySelectorAll('.control-point')
+  controlPoints.forEach(cp => {
+    cp.setAttribute('display', 'none')
+  })
+
+  // Скрываем preview линии
+  const previewLines = svgClone.querySelectorAll('.line--preview, .avatar-preview-line')
+  previewLines.forEach(line => {
+    line.setAttribute('display', 'none')
+  })
+
+  return svgClone
+}
+
+// **Функция для рендеринга SVG в Canvas с учётом смещения и масштаба**
+const renderSVGToCanvas = async (svgElement, offsetX, offsetY, width, height, scale) => {
   if (!svgElement) return null
 
   try {
-    const svgData = new XMLSerializer().serializeToString(svgElement)
+    // Сначала собираем стили из оригинального SVG (пока он в DOM)
+    const stylesMap = collectSVGStyles(svgElement)
+
+    // Клонируем SVG элемент
+    const svgClone = svgElement.cloneNode(true)
+
+    // Инлайним CSS стили, используя собранную карту стилей
+    inlineSVGStyles(svgClone, stylesMap)
+
+    // Устанавливаем viewBox для правильного отображения области
+    svgClone.setAttribute('width', width * scale)
+    svgClone.setAttribute('height', height * scale)
+    svgClone.setAttribute('viewBox', `${offsetX} ${offsetY} ${width} ${height}`)
+
+    // Удаляем интерактивные атрибуты
+    svgClone.removeAttribute('style')
+    svgClone.setAttribute('style', 'background: transparent;')
+
+    // Обновляем маркеры с правильными цветами для каждой линии
+    const lineGroups = svgClone.querySelectorAll('.line-group, .avatar-line-group')
+    lineGroups.forEach(group => {
+      const visibleLine = group.querySelector('.line, .avatar-line')
+      if (visibleLine) {
+        const lineColor = visibleLine.getAttribute('stroke') || '#0f62fe'
+
+        // Создаём уникальный маркер для этой линии
+        const markerId = `marker-${Math.random().toString(36).substr(2, 9)}`
+        const defs = svgClone.querySelector('defs') || svgClone.insertBefore(document.createElementNS('http://www.w3.org/2000/svg', 'defs'), svgClone.firstChild)
+
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker')
+        marker.setAttribute('id', markerId)
+        marker.setAttribute('viewBox', '0 0 10 10')
+        marker.setAttribute('refX', '5')
+        marker.setAttribute('refY', '5')
+        marker.setAttribute('markerWidth', '6')
+        marker.setAttribute('markerHeight', '6')
+        marker.setAttribute('fill', lineColor)
+
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+        circle.setAttribute('cx', '5')
+        circle.setAttribute('cy', '5')
+        circle.setAttribute('r', '4')
+        circle.setAttribute('fill', lineColor)
+
+        marker.appendChild(circle)
+        defs.appendChild(marker)
+
+        // Привязываем маркер к линии
+        visibleLine.setAttribute('marker-start', `url(#${markerId})`)
+        visibleLine.setAttribute('marker-end', `url(#${markerId})`)
+      }
+    })
+
+    const svgData = new XMLSerializer().serializeToString(svgClone)
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
-    
-    const width = parseFloat(svgElement.getAttribute('width')) || svgElement.clientWidth
-    const height = parseFloat(svgElement.getAttribute('height')) || svgElement.clientHeight
-    
-    canvas.width = width
-    canvas.height = height
+
+    canvas.width = width * scale
+    canvas.height = height * scale
 
     const img = new Image()
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
@@ -988,11 +1158,15 @@ const renderSVGToCanvas = async (svgElement) => {
 
     await new Promise((resolve, reject) => {
       img.onload = () => {
-        ctx.drawImage(img, 0, 0, width, height)
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
         URL.revokeObjectURL(url)
         resolve()
       }
-      img.onerror = reject
+      img.onerror = (err) => {
+        console.error('Ошибка загрузки SVG:', err)
+        URL.revokeObjectURL(url)
+        reject(err)
+      }
       img.src = url
     })
 
