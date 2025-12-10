@@ -759,10 +759,66 @@ ${connectionPathsSvg}
     input.click()
   }
 
+// Вспомогательная функция для восстановления стилей и скачивания
+const restoreAndDownload = async (finalCanvas, exportSettings, tempStyles, canvasContainer) => {
+  // Убираем класс capturing
+  canvasContainer.classList.remove('canvas-container--capturing')
+
+  // Восстанавливаем временные стили
+  tempStyles.forEach(({ element, property, originalValue }) => {
+    if (originalValue) {
+      element.style[property] = originalValue
+    } else {
+      element.style[property] = ''
+    }
+  })
+
+  // Конвертируем в blob и скачиваем
+  finalCanvas.toBlob(async (blob) => {
+    if (!blob) {
+      alert('Не удалось создать изображение.')
+      return
+    }
+
+    let finalBlob = blob
+    if (exportSettings?.dpi) {
+      finalBlob = await addPngDpiMetadata(blob, exportSettings.dpi)
+    }
+
+    const url = URL.createObjectURL(finalBlob)
+    const link = document.createElement('a')
+
+    const now = new Date()
+    const dateStr = now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0')
+    const timeStr = String(now.getHours()).padStart(2, '0') + '-' +
+      String(now.getMinutes()).padStart(2, '0') + '-' +
+      String(now.getSeconds()).padStart(2, '0')
+
+    const baseFileName = formatProjectFileName(normalizedProjectName.value || projectStore.projectName, 'scheme')
+
+    let formatSuffix = ''
+    if (exportSettings && exportSettings.format !== 'original') {
+      formatSuffix = `_${exportSettings.format.toUpperCase()}_${exportSettings.orientation === 'portrait' ? 'P' : 'L'}_${exportSettings.dpi}dpi`
+    }
+
+    // Добавляем суффикс режима экспорта
+    const modeSuffix = exportSettings?.exportOnlyVisible ? '_viewport' : '_full'
+
+    link.download = `${baseFileName}${formatSuffix}${modeSuffix}_${dateStr}_${timeStr}.png`
+
+    link.href = url
+    link.click()
+    URL.revokeObjectURL(url)
+  }, 'image/png')
+}
+
 const handleExportPNG = async (exportSettings = null) => {
   try {
     const canvasContainer = document.querySelector('.canvas-container')
     const canvasContent = canvasContainer?.querySelector('.canvas-content')
+
     if (!canvasContainer || !canvasContent) {
       alert('Не удалось найти содержимое холста для экспорта.')
       return
@@ -773,495 +829,327 @@ const handleExportPNG = async (exportSettings = null) => {
       return
     }
 
-    // Add a class to hide UI elements
+    // Добавить класс для скрытия UI элементов
     canvasContainer.classList.add('canvas-container--capturing')
 
-    // Apply export options
+    // Временные стили
     const tempStyles = []
 
-    // Save the original transform
-    const originalTransform = canvasContent.style.transform
-
-    // Reset the transform to capture at a 1:1 scale
-    canvasContent.style.transform = 'matrix(1, 0, 0, 1, 0, 0)'
-
-    // Calculate the boundaries
-    const cards = cardsStore.cards
-    let minX = Infinity
-    let minY = Infinity
-    let maxX = -Infinity
-    let maxY = -Infinity
-
-    // Определяем, экспортируем ли только видимую область
-    const visibleOnly = exportSettings?.visibleOnly === true
-
-    if (visibleOnly) {
-      // Получаем текущий viewport пользователя
-      const containerRect = canvasContainer.getBoundingClientRect()
-
-      // Получаем текущую матрицу трансформации
-      const transformMatrix = window.getComputedStyle(canvasContent).transform
-      let offsetX = 0, offsetY = 0, currentScale = 1
-
-      if (transformMatrix && transformMatrix !== 'none') {
-        const matrixValues = transformMatrix.match(/matrix\(([^)]+)\)/)
-        if (matrixValues) {
-          const values = matrixValues[1].split(',').map(v => parseFloat(v.trim()))
-          currentScale = values[0] || 1
-          offsetX = values[4] || 0
-          offsetY = values[5] || 0
-        }
-      }
-
-      // Используем сохранённые значения из originalTransform
-      const origMatrixValues = originalTransform?.match(/matrix\(([^)]+)\)/)
-      if (origMatrixValues) {
-        const values = origMatrixValues[1].split(',').map(v => parseFloat(v.trim()))
-        currentScale = values[0] || 1
-        offsetX = values[4] || 0
-        offsetY = values[5] || 0
-      }
-
-      // Вычисляем видимую область в координатах контента
-      minX = -offsetX / currentScale
-      minY = -offsetY / currentScale
-      maxX = minX + containerRect.width / currentScale
-      maxY = minY + containerRect.height / currentScale
-    } else {
-      // Экспорт всего контента - вычисляем границы ВСЕХ элементов
-
-      // Карточки
-      cards.forEach(card => {
-        const left = card.x || 0
-        const top = card.y || 0
-        const width = card.width || 0
-        const height = card.height || 0
-        minX = Math.min(minX, left)
-        minY = Math.min(minY, top)
-        maxX = Math.max(maxX, left + width)
-        maxY = Math.max(maxY, top + height)
+    // Опция "Скрыть содержимое"
+    if (exportSettings?.hideContent) {
+      const elementsToHide = canvasContainer.querySelectorAll('.card-title, .card-body, .card-body-html')
+      elementsToHide.forEach(el => {
+        tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+        el.style.visibility = 'hidden'
       })
 
-      // Стикеры
-      if (stickersStore.stickers && stickersStore.stickers.length > 0) {
-        stickersStore.stickers.forEach(sticker => {
-          const left = sticker.x || 0
-          const top = sticker.y || 0
-          const width = sticker.width || 100
-          const height = sticker.height || 100
+      const values = canvasContainer.querySelectorAll('.value')
+      values.forEach(el => {
+        tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+        el.style.visibility = 'hidden'
+      })
+    }
+
+    // Скрыть кнопки управления
+    const controlButtons = canvasContainer.querySelectorAll('.card-close-btn, .card-note-btn, .active-pv-btn, [data-role="active-pv-buttons"]')
+    controlButtons.forEach(el => {
+      tempStyles.push({ element: el, property: 'display', originalValue: el.style.display })
+      el.style.display = 'none'
+    })
+
+    // Опция "Ч/Б (контур)"
+    if (exportSettings?.blackAndWhite) {
+      const cards = canvasContainer.querySelectorAll('.card')
+      cards.forEach(card => {
+        tempStyles.push({ element: card, property: 'background', originalValue: card.style.background })
+        tempStyles.push({ element: card, property: 'backgroundImage', originalValue: card.style.backgroundImage })
+        tempStyles.push({ element: card, property: 'boxShadow', originalValue: card.style.boxShadow })
+        tempStyles.push({ element: card, property: 'border', originalValue: card.style.border })
+        card.style.background = '#ffffff'
+        card.style.backgroundImage = 'none'
+        card.style.boxShadow = 'none'
+        card.style.border = '2px solid #000000'
+      })
+
+      const cardHeaders = canvasContainer.querySelectorAll('.card-header, .card-title')
+      cardHeaders.forEach(header => {
+        tempStyles.push({ element: header, property: 'background', originalValue: header.style.background })
+        tempStyles.push({ element: header, property: 'color', originalValue: header.style.color })
+        header.style.background = '#ffffff'
+        header.style.color = '#000000'
+      })
+    }
+
+    // Сохраняем оригинальный transform
+    const originalTransform = canvasContent.style.transform
+
+    let contentCanvas
+    let contentWidth
+    let contentHeight
+
+    // =====================================================
+    // РЕЖИМ 1: Экспорт только видимой области
+    // =====================================================
+    if (exportSettings?.exportOnlyVisible) {
+      // Получаем текущие размеры видимой области контейнера
+      const containerRect = canvasContainer.getBoundingClientRect()
+      contentWidth = containerRect.width
+      contentHeight = containerRect.height
+
+      // Определяем параметры экспорта
+      let finalWidth, finalHeight, scale
+
+      if (exportSettings && exportSettings.format !== 'original') {
+        let pageWidthMm = exportSettings.width
+        let pageHeightMm = exportSettings.height
+
+        if (exportSettings.orientation === 'landscape') {
+          [pageWidthMm, pageHeightMm] = [pageHeightMm, pageWidthMm]
+        }
+
+        finalWidth = Math.round((pageWidthMm / 25.4) * exportSettings.dpi)
+        finalHeight = Math.round((pageHeightMm / 25.4) * exportSettings.dpi)
+        scale = exportSettings.dpi / 96
+      } else {
+        finalWidth = contentWidth
+        finalHeight = contentHeight
+        scale = 2
+      }
+
+      // Захватываем текущее состояние viewport (с текущим zoom и pan)
+      // НЕ сбрасываем transform - захватываем как есть
+      contentCanvas = await html2canvas(canvasContainer, {
+        backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
+        logging: false,
+        useCORS: true,
+        scale: scale,
+        width: contentWidth,
+        height: contentHeight,
+        windowWidth: contentWidth,
+        windowHeight: contentHeight,
+        x: 0,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0
+      })
+
+      // Финализируем canvas
+      let finalCanvas
+
+      if (exportSettings && exportSettings.format !== 'original') {
+        finalCanvas = document.createElement('canvas')
+        finalCanvas.width = finalWidth
+        finalCanvas.height = finalHeight
+
+        const ctx = finalCanvas.getContext('2d')
+        ctx.fillStyle = exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff')
+        ctx.fillRect(0, 0, finalWidth, finalHeight)
+
+        const scaleX = finalWidth / contentCanvas.width
+        const scaleY = finalHeight / contentCanvas.height
+        const fitScale = Math.min(scaleX, scaleY)
+
+        const scaledWidth = contentCanvas.width * fitScale
+        const scaledHeight = contentCanvas.height * fitScale
+
+        const offsetX = (finalWidth - scaledWidth) / 2
+        const offsetY = (finalHeight - scaledHeight) / 2
+
+        ctx.drawImage(
+          contentCanvas,
+          0, 0, contentCanvas.width, contentCanvas.height,
+          offsetX, offsetY, scaledWidth, scaledHeight
+        )
+      } else {
+        finalCanvas = contentCanvas
+      }
+
+      // Восстановить стили и скачать
+      await restoreAndDownload(finalCanvas, exportSettings, tempStyles, canvasContainer)
+
+    // =====================================================
+    // РЕЖИМ 2: Экспорт всей схемы
+    // =====================================================
+    } else {
+      // Вычисляем bounding box всех элементов
+      const cardsList = Array.isArray(cardsStore.cards) ? cardsStore.cards : []
+
+      let minX = Infinity
+      let minY = Infinity
+      let maxX = -Infinity
+      let maxY = -Infinity
+
+      // Получаем реальные размеры карточек из DOM
+      cardsList.forEach(card => {
+        const cardEl = canvasContainer.querySelector(`[data-card-id="${card.id}"]`)
+        if (cardEl) {
+          const rect = cardEl.getBoundingClientRect()
+          // Получаем позицию относительно canvas-content
+          const left = card.x
+          const top = card.y
+          const width = card.width || rect.width
+          const height = card.height || rect.height
+
           minX = Math.min(minX, left)
           minY = Math.min(minY, top)
           maxX = Math.max(maxX, left + width)
           maxY = Math.max(maxY, top + height)
-        })
-      }
+        }
+      })
 
-      // Изображения на canvas
-      if (imagesStore.images && imagesStore.images.length > 0) {
-        imagesStore.images.forEach(image => {
-          const left = image.x || 0
-          const top = image.y || 0
-          const width = image.width || 100
-          const height = image.height || 100
-          minX = Math.min(minX, left)
-          minY = Math.min(minY, top)
-          maxX = Math.max(maxX, left + width)
-          maxY = Math.max(maxY, top + height)
-        })
-      }
+      // Учитываем соединения
+      const connectionsList = Array.isArray(connectionsStore.connections) ? connectionsStore.connections : []
+      connectionsList.forEach(connection => {
+        const fromCard = cardsList.find(c => c.id === connection.from)
+        const toCard = cardsList.find(c => c.id === connection.to)
+        if (fromCard && toCard) {
+          const strokeWidth = connection.thickness || 5
+          const padding = Math.max(strokeWidth, 8)
 
-      // Якоря (гербы городов)
-      if (anchorsStore.anchors && anchorsStore.anchors.length > 0) {
-        anchorsStore.anchors.forEach(anchor => {
-          const left = anchor.x || 0
-          const top = anchor.y || 0
-          const width = anchor.width || 150
-          const height = anchor.height || 150
-          minX = Math.min(minX, left)
-          minY = Math.min(minY, top)
-          maxX = Math.max(maxX, left + width)
-          maxY = Math.max(maxY, top + height)
-        })
-      }
+          minX = Math.min(minX, fromCard.x - padding, toCard.x - padding)
+          minY = Math.min(minY, fromCard.y - padding, toCard.y - padding)
+          maxX = Math.max(maxX, fromCard.x + fromCard.width + padding, toCard.x + toCard.width + padding)
+          maxY = Math.max(maxY, fromCard.y + fromCard.height + padding, toCard.y + toCard.height + padding)
+        }
+      })
 
-      // Если не найдено ни одного элемента, используем значения по умолчанию
-      if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
+      // Fallback если нет элементов
+      if (!Number.isFinite(minX)) {
         minX = 0
         minY = 0
         maxX = 1920
         maxY = 1080
       }
 
-      // Add padding only for full content export
+      // Добавляем отступы
       const PADDING = 50
       minX -= PADDING
       minY -= PADDING
       maxX += PADDING
       maxY += PADDING
-    }
 
-    const contentWidth = maxX - minX
-    const contentHeight = maxY - minY
+      contentWidth = maxX - minX
+      contentHeight = maxY - minY
 
-    // **КРИТИЧНО: Сохраняем и устанавливаем overflow:visible для захвата всего контента**
-    const originalOverflow = canvasContainer.style.overflow
-    const originalWidth = canvasContainer.style.width
-    const originalHeight = canvasContainer.style.height
+      // Сохраняем оригинальные значения позиции
+      const originalLeft = canvasContent.style.left
+      const originalTop = canvasContent.style.top
 
-    // Устанавливаем overflow:visible чтобы html2canvas мог захватить весь контент
-    canvasContainer.style.overflow = 'visible'
-    canvasContainer.style.width = `${contentWidth}px`
-    canvasContainer.style.height = `${contentHeight}px`
+      // КРИТИЧНО: Сбрасываем transform и позиционируем контент для захвата всей области
+      canvasContent.style.transform = 'none'
+      canvasContent.style.left = `${-minX}px`
+      canvasContent.style.top = `${-minY}px`
 
-    // **КРИТИЧНО: Диспатчим событие для перерисовки ВСЕХ изображений перед захватом**
-    // Это необходимо для отображения изображений, которые были за пределами viewport
-    window.dispatchEvent(new CustomEvent('png-export-render-all-images', {
-      detail: { minX, minY, maxX, maxY, contentWidth, contentHeight }
-    }))
+      // Ждём перерисовки DOM
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
 
-    // Даём время на перерисовку изображений
-    await new Promise(resolve => setTimeout(resolve, 100))
+      // Определяем параметры экспорта
+      let finalWidth, finalHeight, scale
 
-    // Set the position of canvas-content to capture the desired area
-    const originalLeft = canvasContent.style.left
-    const originalTop = canvasContent.style.top
-    canvasContent.style.left = `${-minX}px`
-    canvasContent.style.top = `${-minY}px`
+      if (exportSettings && exportSettings.format !== 'original') {
+        let pageWidthMm = exportSettings.width
+        let pageHeightMm = exportSettings.height
 
-    // Determine the export parameters
-    let finalWidth, finalHeight, scale
+        if (exportSettings.orientation === 'landscape') {
+          [pageWidthMm, pageHeightMm] = [pageHeightMm, pageWidthMm]
+        }
 
-    if (exportSettings && exportSettings.format !== 'original') {
-      let pageWidthMm = exportSettings.width
-      let pageHeightMm = exportSettings.height
-
-      // Apply orientation
-      if (exportSettings.orientation === 'landscape') {
-        [pageWidthMm, pageHeightMm] = [pageHeightMm, pageWidthMm]
-      }
-
-      // Convert millimeters to pixels
-      finalWidth = Math.round((pageWidthMm / 25.4) * exportSettings.dpi)
-      finalHeight = Math.round((pageHeightMm / 25.4) * exportSettings.dpi)
-
-      scale = 1
-    } else {
-      // Original size
-      finalWidth = contentWidth
-      finalHeight = contentHeight
-      scale = 2
-    }
-
-    // **КРИТИЧНО: Скрываем SVG-слой перед захватом html2canvas**
-    const svgLayer = canvasContainer.querySelector('.svg-layer')
-    if (svgLayer) {
-      svgLayer.style.display = 'none'
-    }
-
-    // Capture the content image
-    const contentCanvas = await html2canvas(canvasContainer, {
-      backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
-      logging: false,
-      useCORS: true,
-      scale: scale,
-      width: Math.round(contentWidth * scale),
-      height: Math.round(contentHeight * scale),
-      windowWidth: Math.round(contentWidth * scale),
-      windowHeight: Math.round(contentHeight * scale)
-    })
-
-    // **ВОССТАНАВЛИВАЕМ SVG-слой**
-    if (svgLayer) {
-      svgLayer.style.display = ''
-    }
-
-    // **РЕНДЕРИМ SVG-линии в Canvas с правильным смещением**
-    const svgCanvas = await renderSVGToCanvas(svgLayer, minX, minY, contentWidth, contentHeight, scale)
-
-    // Restore original values
-    canvasContent.style.transform = originalTransform
-    canvasContent.style.left = originalLeft
-    canvasContent.style.top = originalTop
-    canvasContainer.classList.remove('canvas-container--capturing')
-
-    // **ВОССТАНАВЛИВАЕМ overflow и размеры контейнера**
-    canvasContainer.style.overflow = originalOverflow
-    canvasContainer.style.width = originalWidth
-    canvasContainer.style.height = originalHeight
-
-    // **Диспатчим событие для восстановления рендеринга изображений в viewport режиме**
-    window.dispatchEvent(new CustomEvent('png-export-render-complete'))
-
-    // Restore temporary styles
-    tempStyles.forEach(({ element, property, originalValue }) => {
-      if (originalValue) {
-        element.style[property] = originalValue
+        finalWidth = Math.round((pageWidthMm / 25.4) * exportSettings.dpi)
+        finalHeight = Math.round((pageHeightMm / 25.4) * exportSettings.dpi)
+        scale = exportSettings.dpi / 96
       } else {
-        element.style[property] = ''
+        finalWidth = contentWidth
+        finalHeight = contentHeight
+        scale = 2
       }
-    })
 
-    let finalCanvas
+      // КРИТИЧНО: Используем onclone для исправления проблемы с чёрными квадратами
+      contentCanvas = await html2canvas(canvasContainer, {
+        backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
+        logging: false,
+        useCORS: true,
+        allowTaint: false,
+        scale: scale,
+        width: contentWidth,
+        height: contentHeight,
+        windowWidth: contentWidth,
+        windowHeight: contentHeight,
+        x: 0,
+        y: 0,
+        scrollX: 0,
+        scrollY: 0,
+        // Ключевое исправление для больших схем:
+        onclone: (clonedDoc, clonedElement) => {
+          // Убедимся, что все карточки видимы и имеют корректный background
+          const cards = clonedElement.querySelectorAll('.card')
+          cards.forEach(card => {
+            // Принудительно устанавливаем видимость
+            card.style.visibility = 'visible'
+            card.style.opacity = '1'
 
-    if (exportSettings && exportSettings.format !== 'original') {
-      // Create the final canvas
-      finalCanvas = document.createElement('canvas')
-      finalCanvas.width = finalWidth
-      finalCanvas.height = finalHeight
-      const ctx = finalCanvas.getContext('2d')
+            // Если фон не установлен, устанавливаем белый
+            const computedStyle = clonedDoc.defaultView.getComputedStyle(card)
+            if (!computedStyle.background || computedStyle.background === 'none' ||
+                computedStyle.backgroundColor === 'rgba(0, 0, 0, 0)') {
+              card.style.backgroundColor = '#ffffff'
+            }
+          })
 
-      ctx.fillStyle = exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff')
-      ctx.fillRect(0, 0, finalWidth, finalHeight)
+          // Убедимся, что все изображения загружены
+          const images = clonedElement.querySelectorAll('img')
+          images.forEach(img => {
+            if (!img.complete) {
+              img.style.visibility = 'hidden'
+            }
+          })
+        }
+      })
 
-      const scaleX = finalWidth / contentCanvas.width
-      const scaleY = finalHeight / contentCanvas.height
-      const fitScale = Math.min(scaleX, scaleY)
+      // Восстанавливаем оригинальные значения transform и position
+      canvasContent.style.transform = originalTransform
+      canvasContent.style.left = originalLeft
+      canvasContent.style.top = originalTop
 
-      const scaledWidth = contentCanvas.width * fitScale
-      const scaledHeight = contentCanvas.height * fitScale
+      // Финализируем canvas
+      let finalCanvas
 
-      const offsetX = (finalWidth - scaledWidth) / 2
-      const offsetY = (finalHeight - scaledHeight) / 2
+      if (exportSettings && exportSettings.format !== 'original') {
+        finalCanvas = document.createElement('canvas')
+        finalCanvas.width = finalWidth
+        finalCanvas.height = finalHeight
 
-      ctx.drawImage(
-        contentCanvas,
-        0, 0, contentCanvas.width, contentCanvas.height,
-        offsetX, offsetY, scaledWidth, scaledHeight
-      )
+        const ctx = finalCanvas.getContext('2d')
+        ctx.fillStyle = exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff')
+        ctx.fillRect(0, 0, finalWidth, finalHeight)
 
-      // **НАКЛАДЫВАЕМ SVG-линии**
-      if (svgCanvas) {
+        const scaleX = finalWidth / contentCanvas.width
+        const scaleY = finalHeight / contentCanvas.height
+        const fitScale = Math.min(scaleX, scaleY)
+
+        const scaledWidth = contentCanvas.width * fitScale
+        const scaledHeight = contentCanvas.height * fitScale
+
+        const offsetX = (finalWidth - scaledWidth) / 2
+        const offsetY = (finalHeight - scaledHeight) / 2
+
         ctx.drawImage(
-          svgCanvas,
-          0, 0, svgCanvas.width, svgCanvas.height,
+          contentCanvas,
+          0, 0, contentCanvas.width, contentCanvas.height,
           offsetX, offsetY, scaledWidth, scaledHeight
         )
+      } else {
+        finalCanvas = contentCanvas
       }
-    } else {
-      finalCanvas = contentCanvas
 
-      // **НАКЛАДЫВАЕМ SVG-линии для оригинального размера**
-      if (svgCanvas) {
-        const ctx = finalCanvas.getContext('2d')
-        ctx.drawImage(svgCanvas, 0, 0)
-      }
+      // Восстановить стили и скачать
+      await restoreAndDownload(finalCanvas, exportSettings, tempStyles, canvasContainer)
     }
 
-    // Convert to blob and download
-    finalCanvas.toBlob(async (blob) => {
-      if (!blob) {
-        alert('Не удалось создать изображение.')
-        return
-      }
-
-      let finalBlob = blob
-      if (exportSettings?.dpi) {
-        finalBlob = await addPngDpiMetadata(blob, exportSettings.dpi)
-      }
-
-      const url = URL.createObjectURL(finalBlob)
-      const link = document.createElement('a')
-
-      const now = new Date()
-      const dateStr = now.getFullYear() + '-' +
-        String(now.getMonth() + 1).padStart(2, '0') + '-' +
-        String(now.getDate()).padStart(2, '0')
-      const timeStr = String(now.getHours()).padStart(2, '0') + '-' +
-        String(now.getMinutes()).padStart(2, '0') + '-' +
-        String(now.getSeconds()).padStart(2, '0')
-
-      const baseFileName = formatProjectFileName(normalizedProjectName.value || projectStore.projectName, 'scheme')
-
-      let formatSuffix = ''
-      if (exportSettings && exportSettings.format !== 'original') {
-        formatSuffix = `_${exportSettings.format.toUpperCase()}_${exportSettings.orientation === 'portrait' ? 'P' : 'L'}_${exportSettings.dpi}dpi`
-      }
-
-      link.download = `${baseFileName}${formatSuffix}_${dateStr}_${timeStr}.png`
-      link.href = url
-      link.click()
-      URL.revokeObjectURL(url)
-    }, 'image/png')
   } catch (error) {
     console.error('Ошибка при экспорте в PNG:', error)
     alert('Экспорт в PNG завершился ошибкой. Подробности в консоли.')
   }
 }
-
-// **Функция для сбора стилей из оригинального SVG**
-const collectSVGStyles = (svgOriginal) => {
-  const stylesMap = new Map()
-
-  // Собираем стили для всех линий в оригинальном SVG
-  const originalLines = svgOriginal.querySelectorAll('.line, .avatar-line')
-  originalLines.forEach((line, index) => {
-    const computedStyle = window.getComputedStyle(line)
-    // Получаем цвет из inline style или computed style
-    let color = line.style.stroke || line.getAttribute('stroke')
-    if (!color || color === 'currentcolor' || color === 'currentColor') {
-      color = computedStyle.stroke
-    }
-    if (!color || color === 'none' || color === 'currentcolor') {
-      color = '#0f62fe'
-    }
-
-    let strokeWidth = line.style.strokeWidth || line.getAttribute('stroke-width')
-    if (!strokeWidth) {
-      strokeWidth = computedStyle.strokeWidth
-    }
-    if (!strokeWidth || strokeWidth === 'none') {
-      strokeWidth = '5px'
-    }
-
-    stylesMap.set(index, { color, strokeWidth })
-  })
-
-  return stylesMap
-}
-
-// **Функция для инлайнинга CSS стилей в SVG элементы**
-const inlineSVGStyles = (svgClone, stylesMap) => {
-  // Обрабатываем все path элементы с классом line
-  const lines = svgClone.querySelectorAll('.line, .avatar-line')
-  lines.forEach((line, index) => {
-    const styles = stylesMap.get(index) || { color: '#0f62fe', strokeWidth: '5px' }
-    const color = styles.color
-    const strokeWidth = styles.strokeWidth
-
-    line.setAttribute('stroke', color)
-    line.setAttribute('stroke-width', strokeWidth)
-    line.setAttribute('fill', 'none')
-    line.setAttribute('stroke-linecap', 'round')
-    line.setAttribute('stroke-linejoin', 'round')
-
-    // Удаляем CSS переменные из style
-    line.removeAttribute('style')
-    line.setAttribute('style', `stroke: ${color}; stroke-width: ${strokeWidth}; fill: none;`)
-  })
-
-  // Обрабатываем hitbox линии - делаем их полностью прозрачными
-  const hitboxes = svgClone.querySelectorAll('.line-hitbox')
-  hitboxes.forEach(hitbox => {
-    hitbox.setAttribute('stroke', 'transparent')
-    hitbox.setAttribute('stroke-opacity', '0')
-    hitbox.setAttribute('fill', 'none')
-  })
-
-  // Обрабатываем маркеры - заменяем currentColor на конкретный цвет
-  const markers = svgClone.querySelectorAll('marker')
-  markers.forEach(marker => {
-    marker.setAttribute('fill', '#0f62fe')
-    const circles = marker.querySelectorAll('circle')
-    circles.forEach(circle => {
-      circle.setAttribute('fill', 'inherit')
-    })
-  })
-
-  // Скрываем контрольные точки при экспорте
-  const controlPoints = svgClone.querySelectorAll('.control-point')
-  controlPoints.forEach(cp => {
-    cp.setAttribute('display', 'none')
-  })
-
-  // Скрываем preview линии
-  const previewLines = svgClone.querySelectorAll('.line--preview, .avatar-preview-line')
-  previewLines.forEach(line => {
-    line.setAttribute('display', 'none')
-  })
-
-  return svgClone
-}
-
-// **Функция для рендеринга SVG в Canvas с учётом смещения и масштаба**
-const renderSVGToCanvas = async (svgElement, offsetX, offsetY, width, height, scale) => {
-  if (!svgElement) return null
-
-  try {
-    // Сначала собираем стили из оригинального SVG (пока он в DOM)
-    const stylesMap = collectSVGStyles(svgElement)
-
-    // Клонируем SVG элемент
-    const svgClone = svgElement.cloneNode(true)
-
-    // Инлайним CSS стили, используя собранную карту стилей
-    inlineSVGStyles(svgClone, stylesMap)
-
-    // Устанавливаем viewBox для правильного отображения области
-    svgClone.setAttribute('width', width * scale)
-    svgClone.setAttribute('height', height * scale)
-    svgClone.setAttribute('viewBox', `${offsetX} ${offsetY} ${width} ${height}`)
-
-    // Удаляем интерактивные атрибуты
-    svgClone.removeAttribute('style')
-    svgClone.setAttribute('style', 'background: transparent;')
-
-    // Обновляем маркеры с правильными цветами для каждой линии
-    const lineGroups = svgClone.querySelectorAll('.line-group, .avatar-line-group')
-    lineGroups.forEach(group => {
-      const visibleLine = group.querySelector('.line, .avatar-line')
-      if (visibleLine) {
-        const lineColor = visibleLine.getAttribute('stroke') || '#0f62fe'
-
-        // Создаём уникальный маркер для этой линии
-        const markerId = `marker-${Math.random().toString(36).substr(2, 9)}`
-        const defs = svgClone.querySelector('defs') || svgClone.insertBefore(document.createElementNS('http://www.w3.org/2000/svg', 'defs'), svgClone.firstChild)
-
-        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker')
-        marker.setAttribute('id', markerId)
-        marker.setAttribute('viewBox', '0 0 10 10')
-        marker.setAttribute('refX', '5')
-        marker.setAttribute('refY', '5')
-        marker.setAttribute('markerWidth', '6')
-        marker.setAttribute('markerHeight', '6')
-        marker.setAttribute('fill', lineColor)
-
-        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-        circle.setAttribute('cx', '5')
-        circle.setAttribute('cy', '5')
-        circle.setAttribute('r', '4')
-        circle.setAttribute('fill', lineColor)
-
-        marker.appendChild(circle)
-        defs.appendChild(marker)
-
-        // Привязываем маркер к линии
-        visibleLine.setAttribute('marker-start', `url(#${markerId})`)
-        visibleLine.setAttribute('marker-end', `url(#${markerId})`)
-      }
-    })
-
-    const svgData = new XMLSerializer().serializeToString(svgClone)
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-
-    canvas.width = width * scale
-    canvas.height = height * scale
-
-    const img = new Image()
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-    const url = URL.createObjectURL(svgBlob)
-
-    await new Promise((resolve, reject) => {
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-        URL.revokeObjectURL(url)
-        resolve()
-      }
-      img.onerror = (err) => {
-        console.error('Ошибка загрузки SVG:', err)
-        URL.revokeObjectURL(url)
-        reject(err)
-      }
-      img.src = url
-    })
-
-    return canvas
-  } catch (error) {
-    console.error('Ошибка рендеринга SVG в Canvas:', error)
-    return null
-  }
-}
-
 
   return {
     handleSaveProject,
