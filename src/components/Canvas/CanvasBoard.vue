@@ -402,7 +402,8 @@ const loadImage = (dataUrl) => {
 
   const loadingPromise = new Promise((resolve, reject) => {
     const img = new Image();
-
+    img.crossOrigin = 'anonymous';
+	  
     img.onload = () => {
       imageCache.set(dataUrl, { img, loading: null, error: false });
       console.log('✅ Изображение загружено:', dataUrl.substring(0, 50) + '...');
