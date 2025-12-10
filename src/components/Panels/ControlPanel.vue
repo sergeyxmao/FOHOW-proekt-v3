@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import html2canvas from 'html2canvas'
 import { storeToRefs } from 'pinia'
 import { useCardsStore } from '../../stores/cards.js'
 import { useHistoryStore } from '../../stores/history.js'
@@ -663,9 +664,138 @@ const svgStyle = `
   }
 }
 
-const handlePrint = () => {
-  // Печать / Экспорт в PDF
-  window.print()
+const handlePrint = async () => {
+  try {
+    const canvasContainer = document.querySelector('.canvas-container')
+    if (!canvasContainer) {
+      alert('Не удалось найти холст для печати.')
+      return
+    }
+
+    const tempStyles = []
+
+    const uiElements = document.querySelectorAll('.control-panel, .project-menu, .project-menu-wrapper, .side-panel, .top-bar, .zoom-controls')
+    uiElements.forEach(el => {
+      if (el) {
+        tempStyles.push({ element: el, property: 'display', originalValue: el.style.display })
+        el.style.display = 'none'
+      }
+    })
+
+    const cardButtons = canvasContainer.querySelectorAll('.card-close-btn, .card-note-btn, .active-pv-btn, [data-role="active-pv-buttons"], .connection-point')
+    cardButtons.forEach(el => {
+      tempStyles.push({ element: el, property: 'display', originalValue: el.style.display })
+      el.style.display = 'none'
+    })
+
+    const interactiveElements = canvasContainer.querySelectorAll('.selection-box, .line-hitbox, .control-point, .resize-handle, .rotation-handle')
+    interactiveElements.forEach(el => {
+      tempStyles.push({ element: el, property: 'display', originalValue: el.style.display })
+      el.style.display = 'none'
+    })
+
+    canvasContainer.classList.add('canvas-container--capturing')
+
+    const containerRect = canvasContainer.getBoundingClientRect()
+    const viewportWidth = containerRect.width
+    const viewportHeight = containerRect.height
+
+    const canvas = await html2canvas(canvasContainer, {
+      backgroundColor: backgroundColor.value || '#ffffff',
+      logging: false,
+      useCORS: true,
+      scale: 2,
+      width: viewportWidth,
+      height: viewportHeight,
+      windowWidth: viewportWidth,
+      windowHeight: viewportHeight,
+      x: 0,
+      y: 0,
+      scrollX: 0,
+      scrollY: 0
+    })
+
+    canvasContainer.classList.remove('canvas-container--capturing')
+
+    tempStyles.forEach(({ element, property, originalValue }) => {
+      if (originalValue) {
+        element.style[property] = originalValue
+      } else {
+        element.style[property] = ''
+      }
+    })
+
+    const dataUrl = canvas.toDataURL('image/png')
+
+    const printWindow = window.open('', '_blank', 'width=800,height=600')
+
+    if (!printWindow) {
+      alert('Не удалось открыть окно печати. Проверьте, разрешены ли всплывающие окна.')
+      return
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Печать схемы</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+          }
+          img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            page-break-inside: avoid;
+          }
+          @media print {
+            html, body {
+              width: 100%;
+              height: 100%;
+            }
+            img {
+              max-width: 100%;
+              max-height: 100vh;
+              object-fit: contain;
+              page-break-inside: avoid;
+            }
+            @page {
+              size: landscape;
+              margin: 0.5cm;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <img src="${dataUrl}" alt="Схема" />
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+              setTimeout(function() {
+                window.close();
+              }, 100);
+            }, 500);
+          };
+        </script>
+      </body>
+      </html>
+    `)
+
+    printWindow.document.close()
+  } catch (error) {
+    console.error('Ошибка при печати:', error)
+    alert('Печать завершилась ошибкой. Подробности в консоли.')
+  }
 }
 
 const handleLoadProject = () => {
