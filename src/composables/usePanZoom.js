@@ -473,9 +473,67 @@ export function usePanZoom(canvasElement) {
   }
 
   // Предотвращаем стандартное поведение средней кнопки мыши (автоскролл)
+  // и запускаем панорамирование
   const handleMouseDown = (event) => {
     if (event.button === 1) {
+      if (!canvasElement.value) {
+        return
+      }
+
+      if (!canvasElement.value.contains(event.target)) {
+        return
+      }
+
+      // Отключаем панорамирование, если активен режим размещения стикера
+      if (canvasElement.value.classList.contains('canvas-container--sticker-placement')) {
+        return
+      }
+
+      // Проверяем, что клик не на исключенных элементах (карточки, заметки и т.д.)
+      const target = event?.target
+      if (target && typeof target.closest === 'function' && PAN_EXCLUDE_SELECTOR && target.closest(PAN_EXCLUDE_SELECTOR)) {
+        return
+      }
+
       event.preventDefault()
+
+      // Создаем синтетическое pointer событие для запуска панорамирования
+      const pointerEvent = new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        pointerId: event.pointerId || 1,
+        pointerType: 'mouse',
+        button: 1,
+        buttons: 4, // middle button
+        clientX: event.clientX,
+        clientY: event.clientY
+      })
+
+      // Запускаем панорамирование напрямую
+      isPanning = true
+      panPointerId = pointerEvent.pointerId
+      panPointerType = 'mouse'
+      startX = event.clientX - translateX.value
+      startY = event.clientY - translateY.value
+
+      canvasElement.value.classList.add(PAN_CURSOR_CLASS)
+      setBodyCursor('grabbing')
+    }
+  }
+
+  const handleMouseMove = (event) => {
+    // Обработка панорамирования средней кнопкой мыши
+    if (isPanning && panPointerType === 'mouse' && (event.buttons & 4)) {
+      event.preventDefault()
+      translateX.value = event.clientX - startX
+      translateY.value = event.clientY - startY
+      updateTransform()
+    }
+  }
+
+  const handleMouseUp = (event) => {
+    if (event.button === 1 && isPanning && panPointerType === 'mouse') {
+      stopPanning()
     }
   }
 
@@ -493,7 +551,9 @@ export function usePanZoom(canvasElement) {
     window.addEventListener('pointermove', handlePointerMove)
     window.addEventListener('pointerup', handlePointerUp)
     window.addEventListener('pointercancel', handlePointerUp)
-    window.addEventListener('mousedown', handleMouseDown)
+    window.addEventListener('mousedown', handleMouseDown, { passive: false })
+    window.addEventListener('mousemove', handleMouseMove, { passive: false })
+    window.addEventListener('mouseup', handleMouseUp)
     window.addEventListener('auxclick', handleAuxClick)
 
     updateTransform()
@@ -506,6 +566,8 @@ export function usePanZoom(canvasElement) {
     window.removeEventListener('pointerup', handlePointerUp)
     window.removeEventListener('pointercancel', handlePointerUp)
     window.removeEventListener('mousedown', handleMouseDown)
+    window.removeEventListener('mousemove', handleMouseMove)
+    window.removeEventListener('mouseup', handleMouseUp)
     window.removeEventListener('auxclick', handleAuxClick)
     setBodyCursor()
     if (canvasElement.value) {
