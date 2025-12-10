@@ -1004,9 +1004,19 @@ const handleExportPNG = async (exportSettings = null) => {
       const cardHeaders = canvasContainer.querySelectorAll('.card-header, .card-title')
       cardHeaders.forEach(header => {
         tempStyles.push({ element: header, property: 'background', originalValue: header.style.background })
+        tempStyles.push({ element: header, property: 'backgroundImage', originalValue: header.style.backgroundImage })
+        tempStyles.push({ element: header, property: 'borderBottom', originalValue: header.style.borderBottom })
         tempStyles.push({ element: header, property: 'color', originalValue: header.style.color })
         header.style.background = '#ffffff'
+        header.style.backgroundImage = 'none'
+        header.style.borderBottom = 'none'
         header.style.color = '#000000'
+      })
+
+      const coloredElements = canvasContainer.querySelectorAll('.coin-icon, .slf-badge, .fendou-badge, .rank-badge')
+      coloredElements.forEach(el => {
+        tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+        el.style.visibility = 'hidden'
       })
     }
 
@@ -1018,13 +1028,32 @@ const handleExportPNG = async (exportSettings = null) => {
     let contentHeight
 
     // =====================================================
-    // РЕЖИМ 1: Экспорт только видимой области
+    // РЕЖИМ 1: Экспорт только видимой области (ИСПРАВЛЕН)
     // =====================================================
     if (exportSettings?.exportOnlyVisible) {
       // Получаем текущие размеры видимой области контейнера
       const containerRect = canvasContainer.getBoundingClientRect()
       contentWidth = containerRect.width
       contentHeight = containerRect.height
+
+      // ИСПРАВЛЕНИЕ: Подготавливаем SVG-слой для корректного захвата
+      const svgLayer = canvasContent.querySelector('.svg-layer')
+      const originalSvgWidth = svgLayer?.getAttribute('width')
+      const originalSvgHeight = svgLayer?.getAttribute('height')
+      const originalSvgStyleWidth = svgLayer?.style.width
+      const originalSvgStyleHeight = svgLayer?.style.height
+
+      // Временно устанавливаем размеры SVG равными видимой области
+      if (svgLayer) {
+        svgLayer.setAttribute('width', contentWidth)
+        svgLayer.setAttribute('height', contentHeight)
+        svgLayer.style.width = `${contentWidth}px`
+        svgLayer.style.height = `${contentHeight}px`
+        svgLayer.style.overflow = 'visible'
+      }
+
+      // Ждём применения стилей
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
 
       // Определяем параметры экспорта
       let finalWidth, finalHeight, scale
@@ -1046,8 +1075,7 @@ const handleExportPNG = async (exportSettings = null) => {
         scale = 2
       }
 
-      // Захватываем текущее состояние viewport (с текущим zoom и pan)
-      // НЕ сбрасываем transform - захватываем как есть
+      // ИСПРАВЛЕНИЕ: Используем foreignObjectRendering и onclone для SVG
       contentCanvas = await html2canvas(canvasContainer, {
         backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
         logging: false,
@@ -1060,8 +1088,36 @@ const handleExportPNG = async (exportSettings = null) => {
         x: 0,
         y: 0,
         scrollX: 0,
-        scrollY: 0
+        scrollY: 0,
+        // КРИТИЧНО: Включаем foreignObject для SVG
+        foreignObjectRendering: true,
+        // КРИТИЧНО: Колбэк для исправления SVG в клоне
+        onclone: (clonedDoc, clonedElement) => {
+          const clonedSvg = clonedElement.querySelector('.svg-layer')
+          if (clonedSvg) {
+            clonedSvg.setAttribute('width', contentWidth)
+            clonedSvg.setAttribute('height', contentHeight)
+            clonedSvg.style.width = `${contentWidth}px`
+            clonedSvg.style.height = `${contentHeight}px`
+            clonedSvg.style.overflow = 'visible'
+          }
+
+          // Убедимся, что карточки видимы
+          const cards = clonedElement.querySelectorAll('.card')
+          cards.forEach(card => {
+            card.style.visibility = 'visible'
+            card.style.opacity = '1'
+          })
+        }
       })
+
+      // Восстанавливаем оригинальные размеры SVG
+      if (svgLayer) {
+        if (originalSvgWidth) svgLayer.setAttribute('width', originalSvgWidth)
+        if (originalSvgHeight) svgLayer.setAttribute('height', originalSvgHeight)
+        svgLayer.style.width = originalSvgStyleWidth || ''
+        svgLayer.style.height = originalSvgStyleHeight || ''
+      }
 
       // Финализируем canvas
       let finalCanvas
@@ -1098,27 +1154,28 @@ const handleExportPNG = async (exportSettings = null) => {
       await restoreAndDownload(finalCanvas, exportSettings, tempStyles, canvasContainer)
 
     // =====================================================
-    // РЕЖИМ 2: Экспорт всей схемы
+    // РЕЖИМ 2: Экспорт всей схемы (ИСПРАВЛЕН)
     // =====================================================
     } else {
-      // Вычисляем bounding box всех элементов
+      // ИСПРАВЛЕНИЕ: Вычисляем границы ВСЕХ элементов (карточки + изображения + стикеры + якоря)
       const cardsList = Array.isArray(cardsStore.cards) ? cardsStore.cards : []
+      const imagesList = Array.isArray(imagesStore.images) ? imagesStore.images : []
+      const stickersList = Array.isArray(stickersStore.stickers) ? stickersStore.stickers : []
+      const anchorsList = Array.isArray(anchorsStore.anchors) ? anchorsStore.anchors : []
 
       let minX = Infinity
       let minY = Infinity
       let maxX = -Infinity
       let maxY = -Infinity
 
-      // Получаем реальные размеры карточек из DOM
+      // Учитываем карточки
       cardsList.forEach(card => {
         const cardEl = canvasContainer.querySelector(`[data-card-id="${card.id}"]`)
         if (cardEl) {
-          const rect = cardEl.getBoundingClientRect()
-          // Получаем позицию относительно canvas-content
           const left = card.x
           const top = card.y
-          const width = card.width || rect.width
-          const height = card.height || rect.height
+          const width = card.width || cardEl.offsetWidth
+          const height = card.height || cardEl.offsetHeight
 
           minX = Math.min(minX, left)
           minY = Math.min(minY, top)
@@ -1127,7 +1184,38 @@ const handleExportPNG = async (exportSettings = null) => {
         }
       })
 
-      // Учитываем соединения (КРИТИЧНО: используем точную геометрию линий)
+      // ИСПРАВЛЕНИЕ: Учитываем изображения
+      imagesList.forEach(img => {
+        if (!img) return
+        minX = Math.min(minX, img.x)
+        minY = Math.min(minY, img.y)
+        maxX = Math.max(maxX, img.x + (img.width || 0))
+        maxY = Math.max(maxY, img.y + (img.height || 0))
+      })
+
+      // ИСПРАВЛЕНИЕ: Учитываем стикеры
+      stickersList.forEach(sticker => {
+        if (!sticker) return
+        const stickerX = sticker.pos_x || 0
+        const stickerY = sticker.pos_y || 0
+        minX = Math.min(minX, stickerX)
+        minY = Math.min(minY, stickerY)
+        maxX = Math.max(maxX, stickerX + 200) // примерный размер стикера
+        maxY = Math.max(maxY, stickerY + 150)
+      })
+
+      // ИСПРАВЛЕНИЕ: Учитываем якорные точки
+      anchorsList.forEach(anchor => {
+        if (!anchor) return
+        const anchorX = Number.isFinite(anchor.pos_x) ? anchor.pos_x : (anchor.x || 0)
+        const anchorY = Number.isFinite(anchor.pos_y) ? anchor.pos_y : (anchor.y || 0)
+        minX = Math.min(minX, anchorX - 12)
+        minY = Math.min(minY, anchorY - 12)
+        maxX = Math.max(maxX, anchorX + 12)
+        maxY = Math.max(maxY, anchorY + 12)
+      })
+
+      // Учитываем соединения с точной геометрией линий
       const connectionsList = Array.isArray(connectionsStore.connections) ? connectionsStore.connections : []
       const cardMap = new Map(cardsList.map(card => [card.id, card]))
       const defaultLineThickness = connectionsStore.defaultLineThickness || 5
@@ -1137,7 +1225,6 @@ const handleExportPNG = async (exportSettings = null) => {
         const toCard = cardMap.get(connection.to)
         if (!fromCard || !toCard) return
 
-        // Вычисляем геометрию соединения
         const geometry = buildConnectionGeometry(connection, fromCard, toCard)
         if (!geometry || !geometry.points || !geometry.points.length) return
 
@@ -1146,10 +1233,9 @@ const handleExportPNG = async (exportSettings = null) => {
           : defaultLineThickness
         const markerRadius = Math.max(strokeWidth, 8) / 2
 
-        // Учитываем все точки линии (не только начало и конец!)
         geometry.points.forEach(point => {
           if (!point) return
-          minX = Math.min(minX, point.x - markerRadius - 10) // дополнительный запас для маркеров
+          minX = Math.min(minX, point.x - markerRadius - 10)
           minY = Math.min(minY, point.y - markerRadius - 10)
           maxX = Math.max(maxX, point.x + markerRadius + 10)
           maxY = Math.max(maxY, point.y + markerRadius + 10)
@@ -1178,19 +1264,15 @@ const handleExportPNG = async (exportSettings = null) => {
       const originalLeft = canvasContent.style.left
       const originalTop = canvasContent.style.top
 
-      // КРИТИЧНО: Сбрасываем transform и позиционируем контент для захвата всей области
+      // Сбрасываем transform и позиционируем контент для захвата всей области
       canvasContent.style.transform = 'none'
       canvasContent.style.left = `${-minX}px`
       canvasContent.style.top = `${-minY}px`
 
-      // =========================================================
-      // КРИТИЧНО: Временно расширяем SVG-слой и canvas-слой
-      // чтобы линии не обрезались при экспорте
-      // =========================================================
+      // Расширяем SVG-слой и canvas-слой
       const svgLayer = canvasContent.querySelector('.svg-layer')
       const imagesCanvas = canvasContent.querySelector('.images-canvas-layer')
 
-      // Сохраняем оригинальные размеры
       const originalSvgWidth = svgLayer?.getAttribute('width')
       const originalSvgHeight = svgLayer?.getAttribute('height')
       const originalSvgStyleWidth = svgLayer?.style.width
@@ -1200,7 +1282,6 @@ const handleExportPNG = async (exportSettings = null) => {
       const originalCanvasStyleWidth = imagesCanvas?.style.width
       const originalCanvasStyleHeight = imagesCanvas?.style.height
 
-      // Устанавливаем новые размеры, охватывающие весь контент включая линии
       if (svgLayer) {
         svgLayer.setAttribute('width', contentWidth)
         svgLayer.setAttribute('height', contentHeight)
@@ -1215,11 +1296,21 @@ const handleExportPNG = async (exportSettings = null) => {
         imagesCanvas.style.height = `${contentHeight}px`
       }
 
-      // Также расширяем canvas-content до полного размера
       const originalContentWidth = canvasContent.style.width
       const originalContentHeight = canvasContent.style.height
       canvasContent.style.width = `${contentWidth}px`
       canvasContent.style.height = `${contentHeight}px`
+
+      // ИСПРАВЛЕНИЕ: Диспатчим событие для рендеринга всех изображений
+      const exportEvent = new CustomEvent('png-export-render-all-images', {
+        detail: {
+          contentWidth,
+          contentHeight,
+          maxX,
+          maxY
+        }
+      })
+      window.dispatchEvent(exportEvent)
 
       // Ждём перерисовки DOM
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
@@ -1244,7 +1335,7 @@ const handleExportPNG = async (exportSettings = null) => {
         scale = 2
       }
 
-      // КРИТИЧНО: Используем onclone для исправления проблемы с чёрными квадратами
+      // Захват с улучшенным onclone
       contentCanvas = await html2canvas(canvasContainer, {
         backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
         logging: false,
@@ -1259,11 +1350,8 @@ const handleExportPNG = async (exportSettings = null) => {
         y: 0,
         scrollX: 0,
         scrollY: 0,
-        // Принудительно рендерим SVG
         foreignObjectRendering: true,
-        // Ключевое исправление для больших схем:
         onclone: (clonedDoc, clonedElement) => {
-          // Убедимся, что SVG-слой в клоне имеет правильные размеры
           const clonedSvg = clonedElement.querySelector('.svg-layer')
           if (clonedSvg) {
             clonedSvg.setAttribute('width', contentWidth)
@@ -1273,14 +1361,11 @@ const handleExportPNG = async (exportSettings = null) => {
             clonedSvg.style.overflow = 'visible'
           }
 
-          // Убедимся, что все карточки видимы и имеют корректный background
           const cards = clonedElement.querySelectorAll('.card')
           cards.forEach(card => {
-            // Принудительно устанавливаем видимость
             card.style.visibility = 'visible'
             card.style.opacity = '1'
 
-            // Если фон не установлен, устанавливаем белый
             const computedStyle = clonedDoc.defaultView.getComputedStyle(card)
             if (!computedStyle.background || computedStyle.background === 'none' ||
                 computedStyle.backgroundColor === 'rgba(0, 0, 0, 0)') {
@@ -1288,7 +1373,6 @@ const handleExportPNG = async (exportSettings = null) => {
             }
           })
 
-          // Убедимся, что все изображения загружены
           const images = clonedElement.querySelectorAll('img')
           images.forEach(img => {
             if (!img.complete) {
@@ -1298,9 +1382,11 @@ const handleExportPNG = async (exportSettings = null) => {
         }
       })
 
-      // =========================================================
-      // КРИТИЧНО: Восстанавливаем оригинальные размеры SVG-слоя и canvas-слоя
-      // =========================================================
+      // ИСПРАВЛЕНИЕ: Диспатчим событие завершения экспорта
+      const completeEvent = new CustomEvent('png-export-render-complete')
+      window.dispatchEvent(completeEvent)
+
+      // Восстанавливаем оригинальные размеры SVG-слоя и canvas-слоя
       if (svgLayer) {
         if (originalSvgWidth) svgLayer.setAttribute('width', originalSvgWidth)
         if (originalSvgHeight) svgLayer.setAttribute('height', originalSvgHeight)
@@ -1315,7 +1401,6 @@ const handleExportPNG = async (exportSettings = null) => {
         imagesCanvas.style.height = originalCanvasStyleHeight || ''
       }
 
-      // Восстанавливаем размеры canvas-content
       canvasContent.style.width = originalContentWidth
       canvasContent.style.height = originalContentHeight
 
