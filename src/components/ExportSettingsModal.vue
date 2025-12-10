@@ -26,7 +26,7 @@ const dpiOptions = [
 const selectedFormat = ref('a4')
 const selectedOrientation = ref('portrait') // 'portrait' или 'landscape'
 const selectedDPI = ref(300)
-const exportVisibleOnly = ref(true)  
+const exportOnlyVisible = ref(true)
 const hideContent = ref(false) // Скрыть содержимое
 const blackAndWhite = ref(false) // Ч/Б (контур)
 const mmToPixels = (mm, dpi) => Math.round((mm / 25.4) * dpi)
@@ -95,7 +95,7 @@ const targetResolution = computed(() => {
     return null
   }
 
-  const areaSize = exportVisibleOnly.value ? viewportSize.value : contentSize.value
+  const areaSize = exportOnlyVisible.value ? viewportSize.value : contentSize.value
   if (!areaSize.width || !areaSize.height) {
     return null
   }
@@ -117,7 +117,7 @@ const handleExport = () => {
     height: format.height,
     orientation: selectedOrientation.value,
     dpi: selectedDPI.value,
-    visibleOnly: exportVisibleOnly.value,    
+    exportOnlyVisible: exportOnlyVisible.value,
     hideContent: hideContent.value,
     blackAndWhite: blackAndWhite.value
   })
@@ -227,11 +227,11 @@ const handleClose = () => {
           <label class="checkbox-label">
             <input
               type="checkbox"
-              v-model="exportVisibleOnly"
+              v-model="exportOnlyVisible"
               class="checkbox-input"
             />
             <span class="checkbox-text">Экспортировать только видимую область</span>
-          </label>          
+          </label>
         </div>
       </div>
 
