@@ -1371,6 +1371,9 @@ const handleExportPNG = async (exportSettings = null) => {
       const originalContentHeight = canvasContent.style.height
       canvasContent.style.width = `${contentWidth}px`
       canvasContent.style.height = `${contentHeight}px`
+      
+      // Ждём применения новых размеров перед стартом рендеринга изображений
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
 
       // ИСПРАВЛЕНИЕ: Диспатчим событие для рендеринга всех изображений с ожиданием
       const renderPromise = new Promise((resolve) => {
