@@ -708,14 +708,18 @@ ${connectionPathsSvg}
   const handlePrint = async () => {
     try {
       const canvasContainer = document.querySelector('.canvas-container')
-      if (!canvasContainer) {
+      const canvasContent = canvasContainer?.querySelector('.canvas-content')
+
+      if (!canvasContainer || !canvasContent) {
         alert('Не удалось найти холст для печати.')
         return
       }
 
+      // 1. Скрываем все UI элементы
       const tempStyles = []
 
-      const uiElements = document.querySelectorAll('.control-panel, .project-menu, .project-menu-wrapper, .side-panel, .top-bar, .zoom-controls')
+      // Скрываем все панели и меню
+      const uiElements = document.querySelectorAll('.control-panel, .project-menu, .project-menu-wrapper, .side-panel, .top-bar, .zoom-controls, .export-panel-container')
       uiElements.forEach(el => {
         if (el) {
           tempStyles.push({ element: el, property: 'display', originalValue: el.style.display })
@@ -723,29 +727,53 @@ ${connectionPathsSvg}
         }
       })
 
+      // Скрываем кнопки на карточках
       const cardButtons = canvasContainer.querySelectorAll('.card-close-btn, .card-note-btn, .active-pv-btn, [data-role="active-pv-buttons"], .connection-point')
       cardButtons.forEach(el => {
         tempStyles.push({ element: el, property: 'display', originalValue: el.style.display })
         el.style.display = 'none'
       })
 
+      // Скрываем другие интерактивные элементы
       const interactiveElements = canvasContainer.querySelectorAll('.selection-box, .line-hitbox, .control-point, .resize-handle, .rotation-handle')
       interactiveElements.forEach(el => {
         tempStyles.push({ element: el, property: 'display', originalValue: el.style.display })
         el.style.display = 'none'
       })
 
+      // 2. Добавляем класс для capture
       canvasContainer.classList.add('canvas-container--capturing')
 
+      // 3. ИСПРАВЛЕНИЕ: Подготавливаем SVG-слой для корректного рендеринга при печати
+      const svgLayer = canvasContent.querySelector('.svg-layer')
+      const originalSvgWidth = svgLayer?.getAttribute('width')
+      const originalSvgHeight = svgLayer?.getAttribute('height')
+      const originalSvgStyleWidth = svgLayer?.style.width
+      const originalSvgStyleHeight = svgLayer?.style.height
+
+      // Получаем размеры видимой области
       const containerRect = canvasContainer.getBoundingClientRect()
       const viewportWidth = containerRect.width
       const viewportHeight = containerRect.height
 
+      // Временно устанавливаем размеры SVG равными видимой области
+      if (svgLayer) {
+        svgLayer.setAttribute('width', viewportWidth)
+        svgLayer.setAttribute('height', viewportHeight)
+        svgLayer.style.width = `${viewportWidth}px`
+        svgLayer.style.height = `${viewportHeight}px`
+        svgLayer.style.overflow = 'visible'
+      }
+
+      // Ждём применения стилей
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+
+      // 4. ИСПРАВЛЕНИЕ: Создаём скриншот с foreignObjectRendering для SVG
       const canvas = await html2canvas(canvasContainer, {
         backgroundColor: backgroundColor.value || '#ffffff',
         logging: false,
         useCORS: true,
-        scale: 2,
+        scale: 2, // Удвоенное разрешение для качества
         width: viewportWidth,
         height: viewportHeight,
         windowWidth: viewportWidth,
@@ -753,9 +781,38 @@ ${connectionPathsSvg}
         x: 0,
         y: 0,
         scrollX: 0,
-        scrollY: 0
+        scrollY: 0,
+        // КРИТИЧНО: Включаем foreignObject для корректного рендеринга SVG
+        foreignObjectRendering: true,
+        // КРИТИЧНО: Колбэк для исправления SVG в клоне
+        onclone: (clonedDoc, clonedElement) => {
+          const clonedSvg = clonedElement.querySelector('.svg-layer')
+          if (clonedSvg) {
+            clonedSvg.setAttribute('width', viewportWidth)
+            clonedSvg.setAttribute('height', viewportHeight)
+            clonedSvg.style.width = `${viewportWidth}px`
+            clonedSvg.style.height = `${viewportHeight}px`
+            clonedSvg.style.overflow = 'visible'
+          }
+
+          // Убедимся, что карточки видимы
+          const cards = clonedElement.querySelectorAll('.card')
+          cards.forEach(card => {
+            card.style.visibility = 'visible'
+            card.style.opacity = '1'
+          })
+        }
       })
 
+      // 5. ИСПРАВЛЕНИЕ: Восстанавливаем оригинальные размеры SVG
+      if (svgLayer) {
+        if (originalSvgWidth) svgLayer.setAttribute('width', originalSvgWidth)
+        if (originalSvgHeight) svgLayer.setAttribute('height', originalSvgHeight)
+        svgLayer.style.width = originalSvgStyleWidth || ''
+        svgLayer.style.height = originalSvgStyleHeight || ''
+      }
+
+      // 6. Восстанавливаем UI
       canvasContainer.classList.remove('canvas-container--capturing')
 
       tempStyles.forEach(({ element, property, originalValue }) => {
@@ -766,8 +823,10 @@ ${connectionPathsSvg}
         }
       })
 
+      // 7. Конвертируем canvas в image и открываем окно печати
       const dataUrl = canvas.toDataURL('image/png')
 
+      // Создаём новое окно для печати
       const printWindow = window.open('', '_blank', 'width=800,height=600')
 
       if (!printWindow) {
@@ -775,6 +834,7 @@ ${connectionPathsSvg}
         return
       }
 
+      // Формируем HTML для печати
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
@@ -820,8 +880,11 @@ ${connectionPathsSvg}
           <img src="${dataUrl}" alt="Схема" />
           <script>
             window.onload = function() {
+              // Даём время на загрузку изображения
               setTimeout(function() {
                 window.print();
+                // Закрываем окно после печати (опционально)
+                // Закомментируйте следующую строку, если хотите оставить окно открытым
                 setTimeout(function() {
                   window.close();
                 }, 100);
@@ -833,6 +896,7 @@ ${connectionPathsSvg}
       `)
 
       printWindow.document.close()
+
     } catch (error) {
       console.error('Ошибка при печати:', error)
       alert('Печать завершилась ошибкой. Подробности в консоли.')
