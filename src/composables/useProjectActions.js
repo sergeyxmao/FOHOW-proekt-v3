@@ -1407,6 +1407,10 @@ const handleExportPNG = async (exportSettings = null) => {
       // Дополнительное ожидание для гарантии отрисовки
       await new Promise(resolve => setTimeout(resolve, 500))
 
+      // ИСПРАВЛЕНИЕ: Ждём двух кадров для завершения перерисовки DOM
+      // (аналогично режиму экспорта видимой области)
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+
       console.log('Рендеринг завершён, начинаем захват...')
 
       // Определяем параметры экспорта
