@@ -398,16 +398,7 @@ export function usePanZoom(canvasElement) {
       }
 
       // Отключаем панорамирование, если активен режим размещения стикера
-
       if (canvasElement.value.classList.contains('canvas-container--sticker-placement')) {
-
-        return
-
-      }
- 
-      // Проверяем, что клик не на исключенных элементах (карточки, заметки и т.д.)
-      const target = event?.target
-      if (target && typeof target.closest === 'function' && PAN_EXCLUDE_SELECTOR && target.closest(PAN_EXCLUDE_SELECTOR)) {
         return
       }
 
