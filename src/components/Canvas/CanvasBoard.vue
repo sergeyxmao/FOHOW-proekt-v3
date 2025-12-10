@@ -987,7 +987,11 @@ const renderAllImagesForExport = async (exportBounds) => {
  */
 const handlePngExportRenderAllImages = async (event) => {
   const exportBounds = event.detail;
+  console.log('Получено событие png-export-render-all-images, начинаем рендеринг изображений...', exportBounds);
   await renderAllImagesForExport(exportBounds);
+  console.log('Рендеринг изображений завершён, отправляем событие png-export-images-rendered');
+  // Отправляем событие о завершении рендеринга
+  window.dispatchEvent(new CustomEvent('png-export-images-rendered'));
 };
 
 /**

@@ -1324,12 +1324,16 @@ const handleExportPNG = async (exportSettings = null) => {
       contentWidth = maxX - minX
       contentHeight = maxY - minY
 
-      // Сохраняем оригинальные значения позиции
+      console.log(`Экспорт полной схемы: размеры ${contentWidth}x${contentHeight}, границы [${minX},${minY}] -> [${maxX},${maxY}]`)
+
+      // Сохраняем оригинальные значения позиции и transform
       const originalLeft = canvasContent.style.left
       const originalTop = canvasContent.style.top
+      const originalTransformOrigin = canvasContent.style.transformOrigin
 
       // Сбрасываем transform и позиционируем контент для захвата всей области
       canvasContent.style.transform = 'none'
+      canvasContent.style.transformOrigin = '0 0'
       canvasContent.style.left = `${-minX}px`
       canvasContent.style.top = `${-minY}px`
 
@@ -1341,6 +1345,7 @@ const handleExportPNG = async (exportSettings = null) => {
       const originalSvgHeight = svgLayer?.getAttribute('height')
       const originalSvgStyleWidth = svgLayer?.style.width
       const originalSvgStyleHeight = svgLayer?.style.height
+      const originalSvgViewBox = svgLayer?.getAttribute('viewBox')
       const originalCanvasWidth = imagesCanvas?.width
       const originalCanvasHeight = imagesCanvas?.height
       const originalCanvasStyleWidth = imagesCanvas?.style.width
@@ -1349,8 +1354,10 @@ const handleExportPNG = async (exportSettings = null) => {
       if (svgLayer) {
         svgLayer.setAttribute('width', contentWidth)
         svgLayer.setAttribute('height', contentHeight)
+        svgLayer.setAttribute('viewBox', `0 0 ${contentWidth} ${contentHeight}`)
         svgLayer.style.width = `${contentWidth}px`
         svgLayer.style.height = `${contentHeight}px`
+        svgLayer.style.overflow = 'visible'
       }
 
       if (imagesCanvas) {
@@ -1365,19 +1372,42 @@ const handleExportPNG = async (exportSettings = null) => {
       canvasContent.style.width = `${contentWidth}px`
       canvasContent.style.height = `${contentHeight}px`
 
-      // ИСПРАВЛЕНИЕ: Диспатчим событие для рендеринга всех изображений
+      // ИСПРАВЛЕНИЕ: Диспатчим событие для рендеринга всех изображений с ожиданием
+      const renderPromise = new Promise((resolve) => {
+        const handleRenderComplete = () => {
+          window.removeEventListener('png-export-images-rendered', handleRenderComplete)
+          resolve()
+        }
+        window.addEventListener('png-export-images-rendered', handleRenderComplete)
+
+        // Таймаут на случай, если событие не придёт
+        setTimeout(() => {
+          window.removeEventListener('png-export-images-rendered', handleRenderComplete)
+          resolve()
+        }, 3000)
+      })
+
       const exportEvent = new CustomEvent('png-export-render-all-images', {
         detail: {
           contentWidth,
           contentHeight,
+          minX,
+          minY,
           maxX,
           maxY
         }
       })
       window.dispatchEvent(exportEvent)
 
-      // Ждём перерисовки DOM
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      console.log('Отправлено событие png-export-render-all-images, ожидаем рендеринга...')
+
+      // Ждём завершения рендеринга ИЛИ таймаута
+      await renderPromise
+
+      // Дополнительное ожидание для гарантии отрисовки
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      console.log('Рендеринг завершён, начинаем захват...')
 
       // Определяем параметры экспорта
       let finalWidth, finalHeight, scale
@@ -1399,6 +1429,8 @@ const handleExportPNG = async (exportSettings = null) => {
         scale = 2
       }
 
+      console.log(`Захват с параметрами: ${finalWidth}x${finalHeight}, scale=${scale}`)
+
       // Захват с улучшенным onclone
       contentCanvas = await html2canvas(canvasContainer, {
         backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
@@ -1416,13 +1448,17 @@ const handleExportPNG = async (exportSettings = null) => {
         scrollY: 0,
         foreignObjectRendering: true,
         onclone: (clonedDoc, clonedElement) => {
+          console.log('Обработка клона DOM для экспорта...')
+
           const clonedSvg = clonedElement.querySelector('.svg-layer')
           if (clonedSvg) {
             clonedSvg.setAttribute('width', contentWidth)
             clonedSvg.setAttribute('height', contentHeight)
+            clonedSvg.setAttribute('viewBox', `0 0 ${contentWidth} ${contentHeight}`)
             clonedSvg.style.width = `${contentWidth}px`
             clonedSvg.style.height = `${contentHeight}px`
             clonedSvg.style.overflow = 'visible'
+            console.log(`SVG-слой в клоне: ${contentWidth}x${contentHeight}`)
           }
 
           const cards = clonedElement.querySelectorAll('.card')
@@ -1436,6 +1472,7 @@ const handleExportPNG = async (exportSettings = null) => {
               card.style.backgroundColor = '#ffffff'
             }
           })
+          console.log(`Обработано карточек: ${cards.length}`)
 
           const images = clonedElement.querySelectorAll('img')
           images.forEach(img => {
@@ -1443,8 +1480,18 @@ const handleExportPNG = async (exportSettings = null) => {
               img.style.visibility = 'hidden'
             }
           })
+
+          // Убедимся, что canvas изображений видим
+          const clonedImagesCanvas = clonedElement.querySelector('.images-canvas-layer')
+          if (clonedImagesCanvas) {
+            clonedImagesCanvas.style.visibility = 'visible'
+            clonedImagesCanvas.style.opacity = '1'
+            console.log(`Canvas изображений: ${clonedImagesCanvas.width}x${clonedImagesCanvas.height}`)
+          }
         }
       })
+
+      console.log('Захват завершён')
 
       // ИСПРАВЛЕНИЕ: Диспатчим событие завершения экспорта
       const completeEvent = new CustomEvent('png-export-render-complete')
@@ -1454,6 +1501,7 @@ const handleExportPNG = async (exportSettings = null) => {
       if (svgLayer) {
         if (originalSvgWidth) svgLayer.setAttribute('width', originalSvgWidth)
         if (originalSvgHeight) svgLayer.setAttribute('height', originalSvgHeight)
+        if (originalSvgViewBox) svgLayer.setAttribute('viewBox', originalSvgViewBox)
         svgLayer.style.width = originalSvgStyleWidth || ''
         svgLayer.style.height = originalSvgStyleHeight || ''
       }
@@ -1470,8 +1518,11 @@ const handleExportPNG = async (exportSettings = null) => {
 
       // Восстанавливаем оригинальные значения transform и position
       canvasContent.style.transform = originalTransform
+      canvasContent.style.transformOrigin = originalTransformOrigin
       canvasContent.style.left = originalLeft
       canvasContent.style.top = originalTop
+
+      console.log('Стили восстановлены')
 
       // Финализируем canvas
       let finalCanvas
