@@ -997,20 +997,33 @@ const handleExportPNG = async (exportSettings = null) => {
         }
       })
 
-      // Учитываем соединения
+      // Учитываем соединения (КРИТИЧНО: используем точную геометрию линий)
       const connectionsList = Array.isArray(connectionsStore.connections) ? connectionsStore.connections : []
-      connectionsList.forEach(connection => {
-        const fromCard = cardsList.find(c => c.id === connection.from)
-        const toCard = cardsList.find(c => c.id === connection.to)
-        if (fromCard && toCard) {
-          const strokeWidth = connection.thickness || 5
-          const padding = Math.max(strokeWidth, 8)
+      const cardMap = new Map(cardsList.map(card => [card.id, card]))
+      const defaultLineThickness = connectionsStore.defaultLineThickness || 5
 
-          minX = Math.min(minX, fromCard.x - padding, toCard.x - padding)
-          minY = Math.min(minY, fromCard.y - padding, toCard.y - padding)
-          maxX = Math.max(maxX, fromCard.x + fromCard.width + padding, toCard.x + toCard.width + padding)
-          maxY = Math.max(maxY, fromCard.y + fromCard.height + padding, toCard.y + toCard.height + padding)
-        }
+      connectionsList.forEach(connection => {
+        const fromCard = cardMap.get(connection.from)
+        const toCard = cardMap.get(connection.to)
+        if (!fromCard || !toCard) return
+
+        // Вычисляем геометрию соединения
+        const geometry = buildConnectionGeometry(connection, fromCard, toCard)
+        if (!geometry || !geometry.points || !geometry.points.length) return
+
+        const strokeWidth = Number.isFinite(connection.thickness)
+          ? connection.thickness
+          : defaultLineThickness
+        const markerRadius = Math.max(strokeWidth, 8) / 2
+
+        // Учитываем все точки линии (не только начало и конец!)
+        geometry.points.forEach(point => {
+          if (!point) return
+          minX = Math.min(minX, point.x - markerRadius - 10) // дополнительный запас для маркеров
+          minY = Math.min(minY, point.y - markerRadius - 10)
+          maxX = Math.max(maxX, point.x + markerRadius + 10)
+          maxY = Math.max(maxY, point.y + markerRadius + 10)
+        })
       })
 
       // Fallback если нет элементов
@@ -1039,6 +1052,44 @@ const handleExportPNG = async (exportSettings = null) => {
       canvasContent.style.transform = 'none'
       canvasContent.style.left = `${-minX}px`
       canvasContent.style.top = `${-minY}px`
+
+      // =========================================================
+      // КРИТИЧНО: Временно расширяем SVG-слой и canvas-слой
+      // чтобы линии не обрезались при экспорте
+      // =========================================================
+      const svgLayer = canvasContent.querySelector('.svg-layer')
+      const imagesCanvas = canvasContent.querySelector('.images-canvas-layer')
+
+      // Сохраняем оригинальные размеры
+      const originalSvgWidth = svgLayer?.getAttribute('width')
+      const originalSvgHeight = svgLayer?.getAttribute('height')
+      const originalSvgStyleWidth = svgLayer?.style.width
+      const originalSvgStyleHeight = svgLayer?.style.height
+      const originalCanvasWidth = imagesCanvas?.width
+      const originalCanvasHeight = imagesCanvas?.height
+      const originalCanvasStyleWidth = imagesCanvas?.style.width
+      const originalCanvasStyleHeight = imagesCanvas?.style.height
+
+      // Устанавливаем новые размеры, охватывающие весь контент включая линии
+      if (svgLayer) {
+        svgLayer.setAttribute('width', contentWidth)
+        svgLayer.setAttribute('height', contentHeight)
+        svgLayer.style.width = `${contentWidth}px`
+        svgLayer.style.height = `${contentHeight}px`
+      }
+
+      if (imagesCanvas) {
+        imagesCanvas.width = contentWidth
+        imagesCanvas.height = contentHeight
+        imagesCanvas.style.width = `${contentWidth}px`
+        imagesCanvas.style.height = `${contentHeight}px`
+      }
+
+      // Также расширяем canvas-content до полного размера
+      const originalContentWidth = canvasContent.style.width
+      const originalContentHeight = canvasContent.style.height
+      canvasContent.style.width = `${contentWidth}px`
+      canvasContent.style.height = `${contentHeight}px`
 
       // Ждём перерисовки DOM
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
@@ -1078,8 +1129,20 @@ const handleExportPNG = async (exportSettings = null) => {
         y: 0,
         scrollX: 0,
         scrollY: 0,
+        // Принудительно рендерим SVG
+        foreignObjectRendering: true,
         // Ключевое исправление для больших схем:
         onclone: (clonedDoc, clonedElement) => {
+          // Убедимся, что SVG-слой в клоне имеет правильные размеры
+          const clonedSvg = clonedElement.querySelector('.svg-layer')
+          if (clonedSvg) {
+            clonedSvg.setAttribute('width', contentWidth)
+            clonedSvg.setAttribute('height', contentHeight)
+            clonedSvg.style.width = `${contentWidth}px`
+            clonedSvg.style.height = `${contentHeight}px`
+            clonedSvg.style.overflow = 'visible'
+          }
+
           // Убедимся, что все карточки видимы и имеют корректный background
           const cards = clonedElement.querySelectorAll('.card')
           cards.forEach(card => {
@@ -1104,6 +1167,27 @@ const handleExportPNG = async (exportSettings = null) => {
           })
         }
       })
+
+      // =========================================================
+      // КРИТИЧНО: Восстанавливаем оригинальные размеры SVG-слоя и canvas-слоя
+      // =========================================================
+      if (svgLayer) {
+        if (originalSvgWidth) svgLayer.setAttribute('width', originalSvgWidth)
+        if (originalSvgHeight) svgLayer.setAttribute('height', originalSvgHeight)
+        svgLayer.style.width = originalSvgStyleWidth || ''
+        svgLayer.style.height = originalSvgStyleHeight || ''
+      }
+
+      if (imagesCanvas) {
+        imagesCanvas.width = originalCanvasWidth || 0
+        imagesCanvas.height = originalCanvasHeight || 0
+        imagesCanvas.style.width = originalCanvasStyleWidth || ''
+        imagesCanvas.style.height = originalCanvasStyleHeight || ''
+      }
+
+      // Восстанавливаем размеры canvas-content
+      canvasContent.style.width = originalContentWidth
+      canvasContent.style.height = originalContentHeight
 
       // Восстанавливаем оригинальные значения transform и position
       canvasContent.style.transform = originalTransform
