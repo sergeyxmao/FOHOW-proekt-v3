@@ -4,6 +4,9 @@ import { useCardsStore } from '../stores/cards.js'
 import { useConnectionsStore } from '../stores/connections.js'
 import { useProjectStore, formatProjectFileName } from '../stores/project.js'
 import { useCanvasStore } from '../stores/canvas.js'
+import { useStickersStore } from '../stores/stickers.js'
+import { useImagesStore } from '../stores/images.js'
+import { useAnchorsStore } from '../stores/anchors.js'
 import { buildConnectionGeometry } from '../utils/canvasGeometry.js'
 
 const imageDataUriCache = new Map()
@@ -275,6 +278,9 @@ export function useProjectActions() {
   const connectionsStore = useConnectionsStore()
   const projectStore = useProjectStore()
   const canvasStore = useCanvasStore()
+  const stickersStore = useStickersStore()
+  const imagesStore = useImagesStore()
+  const anchorsStore = useAnchorsStore()
 
   const {
     backgroundColor,
@@ -822,7 +828,9 @@ const handleExportPNG = async (exportSettings = null) => {
       maxX = minX + containerRect.width / currentScale
       maxY = minY + containerRect.height / currentScale
     } else {
-      // Экспорт всего контента - вычисляем границы всех карточек
+      // Экспорт всего контента - вычисляем границы ВСЕХ элементов
+
+      // Карточки
       cards.forEach(card => {
         const left = card.x || 0
         const top = card.y || 0
@@ -834,6 +842,56 @@ const handleExportPNG = async (exportSettings = null) => {
         maxY = Math.max(maxY, top + height)
       })
 
+      // Стикеры
+      if (stickersStore.stickers && stickersStore.stickers.length > 0) {
+        stickersStore.stickers.forEach(sticker => {
+          const left = sticker.x || 0
+          const top = sticker.y || 0
+          const width = sticker.width || 100
+          const height = sticker.height || 100
+          minX = Math.min(minX, left)
+          minY = Math.min(minY, top)
+          maxX = Math.max(maxX, left + width)
+          maxY = Math.max(maxY, top + height)
+        })
+      }
+
+      // Изображения на canvas
+      if (imagesStore.images && imagesStore.images.length > 0) {
+        imagesStore.images.forEach(image => {
+          const left = image.x || 0
+          const top = image.y || 0
+          const width = image.width || 100
+          const height = image.height || 100
+          minX = Math.min(minX, left)
+          minY = Math.min(minY, top)
+          maxX = Math.max(maxX, left + width)
+          maxY = Math.max(maxY, top + height)
+        })
+      }
+
+      // Якоря (гербы городов)
+      if (anchorsStore.anchors && anchorsStore.anchors.length > 0) {
+        anchorsStore.anchors.forEach(anchor => {
+          const left = anchor.x || 0
+          const top = anchor.y || 0
+          const width = anchor.width || 150
+          const height = anchor.height || 150
+          minX = Math.min(minX, left)
+          minY = Math.min(minY, top)
+          maxX = Math.max(maxX, left + width)
+          maxY = Math.max(maxY, top + height)
+        })
+      }
+
+      // Если не найдено ни одного элемента, используем значения по умолчанию
+      if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
+        minX = 0
+        minY = 0
+        maxX = 1920
+        maxY = 1080
+      }
+
       // Add padding only for full content export
       const PADDING = 50
       minX -= PADDING
@@ -844,6 +902,25 @@ const handleExportPNG = async (exportSettings = null) => {
 
     const contentWidth = maxX - minX
     const contentHeight = maxY - minY
+
+    // **КРИТИЧНО: Сохраняем и устанавливаем overflow:visible для захвата всего контента**
+    const originalOverflow = canvasContainer.style.overflow
+    const originalWidth = canvasContainer.style.width
+    const originalHeight = canvasContainer.style.height
+
+    // Устанавливаем overflow:visible чтобы html2canvas мог захватить весь контент
+    canvasContainer.style.overflow = 'visible'
+    canvasContainer.style.width = `${contentWidth}px`
+    canvasContainer.style.height = `${contentHeight}px`
+
+    // **КРИТИЧНО: Диспатчим событие для перерисовки ВСЕХ изображений перед захватом**
+    // Это необходимо для отображения изображений, которые были за пределами viewport
+    window.dispatchEvent(new CustomEvent('png-export-render-all-images', {
+      detail: { minX, minY, maxX, maxY, contentWidth, contentHeight }
+    }))
+
+    // Даём время на перерисовку изображений
+    await new Promise(resolve => setTimeout(resolve, 100))
 
     // Set the position of canvas-content to capture the desired area
     const originalLeft = canvasContent.style.left
@@ -906,6 +983,14 @@ const handleExportPNG = async (exportSettings = null) => {
     canvasContent.style.left = originalLeft
     canvasContent.style.top = originalTop
     canvasContainer.classList.remove('canvas-container--capturing')
+
+    // **ВОССТАНАВЛИВАЕМ overflow и размеры контейнера**
+    canvasContainer.style.overflow = originalOverflow
+    canvasContainer.style.width = originalWidth
+    canvasContainer.style.height = originalHeight
+
+    // **Диспатчим событие для восстановления рендеринга изображений в viewport режиме**
+    window.dispatchEvent(new CustomEvent('png-export-render-complete'))
 
     // Restore temporary styles
     tempStyles.forEach(({ element, property, originalValue }) => {
