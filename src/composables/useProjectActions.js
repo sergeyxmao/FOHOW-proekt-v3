@@ -1194,6 +1194,27 @@ const handleExportPNG = async (exportSettings = null) => {
     await inlineImages(canvasContainer)
     console.log('PNG Export: Конвертация изображений завершена')
 
+    // ИСПРАВЛЕНИЕ: Дополнительная обработка изображений в avatar-circle
+    // Эти изображения могут иметь проблемы с CORS или object-fit
+    const avatarCircleImages = canvasContainer.querySelectorAll('.avatar-circle img')
+    console.log(`PNG Export: Найдено ${avatarCircleImages.length} изображений в avatar-circle`)
+    for (const img of avatarCircleImages) {
+      const src = img.getAttribute('src')
+      if (src && !src.startsWith('data:')) {
+        console.warn(`PNG Export: Изображение аватара не сконвертировано в data URI: ${src.substring(0, 100)}`)
+        // Пытаемся конвертировать ещё раз
+        try {
+          const dataUri = await imageToDataUri(src, img)
+          if (dataUri && dataUri.startsWith('data:')) {
+            img.setAttribute('src', dataUri)
+            console.log(`PNG Export: Успешно сконвертировано изображение аватара`)
+          }
+        } catch (e) {
+          console.error(`PNG Export: Ошибка конвертации изображения аватара:`, e)
+        }
+      }
+    }
+
     // Временные стили
     const tempStyles = []
 
@@ -1401,6 +1422,24 @@ const handleExportPNG = async (exportSettings = null) => {
           avatars.forEach(avatar => {
             avatar.style.visibility = 'visible'
             avatar.style.opacity = '1'
+          })
+
+          // ИСПРАВЛЕНИЕ: Специальная обработка изображений внутри avatar-circle
+          // html2canvas не всегда корректно обрабатывает object-fit: cover с border-radius
+          const avatarCircleImages = clonedElement.querySelectorAll('.avatar-circle img')
+          avatarCircleImages.forEach(img => {
+            img.style.visibility = 'visible'
+            img.style.opacity = '1'
+            img.style.display = 'block'
+            // Убедимся, что изображение заполняет контейнер
+            img.style.width = '100%'
+            img.style.height = '100%'
+            img.style.objectFit = 'cover'
+            img.style.objectPosition = 'center'
+            // Убедимся, что изображение находится в правильной позиции
+            img.style.position = 'absolute'
+            img.style.top = '0'
+            img.style.left = '0'
           })
 
           // ИСПРАВЛЕНИЕ: Убедимся, что изображения на канвасе видимы
@@ -1745,6 +1784,25 @@ const handleExportPNG = async (exportSettings = null) => {
             avatar.style.opacity = '1'
           })
           console.log(`Обработано аватаров: ${avatars.length}`)
+
+          // ИСПРАВЛЕНИЕ: Специальная обработка изображений внутри avatar-circle
+          // html2canvas не всегда корректно обрабатывает object-fit: cover с border-radius
+          const avatarCircleImages = clonedElement.querySelectorAll('.avatar-circle img')
+          avatarCircleImages.forEach(img => {
+            img.style.visibility = 'visible'
+            img.style.opacity = '1'
+            img.style.display = 'block'
+            // Убедимся, что изображение заполняет контейнер
+            img.style.width = '100%'
+            img.style.height = '100%'
+            img.style.objectFit = 'cover'
+            img.style.objectPosition = 'center'
+            // Убедимся, что изображение находится в правильной позиции
+            img.style.position = 'absolute'
+            img.style.top = '0'
+            img.style.left = '0'
+          })
+          console.log(`Обработано изображений в avatar-circle: ${avatarCircleImages.length}`)
 
           // ИСПРАВЛЕНИЕ: Убедимся, что изображения на канвасе видимы
           const canvasImages = clonedElement.querySelectorAll('.canvas-image')
