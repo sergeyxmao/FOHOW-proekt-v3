@@ -149,15 +149,35 @@ const arrayBufferToBase64 = (buffer) => {
   return window.btoa(binary)
 }
 
-const imageToDataUri = async (src) => {
+const imageToDataUri = async (src, imgElement = null) => {
   if (!src) return ''
+
+  // Если уже data URI - возвращаем как есть
+  if (src.startsWith('data:')) return src
+
   const normalized = normalizeAssetUrl(src)
   if (imageDataUriCache.has(normalized)) {
     return imageDataUriCache.get(normalized)
   }
 
   try {
-    const response = await fetch(normalized)
+    // Если передан img элемент и он уже загружен, используем его напрямую
+    if (imgElement && imgElement.complete && imgElement.naturalWidth > 0) {
+      const canvas = document.createElement('canvas')
+      canvas.width = imgElement.naturalWidth
+      canvas.height = imgElement.naturalHeight
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(imgElement, 0, 0)
+      const dataUri = canvas.toDataURL('image/png')
+      imageDataUriCache.set(normalized, dataUri)
+      return dataUri
+    }
+
+    // Fallback: загружаем через fetch
+    const response = await fetch(normalized, {
+      mode: 'cors',
+      credentials: 'same-origin'
+    })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     const buffer = await response.arrayBuffer()
     const mime = response.headers.get('Content-Type') || 'image/png'
@@ -167,20 +187,77 @@ const imageToDataUri = async (src) => {
     return dataUri
   } catch (error) {
     console.warn('Не удалось получить данные изображения для экспорта:', src, error)
+
+    // Последняя попытка: создать canvas из imgElement
+    if (imgElement && imgElement.complete && imgElement.naturalWidth > 0) {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = imgElement.naturalWidth
+        canvas.height = imgElement.naturalHeight
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(imgElement, 0, 0)
+        const dataUri = canvas.toDataURL('image/png')
+        return dataUri
+      } catch (canvasError) {
+        console.warn('Не удалось создать data URI через canvas:', canvasError)
+      }
+    }
+
     return src
   }
 }
 
 const inlineImages = async (root) => {
   const images = Array.from(root.querySelectorAll('img'))
+  console.log(`Обрабатываем ${images.length} изображений для экспорта...`)
+
+  // Сначала ждём загрузки ВСЕХ изображений
+  await Promise.all(
+    images.map(img => {
+      // Если изображение уже загружено - ок
+      if (img.complete) return Promise.resolve()
+
+      // Иначе ждём события load
+      return new Promise((resolve) => {
+        const handleLoad = () => {
+          img.removeEventListener('load', handleLoad)
+          img.removeEventListener('error', handleLoad)
+          resolve()
+        }
+        img.addEventListener('load', handleLoad)
+        img.addEventListener('error', handleLoad)
+
+        // Таймаут на случай зависания
+        setTimeout(handleLoad, 5000)
+      })
+    })
+  )
+
+  // Теперь конвертируем все изображения в data URI
   await Promise.all(
     images.map(async (img) => {
       const src = img.getAttribute('src')
-      if (!src || src.startsWith('data:') || /^(https?:)?\/\//i.test(src)) return
-      const dataUri = await imageToDataUri(src)
-      img.setAttribute('src', dataUri)
+
+      // Пропускаем пустые src
+      if (!src) return
+
+      // Если уже data URI - пропускаем
+      if (src.startsWith('data:')) return
+
+      try {
+        // Конвертируем в data URI, передаём сам элемент для более быстрой обработки
+        const dataUri = await imageToDataUri(src, img)
+        if (dataUri && dataUri !== src) {
+          img.setAttribute('src', dataUri)
+          console.log(`✓ Конвертировано изображение: ${src.substring(0, 50)}...`)
+        }
+      } catch (error) {
+        console.warn(`✗ Не удалось конвертировать изображение: ${src}`, error)
+      }
     })
   )
+
+  console.log('Все изображения обработаны для экспорта')
 }
 
 const parseTransform = (transform) => {
@@ -1214,6 +1291,33 @@ const handleExportPNG = async (exportSettings = null) => {
             card.style.visibility = 'visible'
             card.style.opacity = '1'
           })
+
+          // ИСПРАВЛЕНИЕ: Убедимся, что все изображения (включая аватары) видимы
+          const allImages = clonedElement.querySelectorAll('img')
+          allImages.forEach(img => {
+            img.style.visibility = 'visible'
+            img.style.opacity = '1'
+            img.style.display = 'block'
+
+            // Если изображение не загружено, пытаемся использовать fallback
+            if (!img.complete || img.naturalWidth === 0) {
+              console.warn('Изображение не загружено при клонировании:', img.src)
+            }
+          })
+
+          // ИСПРАВЛЕНИЕ: Убедимся, что аватары видимы
+          const avatars = clonedElement.querySelectorAll('.avatar-object, .avatar-circle, .avatar-shape')
+          avatars.forEach(avatar => {
+            avatar.style.visibility = 'visible'
+            avatar.style.opacity = '1'
+          })
+
+          // ИСПРАВЛЕНИЕ: Убедимся, что изображения на канвасе видимы
+          const canvasImages = clonedElement.querySelectorAll('.canvas-image')
+          canvasImages.forEach(img => {
+            img.style.visibility = 'visible'
+            img.style.opacity = '1'
+          })
         }
       })
 
@@ -1523,12 +1627,41 @@ const handleExportPNG = async (exportSettings = null) => {
           })
           console.log(`Обработано карточек: ${cards.length}`)
 
+          // ИСПРАВЛЕНИЕ: Обработка всех изображений (включая аватары)
           const images = clonedElement.querySelectorAll('img')
+          let loadedCount = 0
+          let notLoadedCount = 0
           images.forEach(img => {
-            if (!img.complete) {
-              img.style.visibility = 'hidden'
+            // Показываем ВСЕ изображения, даже если они не загружены
+            // html2canvas лучше обрабатывает data URIs
+            img.style.visibility = 'visible'
+            img.style.opacity = '1'
+            img.style.display = 'block'
+
+            if (img.complete && img.naturalWidth > 0) {
+              loadedCount++
+            } else {
+              notLoadedCount++
+              console.warn('Изображение не полностью загружено:', img.src?.substring(0, 100))
             }
           })
+          console.log(`Изображений загружено: ${loadedCount}, не загружено: ${notLoadedCount}`)
+
+          // ИСПРАВЛЕНИЕ: Убедимся, что аватары видимы
+          const avatars = clonedElement.querySelectorAll('.avatar-object, .avatar-circle, .avatar-shape')
+          avatars.forEach(avatar => {
+            avatar.style.visibility = 'visible'
+            avatar.style.opacity = '1'
+          })
+          console.log(`Обработано аватаров: ${avatars.length}`)
+
+          // ИСПРАВЛЕНИЕ: Убедимся, что изображения на канвасе видимы
+          const canvasImages = clonedElement.querySelectorAll('.canvas-image')
+          canvasImages.forEach(img => {
+            img.style.visibility = 'visible'
+            img.style.opacity = '1'
+          })
+          console.log(`Обработано изображений на канвасе: ${canvasImages.length}`)
 
           // Убедимся, что canvas изображений видим
           const clonedImagesCanvas = clonedElement.querySelector('.images-canvas-layer')
