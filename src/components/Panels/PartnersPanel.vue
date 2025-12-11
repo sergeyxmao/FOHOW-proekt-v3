@@ -390,7 +390,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
               target="_blank"
               rel="noopener"
             >
-              {{ selectedPartner.username || 'Профиль' }}
+              Профиль
             </a>
           </span>
           <span v-else class="partner-details-hidden">🔒 Скрыто</span>
@@ -398,7 +398,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
 
         <!-- Telegram -->
         <div class="partner-details-field">
-          <span class="partner-details-icon" aria-hidden="true">✈️</span>          
+          <span class="partner-details-icon" aria-hidden="true">✈️</span>
           <span class="partner-details-label">Telegram:</span>
           <span v-if="selectedPartner.telegram_user">
             <a
@@ -408,9 +408,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
               rel="noopener"
               @click.prevent="openTelegram(selectedPartner.telegram_user)"
             >
-              {{ selectedPartner.telegram_user.startsWith('@')
-                ? selectedPartner.telegram_user
-                : '@' + selectedPartner.telegram_user }}
+              Профиль
             </a>
           </span>
           <span v-else>
@@ -421,7 +419,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
               rel="noopener"
               @click.prevent="openTelegram('@sergeyxmao')"
             >
-              @sergeyxmao
+              Профиль
             </a>
           </span>
         </div>
@@ -438,9 +436,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
               rel="noopener"
               @click.prevent="openInstagram(selectedPartner.instagram_profile)"
             >
-              {{ selectedPartner.instagram_profile.startsWith('@')
-                ? selectedPartner.instagram_profile
-                : '@' + selectedPartner.instagram_profile }}
+              Профиль
             </a>
           </span>
           <span v-else class="partner-details-hidden">🔒 Скрыто</span>
@@ -457,7 +453,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
               target="_blank"
               rel="noopener"
             >
-              {{ selectedPartner.website }}
+              Профиль
             </a>
           </span>
           <span v-else class="partner-details-hidden">🔒 Скрыто</span>
