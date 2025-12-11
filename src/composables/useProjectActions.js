@@ -160,49 +160,90 @@ const imageToDataUri = async (src, imgElement = null) => {
     return imageDataUriCache.get(normalized)
   }
 
-  try {
-    // Если передан img элемент и он уже загружен, используем его напрямую
-    if (imgElement && imgElement.complete && imgElement.naturalWidth > 0) {
+  // Вспомогательная функция для конвертации img в data URI через canvas
+  const imgToCanvas = (img) => {
+    try {
       const canvas = document.createElement('canvas')
-      canvas.width = imgElement.naturalWidth
-      canvas.height = imgElement.naturalHeight
+      canvas.width = img.naturalWidth || img.width || 100
+      canvas.height = img.naturalHeight || img.height || 100
       const ctx = canvas.getContext('2d')
-      ctx.drawImage(imgElement, 0, 0)
-      const dataUri = canvas.toDataURL('image/png')
-      imageDataUriCache.set(normalized, dataUri)
-      return dataUri
+      ctx.drawImage(img, 0, 0)
+      return canvas.toDataURL('image/png')
+    } catch (e) {
+      console.warn('Canvas tainted:', e)
+      return null
     }
+  }
 
-    // Fallback: загружаем через fetch
-    const response = await fetch(normalized, {
-      mode: 'cors',
-      credentials: 'same-origin'
-    })
-    if (!response.ok) throw new Error(`HTTP ${response.status}`)
-    const buffer = await response.arrayBuffer()
-    const mime = response.headers.get('Content-Type') || 'image/png'
-    const base64 = arrayBufferToBase64(buffer)
-    const dataUri = `data:${mime};base64,${base64}`
-    imageDataUriCache.set(normalized, dataUri)
-    return dataUri
-  } catch (error) {
-    console.warn('Не удалось получить данные изображения для экспорта:', src, error)
-
-    // Последняя попытка: создать canvas из imgElement
+  try {
+    // СПОСОБ 1: Если передан img элемент и он уже загружен (same-origin), используем его
     if (imgElement && imgElement.complete && imgElement.naturalWidth > 0) {
-      try {
-        const canvas = document.createElement('canvas')
-        canvas.width = imgElement.naturalWidth
-        canvas.height = imgElement.naturalHeight
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(imgElement, 0, 0)
-        const dataUri = canvas.toDataURL('image/png')
+      const dataUri = imgToCanvas(imgElement)
+      if (dataUri) {
+        imageDataUriCache.set(normalized, dataUri)
         return dataUri
-      } catch (canvasError) {
-        console.warn('Не удалось создать data URI через canvas:', canvasError)
       }
     }
 
+    // СПОСОБ 2: Создаём новый Image с crossOrigin для загрузки
+    const loadedDataUri = await new Promise((resolve) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+
+      img.onload = () => {
+        const dataUri = imgToCanvas(img)
+        resolve(dataUri)
+      }
+
+      img.onerror = () => {
+        console.warn('Не удалось загрузить изображение с crossOrigin:', normalized)
+        resolve(null)
+      }
+
+      // Таймаут на случай зависания
+      setTimeout(() => resolve(null), 10000)
+
+      img.src = normalized
+    })
+
+    if (loadedDataUri) {
+      imageDataUriCache.set(normalized, loadedDataUri)
+      return loadedDataUri
+    }
+
+    // СПОСОБ 3: Fallback через fetch (для локальных файлов и серверов с CORS)
+    try {
+      const response = await fetch(normalized, {
+        mode: 'cors',
+        credentials: 'same-origin'
+      })
+      if (response.ok) {
+        const buffer = await response.arrayBuffer()
+        const mime = response.headers.get('Content-Type') || 'image/png'
+        const base64 = arrayBufferToBase64(buffer)
+        const dataUri = `data:${mime};base64,${base64}`
+        imageDataUriCache.set(normalized, dataUri)
+        return dataUri
+      }
+    } catch (fetchError) {
+      console.warn('Fetch failed:', fetchError)
+    }
+
+    // СПОСОБ 4: Последняя попытка - используем оригинальный imgElement без crossOrigin
+    if (imgElement && imgElement.complete && imgElement.naturalWidth > 0) {
+      // Пытаемся нарисовать как есть (может работать для same-origin)
+      const dataUri = imgToCanvas(imgElement)
+      if (dataUri) {
+        imageDataUriCache.set(normalized, dataUri)
+        return dataUri
+      }
+    }
+
+    console.warn('Все способы конвертации изображения не удались:', src)
+    return src
+
+  } catch (error) {
+    console.warn('Ошибка конвертации изображения:', src, error)
     return src
   }
 }
@@ -821,6 +862,16 @@ ${connectionPathsSvg}
       // 2. Добавляем класс для capture
       canvasContainer.classList.add('canvas-container--capturing')
 
+      // 2.5. КРИТИЧНО: Конвертируем все изображения в data URI ДО печати
+      console.log('Print: Начинаем конвертацию изображений в data URI...')
+      const originalImageSources = new Map()
+      const allImages = canvasContainer.querySelectorAll('img')
+      allImages.forEach((img) => {
+        originalImageSources.set(img, img.getAttribute('src'))
+      })
+      await inlineImages(canvasContainer)
+      console.log('Print: Конвертация изображений завершена')
+
       // 3. ИСПРАВЛЕНИЕ: Подготавливаем SVG-слой для корректного рендеринга при печати
       const svgLayer = canvasContent.querySelector('.svg-layer')
       const originalSvgWidth = svgLayer?.getAttribute('width')
@@ -899,6 +950,16 @@ ${connectionPathsSvg}
           element.style[property] = ''
         }
       })
+
+      // 6.5. Восстанавливаем оригинальные src изображений
+      if (originalImageSources && originalImageSources.size > 0) {
+        console.log('Print: Восстанавливаем оригинальные src изображений...')
+        originalImageSources.forEach((originalSrc, img) => {
+          if (originalSrc && img.getAttribute('src') !== originalSrc) {
+            img.setAttribute('src', originalSrc)
+          }
+        })
+      }
 
       // 7. Конвертируем canvas в image и открываем окно печати
       const dataUrl = canvas.toDataURL('image/png')
@@ -1031,7 +1092,7 @@ ${connectionPathsSvg}
   }
 
 // Вспомогательная функция для восстановления стилей и скачивания
-const restoreAndDownload = async (finalCanvas, exportSettings, tempStyles, canvasContainer) => {
+const restoreAndDownload = async (finalCanvas, exportSettings, tempStyles, canvasContainer, originalImageSources = null) => {
   // Убираем класс capturing
   canvasContainer.classList.remove('canvas-container--capturing')
 
@@ -1043,6 +1104,17 @@ const restoreAndDownload = async (finalCanvas, exportSettings, tempStyles, canva
       element.style[property] = ''
     }
   })
+
+  // ВАЖНО: Восстанавливаем оригинальные src изображений после экспорта
+  if (originalImageSources && originalImageSources.size > 0) {
+    console.log('PNG Export: Восстанавливаем оригинальные src изображений...')
+    originalImageSources.forEach((originalSrc, img) => {
+      if (originalSrc && img.getAttribute('src') !== originalSrc) {
+        img.setAttribute('src', originalSrc)
+      }
+    })
+    console.log(`PNG Export: Восстановлено ${originalImageSources.size} изображений`)
+  }
 
   // Конвертируем в blob и скачиваем
   finalCanvas.toBlob(async (blob) => {
@@ -1102,6 +1174,25 @@ const handleExportPNG = async (exportSettings = null) => {
 
     // Добавить класс для скрытия UI элементов
     canvasContainer.classList.add('canvas-container--capturing')
+
+    // =====================================================
+    // КРИТИЧНО: Конвертируем все изображения в data URI ДО экспорта
+    // Это необходимо, т.к. html2canvas не может загрузить изображения
+    // с внешних URL из-за CORS ограничений
+    // =====================================================
+    console.log('PNG Export: Начинаем конвертацию изображений в data URI...')
+
+    // Сохраняем оригинальные src для восстановления после экспорта
+    const originalImageSources = new Map()
+    const allImages = canvasContainer.querySelectorAll('img')
+    allImages.forEach((img, index) => {
+      originalImageSources.set(img, img.getAttribute('src'))
+    })
+    console.log(`PNG Export: Найдено ${allImages.length} изображений для конвертации`)
+
+    // Конвертируем все изображения в data URI
+    await inlineImages(canvasContainer)
+    console.log('PNG Export: Конвертация изображений завершена')
 
     // Временные стили
     const tempStyles = []
@@ -1361,7 +1452,7 @@ const handleExportPNG = async (exportSettings = null) => {
       }
 
       // Восстановить стили и скачать
-      await restoreAndDownload(finalCanvas, exportSettings, tempStyles, canvasContainer)
+      await restoreAndDownload(finalCanvas, exportSettings, tempStyles, canvasContainer, originalImageSources)
 
     // =====================================================
     // РЕЖИМ 2: Экспорт всей схемы (ИСПРАВЛЕН)
@@ -1738,7 +1829,7 @@ const handleExportPNG = async (exportSettings = null) => {
       }
 
       // Восстановить стили и скачать
-      await restoreAndDownload(finalCanvas, exportSettings, tempStyles, canvasContainer)
+      await restoreAndDownload(finalCanvas, exportSettings, tempStyles, canvasContainer, originalImageSources)
     }
 
   } catch (error) {
