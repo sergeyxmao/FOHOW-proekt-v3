@@ -162,8 +162,8 @@ export async function registerUserRoutes(app) {
       const userId = req.user.id;
       const {
         full_name, city, country, phone, office, bio,
-        telegram_user, whatsapp_contact, vk_profile, 
-        instagram_profile, ok_profile, telegram_channel
+        telegram_user, whatsapp_contact, vk_profile,
+        instagram_profile, ok_profile, telegram_channel, website
       } = req.body;
       
       const fields = [];
@@ -189,6 +189,7 @@ export async function registerUserRoutes(app) {
       addField('instagram_profile', instagram_profile);
       addField('ok_profile', ok_profile);
       addField('telegram_channel', telegram_channel);
+      addField('website', website);
 
       if (fields.length === 0) return reply.code(400).send({ error: 'Нет данных для обновления' });
 
@@ -199,9 +200,9 @@ export async function registerUserRoutes(app) {
         UPDATE users
         SET ${fields.join(', ')}
         WHERE id = $${paramIndex}
-        RETURNING id, full_name, email, city, country, phone, office, bio, 
-                  telegram_user, whatsapp_contact, vk_profile, instagram_profile, 
-                  ok_profile, telegram_channel, avatar_url
+        RETURNING id, full_name, email, city, country, phone, office, bio,
+                  telegram_user, whatsapp_contact, vk_profile, instagram_profile,
+                  ok_profile, telegram_channel, avatar_url, website
       `;
 
       const result = await pool.query(query, values);
