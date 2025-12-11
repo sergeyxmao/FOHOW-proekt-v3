@@ -1042,6 +1042,27 @@ const handleExportPNG = async (exportSettings = null) => {
         tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
         el.style.visibility = 'hidden'
       })
+
+      // Скрыть аватары в карточках
+      const cardAvatars = canvasContainer.querySelectorAll('.card-avatar-container, .card-avatar')
+      cardAvatars.forEach(el => {
+        tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+        el.style.visibility = 'hidden'
+      })
+
+      // Скрыть отдельные аватары (Avatar.vue)
+      const avatarObjects = canvasContainer.querySelectorAll('.avatar-object')
+      avatarObjects.forEach(el => {
+        tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+        el.style.visibility = 'hidden'
+      })
+
+      // Скрыть изображения на канвасе
+      const canvasImages = canvasContainer.querySelectorAll('.canvas-image')
+      canvasImages.forEach(el => {
+        tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+        el.style.visibility = 'hidden'
+      })
     }
 
     // Скрыть кнопки управления
@@ -1081,6 +1102,27 @@ const handleExportPNG = async (exportSettings = null) => {
       coloredElements.forEach(el => {
         tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
         el.style.visibility = 'hidden'
+      })
+
+      // Применить черно-белый фильтр к аватарам в карточках
+      const cardAvatars = canvasContainer.querySelectorAll('.card-avatar')
+      cardAvatars.forEach(el => {
+        tempStyles.push({ element: el, property: 'filter', originalValue: el.style.filter })
+        el.style.filter = 'grayscale(100%)'
+      })
+
+      // Применить черно-белый фильтр к отдельным аватарам
+      const avatarImages = canvasContainer.querySelectorAll('.avatar-circle img')
+      avatarImages.forEach(el => {
+        tempStyles.push({ element: el, property: 'filter', originalValue: el.style.filter })
+        el.style.filter = 'grayscale(100%)'
+      })
+
+      // Применить черно-белый фильтр к изображениям на канвасе
+      const canvasImages = canvasContainer.querySelectorAll('.canvas-image img, .canvas-image')
+      canvasImages.forEach(el => {
+        tempStyles.push({ element: el, property: 'filter', originalValue: el.style.filter })
+        el.style.filter = 'grayscale(100%)'
       })
     }
 
