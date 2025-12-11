@@ -1112,7 +1112,7 @@ app.put('/api/profile/privacy', {
     // Список допустимых полей
     const allowedFields = [
       'username', 'full_name', 'phone', 'city', 'country', 'office',
-      'personal_id', 'telegram_user', 'instagram_profile'
+      'personal_id', 'telegram_user', 'instagram_profile', 'vk_profile', 'website'
     ];
 
     // Валидация: проверяем, что все ключи допустимы и значения boolean
