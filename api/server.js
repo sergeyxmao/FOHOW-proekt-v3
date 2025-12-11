@@ -902,8 +902,8 @@ app.post('/api/reset-password', async (req, reply) => {
           username, email, currentPassword, newPassword,
           country, city, office, personal_id, phone, full_name,
           telegram_user, telegram_channel, vk_profile, ok_profile,
-          instagram_profile, whatsapp_contact
-          , ui_preferences          
+          instagram_profile, whatsapp_contact, website
+          , ui_preferences
         } = req.body;
         const normalizedOffice = typeof office === 'string' ? office.trim().toUpperCase() : null;
         const normalizedPersonalId = typeof personal_id === 'string' ? personal_id.trim().toUpperCase() : null;
@@ -1052,9 +1052,10 @@ app.post('/api/reset-password', async (req, reply) => {
              telegram_user = COALESCE($10, telegram_user), telegram_channel = COALESCE($11, telegram_channel),
              vk_profile = COALESCE($12, vk_profile), ok_profile = COALESCE($13, ok_profile),
              instagram_profile = COALESCE($14, instagram_profile), whatsapp_contact = COALESCE($15, whatsapp_contact),
-             ui_preferences = COALESCE($16, ui_preferences),             
+             ui_preferences = COALESCE($16, ui_preferences),
+             website = COALESCE($17, website),
              updated_at = CURRENT_TIMESTAMP
-           WHERE id = $17
+           WHERE id = $18
            RETURNING *`;
         
         const queryParams = [
@@ -1062,7 +1063,8 @@ app.post('/api/reset-password', async (req, reply) => {
             country || null, city || null, normalizedOffice || null, normalizedPersonalId || null, phone || null, full_name || null,
             telegram_user || null, telegram_channel || null, vk_profile || null, ok_profile || null,
             instagram_profile || null, whatsapp_contact || null,
-            normalizedUiPreferences ? JSON.stringify(normalizedUiPreferences) : null,          
+            normalizedUiPreferences ? JSON.stringify(normalizedUiPreferences) : null,
+            website || null,
             userId
         ];
         
