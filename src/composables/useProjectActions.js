@@ -1442,6 +1442,23 @@ const handleExportPNG = async (exportSettings = null) => {
             img.style.left = '0'
           })
 
+          // html2canvas НЕ поддерживает object-fit: cover на img элементах
+          // Решение: заменяем img на background-image на родительском контейнере
+          const avatarCircles = clonedElement.querySelectorAll('.avatar-circle')
+          avatarCircles.forEach(circle => {
+            const img = circle.querySelector('img')
+            if (img && img.src) {
+              // Устанавливаем изображение как background на контейнере
+              circle.style.backgroundImage = `url(${img.src})`
+              circle.style.backgroundSize = 'cover'
+              circle.style.backgroundPosition = 'center'
+              circle.style.backgroundRepeat = 'no-repeat'
+              // Скрываем оригинальный img, так как используем background
+              img.style.visibility = 'hidden'
+              img.style.opacity = '0'
+            }
+          })
+
           // ИСПРАВЛЕНИЕ: Убедимся, что изображения на канвасе видимы
           const canvasImages = clonedElement.querySelectorAll('.canvas-image')
           canvasImages.forEach(img => {
@@ -1803,6 +1820,24 @@ const handleExportPNG = async (exportSettings = null) => {
             img.style.left = '0'
           })
           console.log(`Обработано изображений в avatar-circle: ${avatarCircleImages.length}`)
+
+          // html2canvas НЕ поддерживает object-fit: cover на img элементах
+          // Решение: заменяем img на background-image на родительском контейнере
+          const avatarCircles = clonedElement.querySelectorAll('.avatar-circle')
+          avatarCircles.forEach(circle => {
+            const img = circle.querySelector('img')
+            if (img && img.src) {
+              // Устанавливаем изображение как background на контейнере
+              circle.style.backgroundImage = `url(${img.src})`
+              circle.style.backgroundSize = 'cover'
+              circle.style.backgroundPosition = 'center'
+              circle.style.backgroundRepeat = 'no-repeat'
+              // Скрываем оригинальный img, так как используем background
+              img.style.visibility = 'hidden'
+              img.style.opacity = '0'
+            }
+          })
+          console.log(`Обработано avatar-circle: ${avatarCircles.length}`)
 
           // ИСПРАВЛЕНИЕ: Убедимся, что изображения на канвасе видимы
           const canvasImages = clonedElement.querySelectorAll('.canvas-image')
