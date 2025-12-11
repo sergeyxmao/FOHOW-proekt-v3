@@ -2884,7 +2884,9 @@ app.get('/api/boards/:boardId/partners', {
           CASE WHEN u.search_settings->>'country' = 'true' THEN u.country ELSE NULL END as country,
           CASE WHEN u.search_settings->>'office' = 'true' THEN u.office ELSE NULL END as office,
           CASE WHEN u.search_settings->>'telegram_user' = 'true' THEN u.telegram_user ELSE NULL END as telegram_user,
-          CASE WHEN u.search_settings->>'instagram_profile' = 'true' THEN u.instagram_profile ELSE NULL END as instagram_profile
+          CASE WHEN u.search_settings->>'instagram_profile' = 'true' THEN u.instagram_profile ELSE NULL END as instagram_profile,
+          CASE WHEN u.search_settings->>'vk_profile' = 'true' THEN u.vk_profile ELSE NULL END as vk_profile,
+          CASE WHEN u.search_settings->>'website' = 'true' THEN u.website ELSE NULL END as website
         FROM users u
         WHERE u.personal_id = ANY($1)
           AND u.is_verified = true
@@ -2900,7 +2902,9 @@ app.get('/api/boards/:boardId/partners', {
             (u.search_settings->>'office' = 'true' AND LOWER(u.office) LIKE LOWER($2)) OR
             (u.search_settings->>'personal_id' = 'true' AND u.personal_id LIKE $2) OR
             (u.search_settings->>'telegram_user' = 'true' AND LOWER(u.telegram_user) LIKE LOWER($2)) OR
-            (u.search_settings->>'instagram_profile' = 'true' AND LOWER(u.instagram_profile) LIKE LOWER($2))
+            (u.search_settings->>'instagram_profile' = 'true' AND LOWER(u.instagram_profile) LIKE LOWER($2)) OR
+            (u.search_settings->>'vk_profile' = 'true' AND LOWER(u.vk_profile) LIKE LOWER($2)) OR
+            (u.search_settings->>'website' = 'true' AND LOWER(u.website) LIKE LOWER($2))
           )
         ORDER BY u.username ASC
       `;
@@ -2920,7 +2924,9 @@ app.get('/api/boards/:boardId/partners', {
           CASE WHEN u.search_settings->>'country' = 'true' THEN u.country ELSE NULL END as country,
           CASE WHEN u.search_settings->>'office' = 'true' THEN u.office ELSE NULL END as office,
           CASE WHEN u.search_settings->>'telegram_user' = 'true' THEN u.telegram_user ELSE NULL END as telegram_user,
-          CASE WHEN u.search_settings->>'instagram_profile' = 'true' THEN u.instagram_profile ELSE NULL END as instagram_profile
+          CASE WHEN u.search_settings->>'instagram_profile' = 'true' THEN u.instagram_profile ELSE NULL END as instagram_profile,
+          CASE WHEN u.search_settings->>'vk_profile' = 'true' THEN u.vk_profile ELSE NULL END as vk_profile,
+          CASE WHEN u.search_settings->>'website' = 'true' THEN u.website ELSE NULL END as website
         FROM users u
         WHERE u.personal_id = ANY($1)
           AND u.is_verified = true
