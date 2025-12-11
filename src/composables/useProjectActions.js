@@ -1425,21 +1425,21 @@ const handleExportPNG = async (exportSettings = null) => {
           })
 
           // ИСПРАВЛЕНИЕ: Специальная обработка изображений внутри avatar-circle
-          // html2canvas не всегда корректно обрабатывает object-fit: cover с border-radius
-          const avatarCircleImages = clonedElement.querySelectorAll('.avatar-circle img')
-          avatarCircleImages.forEach(img => {
-            img.style.visibility = 'visible'
-            img.style.opacity = '1'
-            img.style.display = 'block'
-            // Убедимся, что изображение заполняет контейнер
-            img.style.width = '100%'
-            img.style.height = '100%'
-            img.style.objectFit = 'cover'
-            img.style.objectPosition = 'center'
-            // Убедимся, что изображение находится в правильной позиции
-            img.style.position = 'absolute'
-            img.style.top = '0'
-            img.style.left = '0'
+          // html2canvas НЕ поддерживает object-fit: cover на img элементах
+          // Решение: заменяем img на background-image на родительском контейнере
+          const avatarCircles = clonedElement.querySelectorAll('.avatar-circle')
+          avatarCircles.forEach(circle => {
+            const img = circle.querySelector('img')
+            if (img && img.src) {
+              // Устанавливаем изображение как background на контейнере
+              circle.style.backgroundImage = `url(${img.src})`
+              circle.style.backgroundSize = 'cover'
+              circle.style.backgroundPosition = 'center'
+              circle.style.backgroundRepeat = 'no-repeat'
+              // Скрываем оригинальный img, так как используем background
+              img.style.visibility = 'hidden'
+              img.style.opacity = '0'
+            }
           })
 
           // ИСПРАВЛЕНИЕ: Убедимся, что изображения на канвасе видимы
@@ -1786,23 +1786,23 @@ const handleExportPNG = async (exportSettings = null) => {
           console.log(`Обработано аватаров: ${avatars.length}`)
 
           // ИСПРАВЛЕНИЕ: Специальная обработка изображений внутри avatar-circle
-          // html2canvas не всегда корректно обрабатывает object-fit: cover с border-radius
-          const avatarCircleImages = clonedElement.querySelectorAll('.avatar-circle img')
-          avatarCircleImages.forEach(img => {
-            img.style.visibility = 'visible'
-            img.style.opacity = '1'
-            img.style.display = 'block'
-            // Убедимся, что изображение заполняет контейнер
-            img.style.width = '100%'
-            img.style.height = '100%'
-            img.style.objectFit = 'cover'
-            img.style.objectPosition = 'center'
-            // Убедимся, что изображение находится в правильной позиции
-            img.style.position = 'absolute'
-            img.style.top = '0'
-            img.style.left = '0'
+          // html2canvas НЕ поддерживает object-fit: cover на img элементах
+          // Решение: заменяем img на background-image на родительском контейнере
+          const avatarCircles = clonedElement.querySelectorAll('.avatar-circle')
+          avatarCircles.forEach(circle => {
+            const img = circle.querySelector('img')
+            if (img && img.src) {
+              // Устанавливаем изображение как background на контейнере
+              circle.style.backgroundImage = `url(${img.src})`
+              circle.style.backgroundSize = 'cover'
+              circle.style.backgroundPosition = 'center'
+              circle.style.backgroundRepeat = 'no-repeat'
+              // Скрываем оригинальный img, так как используем background
+              img.style.visibility = 'hidden'
+              img.style.opacity = '0'
+            }
           })
-          console.log(`Обработано изображений в avatar-circle: ${avatarCircleImages.length}`)
+          console.log(`Обработано avatar-circle: ${avatarCircles.length}`)
 
           // ИСПРАВЛЕНИЕ: Убедимся, что изображения на канвасе видимы
           const canvasImages = clonedElement.querySelectorAll('.canvas-image')
