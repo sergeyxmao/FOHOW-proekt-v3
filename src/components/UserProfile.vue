@@ -559,6 +559,58 @@
                       <span class="privacy-toggle-text">{{ privacySettings.instagram_profile ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
                     </button>
                   </div>
+
+                  <!-- VK -->
+                  <div class="privacy-field-item">
+                    <div class="privacy-field-info">
+                      <span class="privacy-field-label">VK</span>
+                      <span class="privacy-field-value">{{ socialForm.vk_profile || 'Не указано' }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="privacy-toggle-btn"
+                      :class="{ 'privacy-toggle-btn--open': privacySettings.vk_profile, 'privacy-toggle-btn--closed': !privacySettings.vk_profile }"
+                      @click="togglePrivacy('vk_profile')"
+                    >
+                      <svg v-if="privacySettings.vk_profile" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <span class="privacy-toggle-text">{{ privacySettings.vk_profile ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                    </button>
+                  </div>
+
+                  <!-- Сайт -->
+                  <div class="privacy-field-item">
+                    <div class="privacy-field-info">
+                      <span class="privacy-field-label">Сайт</span>
+                      <span class="privacy-field-value">{{ socialForm.website || 'Не указано' }}</span>
+                    </div>
+                    <button
+                      type="button"
+                      class="privacy-toggle-btn"
+                      :class="{ 'privacy-toggle-btn--open': privacySettings.website, 'privacy-toggle-btn--closed': !privacySettings.website }"
+                      @click="togglePrivacy('website')"
+                    >
+                      <svg v-if="privacySettings.website" class="lock-icon lock-icon--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <svg v-else class="lock-icon lock-icon--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/>
+                        <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="12" cy="16" r="1.5" fill="white"/>
+                      </svg>
+                      <span class="privacy-toggle-text">{{ privacySettings.website ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1111,7 +1163,9 @@ const privacySettings = ref({
   office: false,
   personal_id: false,
   telegram_user: false,
-  instagram_profile: false
+  vk_profile: false,
+  instagram_profile: false,
+  website: false
 })
 
 const privacyError = ref('')
@@ -1419,7 +1473,9 @@ onMounted(async () => {
         office: user.value.search_settings.office || false,
         personal_id: user.value.search_settings.personal_id || false,
         telegram_user: user.value.search_settings.telegram_user || false,
-        instagram_profile: user.value.search_settings.instagram_profile || false
+        vk_profile: user.value.search_settings.vk_profile || false,
+        instagram_profile: user.value.search_settings.instagram_profile || false,
+        website: user.value.search_settings.website || false
       }
     }
   }
