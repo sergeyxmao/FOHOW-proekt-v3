@@ -428,7 +428,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
 
         <!-- Instagram -->
         <div class="partner-details-field">
-          <span class="partner-details-icon" aria-hidden="true">📸</span>          
+          <span class="partner-details-icon" aria-hidden="true">📸</span>
           <span class="partner-details-label">Instagram:</span>
           <span v-if="selectedPartner.instagram_profile">
             <a
@@ -441,6 +441,23 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
               {{ selectedPartner.instagram_profile.startsWith('@')
                 ? selectedPartner.instagram_profile
                 : '@' + selectedPartner.instagram_profile }}
+            </a>
+          </span>
+          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+        </div>
+
+        <!-- Сайт -->
+        <div class="partner-details-field">
+          <span class="partner-details-icon" aria-hidden="true">🌐</span>
+          <span class="partner-details-label">Сайт:</span>
+          <span v-if="selectedPartner.website">
+            <a
+              :href="selectedPartner.website.startsWith('http') ? selectedPartner.website : 'https://' + selectedPartner.website"
+              class="partner-details-link"
+              target="_blank"
+              rel="noopener"
+            >
+              {{ selectedPartner.website }}
             </a>
           </span>
           <span v-else class="partner-details-hidden">🔒 Скрыто</span>
