@@ -2726,6 +2726,8 @@ app.get('/api/boards/:boardId/avatar-partners', {
          office,
          telegram_user,
          instagram_profile,
+         vk_profile,
+         website,
          search_settings,
          visibility_settings,
          is_verified
@@ -2777,6 +2779,8 @@ app.get('/api/boards/:boardId/avatar-partners', {
           office: isEnabled(visibility, 'office') ? userRow.office : null,
           telegram_user: isEnabled(visibility, 'telegram_user') ? userRow.telegram_user : null,
           instagram_profile: isEnabled(visibility, 'instagram_profile') ? userRow.instagram_profile : null,
+          vk_profile: isEnabled(visibility, 'showVK') ? userRow.vk_profile : null,
+          website: isEnabled(visibility, 'showWebsite') ? userRow.website : null,
           search_settings: searchSettings,
           x: avatar.x,
           y: avatar.y,
