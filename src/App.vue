@@ -1483,7 +1483,7 @@ html,body{
 }
 
 .zoom-floating-button:hover {
-  transform: translateX(-50%) translateY(-2px);
+  transform: translateX(-50%);
   box-shadow: 0 24px 42px rgba(15, 98, 254, 0.32);
   background: #0f62fe;
   color: #ffffff;
@@ -1503,7 +1503,7 @@ html,body{
 }
 
 .zoom-floating-button--modern:hover {
-  transform: translateX(-50%) translateY(-2px);
+  transform: translateX(-50%);
   box-shadow: 0 28px 48px rgba(12, 84, 196, 0.4);
   background: #0f62fe;
   color: #ffffff;
