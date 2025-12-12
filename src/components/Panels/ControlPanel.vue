@@ -1072,7 +1072,6 @@ const handleHierarchicalDragMode = () => {
 }
 
 .left-panel-controls .ui-btn:hover:not(:disabled) {
-  transform: translateY(-4px);
   box-shadow: 0 18px 32px rgba(15, 23, 42, 0.22);
 }
 
