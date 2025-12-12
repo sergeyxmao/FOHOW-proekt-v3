@@ -1467,7 +1467,7 @@ html,body{
   position: fixed;
   left: 50%;
   bottom: 24px;
-  transform: translateX(-50%);
+  transform: translate(-50%, 0);
   z-index: 1800;
   padding: 12px 22px;
   border-radius: 18px;
@@ -1478,8 +1478,7 @@ html,body{
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 18px 36px rgba(15, 23, 42, 0.2);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-  backdrop-filter: blur(6px);
+  transition: box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;  backdrop-filter: blur(6px);
 }
 
 .zoom-floating-button:hover {
