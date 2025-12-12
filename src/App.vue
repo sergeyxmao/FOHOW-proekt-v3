@@ -1469,7 +1469,14 @@ html,body{
   bottom: 24px;
   transform: translate(-50%, 0);
   z-index: 1800;
-  padding: 12px 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: 46px;
+  min-width: 210px;
+  padding: 0 18px;
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.45);
   background: rgba(248, 250, 252, 0.92);
