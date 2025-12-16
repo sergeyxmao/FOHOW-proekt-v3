@@ -5178,7 +5178,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         @close="() => handleNoteWindowClose(card.id)"
       />
       <!-- Изображения отсортированные по z-index -->
-      <!-- Диапазон z-index для изображений: 6-9 (задний план) и 11-999 (передний план) -->
+      <!-- Диапазон z-index для изображений: 1-4 (задний план, под линиями) и 11-999 (передний план) -->
       <CanvasImage
         v-for="image in sortedImages"
         :key="`image-${image.id}`"
