@@ -1209,9 +1209,9 @@ watch(panelCardRef, (current, previous) => {
 
 .template-menu__list {
   position: absolute;
-  right: calc(100% + var(--template-menu-offset, 0px));
-  left: auto;	
-  margin-right: 0;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
   top: calc(100% + 10px * var(--panel-scale));
   display: flex;
   flex-direction: column;
@@ -1230,7 +1230,7 @@ watch(panelCardRef, (current, previous) => {
 .template-menu__list--drop-up {
   bottom: calc(100% + 10px * var(--panel-scale));
   top: auto;
-  transform-origin: bottom left;
+  transform-origin: center bottom;
 }
 .template-menu__list::-webkit-scrollbar {
   width: calc(6px * var(--panel-scale));
