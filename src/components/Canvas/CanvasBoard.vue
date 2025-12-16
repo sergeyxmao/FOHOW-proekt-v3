@@ -4080,6 +4080,31 @@ const closeImageContextMenu = () => {
   imageContextMenu.value = null;
 };
 
+// Обработчик клика вне контекстного меню для его закрытия
+const handleClickOutsideContextMenu = (event) => {
+  // Проверяем, что клик был вне контекстного меню
+  const contextMenuElement = document.querySelector('.context-menu');
+  if (contextMenuElement && !contextMenuElement.contains(event.target)) {
+    closeImageContextMenu();
+  }
+};
+
+// Watch для добавления/удаления обработчика клика вне меню
+watch(imageContextMenu, (newValue, oldValue) => {
+  if (newValue && !oldValue) {
+    // Меню открылось - добавляем обработчик с небольшой задержкой,
+    // чтобы не закрыть меню сразу при открытии
+    setTimeout(() => {
+      document.addEventListener('click', handleClickOutsideContextMenu);
+      document.addEventListener('pointerdown', handleClickOutsideContextMenu);
+    }, 0);
+  } else if (!newValue && oldValue) {
+    // Меню закрылось - удаляем обработчик
+    document.removeEventListener('click', handleClickOutsideContextMenu);
+    document.removeEventListener('pointerdown', handleClickOutsideContextMenu);
+  }
+});
+
 // Обработчик правого клика на canvas для изображений на заднем плане
 const handleStageContextMenu = (event) => {
   // Проверяем, есть ли изображение под курсором (даже если оно на заднем плане)
