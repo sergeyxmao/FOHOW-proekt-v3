@@ -4502,6 +4502,8 @@ onMounted(() => {
     canvasContainerRef.value.addEventListener('pointermove', handleMouseMove);
     canvasContainerRef.value.addEventListener('pointerdown', handlePointerDown);
     canvasContainerRef.value.addEventListener('click', handleActivePvButtonClick, true);
+    // Добавляем обработчик mousedown в capture фазе для перетаскивания изображений на заднем плане
+    canvasContainerRef.value.addEventListener('mousedown', handleStageMouseDown, true);
   }
 
   handleWindowResize();
@@ -4561,6 +4563,7 @@ onBeforeUnmount(() => {
     canvasContainerRef.value.removeEventListener('pointermove', handleMouseMove);
     canvasContainerRef.value.removeEventListener('pointerdown', handlePointerDown);
     canvasContainerRef.value.removeEventListener('click', handleActivePvButtonClick, true);
+    canvasContainerRef.value.removeEventListener('mousedown', handleStageMouseDown, true);
 
   }
   window.removeEventListener('keydown', handleKeydown);
@@ -5014,7 +5017,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     >
       {{ selectedObjectsCount }}
     </div>
-  <div class="canvas-content" :style="canvasContentStyle" @mousedown="handleStageMouseDown" @click="handleStageClick" @dragover.prevent="handleImageDragOver" @drop.prevent="handleImageDrop">
+  <div class="canvas-content" :style="canvasContentStyle" @click="handleStageClick" @dragover.prevent="handleImageDragOver" @drop.prevent="handleImageDrop">
       <div
         v-if="guidesEnabled && (activeGuides.vertical !== null || activeGuides.horizontal !== null)"
         class="guides-overlay"
