@@ -34,14 +34,50 @@ const calculateContextMenuPosition = (clientX, clientY) => {
   const menuWidth = contextMenuSize.value.width
   const menuHeight = contextMenuSize.value.height
 
+  // Горизонтальное позиционирование
   const availableRight = window.innerWidth - clientX
+  const availableLeft = clientX
   const placeLeft = availableRight < menuWidth + CONTEXT_MENU_OFFSET
-  const x = placeLeft
-    ? Math.max(clientX - menuWidth - CONTEXT_MENU_OFFSET, 0)
-    : clientX + CONTEXT_MENU_OFFSET
 
-  const maxTop = window.innerHeight - menuHeight - CONTEXT_MENU_OFFSET
-  const y = Math.min(clientY, Math.max(maxTop, 0))
+  let x
+  if (placeLeft) {
+    // Пытаемся разместить слева от курсора
+    x = clientX - menuWidth - CONTEXT_MENU_OFFSET
+    // Если не помещается слева, прижимаем к левому краю
+    if (x < CONTEXT_MENU_OFFSET) {
+      x = CONTEXT_MENU_OFFSET
+    }
+  } else {
+    // Размещаем справа от курсора
+    x = clientX + CONTEXT_MENU_OFFSET
+    // Убеждаемся, что меню не выходит за правый край
+    const maxX = window.innerWidth - menuWidth - CONTEXT_MENU_OFFSET
+    if (x > maxX) {
+      x = maxX
+    }
+  }
+
+  // Вертикальное позиционирование
+  const availableBottom = window.innerHeight - clientY
+  const placeAbove = availableBottom < menuHeight + CONTEXT_MENU_OFFSET
+
+  let y
+  if (placeAbove) {
+    // Пытаемся разместить выше курсора
+    y = clientY - menuHeight - CONTEXT_MENU_OFFSET
+    // Если не помещается выше, прижимаем к верхнему краю
+    if (y < CONTEXT_MENU_OFFSET) {
+      y = CONTEXT_MENU_OFFSET
+    }
+  } else {
+    // Размещаем ниже курсора
+    y = clientY + CONTEXT_MENU_OFFSET
+    // Убеждаемся, что меню не выходит за нижний край
+    const maxY = window.innerHeight - menuHeight - CONTEXT_MENU_OFFSET
+    if (y > maxY) {
+      y = maxY
+    }
+  }
 
   return { x, y }
 }
