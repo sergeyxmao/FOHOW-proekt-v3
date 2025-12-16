@@ -4172,7 +4172,9 @@ const handleStageMouseDown = (event) => {
 
   // Если найдено изображение под курсором и оно не заблокировано
   if (imageUnderCursor && !imageUnderCursor.isLocked) {
-    event.stopPropagation();
+    // stopImmediatePropagation предотвращает срабатывание других обработчиков
+    // включая pointerdown на карточках, которые перекрывают изображение
+    event.stopImmediatePropagation();
     event.preventDefault();
 
     // Если изображение не выделено - выделяем его
@@ -4514,8 +4516,8 @@ onMounted(() => {
     canvasContainerRef.value.addEventListener('pointermove', handleMouseMove);
     canvasContainerRef.value.addEventListener('pointerdown', handlePointerDown);
     canvasContainerRef.value.addEventListener('click', handleActivePvButtonClick, true);
-    // Добавляем обработчик mousedown в capture фазе для перетаскивания изображений на заднем плане
-    canvasContainerRef.value.addEventListener('mousedown', handleStageMouseDown, true);
+    // Добавляем обработчик pointerdown в capture фазе для перетаскивания изображений на заднем плане
+    canvasContainerRef.value.addEventListener('pointerdown', handleStageMouseDown, true);
   }
 
   handleWindowResize();
@@ -4575,7 +4577,7 @@ onBeforeUnmount(() => {
     canvasContainerRef.value.removeEventListener('pointermove', handleMouseMove);
     canvasContainerRef.value.removeEventListener('pointerdown', handlePointerDown);
     canvasContainerRef.value.removeEventListener('click', handleActivePvButtonClick, true);
-    canvasContainerRef.value.removeEventListener('mousedown', handleStageMouseDown, true);
+    canvasContainerRef.value.removeEventListener('pointerdown', handleStageMouseDown, true);
 
   }
   window.removeEventListener('keydown', handleKeydown);
