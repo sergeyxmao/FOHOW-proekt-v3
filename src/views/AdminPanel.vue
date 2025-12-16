@@ -12,7 +12,7 @@
         v-for="tab in tabs"
         :key="tab.id"
         :class="['tab', { active: activeTab === tab.id }]"
-        @click="activeTab = tab.id"
+        @click="setActiveTab(tab.id)"
       >
         {{ tab.label }}
       </button>
@@ -64,8 +64,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '../stores/admin'
 import { useAuthStore } from '../stores/auth'
 import AdminStats from '../components/Admin/AdminStats.vue'
@@ -77,10 +77,9 @@ import AdminSharedLibrary from '../components/Admin/AdminSharedLibrary.vue'
 import AdminTransactionHistory from '../components/Admin/AdminTransactionHistory.vue'
 
 const router = useRouter()
+const route = useRoute()  
 const adminStore = useAdminStore()
 const authStore = useAuthStore()
-
-const activeTab = ref('stats')
 
 const tabs = [
   { id: 'stats', label: 'Статистика' },
@@ -91,7 +90,15 @@ const tabs = [
   { id: 'library', label: 'Общая библиотека' },
   { id: 'logs', label: 'Логи' }
 ]
+const tabIds = tabs.map((tab) => tab.id)
+const activeTab = ref(tabs[0].id)
 
+const setActiveTab = (tabId) => {
+  if (!tabIds.includes(tabId)) return
+
+  activeTab.value = tabId
+  router.replace({ query: { ...route.query, tab: tabId } })
+}
 onMounted(async () => {
   // Проверяем, что пользователь является администратором
   if (!authStore.user?.role || authStore.user.role !== 'admin') {
@@ -107,6 +114,25 @@ onMounted(async () => {
     console.error('[ADMIN] Ошибка загрузки статистики:', err)
   }
 })
+
+
+watch(
+  () => route.query.tab,
+  (tabFromRoute) => {
+    if (typeof tabFromRoute !== 'string') {
+      setActiveTab(activeTab.value)
+      return
+    }
+
+    if (tabIds.includes(tabFromRoute)) {
+      activeTab.value = tabFromRoute
+      return
+    }
+
+    setActiveTab(tabs[0].id)
+  },
+  { immediate: true }
+)  
 </script>
 
 <style scoped>
