@@ -1,6 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import ObjectContextMenu from '../drawing/ObjectContextMenu.vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   image: {
@@ -13,74 +12,9 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['image-click', 'start-drag', 'redraw'])
+const emit = defineEmits(['image-click', 'start-drag', 'redraw', 'contextmenu'])
 
 const isDragging = ref(false)
-const contextMenu = ref({
-  visible: false,
-  x: 0,
-  y: 0
-})
-const CONTEXT_MENU_DEFAULT_WIDTH = 200
-const CONTEXT_MENU_DEFAULT_HEIGHT = 240
-const CONTEXT_MENU_OFFSET = 12
-const contextMenuSize = ref({
-  width: CONTEXT_MENU_DEFAULT_WIDTH,
-  height: CONTEXT_MENU_DEFAULT_HEIGHT
-})
-const contextMenuRef = ref(null)
-
-const calculateContextMenuPosition = (clientX, clientY) => {
-  const menuWidth = contextMenuSize.value.width
-  const menuHeight = contextMenuSize.value.height
-
-  // Горизонтальное позиционирование
-  const availableRight = window.innerWidth - clientX
-  const availableLeft = clientX
-  const placeLeft = availableRight < menuWidth + CONTEXT_MENU_OFFSET
-
-  let x
-  if (placeLeft) {
-    // Пытаемся разместить слева от курсора
-    x = clientX - menuWidth - CONTEXT_MENU_OFFSET
-    // Если не помещается слева, прижимаем к левому краю
-    if (x < CONTEXT_MENU_OFFSET) {
-      x = CONTEXT_MENU_OFFSET
-    }
-  } else {
-    // Размещаем справа от курсора
-    x = clientX + CONTEXT_MENU_OFFSET
-    // Убеждаемся, что меню не выходит за правый край
-    const maxX = window.innerWidth - menuWidth - CONTEXT_MENU_OFFSET
-    if (x > maxX) {
-      x = maxX
-    }
-  }
-
-  // Вертикальное позиционирование
-  const availableBottom = window.innerHeight - clientY
-  const placeAbove = availableBottom < menuHeight + CONTEXT_MENU_OFFSET
-
-  let y
-  if (placeAbove) {
-    // Пытаемся разместить выше курсора
-    y = clientY - menuHeight - CONTEXT_MENU_OFFSET
-    // Если не помещается выше, прижимаем к верхнему краю
-    if (y < CONTEXT_MENU_OFFSET) {
-      y = CONTEXT_MENU_OFFSET
-    }
-  } else {
-    // Размещаем ниже курсора
-    y = clientY + CONTEXT_MENU_OFFSET
-    // Убеждаемся, что меню не выходит за нижний край
-    const maxY = window.innerHeight - menuHeight - CONTEXT_MENU_OFFSET
-    if (y > maxY) {
-      y = maxY
-    }
-  }
-
-  return { x, y }
-}
 /**
  * Определение типа взаимодействия с объектом изображения
  * @param {MouseEvent} event - событие мыши
@@ -159,57 +93,8 @@ function handleDragStart(event) {
 function handleContextMenu(event) {
   event.preventDefault()
   event.stopPropagation()
-  emit('image-click', { event, imageId: props.image.id })
-
-  const position = calculateContextMenuPosition(event.clientX, event.clientY)
-  
-  contextMenu.value = {
-    visible: true,
-    x: position.x,
-    y: position.y
-  }
-
-  nextTick().then(() => {
-    const rect = contextMenuRef.value?.getMenuRect?.()
-    if (rect) {
-      contextMenuSize.value = {
-        width: rect.width,
-        height: rect.height
-      }
-
-      const adjustedPosition = calculateContextMenuPosition(event.clientX, event.clientY)
-      contextMenu.value.x = adjustedPosition.x
-      contextMenu.value.y = adjustedPosition.y
-    }
-  })  
+  emit('contextmenu', { event, imageId: props.image.id })
 }
-
-// Закрыть контекстное меню
-function closeContextMenu() {
-  contextMenu.value.visible = false
-}
-
-// Обработчик перерисовки
-function handleRedraw() {
-  emit('redraw')
-}
-
-// Обработчик клика вне контекстного меню
-function handleClickOutside(event) {
-  if (contextMenu.value.visible && !event.target.closest('.context-menu')) {
-    closeContextMenu()
-  }
-}
-
-// Монтируем обработчик клика при создании компонента
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-
-// Удаляем обработчик при размонтировании
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
 </script>
 
 <template>
@@ -258,17 +143,6 @@ onBeforeUnmount(() => {
       <div class="resize-handle resize-handle--w" data-handle="w" @mousedown.stop="handleMouseDown"></div>
     </template>
   </div>
-
-  <!-- Контекстное меню -->
-  <ObjectContextMenu
-    ref="contextMenuRef"    
-    :is-visible="contextMenu.visible"
-    :x="contextMenu.x"
-    :y="contextMenu.y"
-    :object="image"
-    @close="closeContextMenu"
-    @redraw="handleRedraw"
-  />
 </template>
 
 <style scoped>

@@ -14,9 +14,10 @@ import Avatar from './Avatar.vue';
 import AvatarContextMenu from './AvatarContextMenu.vue';
 import AvatarNumberInputModal from '../Modals/AvatarNumberInputModal.vue';
 import NoteWindow from './NoteWindow.vue';
-import IncompatibilityWarningModal from '../Modals/IncompatibilityWarningModal.vue';  
+import IncompatibilityWarningModal from '../Modals/IncompatibilityWarningModal.vue';
 import Sticker from './Sticker.vue';
 import CanvasImage from './CanvasImage.vue';
+import ObjectContextMenu from '../drawing/ObjectContextMenu.vue';
 import AnchorPoint from './AnchorPoint.vue';  
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { useBezierCurves } from '../../composables/useBezierCurves';
@@ -215,6 +216,10 @@ const draggingControlPoint = ref(null); // { connectionId, pointIndex }
 // Контекстное меню для аватара
 const avatarContextMenu = ref(null); // { avatarId }
 const avatarContextMenuPosition = ref({ x: 0, y: 0 })
+
+// Контекстное меню для изображения
+const imageContextMenu = ref(null); // { imageId }
+const imageContextMenuPosition = ref({ x: 0, y: 0 })
 
 // Модальное окно для ввода компьютерного номера
 const avatarNumberModalVisible = ref(false)
@@ -4044,6 +4049,37 @@ const closeAvatarContextMenu = () => {
   avatarContextMenu.value = null;
 };
 
+// Обработчик правого клика на изображении для открытия контекстного меню
+const handleImageContextMenu = (event, imageId) => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  // Закрываем другие контекстные меню
+  closeAvatarContextMenu();
+  closeImageContextMenu();
+
+  // Выделяем изображение, если оно еще не выделено
+  if (!imagesStore.selectedImageIds.includes(imageId)) {
+    clearObjectSelections();
+    imagesStore.selectImage(imageId);
+  }
+
+  // Открываем контекстное меню для изображения
+  const image = imagesStore.images.find(img => img.id === imageId);
+  if (image) {
+    imageContextMenu.value = { imageId };
+    imageContextMenuPosition.value = {
+      x: event.clientX,
+      y: event.clientY
+    };
+  }
+};
+
+// Закрытие контекстного меню изображения
+const closeImageContextMenu = () => {
+  imageContextMenu.value = null;
+};
+
 // Обработчик двойного клика на аватаре
 const handleAvatarDoubleClick = (event, avatarId) => {
   event.stopPropagation();
@@ -4122,6 +4158,29 @@ const handleImageClick = ({ event, imageId }) => {
     }
   }
   selectedCardId.value = null;
+};
+
+const handleStageMouseDown = (event) => {
+  // Проверяем только левую кнопку мыши
+  if (event.button !== 0) {
+    return;
+  }
+
+  // Проверяем, есть ли изображение под курсором (даже если оно на заднем плане)
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+  const imageUnderCursor = getObjectAtPoint(canvasPos.x, canvasPos.y);
+
+  // Если найдено изображение и оно выделено, инициируем перетаскивание
+  if (imageUnderCursor && imageUnderCursor.isSelected && !imageUnderCursor.isLocked) {
+    event.stopPropagation();
+
+    // Инициируем перетаскивание изображения
+    startImageDrag({
+      event,
+      imageId: imageUnderCursor.id,
+      interactionType: 'move'
+    });
+  }
 };
 
 const handleImageRedraw = () => {
@@ -4955,7 +5014,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     >
       {{ selectedObjectsCount }}
     </div>
-  <div class="canvas-content" :style="canvasContentStyle" @click="handleStageClick" @dragover.prevent="handleImageDragOver" @drop.prevent="handleImageDrop">
+  <div class="canvas-content" :style="canvasContentStyle" @mousedown="handleStageMouseDown" @click="handleStageClick" @dragover.prevent="handleImageDragOver" @drop.prevent="handleImageDrop">
       <div
         v-if="guidesEnabled && (activeGuides.vertical !== null || activeGuides.horizontal !== null)"
         class="guides-overlay"
@@ -5203,6 +5262,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         @image-click="handleImageClick"
         @start-drag="startImageDrag"
         @redraw="handleImageRedraw"
+        @contextmenu="({ event, imageId }) => handleImageContextMenu(event, imageId)"
       />
       <!-- Стикеры отсортированные по z-index -->
       <!-- Диапазон z-index для стикеров: 10000+ (всегда на переднем плане) -->
@@ -5232,6 +5292,17 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       :avatar="cardsStore.cards.find(c => c.id === avatarContextMenu.avatarId)"
       :position="avatarContextMenuPosition"
       @close="closeAvatarContextMenu"
+    />
+
+    <!-- Контекстное меню для изображения -->
+    <ObjectContextMenu
+      v-if="imageContextMenu"
+      :is-visible="!!imageContextMenu"
+      :x="imageContextMenuPosition.x"
+      :y="imageContextMenuPosition.y"
+      :object="imagesStore.images.find(img => img.id === imageContextMenu.imageId)"
+      @close="closeImageContextMenu"
+      @redraw="() => {}"
     />
 
     <!-- Модальное окно для ввода компьютерного номера -->
