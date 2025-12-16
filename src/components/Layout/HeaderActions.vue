@@ -343,12 +343,12 @@ function handleToggleTheme() {
                 class="header-actions__menu-item"
                 type="button"
                 role="menuitem"
-              @click.stop="selectTemplate(option.id)"
-            >
-              {{ option.displayText }}
-            </button>
-          </div>
-        </transition>
+                @click.stop="selectTemplate(option.id)"
+              >
+                {{ option.displayText }}
+              </button>
+            </div>
+          </transition>
         </div>
         <button
           class="header-actions__grid-button header-actions__grid-button--avatar"
@@ -359,7 +359,6 @@ function handleToggleTheme() {
           <img src="/Avatar.png" alt="" class="header-actions__avatar-icon" aria-hidden="true" />
           <span class="visually-hidden">Добавить Аватар</span>
         </button>
-        </div>
       </div>
       <button
         v-if="!props.hideThemeToggle"
@@ -427,12 +426,12 @@ function handleToggleTheme() {
                 class="header-actions__menu-item"
                 type="button"
                 role="menuitem"
-              @click.stop="selectTemplate(option.id)"
-            >
-              {{ option.displayText }}
-            </button>
-          </div>
-        </transition>
+                @click.stop="selectTemplate(option.id)"
+              >
+                {{ option.displayText }}
+              </button>
+            </div>
+          </transition>
         </div>
         <button
           class="header-actions__button header-actions__button--avatar"
