@@ -669,7 +669,6 @@ export function registerAdminRoutes(app) {
           sh.amount_paid,
           sh.currency,
           sh.created_at,
-          sh.updated_at,
           u.email as user_email,
           u.username as user_username,
           u.avatar_url as user_avatar,
