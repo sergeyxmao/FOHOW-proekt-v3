@@ -1205,14 +1205,15 @@ watch(panelCardRef, (current, previous) => {
 .template-menu {
   position: relative;
   display: inline-flex;
+  align-items: center;	
 }
 
 .template-menu__list {
   position: absolute;
-  left: 50%;
-  right: auto;
-  transform: translateX(-50%);
-  top: calc(100% + 10px * var(--panel-scale));
+  top: 50%;
+  left: auto;
+  right: calc(100% + var(--template-menu-gap));
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   gap: calc(6px * var(--panel-scale));
@@ -1228,9 +1229,9 @@ watch(panelCardRef, (current, previous) => {
   scrollbar-width: thin;
 }
 .template-menu__list--drop-up {
-  bottom: calc(100% + 10px * var(--panel-scale));
   top: auto;
-  transform-origin: center bottom;
+  transform: translateY(50%);
+  transform-origin: center;
 }
 .template-menu__list::-webkit-scrollbar {
   width: calc(6px * var(--panel-scale));
