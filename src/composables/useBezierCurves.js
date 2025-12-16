@@ -10,35 +10,29 @@
 export function buildBezierPath(points) {
   if (!points || points.length < 2) return ''
 
-  // Для двух точек - прямая линия
   if (points.length === 2) {
     const [start, end] = points
     return `M ${start.x} ${start.y} L ${end.x} ${end.y}`
   }
 
-  // Для трех точек - квадратичная кривая Безье
-  if (points.length === 3) {
-    const [start, control, end] = points
-    return `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`
+  // Используем Catmull-Rom -> Bezier для плавных переходов между несколькими точками
+  const path = [`M ${points[0].x} ${points[0].y}`]
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] || points[i]
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    const p3 = points[i + 2] || points[i + 1]
+
+    const c1x = p1.x + (p2.x - p0.x) / 6
+    const c1y = p1.y + (p2.y - p0.y) / 6
+    const c2x = p2.x - (p3.x - p1.x) / 6
+    const c2y = p2.y - (p3.y - p1.y) / 6
+
+    path.push(`C ${c1x} ${c1y} ${c2x} ${c2y} ${p2.x} ${p2.y}`)
   }
 
-  // Для более чем трех точек - последовательность квадратичных кривых
-  let path = `M ${points[0].x} ${points[0].y}`
-
-  for (let i = 1; i < points.length - 1; i++) {
-    const cp = points[i]
-    const next = points[i + 1]
-    const midX = (cp.x + next.x) / 2
-    const midY = (cp.y + next.y) / 2
-    path += ` Q ${cp.x} ${cp.y} ${midX} ${midY}`
-  }
-
-  // Последний сегмент
-  const lastCp = points[points.length - 2]
-  const end = points[points.length - 1]
-  path += ` Q ${lastCp.x} ${lastCp.y} ${end.x} ${end.y}`
-
-  return path
+  return path.join(' ')
 }
 
 /**
@@ -97,36 +91,41 @@ export function findClosestPointOnBezier(points, x, y, samples = 100) {
 
   const segments = []
 
-  if (points.length === 2) {
-    segments.push({ start: points[0], control: points[0], end: points[1], insertIndex: 1 })
-  } else if (points.length === 3) {
-    segments.push({ start: points[0], control: points[1], end: points[2], insertIndex: 1 })
-  } else {
-    let currentStart = points[0]
-    for (let i = 1; i < points.length - 1; i++) {
-      const cp = points[i]
-      const next = points[i + 1]
-      const isLastControl = i === points.length - 2
-      const end = isLastControl ? points[points.length - 1] : { x: (cp.x + next.x) / 2, y: (cp.y + next.y) / 2 }
+  // Строим те же сегменты Catmull-Rom, что и при генерации пути
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] || points[i]
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    const p3 = points[i + 2] || points[i + 1]
 
-      segments.push({ start: currentStart, control: cp, end, insertIndex: i })
-      currentStart = end
+    const c1 = {
+      x: p1.x + (p2.x - p0.x) / 6,
+      y: p1.y + (p2.y - p0.y) / 6
     }
+    const c2 = {
+      x: p2.x - (p3.x - p1.x) / 6,
+      y: p2.y - (p3.y - p1.y) / 6
+    }
+
+    segments.push({ start: p1, c1, c2, end: p2, insertIndex: i + 1 })
   }
 
   const samplesPerSegment = Math.max(5, Math.round(samples / Math.max(1, segments.length)))
 
-  segments.forEach((segment, segmentIndex) => {
+  segments.forEach(segment => {
     for (let j = 0; j <= samplesPerSegment; j++) {
       const t = j / samplesPerSegment
       const oneMinusT = 1 - t
 
-      const px = (oneMinusT ** 2) * segment.start.x
-        + 2 * oneMinusT * t * segment.control.x
-        + (t ** 2) * segment.end.x
-      const py = (oneMinusT ** 2) * segment.start.y
-        + 2 * oneMinusT * t * segment.control.y
-        + (t ** 2) * segment.end.y
+      const px = oneMinusT ** 3 * segment.start.x
+        + 3 * oneMinusT ** 2 * t * segment.c1.x
+        + 3 * oneMinusT * t ** 2 * segment.c2.x
+        + t ** 3 * segment.end.x
+
+      const py = oneMinusT ** 3 * segment.start.y
+        + 3 * oneMinusT ** 2 * t * segment.c1.y
+        + 3 * oneMinusT * t ** 2 * segment.c2.y
+        + t ** 3 * segment.end.y
 
       const dist = Math.sqrt((px - x) ** 2 + (py - y) ** 2)
 
@@ -134,7 +133,7 @@ export function findClosestPointOnBezier(points, x, y, samples = 100) {
         minDist = dist
         closestPoint = { x: px, y: py }
         closestT = t
-        insertIndex = segmentIndex + 1
+        insertIndex = segment.insertIndex
       }
     }
   })
