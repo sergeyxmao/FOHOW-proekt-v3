@@ -51,6 +51,13 @@ export const useAdminStore = defineStore('admin', {
     selectedUser: null,
     stats: null,
     logs: [],
+    transactions: [],
+    transactionsPagination: {
+      page: 1,
+      limit: 20,
+      total: 0,
+      totalPages: 0
+    },
     pendingImages: [],
     pendingImagesTotal: 0,
     pendingVerifications: [],
@@ -1124,7 +1131,7 @@ export const useAdminStore = defineStore('admin', {
         if (!response.ok) {
           await handleAdminErrorResponse(response, 'Ошибка отклонения заявки')
 
-          return         
+          return
         }
 
         const data = await response.json()
@@ -1138,6 +1145,61 @@ export const useAdminStore = defineStore('admin', {
         return data
       } catch (err) {
         console.error('[ADMIN] Ошибка отклонения заявки:', err)
+        this.error = err.message
+        throw err
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * Получить историю транзакций с пагинацией и фильтрами
+     * @param {Object} params - Параметры запроса
+     * @param {number} params.page - Номер страницы
+     * @param {number} params.limit - Количество записей на странице
+     * @param {string} params.search - Поиск по email
+     * @param {string} params.dateFrom - Дата начала
+     * @param {string} params.dateTo - Дата окончания
+     */
+    async fetchTransactions({ page = 1, limit = 20, search = '', dateFrom = null, dateTo = null } = {}) {
+      this.isLoading = true
+      this.error = null
+
+      try {
+        const authStore = useAuthStore()
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString()
+        })
+
+        if (search) {
+          params.append('search', search)
+        }
+        if (dateFrom) {
+          params.append('dateFrom', dateFrom)
+        }
+        if (dateTo) {
+          params.append('dateTo', dateTo)
+        }
+
+        const response = await fetch(`${API_URL}/admin/transactions?${params}`, {
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          }
+        })
+
+        if (!response.ok) {
+          await handleAdminErrorResponse(response, 'Ошибка загрузки истории транзакций')
+          return
+        }
+
+        const data = await response.json()
+        this.transactions = data.data
+        this.transactionsPagination = data.pagination
+
+        return data
+      } catch (err) {
+        console.error('[ADMIN] Ошибка загрузки транзакций:', err)
         this.error = err.message
         throw err
       } finally {

@@ -29,6 +29,11 @@
         <AdminUsers />
       </div>
 
+      <!-- Вкладка: История транзакций -->
+      <div v-if="activeTab === 'transactions'" class="tab-content">
+        <AdminTransactionHistory />
+      </div>
+
       <!-- Вкладка: Верификация -->
       <div v-if="activeTab === 'verification'" class="tab-content">
         <AdminVerification />
@@ -69,6 +74,7 @@ import AdminVerification from '../components/Admin/AdminVerification.vue'
 import AdminLogs from '../components/Admin/AdminLogs.vue'
 import AdminImagesModeration from '../components/Admin/AdminImagesModeration.vue'
 import AdminSharedLibrary from '../components/Admin/AdminSharedLibrary.vue'
+import AdminTransactionHistory from '../components/Admin/AdminTransactionHistory.vue'
 
 const router = useRouter()
 const adminStore = useAdminStore()
@@ -79,6 +85,7 @@ const activeTab = ref('stats')
 const tabs = [
   { id: 'stats', label: 'Статистика' },
   { id: 'users', label: 'Пользователи' },
+  { id: 'transactions', label: 'История транзакций' },
   { id: 'verification', label: 'Верификация' },
   { id: 'moderation', label: 'Модерация изображений' },
   { id: 'library', label: 'Общая библиотека' },
