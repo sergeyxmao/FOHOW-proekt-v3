@@ -4238,18 +4238,34 @@ const handleStageClick = async (event) => {
       console.error('Не удалось создать стикер: ID доски не определен.');
     }
 
-    const isImageAlreadySelected = imagesStore.selectedImageIds.includes(imageId);
-    const hasMultipleImages = imagesStore.selectedImageIds.length > 1;
-    const hasOtherTypesSelected =
-      cardsStore.selectedCardIds.length > 0 || stickersStore.selectedStickerIds.length > 0;
-
-    if (!isImageAlreadySelected || hasMultipleImages || hasOtherTypesSelected) {
-      clearObjectSelections();
-    }
-
+    return; // Завершаем выполнение функции после создания стикера
   }
 
-  // Логика для снятия выделения при клике на пустое место 
+  // Проверяем, есть ли изображение под курсором (даже если оно на заднем плане)
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+  const imageUnderCursor = getObjectAtPoint(canvasPos.x, canvasPos.y);
+
+  if (imageUnderCursor && !imageUnderCursor.isLocked) {
+    // Если найдено изображение под курсором, выделяем его
+    event.stopPropagation();
+
+    const isCtrlPressed = event.ctrlKey || event.metaKey;
+
+    if (isCtrlPressed) {
+      // При Ctrl - переключаем выделение
+      imagesStore.toggleImageSelection(imageUnderCursor.id);
+    } else {
+      // Без Ctrl - выделяем только это изображение
+      clearObjectSelections();
+      imagesStore.selectImage(imageUnderCursor.id);
+    }
+
+    selectedConnectionIds.value = [];
+    selectedCardId.value = null;
+    return;
+  }
+
+  // Логика для снятия выделения при клике на пустое место
   const preserveCardSelection = true;
   if (!event.ctrlKey && !event.metaKey) {
     clearObjectSelections({ preserveCardSelection });
