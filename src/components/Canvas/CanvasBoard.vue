@@ -2615,56 +2615,13 @@ const updateStageSize = () => {
   if (!canvasContainerRef.value) {
     return;
   }
-  const containerWidth = canvasContainerRef.value.clientWidth;
-  const containerHeight = canvasContainerRef.value.clientHeight;
-  
+
   // Установите большой размер холста по умолчанию (неограниченная область)
+  // Это позволяет размещать объекты в любой точке холста
   const UNLIMITED_CANVAS_SIZE = 50000; // Размер в пиксели - достаточный для любого использования
-  
+
   stageConfig.value.width = UNLIMITED_CANVAS_SIZE;
   stageConfig.value.height = UNLIMITED_CANVAS_SIZE;
-  
-  const cardBounds = cardsStore.cards.map(card => ({
-    right: card.x + (card.width || 0),
-    bottom: card.y + (card.height || 0)
-  }));
-
-  const stickerBounds = stickersStore.stickers.map(sticker => ({
-    right: sticker.pos_x + 200,
-    bottom: sticker.pos_y + 150
-  }));
-
-  const imageBounds = imagesStore.images.map(image => ({
-    right: image.x + (image.width || 0),
-    bottom: image.y + (image.height || 0)
-  }));
-
-  const anchorBounds = anchors.value.map(anchor => {
-    const anchorX = Number.isFinite(anchor.pos_x) ? anchor.pos_x : anchor.x;
-    const anchorY = Number.isFinite(anchor.pos_y) ? anchor.pos_y : anchor.y;
-    return {
-      right: anchorX + 12,
-      bottom: anchorY + 12
-    };
-  });
-
-  const allBounds = [...cardBounds, ...stickerBounds, ...imageBounds, ...anchorBounds];
-
-  const hasObjects = allBounds.length > 0;
-
-  const maxRight = hasObjects ? Math.max(...allBounds.map(item => item.right)) : 0;
-  const maxBottom = hasObjects ? Math.max(...allBounds.map(item => item.bottom)) : 0;
-  const dynamicPadding = Math.max(CANVAS_PADDING, containerWidth, containerHeight);
-  
-  const baseWidth = hasObjects
-    ? Math.max(containerWidth, maxRight + dynamicPadding)
-    : Math.max(containerWidth + CANVAS_PADDING, dynamicPadding);
-  const baseHeight = hasObjects
-    ? Math.max(containerHeight, maxBottom + dynamicPadding)
-    : Math.max(containerHeight + CANVAS_PADDING, dynamicPadding);
-
-  stageConfig.value.width = baseWidth;
-  stageConfig.value.height = baseHeight;
 };
 
 const removeSelectionListeners = () => {
