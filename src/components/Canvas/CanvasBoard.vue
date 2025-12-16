@@ -4170,9 +4170,21 @@ const handleStageMouseDown = (event) => {
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
   const imageUnderCursor = getObjectAtPoint(canvasPos.x, canvasPos.y);
 
-  // Если найдено изображение и оно выделено, инициируем перетаскивание
-  if (imageUnderCursor && imageUnderCursor.isSelected && !imageUnderCursor.isLocked) {
+  // Если найдено изображение под курсором и оно не заблокировано
+  if (imageUnderCursor && !imageUnderCursor.isLocked) {
     event.stopPropagation();
+    event.preventDefault();
+
+    // Если изображение не выделено - выделяем его
+    if (!imageUnderCursor.isSelected) {
+      const isCtrlPressed = event.ctrlKey || event.metaKey;
+      if (isCtrlPressed) {
+        imagesStore.toggleImageSelection(imageUnderCursor.id);
+      } else {
+        clearObjectSelections();
+        imagesStore.selectImage(imageUnderCursor.id);
+      }
+    }
 
     // Инициируем перетаскивание изображения
     startImageDrag({
