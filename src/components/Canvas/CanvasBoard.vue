@@ -3349,6 +3349,22 @@ const handleDragInternal = (event) => {
       );
     });
   }
+  if (Array.isArray(dragState.value.avatarConnectionSnapshots) && dragState.value.avatarConnectionSnapshots.length > 0) {
+    dragState.value.avatarConnectionSnapshots.forEach(snapshot => {
+      const connection = connectionsStore.avatarConnections.find(c => c.id === snapshot.id);
+
+      if (!connection) {
+        return;
+      }
+
+      const newControlPoints = snapshot.controlPoints.map(point => ({
+        x: point.x + finalDx,
+        y: point.y + finalDy
+      }));
+
+      connectionsStore.updateAvatarConnection(connection.id, { controlPoints: newControlPoints }, { saveToHistory: false });
+    });
+  }
 
   updateStageSize();
 
@@ -3450,22 +3466,6 @@ const handleImageResizeInternal = (event) => {
 
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
   const deltaX = canvasPos.x - resizeState.value.startPointer.x;
-  if (Array.isArray(dragState.value.avatarConnectionSnapshots) && dragState.value.avatarConnectionSnapshots.length > 0) {
-    dragState.value.avatarConnectionSnapshots.forEach(snapshot => {
-      const connection = connectionsStore.avatarConnections.find(c => c.id === snapshot.id);
-
-      if (!connection) {
-        return;
-      }
-
-      const newControlPoints = snapshot.controlPoints.map(point => ({
-        x: point.x + finalDx,
-        y: point.y + finalDy
-      }));
-
-      connectionsStore.updateAvatarConnection(connection.id, { controlPoints: newControlPoints }, { saveToHistory: false });
-    });
-  }	
   const deltaY = canvasPos.y - resizeState.value.startPointer.y;
 
   const image = imagesStore.images.find(img => img.id === resizeState.value.imageId);
