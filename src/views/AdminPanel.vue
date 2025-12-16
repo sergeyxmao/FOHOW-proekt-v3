@@ -1,59 +1,72 @@
 <template>
   <div class="admin-panel">
-    <div class="admin-header">
-      <h1>Панель администратора</h1>
-      <button @click="$router.push('/boards')" class="back-button">
-        Вернуться к доскам
-      </button>
-    </div>
-
-    <div class="admin-tabs">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        :class="['tab', { active: activeTab === tab.id }]"
-        @click="setActiveTab(tab.id)"
-      >
-        {{ tab.label }}
-      </button>
-    </div>
-
-    <div class="admin-content">
-      <!-- Вкладка: Статистика -->
-      <div v-if="activeTab === 'stats'" class="tab-content">
-        <AdminStats />
+    <!-- Боковая панель слева -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>Админ панель</h2>
       </div>
 
-      <!-- Вкладка: Пользователи -->
-      <div v-if="activeTab === 'users'" class="tab-content">
-        <AdminUsers />
+      <nav class="sidebar-nav">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          :class="['sidebar-tab', { active: activeTab === tab.id }]"
+          @click="setActiveTab(tab.id)"
+        >
+          {{ tab.label }}
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button @click="$router.push('/boards')" class="back-button">
+          Вернуться к доскам
+        </button>
+      </div>
+    </aside>
+
+    <!-- Основной контент -->
+    <main class="main-content">
+      <div class="content-header">
+        <h1>{{ tabs.find(t => t.id === activeTab)?.label || 'Панель администратора' }}</h1>
       </div>
 
-      <!-- Вкладка: История транзакций -->
-      <div v-if="activeTab === 'transactions'" class="tab-content">
-        <AdminTransactionHistory />
-      </div>
+      <div class="content-body">
+        <!-- Вкладка: Статистика -->
+        <div v-if="activeTab === 'stats'" class="tab-content">
+          <AdminStats />
+        </div>
 
-      <!-- Вкладка: Верификация -->
-      <div v-if="activeTab === 'verification'" class="tab-content">
-        <AdminVerification />
-      </div>
+        <!-- Вкладка: Пользователи -->
+        <div v-if="activeTab === 'users'" class="tab-content">
+          <AdminUsers />
+        </div>
 
-      <!-- Вкладка: Логи -->
-      <div v-if="activeTab === 'logs'" class="tab-content">
-        <AdminLogs />
-      </div>
+        <!-- Вкладка: История транзакций -->
+        <div v-if="activeTab === 'transactions'" class="tab-content">
+          <AdminTransactionHistory />
+        </div>
 
-      <!-- Вкладка: Модерация изображений -->
-      <div v-if="activeTab === 'moderation'" class="tab-content">
-        <AdminImagesModeration />
-      </div>
+        <!-- Вкладка: Верификация -->
+        <div v-if="activeTab === 'verification'" class="tab-content">
+          <AdminVerification />
+        </div>
 
-      <!-- Вкладка: Общая библиотека -->
-      <div v-if="activeTab === 'library'" class="tab-content">
-        <AdminSharedLibrary />
+        <!-- Вкладка: Логи -->
+        <div v-if="activeTab === 'logs'" class="tab-content">
+          <AdminLogs />
+        </div>
+
+        <!-- Вкладка: Модерация изображений -->
+        <div v-if="activeTab === 'moderation'" class="tab-content">
+          <AdminImagesModeration />
+        </div>
+
+        <!-- Вкладка: Общая библиотека -->
+        <div v-if="activeTab === 'library'" class="tab-content">
+          <AdminSharedLibrary />
+        </div>
       </div>
-    </div>
+    </main>
 
     <!-- Уведомление об ошибках -->
     <div v-if="adminStore.error" class="error-notification">
@@ -137,36 +150,80 @@ watch(
 
 <style scoped>
 .admin-panel {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 20px;
-  background: #f5f5f5;
-  min-height: 100vh;
-}
-
-.admin-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 100vh;
+  background: #f5f5f5;
 }
 
-.admin-header h1 {
+/* Боковая панель */
+.sidebar {
+  width: 280px;
+  background: white;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.sidebar-header {
+  padding: 30px 20px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.sidebar-header h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: 22px;
+  color: #333;
+  font-weight: 600;
+}
+
+.sidebar-nav {
+  flex: 1;
+  padding: 20px 0;
+  overflow-y: auto;
+}
+
+.sidebar-tab {
+  width: 100%;
+  padding: 14px 24px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 15px;
+  color: #666;
+  transition: all 0.3s;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-tab:hover {
+  background: #f8f8f8;
   color: #333;
 }
 
+.sidebar-tab.active {
+  background: #f0edff;
+  color: #6c63ff;
+  border-left-color: #6c63ff;
+  font-weight: 500;
+}
+
+.sidebar-footer {
+  padding: 20px;
+  border-top: 1px solid #e5e5e5;
+}
+
 .back-button {
-  padding: 10px 20px;
+  width: 100%;
+  padding: 12px 20px;
   background: #6c63ff;
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
   transition: background 0.3s;
@@ -176,46 +233,38 @@ watch(
   background: #5a52d5;
 }
 
-.admin-tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  background: white;
-  padding: 10px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.tab {
+/* Основной контент */
+.main-content {
   flex: 1;
-  padding: 12px 20px;
-  background: transparent;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-  color: #666;
-  transition: all 0.3s;
+  margin-left: 280px;
+  display: flex;
+  flex-direction: column;
 }
 
-.tab:hover {
-  background: #f0f0f0;
-}
-
-.tab.active {
-  background: #6c63ff;
-  color: white;
-}
-
-.admin-content {
+.content-header {
+  padding: 30px 40px;
   background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  min-height: 500px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.content-header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #333;
+  font-weight: 600;
+}
+
+.content-body {
+  flex: 1;
+  padding: 30px 40px;
 }
 
 .tab-content {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  min-height: 600px;
   animation: fadeIn 0.3s;
 }
 
@@ -230,6 +279,7 @@ watch(
   }
 }
 
+/* Уведомление об ошибках */
 .error-notification {
   position: fixed;
   bottom: 20px;
@@ -243,6 +293,7 @@ watch(
   align-items: center;
   gap: 15px;
   animation: slideIn 0.3s;
+  z-index: 200;
 }
 
 @keyframes slideIn {
@@ -270,5 +321,30 @@ watch(
 
 .error-notification button:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 220px;
+  }
+
+  .main-content {
+    margin-left: 220px;
+  }
+
+  .content-header,
+  .content-body {
+    padding: 20px;
+  }
+
+  .sidebar-header {
+    padding: 20px 16px;
+  }
+
+  .sidebar-tab {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
 }
 </style>
