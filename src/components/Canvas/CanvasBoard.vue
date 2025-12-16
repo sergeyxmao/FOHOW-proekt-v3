@@ -4080,6 +4080,22 @@ const closeImageContextMenu = () => {
   imageContextMenu.value = null;
 };
 
+// Обработчик правого клика на canvas для изображений на заднем плане
+const handleStageContextMenu = (event) => {
+  // Проверяем, есть ли изображение под курсором (даже если оно на заднем плане)
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+  const imageUnderCursor = getObjectAtPoint(canvasPos.x, canvasPos.y);
+
+  // Если найдено изображение под курсором
+  if (imageUnderCursor && !imageUnderCursor.isLocked) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    // Вызываем обработчик контекстного меню для изображения
+    handleImageContextMenu(event, imageUnderCursor.id);
+  }
+};
+
 // Обработчик двойного клика на аватаре
 const handleAvatarDoubleClick = (event, avatarId) => {
   event.stopPropagation();
@@ -4518,6 +4534,8 @@ onMounted(() => {
     canvasContainerRef.value.addEventListener('click', handleActivePvButtonClick, true);
     // Добавляем обработчик pointerdown в capture фазе для перетаскивания изображений на заднем плане
     canvasContainerRef.value.addEventListener('pointerdown', handleStageMouseDown, true);
+    // Добавляем обработчик contextmenu в capture фазе для контекстного меню изображений на заднем плане
+    canvasContainerRef.value.addEventListener('contextmenu', handleStageContextMenu, true);
   }
 
   handleWindowResize();
@@ -4578,7 +4596,7 @@ onBeforeUnmount(() => {
     canvasContainerRef.value.removeEventListener('pointerdown', handlePointerDown);
     canvasContainerRef.value.removeEventListener('click', handleActivePvButtonClick, true);
     canvasContainerRef.value.removeEventListener('pointerdown', handleStageMouseDown, true);
-
+    canvasContainerRef.value.removeEventListener('contextmenu', handleStageContextMenu, true);
   }
   window.removeEventListener('keydown', handleKeydown);
   window.removeEventListener('keyup', handleKeyup);
