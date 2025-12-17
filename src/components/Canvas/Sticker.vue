@@ -92,22 +92,26 @@ defineExpose({
 
 // Перетаскивание
 const handlePointerDown = (e) => {
-  if (isEditing.value) {
-    e.stopPropagation();
-    return;
-  }
-
   // Игнорируем правую кнопку мыши
   if (e.button === 2) return;
 
+  // Если стикер в режиме редактирования - НЕ обрабатываем клики вообще
+  // Редактирование закроется через @blur на textarea
+  if (isEditing.value) {
+    return; // НЕ останавливаем всплытие - пусть textarea обработает
+  }
+
+  // Останавливаем всплытие для ВСЕХ остальных случаев
+  e.stopPropagation();
+
   // Проверка Ctrl/Meta для выделения
   if (e.ctrlKey || e.metaKey) {
-    e.stopPropagation();
-
-    // Эмитим событие выделения
     emit('sticker-click', e, props.sticker.id);
     return;
   }
+
+  // Обычный клик без Ctrl - тоже эмитим событие для выделения
+  emit('sticker-click', e, props.sticker.id);
 
   // Начинаем перетаскивание через общую систему
   emit('start-drag', e, props.sticker.id);
@@ -199,7 +203,6 @@ const handleDelete = async (event) => {
     }"
     :style="stickerStyle"
     :data-sticker-id="sticker.id"
-    @click.stop
     @dblclick="handleDoubleClick"
     @pointerdown="handlePointerDown"
     @pointermove="handlePointerMove"
