@@ -4301,31 +4301,20 @@ const handleStageClick = async (event) => {
     // Если нет данных изображения, создаем обычный стикер
     if (boardStore.currentBoardId) {
       try {
-        // Вызываем action для добавления стикера
         const newSticker = await stickersStore.addSticker(boardStore.currentBoardId, {
           pos_x: Math.round(x),
           pos_y: Math.round(y),
-          color: '#FFFF88' // Цвет по умолчанию, как в ТЗ
+          color: '#FFFF88',
         });
-
-        // Если стикер успешно создан - выделяем его и открываем редактирование
-        if (newSticker) {
-          // Снимаем выделение со всех других объектов
-          clearObjectSelections();
-
-          // Выделяем новый стикер
-          stickersStore.selectSticker(newSticker.id);
-
-          // Ждем отрисовки DOM и программно вызываем двойной клик для открытия редактирования
-          await nextTick();
-          const elem = document.querySelector(`[data-sticker-id="${newSticker.id}"]`);
-          if (elem) {
-            elem.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-          }
+        clearObjectSelections();
+        stickersStore.selectSticker(newSticker.id);
+        await nextTick();
+        const elem = document.querySelector(`[data-sticker-id="${newSticker.id}"]`);
+        if (elem) {
+          elem.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
         }
       } catch (error) {
-        console.error('Ошибка создания стикера:', error);
-        alert('Не удалось создать стикер');
+        console.error(error);
       }
     } else {
       console.error('Не удалось создать стикер: ID доски не определен.');
