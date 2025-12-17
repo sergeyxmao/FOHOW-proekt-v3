@@ -4228,6 +4228,7 @@ const handlePvChanged = (cardId) => {
 };
 
 const handleStageClick = async (event) => {
+  console.log('🎯 handleStageClick сработал!', event.target);
   if (suppressNextStageClick) {
     suppressNextStageClick = false;
     return;
