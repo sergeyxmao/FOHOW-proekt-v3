@@ -152,7 +152,10 @@ const canvasContentStyle = computed(() => {
   const scale = Number.isFinite(zoomScale.value) && zoomScale.value > 0 ? zoomScale.value : 1;
 
   const style = {
-    transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`
+    transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
+    // Устанавливаем размер canvas-content равным размеру stage для возможности размещения элементов в любой точке
+    width: `${stageConfig.value.width}px`,
+    height: `${stageConfig.value.height}px`
   };
 
   const step = Number.isFinite(gridStepRef.value) ? gridStepRef.value : 0;
@@ -5381,6 +5384,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   width: 100%;
   height: 100%;
   transform-origin: 0 0;
+  background: transparent; /* Прозрачный фон, чтобы не перекрывать фон canvas-container */
   --grid-step: 40px;
   --grid-line-color: rgba(79, 85, 99, 0.15);
   --grid-opacity: 0;
