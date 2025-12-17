@@ -5110,7 +5110,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         class="svg-layer"
         :width="stageConfig.width"
         :height="stageConfig.height"
-        style="position: absolute; top: 0; left: 0; z-index: 5; overflow: visible; pointer-events: auto;"
+        style="position: absolute; top: 0; left: 0; z-index: 5; overflow: visible; pointer-events: none;"
         @click="handleStageClick"
       >
         <defs>
@@ -5149,7 +5149,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
                 selected: selectedConnectionIds.includes(path.id),
                 'line--balance-highlight': path.highlightType === 'balance',
                 'line--pv-highlight': path.highlightType === 'pv'
-              }           
+              }
             ]"
             marker-start="url(#marker-dot)"
             marker-end="url(#marker-dot)"
@@ -5157,10 +5157,11 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
               '--line-color': path.color,
               '--line-width': `${path.strokeWidth}px`,
               '--line-animation-duration': `${path.animationDuration}ms`,
-              '--line-animation-rgb': avatarAnimationColorRgb,              
+              '--line-animation-rgb': avatarAnimationColorRgb,
               color: path.color,
               stroke: path.color,
-              strokeWidth: path.strokeWidth
+              strokeWidth: path.strokeWidth,
+              pointerEvents: 'stroke'
             }"
           />
         </g>
@@ -5189,20 +5190,22 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
               'avatar-line',
               {
                 selected: selectedAvatarConnectionIds.includes(path.id),
-                'avatar-line--animated': animatedAvatarConnectionIds.has(path.id)              }
+                'avatar-line--animated': animatedAvatarConnectionIds.has(path.id)
+              }
             ]"
-          :style="{
-            '--line-color': path.color,
-            '--line-width': `${path.strokeWidth}px`,
-            '--line-animation-duration': `${avatarAnimationDuration.value}ms`,
-            '--line-animation-rgb': avatarAnimationColorRgb,
-            '--line-animation-color': avatarAnimationColor.value,
-            '--line-flow-direction': path.flowDirection,
-            color: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
-            stroke: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
-            strokeWidth: path.strokeWidth
-          }"
-        />
+            :style="{
+              '--line-color': path.color,
+              '--line-width': `${path.strokeWidth}px`,
+              '--line-animation-duration': `${avatarAnimationDuration.value}ms`,
+              '--line-animation-rgb': avatarAnimationColorRgb,
+              '--line-animation-color': avatarAnimationColor.value,
+              '--line-flow-direction': path.flowDirection,
+              color: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
+              stroke: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
+              strokeWidth: path.strokeWidth,
+              pointerEvents: 'stroke'
+            }"
+          />
 
           <!-- Контрольные точки (видны только когда линия выделена) -->
           <g v-if="selectedAvatarConnectionIds.includes(path.id)">
@@ -5232,7 +5235,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           :style="{
             '--line-color': previewLinePath.color,
             '--line-width': `${previewLinePath.strokeWidth}px`,
-            color: previewLinePath.color
+            color: previewLinePath.color,
+            pointerEvents: 'stroke'
           }"
           :stroke-dasharray="previewLinePath.strokeDasharray"
           marker-start="url(#marker-dot)"
@@ -5248,7 +5252,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
             '--line-color': avatarPreviewLinePath.color,
             '--line-width': `${avatarPreviewLinePath.strokeWidth}px`,
             color: avatarPreviewLinePath.color,
-            stroke: avatarPreviewLinePath.color
+            stroke: avatarPreviewLinePath.color,
+            pointerEvents: 'stroke'
           }"
           :stroke-dasharray="avatarPreviewLinePath.strokeDasharray"
         />
