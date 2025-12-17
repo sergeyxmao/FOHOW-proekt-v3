@@ -4332,6 +4332,10 @@ const handleStageClick = async (event) => {
           pos_y: Math.round(y),
           color: '#FFFF88',
         });
+
+        // Отключаем режим размещения после создания стикера
+        stickersStore.disablePlacementMode();
+
         clearObjectSelections();
         stickersStore.selectSticker(newSticker.id);
         await nextTick();
