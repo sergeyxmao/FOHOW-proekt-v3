@@ -5019,6 +5019,9 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   ref="canvasContainerRef"
   :class="['canvas-container', canvasContainerClasses, { 'canvas-container--modern': props.isModernTheme }]"
   :style="{ backgroundColor: backgroundColor }"
+  @click="handleStageClick"
+  @dragover.prevent="handleImageDragOver"
+  @drop.prevent="handleImageDrop"
 >
     <div
       v-if="selectionRect"
@@ -5032,7 +5035,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     >
       {{ selectedObjectsCount }}
     </div>
-  <div class="canvas-content" :style="canvasContentStyle" @click="handleStageClick" @dragover.prevent="handleImageDragOver" @drop.prevent="handleImageDrop">
+  <div class="canvas-content" :style="canvasContentStyle">
       <div
         v-if="guidesEnabled && (activeGuides.vertical !== null || activeGuides.horizontal !== null)"
         class="guides-overlay"
