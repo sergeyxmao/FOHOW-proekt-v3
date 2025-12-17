@@ -4248,7 +4248,12 @@ const handlePvChanged = (cardId) => {
 };
 
 const handleStageClick = async (event) => {
-  console.log('🎯 handleStageClick сработал!', event.target);
+  // *** ДОБАВЛЕНО ЛОГИРОВАНИЕ ***
+  console.log('🎯 handleStageClick сработал!', {
+    target: event.target.className,
+    isPlacementMode: stickersStore.isPlacementMode,
+    placementTarget: stickersStore.placementTarget
+  });
   if (suppressNextStageClick) {
     suppressNextStageClick = false;
     return;
