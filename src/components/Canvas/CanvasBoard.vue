@@ -155,7 +155,9 @@ const canvasContentStyle = computed(() => {
     transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
     // Устанавливаем размер canvas-content равным размеру stage для возможности размещения элементов в любой точке
     width: `${stageConfig.value.width}px`,
-    height: `${stageConfig.value.height}px`
+    height: `${stageConfig.value.height}px`,
+    // Пропускаем клики через canvas-content к нижележащим элементам (SVG и canvas-container)
+    pointerEvents: 'none'
   };
 
   const step = Number.isFinite(gridStepRef.value) ? gridStepRef.value : 0;
