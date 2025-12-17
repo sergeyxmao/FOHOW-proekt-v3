@@ -5057,7 +5057,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         class="images-canvas-layer"
         :width="stageConfig.width"
         :height="stageConfig.height"
-        style="position: absolute; top: 0; left: 0; z-index: 0; pointer-events: none;"
+        style="position: absolute; top: 0; left: 0; z-index: 0; pointer-events: none; background: transparent; opacity: 1;"
       ></canvas>
 
       <!-- SVG слой для линий связи -->
@@ -5344,9 +5344,9 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 .canvas-container {
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: visible; /* Разрешаем размещение элементов за пределами viewport */
   position: relative;
-  touch-action: none;  
+  touch-action: none;
 }
 .canvas-container--selection-mode {
   cursor: crosshair;
@@ -5401,7 +5401,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   background-position: 0 0;
   opacity: var(--grid-opacity);
   pointer-events: none;
-  z-index: -1;  
+  z-index: -1;
 }
 
 .line-group {
