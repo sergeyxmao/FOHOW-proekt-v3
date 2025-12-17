@@ -92,7 +92,10 @@ defineExpose({
 
 // Перетаскивание
 const handlePointerDown = (e) => {
-  if (isEditing.value) return;
+  if (isEditing.value) {
+    e.stopPropagation();
+    return;
+  }
 
   // Игнорируем правую кнопку мыши
   if (e.button === 2) return;
