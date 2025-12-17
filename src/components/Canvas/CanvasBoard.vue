@@ -2616,77 +2616,12 @@ const updateStageSize = () => {
     return;
   }
 
-  const padding = CANVAS_PADDING; // 400
+  // Установите большой размер холста по умолчанию (неограниченная область)
+  // Это позволяет размещать объекты в любой точке холста
+  const UNLIMITED_CANVAS_SIZE = 50000; // Размер в пиксели - достаточный для любого использования
 
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  let hasContent = false;
-
-  const updateBounds = (left, top, width, height) => {
-    minX = Math.min(minX, left);
-    minY = Math.min(minY, top);
-    maxX = Math.max(maxX, left + width);
-    maxY = Math.max(maxY, top + height);
-    hasContent = true;
-  };
-
-  // Карточки
-  cards.value.forEach(card => {
-    if (!card) return;
-    const left = Number.isFinite(card.x) ? card.x : 0;
-    const top = Number.isFinite(card.y) ? card.y : 0;
-    const isAvatar = card.type === 'avatar';
-    const width = isAvatar
-      ? (Number.isFinite(card.diameter) ? card.diameter : 0)
-      : (Number.isFinite(card.width) ? card.width : 0);
-    const height = isAvatar
-      ? (Number.isFinite(card.diameter) ? card.diameter : 0)
-      : (Number.isFinite(card.height) ? card.height : 0);
-    updateBounds(left, top, width, height);
-  });
-
-  // Изображения
-  images.value.forEach(image => {
-    if (!image) return;
-    const left = Number.isFinite(image.x) ? image.x : 0;
-    const top = Number.isFinite(image.y) ? image.y : 0;
-    const width = Number.isFinite(image.width) ? image.width : 0;
-    const height = Number.isFinite(image.height) ? image.height : 0;
-    updateBounds(left, top, width, height);
-  });
-
-  // Стикеры
-  stickersStore.stickers.forEach(sticker => {
-    if (!sticker) return;
-    const left = Number.isFinite(sticker.pos_x) ? sticker.pos_x : 0;
-    const top = Number.isFinite(sticker.pos_y) ? sticker.pos_y : 0;
-    const width = 200;
-    const height = 150;
-    updateBounds(left, top, width, height);
-  });
-
-  // Якоря
-  anchors.value.forEach(anchor => {
-    if (!anchor) return;
-    const left = Number.isFinite(anchor.pos_x) ? anchor.pos_x : anchor.x;
-    const top = Number.isFinite(anchor.pos_y) ? anchor.pos_y : anchor.y;
-    updateBounds(left, top, 20, 20);
-  });
-
-  if (!hasContent) {
-    // Пустая доска — разумный начальный размер
-    stageConfig.value.width = 4000;
-    stageConfig.value.height = 3000;
-    return;
-  }
-
-  const width = Math.max(1000, maxX - minX + padding * 2);
-  const height = Math.max(800, maxY - minY + padding * 2);
-
-  stageConfig.value.width = width;
-  stageConfig.value.height = height;
+  stageConfig.value.width = UNLIMITED_CANVAS_SIZE;
+  stageConfig.value.height = UNLIMITED_CANVAS_SIZE;
 };
 
 const removeSelectionListeners = () => {
@@ -4681,7 +4616,7 @@ const fitToContent = (options = {}) => {
   const padding = Number.isFinite(options.padding) ? Math.max(0, options.padding) : 120;
   const cardsList = cards.value;
   const connectionsList = connections.value;
-  const avatarConnectionsList = avatarConnections.value;
+  const avatarConnectionsList = avatarConnections.value;  
   const imagesList = images.value;
   const stickersList = stickersStore.stickers;
   
@@ -4690,18 +4625,19 @@ const fitToContent = (options = {}) => {
   let maxX = -Infinity;
   let maxY = -Infinity;
   let hasContent = false;
-	
-  const updateBounds = (left, top, width, height) => {
+  const updateBounds = (left, top, width, height) => {    
     minX = Math.min(minX, left);
     minY = Math.min(minY, top);
     maxX = Math.max(maxX, left + width);
     maxY = Math.max(maxY, top + height);
     hasContent = true;
   };
-	
-  // Карточки (включая аватары) 
+  
   cardsList.forEach(card => {
-    if (!card) return;
+    if (!card) {
+      return;
+    }
+
     const left = Number.isFinite(card.x) ? card.x : 0;
     const top = Number.isFinite(card.y) ? card.y : 0;
     const isAvatar = card.type === 'avatar';
@@ -4716,7 +4652,10 @@ const fitToContent = (options = {}) => {
   });
 
   imagesList.forEach(image => {
-    if (!image) return;
+    if (!image) {
+      return;
+    }
+
     const left = Number.isFinite(image.x) ? image.x : 0;
     const top = Number.isFinite(image.y) ? image.y : 0;
     const width = Number.isFinite(image.width) ? image.width : 0;
@@ -4724,10 +4663,11 @@ const fitToContent = (options = {}) => {
 
     updateBounds(left, top, width, height);
   });
-	
-  // Стикеры
+
   stickersList.forEach(sticker => {
-    if (!sticker) return;
+    if (!sticker) {
+      return;
+    }
 
     const left = Number.isFinite(sticker.pos_x) ? sticker.pos_x : 0;
     const top = Number.isFinite(sticker.pos_y) ? sticker.pos_y : 0;
@@ -4736,15 +4676,7 @@ const fitToContent = (options = {}) => {
 
     updateBounds(left, top, width, height);
   });
-  // Якоря
-  anchors.value.forEach(anchor => {
-    if (!anchor) return;
-    const left = Number.isFinite(anchor.pos_x) ? anchor.pos_x : anchor.x;
-    const top = Number.isFinite(anchor.pos_y) ? anchor.pos_y : anchor.y;
-    updateBounds(left, top, 20, 20);
-  });
 
-  // Обычные соединения
   if (Array.isArray(connectionsList) && connectionsList.length > 0) {
     const cardMap = new Map(cardsList.map(card => [card.id, card]));
     const defaultThickness = connectionsStore.defaultLineThickness || 0;
@@ -4752,17 +4684,25 @@ const fitToContent = (options = {}) => {
     connectionsList.forEach(connection => {
       const fromCard = cardMap.get(connection.from);
       const toCard = cardMap.get(connection.to);
-      if (!fromCard || !toCard) return;
+
+      if (!fromCard || !toCard) {
+        return;
+      }
 
       const geometry = buildConnectionGeometry(connection, fromCard, toCard);
-      if (!geometry || !geometry.points || geometry.points.length === 0) return;
-		
+
+      if (!geometry || !geometry.points || geometry.points.length === 0) {
+        return;
+      }
+
       const strokeWidth = Number.isFinite(connection.thickness)
         ? connection.thickness
         : defaultThickness;
       const markerRadius = Math.max(strokeWidth, 8) / 2;
       geometry.points.forEach(point => {
-        if (!point) return;
+        if (!point) {
+          return;
+        }
 
         minX = Math.min(minX, point.x - markerRadius);
         minY = Math.min(minY, point.y - markerRadius);
@@ -4773,15 +4713,16 @@ const fitToContent = (options = {}) => {
       hasContent = true;
     });
   }
-	
-  // Avatar соединения	
   if (Array.isArray(avatarConnectionsList) && avatarConnectionsList.length > 0) {
     const defaultThickness = connectionsStore.defaultLineThickness || 0;
 
     avatarConnectionsList.forEach(connection => {
       const fromAvatar = cardsList.find(card => card.id === connection.from && card.type === 'avatar');
       const toAvatar = cardsList.find(card => card.id === connection.to && card.type === 'avatar');
-      if (!fromAvatar || !toAvatar) return;
+
+      if (!fromAvatar || !toAvatar) {
+        return;
+      }
 
       const startPoint = getAvatarConnectionPoint(fromAvatar, connection.fromPointIndex);
       const endPoint = getAvatarConnectionPoint(toAvatar, connection.toPointIndex);
@@ -4794,20 +4735,21 @@ const fitToContent = (options = {}) => {
       const markerRadius = Math.max(strokeWidth, 8) / 2;
 
       points.forEach(point => {
-        if (!point) return;
+        if (!point) {
+          return;
+        }
 
         minX = Math.min(minX, point.x - markerRadius);
         minY = Math.min(minY, point.y - markerRadius);
         maxX = Math.max(maxX, point.x + markerRadius);
         maxY = Math.max(maxY, point.y + markerRadius);
       });
+
       hasContent = true;
     });
   }
-
-  if (!hasContent || !Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
-    resetZoomTransform();
-	  return;
+  if (!hasContent || !Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {    resetZoomTransform();
+    return;
   }
 
   const containerRect = canvasContainerRef.value.getBoundingClientRect();
