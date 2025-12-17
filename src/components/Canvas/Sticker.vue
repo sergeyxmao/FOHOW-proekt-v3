@@ -78,6 +78,18 @@ const cancelEditing = (event) => {
   event.stopPropagation();
 };
 
+// Закрытие редактирования при клике вне стикера
+const closeEditing = () => {
+  if (isEditing.value) {
+    saveChanges();
+  }
+};
+
+// Экспортировать метод для доступа из родительского компонента
+defineExpose({
+  closeEditing
+});
+
 // Перетаскивание
 const handlePointerDown = (e) => {
   if (isEditing.value) return;

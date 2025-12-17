@@ -102,6 +102,18 @@ const stageConfig = ref({
   width: 0,
   height: 0
 });
+
+// Refs для компонентов стикеров
+const stickerRefs = ref(new Map());
+
+const handleStickerRefRegister = (stickerId, stickerComponent) => {
+  if (stickerComponent) {
+    stickerRefs.value.set(stickerId, stickerComponent);
+  } else {
+    stickerRefs.value.delete(stickerId);
+  }
+};
+
 const CANVAS_PADDING = 400;
 const IMAGE_CACHE_LIMIT = 120;
 const OFFSCREEN_CACHE_LIMIT = 80;
@@ -302,7 +314,15 @@ const clearObjectSelections = ({ preserveCardSelection = false } = {}) => {
   }
   stickersStore.deselectAllStickers();
   imagesStore.deselectAllImages();
-  stopAvatarSelectionAnimation();  
+  stopAvatarSelectionAnimation();
+};
+
+const closeAllStickerEditing = () => {
+  stickerRefs.value.forEach((stickerComponent) => {
+    if (stickerComponent && typeof stickerComponent.closeEditing === 'function') {
+      stickerComponent.closeEditing();
+    }
+  });
 };
 
 const noteWindowRefs = new Map();
@@ -4351,6 +4371,7 @@ const handleStageClick = async (event) => {
   // Логика для снятия выделения при клике на пустое место
   const preserveCardSelection = true;
   if (!event.ctrlKey && !event.metaKey) {
+    closeAllStickerEditing();
     clearObjectSelections({ preserveCardSelection });
   }
 
@@ -5302,6 +5323,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         v-for="sticker in sortedStickers"
         :key="`sticker-${sticker.id}`"
         :sticker="sticker"
+        :ref="(el) => handleStickerRefRegister(sticker.id, el)"
         @sticker-click="handleStickerClick"
         @start-drag="startStickerDrag"
       />
