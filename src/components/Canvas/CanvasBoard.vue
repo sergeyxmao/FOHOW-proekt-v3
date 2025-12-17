@@ -5069,7 +5069,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         class="svg-layer"
         :width="stageConfig.width"
         :height="stageConfig.height"
-        style="position: absolute; top: 0; left: 0; z-index: 5; overflow: visible; pointer-events: auto;"
+        style="position: absolute; top: 0; left: 0; z-index: 5; overflow: visible; pointer-events: none;"
         @click="handleStageClick"
       >
         <defs>
