@@ -150,10 +150,8 @@ const canvasContentStyle = computed(() => {
   const translateX = Number.isFinite(zoomTranslateX.value) ? zoomTranslateX.value : 0;
   const translateY = Number.isFinite(zoomTranslateY.value) ? zoomTranslateY.value : 0;
   const scale = Number.isFinite(zoomScale.value) && zoomScale.value > 0 ? zoomScale.value : 1;
-  
+
   const style = {
-    width: `${stageConfig.value.width}px`,
-    height: `${stageConfig.value.height}px`,
     transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`
   };
 
