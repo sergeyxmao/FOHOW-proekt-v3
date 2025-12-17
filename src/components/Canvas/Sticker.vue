@@ -203,6 +203,7 @@ const handleDelete = async (event) => {
     }"
     :style="stickerStyle"
     :data-sticker-id="sticker.id"
+    @click.stop
     @dblclick="handleDoubleClick"
     @pointerdown="handlePointerDown"
     @pointermove="handlePointerMove"
