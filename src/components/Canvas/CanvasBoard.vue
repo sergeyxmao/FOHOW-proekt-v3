@@ -2634,17 +2634,96 @@ const screenToCanvas = (clientX, clientY) => {
   return { x, y };
 };
 
+/**
+ * Обновление размеров холста на основе всех объектов (карточки, изображения, стикеры)
+ * Реализация виртуального бесконечного холста
+ */
 const updateStageSize = () => {
   if (!canvasContainerRef.value) {
     return;
   }
 
-  // Устанавливаем максимальный размер холста (ограниченная область)
-  // Это позволяет размещать объекты в любой точке холста, но не больше заданного предела
-  const MAX_CANVAS_SIZE = 100000; // Размер в пикселях — ограничение холста
+  const containerWidth = canvasContainerRef.value.clientWidth;
+  const containerHeight = canvasContainerRef.value.clientHeight;
 
-  stageConfig.value.width = MAX_CANVAS_SIZE;
-  stageConfig.value.height = MAX_CANVAS_SIZE;
+  // Начальные границы холста
+  let minX = 0;
+  let minY = 0;
+  let maxX = containerWidth;
+  let maxY = containerHeight;
+
+  let hasContent = false;
+
+  // Учитываем карточки
+  if (cards.value && cards.value.length > 0) {
+    cards.value.forEach(card => {
+      const cardX = Number.isFinite(card.x) ? card.x : 0;
+      const cardY = Number.isFinite(card.y) ? card.y : 0;
+      const cardWidth = Number.isFinite(card.width) ? card.width : 0;
+      const cardHeight = Number.isFinite(card.height) ? card.height : 0;
+
+      minX = Math.min(minX, cardX);
+      minY = Math.min(minY, cardY);
+      maxX = Math.max(maxX, cardX + cardWidth);
+      maxY = Math.max(maxY, cardY + cardHeight);
+      hasContent = true;
+    });
+  }
+
+  // Учитываем изображения
+  if (imagesStore.images && imagesStore.images.length > 0) {
+    imagesStore.images.forEach(image => {
+      const imgX = Number.isFinite(image.x) ? image.x : 0;
+      const imgY = Number.isFinite(image.y) ? image.y : 0;
+      const imgWidth = Number.isFinite(image.width) ? image.width : 0;
+      const imgHeight = Number.isFinite(image.height) ? image.height : 0;
+
+      minX = Math.min(minX, imgX);
+      minY = Math.min(minY, imgY);
+      maxX = Math.max(maxX, imgX + imgWidth);
+      maxY = Math.max(maxY, imgY + imgHeight);
+      hasContent = true;
+    });
+  }
+
+  // Учитываем стикеры
+  if (stickersStore.stickers && stickersStore.stickers.length > 0) {
+    stickersStore.stickers.forEach(sticker => {
+      const stickerX = Number.isFinite(sticker.pos_x) ? sticker.pos_x : 0;
+      const stickerY = Number.isFinite(sticker.pos_y) ? sticker.pos_y : 0;
+      const stickerWidth = Number.isFinite(sticker.width) ? sticker.width : 200; // Дефолтная ширина стикера
+      const stickerHeight = Number.isFinite(sticker.height) ? sticker.height : 150; // Дефолтная высота стикера
+
+      minX = Math.min(minX, stickerX);
+      minY = Math.min(minY, stickerY);
+      maxX = Math.max(maxX, stickerX + stickerWidth);
+      maxY = Math.max(maxY, stickerY + stickerHeight);
+      hasContent = true;
+    });
+  }
+
+  // Если нет контента, используем размер контейнера
+  if (!hasContent) {
+    stageConfig.value.width = containerWidth;
+    stageConfig.value.height = containerHeight;
+    return;
+  }
+
+  // Динамический отступ вокруг контента
+  const dynamicPadding = Math.max(CANVAS_PADDING, containerWidth, containerHeight);
+
+  // Вычисляем финальные размеры холста с учетом отступов
+  const contentWidth = maxX - minX;
+  const contentHeight = maxY - minY;
+
+  stageConfig.value.width = Math.max(
+    containerWidth,
+    contentWidth + dynamicPadding * 2
+  );
+  stageConfig.value.height = Math.max(
+    containerHeight,
+    contentHeight + dynamicPadding * 2
+  );
 };
 
 const removeSelectionListeners = () => {
