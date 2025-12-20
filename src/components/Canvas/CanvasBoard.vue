@@ -2646,14 +2646,13 @@ const updateStageSize = () => {
   const containerWidth = canvasContainerRef.value.clientWidth;
   const containerHeight = canvasContainerRef.value.clientHeight;
 
-  // Минимальный размер холста для возможности размещения объектов в любой точке
-  const MIN_CANVAS_SIZE = 50000;
-
   // Начальные границы холста
   let minX = 0;
   let minY = 0;
   let maxX = containerWidth;
   let maxY = containerHeight;
+
+  let hasContent = false;
 
   // Учитываем карточки
   if (cards.value && cards.value.length > 0) {
@@ -2667,6 +2666,7 @@ const updateStageSize = () => {
       minY = Math.min(minY, cardY);
       maxX = Math.max(maxX, cardX + cardWidth);
       maxY = Math.max(maxY, cardY + cardHeight);
+      hasContent = true;
     });
   }
 
@@ -2682,6 +2682,7 @@ const updateStageSize = () => {
       minY = Math.min(minY, imgY);
       maxX = Math.max(maxX, imgX + imgWidth);
       maxY = Math.max(maxY, imgY + imgHeight);
+      hasContent = true;
     });
   }
 
@@ -2690,31 +2691,36 @@ const updateStageSize = () => {
     stickersStore.stickers.forEach(sticker => {
       const stickerX = Number.isFinite(sticker.pos_x) ? sticker.pos_x : 0;
       const stickerY = Number.isFinite(sticker.pos_y) ? sticker.pos_y : 0;
-      const stickerWidth = Number.isFinite(sticker.width) ? sticker.width : 200;
-      const stickerHeight = Number.isFinite(sticker.height) ? sticker.height : 150;
+      const stickerWidth = Number.isFinite(sticker.width) ? sticker.width : 200; // Дефолтная ширина стикера
+      const stickerHeight = Number.isFinite(sticker.height) ? sticker.height : 150; // Дефолтная высота стикера
 
       minX = Math.min(minX, stickerX);
       minY = Math.min(minY, stickerY);
       maxX = Math.max(maxX, stickerX + stickerWidth);
       maxY = Math.max(maxY, stickerY + stickerHeight);
+      hasContent = true;
     });
+  }
+
+  // Если нет контента, используем размер контейнера
+  if (!hasContent) {
+    stageConfig.value.width = containerWidth;
+    stageConfig.value.height = containerHeight;
+    return;
   }
 
   // Динамический отступ вокруг контента
   const dynamicPadding = Math.max(CANVAS_PADDING, containerWidth, containerHeight);
 
-  // Вычисляем размеры с учетом контента и отступов
+  // Вычисляем финальные размеры холста с учетом отступов
   const contentWidth = maxX - minX;
   const contentHeight = maxY - minY;
 
-  // Финальные размеры: максимум из минимального размера, размера контейнера и размера контента с отступами
   stageConfig.value.width = Math.max(
-    MIN_CANVAS_SIZE,
     containerWidth,
     contentWidth + dynamicPadding * 2
   );
   stageConfig.value.height = Math.max(
-    MIN_CANVAS_SIZE,
     containerHeight,
     contentHeight + dynamicPadding * 2
   );
