@@ -2639,12 +2639,12 @@ const updateStageSize = () => {
     return;
   }
 
-  // Установите большой размер холста по умолчанию (неограниченная область)
-  // Это позволяет размещать объекты в любой точке холста
-  const UNLIMITED_CANVAS_SIZE = 50000; // Размер в пиксели - достаточный для любого использования
+  // Устанавливаем максимальный размер холста (ограниченная область)
+  // Это позволяет размещать объекты в любой точке холста, но не больше заданного предела
+  const MAX_CANVAS_SIZE = 100000; // Размер в пикселях — ограничение холста
 
-  stageConfig.value.width = UNLIMITED_CANVAS_SIZE;
-  stageConfig.value.height = UNLIMITED_CANVAS_SIZE;
+  stageConfig.value.width = MAX_CANVAS_SIZE;
+  stageConfig.value.height = MAX_CANVAS_SIZE;
 };
 
 const removeSelectionListeners = () => {
