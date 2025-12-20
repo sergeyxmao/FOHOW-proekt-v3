@@ -528,18 +528,19 @@ defineExpose({
 <style scoped>
 .note-window {
   position: fixed;
-  background: #fff;
+  background: rgba(30, 41, 59, 0.95);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   min-width: 200px;
   min-height: 200px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 10000;
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transform-origin: top left;
-  will-change: transform;  
+  will-change: transform;
+  backdrop-filter: blur(8px);
 }
 
 .note-window::after {
@@ -548,7 +549,7 @@ defineExpose({
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .note-header {
@@ -556,7 +557,7 @@ defineExpose({
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  background: linear-gradient(135deg, rgba(244, 67, 54, 0.12), rgba(255, 255, 255, 0.9));
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.15), rgba(51, 65, 85, 0.9));
   gap: 12px;
   cursor: grab;
   user-select: none;
@@ -568,8 +569,8 @@ defineExpose({
 
 .note-header__close {
   border: none;
-  background: rgba(15, 23, 42, 0.08);
-  color: #0f172a;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
   width: 28px;
   height: 28px;
   border-radius: 8px;
@@ -581,7 +582,7 @@ defineExpose({
 }
 
 .note-header__close:hover {
-  background: rgba(15, 23, 42, 0.16);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .note-header__colors {
@@ -595,20 +596,20 @@ defineExpose({
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 2px solid rgba(15, 23, 42, 0.32);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .clr-dot:hover {
   transform: translateY(-1px) scale(1.05);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .clr-dot.active {
-  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.22), inset 0 0 0 2px #fff;
-  border-color: rgba(15, 23, 42, 0.65);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3), inset 0 0 0 2px rgba(30, 41, 59, 0.8);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 .note-calendar {
@@ -628,13 +629,13 @@ defineExpose({
 .note-calendar__title {
   font-weight: 600;
   text-transform: capitalize;
-  color: #0f172a;
+  color: #e2e8f0;
 }
 
 .note-calendar__nav-btn {
   border: none;
-  background: rgba(15, 23, 42, 0.08);
-  color: #0f172a;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
   width: 28px;
   height: 28px;
   border-radius: 8px;
@@ -643,7 +644,7 @@ defineExpose({
 }
 
 .note-calendar__nav-btn:hover {
-  background: rgba(15, 23, 42, 0.16);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .note-calendar__grid {
@@ -655,7 +656,7 @@ defineExpose({
 .note-calendar__grid--header {
   font-size: 12px;
   font-weight: 600;
-  color: #475569;
+  color: #94a3b8;
   text-transform: uppercase;
 }
 
@@ -666,8 +667,8 @@ defineExpose({
 
 .note-calendar__cell {
   border: none;
-  background: rgba(241, 245, 249, 0.9);
-  color: #0f172a;
+  background: rgba(51, 65, 85, 0.6);
+  color: #e2e8f0;
   height: 28px;
   border-radius: 6px;
   font-size: 13px;
@@ -680,17 +681,18 @@ defineExpose({
 
 .note-calendar__cell:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  background: rgba(71, 85, 105, 0.8);
 }
 
 .note-calendar__cell.selected {
   outline: 2px solid var(--note-accent);
-  background: rgba(59, 130, 246, 0.08);
+  background: rgba(59, 130, 246, 0.2);
 }
 
 .note-calendar__cell.has-entry {
   color: #fff;
-  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.15);
 }
 
 .note-calendar__cell.out {
@@ -707,23 +709,27 @@ defineExpose({
   resize: none;
   width: 100%;
   flex: 1;
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 14px;
   line-height: 1.4;
   font-family: inherit;
-  color: #0f172a;
-  background: rgba(248, 250, 252, 0.85);
+  color: #e2e8f0;
+  background: rgba(51, 65, 85, 0.5);
   transition: border 0.2s ease, box-shadow 0.2s ease;
-  min-height: calc(1.4em * 3 + 20px);  
+  min-height: calc(1.4em * 3 + 20px);
+}
+
+.note-textarea::placeholder {
+  color: #94a3b8;
 }
 
 .note-textarea:focus {
   outline: none;
   border-color: var(--note-accent);
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
-  background: #fff;
+  background: rgba(51, 65, 85, 0.7);
 }
 
 .note-resize-handle {
@@ -734,8 +740,8 @@ defineExpose({
   height: 28px;
   border-radius: 50%;
   border: none;
-  background: rgba(15, 23, 42, 0.08);
-  color: #0f172a;
+  background: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
   cursor: se-resize;
   display: grid;
   place-items: center;
@@ -744,6 +750,6 @@ defineExpose({
 }
 
 .note-resize-handle:hover {
-  background: rgba(15, 23, 42, 0.16);
+  background: rgba(255, 255, 255, 0.2);
 }
 </style>
