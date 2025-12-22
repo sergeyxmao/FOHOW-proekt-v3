@@ -280,7 +280,7 @@ const handleDelete = async (event) => {
       @pointerdown.stop
       @keydown.esc="cancelEditing"
       autofocus
-    />
+    ></textarea>
   </div>
 </template>
 
