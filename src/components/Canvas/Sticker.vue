@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useStickersStore } from '../../stores/stickers';
 
 const props = defineProps({
@@ -22,6 +22,8 @@ const dragOffset = ref({ x: 0, y: 0 });
 const isHovering = ref(false);
 // Временная позиция во время перетаскивания
 const tempPosition = ref({ x: null, y: null });
+// Реф для стикера
+const stickerRef = ref(null);
 
 // Вычисляемые свойства
 const stickerStyle = computed(() => ({
@@ -84,6 +86,33 @@ const closeEditing = () => {
     saveChanges();
   }
 };
+
+// Обработчик кликов вне стикера для закрытия редактирования
+const handleClickOutside = (event) => {
+  if (!isEditing.value) return;
+
+  // Проверяем, кликнули ли вне стикера
+  if (stickerRef.value && !stickerRef.value.contains(event.target)) {
+    saveChanges();
+  }
+};
+
+// Watch для добавления/удаления обработчика кликов при входе/выходе из режима редактирования
+watch(isEditing, (newValue) => {
+  if (newValue) {
+    // Добавляем обработчик с небольшой задержкой, чтобы не закрыть сразу после открытия
+    setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 100);
+  } else {
+    document.removeEventListener('click', handleClickOutside);
+  }
+});
+
+// Убираем обработчик при размонтировании компонента
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
 
 // Экспортировать метод для доступа из родительского компонента
 defineExpose({
@@ -195,6 +224,7 @@ const handleDelete = async (event) => {
 
 <template>
   <div
+    ref="stickerRef"
     class="sticker"
     :class="{
       'sticker--dragging': isDragging,
@@ -255,8 +285,9 @@ const handleDelete = async (event) => {
 
     <!-- Кнопка удаления -->
     <button
-      v-if="isHovering && !isEditing"
+      v-if="!isEditing"
       class="sticker__delete"
+      :class="{ 'sticker__delete--visible': isHovering }"
       type="button"
       @click.stop="handleDelete"
       aria-label="Удалить стикер"
@@ -354,11 +385,18 @@ const handleDelete = async (event) => {
   font-weight: bold;
   line-height: 1;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.1s ease;
+  transition: background 0.2s ease, transform 0.1s ease, opacity 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sticker__delete--visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .sticker__delete:hover {
