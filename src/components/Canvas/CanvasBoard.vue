@@ -2925,7 +2925,9 @@ const startSelection = (event) => {
   if (event.button !== 0) {
     return;
   }
-
+  if (stickersStore.isPlacementMode && stickersStore.placementTarget === 'board') {
+    return;
+  }
   event.preventDefault();
   suppressNextStageClick = true;
   isSelecting.value = true;
@@ -3773,6 +3775,10 @@ const handleMouseMoveInternal = (event) => {
 const handleMouseMove = useThrottleFn(handleMouseMoveInternal, 16, true, false);
 
 const handlePointerDown = (event) => {
+  if (stickersStore.isPlacementMode && stickersStore.placementTarget === 'board') {
+    return;
+  }
+	
   const connectionPoint = event.target.closest('.connection-point');
   
   if (connectionPoint) {
@@ -4266,6 +4272,10 @@ const handleStageMouseDown = (event) => {
     return;
   }
 
+	if (stickersStore.isPlacementMode && stickersStore.placementTarget === 'board') {
+    return;
+  }
+
   // Проверяем, есть ли изображение под курсором (даже если оно на заднем плане)
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
   const imageUnderCursor = getObjectAtPoint(canvasPos.x, canvasPos.y);
@@ -4367,8 +4377,9 @@ const handleStageClick = async (event) => {
 
   // Если активен режим размещения стикера/изображения
   if (stickersStore.isPlacementMode && stickersStore.placementTarget === 'board') {
-    // Выключаем режим размещения СРАЗУ, чтобы предотвратить дублирование
-    stickersStore.disablePlacementMode();
+    if (event.button !== 0) {
+      return;
+    }
 
     // Останавливаем всплытие события, чтобы предотвратить повторное срабатывание
     event.stopPropagation();
@@ -4392,6 +4403,8 @@ const handleStageClick = async (event) => {
         });
 
         console.log('✅ Изображение добавлено на доску:', imageData);
+     
+		stickersStore.disablePlacementMode();		  
       } catch (error) {
         console.error('Ошибка добавления изображения на доску:', error);
         alert('Не удалось добавить изображение на доску');
@@ -4412,11 +4425,9 @@ const handleStageClick = async (event) => {
           color: '#FFFF88',
         });
 
-        // Отключаем режим размещения после создания стикера
-        stickersStore.disablePlacementMode();
-
         clearObjectSelections();
         stickersStore.selectSticker(newSticker.id);
+        stickersStore.disablePlacementMode();		  
         await nextTick();
         const elem = document.querySelector(`[data-sticker-id="${newSticker.id}"]`);
         if (elem) {
