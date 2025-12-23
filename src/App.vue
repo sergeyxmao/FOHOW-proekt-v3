@@ -313,7 +313,6 @@ async function ensureStructureExists(action) {
 async function createStructureWithName(name, action = null, initialState = null) {
   try {
     boardStore.isSaving = true
-    console.log("🔧 createStructureWithName вызвана:", { name, action, initialState: initialState ? "передано" : "null" })
 
     // Если передано начальное состояние, используем его, иначе берём текущее
     const canvasState = initialState !== null ? initialState : getCanvasState()
