@@ -1044,13 +1044,15 @@ const handleHierarchicalDragMode = () => {
   justify-content: center;
   gap: 6px;
   box-shadow: var(--left-panel-btn-shadow);
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 .left-panel-controls__zoom-button:hover {
-  transform: none;
+  transform: translateZ(0);
   filter: brightness(1.02);
 }
 .left-panel-controls__zoom-button:active {
-  transform: none;
+  transform: translateZ(0);
   filter: brightness(0.98);
 }
 .left-panel-controls__zoom-value {
