@@ -27,7 +27,7 @@ const handleClose = () => {
     }"
   >
     <div class="comments-side-panel__header">
-      <h2 class="comments-side-panel__title">Личные комментарии</h2>
+      <h2 class="comments-side-panel__title">Коментарии к доске</h2>
       <button
         type="button"
         class="comments-side-panel__close"
