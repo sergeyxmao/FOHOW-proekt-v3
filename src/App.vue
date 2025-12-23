@@ -310,11 +310,12 @@ async function ensureStructureExists(action) {
   })
 }
 
-async function createStructureWithName(name, action = null) {
+async function createStructureWithName(name, action = null, initialState = null) {
   try {
     boardStore.isSaving = true
 
-    const canvasState = getCanvasState()
+    // Если передано начальное состояние, используем его, иначе берём текущее
+    const canvasState = initialState !== null ? initialState : getCanvasState()
 
     const createResponse = await fetch(`${API_URL}/boards`, {
       method: 'POST',
@@ -379,17 +380,28 @@ async function handleStructureNameConfirm(name) {
     isCreatingNewStructure.value = false
     pendingAction.value = null
 
-    // Очищаем холст только после подтверждения названия
-    handleClearCanvas()
+    // Создаём пустое начальное состояние для новой структуры
+    const emptyState = {
+      objects: [],
+      connections: [],
+      stickers: [],
+      images: [],
+      notes: [],
+      background: canvasStore.background || '#ffffff',
+      zoom: 1
+    }
 
-    // Сбрасываем текущую доску
-    boardStore.clearCurrentBoard()
+    // Сначала очищаем холст локально
+    handleClearCanvas()
 
     // Сбрасываем историю
     const historyStore = useHistoryStore()
     historyStore.reset()
 
-    await createStructureWithName(name)
+    // Создаём структуру на сервере с пустым состоянием
+    // Функция createStructureWithName сама установит новую доску через boardStore.setCurrentBoard
+    await createStructureWithName(name, null, emptyState)
+
     return
   }
 
