@@ -936,7 +936,7 @@ const handleHierarchicalDragMode = () => {
         </button>   
       </div>
     </template>
-    <div class="left-panel-controls__zoom">
+    <div class="left-panel-controls__zoom-wrapper">
       <button
         class="left-panel-controls__zoom-button"
         type="button"
@@ -945,10 +945,10 @@ const handleHierarchicalDragMode = () => {
         @mouseleave="showZoomTooltip = false"
       >
         Масштаб: <span class="left-panel-controls__zoom-value">{{ zoomDisplay }}</span>
-        <div v-if="showZoomTooltip" class="left-panel-controls__tooltip">
-          Автоподгонка масштаба
-        </div>
       </button>
+      <div v-if="showZoomTooltip" class="left-panel-controls__tooltip">
+        Автоподгонка масштаба
+      </div>
     </div>   
     <input type="file" accept=".json,application/json" style="display:none">
   </div>
@@ -1028,7 +1028,7 @@ const handleHierarchicalDragMode = () => {
   grid-column: 1 / -1;
 }
 
-.left-panel-controls__zoom {
+.left-panel-controls__zoom-wrapper {
   width: 100%;
   margin-top: auto;
   padding-top: calc(var(--left-panel-section-gap) * 0.4);
@@ -1051,8 +1051,6 @@ const handleHierarchicalDragMode = () => {
   justify-content: center;
   gap: 6px;
   box-shadow: var(--left-panel-btn-shadow);
-  position: relative;
-  isolation: isolate;
   transform: translateZ(0);
   backface-visibility: hidden;
   min-width: 0;
