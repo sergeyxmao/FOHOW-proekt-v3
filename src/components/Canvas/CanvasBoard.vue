@@ -163,13 +163,17 @@ const canvasContentStyle = computed(() => {
   const translateY = Number.isFinite(zoomTranslateY.value) ? zoomTranslateY.value : 0;
   const scale = Number.isFinite(zoomScale.value) && zoomScale.value > 0 ? zoomScale.value : 1;
 
+  // Определяем, активен ли режим размещения новых объектов
+  const isPlacingObject = placementMode.value === 'anchor' || stickersStore.isPlacementMode;
+
   const style = {
     transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
     // Устанавливаем размер canvas-content равным размеру stage для возможности размещения элементов в любой точке
     width: `${stageConfig.value.width}px`,
     height: `${stageConfig.value.height}px`,
-    // Пропускаем клики через canvas-content к нижележащим элементам (SVG и canvas-container)
-    pointerEvents: 'none'
+    // Пропускаем клики через canvas-content ТОЛЬКО в режиме размещения новых объектов
+    // В обычном режиме разрешаем события для интерактивных элементов (стикеры, карточки)
+    pointerEvents: isPlacingObject ? 'none' : 'auto'
   };
 
   const step = Number.isFinite(gridStepRef.value) ? gridStepRef.value : 0;
