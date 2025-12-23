@@ -313,6 +313,7 @@ async function ensureStructureExists(action) {
 async function createStructureWithName(name, action = null, initialState = null) {
   try {
     boardStore.isSaving = true
+    console.log("🔧 createStructureWithName вызвана:", { name, action, initialState: initialState ? "передано" : "null" })
 
     // Если передано начальное состояние, используем его, иначе берём текущее
     const canvasState = initialState !== null ? initialState : getCanvasState()
@@ -396,7 +397,7 @@ async function handleStructureNameConfirm(name) {
 
     // Сбрасываем историю
     const historyStore = useHistoryStore()
-    historyStore.reset()
+    historyStore.clearHistory()
 
     // Создаём структуру на сервере с пустым состоянием
     // Функция createStructureWithName сама установит новую доску через boardStore.setCurrentBoard
