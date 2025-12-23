@@ -239,17 +239,8 @@ async function handleNewStructure(shouldSave) {
     await saveCurrentBoard()
   }
 
-  // Очищаем холст
-  handleClearCanvas()
-
-  // Сбрасываем текущую доску
-  boardStore.clearCurrentBoard()
-
-  // Сбрасываем историю
-  const historyStore = useHistoryStore()
-  historyStore.reset()
-
-  // Запрашиваем имя для новой структуры и сразу создаем ее после ввода
+  // Запрашиваем имя для новой структуры
+  // Очистка холста и сброс доски произойдут только после подтверждения названия
   isCreatingNewStructure.value = true
   isStructureNameModalOpen.value = true
 
@@ -388,10 +379,20 @@ async function handleStructureNameConfirm(name) {
     isCreatingNewStructure.value = false
     pendingAction.value = null
 
+    // Очищаем холст только после подтверждения названия
+    handleClearCanvas()
+
+    // Сбрасываем текущую доску
+    boardStore.clearCurrentBoard()
+
+    // Сбрасываем историю
+    const historyStore = useHistoryStore()
+    historyStore.reset()
+
     await createStructureWithName(name)
     return
   }
-  
+
   if (!pendingAction.value) {
     return
   }
