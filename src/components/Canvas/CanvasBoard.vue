@@ -2410,7 +2410,8 @@ const focusAnchorOnCanvas = (anchorId) => {
     translateX: targetTranslateX,
     translateY: targetTranslateY
   });
-
+	
+  boardStore.startAnchorAnimation(anchorId);
   boardStore.selectAnchor(anchorId);
 };
 
