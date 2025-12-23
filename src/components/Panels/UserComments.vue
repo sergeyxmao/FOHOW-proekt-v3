@@ -12,6 +12,7 @@ const newCommentColor = ref('#FFEB3B')
 const editingId = ref(null)
 const editContent = ref('')
 const editColor = ref('')
+const searchQuery = ref('')  
 
 // Палитра цветов
 const colorPalette = [
