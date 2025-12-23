@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import html2canvas from 'html2canvas'
 import { storeToRefs } from 'pinia'
 import { useCardsStore } from '../../stores/cards.js'
@@ -41,6 +41,7 @@ const {
 const { normalizedProjectName } = storeToRefs(projectStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
+const showZoomTooltip = ref(false)
 
 // Обработчики для кнопок левой панели
 const handleUndo = () => {
@@ -939,10 +940,14 @@ const handleHierarchicalDragMode = () => {
       <button
         class="left-panel-controls__zoom-button"
         type="button"
-        title="Автоподгонка масштаба"
         @click="handleFitToContent"
+        @mouseenter="showZoomTooltip = true"
+        @mouseleave="showZoomTooltip = false"
       >
         Масштаб: <span class="left-panel-controls__zoom-value">{{ zoomDisplay }}</span>
+        <div v-if="showZoomTooltip" class="left-panel-controls__tooltip">
+          Автоподгонка масштаба
+        </div>
       </button>
     </div>   
     <input type="file" accept=".json,application/json" style="display:none">
@@ -1136,5 +1141,44 @@ const handleHierarchicalDragMode = () => {
 
 .left-panel-controls--collapsed .theme-toggle {
   box-shadow: inset 0 2px 0 rgba(255,255,255,0.18), 0 18px 30px rgba(15, 23, 42, 0.18);
+}
+
+.left-panel-controls__tooltip {
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: calc(var(--left-panel-btn-font) * 0.48);
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10000;
+  animation: tooltipFadeIn 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.left-panel-controls__tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.85);
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>
