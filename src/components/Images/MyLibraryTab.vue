@@ -353,9 +353,6 @@ async function uploadSingleImage(file) {
     })
 
     console.log('✅ Изображение успешно загружено:', newImage)
-
-    // Обновляем статистику
-    await loadStats()
   } catch (error) {
     console.error('Ошибка загрузки изображения:', error)
 
