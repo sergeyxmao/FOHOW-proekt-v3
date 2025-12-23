@@ -104,6 +104,7 @@ const mobileAuthModalView = ref('login')
 const isMobileAuthModalOpen = ref(false)
 const isBoardsModalOpen = ref(false)
 const isStructureNameModalOpen = ref(false)
+const isCreatingNewStructure = ref(false)  
 const pendingAction = ref(null)
 
 const showResetPassword = ref(false)
@@ -248,7 +249,11 @@ async function handleNewStructure(shouldSave) {
   const historyStore = useHistoryStore()
   historyStore.reset()
 
-  console.log('📄 Создана новая структура')
+  // Запрашиваем имя для новой структуры и сразу создаем ее после ввода
+  isCreatingNewStructure.value = true
+  isStructureNameModalOpen.value = true
+
+  console.log('📄 Создается новая структура: запрос имени')
 }
 
 function handleGlobalKeydown(event) {
@@ -379,7 +384,14 @@ async function createStructureWithName(name, action = null) {
 
 async function handleStructureNameConfirm(name) {
   isStructureNameModalOpen.value = false
+  if (isCreatingNewStructure.value) {
+    isCreatingNewStructure.value = false
+    pendingAction.value = null
 
+    await createStructureWithName(name)
+    return
+  }
+  
   if (!pendingAction.value) {
     return
   }
@@ -396,6 +408,11 @@ async function handleStructureNameConfirm(name) {
 
 function handleStructureNameCancel() {
   isStructureNameModalOpen.value = false
+  if (isCreatingNewStructure.value) {
+    isCreatingNewStructure.value = false
+    pendingAction.value = null
+    return
+  }
 
   if (pendingAction.value?.resolve) {
     pendingAction.value.resolve(false)
