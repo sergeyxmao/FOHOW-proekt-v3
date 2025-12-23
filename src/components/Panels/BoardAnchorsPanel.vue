@@ -22,13 +22,24 @@ const { anchors } = storeToRefs(anchorsStore)
 const editingAnchorId = ref(null)
 const editText = ref('')
 const textareaRef = ref(null)
-
+const searchQuery = ref('')
+  
 const sortedAnchors = computed(() => {
   return [...anchors.value].sort((a, b) => {
     const dateA = a.created_at ? new Date(a.created_at).getTime() : 0
     const dateB = b.created_at ? new Date(b.created_at).getTime() : 0
     return dateB - dateA
   })
+})
+const filteredAnchors = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) {
+    return sortedAnchors.value
+  }
+
+  return sortedAnchors.value.filter(anchor =>
+    anchor.description?.toLowerCase().includes(query)
+  )
 })
 
 const handleClose = () => {
@@ -105,10 +116,18 @@ watch(anchors, () => {
         ×
       </button>
     </div>
+    <div class="anchors-panel__search">
+      <input
+        v-model="searchQuery"
+        class="anchors-panel__search-input"
+        type="search"
+        placeholder="Поиск по точкам..."
+      />
+    </div>
 
     <div class="anchors-panel__content">
       <div
-        v-for="anchor in sortedAnchors"
+        v-for="anchor in filteredAnchors"
         :key="anchor.id"
         class="anchors-panel__item"
         :class="{ 'anchors-panel__item--active': selectedAnchorId === anchor.id }"
@@ -140,7 +159,8 @@ watch(anchors, () => {
           </button>
         </div>
       </div>
-      <p v-if="!sortedAnchors.length" class="anchors-panel__empty">Точек пока нет</p>
+      <p v-if="!sortedAnchors.length && !searchQuery.trim()" class="anchors-panel__empty">Точек пока нет</p>
+      <p v-else-if="!filteredAnchors.length" class="anchors-panel__empty">Ничего не найдено</p>
     </div>
   </div>
 </template>
@@ -200,7 +220,24 @@ watch(anchors, () => {
   flex-direction: column;
   gap: 12px;
 }
+.anchors-panel__search {
+  padding: 0 16px 8px;
+}
 
+.anchors-panel__search-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.anchors-panel__search-input:focus {
+  border-color: #5d8bf4;
+  box-shadow: 0 0 0 3px rgba(93, 139, 244, 0.1);
+}
 .anchors-panel__item {
   background: #fff9c4;
   border: 1px solid rgba(0, 0, 0, 0.12);
