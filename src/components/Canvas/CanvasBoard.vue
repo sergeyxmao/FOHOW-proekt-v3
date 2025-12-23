@@ -3782,6 +3782,11 @@ const handlePointerDown = (event) => {
   if (stickersStore.isPlacementMode && stickersStore.placementTarget === 'board') {
     return;
   }
+
+  // Игнорируем pointerdown в режиме размещения якоря
+  if (placementMode.value === 'anchor') {
+    return;
+  }
 	
   const connectionPoint = event.target.closest('.connection-point');
   
