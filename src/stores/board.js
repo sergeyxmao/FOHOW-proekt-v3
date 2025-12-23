@@ -12,12 +12,15 @@ export const useBoardStore = defineStore('board', () => {
   const selectedAnchorId = ref(null)
   const pendingFocusAnchorId = ref(null)
   const pendingEditAnchorId = ref(null)
+  const animatingAnchorId = ref(null)  
   const placementMode = ref(null) // 'anchor' | null
   const isNavigating = ref(false) // Флаг для предотвращения конфликтов при программной навигации
   const targetViewPoint = ref(null) // { x, y, timestamp } - целевая точка для центрирования
   const isCurrentBoard = computed(() => currentBoardId.value !== null)
   const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
-
+  
+  let anchorAnimationTimeout = null
+  
   function setCurrentBoard(id, name) {
     currentBoardId.value = id
     currentBoardName.value = name || 'Без названия'
@@ -34,7 +37,8 @@ export const useBoardStore = defineStore('board', () => {
     selectedAnchorId.value = null
     pendingFocusAnchorId.value = null
     pendingEditAnchorId.value = null
-    placementMode.value = null    
+    stopAnchorAnimation()
+    placementMode.value = null
   }
 
   function markAsChanged() {
@@ -88,7 +92,36 @@ export const useBoardStore = defineStore('board', () => {
     pendingFocusAnchorId.value = id
     selectedAnchorId.value = id
   }
+  function startAnchorAnimation(id, durationMs = 3000) {
+    if (!id) {
+      stopAnchorAnimation()
+      return
+    }
 
+    if (anchorAnimationTimeout) {
+      clearTimeout(anchorAnimationTimeout)
+      anchorAnimationTimeout = null
+    }
+
+    // Сбрасываем значение, чтобы можно было перезапустить анимацию для той же точки
+    animatingAnchorId.value = null
+
+    requestAnimationFrame(() => {
+      animatingAnchorId.value = id
+      anchorAnimationTimeout = setTimeout(() => {
+        animatingAnchorId.value = null
+        anchorAnimationTimeout = null
+      }, durationMs)
+    })
+  }
+
+  function stopAnchorAnimation() {
+    if (anchorAnimationTimeout) {
+      clearTimeout(anchorAnimationTimeout)
+      anchorAnimationTimeout = null
+    }
+    animatingAnchorId.value = null
+  }
   function requestAnchorEdit(id) {
     pendingEditAnchorId.value = id
   }
@@ -187,6 +220,7 @@ export const useBoardStore = defineStore('board', () => {
     selectedAnchorId,
     pendingFocusAnchorId,
     pendingEditAnchorId,
+    animatingAnchorId,    
     placementMode,
     isNavigating,
     targetViewPoint,
@@ -201,6 +235,8 @@ export const useBoardStore = defineStore('board', () => {
     removeAnchor,
     selectAnchor,
     focusAnchor,
+    startAnchorAnimation,
+    stopAnchorAnimation,    
     requestAnchorEdit,
     clearPendingAnchorEdit,
     setPlacementMode,
