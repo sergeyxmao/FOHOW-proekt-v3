@@ -10,10 +10,21 @@ const props = defineProps({
 })
 
 const stickersStore = useStickersStore()
-
+const searchQuery = ref('')
+  
 // Вычисляемое свойство для получения стикеров с непустым содержимым
 const messagesStickers = computed(() => {
   return stickersStore.stickers.filter(sticker => sticker.content && sticker.content.trim())
+})
+const filteredMessages = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) {
+    return messagesStickers.value
+  }
+
+  return messagesStickers.value.filter(sticker =>
+    sticker.content?.toLowerCase().includes(query)
+  )
 })
 
 const hasMessages = computed(() => messagesStickers.value.length > 0)
@@ -114,6 +125,14 @@ onMounted(() => {
         <span v-if="hasMessages" class="sticker-messages__count">({{ messagesStickers.length }})</span>
       </h3>
     </div>
+    <div v-if="hasMessages" class="sticker-messages__search">
+      <input
+        v-model="searchQuery"
+        class="sticker-messages__search-input"
+        type="search"
+        placeholder="Поиск по сообщениям..."
+      />
+    </div>
 
     <div v-if="!hasMessages" class="sticker-messages__empty">
       <div class="sticker-messages__empty-icon">📌</div>
@@ -127,7 +146,7 @@ onMounted(() => {
 
     <div v-else class="sticker-messages__list">
       <div
-        v-for="sticker in messagesStickers"
+        v-for="sticker in filteredMessages"
         :key="sticker.id"
         class="sticker-message-item"
         :class="{ 'sticker-message-item--editing': editingStickerId === sticker.id }"
@@ -191,6 +210,8 @@ onMounted(() => {
           {{ formatDate(sticker.created_at) }}
         </div>
       </div>
+
+      <p v-if="!filteredMessages.length" class="sticker-messages__empty-text">Ничего не найдено</p>      
     </div>
   </div>
 </template>
@@ -207,7 +228,24 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
 }
+.sticker-messages__search {
+  margin-bottom: -4px;
+}
 
+.sticker-messages__search-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sticker-messages__search-input:focus {
+  border-color: #5d8bf4;
+  box-shadow: 0 0 0 3px rgba(93, 139, 244, 0.1);
+}
 .sticker-messages__title {
   margin: 0;
   font-size: 16px;
