@@ -31,6 +31,17 @@ const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
 
 const submitDisabled = computed(() => !newCommentContent.value.trim())
 
+const filteredComments = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) {
+    return comments.value
+  }
+
+  return comments.value.filter(comment =>
+    comment.content?.toLowerCase().includes(query)
+  )
+})
+
 // Загрузка комментариев при монтировании компонента
 onMounted(async () => {
   try {
@@ -152,6 +163,14 @@ const formatDate = (isoString) => {
         />
       </div>
     </div>
+    <div class="user-comments__search">
+      <input
+        v-model="searchQuery"
+        class="user-comments__search-input"
+        type="search"
+        placeholder="Поиск по комментариям..."
+      />
+    </div>
 
     <form class="user-comments__form" @submit.prevent="handleSubmit">
       <textarea
@@ -177,7 +196,7 @@ const formatDate = (isoString) => {
 
     <div v-else-if="hasComments" class="user-comments__list" role="list">
       <div
-        v-for="comment in comments"
+        v-for="comment in filteredComments"
         :key="comment.id"
         class="user-comments__item"
         :style="{ backgroundColor: comment.color || '#F5F5F5' }"
@@ -238,8 +257,8 @@ const formatDate = (isoString) => {
       </div>
     </div>
 
-    <p v-else class="user-comments__empty">Комментарии ещё не добавлены.</p>
-  </div>
+    <p v-else-if="!searchQuery.trim()" class="user-comments__empty">Комментарии ещё не добавлены.</p>
+    <p v-else class="user-comments__empty">Ничего не найдено</p>  </div>
 </template>
 
 <style scoped>
@@ -256,7 +275,24 @@ const formatDate = (isoString) => {
   justify-content: space-between;
   gap: 12px;
 }
+.user-comments__search {
+  margin-top: -4px;
+}
 
+.user-comments__search-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-comments__search-input:focus {
+  border-color: #5d8bf4;
+  box-shadow: 0 0 0 3px rgba(93, 139, 244, 0.1);
+}
 .user-comments__title {
   margin: 0;
   font-size: 18px;
