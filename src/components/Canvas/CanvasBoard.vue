@@ -2352,7 +2352,8 @@ const focusStickerOnCanvas = (stickerId) => {
   }
 
   // 1. Получаем текущие параметры холста
-  const scale = zoomScale.value || 1;
+  // Устанавливаем масштаб на 100% при переходе к стикеру
+  const scale = 1.0;
   const containerRect = canvasContainerRef.value.getBoundingClientRect();
 
   // 2. Вычисляем целевые координаты для центрирования стикера
@@ -2399,7 +2400,8 @@ const focusAnchorOnCanvas = (anchorId) => {
   const anchorX = Number.isFinite(anchor.pos_x) ? anchor.pos_x : anchor.x;
   const anchorY = Number.isFinite(anchor.pos_y) ? anchor.pos_y : anchor.y;
 
-  const scale = zoomScale.value || 1;
+  // Устанавливаем масштаб на 100% при переходе к точке
+  const scale = 1.0;
   const containerRect = canvasContainerRef.value.getBoundingClientRect();
   const targetTranslateX = containerRect.width / 2 - anchorX * scale;
   const targetTranslateY = containerRect.height / 2 - anchorY * scale;
