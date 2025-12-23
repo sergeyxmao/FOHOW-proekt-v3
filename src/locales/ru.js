@@ -80,7 +80,7 @@ export default {
   discussionMenu: {
     title: 'Обсуждение',
     notesList: 'Список заметок',
-    boardComments: 'Комментарии доски',
+    boardComments: 'Коментарии к доске',
     stickerMessages: 'Стикеры',
     allStickers: 'Все стикеры',
     addSticker: 'Добавить стикер',
