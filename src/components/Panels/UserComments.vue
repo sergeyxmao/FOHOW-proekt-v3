@@ -149,8 +149,6 @@ const formatDate = (isoString) => {
   <div class="user-comments">
     <!-- Форма добавления нового комментария -->
     <div class="user-comments__header">
-      <h3 class="user-comments__title">Личные комментарии</h3>
-      <!-- Палитра цветов в заголовке -->
       <div class="user-comments__header-colors">
         <button
           v-for="color in colorPalette"
@@ -273,7 +271,7 @@ const formatDate = (isoString) => {
 .user-comments__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
 }
 .user-comments__search {
@@ -294,16 +292,12 @@ const formatDate = (isoString) => {
   border-color: #5d8bf4;
   box-shadow: 0 0 0 3px rgba(93, 139, 244, 0.1);
 }
-.user-comments__title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #1f2937;
-}
 
 .user-comments__header-colors {
   display: flex;
   gap: 6px;
+  justify-content: center;
+  width: 100%;  
 }
 
 .user-comments__form {
