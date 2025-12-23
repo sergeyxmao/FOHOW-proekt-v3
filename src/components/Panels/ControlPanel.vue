@@ -1027,6 +1027,7 @@ const handleHierarchicalDragMode = () => {
   width: 100%;
   margin-top: auto;
   padding-top: calc(var(--left-panel-section-gap) * 0.4);
+  align-self: stretch;
 }
 .left-panel-controls__zoom-button {
   width: 100%;
@@ -1044,6 +1045,8 @@ const handleHierarchicalDragMode = () => {
   justify-content: center;
   gap: 6px;
   box-shadow: var(--left-panel-btn-shadow);
+  position: relative;
+  isolation: isolate;
   transform: translateZ(0);
   backface-visibility: hidden;
 }
