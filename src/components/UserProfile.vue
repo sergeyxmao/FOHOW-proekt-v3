@@ -11,53 +11,56 @@
     </div>
 
     <!-- Показываем основной контент ТОЛЬКО ЕСЛИ объект user существует и загружен -->
-    <div v-if="user" class="profile-content">
+    <div v-if="user" class="profile-layout">
       <!-- ============================================ -->
-      <!-- Блок 1: Аватарка (верх страницы, по центру) -->
+      <!-- ЛЕВАЯ ПАНЕЛЬ: Аватар + Меню -->
       <!-- ============================================ -->
-      <div
-        class="profile-avatar-section"
-        :class="{ 'profile-avatar-section--verified': user.is_verified }"
-      >
+      <div class="profile-sidebar">
+        <!-- Аватар -->
         <div
-          :class="['avatar-wrapper', 'avatar-wrapper--clickable', { 'avatar-wrapper--verified': user.is_verified }]"
-          @click="openAvatarEdit"
-          title="Нажмите для редактирования аватара"
+          class="profile-avatar-section"
+          :class="{ 'profile-avatar-section--verified': user.is_verified }"
         >
-          <img
-            v-if="user.avatar_url"
-            :key="avatarKey"
-            :src="getAvatarUrl(user.avatar_url)"
-            alt="Аватар"
-            class="profile-avatar"
+          <div
+            :class="['avatar-wrapper', 'avatar-wrapper--clickable', { 'avatar-wrapper--verified': user.is_verified }]"
+            @click="openAvatarEdit"
+            title="Нажмите для редактирования аватара"
           >
-          <div v-else class="profile-avatar-placeholder">
-            {{ getInitials(user.username || user.email) }}
-          </div>
-          <div class="avatar-edit-overlay">
-            <span class="avatar-edit-icon">📷</span>
+            <img
+              v-if="user.avatar_url"
+              :key="avatarKey"
+              :src="getAvatarUrl(user.avatar_url)"
+              alt="Аватар"
+              class="profile-avatar"
+            >
+            <div v-else class="profile-avatar-placeholder">
+              {{ getInitials(user.username || user.email) }}
+            </div>
+            <div class="avatar-edit-overlay">
+              <span class="avatar-edit-icon">📷</span>
+            </div>
           </div>
         </div>
-        <p class="avatar-hint">Нажмите на аватар для редактирования</p>
-      </div>
 
-      <!-- ============================================ -->
-      <!-- Блок 2: Табы с информацией (8 кнопок) -->
-      <!-- ============================================ -->
-      <div class="tabs-container">
-        <div v-if="!isAvatarEditMode" class="tabs-buttons">
+        <!-- Вертикальное меню -->
+        <nav class="sidebar-menu">
           <button
             v-for="tab in tabs"
             :key="tab.id"
-            :class="['tab-button', { active: activeTab === tab.id }]"
-            @click="activeTab = tab.id"
+            :class="['menu-item', { 'menu-item--active': activeTab === tab.id && !isAvatarEditMode }]"
+            @click="selectTab(tab.id)"
           >
-            <span class="tab-icon">{{ tab.icon }}</span>
-            <span class="tab-label">{{ tab.label }}</span>
+            <span class="menu-icon">{{ tab.icon }}</span>
+            <span class="menu-label">{{ tab.label }}</span>
           </button>
-        </div>
+        </nav>
+      </div>
 
-        <div class="tab-content">
+      <!-- ============================================ -->
+      <!-- ПРАВАЯ ПАНЕЛЬ: Контент -->
+      <!-- ============================================ -->
+      <div class="profile-main">
+        <div class="content-area">
           <!-- ===== TAB 1: Основная информация ===== -->
           <div v-if="activeTab === 'basic' && !isAvatarEditMode" class="tab-panel">
             <div class="info-grid">
@@ -2393,6 +2396,12 @@ async function handleAvatarDelete() {
   }
 }
 
+// Выбрать таб из бокового меню
+function selectTab(tabId) {
+  isAvatarEditMode.value = false
+  activeTab.value = tabId
+}
+
 // Открыть режим редактирования аватара
 function openAvatarEdit() {
   isAvatarEditMode.value = true
@@ -2683,7 +2692,110 @@ watch(activeTab, (newTab) => {
 }
 
 /* ========================================== */
-/* БЛОК 2: ТАБЫ */
+/* ДВУХКОЛОНОЧНЫЙ LAYOUT */
+/* ========================================== */
+.profile-layout {
+  display: flex;
+  gap: 24px;
+  min-height: 400px;
+}
+
+.profile-sidebar {
+  flex-shrink: 0;
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-sidebar .profile-avatar-section {
+  margin-bottom: 8px;
+}
+
+.profile-sidebar .avatar-wrapper {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto;
+}
+
+.profile-sidebar .profile-avatar,
+.profile-sidebar .profile-avatar-placeholder {
+  width: 100px;
+  height: 100px;
+  font-size: 36px;
+}
+
+.profile-sidebar .avatar-hint {
+  display: none;
+}
+
+/* Боковое меню */
+.sidebar-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--profile-control-bg);
+  border: 2px solid var(--profile-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--profile-text);
+}
+
+.menu-item:hover {
+  border-color: #667eea;
+  background: var(--profile-control-bg-hover);
+  transform: translateX(4px);
+}
+
+.menu-item--active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.menu-item--active:hover {
+  transform: translateX(4px);
+}
+
+.menu-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.menu-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Правая панель контента */
+.profile-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.content-area {
+  background: var(--profile-control-bg);
+  border-radius: 16px;
+  padding: 24px;
+  min-height: 100%;
+  border: 1px solid var(--profile-border);
+}
+
+/* ========================================== */
+/* БЛОК 2: ТАБЫ (старые стили для совместимости) */
 /* ========================================== */
 .tabs-container {
   margin-bottom: 30px;
@@ -4553,15 +4665,45 @@ watch(activeTab, (newTab) => {
 }
 
 /* ========================================== */
-/* АДАПТИВНЫЕ СТИЛИ ДЛЯ РАСШИРЕННОЙ СЕТКИ ТАБОВ */
+/* АДАПТИВНЫЕ СТИЛИ ДЛЯ ДВУХКОЛОНОЧНОГО LAYOUT */
 /* ========================================== */
-@media (max-width: 900px) {
-  .tabs-buttons {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
 @media (max-width: 768px) {
+  .profile-layout {
+    flex-direction: column;
+  }
+
+  .profile-sidebar {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .profile-sidebar .profile-avatar-section {
+    margin-bottom: 0;
+  }
+
+  .sidebar-menu {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex: 1;
+    gap: 8px;
+  }
+
+  .menu-item {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .menu-icon {
+    font-size: 16px;
+  }
+
+  .content-area {
+    padding: 16px;
+  }
+
   .avatar-preview-large {
     width: 150px;
     height: 150px;
@@ -4577,22 +4719,30 @@ watch(activeTab, (newTab) => {
 }
 
 @media (max-width: 480px) {
-  .tabs-buttons {
-    grid-template-columns: 1fr;
+  .profile-sidebar {
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .tab-button {
-    flex-direction: row;
-    justify-content: flex-start;
-    padding: 12px 16px;
+  .profile-sidebar .profile-avatar-section {
+    align-self: center;
   }
 
-  .tab-icon {
-    font-size: 20px;
+  .sidebar-menu {
+    flex-direction: column;
   }
 
-  .tab-label {
-    font-size: 14px;
+  .menu-item {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .menu-item:hover {
+    transform: none;
+  }
+
+  .menu-item--active:hover {
+    transform: none;
   }
 }
 </style>
