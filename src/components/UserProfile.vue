@@ -872,6 +872,36 @@
                     <span class="detail-value" :class="getExpiryClass()">{{ getExpiryDate() }}</span>
                   </div>
                 </div>
+
+                <!-- Возможности текущего тарифа -->
+                <div v-if="Object.keys(subscriptionStore.features).length > 0" class="current-tariff-features">
+                  <button
+                    class="btn-show-current-features"
+                    @click="showCurrentTariffFeatures = !showCurrentTariffFeatures"
+                  >
+                    {{ showCurrentTariffFeatures ? 'Скрыть возможности ▲' : 'Показать возможности ▼' }}
+                  </button>
+                  <div v-if="showCurrentTariffFeatures" class="current-features-list">
+                    <ul class="tariff-features tariff-features--current">
+                      <li
+                        v-for="feature in getPrimaryFeatures(subscriptionStore.features)"
+                        :key="feature.key"
+                        :class="{ 'feature-unavailable': !feature.available }"
+                      >
+                        <span class="feature-icon">{{ feature.available ? '✓' : '✗' }}</span>
+                        {{ feature.label }}
+                      </li>
+                      <li
+                        v-for="feature in getSecondaryFeatures(subscriptionStore.features)"
+                        :key="feature.key"
+                        :class="{ 'feature-unavailable': !feature.available }"
+                      >
+                        <span class="feature-icon">{{ feature.available ? '✓' : '✗' }}</span>
+                        {{ feature.label }}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
               </div>
 
               <!-- Доступные тарифы -->
@@ -888,19 +918,55 @@
                     v-for="plan in availablePlans"
                     :key="plan.id"
                     class="tariff-card"
-                    :class="{ 'tariff-card--recommended': plan.is_recommended }"
+                    :class="{
+                      'tariff-card--recommended': plan.is_featured,
+                      'tariff-card--expanded': isPlanExpanded(plan.id)
+                    }"
                   >
-                    <div v-if="plan.is_recommended" class="tariff-recommended-badge">Рекомендуем</div>
+                    <div v-if="plan.is_featured" class="tariff-recommended-badge">Рекомендуем</div>
                     <h4 class="tariff-card-name">{{ plan.name }}</h4>
+                    <p v-if="plan.description" class="tariff-card-description">{{ plan.description }}</p>
                     <p class="tariff-card-price">
-                      <span class="price-amount">{{ plan.priceMonthly || 0 }}</span>
+                      <span class="price-amount">{{ plan.price_monthly || 0 }}</span>
                       <span class="price-period">₽/мес</span>
                     </p>
-                    <ul class="tariff-features">
-                      <li v-if="plan.max_boards">Досок: {{ plan.max_boards === -1 ? '∞' : plan.max_boards }}</li>
-                      <li v-if="plan.max_notes">Заметок: {{ plan.max_notes === -1 ? '∞' : plan.max_notes }}</li>
-                      <li v-if="plan.max_stickers">Стикеров: {{ plan.max_stickers === -1 ? '∞' : plan.max_stickers }}</li>
+
+                    <!-- Основные функции (всегда видны) -->
+                    <ul class="tariff-features tariff-features--primary">
+                      <li
+                        v-for="feature in getPrimaryFeatures(plan.features)"
+                        :key="feature.key"
+                        :class="{ 'feature-unavailable': !feature.available }"
+                      >
+                        <span class="feature-icon">{{ feature.available ? '✓' : '✗' }}</span>
+                        {{ feature.label }}
+                      </li>
                     </ul>
+
+                    <!-- Кнопка раскрытия дополнительных функций -->
+                    <button
+                      v-if="getSecondaryFeatures(plan.features).length > 0"
+                      class="btn-expand-features"
+                      @click="togglePlanExpanded(plan.id)"
+                    >
+                      <span v-if="isPlanExpanded(plan.id)">Скрыть подробности ▲</span>
+                      <span v-else>Подробнее ▼</span>
+                    </button>
+
+                    <!-- Дополнительные функции (раскрываются) -->
+                    <div v-if="isPlanExpanded(plan.id)" class="tariff-features-expanded">
+                      <ul class="tariff-features tariff-features--secondary">
+                        <li
+                          v-for="feature in getSecondaryFeatures(plan.features)"
+                          :key="feature.key"
+                          :class="{ 'feature-unavailable': !feature.available }"
+                        >
+                          <span class="feature-icon">{{ feature.available ? '✓' : '✗' }}</span>
+                          {{ feature.label }}
+                        </li>
+                      </ul>
+                    </div>
+
                     <button class="btn-upgrade" @click="handleUpgrade(plan)">
                       Перейти на тариф
                     </button>
@@ -1301,6 +1367,111 @@ const applyingPromo = ref(false)
 // Тарифы
 const loadingPlans = ref(false)
 const availablePlans = ref([])
+const expandedPlanIds = ref([]) // Раскрытые карточки тарифов
+const showCurrentTariffFeatures = ref(false) // Показать возможности текущего тарифа
+
+// Маппинг для человекочитаемых названий функций тарифов
+const featureLabels = {
+  // Лимиты
+  'max_boards': (value) => value === -1 ? '∞ Безлимитные доски' : `📊 До ${value} досок`,
+  'max_notes': (value) => value === -1 ? '∞ Безлимитные заметки' : `📝 До ${value} заметок`,
+  'max_stickers': (value) => value === -1 ? '∞ Безлимитные стикеры' : `🎨 До ${value} стикеров`,
+  'max_licenses': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек`,
+  'max_cards_per_board': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек на доске`,
+  'max_comments': (value) => value === -1 ? '∞ Безлимитные комментарии' : `💬 До ${value} комментариев`,
+
+  // Булевы функции
+  'can_export_pdf': '📄 Экспорт в PDF',
+  'can_export_png': '🖼️ Экспорт в PNG',
+  'can_export_png_bw': '⬛ Экспорт PNG (Ч/Б)',
+  'can_export_png_formats': (value) => {
+    if (Array.isArray(value) && value.length > 0) {
+      return `📏 Форматы PNG: ${value.join(', ')}`
+    }
+    return '📏 Экспорт в разных форматах'
+  },
+  'can_export_svg': '📐 Экспорт в SVG',
+  'can_save_project': '💾 Сохранение проекта',
+  'can_load_project': '📂 Загрузка проекта',
+  'can_share_project': '🔗 Поделиться проектом',
+  'can_share_boards': '🔗 Поделиться досками',
+  'can_invite_drawing': '✏️ Приглашение к рисованию',
+  'can_duplicate_boards': '📋 Дублирование досок'
+}
+
+// Основные функции для краткого списка (первые 4)
+const primaryFeatures = ['max_boards', 'max_licenses', 'max_notes', 'max_stickers']
+
+// Дополнительные функции для расширенного списка
+const secondaryFeatures = [
+  'max_comments',
+  'can_export_pdf',
+  'can_export_png',
+  'can_export_png_formats',
+  'can_export_png_bw',
+  'can_export_svg',
+  'can_save_project',
+  'can_load_project',
+  'can_share_project',
+  'can_share_boards',
+  'can_invite_drawing',
+  'can_duplicate_boards'
+]
+
+// Форматирование функции
+function formatFeature(key, value) {
+  if (key in featureLabels) {
+    const formatter = featureLabels[key]
+    if (typeof formatter === 'function') {
+      return formatter(value)
+    }
+    return formatter
+  }
+  return null
+}
+
+// Получение основных функций для карточки
+function getPrimaryFeatures(features) {
+  if (!features) return []
+  return Object.entries(features)
+    .filter(([key]) => primaryFeatures.includes(key))
+    .map(([key, value]) => ({
+      key,
+      label: formatFeature(key, value),
+      available: typeof value === 'boolean' ? value : true
+    }))
+    .filter(f => f.label !== null)
+    .sort((a, b) => primaryFeatures.indexOf(a.key) - primaryFeatures.indexOf(b.key))
+}
+
+// Получение дополнительных функций для раскрытого списка
+function getSecondaryFeatures(features) {
+  if (!features) return []
+  return Object.entries(features)
+    .filter(([key]) => secondaryFeatures.includes(key))
+    .map(([key, value]) => ({
+      key,
+      label: formatFeature(key, value),
+      available: typeof value === 'boolean' ? value : true
+    }))
+    .filter(f => f.label !== null)
+    .sort((a, b) => secondaryFeatures.indexOf(a.key) - secondaryFeatures.indexOf(b.key))
+}
+
+// Переключение раскрытия карточки тарифа
+function togglePlanExpanded(planId) {
+  const index = expandedPlanIds.value.indexOf(planId)
+  if (index === -1) {
+    expandedPlanIds.value.push(planId)
+  } else {
+    expandedPlanIds.value.splice(index, 1)
+  }
+}
+
+// Проверка раскрыта ли карточка
+function isPlanExpanded(planId) {
+  return expandedPlanIds.value.includes(planId)
+}
 
 // Предупреждение об изменении компьютерного номера
 const showPersonalIdWarning = ref(false)
@@ -4658,15 +4829,126 @@ watch(activeTab, (newTab) => {
   margin: 0 0 16px 0;
 }
 
-.tariff-features li {
-  padding: 4px 0;
-  font-size: 13px;
+.tariff-card-description {
+  font-size: 12px;
   color: var(--profile-muted);
+  margin: 0 0 12px 0;
+  line-height: 1.4;
 }
 
-.tariff-features li::before {
-  content: '✓ ';
+.tariff-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 12px;
+  color: var(--profile-text);
+}
+
+.tariff-features li .feature-icon {
+  flex-shrink: 0;
   color: #4CAF50;
+  font-weight: 600;
+}
+
+.tariff-features li.feature-unavailable {
+  color: var(--profile-muted);
+  text-decoration: line-through;
+}
+
+.tariff-features li.feature-unavailable .feature-icon {
+  color: #e74c3c;
+}
+
+.tariff-features--primary {
+  margin-bottom: 8px;
+}
+
+.tariff-features--secondary {
+  margin-bottom: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--profile-border);
+}
+
+.btn-expand-features {
+  width: 100%;
+  padding: 6px 12px;
+  margin-bottom: 12px;
+  background: transparent;
+  border: 1px solid var(--profile-border);
+  border-radius: 6px;
+  color: var(--profile-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-expand-features:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.tariff-features-expanded {
+  animation: expandFeatures 0.3s ease;
+}
+
+@keyframes expandFeatures {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+.tariff-card--expanded {
+  background: var(--profile-control-bg);
+}
+
+/* Стили для возможностей текущего тарифа */
+.current-tariff-features {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-show-current-features {
+  width: 100%;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-show-current-features:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.current-features-list {
+  margin-top: 12px;
+  animation: expandFeatures 0.3s ease;
+}
+
+.tariff-features--current li {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.tariff-features--current li .feature-icon {
+  color: #90EE90;
+}
+
+.tariff-features--current li.feature-unavailable {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.tariff-features--current li.feature-unavailable .feature-icon {
+  color: #ff6b6b;
 }
 
 .btn-upgrade {
