@@ -2,7 +2,7 @@
 
     export function checkFeature(featureName, requiredValue = true) {
       return async (req, reply) => {
-        const userId = req.user.id; // ИСПРАВЛЕНО
+        const userId = req.user.id;
 
         if (!userId) {
           return reply.code(401).send({ error: 'Не удалось определить пользователя из токена.' });
@@ -18,7 +18,8 @@
             `SELECT
                sp.features,
                sp.name as plan_name,
-               u.subscription_expires_at
+               u.subscription_expires_at,
+               u.grace_period_until
              FROM users u
              JOIN subscription_plans sp ON u.plan_id = sp.id
              WHERE u.id = $1`,
@@ -33,12 +34,24 @@
           const features = plan.features;
           const featureValue = features[featureName];
 
+          // Проверка подписки с учётом grace-периода
           if (plan.subscription_expires_at && new Date(plan.subscription_expires_at) < new Date()) {
-            return reply.code(403).send({
-              error: 'Срок вашей подписки истек.',
-              code: 'SUBSCRIPTION_EXPIRED',
-              upgradeRequired: true
-            });
+            // Подписка истекла — проверяем grace-период
+            const now = new Date();
+            const gracePeriodUntil = plan.grace_period_until ? new Date(plan.grace_period_until) : null;
+
+            if (!gracePeriodUntil || now > gracePeriodUntil) {
+              // Grace-период отсутствует или тоже истёк
+              return reply.code(403).send({
+                error: 'Срок вашей подписки истек.',
+                code: 'SUBSCRIPTION_EXPIRED',
+                upgradeRequired: true
+              });
+            }
+
+            // Grace-период активен — разрешаем доступ, но добавляем метку
+            req.user.inGracePeriod = true;
+            console.log(`[GRACE] Пользователь ${userId} в grace-периоде до ${gracePeriodUntil.toISOString()}`);
           }
 
           if (featureValue !== requiredValue) {

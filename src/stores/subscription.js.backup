@@ -98,64 +98,28 @@ export const useSubscriptionStore = defineStore('subscription', {
 
         const data = await response.json()
 
-        // Проверяем, истекла ли подписка с учётом grace-периода
-        const subscriptionExpiresAt = data.user?.subscriptionExpiresAt
-        const gracePeriodUntil = data.user?.gracePeriodUntil
-        const now = new Date()
-        let isExpired = false
-
-        if (subscriptionExpiresAt) {
-          const expireDate = new Date(subscriptionExpiresAt)
-          if (now > expireDate) {
-            // Подписка истекла — проверяем grace-период
-            if (!gracePeriodUntil || now > new Date(gracePeriodUntil)) {
-              isExpired = true
-            }
-          }
+        // Сохраняем данные в state
+        this.currentPlan = {
+          id: data.plan?.id,
+          name: data.plan?.name,
+          code_name: data.plan?.code_name,
+          priceMonthly: data.plan?.priceMonthly,
+          expiresAt: data.user?.subscriptionExpiresAt
         }
 
-        // Если подписка истекла и grace-период тоже — показываем Guest-тариф
-        if (isExpired) {
-          this.currentPlan = {
-            id: data.plan?.id,
-            name: 'Guest (подписка истекла)',
-            code_name: 'guest',
-            priceMonthly: 0,
-            expiresAt: subscriptionExpiresAt
-          }
-          // Устанавливаем лимиты Guest-тарифа
-          this.features = {
-            max_boards: 1,
-            max_stickers: 10,
-            max_notes: 10,
-            max_comments: 10,
-            max_licenses: 0
-          }
-        } else {
-          // Подписка активна или в grace-периоде
-          this.currentPlan = {
-            id: data.plan?.id,
-            name: data.plan?.name,
-            code_name: data.plan?.code_name,
-            priceMonthly: data.plan?.priceMonthly,
-            expiresAt: subscriptionExpiresAt
-          }
-          this.features = data.features || {}
-        }
-
+        this.features = data.features || {}
         this.usage = data.usage || {}
 
         // Формируем лимиты из features
         this.limits = {
-          boards: this.features?.max_boards ?? -1,
-          notes: this.features?.max_notes ?? -1,
-          stickers: this.features?.max_stickers ?? -1,
-          comments: this.features?.max_comments ?? -1,
-          cards: this.features?.max_licenses ?? -1
+          boards: data.features?.max_boards ?? -1,
+          notes: data.features?.max_notes ?? -1,
+          stickers: data.features?.max_stickers ?? -1,
+          comments: data.features?.max_comments ?? -1,
+          cards: data.features?.max_licenses ?? -1
         }
 
         return data
-
       } catch (error) {
         console.error('Ошибка при загрузке плана:', error)
         this.error = error.message

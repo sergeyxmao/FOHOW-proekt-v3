@@ -140,45 +140,24 @@ export const useStickersStore = defineStore('stickers', () => {
       });
 
       if (!response.ok) {
-        // Проверяем, не превышен ли лимит или подписка
+        // Проверяем, не превышен ли лимит
         if (response.status === 403) {
           try {
             const errorData = await response.json();
-            
-            // Проверяем код ошибки
             if (errorData.code === 'USAGE_LIMIT_REACHED') {
+              // Показываем специфичное сообщение о превышении лимита
               alert(errorData.error || 'Достигнут лимит стикеров на вашем тарифе');
               isLoading.value = false;
               return null;
             }
-            
-            if (errorData.code === 'SUBSCRIPTION_EXPIRED') {
-              alert(errorData.error || 'Срок вашей подписки истек');
-              isLoading.value = false;
-              return null;
-            }
-            
-            // Если другая ошибка 403
-            alert(errorData.error || 'Доступ запрещен');
-            isLoading.value = false;
-            return null;
-            
           } catch (parseError) {
-            // Если не удалось распарсить JSON
-            alert('Ошибка доступа. Проверьте подписку.');
-            isLoading.value = false;
-            return null;
+            // Если не удалось распарсить JSON, продолжаем с общей ошибкой
           }
         }
-        
-        // Для других статусов (не 403)
-        try {
-          const data = await response.json();
-          throw new Error(data.error || 'Ошибка создания стикера');
-        } catch (parseError) {
-          throw new Error('Ошибка создания стикера');
-        }
+        const data = await response.json();
+        throw new Error(data.error || 'Ошибка создания стикера');
       }
+
       const data = await response.json();
 
       // Сервер может вернуть стикер с произвольным z_index.

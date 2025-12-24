@@ -4437,16 +4437,9 @@ const handleStageClick = async (event) => {
           color: '#FFFF88',
         });
 
-        // Проверяем, что стикер создан успешно
-        if (!newSticker) {
-          // Ошибка уже показана в store (alert), просто выходим
-          stickersStore.disablePlacementMode();
-          return;
-        }
-
         clearObjectSelections();
         stickersStore.selectSticker(newSticker.id);
-        stickersStore.disablePlacementMode();
+        stickersStore.disablePlacementMode();		  
         await nextTick();
         const elem = document.querySelector(`[data-sticker-id="${newSticker.id}"]`);
         if (elem) {
