@@ -130,7 +130,16 @@ node scripts/downgrade_expired.js
 
 - Node.js >= 20.19.0
 - Доступ к базе данных PostgreSQL
-- Правильно настроенный `.env` файл с параметрами подключения к БД
+- Файл `api/.env` с параметрами подключения к БД:
+  ```env
+  DB_HOST=localhost
+  DB_PORT=5432
+  DB_NAME=your_database
+  DB_USER=your_user
+  DB_PASSWORD=your_password
+  ```
+
+**Важно:** Скрипт автоматически загружает переменные из `api/.env`. Если файл отсутствует или неправильно настроен, скрипт выведет ошибку и завершится.
 
 ### Безопасность
 

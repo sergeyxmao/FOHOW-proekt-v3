@@ -19,6 +19,29 @@
  *   0 3 * * * cd /path/to/project && node scripts/downgrade_expired.js >> /var/log/downgrade_expired.log 2>&1
  */
 
+// Загружаем переменные окружения из .env файла
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Загружаем .env из папки api/
+dotenv.config({ path: join(__dirname, '../api/.env') });
+
+// Проверяем, что переменные окружения загружены
+if (!process.env.DB_HOST || !process.env.DB_NAME) {
+  console.error('\n❌ ОШИБКА: Переменные окружения не загружены!');
+  console.error('Убедитесь, что файл api/.env существует и содержит:');
+  console.error('  - DB_HOST');
+  console.error('  - DB_NAME');
+  console.error('  - DB_USER');
+  console.error('  - DB_PASSWORD');
+  console.error('  - DB_PORT\n');
+  process.exit(1);
+}
+
 import { pool } from '../api/db.js';
 
 /**
