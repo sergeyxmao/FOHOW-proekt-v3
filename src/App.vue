@@ -109,6 +109,7 @@ const pendingAction = ref(null)
 
 const showResetPassword = ref(false)
 const resetToken = ref('')
+const graceNotificationShown = ref(false) // Флаг показа уведомления о grace-периоде
 
 let autoSaveInterval = null
 const API_URL = import.meta.env.VITE_API_URL || '/api' // Используем относительный путь для прокси
@@ -938,6 +939,56 @@ function handleMobileBoardSelect(boardId) {
   openBoard(boardId)
 }
 
+/**
+ * Проверяет, находится ли пользователь в grace-периоде и показывает уведомление
+ */
+function checkAndNotifyGracePeriod() {
+  // Если уже показали уведомление в этой сессии, не показываем повторно
+  if (graceNotificationShown.value) {
+    return
+  }
+
+  // Проверяем наличие необходимых данных
+  const user = userStore.user
+  if (!user) {
+    return
+  }
+
+  const expiresAt = user.subscriptionExpiresAt
+  const gracePeriodUntil = user.gracePeriodUntil
+
+  if (!expiresAt || !gracePeriodUntil) {
+    return
+  }
+
+  const now = new Date()
+  const expireDate = new Date(expiresAt)
+  const graceDate = new Date(gracePeriodUntil)
+
+  // Проверяем: подписка истекла, но grace-период еще активен
+  const isExpired = now > expireDate
+  const isGraceActive = now <= graceDate
+
+  if (isExpired && isGraceActive) {
+    // Форматируем дату окончания grace-периода
+    const formattedDate = graceDate.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+
+    // Показываем toast-уведомление
+    notificationsStore.addNotification({
+      type: 'warning',
+      message: `⚠️ Ваша подписка истекла. Доступ сохранен до ${formattedDate}. Продлите подписку.`,
+      duration: 8000 // 8 секунд
+    })
+
+    // Отмечаем, что уведомление показано
+    graceNotificationShown.value = true
+  }
+}
+
 watch(isAuthenticated, (value) => {
   if (value) {
     showMobileAuthPrompt.value = false
@@ -993,6 +1044,9 @@ onMounted(async () => {
       await userStore.fetchUserPlan()
       // Загружаем план подписки через subscription store
       await subscriptionStore.loadPlan()
+
+      // Проверяем и показываем уведомление о grace-периоде
+      checkAndNotifyGracePeriod()
     } catch (error) {
       console.error('⚠️ Ошибка загрузки данных о подписке:', error)
     }

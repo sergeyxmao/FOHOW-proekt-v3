@@ -45,7 +45,7 @@ const props = defineProps({
   type: {
     type: String,
     default: 'info',
-    validator: (value) => ['error', 'success', 'info'].includes(value)
+    validator: (value) => ['error', 'success', 'info', 'warning'].includes(value)
   },
   actionText: {
     type: String,
@@ -63,7 +63,8 @@ function getIcon() {
   const icons = {
     error: '❌',
     success: '✅',
-    info: 'ℹ️'
+    info: 'ℹ️',
+    warning: '⚠️'
   }
   return icons[props.type] || icons.info
 }
@@ -123,6 +124,10 @@ function handleAction() {
 
 .toast-notification--info {
   border-left-color: #2196f3;
+}
+
+.toast-notification--warning {
+  border-left-color: #ff9800;
 }
 
 /* Иконка */
@@ -186,6 +191,16 @@ function handleAction() {
 
 .toast-notification--info .toast-notification__action:hover {
   background: #1976d2;
+  transform: translateY(-1px);
+}
+
+.toast-notification--warning .toast-notification__action {
+  background: #ff9800;
+  color: white;
+}
+
+.toast-notification--warning .toast-notification__action:hover {
+  background: #f57c00;
   transform: translateY(-1px);
 }
 
