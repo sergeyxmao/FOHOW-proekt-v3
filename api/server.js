@@ -1795,6 +1795,7 @@ app.get('/api/user/plan', {
         u.email,
         u.subscription_started_at,
         u.subscription_expires_at,
+        u.grace_period_until,
         sp.id as plan_id,
         sp.name as plan_name,
         sp.code_name as plan_code_name,
@@ -1830,7 +1831,8 @@ app.get('/api/user/plan', {
         username: data.username,
         email: data.email,
         subscriptionStartedAt: data.subscription_started_at,
-        subscriptionExpiresAt: data.subscription_expires_at
+        subscriptionExpiresAt: data.subscription_expires_at,
+        gracePeriodUntil: data.grace_period_until
       },
       plan: {
         id: data.plan_id,
