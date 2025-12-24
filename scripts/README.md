@@ -131,11 +131,22 @@ node scripts/downgrade_expired.js
 - Node.js >= 20.19.0
 - Доступ к базе данных PostgreSQL
 - Файл `api/.env` с параметрами подключения к БД:
+
+  **Локальная БД (localhost):**
   ```env
   DB_HOST=localhost
   DB_PORT=5432
   DB_NAME=your_database
   DB_USER=your_user
+  DB_PASSWORD=your_password
+  ```
+
+  **Удаленная БД (например, Beget):**
+  ```env
+  DB_HOST=oshifotkleeshuln.beget.app
+  DB_PORT=5432
+  DB_NAME=oshifotkl_interboard
+  DB_USER=oshifotkl_interboard
   DB_PASSWORD=your_password
   ```
 
