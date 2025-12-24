@@ -871,6 +871,14 @@
                     <span class="detail-label">Окончание подписки:</span>
                     <span class="detail-value" :class="getExpiryClass()">{{ getExpiryDate() }}</span>
                   </div>
+                  <!-- Grace-период -->
+                  <div v-if="isInGracePeriod()" class="tariff-detail-item grace-period-warning">
+                    <span class="detail-label">⚠️ Льготный период:</span>
+                    <span class="detail-value grace-period-date">До {{ getGracePeriodDate() }}</span>
+                  </div>
+                  <div v-if="isInGracePeriod()" class="grace-period-message">
+                    Ваша подписка истекла, но доступ сохранён до окончания льготного периода. Пожалуйста, продлите подписку.
+                  </div>
                 </div>
 
                 <!-- Возможности текущего тарифа -->
@@ -1867,6 +1875,31 @@ function getExpiryDate() {
   const expiresAt = user.value?.subscription_expires_at || subscriptionStore.currentPlan?.expiresAt
   if (!expiresAt) return 'Бессрочно'
   return formatDate(expiresAt)
+}
+
+// Проверка: находится ли пользователь в grace-периоде
+function isInGracePeriod() {
+  const expiresAt = user.value?.subscription_expires_at
+  const gracePeriodUntil = user.value?.grace_period_until
+
+  // Grace-период НЕ показываем если:
+  if (!gracePeriodUntil) return false // Нет даты grace-периода
+  if (!expiresAt) return false // Бессрочная подписка (null)
+
+  // Подписка истекла — проверяем, активен ли grace-период
+  const now = new Date()
+  const graceDate = new Date(gracePeriodUntil)
+  const expireDate = new Date(expiresAt)
+
+  // Показываем только если подписка уже истекла И grace-период ещё активен
+  return now > expireDate && now <= graceDate
+}
+
+// Дата окончания grace-периода
+function getGracePeriodDate() {
+  const gracePeriodUntil = user.value?.grace_period_until
+  if (!gracePeriodUntil) return null
+  return formatDate(gracePeriodUntil)
 }
 // Статистика библиотеки изображений
 const imageLibraryStats = ref(null)
@@ -4741,6 +4774,37 @@ watch(activeTab, (newTab) => {
 
 .detail-value {
   font-weight: 600;
+}
+
+/* Grace-период стили */
+.grace-period-warning {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 4px solid #ff9800;
+  margin-top: 8px;
+}
+
+.grace-period-warning .detail-label {
+  color: #e67e22;
+  font-weight: 600;
+  opacity: 1;
+}
+
+.grace-period-date {
+  color: #d35400;
+  font-weight: 700;
+}
+
+.grace-period-message {
+  background: #fff3cd;
+  color: #856404;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 8px;
+  border: 1px solid #ffeaa7;
 }
 
 .available-tariffs {

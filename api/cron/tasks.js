@@ -192,7 +192,7 @@ async function handleSubscriptionExpiry() {
     for (const user of expiredUsers.rows) {
       try {
         const isPaidPlan = ['individual', 'premium'].includes(user.current_plan_code);
-        const gracePeriodUntil = isPaidPlan ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : null;
+        const gracePeriodUntil = isPaidPlan ? new Date(new Date(user.subscription_expires_at).getTime() + 7 * 24 * 60 * 60 * 1000) : null;
 
         // Обновить план на guest
         await client.query(
