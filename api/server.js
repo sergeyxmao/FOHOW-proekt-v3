@@ -750,7 +750,7 @@ app.get('/api/profile', {
             u.telegram_user, u.telegram_channel, u.vk_profile, u.ok_profile,
             u.instagram_profile, u.whatsapp_contact,
             u.visibility_settings, u.search_settings, u.ui_preferences,
-            u.subscription_started_at, u.subscription_expires_at,
+            u.subscription_started_at, u.subscription_expires_at, u.grace_period_until,
             u.is_verified, u.verified_at,
             sp.id as plan_id, sp.name as plan_name, sp.features
      FROM users u
@@ -790,6 +790,7 @@ app.get('/api/profile', {
       ui_preferences: userData.ui_preferences,      
       subscription_started_at: userData.subscription_started_at,
       subscription_expires_at: userData.subscription_expires_at,
+      grace_period_until: userData.grace_period_until,
       is_verified: userData.is_verified || false,
       verified_at: userData.verified_at || null,
       plan: userData.plan_id ? {
