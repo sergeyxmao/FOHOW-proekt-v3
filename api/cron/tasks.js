@@ -204,8 +204,8 @@ async function handleSubscriptionExpiry() {
 
         // Записать в историю
         await client.query(
-          `INSERT INTO subscription_history (user_id, plan_id, start_date, source, amount_paid, currency)
-           VALUES ($1, $2, NOW(), 'auto_subscription_expired', 0.00, 'RUB')`,
+          `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
+           VALUES ($1, $2, NOW(), NOW() + INTERVAL '100 years', 'auto_subscription_expired', 0.00, 'RUB')`,
           [user.id, guestPlanId]
         );
 
@@ -492,10 +492,9 @@ async function switchDemoToGuest() {
 
         // Записываем в историю подписок
         await client.query(
-          `INSERT INTO subscription_history
-             (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
-           VALUES ($1, $2, NOW(), NULL, 'auto_demo_expired', 0.00, 'RUB')`,
-          [user.id, guestPlan.id]
+          `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
+             VALUES ($1, $2, NOW(), NOW() + INTERVAL '100 years', 'auto_subscription_expired', 0.00, 'RUB')`,
+          [user.id, guestPlanId]
         );
 
         console.log(`  ✅ Пользователь ${user.email} переведен на гостевой тариф`);
