@@ -18,43 +18,34 @@
       <div
         class="profile-avatar-section"
         :class="{ 'profile-avatar-section--verified': user.is_verified }"
-      >          <div :class="['avatar-wrapper', { 'avatar-wrapper--verified': user.is_verified }]">
-            <img
-              v-if="user.avatar_url"
-              :key="avatarKey"
-              :src="getAvatarUrl(user.avatar_url)"
-              alt="Аватар"
-              class="profile-avatar"
-            >
-            <div v-else class="profile-avatar-placeholder">
-              {{ getInitials(user.username || user.email) }}
-            </div>
-          </div>
-          <div class="avatar-actions">
-            <label class="btn-upload">
-              <input
-              type="file"
-              accept="image/*"
-              @change="handleAvatarChange"
-              style="display: none"
-            >
-            📷 Загрузить фото
-          </label>
-          <button
+      >
+        <div
+          :class="['avatar-wrapper', 'avatar-wrapper--clickable', { 'avatar-wrapper--verified': user.is_verified }]"
+          @click="openAvatarEdit"
+          title="Нажмите для редактирования аватара"
+        >
+          <img
             v-if="user.avatar_url"
-            class="btn-remove"
-            @click="handleAvatarDelete"
+            :key="avatarKey"
+            :src="getAvatarUrl(user.avatar_url)"
+            alt="Аватар"
+            class="profile-avatar"
           >
-            🗑️ Удалить фото
-          </button>
+          <div v-else class="profile-avatar-placeholder">
+            {{ getInitials(user.username || user.email) }}
+          </div>
+          <div class="avatar-edit-overlay">
+            <span class="avatar-edit-icon">📷</span>
+          </div>
         </div>
+        <p class="avatar-hint">Нажмите на аватар для редактирования</p>
       </div>
 
       <!-- ============================================ -->
-      <!-- Блок 2: Табы с информацией (4 кнопки в ряд) -->
+      <!-- Блок 2: Табы с информацией (8 кнопок) -->
       <!-- ============================================ -->
       <div class="tabs-container">
-        <div class="tabs-buttons">
+        <div v-if="!isAvatarEditMode" class="tabs-buttons">
           <button
             v-for="tab in tabs"
             :key="tab.id"
@@ -68,7 +59,7 @@
 
         <div class="tab-content">
           <!-- ===== TAB 1: Основная информация ===== -->
-          <div v-if="activeTab === 'basic'" class="tab-panel">
+          <div v-if="activeTab === 'basic' && !isAvatarEditMode" class="tab-panel">
             <div class="info-grid">
               <div class="info-item">
                 <label>Email:</label>
@@ -107,7 +98,7 @@
           </div>
 
           <!-- ===== TAB 2: Личная информация ===== -->
-          <div v-if="activeTab === 'personal'" class="tab-panel">
+          <div v-if="activeTab === 'personal' && !isAvatarEditMode" class="tab-panel">
             <form @submit.prevent="savePersonalInfo" class="info-form">
               <div class="form-group">
                 <label for="username">Имя пользователя:</label>
@@ -265,7 +256,7 @@
           </div>
 
           <!-- ===== TAB 3: Соц. сети ===== -->
-          <div v-if="activeTab === 'social'" class="tab-panel">
+          <div v-if="activeTab === 'social' && !isAvatarEditMode" class="tab-panel">
             <form @submit.prevent="saveSocialInfo" class="info-form">
               <div class="form-group">
                 <label for="telegram">Telegram (@username):</label>
@@ -317,7 +308,7 @@
           </div>
 
           <!-- ===== TAB 4: Настройки конфиденциальности ===== -->
-          <div v-if="activeTab === 'privacy'" class="tab-panel">
+          <div v-if="activeTab === 'privacy' && !isAvatarEditMode" class="tab-panel">
             <div class="privacy-settings-main">
               <h3 class="privacy-settings-title">Управление видимостью данных</h3>
               <p class="privacy-settings-hint">
@@ -629,7 +620,7 @@
           </div>
 
           <!-- ===== TAB 5: Лимиты / Используемые ресурсы ===== -->
-          <div v-if="activeTab === 'limits'" class="tab-panel">
+          <div v-if="activeTab === 'limits' && !isAvatarEditMode" class="tab-panel">
             <div v-if="imageStatsError" class="limit-error">
               {{ imageStatsError }}
             </div>            
@@ -792,49 +783,161 @@
                     ></div>
                   </div>
                 </div>
-              </div>              
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- ============================================ -->
-      <!-- Блок 3: Telegram интеграция -->
-      <!-- ============================================ -->
-      <div class="extra-section">
-        <div class="section-header">
-          <h3>Уведомления Telegram</h3>
-        </div>
-        <TelegramLinkWidget />
-      </div>
+          <!-- ===== TAB 6: Уведомления ===== -->
+          <div v-if="activeTab === 'notifications' && !isAvatarEditMode" class="tab-panel">
+            <div class="notifications-section">
+              <div class="notification-block">
+                <h3 class="notification-title">
+                  <span class="notification-icon">💬</span>
+                  Telegram
+                </h3>
+                <TelegramLinkWidget />
+              </div>
 
-      <!-- ============================================ -->
-      <!-- Блок 4: Промокоды -->
-      <!-- ============================================ -->
-      <div class="extra-section">
-        <div class="section-header">
-          <h3>Промокод</h3>
-        </div>
-        <div class="promo-section">
-          <div class="promo-input-group">
-            <input
-              v-model="promoCodeInput"
-              type="text"
-              placeholder="Введите промокод"
-              class="promo-input"
-              :disabled="applyingPromo"
-            />
-            <button
-              class="btn-promo"
-              @click="handleApplyPromo"
-              :disabled="!promoCodeInput.trim() || applyingPromo"
-            >
-              {{ applyingPromo ? 'Применение...' : 'Применить' }}
-            </button>
+              <div class="notification-block notification-block--coming-soon">
+                <h3 class="notification-title">
+                  <span class="notification-icon">📧</span>
+                  Email-уведомления
+                </h3>
+                <p class="coming-soon-text">Скоро появится</p>
+              </div>
+
+              <div class="notification-block notification-block--coming-soon">
+                <h3 class="notification-title">
+                  <span class="notification-icon">🔔</span>
+                  Push-уведомления
+                </h3>
+                <p class="coming-soon-text">Скоро появится</p>
+              </div>
+            </div>
           </div>
 
-          <div v-if="promoError" class="error-message">{{ promoError }}</div>
-          <div v-if="promoSuccess" class="success-message">{{ promoSuccess }}</div>
+          <!-- ===== TAB 7: Промокод ===== -->
+          <div v-if="activeTab === 'promo' && !isAvatarEditMode" class="tab-panel">
+            <div class="promo-section">
+              <div class="promo-description">
+                <p>Введите промокод для получения бонусов или продления подписки:</p>
+              </div>
+              <div class="promo-input-group">
+                <input
+                  v-model="promoCodeInput"
+                  type="text"
+                  placeholder="Введите промокод"
+                  class="promo-input"
+                  :disabled="applyingPromo"
+                />
+                <button
+                  class="btn-promo"
+                  @click="handleApplyPromo"
+                  :disabled="!promoCodeInput.trim() || applyingPromo"
+                >
+                  {{ applyingPromo ? 'Применение...' : 'Применить' }}
+                </button>
+              </div>
+
+              <div v-if="promoError" class="error-message">{{ promoError }}</div>
+              <div v-if="promoSuccess" class="success-message">{{ promoSuccess }}</div>
+            </div>
+          </div>
+
+          <!-- ===== TAB 8: Тарифы ===== -->
+          <div v-if="activeTab === 'tariffs' && !isAvatarEditMode" class="tab-panel">
+            <div class="tariffs-section">
+              <!-- Текущий тариф -->
+              <div class="current-tariff-card">
+                <div class="tariff-badge tariff-badge--current">Текущий тариф</div>
+                <h3 class="tariff-name">{{ subscriptionStore.currentPlan?.name || 'Не определен' }}</h3>
+                <div class="tariff-details">
+                  <div class="tariff-detail-item">
+                    <span class="detail-label">Начало подписки:</span>
+                    <span class="detail-value">{{ getStartDate() }}</span>
+                  </div>
+                  <div class="tariff-detail-item">
+                    <span class="detail-label">Окончание подписки:</span>
+                    <span class="detail-value" :class="getExpiryClass()">{{ getExpiryDate() }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Доступные тарифы -->
+              <div class="available-tariffs">
+                <h4 class="tariffs-subtitle">Доступные тарифы</h4>
+                <div v-if="loadingPlans" class="tariffs-loading">
+                  Загрузка тарифов...
+                </div>
+                <div v-else-if="availablePlans.length === 0" class="tariffs-empty">
+                  Нет доступных тарифов для перехода
+                </div>
+                <div v-else class="tariffs-grid">
+                  <div
+                    v-for="plan in availablePlans"
+                    :key="plan.id"
+                    class="tariff-card"
+                    :class="{ 'tariff-card--recommended': plan.is_recommended }"
+                  >
+                    <div v-if="plan.is_recommended" class="tariff-recommended-badge">Рекомендуем</div>
+                    <h4 class="tariff-card-name">{{ plan.name }}</h4>
+                    <p class="tariff-card-price">
+                      <span class="price-amount">{{ plan.priceMonthly || 0 }}</span>
+                      <span class="price-period">₽/мес</span>
+                    </p>
+                    <ul class="tariff-features">
+                      <li v-if="plan.max_boards">Досок: {{ plan.max_boards === -1 ? '∞' : plan.max_boards }}</li>
+                      <li v-if="plan.max_notes">Заметок: {{ plan.max_notes === -1 ? '∞' : plan.max_notes }}</li>
+                      <li v-if="plan.max_stickers">Стикеров: {{ plan.max_stickers === -1 ? '∞' : plan.max_stickers }}</li>
+                    </ul>
+                    <button class="btn-upgrade" @click="handleUpgrade(plan)">
+                      Перейти на тариф
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== Режим редактирования аватара ===== -->
+          <div v-if="isAvatarEditMode" class="tab-panel avatar-edit-panel">
+            <div class="avatar-editor">
+              <h3 class="avatar-editor-title">Редактирование аватара</h3>
+              <div class="avatar-preview-large">
+                <img
+                  v-if="user.avatar_url"
+                  :key="avatarKey"
+                  :src="getAvatarUrl(user.avatar_url)"
+                  alt="Аватар"
+                  class="avatar-large-img"
+                >
+                <div v-else class="avatar-large-placeholder">
+                  {{ getInitials(user.username || user.email) }}
+                </div>
+              </div>
+              <div class="avatar-editor-actions">
+                <label class="btn-upload-large">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    @change="handleAvatarChangeAndClose"
+                    style="display: none"
+                  >
+                  📷 Загрузить фото
+                </label>
+                <button
+                  v-if="user.avatar_url"
+                  class="btn-delete-large"
+                  @click="handleAvatarDeleteAndClose"
+                >
+                  🗑️ Удалить фото
+                </button>
+                <button class="btn-cancel-edit" @click="closeAvatarEdit">
+                  ← Назад
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1083,7 +1186,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, onBeforeUnmount, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
@@ -1122,8 +1225,14 @@ const tabs = [
   { id: 'personal', label: 'Личная информация', icon: '👤' },
   { id: 'social', label: 'Соц. сети', icon: '🌐' },
   { id: 'privacy', label: 'Настройки конфиденциальности', icon: '🔒' },
-  { id: 'limits', label: 'Лимиты', icon: '📊' }
+  { id: 'limits', label: 'Лимиты', icon: '📊' },
+  { id: 'notifications', label: 'Уведомления', icon: '🔔' },
+  { id: 'promo', label: 'Промокод', icon: '🎟️' },
+  { id: 'tariffs', label: 'Тарифы', icon: '💳' }
 ]
+
+// Флаг режима редактирования аватара
+const isAvatarEditMode = ref(false)
 
 // Формы
 const personalForm = reactive({
@@ -1177,6 +1286,10 @@ const promoCodeInput = ref('')
 const promoError = ref('')
 const promoSuccess = ref('')
 const applyingPromo = ref(false)
+
+// Тарифы
+const loadingPlans = ref(false)
+const availablePlans = ref([])
 
 // Предупреждение об изменении компьютерного номера
 const showPersonalIdWarning = ref(false)
@@ -2237,6 +2350,11 @@ async function confirmCrop() {
 
       alert('Аватар успешно обновлен!')
       cancelCrop()
+
+      // Закрываем режим редактирования аватара если он открыт
+      if (isAvatarEditMode.value) {
+        closeAvatarEdit()
+      }
     }, 'image/jpeg', 0.95)
   } catch (err) {
     alert(err.message || 'Ошибка загрузки аватара')
@@ -2274,6 +2392,61 @@ async function handleAvatarDelete() {
     alert(err.message || 'Ошибка удаления аватара')
   }
 }
+
+// Открыть режим редактирования аватара
+function openAvatarEdit() {
+  isAvatarEditMode.value = true
+}
+
+// Закрыть режим редактирования аватара
+function closeAvatarEdit() {
+  isAvatarEditMode.value = false
+  activeTab.value = 'basic'
+}
+
+// Загрузить аватар и закрыть режим редактирования
+async function handleAvatarChangeAndClose(event) {
+  await handleAvatarChange(event)
+  // После успешной загрузки cropper закроется автоматически
+  // и мы вернёмся к основной информации
+}
+
+// Удалить аватар и закрыть режим редактирования
+async function handleAvatarDeleteAndClose() {
+  await handleAvatarDelete()
+  closeAvatarEdit()
+}
+
+// Загрузить список доступных тарифов
+async function loadAvailablePlans() {
+  loadingPlans.value = true
+  try {
+    await subscriptionStore.fetchPlans()
+    // Фильтруем планы - исключаем текущий
+    availablePlans.value = subscriptionStore.plans.filter(
+      plan => plan.code_name !== subscriptionStore.currentPlan?.code_name
+    )
+  } catch (err) {
+    console.error('Ошибка загрузки тарифов:', err)
+    availablePlans.value = []
+  } finally {
+    loadingPlans.value = false
+  }
+}
+
+// Переход на другой тариф
+function handleUpgrade(plan) {
+  // Открываем страницу оплаты или показываем модальное окно
+  // TODO: Реализовать переход на страницу оплаты
+  alert(`Переход на тариф "${plan.name}" будет реализован в ближайшее время`)
+}
+
+// Загружаем тарифы при переключении на вкладку
+watch(activeTab, (newTab) => {
+  if (newTab === 'tariffs' && availablePlans.value.length === 0) {
+    loadAvailablePlans()
+  }
+})
 </script>
 
 <style scoped>
@@ -3991,6 +4164,435 @@ async function handleAvatarDelete() {
   .privacy-toggle-btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* ========================================== */
+/* НОВЫЕ СТИЛИ: АВАТАР (КЛИК ДЛЯ РЕДАКТИРОВАНИЯ) */
+/* ========================================== */
+.avatar-wrapper--clickable {
+  cursor: pointer;
+  position: relative;
+}
+
+.avatar-wrapper--clickable:hover .avatar-edit-overlay {
+  opacity: 1;
+}
+
+.avatar-edit-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.avatar-edit-icon {
+  font-size: 32px;
+}
+
+.avatar-hint {
+  font-size: 12px;
+  color: var(--profile-muted);
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* ========================================== */
+/* РЕДАКТОР АВАТАРА */
+/* ========================================== */
+.avatar-edit-panel {
+  display: flex;
+  justify-content: center;
+}
+
+.avatar-editor {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 20px;
+}
+
+.avatar-editor-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--profile-text);
+  margin: 0;
+}
+
+.avatar-preview-large {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+  border: 4px solid rgba(255, 215, 0, 0.4);
+}
+
+.avatar-large-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-large-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 64px;
+  font-weight: 600;
+}
+
+.avatar-editor-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 250px;
+}
+
+.btn-upload-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-upload-large:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-delete-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-delete-large:hover {
+  background: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+}
+
+.btn-cancel-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: var(--profile-control-bg);
+  color: var(--profile-text);
+  border: 1px solid var(--profile-border);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel-edit:hover {
+  background: var(--profile-control-bg-hover);
+}
+
+/* ========================================== */
+/* РАЗДЕЛ УВЕДОМЛЕНИЯ */
+/* ========================================== */
+.notifications-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.notification-block {
+  padding: 20px;
+  background: var(--profile-control-bg);
+  border-radius: 12px;
+  border: 1px solid var(--profile-border);
+}
+
+.notification-block--coming-soon {
+  opacity: 0.7;
+}
+
+.notification-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--profile-text);
+  margin: 0 0 16px 0;
+}
+
+.notification-icon {
+  font-size: 24px;
+}
+
+.coming-soon-text {
+  color: var(--profile-muted);
+  font-style: italic;
+  font-size: 14px;
+  margin: 0;
+  padding: 12px;
+  background: var(--profile-bg);
+  border-radius: 8px;
+  text-align: center;
+}
+
+/* ========================================== */
+/* РАЗДЕЛ ПРОМОКОД (обновлённые стили) */
+/* ========================================== */
+.promo-description {
+  margin-bottom: 16px;
+}
+
+.promo-description p {
+  color: var(--profile-muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ========================================== */
+/* РАЗДЕЛ ТАРИФЫ */
+/* ========================================== */
+.tariffs-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.current-tariff-card {
+  position: relative;
+  padding: 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  color: white;
+}
+
+.tariff-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.tariff-name {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+}
+
+.tariff-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tariff-detail-item {
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.detail-label {
+  opacity: 0.8;
+}
+
+.detail-value {
+  font-weight: 600;
+}
+
+.available-tariffs {
+  padding: 20px;
+  background: var(--profile-control-bg);
+  border-radius: 16px;
+}
+
+.tariffs-subtitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--profile-text);
+  margin: 0 0 16px 0;
+}
+
+.tariffs-loading,
+.tariffs-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--profile-muted);
+  font-size: 14px;
+}
+
+.tariffs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.tariff-card {
+  position: relative;
+  padding: 20px;
+  background: var(--profile-bg);
+  border: 2px solid var(--profile-border);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.tariff-card:hover {
+  border-color: #667eea;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+}
+
+.tariff-card--recommended {
+  border-color: #667eea;
+}
+
+.tariff-recommended-badge {
+  position: absolute;
+  top: -10px;
+  right: 12px;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+.tariff-card-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--profile-text);
+  margin: 0 0 8px 0;
+}
+
+.tariff-card-price {
+  margin: 0 0 12px 0;
+}
+
+.price-amount {
+  font-size: 28px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.price-period {
+  font-size: 14px;
+  color: var(--profile-muted);
+}
+
+.tariff-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+}
+
+.tariff-features li {
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--profile-muted);
+}
+
+.tariff-features li::before {
+  content: '✓ ';
+  color: #4CAF50;
+}
+
+.btn-upgrade {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-upgrade:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* ========================================== */
+/* АДАПТИВНЫЕ СТИЛИ ДЛЯ РАСШИРЕННОЙ СЕТКИ ТАБОВ */
+/* ========================================== */
+@media (max-width: 900px) {
+  .tabs-buttons {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .avatar-preview-large {
+    width: 150px;
+    height: 150px;
+  }
+
+  .avatar-large-placeholder {
+    font-size: 48px;
+  }
+
+  .tariffs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabs-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .tab-button {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 12px 16px;
+  }
+
+  .tab-icon {
+    font-size: 20px;
+  }
+
+  .tab-label {
+    font-size: 14px;
   }
 }
 </style>
