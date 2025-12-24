@@ -3,13 +3,13 @@
  *
  * Задачи:
  * 1. Уведомления о истечении подписок (ежедневно 09:00)
- * 2. Блокировка истекших подписок (ежедневно 01:00)
+ * 2. Обработка истекших подписок (ежедневно 01:00)
+ * 2.1. Окончание grace-периода (ежедневно 01:30)
  * 3. Очистка старых сессий (каждый час)
  * 4. Закрытие демо-периодов (ежедневно 02:00)
  * 5. Автоматическая смена тарифа с Демо на Гостевой (ежедневно 02:30)
- * 6. Блокировка досок при окончании платной подписки (ежедневно 01:00)
- * 7. Удаление заблокированных досок через 14 дней (ежедневно 03:00)
- * 8. Очистка устаревших кодов подтверждения email (каждый час)
+ * 6. Удаление заблокированных досок через 14 дней (ежедневно 03:00)
+ * 7. Очистка устаревших кодов подтверждения email (каждый час)
  */
 
 import cron from 'node-cron';
@@ -153,117 +153,159 @@ async function notifyExpiringSubscriptions() {
 }
 
 // ============================================
-// 2. Блокировка истекших подписок
+// 2. Единая обработка истекших подписок
 // ============================================
 
 /**
- * Блокирует пользователей с истекшими подписками
- * Переводит их на бесплатный план (demo)
+ * Единая обработка истекших подписок
  * Запускается ежедневно в 01:00
  */
-async function blockExpiredSubscriptions() {
-  console.log('\n🔒 Крон-задача: Блокировка истекших подписок');
-
+async function handleSubscriptionExpiry() {
+  console.log('\n🔄 Крон-задача: Обработка истекших подписок');
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    // Получаем ID демо-плана (бесплатный план)
-    const demoPlanResult = await client.query(
-      `SELECT id FROM subscription_plans WHERE code_name IN ('demo', 'free') LIMIT 1`
+    // Получить ID тарифа guest
+    const guestPlanResult = await client.query(
+      `SELECT id FROM subscription_plans WHERE code_name = 'guest' LIMIT 1`
     );
+    if (guestPlanResult.rows.length === 0) throw new Error('Тариф guest не найден');
+    const guestPlanId = guestPlanResult.rows[0].id;
 
-    if (demoPlanResult.rows.length === 0) {
-      throw new Error('Демо-план не найден в базе данных');
-    }
-
-    const demoPlanId = demoPlanResult.rows[0].id;
-
-    // Находим пользователей с истекшими подписками (где auto_renew = false или NULL)
+    // Найти пользователей с истёкшими подписками
     const expiredUsersQuery = `
-      SELECT
-        u.id,
-        u.email,
-        u.telegram_chat_id,
-        u.plan_id,
-        u.subscription_expires_at,
-        sp.name as current_plan_name
+      SELECT u.id, u.email, u.plan_id, u.subscription_expires_at, u.telegram_chat_id,
+             sp.code_name as current_plan_code, sp.name as current_plan_name
       FROM users u
-      LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
-      WHERE
-        u.subscription_expires_at < NOW()
-        AND (u.auto_renew = false OR u.auto_renew IS NULL)
-        AND u.plan_id != $1
+      JOIN subscription_plans sp ON u.plan_id = sp.id
+      WHERE u.subscription_expires_at < NOW()
+        AND sp.code_name != 'guest'
+        AND (u.grace_period_until IS NULL OR u.grace_period_until < NOW())
     `;
-
-    const expiredUsers = await client.query(expiredUsersQuery, [demoPlanId]);
-
-    console.log(`✅ Найдено пользователей с истекшими подписками: ${expiredUsers.rows.length}`);
+    const expiredUsers = await client.query(expiredUsersQuery);
+    console.log(`✅ Найдено пользователей: ${expiredUsers.rows.length}`);
 
     let successCount = 0;
 
-    // Обрабатываем каждого пользователя
     for (const user of expiredUsers.rows) {
       try {
-        // Обновляем план пользователя на демо
+        const isPaidPlan = ['individual', 'premium'].includes(user.current_plan_code);
+        const gracePeriodUntil = isPaidPlan ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : null;
+
+        // Обновить план на guest
         await client.query(
-          `UPDATE users
-           SET plan_id = $1,
-               subscription_started_at = NOW()
-           WHERE id = $2`,
-          [demoPlanId, user.id]
+          `UPDATE users SET plan_id = $1, subscription_expires_at = NULL,
+           subscription_started_at = NOW(), grace_period_until = $2,
+           boards_locked = FALSE, boards_locked_at = NULL WHERE id = $3`,
+          [guestPlanId, gracePeriodUntil, user.id]
         );
 
-        // Создаем запись в subscription_history
+        // Записать в историю
         await client.query(
-          `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
-           VALUES ($1, $2, NOW(), NULL, 'expiration', 0.00, 'RUB')`,
-          [user.id, demoPlanId]
+          `INSERT INTO subscription_history (user_id, plan_id, start_date, source, amount_paid, currency)
+           VALUES ($1, $2, NOW(), 'auto_subscription_expired', 0.00, 'RUB')`,
+          [user.id, guestPlanId]
         );
 
-        // Отправляем Telegram уведомление о истечении подписки (только если есть telegram_chat_id)
-        if (user.telegram_chat_id) {
-          const telegramMessage = getSubscriptionExpiredMessage(
-            user.email.split('@')[0],
-            process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/pricing` : 'https://fohow.ru/pricing'
-          );
-
-          await sendTelegramMessage(
-            user.telegram_chat_id,
-            telegramMessage.text,
-            {
-              parse_mode: telegramMessage.parse_mode,
-              reply_markup: telegramMessage.reply_markup
-            }
+        // Если НЕТ grace — архивировать доски сразу
+        if (!gracePeriodUntil) {
+          await client.query(
+            `UPDATE boards SET archived = TRUE WHERE owner_id = $1
+             AND id NOT IN (SELECT id FROM boards WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1)`,
+            [user.id]
           );
         }
 
-        console.log(`  ✅ Пользователь ${user.email} переведен на демо-план`);
+        // Отправить Telegram
+        if (user.telegram_chat_id) {
+          const message = gracePeriodUntil
+            ? `⚠️ Подписка "${user.current_plan_name}" истекла.\n🎁 Льготный период: 7 дней.\nВсе доски доступны до ${formatDate(gracePeriodUntil)}.\n\n💳 Продлите: ${process.env.FRONTEND_URL}/pricing`
+            : `⚠️ Подписка "${user.current_plan_name}" истекла.\nТариф: Гостевой (1 доска).\nОстальные доски заархивированы.\n\n💳 Улучшите: ${process.env.FRONTEND_URL}/pricing`;
+          await sendTelegramMessage(user.telegram_chat_id, message);
+        }
+
+        console.log(`  ✅ ${user.email}: ${user.current_plan_name} → Guest` + (gracePeriodUntil ? ' (grace 7д)' : ''));
         successCount++;
 
-        // Логируем блокировку
-        await logToSystem('warning', 'subscription_expired', {
-          userId: user.id,
-          email: user.email,
-          telegramChatId: user.telegram_chat_id,
-          oldPlanId: user.plan_id,
-          newPlanId: demoPlanId,
-          expiredAt: user.subscription_expires_at
+        await logToSystem('info', 'subscription_expired_to_guest', {
+          userId: user.id, email: user.email, oldPlan: user.current_plan_code,
+          gracePeriodUntil: gracePeriodUntil
         });
 
       } catch (error) {
-        console.error(`  ❌ Ошибка обработки пользователя ${user.email}:`, error.message);
+        console.error(`  ❌ Ошибка ${user.email}:`, error.message);
       }
     }
 
     await client.query('COMMIT');
-    console.log(`\n📊 Результаты: успешно обработано ${successCount} пользователей`);
+    console.log(`\n📊 Обработано: ${successCount}`);
 
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ Ошибка в задаче blockExpiredSubscriptions:', error);
-    await logToSystem('error', 'block_expired_subscriptions_failed', { error: error.message });
+    console.error('❌ Ошибка handleSubscriptionExpiry:', error);
+    await logToSystem('error', 'handle_subscription_expiry_failed', { error: error.message });
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Архивация досок после окончания grace-периода
+ * Запускается ежедневно в 01:30
+ */
+async function handleGracePeriodExpiry() {
+  console.log('\n⏰ Крон-задача: Окончание grace-периода');
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const expiredGraceQuery = `
+      SELECT u.id, u.email, u.telegram_chat_id
+      FROM users u
+      WHERE u.grace_period_until IS NOT NULL AND u.grace_period_until < NOW()
+    `;
+    const expiredGraceUsers = await client.query(expiredGraceQuery);
+    console.log(`✅ Найдено пользователей: ${expiredGraceUsers.rows.length}`);
+
+    let successCount = 0;
+
+    for (const user of expiredGraceUsers.rows) {
+      try {
+        const archiveResult = await client.query(
+          `UPDATE boards SET archived = TRUE WHERE owner_id = $1
+           AND id NOT IN (SELECT id FROM boards WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1)
+           RETURNING id`,
+          [user.id]
+        );
+
+        await client.query(`UPDATE users SET grace_period_until = NULL WHERE id = $1`, [user.id]);
+
+        if (user.telegram_chat_id) {
+          const message = `⏰ Льготный период завершён.\nЗаархивировано досок: ${archiveResult.rowCount}.\nАктивна 1 доска.\n\n💳 Улучшите тариф: ${process.env.FRONTEND_URL}/pricing`;
+          await sendTelegramMessage(user.telegram_chat_id, message);
+        }
+
+        console.log(`  ✅ ${user.email}: архивировано ${archiveResult.rowCount} досок`);
+        successCount++;
+
+        await logToSystem('info', 'grace_period_expired', {
+          userId: user.id, archivedCount: archiveResult.rowCount
+        });
+
+      } catch (error) {
+        console.error(`  ❌ Ошибка ${user.email}:`, error.message);
+      }
+    }
+
+    await client.query('COMMIT');
+    console.log(`\n📊 Обработано: ${successCount}`);
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Ошибка handleGracePeriodExpiry:', error);
   } finally {
     client.release();
   }
@@ -493,130 +535,7 @@ async function switchDemoToGuest() {
 }
 
 // ============================================
-// 6. Блокировка досок при окончании платной подписки
-// ============================================
-
-/**
- * Блокирует доски пользователей с истекшей платной подпиской
- * Переводит их на тариф "guest" и устанавливает флаг boards_locked
- * Запускается ежедневно в 01:00 (вместе с блокировкой подписок)
- */
-async function lockBoardsAfterExpiry() {
-  console.log('\n🔒 Крон-задача: Блокировка досок при окончании платной подписки');
-
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    // 1. Находим тариф "guest"
-    const guestPlanResult = await client.query(
-      `SELECT id, name FROM subscription_plans WHERE code_name = 'guest' LIMIT 1`
-    );
-
-    if (guestPlanResult.rows.length === 0) {
-      throw new Error('Гостевой тариф не найден в базе данных');
-    }
-
-    const guestPlan = guestPlanResult.rows[0];
-    console.log(`✅ Найден гостевой тариф: ${guestPlan.name} (ID: ${guestPlan.id})`);
-
-    // 2. Находим пользователей с истекшей платной подпиской (individual или premium)
-    const expiredUsersQuery = `
-      SELECT
-        u.id,
-        u.email,
-        u.plan_id,
-        u.subscription_expires_at,
-        u.telegram_chat_id,
-        sp.name as current_plan_name,
-        sp.code_name as current_plan_code
-      FROM users u
-      JOIN subscription_plans sp ON u.plan_id = sp.id
-      WHERE
-        sp.code_name IN ('individual', 'premium')
-        AND u.subscription_expires_at < NOW()
-        AND u.boards_locked = FALSE
-    `;
-
-    const expiredUsers = await client.query(expiredUsersQuery);
-
-    console.log(`✅ Найдено пользователей с истекшей платной подпиской: ${expiredUsers.rows.length}`);
-
-    let successCount = 0;
-
-    // 3. Для каждого пользователя заблокировать доски
-    for (const user of expiredUsers.rows) {
-      try {
-        // Обновляем план пользователя на guest и устанавливаем флаги блокировки
-        await client.query(
-          `UPDATE users
-           SET plan_id = $1,
-               boards_locked = TRUE,
-               boards_locked_at = NOW(),
-               subscription_expires_at = NULL,
-               subscription_started_at = NOW()
-           WHERE id = $2`,
-          [guestPlan.id, user.id]
-        );
-
-        // Блокируем все доски пользователя
-        const boardsResult = await client.query(
-          `UPDATE boards
-           SET is_locked = TRUE
-           WHERE owner_id = $1`,
-          [user.id]
-        );
-
-        const lockedBoardsCount = boardsResult.rowCount;
-
-        // Записываем в историю подписок
-        await client.query(
-          `INSERT INTO subscription_history
-             (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
-           VALUES ($1, $2, NOW(), NULL, 'auto_subscription_expired', 0.00, 'RUB')`,
-          [user.id, guestPlan.id]
-        );
-
-        console.log(`  ✅ Пользователь ${user.email}: переведен на гостевой тариф, заблокировано досок: ${lockedBoardsCount}`);
-        successCount++;
-
-        // Логируем блокировку досок
-        await logToSystem('warning', 'boards_locked_after_subscription_expiry', {
-          userId: user.id,
-          email: user.email,
-          oldPlanId: user.plan_id,
-          oldPlanName: user.current_plan_name,
-          newPlanId: guestPlan.id,
-          newPlanName: guestPlan.name,
-          lockedBoardsCount: lockedBoardsCount,
-          expiredAt: user.subscription_expires_at
-        });
-
-      } catch (error) {
-        console.error(`  ❌ Ошибка обработки пользователя ${user.email}:`, error.message);
-        await logToSystem('error', 'boards_lock_failed', {
-          userId: user.id,
-          email: user.email,
-          error: error.message
-        });
-      }
-    }
-
-    await client.query('COMMIT');
-    console.log(`\n📊 Результаты: успешно заблокировано досок для ${successCount} пользователей`);
-
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('❌ Ошибка в задаче lockBoardsAfterExpiry:', error);
-    await logToSystem('error', 'lock_boards_after_expiry_failed', { error: error.message });
-  } finally {
-    client.release();
-  }
-}
-
-// ============================================
-// 7. Удаление заблокированных досок через 14 дней
+// 6. Удаление заблокированных досок через 14 дней
 // ============================================
 
 /**
@@ -784,13 +703,21 @@ export function initializeCronTasks() {
   });
   console.log('✅ Задача 1: Уведомления о истечении подписок (ежедневно 09:00 МСК)');
 
-  // 2. Блокировка истекших подписок - каждый день в 01:00
+  // 2. Обработка истекших подписок - каждый день в 01:00
   cron.schedule('0 1 * * *', () => {
-    blockExpiredSubscriptions();
+    handleSubscriptionExpiry();
   }, {
     timezone: 'Europe/Moscow'
   });
-  console.log('✅ Задача 2: Блокировка истекших подписок (ежедневно 01:00 МСК)');
+  console.log('✅ Задача 2: Обработка истекших подписок (ежедневно 01:00 МСК)');
+
+  // 2.1. Окончание grace-периода - каждый день в 01:30
+  cron.schedule('30 1 * * *', () => {
+    handleGracePeriodExpiry();
+  }, {
+    timezone: 'Europe/Moscow'
+  });
+  console.log('✅ Задача 2.1: Окончание grace-периода (ежедневно 01:30 МСК)');
 
   // 3. Очистка старых сессий - каждый час
   cron.schedule('0 * * * *', () => {
@@ -814,27 +741,19 @@ export function initializeCronTasks() {
   });
   console.log('✅ Задача 5: Смена тарифа с Демо на Гостевой (ежедневно 02:30 МСК)');
 
-  // 6. Блокировка досок при окончании платной подписки - каждый день в 01:00
-  cron.schedule('0 1 * * *', () => {
-    lockBoardsAfterExpiry();
-  }, {
-    timezone: 'Europe/Moscow'
-  });
-  console.log('✅ Задача 6: Блокировка досок при окончании платной подписки (ежедневно 01:00 МСК)');
-
-  // 7. Удаление заблокированных досок через 14 дней - каждый день в 03:00
+  // 6. Удаление заблокированных досок через 14 дней - каждый день в 03:00
   cron.schedule('0 3 * * *', () => {
     deleteLockedBoardsAfter14Days();
   }, {
     timezone: 'Europe/Moscow'
   });
-  console.log('✅ Задача 7: Удаление заблокированных досок через 14 дней (ежедневно 03:00 МСК)');
+  console.log('✅ Задача 6: Удаление заблокированных досок через 14 дней (ежедневно 03:00 МСК)');
 
-  // 8. Очистка устаревших кодов подтверждения email - каждый час
+  // 7. Очистка устаревших кодов подтверждения email - каждый час
   cron.schedule('0 * * * *', () => {
     cleanupExpiredVerificationCodes();
   });
-  console.log('✅ Задача 8: Очистка устаревших кодов подтверждения email (каждый час)');
+  console.log('✅ Задача 7: Очистка устаревших кодов подтверждения email (каждый час)');
 
   console.log('\n✅ Все крон-задачи успешно инициализированы!\n');
 }
@@ -842,11 +761,11 @@ export function initializeCronTasks() {
 // Экспорт функций для возможности ручного запуска
 export {
   notifyExpiringSubscriptions,
-  blockExpiredSubscriptions,
+  handleSubscriptionExpiry,
+  handleGracePeriodExpiry,
   cleanupOldSessions,
   closeDemoPeriods,
   switchDemoToGuest,
-  lockBoardsAfterExpiry,
   deleteLockedBoardsAfter14Days,
   cleanupExpiredVerificationCodes
 };
