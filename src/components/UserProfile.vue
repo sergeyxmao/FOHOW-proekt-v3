@@ -7,6 +7,14 @@
   >
     <div class="profile-header">
       <h2>Мой профиль</h2>
+      <button
+        class="tariff-btn"
+        :style="getPlanBadgeStyle()"
+        @click="selectTab('tariffs')"
+        title="Перейти в раздел тарифы"
+      >
+        {{ subscriptionStore.currentPlan?.name || 'Не определен' }}
+      </button>
       <button class="close-btn" @click="$emit('close')">×</button>
     </div>
 
@@ -2546,6 +2554,21 @@ watch(activeTab, (newTab) => {
   color: var(--profile-text);
   font-size: 28px;
   font-weight: 700;
+}
+
+.tariff-btn {
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tariff-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.tariff-btn:active {
+  transform: translateY(0);
 }
 
 .close-btn {
