@@ -71,6 +71,21 @@
         <div class="content-area">
           <!-- ===== TAB 1: Основная информация ===== -->
           <div v-if="activeTab === 'basic' && !isAvatarEditMode" class="tab-panel">
+            <!-- Grace-период предупреждение -->
+            <div v-if="isInGracePeriod()" class="grace-warning">
+              <div class="grace-warning-icon">⚠️</div>
+              <div class="grace-warning-content">
+                <p class="grace-warning-title">Льготный период доступа</p>
+                <p class="grace-warning-text">
+                  Срок вашей подписки истек, но доступ сохранен до <strong>{{ getGracePeriodDate() }}</strong>.
+                  Продлите подписку, чтобы не потерять доступ к платным функциям.
+                </p>
+                <button @click="activeTab = 'tariffs'" class="grace-warning-button">
+                  Продлить подписку
+                </button>
+              </div>
+            </div>
+
             <div class="info-grid">
               <div class="info-item">
                 <label>Email:</label>
@@ -3098,6 +3113,71 @@ watch(activeTab, (newTab) => {
 /* ========================================== */
 /* TAB 1: ОСНОВНАЯ ИНФОРМАЦИЯ */
 /* ========================================== */
+
+/* Grace-период предупреждение */
+.grace-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  margin-bottom: 24px;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  animation: fadeIn 0.3s ease;
+}
+
+.grace-warning-icon {
+  font-size: 32px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.grace-warning-content {
+  flex: 1;
+}
+
+.grace-warning-title {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #856404;
+}
+
+.grace-warning-text {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #856404;
+}
+
+.grace-warning-text strong {
+  font-weight: 700;
+  color: #664d03;
+}
+
+.grace-warning-button {
+  padding: 10px 20px;
+  background-color: #ffc107;
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.grace-warning-button:hover {
+  background-color: #ffca2c;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+.grace-warning-button:active {
+  transform: translateY(0);
+}
+
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
