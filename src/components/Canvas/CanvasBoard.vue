@@ -250,6 +250,11 @@ const animatedAvatarConnectionIds = ref(new Set())
 const avatarAnimationTimers = ref([])
 const avatarAnimationRootId = ref(null)
 const avatarAnimationDuration = computed(() => 2000)
+// Анимация выделения обычных стикеров и их линий
+const animatedStickerIds = ref(new Set())
+const animatedStickerConnectionIds = ref(new Set())
+const stickerAnimationTimers = ref([])
+const stickerAnimationRootId = ref(null)
 const toRgbString = (color) => {
   if (typeof color !== 'string') return null
   const hex = color.replace('#', '')
@@ -2116,8 +2121,49 @@ const stopAvatarSelectionAnimation = () => {
 watch(() => isAvatarAnimationEnabled.value, (enabled) => {
   if (!enabled) {
     stopAvatarSelectionAnimation();
+    stopStickerSelectionAnimation();
   }
 });
+
+// Функции для анимации обычных стикеров и их линий
+const stopStickerSelectionAnimation = () => {
+  stickerAnimationTimers.value.forEach(timerId => window.clearTimeout(timerId));
+  stickerAnimationTimers.value = [];
+  animatedStickerIds.value = new Set();
+  animatedStickerConnectionIds.value = new Set();
+  stickerAnimationRootId.value = null;
+};
+
+const startStickerSelectionAnimation = (stickerId) => {
+  const sticker = cards.value.find(card => card.id === stickerId && card.type !== 'avatar');
+  if (!sticker) {
+    stopStickerSelectionAnimation();
+    return;
+  }
+
+  stopStickerSelectionAnimation();
+  stickerAnimationRootId.value = stickerId;
+
+  // Найти все connections, связанные с этим стикером
+  const relatedConnectionIds = new Set();
+  connections.value.forEach(connection => {
+    if (connection.from === stickerId || connection.to === stickerId) {
+      relatedConnectionIds.add(connection.id);
+    }
+  });
+
+  animatedStickerIds.value = new Set([stickerId]);
+  animatedStickerConnectionIds.value = relatedConnectionIds;
+
+  const duration = avatarAnimationDuration.value;
+
+  const timerId = window.setTimeout(() => {
+    if (stickerAnimationRootId.value !== stickerId) return;
+    stopStickerSelectionAnimation();
+  }, duration);
+
+  stickerAnimationTimers.value.push(timerId);
+};
 
 const findNextAvatarUp = (avatarId, visited = new Set()) => {
   const currentAvatar = cards.value.find(card => card.id === avatarId && card.type === 'avatar');
@@ -4097,9 +4143,14 @@ const handleCardClick = (event, cardId) => {
 
   if (isAvatarCard && isNowSelected && isAvatarAnimationEnabled.value) {
     startAvatarSelectionAnimation(cardId);
+    stopStickerSelectionAnimation();
+  } else if (!isAvatarCard && isNowSelected && isAvatarAnimationEnabled.value) {
+    startStickerSelectionAnimation(cardId);
+    stopAvatarSelectionAnimation();
   } else {
     stopAvatarSelectionAnimation();
-  }  
+    stopStickerSelectionAnimation();
+  }
 };
 
 // Обработчик правого клика мыши на аватаре для открытия контекстного меню
@@ -5257,7 +5308,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
               {
                 selected: selectedConnectionIds.includes(path.id),
                 'line--balance-highlight': path.highlightType === 'balance',
-                'line--pv-highlight': path.highlightType === 'pv'
+                'line--pv-highlight': path.highlightType === 'pv',
+                'line--animated': animatedStickerConnectionIds.has(path.id)
               }
             ]"
             marker-start="url(#marker-dot)"
@@ -5266,9 +5318,10 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
               '--line-color': path.color,
               '--line-width': `${path.strokeWidth}px`,
               '--line-animation-duration': `${path.animationDuration}ms`,
-              '--line-animation-rgb': avatarAnimationColorRgb,
-              color: path.color,
-              stroke: path.color,
+              '--line-animation-rgb': avatarAnimationColorRgb.value,
+              '--line-animation-color': avatarAnimationColor.value,
+              color: animatedStickerConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
+              stroke: animatedStickerConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
               strokeWidth: path.strokeWidth,
               pointerEvents: 'stroke'
             }"
@@ -5605,6 +5658,16 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   stroke-width: var(--line-width, 2px);
   stroke-dasharray: 5 5;
   pointer-events: none;
+}
+
+.line--animated {
+  --line-highlight: rgba(var(--line-animation-rgb, 93, 139, 244), 0.55);
+  stroke-dasharray: 16 12;
+  stroke-linecap: round;
+  animation: avatarLineFlow var(--line-animation-duration, 2000ms) linear infinite;
+  filter: drop-shadow(0 0 10px var(--line-highlight));
+  stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
+  color: var(--line-animation-color, var(--line-color, #5D8BF4));
 }
 
 /* Стили для avatar-линий */
