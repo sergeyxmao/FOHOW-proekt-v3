@@ -5320,7 +5320,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
             :style="{
               '--line-color': path.color,
               '--line-width': `${path.strokeWidth}px`,
-              '--line-animation-duration': `${path.animationDuration}ms`,
+              '--line-animation-duration': `${avatarAnimationDuration.value}ms`,
               '--line-animation-rgb': avatarAnimationColorRgb.value,
               '--line-animation-color': avatarAnimationColor.value,
               color: animatedStickerConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
