@@ -2005,13 +2005,16 @@ const connectionPaths = computed(() => {
         return null;
       }
 
+      // Проверяем, анимирована ли эта линия
+      const isAnimated = animatedStickerConnectionIds.value.has(connection.id);
 
       return {
         id: connection.id,
         d: geometry.d,
         color: connection.color || connectionsStore.defaultLineColor,
         strokeWidth: connection.thickness || connectionsStore.defaultLineThickness,
-        highlightType: connection.highlightType || null,
+        highlightType: isAnimated ? 'animated' : (connection.highlightType || null),
+        isAnimated,
         animationDuration: connection.animationDuration ?? connectionsStore.defaultAnimationDuration,
         flowDirection: 1
 		};
@@ -5312,7 +5315,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
                 selected: selectedConnectionIds.includes(path.id),
                 'line--balance-highlight': path.highlightType === 'balance',
                 'line--pv-highlight': path.highlightType === 'pv',
-                'line--animated': animatedStickerConnectionIds.has(path.id)
+                'line--animated': path.isAnimated
               }
             ]"
             marker-start="url(#marker-dot)"
@@ -5320,11 +5323,11 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
             :style="{
               '--line-color': path.color,
               '--line-width': `${path.strokeWidth}px`,
-              '--line-animation-duration': `${avatarAnimationDuration.value}ms`,
-              '--line-animation-rgb': avatarAnimationColorRgb.value,
-              '--line-animation-color': avatarAnimationColor.value,
-              color: animatedStickerConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
-              stroke: animatedStickerConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
+              '--line-animation-duration': `${avatarAnimationDuration}ms`,
+              '--line-animation-rgb': avatarAnimationColorRgb,
+              '--line-animation-color': avatarAnimationColor,
+              color: path.isAnimated ? avatarAnimationColor : path.color,
+              stroke: path.isAnimated ? avatarAnimationColor : path.color,
               strokeWidth: path.strokeWidth,
               pointerEvents: 'stroke'
             }"
