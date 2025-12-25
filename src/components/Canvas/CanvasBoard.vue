@@ -4141,14 +4141,17 @@ const handleCardClick = (event, cardId) => {
   const isAvatarCard = clickedCard?.type === 'avatar';
   const isNowSelected = cardsStore.selectedCardIds.includes(cardId);
 
+  // Анимация для аватаров
   if (isAvatarCard && isNowSelected && isAvatarAnimationEnabled.value) {
     startAvatarSelectionAnimation(cardId);
-    stopStickerSelectionAnimation();
-  } else if (!isAvatarCard && isNowSelected && isAvatarAnimationEnabled.value) {
+  } else if (isAvatarCard) {
+    stopAvatarSelectionAnimation();
+  }
+
+  // Анимация для обычных стикеров/лицензий
+  if (!isAvatarCard && isNowSelected && isAvatarAnimationEnabled.value) {
     startStickerSelectionAnimation(cardId);
-    stopAvatarSelectionAnimation();
-  } else {
-    stopAvatarSelectionAnimation();
+  } else if (!isAvatarCard) {
     stopStickerSelectionAnimation();
   }
 };
