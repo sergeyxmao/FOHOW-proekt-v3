@@ -2113,7 +2113,7 @@ const stopAvatarSelectionAnimation = () => {
   avatarAnimationRootId.value = null;
 };
 
-watch(isAvatarAnimationEnabled, (enabled) => {
+watch(() => isAvatarAnimationEnabled.value, (enabled) => {
   if (!enabled) {
     stopAvatarSelectionAnimation();
   }
@@ -5306,7 +5306,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
               '--line-color': path.color,
               '--line-width': `${path.strokeWidth}px`,
               '--line-animation-duration': `${avatarAnimationDuration.value}ms`,
-              '--line-animation-rgb': avatarAnimationColorRgb,
+              '--line-animation-rgb': avatarAnimationColorRgb.value,
               '--line-animation-color': avatarAnimationColor.value,
               '--line-flow-direction': path.flowDirection,
               color: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
