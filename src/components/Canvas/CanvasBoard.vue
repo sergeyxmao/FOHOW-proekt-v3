@@ -25,6 +25,8 @@ import { useAvatarConnections, toRgbString } from '../../composables/useAvatarCo
 import { useCanvasContextMenus } from '../../composables/useCanvasContextMenus';
 import { useCanvasDrag } from '../../composables/useCanvasDrag';
 import { useImageResize } from '../../composables/useImageResize';
+import { useCanvasSelection } from '../../composables/useCanvasSelection';
+import { useCanvasConnections } from '../../composables/useCanvasConnections';
 import { getHeaderColorRgb } from '../../utils/constants';
 import { batchDeleteCards } from '../../utils/historyOperations';
 import { usePanZoom } from '../../composables/usePanZoom';
@@ -237,12 +239,30 @@ const createLruCache = (limit) => {
 const anchorPoints = computed(() => Array.isArray(anchors.value) ? anchors.value : []);
   
 const selectedCardId = ref(null);
-const connectionStart = ref(null);
-const isDrawingLine = ref(false);
-const previewLine = ref(null);
-const previewLineWidth = computed(() => connectionsStore.defaultLineThickness || 2);
 const mousePosition = ref({ x: 0, y: 0 });
-const selectedConnectionIds = ref([]);
+
+// Инициализация composable для соединений между карточками
+const {
+  connectionStart,
+  isDrawingLine,
+  previewLine,
+  selectedConnectionIds,
+  previewLineWidth,
+  previewLinePath,
+  createConnectionBetweenCards,
+  startDrawingLine,
+  endDrawingLine,
+  cancelDrawing,
+  handleLineClick,
+  deleteSelectedConnections,
+  clearConnectionSelection
+} = useCanvasConnections({
+  connectionsStore,
+  cardsStore,
+  cards,
+  mousePosition,
+  emit
+});
 
 // Анимация выделения обычных стикеров и их линий
 const animatedStickerIds = ref(new Set())
@@ -303,27 +323,31 @@ const {
 });
 
 const activeGuides = ref({ vertical: null, horizontal: null });
-const isSelecting = ref(false);
-const selectionRect = ref(null);
-let selectionStartPoint = null;
-const createSelectionBaseState = () => ({
-  cardIds: new Set(),
-  stickerIds: new Set(),
-  imageIds: new Set()
-});
-let selectionBaseSelection = createSelectionBaseState();
-let suppressNextStageClick = false;
-const selectionCursorPosition = ref(null);
 
-const clearObjectSelections = ({ preserveCardSelection = false } = {}) => {
-  if (!preserveCardSelection) {
-    cardsStore.deselectAllCards();
-    selectedCardId.value = null;
+// Инициализация composable для выделения объектов
+const {
+  isSelecting,
+  selectionRect,
+  selectionCursorPosition,
+  clearObjectSelections,
+  startSelection,
+  finishSelection,
+  removeSelectionListeners,
+  getSuppressNextStageClick,
+  setSuppressNextStageClick
+} = useCanvasSelection({
+  cardsStore,
+  stickersStore,
+  imagesStore,
+  canvasContainerRef,
+  selectedCardId,
+  stopAvatarSelectionAnimation,
+  onSelectionStart: () => {
+    // При начале выделения сбрасываем состояние соединений
+    clearConnectionSelection()
+    cancelDrawing()
   }
-  stickersStore.deselectAllStickers();
-  imagesStore.deselectAllImages();
-  stopAvatarSelectionAnimation();
-};
+});
 
 const closeAllStickerEditing = () => {
   stickerRefs.value.forEach((stickerComponent) => {
@@ -2037,23 +2061,6 @@ const connectionPaths = computed(() => {
     .filter(Boolean);
 });
 
-const previewLinePath = computed(() => {
-  if (!isDrawingLine.value || !connectionStart.value) return null;
-
-  const fromCard = cards.value.find(card => card.id === connectionStart.value.cardId);
-  if (!fromCard) return null;
-
-  const startPoint = getCardConnectorPoint(fromCard, connectionStart.value.side);
-  const { d } = buildOrthogonalConnectionPath(startPoint, mousePosition.value, connectionStart.value.side, null);
-
-  return {
-    d,
-    color: '#ff9800',
-    strokeWidth: previewLineWidth.value,
-    strokeDasharray: '5,5'
-  };
-});
-
 // Вспомогательные функции для анимации
 const addAnimatedItem = (setRef, id) => {
   const next = new Set(setRef.value);
@@ -2508,28 +2515,6 @@ const collectImageDragTargets = (imageId, event) => {
     imageIds: Array.from(imageIds)
   };
 };
-  
-const createConnectionBetweenCards = (fromCardId, toCardId, options = {}) => {
-  if (fromCardId === toCardId) return null;
-
-  const fromCard = cards.value.find(card => card.id === fromCardId);
-  const toCard = cards.value.find(card => card.id === toCardId);
-
-  if (!fromCard || !toCard) return null;
-
-  const { fromSide, toSide } = resolveConnectionSides(
-    fromCard,
-    toCard,
-    options.fromSide,
-    options.toSide
-  );
-
-  return connectionsStore.addConnection(fromCardId, toCardId, {
-    ...options,
-    fromSide,
-    toSide
-  });
-};
 
 /**
  * Обновление размеров холста на основе всех объектов (карточки, изображения, стикеры)
@@ -2677,244 +2662,6 @@ const startImageDrag = ({ event, imageId, interactionType = 'move' }) => {
   startImageDragFromComposable(event, imageId);
 };
 
-const removeSelectionListeners = () => {
-  window.removeEventListener('pointermove', handleSelectionPointerMove);
-  window.removeEventListener('pointerup', handleSelectionPointerUp);
-  window.removeEventListener('pointercancel', handleSelectionPointerCancel);
-};
-
-const applySelectionFromRect = (rect) => {
-  const nextSelectionCardIds = new Set();
-  const nextSelectionStickerIds = new Set();
-  const nextSelectionImageIds = new Set();
-  
-  // Сохраняем существующее выделение, если оно ещё актуально
-  selectionBaseSelection.cardIds.forEach((id) => {
-    if (cardsStore.cards.some(card => card.id === id)) {
-      nextSelectionCardIds.add(id);
-    }
-  });
-  selectionBaseSelection.stickerIds.forEach((id) => {
-    if (stickersStore.stickers.some(sticker => sticker.id === id)) {
-      nextSelectionStickerIds.add(id);
-    }
-  });
-  selectionBaseSelection.imageIds.forEach((id) => {
-    if (imagesStore.images.some(image => image.id === id)) {
-      nextSelectionImageIds.add(id);
-    }
-  });
-
-  if (canvasContainerRef.value) {
-    // Проверяем карточки
-    const cardElements = canvasContainerRef.value.querySelectorAll('.card');
-    cardElements.forEach((element) => {
-      const cardId = element.dataset.cardId;
-      if (!cardId) {
-        return;
-      }
-
-      const cardRect = element.getBoundingClientRect();
-      const intersects =
-        cardRect.left < rect.right &&
-        cardRect.right > rect.left &&
-        cardRect.top < rect.bottom &&
-        cardRect.bottom > rect.top;
-
-      if (intersects) {
-        nextSelectionCardIds.add(cardId);
-      }
-    });
-    // Проверяем аватары
-    const avatarElements = canvasContainerRef.value.querySelectorAll('.avatar-object');
-    avatarElements.forEach((element) => {
-      const avatarId = element.dataset.avatarId;
-      if (!avatarId) {
-        return;
-      }
-
-      const avatarRect = element.getBoundingClientRect();
-      const intersects =
-        avatarRect.left < rect.right &&
-        avatarRect.right > rect.left &&
-        avatarRect.top < rect.bottom &&
-        avatarRect.bottom > rect.top;
-
-      if (intersects) {
-        nextSelectionCardIds.add(avatarId);
-      }
-    });
-    // Проверяем стикеры
-    const stickerElements = canvasContainerRef.value.querySelectorAll('.sticker');
-    stickerElements.forEach((element) => {
-      const stickerId = element.dataset.stickerId;
-      if (!stickerId) {
-        return;
-      }
-
-      const stickerRect = element.getBoundingClientRect();
-      const intersects =
-        stickerRect.left < rect.right &&
-        stickerRect.right > rect.left &&
-        stickerRect.top < rect.bottom &&
-        stickerRect.bottom > rect.top;
-
-      if (intersects) {
-        nextSelectionStickerIds.add(Number(stickerId));
-      }
-    });
-
-    // Проверяем изображения
-    const imageElements = canvasContainerRef.value.querySelectorAll('.canvas-image');
-    imageElements.forEach((element) => {
-      const imageId = element.dataset.imageId;
-      if (!imageId) {
-        return;
-      }
-
-      const imageRect = element.getBoundingClientRect();
-      const intersects =
-        imageRect.left < rect.right &&
-        imageRect.right > rect.left &&
-        imageRect.top < rect.bottom &&
-        imageRect.bottom > rect.top;
-
-      if (intersects) {
-        nextSelectionImageIds.add(imageId);
-      }
-    });    
-  }
-
-  // Применяем выделение для карточек
-  cardsStore.deselectAllCards();
-  const orderedCardIds = Array.from(nextSelectionCardIds);
-  orderedCardIds.forEach((id) => {
-    cardsStore.selectCard(id);
-  });
-
-  // Применяем выделение для стикеров
-  stickersStore.deselectAllStickers();
-  const orderedStickerIds = Array.from(nextSelectionStickerIds);
-  orderedStickerIds.forEach((id) => {
-    stickersStore.selectSticker(id);
-  });
-  // Применяем выделение для изображений
-  imagesStore.deselectAllImages();
-  const orderedImageIds = Array.from(nextSelectionImageIds);
-  orderedImageIds.forEach((id) => {
-    imagesStore.selectImage(id);
-  });
-  selectedCardId.value = orderedCardIds.length > 0 ? orderedCardIds[orderedCardIds.length - 1] : null;
-};
-
-const updateSelectionRectFromEvent = (event) => {
-  if (!selectionStartPoint) {
-    return;
-  }
-
-  const currentX = event.clientX;
-  const currentY = event.clientY;
-
-  const left = Math.min(selectionStartPoint.x, currentX);
-  const top = Math.min(selectionStartPoint.y, currentY);
-  const width = Math.abs(currentX - selectionStartPoint.x);
-  const height = Math.abs(currentY - selectionStartPoint.y);
-
-  const rect = {
-    left,
-    top,
-    width,
-    height,
-    right: left + width,
-    bottom: top + height
-  };
-
-  selectionRect.value = rect;
-  selectionCursorPosition.value = { x: event.clientX, y: event.clientY };
-
-  applySelectionFromRect(rect);
-};
-
-const finishSelection = () => {
-
-  removeSelectionListeners();
-  isSelecting.value = false;
-  selectionRect.value = null;
-  selectionStartPoint = null;
-  selectionBaseSelection = createSelectionBaseState();
-  selectionCursorPosition.value = null;
-
-  setTimeout(() => {
-    suppressNextStageClick = false;
-  }, 50);
-};
-
-const handleSelectionPointerMove = (event) => {
-  if (!isSelecting.value) {
-    return;
-  }
-
-  event.preventDefault();
-  updateSelectionRectFromEvent(event);
-};
-
-const handleSelectionPointerUp = (event) => {
-  if (isSelecting.value) {
-    updateSelectionRectFromEvent(event);
-  }
-  finishSelection();
-};
-
-const handleSelectionPointerCancel = (event) => {
-  if (isSelecting.value) {
-    updateSelectionRectFromEvent(event);
-  }
-  finishSelection();
-};
-
-const startSelection = (event) => {
-  if (event.button !== 0) {
-    return;
-  }
-  if (stickersStore.isPlacementMode && stickersStore.placementTarget === 'board') {
-    return;
-  }
-  event.preventDefault();
-  suppressNextStageClick = true;
-  isSelecting.value = true;
-  selectionStartPoint = { x: event.clientX, y: event.clientY };
-    selectionCursorPosition.value = { ...selectionStartPoint };
-
-  // Сохраняем базовое выделение (включая карточки и стикеры)
-  if (event.ctrlKey || event.metaKey) {
-    selectionBaseSelection = {
-      cardIds: new Set(cardsStore.selectedCardIds),
-      stickerIds: new Set(stickersStore.selectedStickerIds),
-      imageIds: new Set(imagesStore.selectedImageIds)
-    };
-  } else {
-    selectionBaseSelection = createSelectionBaseState();
-    clearObjectSelections();
-  }
-
-  selectedConnectionIds.value = [];
-  selectedCardId.value = null;
-  cancelDrawing();
-
-  selectionRect.value = {
-    left: selectionStartPoint.x,
-    top: selectionStartPoint.y,
-    width: 0,
-    height: 0,
-    right: selectionStartPoint.x,
-    bottom: selectionStartPoint.y
-  };
-
-  window.addEventListener('pointermove', handleSelectionPointerMove, { passive: false });
-  window.addEventListener('pointerup', handleSelectionPointerUp);
-  window.addEventListener('pointercancel', handleSelectionPointerCancel);
-};
-
 
 const handleMouseMoveInternal = (event) => {
   if (isDrawingLine.value) {
@@ -2986,67 +2733,6 @@ const handlePointerDown = (event) => {
   }
 };
 
-const startDrawingLine = (cardId, side) => {
-  selectedConnectionIds.value = [];
-  connectionStart.value = { cardId, side };
-  isDrawingLine.value = true;
-
-  const startCard = cards.value.find(card => card.id === cardId);
-  if (startCard) {
-    const startPoint = getPointCoords(startCard, side);
-    mousePosition.value = { x: startPoint.x, y: startPoint.y };
-  }
-  
-  emit('update-connection-status', 'Рисование линии: кликните на соединительную точку другой карточки');
-  console.log('Начало рисования линии:', connectionStart.value);
-};
-
-const endDrawingLine = (cardId, side) => {
-  if (!connectionStart.value || connectionStart.value.cardId === cardId) {
-    cancelDrawing();
-    return;
-  }
-  
-  createConnectionBetweenCards(connectionStart.value.cardId, cardId, {
-    fromSide: connectionStart.value.side,
-    toSide: side
-  });
-  
-  console.log('Создано соединение:', connectionStart.value.cardId, '->', cardId);
-  cancelDrawing();
-};
-
-const cancelDrawing = () => {
-  connectionStart.value = null;
-  isDrawingLine.value = false;
-  previewLine.value = null;
-  emit('update-connection-status', 'Кликните на соединительную точку для создания линии');
-};
-
-const handleLineClick = (event, connectionId) => {
-  event.stopPropagation();
-
-  const isCtrlPressed = event.ctrlKey || event.metaKey;
-
-  if (isCtrlPressed) {
-    const index = selectedConnectionIds.value.indexOf(connectionId);
-    if (index > -1) {
-      selectedConnectionIds.value.splice(index, 1);
-    } else {
-      selectedConnectionIds.value.push(connectionId);
-    }
-  } else {
-    if (selectedConnectionIds.value.length === 1 && selectedConnectionIds.value[0] === connectionId) {
-      selectedConnectionIds.value = [];
-    } else {
-      selectedConnectionIds.value = [connectionId];
-    }
-  }
-
-  cardsStore.deselectAllCards();
-  selectedCardId.value = null;
-  cancelDrawing();
-};
 
 const handleCardClick = (event, cardId) => {
   if (suppressNextCardClick.value) {
@@ -3222,8 +2908,8 @@ const handleStageClick = async (event) => {
     isPlacementMode: stickersStore.isPlacementMode,
     placementTarget: stickersStore.placementTarget
   });
-  if (suppressNextStageClick) {
-    suppressNextStageClick = false;
+  if (getSuppressNextStageClick()) {
+    setSuppressNextStageClick(false);
     return;
   }
   if (placementMode.value === 'anchor') {
@@ -3408,19 +3094,6 @@ const deleteSelectedCards = () => {
   selectedCardId.value = null;
   selectedConnectionIds.value = [];
   cancelDrawing();
-};
-
-const deleteSelectedConnections = () => {
-  if (selectedConnectionIds.value.length === 0) return;
-
-  console.log('Deleting connections:', selectedConnectionIds.value);
-
-  selectedConnectionIds.value.forEach(connectionId => {
-    connectionsStore.removeConnection(connectionId);
-  });
-
-  selectedConnectionIds.value = [];
-  console.log('Connections deleted');
 };
 
 const deleteSelectedImages = () => {
