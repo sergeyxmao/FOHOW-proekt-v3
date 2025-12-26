@@ -22,8 +22,10 @@ import { useThrottleFn } from '@vueuse/core'
  * @property {Function} resetActiveGuides - Функция сброса активных направляющих
  * @property {import('vue').Ref} activeGuides - Ref на активные направляющие
  * @property {import('vue').Ref} isSelecting - Ref на состояние выделения
- * @property {import('vue').Ref} isHierarchicalDragMode - Ref на режим иерархического перетаскивания
  * @property {Function} snapDelta - Функция привязки дельты к сетке
+ * @property {Function} collectDragTargets - Функция сбора целей для drag карточки
+ * @property {Function} collectStickerDragTargets - Функция сбора целей для drag стикера
+ * @property {Function} collectImageDragTargets - Функция сбора целей для drag изображения
  */
 
 /**
@@ -46,8 +48,10 @@ export function useCanvasDrag(options) {
     resetActiveGuides,
     activeGuides,
     isSelecting,
-    isHierarchicalDragMode,
-    snapDelta
+    snapDelta,
+    collectDragTargets,
+    collectStickerDragTargets,
+    collectImageDragTargets
   } = options
 
   // === Refs и состояния ===
@@ -59,158 +63,8 @@ export function useCanvasDrag(options) {
   let activeDragPointerId = null
   let dragPointerCaptureElement = null
 
-  // === Вспомогательные функции ===
+  // === Внутренний обработчик перетаскивания ===
 
-  /**
-   * Сбор целей для перетаскивания от карточки
-   */
-  const collectDragTargets = (cardId, event) => {
-    const isCtrlPressed = event.ctrlKey || event.metaKey
-    const selectedCardIds = cardsStore.selectedCardIds || []
-    const selectedStickerIds = stickersStore.selectedStickerIds || []
-    const selectedImageIds = imagesStore.selectedImageIds || []
-
-    // Режим иерархического перетаскивания
-    if (isHierarchicalDragMode?.value) {
-      const subtreeIds = cardsStore.getSubtreeCardIds?.(cardId) || [cardId]
-      return {
-        cardIds: subtreeIds,
-        stickerIds: [],
-        imageIds: []
-      }
-    }
-
-    // Если карточка уже выделена - перетаскиваем все выделенные объекты
-    if (selectedCardIds.includes(cardId)) {
-      return {
-        cardIds: selectedCardIds,
-        stickerIds: selectedStickerIds,
-        imageIds: selectedImageIds.filter(id => {
-          const img = imagesStore.images.find(i => i.id === id)
-          return img && !img.isLocked
-        })
-      }
-    }
-
-    // Ctrl не нажат - выделяем только эту карточку
-    if (!isCtrlPressed) {
-      return {
-        cardIds: [cardId],
-        stickerIds: [],
-        imageIds: []
-      }
-    }
-
-    // Ctrl нажат - добавляем к выделению
-    const newCardIds = selectedCardIds.includes(cardId)
-      ? selectedCardIds
-      : [...selectedCardIds, cardId]
-
-    return {
-      cardIds: newCardIds,
-      stickerIds: selectedStickerIds,
-      imageIds: selectedImageIds.filter(id => {
-        const img = imagesStore.images.find(i => i.id === id)
-        return img && !img.isLocked
-      })
-    }
-  }
-
-  /**
-   * Сбор целей для перетаскивания от стикера
-   */
-  const collectStickerDragTargets = (stickerId, event) => {
-    const isCtrlPressed = event.ctrlKey || event.metaKey
-    const selectedCardIds = cardsStore.selectedCardIds || []
-    const selectedStickerIds = stickersStore.selectedStickerIds || []
-    const selectedImageIds = imagesStore.selectedImageIds || []
-
-    // Если стикер уже выделен - перетаскиваем все выделенные объекты
-    if (selectedStickerIds.includes(stickerId)) {
-      return {
-        cardIds: selectedCardIds,
-        stickerIds: selectedStickerIds,
-        imageIds: selectedImageIds.filter(id => {
-          const img = imagesStore.images.find(i => i.id === id)
-          return img && !img.isLocked
-        })
-      }
-    }
-
-    // Ctrl не нажат - выделяем только этот стикер
-    if (!isCtrlPressed) {
-      return {
-        cardIds: [],
-        stickerIds: [stickerId],
-        imageIds: []
-      }
-    }
-
-    // Ctrl нажат - добавляем к выделению
-    const newStickerIds = selectedStickerIds.includes(stickerId)
-      ? selectedStickerIds
-      : [...selectedStickerIds, stickerId]
-
-    return {
-      cardIds: selectedCardIds,
-      stickerIds: newStickerIds,
-      imageIds: selectedImageIds.filter(id => {
-        const img = imagesStore.images.find(i => i.id === id)
-        return img && !img.isLocked
-      })
-    }
-  }
-
-  /**
-   * Сбор целей для перетаскивания от изображения
-   */
-  const collectImageDragTargets = (imageId, event) => {
-    const isCtrlPressed = event.ctrlKey || event.metaKey
-    const selectedCardIds = cardsStore.selectedCardIds || []
-    const selectedStickerIds = stickersStore.selectedStickerIds || []
-    const selectedImageIds = imagesStore.selectedImageIds || []
-
-    // Если изображение уже выделено - перетаскиваем все выделенные объекты
-    if (selectedImageIds.includes(imageId)) {
-      return {
-        cardIds: selectedCardIds,
-        stickerIds: selectedStickerIds,
-        imageIds: selectedImageIds.filter(id => {
-          const img = imagesStore.images.find(i => i.id === id)
-          return img && !img.isLocked
-        })
-      }
-    }
-
-    // Ctrl не нажат - выделяем только это изображение
-    if (!isCtrlPressed) {
-      return {
-        cardIds: [],
-        stickerIds: [],
-        imageIds: [imageId]
-      }
-    }
-
-    // Ctrl нажат - добавляем к выделению
-    const newImageIds = selectedImageIds.includes(imageId)
-      ? selectedImageIds
-      : [...selectedImageIds, imageId]
-
-    return {
-      cardIds: selectedCardIds,
-      stickerIds: selectedStickerIds,
-      imageIds: newImageIds.filter(id => {
-        const img = imagesStore.images.find(i => i.id === id)
-        return img && !img.isLocked
-      })
-    }
-  }
-
-  // === Основные функции перетаскивания ===
-
-  /**
-   * Внутренний обработчик перетаскивания
-   */
   const handleDragInternal = (event) => {
     if (!dragState.value || (!dragState.value.cards.length && !dragState.value.stickers.length && !dragState.value.images?.length)) {
       return
@@ -438,6 +292,26 @@ export function useCanvasDrag(options) {
   }
 
   /**
+   * Вспомогательная функция для настройки event listeners
+   */
+  const setupDragListeners = (event) => {
+    const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent
+
+    if (isPointerEvent) {
+      activeDragPointerId = event.pointerId
+      dragPointerCaptureElement = event.target
+      dragPointerCaptureElement?.setPointerCapture?.(activeDragPointerId)
+      window.addEventListener('pointermove', handleDrag, { passive: false })
+      window.addEventListener('pointerup', endDrag)
+      window.addEventListener('pointercancel', endDrag)
+    } else {
+      window.addEventListener('mousemove', handleDrag)
+      window.addEventListener('mouseup', endDrag)
+    }
+    event.preventDefault()
+  }
+
+  /**
    * Начало перетаскивания карточки
    */
   const startDrag = (event, cardId) => {
@@ -537,20 +411,7 @@ export function useCanvasDrag(options) {
       resetActiveGuides()
     }
 
-    const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent
-
-    if (isPointerEvent) {
-      activeDragPointerId = event.pointerId
-      dragPointerCaptureElement = event.target
-      dragPointerCaptureElement?.setPointerCapture?.(activeDragPointerId)
-      window.addEventListener('pointermove', handleDrag, { passive: false })
-      window.addEventListener('pointerup', endDrag)
-      window.addEventListener('pointercancel', endDrag)
-    } else {
-      window.addEventListener('mousemove', handleDrag)
-      window.addEventListener('mouseup', endDrag)
-    }
-    event.preventDefault()
+    setupDragListeners(event)
   }
 
   /**
@@ -647,20 +508,107 @@ export function useCanvasDrag(options) {
       resetActiveGuides()
     }
 
-    const isPointerEvent = typeof PointerEvent !== 'undefined' && event instanceof PointerEvent
+    setupDragListeners(event)
+  }
 
-    if (isPointerEvent) {
-      activeDragPointerId = event.pointerId
-      dragPointerCaptureElement = event.target
-      dragPointerCaptureElement?.setPointerCapture?.(activeDragPointerId)
-      window.addEventListener('pointermove', handleDrag, { passive: false })
-      window.addEventListener('pointerup', endDrag)
-      window.addEventListener('pointercancel', endDrag)
-    } else {
-      window.addEventListener('mousemove', handleDrag)
-      window.addEventListener('mouseup', endDrag)
+  /**
+   * Начало перетаскивания изображения (только для move, resize обрабатывается отдельно)
+   */
+  const startImageDrag = (event, imageId) => {
+    if (event.button !== 0) {
+      return
     }
-    event.preventDefault()
+
+    if (isSelecting?.value) {
+      return
+    }
+
+    const image = imagesStore.images.find(img => img.id === imageId)
+    if (!image || image.isLocked) {
+      return
+    }
+
+    const dragTargets = collectImageDragTargets(imageId, event)
+    const dragCardIds = dragTargets.cardIds || []
+    const dragStickerIds = dragTargets.stickerIds || []
+    const dragImageIds = dragTargets.imageIds || []
+
+    if (dragCardIds.length === 0 && dragStickerIds.length === 0 && dragImageIds.length === 0) {
+      return
+    }
+
+    const canvasPos = screenToCanvas(event.clientX, event.clientY)
+
+    const cardsToDrag = dragCardIds
+      .map(id => {
+        const targetCard = findCardById(id)
+        if (!targetCard) return null
+        return {
+          id: targetCard.id,
+          type: 'card',
+          startX: targetCard.x,
+          startY: targetCard.y
+        }
+      })
+      .filter(Boolean)
+
+    const stickersToDrag = dragStickerIds
+      .map(id => {
+        const sticker = stickersStore.stickers.find(s => s.id === id)
+        if (!sticker) return null
+        return {
+          id: sticker.id,
+          type: 'sticker',
+          startX: sticker.pos_x,
+          startY: sticker.pos_y
+        }
+      })
+      .filter(Boolean)
+
+    const imagesToDrag = dragImageIds
+      .map(id => {
+        const targetImage = imagesStore.images.find(img => img.id === id)
+        if (!targetImage || targetImage.isLocked) {
+          return null
+        }
+        return {
+          id: targetImage.id,
+          type: 'image',
+          startX: targetImage.x,
+          startY: targetImage.y
+        }
+      })
+      .filter(Boolean)
+
+    const itemsToDrag = [...cardsToDrag, ...stickersToDrag, ...imagesToDrag]
+
+    if (itemsToDrag.length === 0) {
+      return
+    }
+
+    const movingIds = new Set(itemsToDrag.map(item => item.id))
+    const primaryEntry = itemsToDrag.find(item => item.id === imageId) || itemsToDrag[0] || null
+    const avatarConnectionSnapshots = collectAvatarConnectionSnapshots ? collectAvatarConnectionSnapshots(movingIds) : []
+
+    dragState.value = {
+      cards: cardsToDrag,
+      stickers: stickersToDrag,
+      images: imagesToDrag,
+      items: itemsToDrag,
+      startPointer: canvasPos,
+      hasMoved: false,
+      movingIds,
+      primaryCardId: primaryEntry ? primaryEntry.id : null,
+      primaryCardStart: primaryEntry ? { x: primaryEntry.startX, y: primaryEntry.startY } : null,
+      axisLock: null,
+      avatarConnectionSnapshots
+    }
+
+    if (resetActiveGuides) {
+      resetActiveGuides()
+    }
+
+    setupDragListeners(event)
   }
 
   // === Возвращаемые значения ===
@@ -669,14 +617,10 @@ export function useCanvasDrag(options) {
     dragState,
     suppressNextCardClick,
 
-    // Функции сбора целей
-    collectDragTargets,
-    collectStickerDragTargets,
-    collectImageDragTargets,
-
     // Функции перетаскивания
     startDrag,
     startStickerDrag,
+    startImageDrag,
     handleDrag,
     handleDragInternal,
     endDrag,
