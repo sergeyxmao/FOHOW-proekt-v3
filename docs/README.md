@@ -1,4 +1,4 @@
-# FOHOW Interactive Board
+# FOHOW Interactive Board 
 
 Интерактивная доска для визуализации MLM-структур и стратегий партнёрской сети.
 
