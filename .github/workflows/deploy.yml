@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,10 +18,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Build project
         run: npm run build
 
@@ -35,16 +35,16 @@ jobs:
             echo "✅ SSH connection successful!"
             whoami
             pwd
-            mkdir -p ${{ secrets.PROJECT_PATH }}
 
-      - name: Deploy via rsync
+      - name: Deploy frontend via rsync
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key
           chmod 600 private_key
           rsync -avz -e "ssh -i private_key -o StrictHostKeyChecking=no" \
-            --delete \
             --exclude='.git' \
             --exclude='node_modules' \
+            --exclude='api' \
+            --exclude='.env' \
             dist/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.PROJECT_PATH }}/
           rm private_key
 
@@ -57,7 +57,9 @@ jobs:
           script: |
             cd ${{ secrets.PROJECT_PATH }}
             git pull origin main
+            cd api
             npm ci --production
+            cd ..
             systemctl restart fohow-api
             echo "✅ API service restarted!"
             systemctl status fohow-api --no-pager
@@ -70,5 +72,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "✅ Deployment complete!"
-            echo "Frontend files in ${{ secrets.PROJECT_PATH }}:"
+            echo "Frontend files:"
             ls -lah ${{ secrets.PROJECT_PATH }} | head -n 10
+            echo ""
+            echo "API status:"
+            systemctl is-active fohow-api
