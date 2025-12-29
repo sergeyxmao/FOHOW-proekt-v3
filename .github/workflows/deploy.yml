@@ -48,6 +48,20 @@ jobs:
             dist/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.PROJECT_PATH }}/
           rm private_key
 
+      - name: Update API and restart service
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.PROJECT_PATH }}
+            git pull origin main
+            npm ci --production
+            systemctl restart fohow-api
+            echo "✅ API service restarted!"
+            systemctl status fohow-api --no-pager
+
       - name: Verify deployment
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -56,5 +70,5 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             echo "✅ Deployment complete!"
-            echo "Files in ${{ secrets.PROJECT_PATH }}:"
+            echo "Frontend files in ${{ secrets.PROJECT_PATH }}:"
             ls -lah ${{ secrets.PROJECT_PATH }} | head -n 10
