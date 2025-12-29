@@ -25,17 +25,28 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Deploy files to server
-        uses: appleboy/scp-action@master
+      - name: Test SSH connection
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "dist/*"
-          target: ${{ secrets.PROJECT_PATH }}
-          strip_components: 1
-          overwrite: true
-          rm: true
+          script: |
+            echo "✅ SSH connection successful!"
+            whoami
+            pwd
+            mkdir -p ${{ secrets.PROJECT_PATH }}
+
+      - name: Deploy via rsync
+        run: |
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key
+          chmod 600 private_key
+          rsync -avz -e "ssh -i private_key -o StrictHostKeyChecking=no" \
+            --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            dist/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.PROJECT_PATH }}/
+          rm private_key
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1.0.3
@@ -44,6 +55,6 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            echo "✅ Deployment successful!"
+            echo "✅ Deployment complete!"
             echo "Files in ${{ secrets.PROJECT_PATH }}:"
             ls -lah ${{ secrets.PROJECT_PATH }} | head -n 10
