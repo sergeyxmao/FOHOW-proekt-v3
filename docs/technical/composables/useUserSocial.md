@@ -100,6 +100,20 @@ async function saveSocialInfo() {
   }
 }
 ```
+После обновления профиля необходимо синхронизировать локальную форму с теми данными, которые вернул сервер (чтобы в UI появились все сохранённые поля, включая `website`). В актуальной реализации `saveSocialInfo` получает обновлённый объект пользователя, перекладывает его в `user` и перезаписывает поля формы из ответа:
+
+```javascript
+const updatedUser = await authStore.updateProfile(profileData)
+
+if (updatedUser) {
+  user.value = { ...user.value, ...updatedUser }
+
+  socialForm.telegram_user = updatedUser.telegram_user || ''
+  socialForm.vk_profile = updatedUser.vk_profile || ''
+  socialForm.instagram_profile = updatedUser.instagram_profile || ''
+  socialForm.website = updatedUser.website || ''
+}
+```
 
 ## Инициализация формы
 
