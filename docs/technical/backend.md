@@ -20,7 +20,14 @@ api/
 │   ├── notes.js             # Заметки CRUD (~115 строк)
 │   ├── comments.js          # Личные комментарии (~175 строк)
 │   ├── boardPartners.js     # Партнёры на досках (~280 строк)
-│   ├── admin.js             # Админ-панель
+│   ├── admin/               # Админ-панель (модульная структура)
+│   │   ├── index.js         # Агрегатор модулей (~40 строк)
+│   │   ├── users.js         # Управление пользователями (~350 строк)
+│   │   ├── stats.js         # Статистика и мониторинг (~140 строк)
+│   │   ├── transactions.js  # История транзакций (~90 строк)
+│   │   ├── images.js        # Модерация изображений (~1100 строк)
+│   │   ├── verifications.js # Модерация верификации (~230 строк)
+│   │   └── exports.js       # Экспорт пользователей в CSV (~210 строк)
 │   ├── images.js            # Работа с изображениями
 │   ├── anchors.js           # Якорные точки
 │   ├── verification.js      # Верификация пользователей
@@ -151,6 +158,70 @@ api/
 |-------|----------|----------|
 | GET | `/api/boards/:boardId/avatar-partners` | Партнёры по аватарам |
 | GET | `/api/boards/:boardId/partners` | Партнёры по карточкам |
+
+### Админ-панель (`routes/admin/`)
+
+Модульная структура админ-панели для управления платформой.
+
+#### Пользователи (`admin/users.js`)
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/admin/users` | Список пользователей с пагинацией |
+| GET | `/api/admin/users/:userId` | Детали пользователя |
+| PATCH | `/api/admin/users/:userId/role` | Изменить роль |
+| PATCH | `/api/admin/users/:userId/plan` | Изменить тарифный план |
+| DELETE | `/api/admin/users/:userId` | Удалить пользователя |
+| DELETE | `/api/admin/sessions/:sessionId` | Завершить сессию |
+| DELETE | `/api/admin/users/:userId/sessions` | Завершить все сессии |
+
+#### Статистика (`admin/stats.js`)
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/admin/stats` | Общая статистика системы |
+| GET | `/api/admin/logs` | Системные логи |
+| GET | `/api/admin/subscription-plans` | Список тарифных планов |
+
+#### Транзакции (`admin/transactions.js`)
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/admin/transactions` | История транзакций |
+
+#### Изображения (`admin/images.js`)
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/admin/shared-folders` | Список папок общей библиотеки |
+| POST | `/api/admin/shared-folders` | Создать папку |
+| PATCH | `/api/admin/shared-folders/:id` | Переименовать папку |
+| DELETE | `/api/admin/shared-folders/:id` | Удалить папку |
+| GET | `/api/admin/images/pending` | Изображения на модерации |
+| POST | `/api/admin/images/:id/approve` | Одобрить изображение |
+| POST | `/api/admin/images/:id/reject` | Отклонить изображение |
+| POST | `/api/admin/images/upload-shared` | Загрузить в общую библиотеку |
+| POST | `/api/admin/images/:id/move-to-folder` | Переместить в папку |
+| PATCH | `/api/admin/images/:id/rename` | Переименовать изображение |
+| DELETE | `/api/admin/images/:id` | Удалить изображение |
+
+#### Верификация (`admin/verifications.js`)
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/admin/screenshot-proxy` | Прокси для скриншотов |
+| GET | `/api/admin/verifications/pending` | Заявки на верификацию |
+| POST | `/api/admin/verifications/:id/approve` | Одобрить заявку |
+| POST | `/api/admin/verifications/:id/reject` | Отклонить заявку |
+| GET | `/api/admin/verifications/archive` | Архив верификации |
+
+#### Экспорт (`admin/exports.js`)
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/admin/export/verified-users` | Экспорт верифицированных |
+| GET | `/api/admin/export/non-verified-users` | Экспорт не верифицированных |
+| GET | `/api/admin/export/users-by-plan/:planId` | Экспорт по тарифу |
 
 ---
 
