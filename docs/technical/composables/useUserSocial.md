@@ -59,6 +59,8 @@ const socialForm = ref({
 
 ## Сохранение данных
 
+Функция `saveSocialInfo` отправляет данные на сервер через `authStore.updateProfile()` и синхронизирует форму с ответом сервера:
+
 ```javascript
 async function saveSocialInfo() {
   socialError.value = ''
@@ -66,54 +68,49 @@ async function saveSocialInfo() {
   savingSocial.value = true
 
   try {
-    const response = await fetch(`${API_URL}/profile/social`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(socialForm.value)
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Ошибка сохранения')
+    const profileData = {
+      telegram_user: socialForm.telegram_user?.trim() || '',
+      vk_profile: socialForm.vk_profile?.trim() || '',
+      instagram_profile: socialForm.instagram_profile?.trim() || '',
+      website: socialForm.website?.trim() || ''
     }
 
-    const updatedUser = await response.json()
+    const updatedUser = await authStore.updateProfile(profileData)
 
-    // Обновляем данные
-    Object.assign(user.value, updatedUser)
-    authStore.user = updatedUser
-    localStorage.setItem('user', JSON.stringify(updatedUser))
+    // ВАЖНО: Синхронизируем форму с данными из ответа сервера
+    if (updatedUser) {
+      if (user?.value) {
+        user.value = { ...user.value, ...updatedUser }
+      }
 
-    socialSuccess.value = 'Социальные сети сохранены!'
+      // Обновляем все поля формы из ответа сервера
+      socialForm.telegram_user = updatedUser.telegram_user || ''
+      socialForm.vk_profile = updatedUser.vk_profile || ''
+      socialForm.instagram_profile = updatedUser.instagram_profile || ''
+      socialForm.website = updatedUser.website || ''
+    }
+
+    socialSuccess.value = 'Социальные сети успешно обновлены!'
 
     setTimeout(() => {
       socialSuccess.value = ''
     }, 3000)
 
   } catch (err) {
-    socialError.value = err.message
+    socialError.value = err.message || 'Произошла ошибка при сохранении'
   } finally {
     savingSocial.value = false
   }
 }
 ```
-После обновления профиля необходимо синхронизировать локальную форму с теми данными, которые вернул сервер (чтобы в UI появились все сохранённые поля, включая `website`). В актуальной реализации `saveSocialInfo` получает обновлённый объект пользователя, перекладывает его в `user` и перезаписывает поля формы из ответа:
 
-```javascript
-const updatedUser = await authStore.updateProfile(profileData)
+### Почему важно обновлять форму после сохранения
 
-if (updatedUser) {
-  user.value = { ...user.value, ...updatedUser }
+После успешного ответа от сервера необходимо:
+1. Обновить `user.value` — для синхронизации с authStore
+2. Обновить все поля `socialForm` — чтобы UI отображал актуальные данные, включая `website`
 
-  socialForm.telegram_user = updatedUser.telegram_user || ''
-  socialForm.vk_profile = updatedUser.vk_profile || ''
-  socialForm.instagram_profile = updatedUser.instagram_profile || ''
-  socialForm.website = updatedUser.website || ''
-}
-```
+Без этой синхронизации поле "Сайт (URL)" может показывать пустое или старое значение после сохранения.
 
 ## Инициализация формы
 
