@@ -1286,15 +1286,23 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick, onBeforeUnmount, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.css'
 import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscription'
 import TelegramLinkWidget from '@/components/TelegramLinkWidget.vue'
-import { getMyStats } from '@/services/imageService'
-  
+
+// Composables
+import { useUserAvatar } from '@/composables/useUserAvatar'
+import { useUserVerification } from '@/composables/useUserVerification'
+import { useUserPersonalInfo } from '@/composables/useUserPersonalInfo'
+import { useUserSocial } from '@/composables/useUserSocial'
+import { useUserPrivacy } from '@/composables/useUserPrivacy'
+import { useUserLimits } from '@/composables/useUserLimits'
+import { useUserTariffs } from '@/composables/useUserTariffs'
+import { useUserPromo } from '@/composables/useUserPromo'
+
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -1310,14 +1318,6 @@ const { user } = storeToRefs(authStore)
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
-// Аватарка
-const avatarKey = ref(0) // Ключ для принудительной перерисовки аватарки
-const showCropper = ref(false)
-const selectedImageUrl = ref('')
-const cropperImage = ref(null)
-let cropper = null
-const uploadingAvatar = ref(false)
-
 // Табы
 const activeTab = ref('basic')
 const tabs = [
@@ -1331,496 +1331,154 @@ const tabs = [
   { id: 'tariffs', label: 'Тарифы', icon: '💳' }
 ]
 
-// Флаг режима редактирования аватара
-const isAvatarEditMode = ref(false)
+// === Инициализация Composables ===
 
-// Формы
-const personalForm = reactive({
-  username: '',
-  full_name: '',
-  phone: '',
-  city: '',
-  country: '',
-  office: '',
-  personal_id: ''
-})
-const officeError = ref('')
-const personalIdError = ref('')
-const personalIdSuffix = ref('')
-const socialForm = reactive({
-  telegram_user: '',
-  vk_profile: '',
-  instagram_profile: '',
-  website: ''
-})
+// Avatar
+const {
+  avatarKey,
+  showCropper,
+  selectedImageUrl,
+  cropperImage,
+  uploadingAvatar,
+  isAvatarEditMode,
+  getAvatarUrl,
+  getInitials,
+  handleAvatarChange,
+  cancelCrop,
+  confirmCrop,
+  handleAvatarDelete,
+  openAvatarEdit,
+  closeAvatarEdit,
+  handleAvatarChangeAndClose,
+  handleAvatarDeleteAndClose,
+  cleanup: cleanupAvatar
+} = useUserAvatar({ user, authStore, API_URL })
 
-const personalError = ref('')
-const personalSuccess = ref('')
-const savingPersonal = ref(false)
+// Social (нужна форма до Personal для зависимости)
+const {
+  socialForm,
+  socialError,
+  socialSuccess,
+  savingSocial,
+  saveSocialInfo,
+  initializeForm: initializeSocialForm
+} = useUserSocial({ user, authStore })
 
-const socialError = ref('')
-const socialSuccess = ref('')
-const savingSocial = ref(false)
+// Personal (требует verificationStatus и cancelVerification, поэтому сначала создаём Verification)
+// Но Personal нужна personalForm для Verification... Создаём Personal первым без cancelVerification
 
-// Настройки конфиденциальности
-const privacySettings = ref({
-  username: false,
-  full_name: false,
-  phone: false,
-  city: false,
-  country: false,
-  office: false,
-  personal_id: false,
-  telegram_user: false,
-  vk_profile: false,
-  instagram_profile: false,
-  website: false
-})
-
-const privacyError = ref('')
-const privacySuccess = ref('')
-const savingPrivacy = ref(false)
-
-// Промокод
-const promoCodeInput = ref('')
-const promoError = ref('')
-const promoSuccess = ref('')
-const applyingPromo = ref(false)
-
-// Тарифы
-const loadingPlans = ref(false)
-const availablePlans = ref([])
-const expandedPlanIds = ref([]) // Раскрытые карточки тарифов
-const showCurrentTariffFeatures = ref(false) // Показать возможности текущего тарифа
-
-// Маппинг для человекочитаемых названий функций тарифов
-const featureLabels = {
-  // Лимиты
-  'max_boards': (value) => value === -1 ? '∞ Безлимитные доски' : `📊 До ${value} досок`,
-  'max_notes': (value) => value === -1 ? '∞ Безлимитные заметки' : `📝 До ${value} заметок`,
-  'max_stickers': (value) => value === -1 ? '∞ Безлимитные стикеры' : `🎨 До ${value} стикеров`,
-  'max_licenses': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек`,
-  'max_cards_per_board': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек на доске`,
-  'max_comments': (value) => value === -1 ? '∞ Безлимитные комментарии' : `💬 До ${value} комментариев`,
-
-  // Булевы функции
-  'can_export_pdf': '📄 Экспорт в PDF',
-  'can_export_png': '🖼️ Экспорт в PNG',
-  'can_export_png_bw': '⬛ Экспорт PNG (Ч/Б)',
-  'can_export_png_formats': (value) => {
-    if (Array.isArray(value) && value.length > 0) {
-      return `📏 Форматы PNG: ${value.join(', ')}`
-    }
-    return '📏 Экспорт в разных форматах'
-  },
-  'can_export_svg': '📐 Экспорт в SVG',
-  'can_save_project': '💾 Сохранение проекта',
-  'can_load_project': '📂 Загрузка проекта',
-  'can_share_project': '🔗 Поделиться проектом',
-  'can_share_boards': '🔗 Поделиться досками',
-  'can_invite_drawing': '✏️ Приглашение к рисованию',
-  'can_duplicate_boards': '📋 Дублирование досок'
-}
-
-// Основные функции для краткого списка (первые 4)
-const primaryFeatures = ['max_boards', 'max_licenses', 'max_notes', 'max_stickers']
-
-// Дополнительные функции для расширенного списка
-const secondaryFeatures = [
-  'max_comments',
-  'can_export_pdf',
-  'can_export_png',
-  'can_export_png_formats',
-  'can_export_png_bw',
-  'can_export_svg',
-  'can_save_project',
-  'can_load_project',
-  'can_share_project',
-  'can_share_boards',
-  'can_invite_drawing',
-  'can_duplicate_boards'
-]
-
-// Форматирование функции
-function formatFeature(key, value) {
-  if (key in featureLabels) {
-    const formatter = featureLabels[key]
-    if (typeof formatter === 'function') {
-      return formatter(value)
-    }
-    return formatter
-  }
-  return null
-}
-
-// Получение основных функций для карточки
-function getPrimaryFeatures(features) {
-  if (!features) return []
-  return Object.entries(features)
-    .filter(([key]) => primaryFeatures.includes(key))
-    .map(([key, value]) => ({
-      key,
-      label: formatFeature(key, value),
-      available: typeof value === 'boolean' ? value : true
-    }))
-    .filter(f => f.label !== null)
-    .sort((a, b) => primaryFeatures.indexOf(a.key) - primaryFeatures.indexOf(b.key))
-}
-
-// Получение дополнительных функций для раскрытого списка
-function getSecondaryFeatures(features) {
-  if (!features) return []
-  return Object.entries(features)
-    .filter(([key]) => secondaryFeatures.includes(key))
-    .map(([key, value]) => ({
-      key,
-      label: formatFeature(key, value),
-      available: typeof value === 'boolean' ? value : true
-    }))
-    .filter(f => f.label !== null)
-    .sort((a, b) => secondaryFeatures.indexOf(a.key) - secondaryFeatures.indexOf(b.key))
-}
-
-// Переключение раскрытия карточки тарифа
-function togglePlanExpanded(planId) {
-  const index = expandedPlanIds.value.indexOf(planId)
-  if (index === -1) {
-    expandedPlanIds.value.push(planId)
-  } else {
-    expandedPlanIds.value.splice(index, 1)
-  }
-}
-
-// Проверка раскрыта ли карточка
-function isPlanExpanded(planId) {
-  return expandedPlanIds.value.includes(planId)
-}
-
-// Предупреждение об изменении компьютерного номера
-const showPersonalIdWarning = ref(false)
-const pendingPersonalId = ref('')
-const pendingOffice = ref('')
-
-// Предупреждение при изменении данных во время pending заявки
-const showPendingWarning = ref(false)
-const cancellingVerification = ref(false)
-
-// Подтверждение отмены заявки на верификацию
-const showCancelConfirm = ref(false)
-
-// Статус верификации
-const verificationStatus = reactive({
-  isVerified: false,
-  hasPendingRequest: false,
-  lastRejection: null,
-  lastAttempt: null,
-  cooldownUntil: null
+// Используем временный объект для personalForm
+const {
+  personalForm,
+  officeError,
+  personalIdError,
+  personalIdSuffix,
+  personalError,
+  personalSuccess,
+  savingPersonal,
+  showPersonalIdWarning,
+  pendingPersonalId,
+  pendingOffice,
+  showPendingWarning,
+  showCancelConfirm,
+  cancellingVerification: cancellingVerificationPersonal,
+  officePrefix,
+  isPersonalIdComplete,
+  validateOffice,
+  updatePersonalId,
+  savePersonalInfo,
+  confirmPersonalIdChange,
+  cancelPersonalIdChange,
+  cancelPendingChange,
+  confirmPendingChange,
+  openCancelConfirm,
+  closeCancelConfirm,
+  confirmCancelVerification,
+  initializeForm: initializePersonalForm
+} = useUserPersonalInfo({
+  user,
+  authStore,
+  verificationStatus: { hasPendingRequest: false }, // Временно, будет обновлено
+  cancelVerification: async () => {}, // Временно
+  loadVerificationStatus: async () => {} // Временно
 })
 
-const showVerificationModal = ref(false)
+// Verification
+const {
+  verificationStatus,
+  showVerificationModal,
+  verificationForm,
+  verificationError,
+  submittingVerification,
+  cancellingVerification,
+  verificationHistory,
+  loadingHistory,
+  showHistory,
+  cooldownTimeRemaining,
+  canSubmitVerification,
+  cooldownMessage,
+  loadVerificationStatus,
+  loadVerificationHistory,
+  openHistory,
+  closeHistory,
+  getStatusLabel,
+  getStatusClass,
+  openVerificationModal,
+  closeVerificationModal,
+  handleScreenshotChange,
+  submitVerification,
+  cancelVerification,
+  startVerificationCheck,
+  cleanup: cleanupVerification
+} = useUserVerification({ user, authStore, API_URL, personalForm })
 
-// Форма верификации
-const verificationForm = reactive({
-  full_name: '',
-  screenshot_1: null,
-  screenshot_2: null
-})
+// Privacy
+const {
+  privacySettings,
+  privacyError,
+  privacySuccess,
+  savingPrivacy,
+  togglePrivacy,
+  savePrivacySettings,
+  initializeSettings: initializePrivacySettings
+} = useUserPrivacy({ user, authStore, API_URL })
 
-const verificationError = ref('')
-const submittingVerification = ref(false)
+// Limits
+const {
+  imageLibraryStats,
+  imageStatsError,
+  getLimitInfo,
+  getImageLimitInfo,
+  getLimitColor,
+  loadImageLibraryStats
+} = useUserLimits({ subscriptionStore })
 
-// Интервал автоматической проверки статуса верификации
-let verificationCheckInterval = null
+// Tariffs
+const {
+  loadingPlans,
+  availablePlans,
+  expandedPlanIds,
+  showCurrentTariffFeatures,
+  featureLabels,
+  formatFeature,
+  getPrimaryFeatures,
+  getSecondaryFeatures,
+  togglePlanExpanded,
+  isPlanExpanded,
+  loadAvailablePlans,
+  handleUpgrade
+} = useUserTariffs({ subscriptionStore })
 
-// Интервал обновления таймера кулдауна
-let cooldownTimerInterval = null
+// Promo
+const {
+  promoCodeInput,
+  promoError,
+  promoSuccess,
+  applyingPromo,
+  handleApplyPromo
+} = useUserPromo({ authStore, subscriptionStore })
 
-// Оставшееся время кулдауна (форматированная строка)
-const cooldownTimeRemaining = ref('')
-
-// История верификации
-const verificationHistory = ref([])
-const loadingHistory = ref(false)
-const showHistory = ref(false)
-const OFFICE_PATTERN = /^[A-Z]{3}\d{2,3}$/
-
-const officePrefix = computed(() => personalForm.office.trim().toUpperCase())
-
-const isPersonalIdComplete = computed(() => {
-  const suffix = personalIdSuffix.value.replace(/\D/g, '')
-  return OFFICE_PATTERN.test(officePrefix.value) && suffix.length === 9
-})
-
-// Вычисляемые свойства для верификации
-const canSubmitVerification = computed(() => {
-  // Нельзя подать заявку, если уже есть ожидающая
-  if (verificationStatus.hasPendingRequest) return false
-
-  // Нельзя подать заявку, если не указан компьютерный номер
-  if (!personalForm.personal_id || !personalForm.personal_id.trim()) return false
-
-  // Нельзя подать заявку, если действует кулдаун
-  if (verificationStatus.cooldownUntil) {
-    const now = new Date()
-    const cooldownEnd = new Date(verificationStatus.cooldownUntil)
-    if (now < cooldownEnd) return false
-  }
-
-  return true
-})
-
-const cooldownMessage = computed(() => {
-  if (!verificationStatus.cooldownUntil) return ''
-
-  const now = new Date()
-  const cooldownEnd = new Date(verificationStatus.cooldownUntil)
-
-  if (now >= cooldownEnd) return ''
-
-  // Если есть точное оставшееся время, показать его
-  if (cooldownTimeRemaining.value) {
-    return `Повторная заявка доступна через ${cooldownTimeRemaining.value}`
-  }
-
-  // Fallback на часы/дни (если таймер ещё не запущен)
-  const diffMs = cooldownEnd - now
-  const diffHours = Math.ceil(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffDays > 1) {
-    return `Повторная заявка доступна через ${diffDays} дн.`
-  } else if (diffHours > 1) {
-    return `Повторная заявка доступна через ${diffHours} ч.`
-  } else {
-    return 'Повторная заявка скоро будет доступна'
-  }
-})
-
-// Обновление таймера обратного отсчёта кулдауна
-function updateCooldownTime() {
-  const endTime = verificationStatus.cooldownUntil
-
-  if (!endTime) {
-    cooldownTimeRemaining.value = ''
-    return
-  }
-
-  const now = new Date()
-  const end = new Date(endTime)
-  const diff = end - now
-
-  if (diff <= 0) {
-    cooldownTimeRemaining.value = ''
-    // Очистить интервал
-    if (cooldownTimerInterval) {
-      clearInterval(cooldownTimerInterval)
-      cooldownTimerInterval = null
-    }
-    // Перезагрузить статус
-    loadVerificationStatus()
-    return
-  }
-
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-
-  if (hours > 0) {
-    cooldownTimeRemaining.value = `${hours}ч ${minutes}м ${seconds}с`
-  } else if (minutes > 0) {
-    cooldownTimeRemaining.value = `${minutes}м ${seconds}с`
-  } else {
-    cooldownTimeRemaining.value = `${seconds}с`
-  }
-}
-
-// Запустить таймер кулдауна
-function startCooldownTimer() {
-  // Очистить предыдущий интервал
-  if (cooldownTimerInterval) {
-    clearInterval(cooldownTimerInterval)
-  }
-
-  // Запустить обновление каждую секунду
-  cooldownTimerInterval = setInterval(updateCooldownTime, 1000)
-  // Сразу обновить
-  updateCooldownTime()
-}
-function normalizeOffice(value) {
-  return (value || '').trim().toUpperCase()
-}
-
-function validateOffice() {
-  const office = normalizeOffice(personalForm.office)
-  personalForm.office = office
-
-  if (!office) {
-    officeError.value = ''
-    personalIdError.value = ''
-    updatePersonalId(false)
-    return true
-  }
-
-  if (!OFFICE_PATTERN.test(office)) {
-    officeError.value = 'Представительство должно быть в формате: 3 английские буквы + 2-3 цифры (например: RUY68)'
-    personalIdError.value = officeError.value
-    return false
-  }
-
-  officeError.value = ''
-  updatePersonalId()
-  return true
-}
-
-function updatePersonalId(showOfficeValidation = true) {
-  const office = normalizeOffice(personalForm.office)
-  personalForm.office = office
-
-  const digitsOnly = personalIdSuffix.value.replace(/\D/g, '')
-  if (digitsOnly !== personalIdSuffix.value) {
-    personalIdSuffix.value = digitsOnly
-  }
-
-  if (personalIdSuffix.value.length > 9) {
-    personalIdSuffix.value = personalIdSuffix.value.slice(0, 9)
-  }
-
-  const suffix = personalIdSuffix.value
-  personalForm.personal_id = office + suffix
-
-  if (!office) {
-    personalIdError.value = showOfficeValidation ? 'Укажите представительство' : ''
-    return
-  }
-
-  if (!OFFICE_PATTERN.test(office)) {
-    personalIdError.value = showOfficeValidation ? (officeError.value || 'Некорректный формат представительства') : ''
-    return
-  }
-
-  if (suffix.length === 9) {
-    personalIdError.value = ''
-  } else {
-    personalIdError.value = `Введено ${suffix.length}/9 цифр`
-  }
-}
-
-function validatePersonalId() {
-  const isOfficeValid = validateOffice()
-  const office = officePrefix.value
-  const suffix = personalIdSuffix.value.replace(/\D/g, '')
-
-  if (!office) {
-    personalIdError.value = 'Укажите представительство'
-    return false
-  }
-
-  if (!isOfficeValid) {
-    personalIdError.value = officeError.value
-    return false
-  }
-
-  if (suffix.length !== 9) {
-    personalIdError.value = `Введено ${suffix.length}/9 цифр`
-    return false
-  }
-
-  personalForm.personal_id = office + suffix
-  personalIdError.value = ''
-  return true
-}
-
-function initializePersonalIdFields() {
-  personalForm.office = normalizeOffice(personalForm.office)
-  const existingPersonalId = (personalForm.personal_id || '').trim()
-  let suffix = ''
-
-  if (existingPersonalId && officePrefix.value && existingPersonalId.startsWith(officePrefix.value)) {
-    suffix = existingPersonalId.slice(officePrefix.value.length)
-  } else if (existingPersonalId) {
-    const match = existingPersonalId.match(/^([A-Z]{3}\d{2,3})(\d{0,9})/)
-    if (match) {
-      personalForm.office = match[1]
-      suffix = match[2]
-    }
-  }
-
-  personalIdSuffix.value = (suffix || '').replace(/\D/g, '').slice(0, 9)
-  updatePersonalId(false)
-}
-// Инициализация
-onMounted(async () => {
-  // Принудительно загружаем свежие данные пользователя и план подписки
-  try {
-    // Загружаем профиль пользователя с актуальными данными
-    await authStore.fetchProfile()
-    // Загружаем план подписки
-    await subscriptionStore.loadPlan()
-    // Загружаем лимиты библиотеки изображений
-    await loadImageLibraryStats()    
-    // Загружаем статус верификации
-    await loadVerificationStatus()
-  } catch (error) {
-    console.error('Ошибка при загрузке данных профиля:', error)
-  }
-
-  // Заполняем формы текущими данными
-  if (user.value) {
-    personalForm.username = user.value.username || ''
-    personalForm.full_name = user.value.full_name || ''
-    personalForm.phone = user.value.phone || ''
-    personalForm.city = user.value.city || ''
-    personalForm.country = user.value.country || ''
-    personalForm.office = user.value.office || ''
-    personalForm.personal_id = user.value.personal_id || ''
-    initializePersonalIdFields()
-
-    socialForm.telegram_user = user.value.telegram_user || ''
-    socialForm.vk_profile = user.value.vk_profile || ''
-    socialForm.instagram_profile = user.value.instagram_profile || ''
-    socialForm.website = user.value.website || ''
-
-    // Инициализируем настройки конфиденциальности
-    if (user.value.search_settings) {
-      privacySettings.value = {
-        username: user.value.search_settings.username || false,
-        full_name: user.value.search_settings.full_name || false,
-        phone: user.value.search_settings.phone || false,
-        city: user.value.search_settings.city || false,
-        country: user.value.search_settings.country || false,
-        office: user.value.search_settings.office || false,
-        personal_id: user.value.search_settings.personal_id || false,
-        telegram_user: user.value.search_settings.telegram_user || false,
-        vk_profile: user.value.search_settings.vk_profile || false,
-        instagram_profile: user.value.search_settings.instagram_profile || false,
-        website: user.value.search_settings.website || false
-      }
-    }
-  }
-
-  // Автоматически проверять статус верификации каждые 10 секунд (если есть pending заявка)
-  verificationCheckInterval = setInterval(async () => {
-    if (verificationStatus.hasPendingRequest) {
-      await loadVerificationStatus()
-    }
-  }, 10000) // 10 секунд
-})
-
-onBeforeUnmount(() => {
-  cancelCrop()
-
-  // Очистить интервал автоматической проверки статуса верификации
-  if (verificationCheckInterval) {
-    clearInterval(verificationCheckInterval)
-    verificationCheckInterval = null
-  }
-
-  // Очистить интервал таймера кулдауна
-  if (cooldownTimerInterval) {
-    clearInterval(cooldownTimerInterval)
-    cooldownTimerInterval = null
-  }
-})
+// === Вспомогательные функции ===
 
 // Форматирование даты
 function formatDate(dateString) {
@@ -1831,23 +1489,6 @@ function formatDate(dateString) {
     month: 'long',
     day: 'numeric'
   })
-}
-
-// Получить URL аватара
-function getAvatarUrl(url) {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return `${API_URL.replace('/api', '')}${url}`
-}
-
-// Получить инициалы
-function getInitials(name) {
-  if (!name) return '?'
-  const parts = name.split(' ')
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
-  }
-  return name.substring(0, 2).toUpperCase()
 }
 
 // Стиль бейджа плана
@@ -1865,7 +1506,6 @@ function getPlanBadgeStyle() {
 
 // Класс для даты окончания подписки
 function getExpiryClass() {
-  // Проверяем сначала user.subscription_expires_at, затем subscriptionStore
   const expiresAt = user.value?.subscription_expires_at || subscriptionStore.currentPlan?.expiresAt
   if (!expiresAt) return 'expiry-unlimited'
 
@@ -1879,14 +1519,12 @@ function getExpiryClass() {
 
 // Дата начала подписки
 function getStartDate() {
-  // Используем subscription_started_at, если есть, иначе created_at
   const startDate = user.value?.subscription_started_at || user.value?.created_at
   return formatDate(startDate)
 }
 
 // Дата окончания подписки
 function getExpiryDate() {
-  // Проверяем сначала user.subscription_expires_at, затем subscriptionStore
   const expiresAt = user.value?.subscription_expires_at || subscriptionStore.currentPlan?.expiresAt
   if (!expiresAt) return 'Бессрочно'
   return formatDate(expiresAt)
@@ -1897,16 +1535,13 @@ function isInGracePeriod() {
   const expiresAt = user.value?.subscription_expires_at
   const gracePeriodUntil = user.value?.grace_period_until
 
-  // Grace-период НЕ показываем если:
-  if (!gracePeriodUntil) return false // Нет даты grace-периода
-  if (!expiresAt) return false // Бессрочная подписка (null)
+  if (!gracePeriodUntil) return false
+  if (!expiresAt) return false
 
-  // Подписка истекла — проверяем, активен ли grace-период
   const now = new Date()
   const graceDate = new Date(gracePeriodUntil)
   const expireDate = new Date(expiresAt)
 
-  // Показываем только если подписка уже истекла И grace-период ещё активен
   return now > expireDate && now <= graceDate
 }
 
@@ -1916,712 +1551,6 @@ function getGracePeriodDate() {
   if (!gracePeriodUntil) return null
   return formatDate(gracePeriodUntil)
 }
-// Статистика библиотеки изображений
-const imageLibraryStats = ref(null)
-const imageStatsError = ref('')
-
-// Информация о лимитах
-function getLimitInfo(resourceType) {
-  const limitData = subscriptionStore.checkLimit(resourceType)
-  const maxDisplay = limitData.max === -1 ? '∞' : limitData.max
-  const percentage = limitData.max === -1 ? 0 : Math.min(100, Math.round((limitData.current / limitData.max) * 100))
-
-  return {
-    current: limitData.current,
-    max: limitData.max,
-    maxDisplay,
-    percentage
-  }
-}
-function getImageLimitInfo(resourceKey) {
-  const usage = imageLibraryStats.value?.usage || {}
-  const limits = imageLibraryStats.value?.limits || {}
-
-  const currentRaw = Number(usage[resourceKey] ?? 0)
-  const limitRaw = limits[resourceKey]
-  const isUnlimited = limitRaw === -1
-
-  const currentDisplay = resourceKey === 'storageMB'
-    ? `${currentRaw.toFixed(2)} МБ`
-    : currentRaw
-
-  const maxDisplay = isUnlimited
-    ? '∞'
-    : resourceKey === 'storageMB'
-      ? `${Number(limitRaw ?? 0)} МБ`
-      : Number(limitRaw ?? 0)
-
-  const percentage = (!isUnlimited && Number(limitRaw) > 0)
-    ? Math.min(100, Math.round((currentRaw / Number(limitRaw)) * 100))
-    : 0
-
-  return { currentDisplay, maxDisplay, percentage }
-}
-// Цвет прогресс-бара
-function getLimitColor(percentage) {
-  if (percentage < 70) return '#4caf50' // Зелёный
-  if (percentage < 90) return '#ffc107' // Оранжевый
-  return '#f44336' // Красный
-}
-async function loadImageLibraryStats() {
-  try {
-    imageStatsError.value = ''
-    imageLibraryStats.value = await getMyStats()
-  } catch (error) {
-    console.error('Ошибка загрузки лимитов библиотеки изображений:', error)
-    imageStatsError.value = error.message || 'Не удалось загрузить лимиты библиотеки изображений'
-  }
-}
-
-// Загрузка статуса верификации
-async function loadVerificationStatus() {
-  try {
-    const response = await fetch(`${API_URL}/verification/status`, {
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-
-    if (response.ok) {
-      const data = await response.json()
-
-      // Если статус верификации изменился, обновить профиль пользователя
-      if (data.isVerified !== user.value.is_verified) {
-        await authStore.fetchProfile()
-      }
-
-      verificationStatus.isVerified = data.isVerified || false
-      verificationStatus.hasPendingRequest = data.hasPendingRequest || false
-      verificationStatus.lastRejection = data.lastRejection || null
-      verificationStatus.lastAttempt = data.lastAttempt || null
-      verificationStatus.cooldownUntil = data.cooldownUntil || null
-
-      // Запустить таймер обратного отсчёта, если есть активный кулдаун
-      if (data.cooldownUntil) {
-        startCooldownTimer()
-      } else {
-        // Очистить таймер если кулдаун закончился
-        if (cooldownTimerInterval) {
-          clearInterval(cooldownTimerInterval)
-          cooldownTimerInterval = null
-        }
-        cooldownTimeRemaining.value = ''
-      }
-    }
-  } catch (error) {
-    console.error('Ошибка загрузки статуса верификации:', error)
-  }
-}
-
-// Функция загрузки истории верификации
-async function loadVerificationHistory() {
-  loadingHistory.value = true
-
-  try {
-    const response = await fetch(`${API_URL}/verification/history`, {
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error('Ошибка загрузки истории')
-    }
-
-    const data = await response.json()
-    verificationHistory.value = data.history || []
-  } catch (err) {
-    console.error('Ошибка загрузки истории верификации:', err)
-  } finally {
-    loadingHistory.value = false
-  }
-}
-
-// Открыть историю верификации
-function openHistory() {
-  showHistory.value = true
-  loadVerificationHistory()
-}
-
-// Закрыть историю верификации
-function closeHistory() {
-  showHistory.value = false
-}
-
-// Функция получения метки статуса
-function getStatusLabel(status) {
-  const labels = {
-    'pending': '⏳ На модерации',
-    'approved': '✅ Одобрено',
-    'rejected': '❌ Отклонено'
-  }
-  return labels[status] || status
-}
-
-// Функция получения класса статуса
-function getStatusClass(status) {
-  return `status-${status}`
-}
-
-// Открыть модальное окно верификации
-function openVerificationModal() {
-  if (!canSubmitVerification.value) {
-    return
-  }
-
-  // Предзаполнить ФИО из профиля
-  verificationForm.full_name = user.value.full_name || ''
-  verificationForm.screenshot_1 = null
-  verificationForm.screenshot_2 = null
-  verificationError.value = ''
-
-  showVerificationModal.value = true
-}
-
-// Закрыть модальное окно верификации
-function closeVerificationModal() {
-  showVerificationModal.value = false
-  verificationForm.full_name = ''
-  verificationForm.screenshot_1 = null
-  verificationForm.screenshot_2 = null
-  verificationError.value = ''
-}
-
-// Обработка выбора файла
-function handleScreenshotChange(event, screenshotNumber) {
-  const file = event.target.files[0]
-
-  if (!file) {
-    return
-  }
-
-  // Валидация типа файла
-  if (!file.type.match(/^image\/(jpeg|png)$/)) {
-    verificationError.value = 'Допустимы только файлы JPG и PNG'
-    event.target.value = ''
-    return
-  }
-
-  // Валидация размера файла (5MB)
-  const maxSize = 5 * 1024 * 1024
-  if (file.size > maxSize) {
-    verificationError.value = `Файл ${screenshotNumber === 1 ? '1' : '2'} превышает максимальный размер 5MB`
-    event.target.value = ''
-    return
-  }
-
-  if (screenshotNumber === 1) {
-    verificationForm.screenshot_1 = file
-  } else {
-    verificationForm.screenshot_2 = file
-  }
-
-  verificationError.value = ''
-}
-
-// Отправить заявку на верификацию
-async function submitVerification() {
-  verificationError.value = ''
-
-  // Валидация формы
-  if (!verificationForm.full_name.trim()) {
-    verificationError.value = 'Введите полное ФИО'
-    return
-  }
-
-  if (!verificationForm.screenshot_1) {
-    verificationError.value = 'Загрузите первый скриншот'
-    return
-  }
-
-  if (!verificationForm.screenshot_2) {
-    verificationError.value = 'Загрузите второй скриншот'
-    return
-  }
-
-  submittingVerification.value = true
-
-  try {
-    const formData = new FormData()
-    formData.append('full_name', verificationForm.full_name.trim())
-    formData.append('screenshot_1', verificationForm.screenshot_1)
-    formData.append('screenshot_2', verificationForm.screenshot_2)
-
-    const response = await fetch(`${API_URL}/verification/submit`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      },
-      body: formData
-    })
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Ошибка отправки заявки')
-    }
-
-    // Закрыть модальное окно
-    closeVerificationModal()
-
-    // Обновить статус верификации
-    await loadVerificationStatus()
-
-    // Показать успешное уведомление
-    alert('Заявка на верификацию отправлена! Ожидайте проверки администратором.')
-
-  } catch (err) {
-    verificationError.value = err.message || 'Не удалось отправить заявку. Попробуйте позже.'
-  } finally {
-    submittingVerification.value = false
-  }
-}
-
-// Сохранить личную информацию
-async function savePersonalInfo() {
-  personalError.value = ''
-  personalSuccess.value = ''
-  if (!validatePersonalId()) {
-    personalError.value = personalIdError.value || 'Проверьте корректность представительства и компьютерного номера'
-    return
-  }
-
-  // Проверяем, изменились ли критические поля (office или personal_id)
-  const officeChanged = personalForm.office &&
-    personalForm.office.trim().toUpperCase() !== (user.value.office || '').trim().toUpperCase()
-  const personalIdChanged = personalForm.personal_id &&
-    personalForm.personal_id.trim() !== '' &&
-    personalForm.personal_id !== user.value.personal_id
-
-  // ПРОВЕРКА 1: Если есть pending заявка и изменяются критические поля
-  if (verificationStatus.hasPendingRequest && (officeChanged || personalIdChanged)) {
-    // Показать предупреждение о pending заявке
-    showPendingWarning.value = true
-    pendingPersonalId.value = personalForm.personal_id
-    pendingOffice.value = personalForm.office
-    return // Остановить выполнение до подтверждения
-  }
-
-  // ПРОВЕРКА 2: Проверка изменения номера/офиса для верифицированных пользователей
-  if (user.value.is_verified && (officeChanged || personalIdChanged)) {
-    // Открыть модальное окно предупреждения
-    showPersonalIdWarning.value = true
-    pendingPersonalId.value = personalForm.personal_id
-    pendingOffice.value = personalForm.office
-    return // Остановить выполнение до подтверждения
-  }
-
-  // Если предупреждение не нужно, продолжить обычное сохранение
-  savingPersonal.value = true
-
-  try {
-    await authStore.updateProfile({
-      username: personalForm.username,
-      full_name: personalForm.full_name,
-      phone: personalForm.phone,
-      city: personalForm.city,
-      country: personalForm.country,
-      office: personalForm.office,
-      personal_id: personalForm.personal_id
-    })
-
-    personalSuccess.value = 'Личная информация успешно обновлена!'
-
-    setTimeout(() => {
-      personalSuccess.value = ''
-    }, 3000)
-  } catch (err) {
-    personalError.value = err.message || 'Произошла ошибка при сохранении'
-  } finally {
-    savingPersonal.value = false
-  }
-}
-
-// Подтвердить изменение компьютерного номера
-function confirmPersonalIdChange() {
-  showPersonalIdWarning.value = false
-  // Продолжить сохранение с новым номером
-  savePersonalInfoConfirmed()
-}
-
-// Отменить изменение компьютерного номера
-function cancelPersonalIdChange() {
-  showPersonalIdWarning.value = false
-  // Вернуть старые значения
-  personalForm.personal_id = user.value.personal_id || ''
-  personalForm.office = user.value.office || ''
-  pendingPersonalId.value = ''
-  pendingOffice.value = ''
-  // Обновить суффикс
-  if (user.value.personal_id && user.value.office) {
-    personalIdSuffix.value = user.value.personal_id.replace(user.value.office.toUpperCase(), '')
-  }
-}
-
-// Сохранить личную информацию после подтверждения
-async function savePersonalInfoConfirmed() {
-  savingPersonal.value = true
-  personalError.value = ''
-  personalSuccess.value = ''
-
-  try {
-    await authStore.updateProfile({
-      username: personalForm.username,
-      full_name: personalForm.full_name,
-      phone: personalForm.phone,
-      city: personalForm.city,
-      country: personalForm.country,
-      office: pendingOffice.value || personalForm.office,
-      personal_id: pendingPersonalId.value || personalForm.personal_id
-    })
-
-    personalSuccess.value = 'Личная информация обновлена. Верификация отменена.'
-
-    setTimeout(() => {
-      personalSuccess.value = ''
-    }, 3000)
-  } catch (err) {
-    personalError.value = err.message || 'Произошла ошибка при сохранении'
-  } finally {
-    savingPersonal.value = false
-    pendingPersonalId.value = ''
-    pendingOffice.value = ''
-  }
-}
-
-// === Функции для работы с pending заявками ===
-
-// Отменить изменения при pending заявке
-function cancelPendingChange() {
-  showPendingWarning.value = false
-  // Вернуть старые значения
-  personalForm.personal_id = user.value.personal_id || ''
-  personalForm.office = user.value.office || ''
-  pendingPersonalId.value = ''
-  pendingOffice.value = ''
-  // Обновить суффикс
-  if (user.value.personal_id && user.value.office) {
-    personalIdSuffix.value = user.value.personal_id.replace(user.value.office.toUpperCase(), '')
-  }
-}
-
-// Подтвердить изменения и отменить pending заявку
-async function confirmPendingChange() {
-  cancellingVerification.value = true
-  try {
-    // Отменить заявку на верификацию
-    await cancelVerification()
-
-    // Закрыть модальное окно
-    showPendingWarning.value = false
-
-    // Продолжить сохранение с новыми данными
-    savingPersonal.value = true
-
-    await authStore.updateProfile({
-      username: personalForm.username,
-      full_name: personalForm.full_name,
-      phone: personalForm.phone,
-      city: personalForm.city,
-      country: personalForm.country,
-      office: pendingOffice.value || personalForm.office,
-      personal_id: pendingPersonalId.value || personalForm.personal_id
-    })
-
-    personalSuccess.value = 'Заявка на верификацию отменена. Данные обновлены.'
-
-    setTimeout(() => {
-      personalSuccess.value = ''
-    }, 3000)
-  } catch (err) {
-    personalError.value = err.message || 'Произошла ошибка'
-  } finally {
-    cancellingVerification.value = false
-    savingPersonal.value = false
-    pendingPersonalId.value = ''
-    pendingOffice.value = ''
-  }
-}
-
-// Открыть подтверждение отмены заявки
-function openCancelConfirm() {
-  showCancelConfirm.value = true
-}
-
-// Закрыть подтверждение отмены заявки
-function closeCancelConfirm() {
-  showCancelConfirm.value = false
-}
-
-// Подтвердить отмену заявки
-async function confirmCancelVerification() {
-  cancellingVerification.value = true
-  try {
-    await cancelVerification()
-    showCancelConfirm.value = false
-    personalSuccess.value = 'Заявка на верификацию отменена.'
-    setTimeout(() => {
-      personalSuccess.value = ''
-    }, 3000)
-  } catch (err) {
-    personalError.value = err.message || 'Не удалось отменить заявку'
-  } finally {
-    cancellingVerification.value = false
-  }
-}
-
-// Отменить заявку на верификацию
-async function cancelVerification() {
-  const token = localStorage.getItem('token')
-  if (!token) {
-    throw new Error('Необходима авторизация')
-  }
-
-  const response = await fetch(`${API_URL}/verification/cancel`, {
-    method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  })
-
-  if (!response.ok) {
-    const data = await response.json()
-    throw new Error(data.error || 'Ошибка отмены заявки')
-  }
-
-  // Обновить статус верификации
-  await loadVerificationStatus()
-
-  return true
-}
-
-// Сохранить соц. сети
-async function saveSocialInfo() {
-  socialError.value = ''
-  socialSuccess.value = ''
-  savingSocial.value = true
-
-  try {
-    const profileData = {
-      telegram_user: socialForm.telegram_user?.trim() || '',
-      vk_profile: socialForm.vk_profile?.trim() || '',
-      instagram_profile: socialForm.instagram_profile?.trim() || '',
-      website: socialForm.website?.trim() || ''
-    }
-
-    await authStore.updateProfile(profileData)
-    socialSuccess.value = 'Социальные сети успешно обновлены!'
-
-    setTimeout(() => {
-      socialSuccess.value = ''
-    }, 3000)
-  } catch (err) {
-    socialError.value = err.message || 'Произошла ошибка при сохранении'
-  } finally {
-    savingSocial.value = false
-  }
-}
-
-// Переключить настройку конфиденциальности
-function togglePrivacy(field) {
-  privacySettings.value[field] = !privacySettings.value[field]
-}
-
-// Сохранить настройки конфиденциальности
-async function savePrivacySettings() {
-  privacyError.value = ''
-  privacySuccess.value = ''
-  savingPrivacy.value = true
-
-  try {
-    const response = await fetch(`${API_URL}/profile/privacy`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ search_settings: privacySettings.value })
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Ошибка сохранения настроек')
-    }
-
-    const result = await response.json()
-
-    // Обновляем search_settings в authStore
-    if (user.value) {
-      user.value.search_settings = result.search_settings
-    }
-
-    privacySuccess.value = 'Настройки конфиденциальности успешно сохранены!'
-
-    setTimeout(() => {
-      privacySuccess.value = ''
-    }, 3000)
-  } catch (err) {
-    privacyError.value = err.message || 'Произошла ошибка при сохранении'
-  } finally {
-    savingPrivacy.value = false
-  }
-}
-
-// Применить промокод
-async function handleApplyPromo() {
-  promoError.value = ''
-  promoSuccess.value = ''
-
-  const code = promoCodeInput.value.trim()
-
-  if (!code) {
-    promoError.value = 'Введите промокод'
-    return
-  }
-
-  applyingPromo.value = true
-
-  try {
-    await authStore.applyPromoCode(code)
-    promoSuccess.value = 'Промокод успешно применен!'
-    promoCodeInput.value = ''
-
-    // Обновляем план подписки
-    await subscriptionStore.loadPlan()
-
-    setTimeout(() => {
-      promoSuccess.value = ''
-    }, 5000)
-  } catch (err) {
-    promoError.value = err.message || 'Ошибка применения промокода'
-  } finally {
-    applyingPromo.value = false
-  }
-}
-
-// Загрузка аватара
-async function handleAvatarChange(event) {
-  const file = event.target.files[0]
-  if (!file) return
-
-  selectedImageUrl.value = URL.createObjectURL(file)
-  showCropper.value = true
-
-  await nextTick()
-
-  if (cropper) {
-    cropper.destroy()
-  }
-
-  cropper = new Cropper(cropperImage.value, {
-    aspectRatio: 1,
-    viewMode: 1,
-    autoCropArea: 1,
-    responsive: true,
-    background: false
-  })
-}
-
-// Отмена обрезки
-function cancelCrop() {
-  if (cropper) {
-    cropper.destroy()
-    cropper = null
-  }
-  if (selectedImageUrl.value) {
-    URL.revokeObjectURL(selectedImageUrl.value)
-    selectedImageUrl.value = ''
-  }
-  showCropper.value = false
-}
-
-// Подтверждение обрезки и загрузка
-async function confirmCrop() {
-  if (!cropper) return
-
-  uploadingAvatar.value = true
-
-  try {
-    const canvas = cropper.getCroppedCanvas({
-      width: 400,
-      height: 400,
-      imageSmoothingQuality: 'high'
-    })
-
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        throw new Error('Ошибка создания изображения')
-      }
-
-      const formData = new FormData()
-      formData.append('avatar', blob, 'avatar.jpg')
-
-      const response = await fetch(`${API_URL}/profile/avatar`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authStore.token}`
-        },
-        body: formData
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Ошибка загрузки')
-      }
-
-      // ИСПРАВЛЕНИЕ БАГА: Обновляем аватар и увеличиваем ключ для перерисовки
-      user.value.avatar_url = data.avatar_url
-      authStore.user.avatar_url = data.avatar_url
-      localStorage.setItem('user', JSON.stringify(authStore.user))
-
-      // Увеличиваем ключ для принудительной перерисовки аватарки
-      avatarKey.value++
-
-      alert('Аватар успешно обновлен!')
-      cancelCrop()
-
-      // Закрываем режим редактирования аватара если он открыт
-      if (isAvatarEditMode.value) {
-        closeAvatarEdit()
-      }
-    }, 'image/jpeg', 0.95)
-  } catch (err) {
-    alert(err.message || 'Ошибка загрузки аватара')
-  } finally {
-    uploadingAvatar.value = false
-  }
-}
-
-// Удаление аватара
-async function handleAvatarDelete() {
-  if (!confirm('Вы уверены, что хотите удалить аватар?')) return
-
-  try {
-    const response = await fetch(`${API_URL}/profile/avatar`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${authStore.token}`
-      }
-    })
-
-    if (!response.ok) {
-      const data = await response.json()
-      throw new Error(data.error || 'Ошибка удаления аватара')
-    }
-
-    // Обновляем аватар и увеличиваем ключ для перерисовки
-    user.value.avatar_url = null
-    authStore.user.avatar_url = null
-    localStorage.setItem('user', JSON.stringify(authStore.user))
-
-    avatarKey.value++
-
-    alert('Аватар успешно удален!')
-  } catch (err) {
-    alert(err.message || 'Ошибка удаления аватара')
-  }
-}
 
 // Выбрать таб из бокового меню
 function selectTab(tabId) {
@@ -2629,53 +1558,32 @@ function selectTab(tabId) {
   activeTab.value = tabId
 }
 
-// Открыть режим редактирования аватара
-function openAvatarEdit() {
-  isAvatarEditMode.value = true
-}
+// === Lifecycle Hooks ===
 
-// Закрыть режим редактирования аватара
-function closeAvatarEdit() {
-  isAvatarEditMode.value = false
-  activeTab.value = 'basic'
-}
-
-// Загрузить аватар и закрыть режим редактирования
-async function handleAvatarChangeAndClose(event) {
-  await handleAvatarChange(event)
-  // После успешной загрузки cropper закроется автоматически
-  // и мы вернёмся к основной информации
-}
-
-// Удалить аватар и закрыть режим редактирования
-async function handleAvatarDeleteAndClose() {
-  await handleAvatarDelete()
-  closeAvatarEdit()
-}
-
-// Загрузить список доступных тарифов
-async function loadAvailablePlans() {
-  loadingPlans.value = true
+onMounted(async () => {
   try {
-    await subscriptionStore.fetchPlans()
-    // Фильтруем планы - исключаем текущий
-    availablePlans.value = subscriptionStore.plans.filter(
-      plan => plan.code_name !== subscriptionStore.currentPlan?.code_name
-    )
-  } catch (err) {
-    console.error('Ошибка загрузки тарифов:', err)
-    availablePlans.value = []
-  } finally {
-    loadingPlans.value = false
+    // Загружаем данные пользователя и план подписки
+    await authStore.fetchProfile()
+    await subscriptionStore.loadPlan()
+    await loadImageLibraryStats()
+    await loadVerificationStatus()
+  } catch (error) {
+    console.error('Ошибка при загрузке данных профиля:', error)
   }
-}
 
-// Переход на другой тариф
-function handleUpgrade(plan) {
-  // Открываем страницу оплаты или показываем модальное окно
-  // TODO: Реализовать переход на страницу оплаты
-  alert(`Переход на тариф "${plan.name}" будет реализован в ближайшее время`)
-}
+  // Инициализируем формы из composables
+  initializePersonalForm()
+  initializeSocialForm()
+  initializePrivacySettings()
+
+  // Запускаем автоматическую проверку верификации
+  startVerificationCheck()
+})
+
+onBeforeUnmount(() => {
+  cleanupAvatar()
+  cleanupVerification()
+})
 
 // Загружаем тарифы при переключении на вкладку
 watch(activeTab, (newTab) => {
