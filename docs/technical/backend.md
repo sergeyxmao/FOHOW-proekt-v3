@@ -6,7 +6,7 @@
 
 ```
 api/
-├── server.js                 # Главный файл (~1050 строк) - инициализация, стикеры, заметки
+├── server.js                 # Главный файл (~220 строк) - инициализация, плагины, запуск
 ├── db.js                     # Подключение к PostgreSQL
 ├── socket.js                 # WebSocket конфигурация
 │
@@ -16,6 +16,10 @@ api/
 │   ├── boards.js            # Доски (~350 строк)
 │   ├── plans.js             # Тарифные планы (~120 строк)
 │   ├── telegram.js          # Telegram интеграция (~180 строк)
+│   ├── stickers.js          # Стикеры CRUD (~220 строк)
+│   ├── notes.js             # Заметки CRUD (~115 строк)
+│   ├── comments.js          # Личные комментарии (~175 строк)
+│   ├── boardPartners.js     # Партнёры на досках (~280 строк)
 │   ├── admin.js             # Админ-панель
 │   ├── images.js            # Работа с изображениями
 │   ├── anchors.js           # Якорные точки
@@ -115,6 +119,38 @@ api/
 | GET | `/api/user/telegram/check-link-status` | Статус привязки |
 | POST | `/api/user/connect-telegram` | Привязать Telegram |
 | GET | `/api/user/telegram-status` | Статус Telegram |
+
+### Стикеры (`routes/stickers.js`)
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/boards/:boardId/stickers` | Получить стикеры доски |
+| POST | `/api/boards/:boardId/stickers` | Создать стикер |
+| PUT | `/api/stickers/:stickerId` | Обновить стикер |
+| DELETE | `/api/stickers/:stickerId` | Удалить стикер |
+
+### Заметки (`routes/notes.js`)
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/boards/:boardId/notes` | Получить заметки доски |
+| POST | `/api/notes` | Создать/обновить/удалить заметку (UPSERT) |
+
+### Комментарии (`routes/comments.js`)
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/comments` | Получить комментарии пользователя |
+| POST | `/api/comments` | Создать комментарий |
+| PUT | `/api/comments/:commentId` | Обновить комментарий |
+| DELETE | `/api/comments/:commentId` | Удалить комментарий |
+
+### Партнёры на досках (`routes/boardPartners.js`)
+
+| Метод | Endpoint | Описание |
+|-------|----------|----------|
+| GET | `/api/boards/:boardId/avatar-partners` | Партнёры по аватарам |
+| GET | `/api/boards/:boardId/partners` | Партнёры по карточкам |
 
 ---
 
