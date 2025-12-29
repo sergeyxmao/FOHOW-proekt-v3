@@ -346,7 +346,7 @@ export const useAuthStore = defineStore('auth', {
       this.user = mergeUserData(this.user, data.user)
       localStorage.setItem('user', JSON.stringify(this.user))
 
-      return data.user
+      return this.user
     },
 
     async applyPromoCode(code) {
