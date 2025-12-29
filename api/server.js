@@ -20,7 +20,7 @@ import { checkFeature } from './middleware/checkFeature.js';
 import { checkUsageLimit } from './middleware/checkUsageLimit.js';
 import { registerPromoRoutes } from './routes/promo.js';
 import { registerAdminRoutes } from './routes/admin/index.js';
-import { registerImageRoutes } from './routes/images.js';
+import { registerImageRoutes } from './routes/images/index.js';
 import { registerAnchorRoutes } from './routes/anchors.js';
 import { registerBoardFolderRoutes } from './routes/boardFolders.js';
 import { registerDiscussionRoutes } from './routes/discussion.js';
