@@ -166,4 +166,6 @@ onMounted(() => {
 
 - `src/components/UserProfile.vue` — основной компонент профиля
 - `src/stores/auth.js` — store авторизации
-- API endpoint: `PUT /profile/social`
+- API endpoints:
+  - `PUT /api/profile` — обновление профиля (включая социальные сети)
+  - `GET /api/profile` — получение профиля (включая поле `website`)
