@@ -38,7 +38,18 @@ export function useUserSocial({ user, authStore }) {
         website: socialForm.website?.trim() || ''
       }
 
-      await authStore.updateProfile(profileData)
+      const updatedUser = await authStore.updateProfile(profileData)
+
+      if (updatedUser) {
+        if (user?.value) {
+          user.value = { ...user.value, ...updatedUser }
+        }
+
+        socialForm.telegram_user = updatedUser.telegram_user || ''
+        socialForm.vk_profile = updatedUser.vk_profile || ''
+        socialForm.instagram_profile = updatedUser.instagram_profile || ''
+        socialForm.website = updatedUser.website || ''
+      }
       socialSuccess.value = 'Социальные сети успешно обновлены!'
 
       setTimeout(() => {
