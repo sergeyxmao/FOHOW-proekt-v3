@@ -19,7 +19,7 @@ import Redis from 'ioredis'; // <-- Добавлен импорт Redis
 import { checkFeature } from './middleware/checkFeature.js';
 import { checkUsageLimit } from './middleware/checkUsageLimit.js';
 import { registerPromoRoutes } from './routes/promo.js';
-import { registerAdminRoutes } from './routes/admin.js';
+import { registerAdminRoutes } from './routes/admin/index.js';
 import { registerImageRoutes } from './routes/images.js';
 import { registerAnchorRoutes } from './routes/anchors.js';
 import { registerBoardFolderRoutes } from './routes/boardFolders.js';

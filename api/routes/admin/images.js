@@ -1,6 +1,6 @@
-import { pool } from '../db.js';
-import { authenticateToken } from '../middleware/auth.js';
-import { requireAdmin } from '../middleware/requireAdmin.js';
+import { pool } from '../../db.js';
+import { authenticateToken } from '../../middleware/auth.js';
+import { requireAdmin } from '../../middleware/requireAdmin.js';
 import { randomBytes } from 'crypto';
 import {
   getSharedFolderPath,
@@ -10,14 +10,9 @@ import {
   publishFile,
   deleteFile,
   uploadFile
-} from '../services/yandexDiskService.js';
-import { syncSharedFoldersWithYandexDisk } from '../services/sharedFoldersSync.js';
-import { generateImagePlaceholders } from '../utils/imagePlaceholders.js';
-import {
-  getPendingVerifications,
-  approveVerification,
-  rejectVerification
-} from '../services/verificationService.js';
+} from '../../services/yandexDiskService.js';
+import { syncSharedFoldersWithYandexDisk } from '../../services/sharedFoldersSync.js';
+import { generateImagePlaceholders } from '../../utils/imagePlaceholders.js';
 
 /**
  * Рекурсивная функция для замены URL в JSON-структурах
@@ -42,669 +37,10 @@ function replaceUrls(obj, oldUrl, newUrl) {
 }
 
 /**
- * Регистрация маршрутов для админ-панели
+ * Регистрация маршрутов модерации изображений
  * @param {import('fastify').FastifyInstance} app - Экземпляр Fastify
  */
-export function registerAdminRoutes(app) {
-  // ============================================
-  // УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ
-  // ============================================
-
-  /**
-   * Получить список всех пользователей с пагинацией
-   * GET /api/admin/users?page=1&limit=50&search=email
-   */
-  app.get('/api/admin/users', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const { page = 1, limit = 50, search = '', sortBy = 'created_at', sortOrder = 'DESC' } = req.query;
-      const offset = (page - 1) * limit;
-
-      // Базовый запрос
-      let whereClause = '';
-      const queryParams = [];
-
-      // Поиск по email, username или id
-      if (search) {
-        whereClause = `WHERE (u.email ILIKE $1 OR u.username ILIKE $1 OR CAST(u.id AS TEXT) LIKE $1)`;
-        queryParams.push(`%${search}%`);
-      }
-
-      // Подсчет общего количества пользователей
-      const countResult = await pool.query(
-        `SELECT COUNT(*) as total FROM users u ${whereClause}`,
-        queryParams
-      );
-      const total = parseInt(countResult.rows[0].total, 10);
-
-      // Получение списка пользователей
-      const allowedSortFields = ['id', 'email', 'username', 'created_at', 'role', 'plan_name'];
-      const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'created_at';
-      const sortDirection = sortOrder.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-
-      queryParams.push(limit, offset);
-      const usersResult = await pool.query(
-        `SELECT
-          u.id, u.email, u.username, u.avatar_url, u.role,
-          u.created_at, u.updated_at, u.subscription_expires_at,
-          u.country, u.city, u.full_name, u.phone, u.is_verified,
-          sp.id as plan_id, sp.name as plan_name, sp.code_name as plan_code,
-          (SELECT COUNT(*) FROM boards WHERE owner_id = u.id) as boards_count,
-          (SELECT COUNT(*) FROM active_sessions WHERE user_id = u.id) as active_sessions
-         FROM users u
-         LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
-         ${whereClause}
-         ORDER BY ${sortField === 'plan_name' ? 'sp.name' : 'u.' + sortField} ${sortDirection}
-         LIMIT $${queryParams.length - 1} OFFSET $${queryParams.length}`,
-        queryParams
-      );
-
-      return reply.send({
-        success: true,
-        data: usersResult.rows,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total,
-          totalPages: Math.ceil(total / limit)
-        }
-      });
-    } catch (err) {
-      console.error('[ADMIN] Ошибка получения списка пользователей:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  /**
-   * Получить информацию о конкретном пользователе
-   * GET /api/admin/users/:userId
-   */
-  app.get('/api/admin/users/:userId', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const { userId } = req.params;
-
-      const result = await pool.query(
-        `SELECT
-          u.id, u.email, u.username, u.avatar_url, u.role, u.created_at, u.updated_at,
-          u.subscription_expires_at, u.subscription_started_at,
-          u.country, u.city, u.office, u.personal_id, u.phone, u.full_name,
-          u.telegram_user, u.telegram_channel, u.telegram_chat_id,
-          u.vk_profile, u.ok_profile, u.instagram_profile, u.whatsapp_contact,
-          u.visibility_settings, u.search_settings,
-          sp.id as plan_id, sp.name as plan_name, sp.code_name as plan_code, sp.features,
-          (SELECT COUNT(*) FROM boards WHERE owner_id = u.id) as boards_count,
-          (SELECT COUNT(*) FROM notes n JOIN boards b ON n.board_id = b.id WHERE b.owner_id = u.id) as notes_count,
-          (SELECT COUNT(*) FROM stickers s JOIN boards b ON s.board_id = b.id WHERE b.owner_id = u.id) as stickers_count,
-          (SELECT COUNT(*) FROM user_comments WHERE user_id = u.id) as comments_count,
-          (SELECT COUNT(*) FROM active_sessions WHERE user_id = u.id) as active_sessions_count
-         FROM users u
-         LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
-         WHERE u.id = $1`,
-        [userId]
-      );
-
-      if (result.rows.length === 0) {
-        return reply.code(404).send({ error: 'Пользователь не найден' });
-      }
-
-      // Получаем историю подписок
-      const subscriptionHistory = await pool.query(
-        `SELECT sh.*, sp.name as plan_name
-         FROM subscription_history sh
-         LEFT JOIN subscription_plans sp ON sh.plan_id = sp.id
-         WHERE sh.user_id = $1
-         ORDER BY sh.start_date DESC
-         LIMIT 10`,
-        [userId]
-      );
-
-      // Получаем активные сессии
-      const activeSessions = await pool.query(
-        `SELECT id, ip_address, user_agent, created_at, last_seen, expires_at
-         FROM active_sessions
-         WHERE user_id = $1
-         ORDER BY last_seen DESC`,
-        [userId]
-      );
-
-      return reply.send({
-        success: true,
-        user: result.rows[0],
-        subscriptionHistory: subscriptionHistory.rows,
-        activeSessions: activeSessions.rows
-      });
-    } catch (err) {
-      console.error('[ADMIN] Ошибка получения информации о пользователе:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  /**
-   * Изменить роль пользователя
-   * PATCH /api/admin/users/:userId/role
-   */
-  app.patch('/api/admin/users/:userId/role', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const { userId } = req.params;
-      const { role } = req.body;
-
-      // Валидация роли
-      const allowedRoles = ['user', 'admin'];
-      if (!role || !allowedRoles.includes(role)) {
-        return reply.code(400).send({
-          error: `Недопустимая роль. Разрешены: ${allowedRoles.join(', ')}`
-        });
-      }
-
-      // Проверяем, что пользователь не меняет свою собственную роль
-      if (parseInt(userId) === req.user.id) {
-        return reply.code(403).send({
-          error: 'Нельзя изменить собственную роль'
-        });
-      }
-
-      const result = await pool.query(
-        `UPDATE users SET role = $1, updated_at = CURRENT_TIMESTAMP
-         WHERE id = $2
-         RETURNING id, email, username, role`,
-        [role, userId]
-      );
-
-      if (result.rows.length === 0) {
-        return reply.code(404).send({ error: 'Пользователь не найден' });
-      }
-
-      console.log(`[ADMIN] Роль пользователя изменена: user_id=${userId}, new_role=${role}, admin_id=${req.user.id}`);
-
-      return reply.send({
-        success: true,
-        message: `Роль пользователя изменена на "${role}"`,
-        user: result.rows[0]
-      });
-    } catch (err) {
-      console.error('[ADMIN] Ошибка изменения роли пользователя:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  /**
-   * Изменить тарифный план пользователя
-   * PATCH /api/admin/users/:userId/plan
-   */
-  app.patch('/api/admin/users/:userId/plan', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const { userId } = req.params;
-      const { planId, duration = 30, source = 'admin_manual' } = req.body;
-
-      if (!planId) {
-        return reply.code(400).send({ error: 'Не указан ID тарифного плана' });
-      }
-
-      // Проверяем существование плана
-      const planCheck = await pool.query(
-        'SELECT id, name, code_name FROM subscription_plans WHERE id = $1',
-        [planId]
-      );
-
-      if (planCheck.rows.length === 0) {
-        return reply.code(404).send({ error: 'Тарифный план не найден' });
-      }
-
-      const plan = planCheck.rows[0];
-
-      // Получаем клиент для транзакции
-      const client = await pool.connect();
-
-      try {
-        await client.query('BEGIN');
-
-        // Обновляем план пользователя
-        const startDate = new Date();
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + parseInt(duration));
-
-        const updateResult = await client.query(
-          `UPDATE users
-           SET plan_id = $1,
-               subscription_expires_at = $2,
-               subscription_started_at = $3,
-               updated_at = CURRENT_TIMESTAMP
-           WHERE id = $4
-           RETURNING id, email, username`,
-          [planId, endDate, startDate, userId]
-        );
-
-        if (updateResult.rows.length === 0) {
-          await client.query('ROLLBACK');
-          return reply.code(404).send({ error: 'Пользователь не найден' });
-        }
-
-        // ============================================
-        // РАЗБЛОКИРОВКА ДОСОК ПРИ ПРОДЛЕНИИ ТАРИФА
-        // ============================================
-        // Проверяем, были ли доски заблокированы, и разблокируем их
-        const userCheck = await client.query(
-          'SELECT boards_locked FROM users WHERE id = $1',
-          [userId]
-        );
-
-        let unlockedBoardsCount = 0;
-
-        if (userCheck.rows.length > 0 && userCheck.rows[0].boards_locked) {
-          console.log(`[ADMIN] Обнаружены заблокированные доски для пользователя ID=${userId}, разблокировка...`);
-
-          // Разблокируем доски на уровне пользователя
-          await client.query(
-            `UPDATE users
-             SET boards_locked = FALSE,
-                 boards_locked_at = NULL
-             WHERE id = $1`,
-            [userId]
-          );
-
-          // Разблокируем все доски пользователя
-          const unlockedBoardsResult = await client.query(
-            `UPDATE boards
-             SET is_locked = FALSE
-             WHERE owner_id = $1`,
-            [userId]
-          );
-
-          unlockedBoardsCount = unlockedBoardsResult.rowCount;
-
-          console.log(`[ADMIN] ✅ Разблокировано досок для пользователя ID=${userId}: ${unlockedBoardsCount}`);
-        }
-
-        // Создаем запись в истории подписок
-        await client.query(
-          `INSERT INTO subscription_history
-           (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
-           VALUES ($1, $2, $3, $4, $5, 0.00, 'RUB')`,
-          [userId, planId, startDate, endDate, source]
-        );
-
-        await client.query('COMMIT');
-
-        console.log(`[ADMIN] Тарифный план изменен: user_id=${userId}, plan=${plan.name}, duration=${duration} дней, admin_id=${req.user.id}`);
-
-        // Формируем ответ с информацией о разблокировке
-        const response = {
-          success: true,
-          message: `Тарифный план изменен на "${plan.name}"`,
-          user: updateResult.rows[0],
-          plan: {
-            id: plan.id,
-            name: plan.name,
-            code_name: plan.code_name
-          },
-          subscription: {
-            startDate,
-            endDate,
-            duration
-          }
-        };
-
-        // Добавляем информацию о разблокировке досок, если они были разблокированы
-        if (unlockedBoardsCount > 0) {
-          response.boardsUnlocked = {
-            count: unlockedBoardsCount,
-            message: `Разблокировано досок: ${unlockedBoardsCount}`
-          };
-        }
-
-        return reply.send(response);
-      } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-      } finally {
-        client.release();
-      }
-    } catch (err) {
-      console.error('[ADMIN] Ошибка изменения тарифного плана:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  /**
-   * Удалить пользователя (с подтверждением)
-   * DELETE /api/admin/users/:userId
-   */
-  app.delete('/api/admin/users/:userId', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const { userId } = req.params;
-      const { confirm } = req.body;
-
-      // Проверяем, что администратор не удаляет сам себя
-      if (parseInt(userId) === req.user.id) {
-        return reply.code(403).send({
-          error: 'Нельзя удалить собственный аккаунт'
-        });
-      }
-
-      // Требуем подтверждения
-      if (confirm !== true) {
-        return reply.code(400).send({
-          error: 'Требуется подтверждение удаления (confirm: true)'
-        });
-      }
-
-      // Получаем информацию о пользователе перед удалением
-      const userInfo = await pool.query(
-        'SELECT id, email, username FROM users WHERE id = $1',
-        [userId]
-      );
-
-      if (userInfo.rows.length === 0) {
-        return reply.code(404).send({ error: 'Пользователь не найден' });
-      }
-
-      const deletedUser = userInfo.rows[0];
-
-      // Удаляем пользователя (каскадное удаление настроено в БД)
-      await pool.query('DELETE FROM users WHERE id = $1', [userId]);
-
-      console.log(`[ADMIN] Пользователь удален: user_id=${userId}, email=${deletedUser.email}, admin_id=${req.user.id}`);
-
-      return reply.send({
-        success: true,
-        message: 'Пользователь успешно удален',
-        deletedUser
-      });
-    } catch (err) {
-      console.error('[ADMIN] Ошибка удаления пользователя:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  // ============================================
-  // СТАТИСТИКА И МОНИТОРИНГ
-  // ============================================
-
-  /**
-   * Получить общую статистику системы
-   * GET /api/admin/stats
-   */
-  app.get('/api/admin/stats', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      // Общая статистика
-      const stats = await pool.query(`
-        SELECT
-          (SELECT COUNT(*) FROM users) as total_users,
-          (SELECT COUNT(*) FROM users WHERE role = 'admin') as admin_users,
-          (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '7 days') as new_users_week,
-          (SELECT COUNT(*) FROM users WHERE created_at >= NOW() - INTERVAL '30 days') as new_users_month,
-          (SELECT COUNT(*) FROM users WHERE is_verified = TRUE) as verified_users,
-          (SELECT COUNT(*) FROM boards) as total_boards,
-          (SELECT COUNT(*) FROM notes) as total_notes,
-          (SELECT COUNT(*) FROM stickers) as total_stickers,
-          (SELECT COUNT(*) FROM user_comments) as total_comments,
-          (SELECT COUNT(*) FROM active_sessions) as active_sessions_count,
-          (SELECT COUNT(DISTINCT user_id) FROM active_sessions WHERE last_seen >= NOW() - INTERVAL '1 hour') as active_users_hour,
-          (SELECT COUNT(DISTINCT user_id) FROM active_sessions WHERE last_seen >= NOW() - INTERVAL '24 hours') as active_users_day
-      `);
-
-      // Статистика по тарифным планам
-      const planStats = await pool.query(`
-        SELECT
-          sp.id, sp.name, sp.code_name,
-          COUNT(u.id) as users_count
-        FROM subscription_plans sp
-        LEFT JOIN users u ON sp.id = u.plan_id
-        GROUP BY sp.id, sp.name, sp.code_name
-        ORDER BY users_count DESC
-      `);
-
-      // Статистика регистраций по дням (последние 30 дней)
-      const registrationStats = await pool.query(`
-        SELECT
-          DATE(created_at) as date,
-          COUNT(*) as count
-        FROM users
-        WHERE created_at >= NOW() - INTERVAL '30 days'
-        GROUP BY DATE(created_at)
-        ORDER BY date DESC
-      `);
-
-      return reply.send({
-        success: true,
-        stats: stats.rows[0],
-        planStats: planStats.rows,
-        registrationStats: registrationStats.rows
-      });
-    } catch (err) {
-      console.error('[ADMIN] Ошибка получения статистики:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  /**
-   * Получить системные логи
-   * GET /api/admin/logs?page=1&limit=100&level=error
-   */
-  app.get('/api/admin/logs', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const { page = 1, limit = 100, level = null } = req.query;
-      const offset = (page - 1) * limit;
-
-      let whereClause = '';
-      const queryParams = [];
-
-      if (level) {
-        whereClause = 'WHERE level = $1';
-        queryParams.push(level);
-      }
-
-      // Подсчет логов
-      const countResult = await pool.query(
-        `SELECT COUNT(*) as total FROM system_logs ${whereClause}`,
-        queryParams
-      );
-      const total = parseInt(countResult.rows[0].total, 10);
-
-      // Получение логов
-      queryParams.push(limit, offset);
-      const logsResult = await pool.query(
-        `SELECT
-           id,
-           level,
-           action AS message,
-           details AS context,
-           created_at
-           FROM system_logs
-         ${whereClause}
-         ORDER BY created_at DESC
-         LIMIT $${queryParams.length - 1} OFFSET $${queryParams.length}`,
-        queryParams
-      );
-
-      return reply.send({
-        success: true,
-        logs: logsResult.rows,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total,
-          totalPages: Math.ceil(total / limit)
-        }
-      });
-    } catch (err) {
-      console.error('[ADMIN] Ошибка получения логов:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  /**
-   * Завершить сессию пользователя
-   * DELETE /api/admin/sessions/:sessionId
-   */
-  app.delete('/api/admin/sessions/:sessionId', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const { sessionId } = req.params;
-
-      const result = await pool.query(
-        'DELETE FROM active_sessions WHERE id = $1 RETURNING id, user_id',
-        [sessionId]
-      );
-
-      if (result.rows.length === 0) {
-        return reply.code(404).send({ error: 'Сессия не найдена' });
-      }
-
-      console.log(`[ADMIN] Сессия завершена: session_id=${sessionId}, user_id=${result.rows[0].user_id}, admin_id=${req.user.id}`);
-
-      return reply.send({
-        success: true,
-        message: 'Сессия успешно завершена'
-      });
-    } catch (err) {
-      console.error('[ADMIN] Ошибка завершения сессии:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  /**
-   * Завершить все сессии пользователя
-   * DELETE /api/admin/users/:userId/sessions
-   */
-  app.delete('/api/admin/users/:userId/sessions', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const { userId } = req.params;
-
-      const result = await pool.query(
-        'DELETE FROM active_sessions WHERE user_id = $1 RETURNING id',
-        [userId]
-      );
-
-      console.log(`[ADMIN] Все сессии пользователя завершены: user_id=${userId}, sessions_count=${result.rowCount}, admin_id=${req.user.id}`);
-
-      return reply.send({
-        success: true,
-        message: `Завершено сессий: ${result.rowCount}`
-      });
-    } catch (err) {
-      console.error('[ADMIN] Ошибка завершения сессий пользователя:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  // ============================================
-  // ИСТОРИЯ ТРАНЗАКЦИЙ
-  // ============================================
-
-  /**
-   * Получить историю всех транзакций с пагинацией и фильтрами
-   * GET /api/admin/transactions?page=1&limit=20&search=email&dateFrom=2024-01-01&dateTo=2024-12-31
-   */
-  app.get('/api/admin/transactions', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const { page = 1, limit = 20, search = '', dateFrom = null, dateTo = null } = req.query;
-      const offset = (page - 1) * limit;
-
-      // Построение WHERE clause для фильтров
-      const queryParams = [];
-      const whereConditions = [];
-
-      // Поиск по email пользователя
-      if (search) {
-        queryParams.push(`%${search}%`);
-        whereConditions.push(`u.email ILIKE $${queryParams.length}`);
-      }
-
-      // Фильтр по дате (от)
-      if (dateFrom) {
-        queryParams.push(dateFrom);
-        whereConditions.push(`sh.created_at >= $${queryParams.length}`);
-      }
-
-      // Фильтр по дате (до)
-      if (dateTo) {
-        queryParams.push(dateTo);
-        whereConditions.push(`sh.created_at <= $${queryParams.length}`);
-      }
-
-      const whereClause = whereConditions.length > 0
-        ? `WHERE ${whereConditions.join(' AND ')}`
-        : '';
-
-      // Подсчет общего количества транзакций
-      const countResult = await pool.query(
-        `SELECT COUNT(*) as total
-         FROM subscription_history sh
-         LEFT JOIN users u ON sh.user_id = u.id
-         ${whereClause}`,
-        queryParams
-      );
-      const total = parseInt(countResult.rows[0].total, 10);
-
-      // Получение транзакций с данными пользователя и плана
-      queryParams.push(limit, offset);
-      const transactionsResult = await pool.query(
-        `SELECT
-          sh.id,
-          sh.user_id,
-          sh.plan_id,
-          sh.start_date,
-          sh.end_date,
-          sh.source,
-          sh.payment_method,
-          sh.amount_paid,
-          sh.currency,
-          sh.created_at,
-          u.email as user_email,
-          u.username as user_username,
-          u.avatar_url as user_avatar,
-          u.full_name as user_full_name,
-          sp.name as plan_name,
-          sp.code_name as plan_code
-         FROM subscription_history sh
-         LEFT JOIN users u ON sh.user_id = u.id
-         LEFT JOIN subscription_plans sp ON sh.plan_id = sp.id
-         ${whereClause}
-         ORDER BY sh.created_at DESC
-         LIMIT $${queryParams.length - 1} OFFSET $${queryParams.length}`,
-        queryParams
-      );
-
-      console.log(`[ADMIN] История транзакций загружена: page=${page}, total=${total}, admin_id=${req.user.id}`);
-
-      return reply.send({
-        success: true,
-        data: transactionsResult.rows,
-        pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
-          total,
-          totalPages: Math.ceil(total / limit)
-        }
-      });
-    } catch (err) {
-      console.error('[ADMIN] Ошибка получения истории транзакций:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  // ============================================
-  // МОДЕРАЦИЯ ИЗОБРАЖЕНИЙ
-  // ============================================
+export function registerAdminImagesRoutes(app) {
 
   /**
    * Получить список папок для общей библиотеки
@@ -927,7 +263,7 @@ export function registerAdminRoutes(app) {
           console.warn(`[ADMIN] Пропуск файла без yandex_path: id=${file.id}, filename=${file.filename}`);
           continue;
         }
-        
+
         const oldPath = file.yandex_path;
         const newFolderPath = getSharedFolderPath(newFolderName);
         const newPath = `${newFolderPath}/${file.filename}`;
@@ -944,7 +280,7 @@ export function registerAdminRoutes(app) {
           // Опубликовать файл заново и получить новую публичную ссылку
           const { public_url: originalPublicUrl, preview_url } = await publishFile(newPath);
           const newPublicUrl = preview_url || originalPublicUrl;
-          
+
           // Обновить запись в БД
           await client.query(
             `UPDATE image_library
@@ -964,7 +300,7 @@ export function registerAdminRoutes(app) {
             console.warn(`[ADMIN] Файл не найден на Яндекс.Диске, пропускаем: ${oldPath}`);
             continue;
           }
-          
+
           await client.query('ROLLBACK');
 
           return reply.code(500).send({
@@ -1025,6 +361,7 @@ export function registerAdminRoutes(app) {
       client.release();
     }
   });
+
   /**
    * Удалить папку общей библиотеки вместе с содержимым
    * DELETE /api/admin/shared-folders/:id
@@ -1132,6 +469,7 @@ export function registerAdminRoutes(app) {
       client.release();
     }
   });
+
   /**
    * Получить список изображений на модерацию (pending)
    * GET /api/admin/images/pending
@@ -1150,7 +488,7 @@ export function registerAdminRoutes(app) {
           il.public_url,
           il.preview_url,
           il.yandex_path,
-          il.pending_yandex_path,          
+          il.pending_yandex_path,
           il.user_id,
           u.full_name as user_full_name,
           u.personal_id as user_personal_id,
@@ -1240,7 +578,7 @@ export function registerAdminRoutes(app) {
           il.pending_yandex_path,
           il.preview_url,
           il.preview_placeholder,
-          il.blurhash,          
+          il.blurhash,
           il.width,
           il.height,
           il.file_size,
@@ -1248,7 +586,7 @@ export function registerAdminRoutes(app) {
           il.is_shared,
           u.personal_id as user_personal_id
           FROM image_library il
-         JOIN users u ON il.user_id = u.id         
+         JOIN users u ON il.user_id = u.id
          WHERE il.id = $1
            AND il.share_requested_at IS NOT NULL
            AND il.is_shared = FALSE`,
@@ -1358,7 +696,7 @@ export function registerAdminRoutes(app) {
       });
 
       const placeholderToStore = preview_placeholder || image.preview_placeholder;
-         
+
       console.log(`[ADMIN] Файл опубликован, public_url: ${publicUrl}`);
 
       // Создать новую запись для общей библиотеки
@@ -1372,7 +710,7 @@ export function registerAdminRoutes(app) {
           public_url,
           preview_url,
           preview_placeholder,
-          blurhash,          
+          blurhash,
           width,
           height,
           file_size,
@@ -1393,7 +731,7 @@ export function registerAdminRoutes(app) {
           publicUrl,
           previewUrl,
           placeholderToStore,
-          blurhash,          
+          blurhash,
           width,
           height,
           file_size,
@@ -1401,7 +739,7 @@ export function registerAdminRoutes(app) {
           true,
           shared_folder_id,
           null,
-          new Date(),          
+          new Date(),
           adminId
         ]
       );
@@ -1537,7 +875,7 @@ await pool.query(
         `SELECT
           il.id,
           il.yandex_path,
-          il.pending_yandex_path,          
+          il.pending_yandex_path,
           il.share_requested_at,
           il.is_shared
          FROM image_library il
@@ -1723,7 +1061,7 @@ await pool.query(
         buffer,
         mimeType
       });
-      
+
       console.log(`[ADMIN] Файл опубликован, public_url: ${publicUrl}`);
 
       // Сохранить запись в БД
@@ -1736,7 +1074,7 @@ await pool.query(
           yandex_path,
           public_url,
           preview_placeholder,
-          blurhash,          
+          blurhash,
           width,
           height,
           file_size,
@@ -1751,7 +1089,7 @@ await pool.query(
           original_name,
           public_url,
           preview_placeholder,
-          blurhash,          
+          blurhash,
           shared_folder_id,
           is_shared`,
         [
@@ -1762,7 +1100,7 @@ await pool.query(
           filePath,             // yandex_path
           publicUrl,            // public_url
           preview_placeholder,  // preview_placeholder
-          blurhash,             // blurhash          
+          blurhash,             // blurhash
           width,                // width
           height,               // height
           fileSize,             // file_size
@@ -1915,7 +1253,7 @@ await pool.query(
       // Обновить публичный URL (вызов publishFile для нового пути)
       const { public_url: originalPublicUrl, preview_url } = await publishFile(newFilePath);
       const newPublicUrl = preview_url || originalPublicUrl;
-      
+
       console.log(`[ADMIN] Файл опубликован, новый public_url: ${newPublicUrl}`);
 
       // Обновить запись в image_library
@@ -2279,553 +1617,4 @@ await pool.query(
       return reply.code(500).send({ error: errorMessage });
     }
   });
-
-  // ============================================
-  // МОДЕРАЦИЯ ВЕРИФИКАЦИИ
-  // ============================================
-
-  /**
-   * Прокси для скриншотов верификации
-   * GET /api/admin/screenshot-proxy
-   *
-   * Позволяет админу получить скриншот верификации по пути на Yandex.Disk.
-   * Скриншоты хранятся в /verifications/{userId}/ и недоступны напрямую.
-   */
-  app.get('/api/admin/screenshot-proxy', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const { path } = req.query;
-
-      if (!path) {
-        return reply.code(400).send({ error: 'Параметр path обязателен' });
-      }
-
-      console.log(`[ADMIN] Запрос прокси скриншота: path=${path}`);
-
-      // Проверка, что путь начинается с /verifications/ (безопасность)
-      if (!path.startsWith('/verifications/')) {
-        return reply.code(403).send({ error: 'Доступ к данному пути запрещён' });
-      }
-
-      // Получить ссылку для скачивания через Yandex API
-      const downloadUrl = `https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(path)}`;
-
-      const response = await fetch(downloadUrl, {
-        headers: {
-          Authorization: `OAuth ${process.env.YANDEX_DISK_TOKEN}`
-        }
-      });
-
-      if (!response.ok) {
-        console.error(`[ADMIN] Yandex API вернул статус ${response.status} для path=${path}`);
-
-        if (response.status === 404) {
-          return reply.code(404).send({ error: 'Файл не найден' });
-        }
-
-        return reply.code(500).send({ error: 'Не удалось получить файл' });
-      }
-
-      const data = await response.json();
-
-      if (!data.href) {
-        console.error(`[ADMIN] Yandex API не вернул href для path=${path}`);
-        return reply.code(500).send({ error: 'Не удалось получить ссылку на файл' });
-      }
-
-      // Загрузить файл с временной ссылки Yandex
-      const fileResponse = await fetch(data.href);
-
-      if (!fileResponse.ok) {
-        console.error(`[ADMIN] Ошибка загрузки с Yandex: ${fileResponse.status}`);
-        return reply.code(500).send({ error: 'Ошибка загрузки файла' });
-      }
-
-      // Получить тело как буфер
-      const fileBuffer = await fileResponse.arrayBuffer();
-
-      console.log(`[ADMIN] Скриншот загружен, размер: ${fileBuffer.byteLength} байт`);
-
-      // Определить Content-Type по расширению
-      let contentType = 'image/jpeg';
-      if (path.endsWith('.png')) {
-        contentType = 'image/png';
-      } else if (path.endsWith('.webp')) {
-        contentType = 'image/webp';
-      }
-
-      // Отдать клиенту с правильными заголовками
-      return reply
-        .header('Content-Type', contentType)
-        .header('Content-Length', fileBuffer.byteLength)
-        .header('Cache-Control', 'private, max-age=3600')
-        .send(Buffer.from(fileBuffer));
-
-    } catch (err) {
-      console.error('[ADMIN] Ошибка прокси скриншота:', err);
-
-      const errorMessage = process.env.NODE_ENV === 'development'
-        ? `Ошибка сервера: ${err.message}`
-        : 'Ошибка сервера';
-
-      return reply.code(500).send({ error: errorMessage });
-    }
-  });
-
-  /**
-   * Получить список заявок на верификацию
-   * GET /api/admin/verifications/pending
-   */
-  app.get('/api/admin/verifications/pending', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      console.log('[ADMIN] Запрос списка заявок на верификацию, admin_id=' + req.user.id);
-
-      const verifications = await getPendingVerifications();
-
-      console.log(`[ADMIN] Найдено заявок на верификацию: ${verifications.length}`);
-
-      return reply.send({
-        success: true,
-        items: verifications,
-        total: verifications.length
-      });
-    } catch (err) {
-      console.error('[ADMIN] Ошибка получения списка заявок:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  /**
-   * Одобрить заявку на верификацию
-   * POST /api/admin/verifications/:id/approve
-   */
-  app.post('/api/admin/verifications/:id/approve', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const adminId = req.user.id;
-      const verificationId = parseInt(req.params.id, 10);
-
-      console.log(`[ADMIN] Запрос на одобрение верификации: verification_id=${verificationId}, admin_id=${adminId}`);
-
-      // Валидация ID
-      if (!Number.isInteger(verificationId) || verificationId <= 0) {
-        return reply.code(400).send({ error: 'Некорректный ID заявки' });
-      }
-
-      await approveVerification(verificationId, adminId);
-
-      console.log(`[ADMIN] ✅ Верификация одобрена: verification_id=${verificationId}`);
-
-      return reply.send({
-        success: true,
-        message: 'Заявка одобрена. Пользователь верифицирован.'
-      });
-
-    } catch (err) {
-      console.error('[ADMIN] Ошибка одобрения верификации:', err);
-
-      const errorMessage = process.env.NODE_ENV === 'development'
-        ? `Ошибка: ${err.message}`
-        : 'Не удалось одобрить заявку. Попробуйте позже.';
-
-      return reply.code(500).send({ error: errorMessage });
-    }
-  });
-
-  /**
-   * Отклонить заявку на верификацию
-   * POST /api/admin/verifications/:id/reject
-   */
-  app.post('/api/admin/verifications/:id/reject', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const adminId = req.user.id;
-      const verificationId = parseInt(req.params.id, 10);
-      const { rejection_reason } = req.body;
-
-      console.log(`[ADMIN] Запрос на отклонение верификации: verification_id=${verificationId}, admin_id=${adminId}`);
-
-      // Валидация ID
-      if (!Number.isInteger(verificationId) || verificationId <= 0) {
-        return reply.code(400).send({ error: 'Некорректный ID заявки' });
-      }
-
-      // Валидация причины отклонения
-      if (!rejection_reason || !rejection_reason.trim()) {
-        return reply.code(400).send({ error: 'Необходимо указать причину отклонения' });
-      }
-
-      await rejectVerification(verificationId, adminId, rejection_reason.trim());
-
-      console.log(`[ADMIN] ✅ Верификация отклонена: verification_id=${verificationId}`);
-
-      return reply.send({
-        success: true,
-        message: 'Заявка отклонена. Пользователю отправлено уведомление.'
-      });
-
-    } catch (err) {
-      console.error('[ADMIN] Ошибка отклонения верификации:', err);
-
-      const errorMessage = process.env.NODE_ENV === 'development'
-        ? `Ошибка: ${err.message}`
-        : 'Не удалось отклонить заявку. Попробуйте позже.';
-
-      return reply.code(500).send({ error: errorMessage });
-    }
-  });
-
-  /**
-   * Получить архив верификации (одобренные и отклонённые)
-   * GET /api/admin/verifications/archive
-   */
-  app.get('/api/admin/verifications/archive', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      console.log('[ADMIN] Запрос архива верификации, admin_id=' + req.user.id);
-
-      const result = await pool.query(
-        `SELECT
-          v.id,
-          v.user_id,
-          v.full_name,
-          v.screenshot_1_path,
-          v.screenshot_2_path,
-          v.status,
-          v.rejection_reason,
-          v.submitted_at,
-          v.processed_at,
-          u.personal_id,
-          u.email,
-          u.username,
-          (SELECT username FROM users WHERE id = v.processed_by) as processed_by_username
-         FROM user_verifications v
-         JOIN users u ON v.user_id = u.id
-         WHERE v.status IN ('approved', 'rejected')
-         ORDER BY v.processed_at DESC
-         LIMIT 100`,
-        []
-      );
-
-      console.log(`[ADMIN] Найдено записей в архиве: ${result.rows.length}`);
-
-      return reply.send({
-        success: true,
-        items: result.rows,
-        total: result.rows.length
-      });
-    } catch (err) {
-      console.error('[ADMIN] Ошибка получения архива верификации:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  // ============================================
-  // ЭКСПОРТ ПОЛЬЗОВАТЕЛЕЙ В CSV
-  // ============================================
-
-  /**
-   * Вспомогательная функция генерации CSV
-   */
-  function generateUserCSV(rows, title, includeVerificationDate = true, includeVerificationStatus = false) {
-    // Заголовки колонок
-    const headers = [
-      'ID',
-      'Компьютерный номер',
-      'ФИО',
-      'Email',
-      'Username',
-      'Телефон',
-      'Город',
-      'Страна',
-      'Представительство'
-    ];
-
-    if (includeVerificationStatus) {
-      headers.push('Статус верификации');
-    }
-
-    if (includeVerificationDate) {
-      headers.push('Дата верификации');
-    }
-
-    headers.push('Дата регистрации', 'Тарифный план');
-
-    // BOM для корректного отображения кириллицы в Excel
-    let csv = '\uFEFF';
-
-    // Только заголовки таблицы
-    csv += headers.join(',') + '\n';
-
-    // Данные
-    rows.forEach(row => {
-      const values = [
-        row.id,
-        row.personal_id || '',
-        `"${(row.full_name || '').replace(/"/g, '""')}"`,
-        row.email || '',
-        row.username || '',
-        row.phone || '',
-        `"${(row.city || '').replace(/"/g, '""')}"`,
-        `"${(row.country || '').replace(/"/g, '""')}"`,
-        `"${(row.office || '').replace(/"/g, '""')}"`
-      ];
-
-      if (includeVerificationStatus) {
-        values.push(row.is_verified ? 'Да' : 'Нет');
-      }
-
-      if (includeVerificationDate) {
-        values.push(row.verified_at ? new Date(row.verified_at).toISOString().split('T')[0] : '');
-      }
-
-      values.push(
-        row.created_at ? new Date(row.created_at).toISOString().split('T')[0] : '',
-        `"${(row.plan_name || '').replace(/"/g, '""')}"`
-      );
-
-      csv += values.join(',') + '\n';
-    });
-
-    return csv;
-  }
-
-  /**
-   * Экспорт списка верифицированных пользователей в CSV
-   * GET /api/admin/export/verified-users
-   */
-  app.get('/api/admin/export/verified-users', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      console.log('[ADMIN] Экспорт верифицированных пользователей, admin_id=' + req.user.id);
-
-      const result = await pool.query(
-        `SELECT
-          u.id,
-          u.personal_id,
-          u.full_name,
-          u.email,
-          u.username,
-          u.phone,
-          u.city,
-          u.country,
-          u.office,
-          u.verified_at,
-          u.created_at,
-          sp.name as plan_name
-         FROM users u
-         LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
-         WHERE u.is_verified = TRUE
-         ORDER BY u.verified_at DESC`
-      );
-
-      const csv = generateUserCSV(result.rows, 'Верифицированные пользователи');
-
-      console.log(`[ADMIN] Экспортировано верифицированных пользователей: ${result.rows.length}`);
-
-      return reply
-        .header('Content-Type', 'text/csv; charset=utf-8')
-        .header('Content-Disposition', `attachment; filename="verified_users_${new Date().toISOString().split('T')[0]}.csv"`)
-        .send(csv);
-
-    } catch (err) {
-      console.error('[ADMIN] Ошибка экспорта верифицированных пользователей:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  /**
-   * Экспорт списка НЕ верифицированных пользователей в CSV
-   * GET /api/admin/export/non-verified-users
-   */
-  app.get('/api/admin/export/non-verified-users', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      console.log('[ADMIN] Экспорт НЕ верифицированных пользователей, admin_id=' + req.user.id);
-
-      const result = await pool.query(
-        `SELECT
-          u.id,
-          u.personal_id,
-          u.full_name,
-          u.email,
-          u.username,
-          u.phone,
-          u.city,
-          u.country,
-          u.office,
-          u.created_at,
-          sp.name as plan_name
-         FROM users u
-         LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
-         WHERE u.is_verified = FALSE OR u.is_verified IS NULL
-         ORDER BY u.created_at DESC`
-      );
-
-      const csv = generateUserCSV(result.rows, 'Не верифицированные пользователи', false);
-
-      console.log(`[ADMIN] Экспортировано НЕ верифицированных пользователей: ${result.rows.length}`);
-
-      return reply
-        .header('Content-Type', 'text/csv; charset=utf-8')
-        .header('Content-Disposition', `attachment; filename="non_verified_users_${new Date().toISOString().split('T')[0]}.csv"`)
-        .send(csv);
-
-    } catch (err) {
-      console.error('[ADMIN] Ошибка экспорта НЕ верифицированных пользователей:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  /**
-   * Экспорт пользователей по тарифному плану в CSV
-   * GET /api/admin/export/users-by-plan/:planId
-   * Параметры: planId - ID плана или "null" для пользователей без плана
-   */
-  app.get('/api/admin/export/users-by-plan/:planId', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const { planId } = req.params;
-
-      console.log(`[ADMIN] Экспорт пользователей по плану ID="${planId}", admin_id=${req.user.id}`);
-
-      let result;
-      let planName = '';
-
-      if (planId === 'null' || planId === 'NULL') {
-        // Пользователи без плана
-        console.log('[ADMIN] Экспорт пользователей без плана');
-
-        result = await pool.query(
-          `SELECT
-            u.id,
-            u.personal_id,
-            u.full_name,
-            u.email,
-            u.username,
-            u.phone,
-            u.city,
-            u.country,
-            u.office,
-            u.is_verified,
-            u.verified_at,
-            u.created_at,
-            'Без плана' as plan_name
-           FROM users u
-           WHERE u.plan_id IS NULL
-           ORDER BY u.created_at DESC`
-        );
-
-        planName = 'Без плана';
-      } else {
-        // Пользователи конкретного плана по ID
-        console.log(`[ADMIN] Поиск плана с ID: ${planId}`);
-
-        // Получить название плана по ID
-        const planCheck = await pool.query(
-          'SELECT id, name FROM subscription_plans WHERE id = $1',
-          [parseInt(planId)]
-        );
-
-        if (planCheck.rows.length === 0) {
-          console.error(`[ADMIN] План с ID ${planId} не найден в БД`);
-          return reply.code(404).send({
-            error: `План с ID ${planId} не найден`
-          });
-        }
-
-        planName = planCheck.rows[0].name;
-        console.log(`[ADMIN] План найден: "${planName}"`);
-
-        result = await pool.query(
-          `SELECT
-            u.id,
-            u.personal_id,
-            u.full_name,
-            u.email,
-            u.username,
-            u.phone,
-            u.city,
-            u.country,
-            u.office,
-            u.is_verified,
-            u.verified_at,
-            u.created_at,
-            sp.name as plan_name
-           FROM users u
-           JOIN subscription_plans sp ON u.plan_id = sp.id
-           WHERE sp.id = $1
-           ORDER BY u.created_at DESC`,
-          [parseInt(planId)]
-        );
-      }
-
-      console.log(`[ADMIN] Найдено пользователей: ${result.rows.length}`);
-
-      const csv = generateUserCSV(result.rows, `Пользователи плана: ${planName}`, true, true);
-
-      console.log(`[ADMIN] CSV сгенерирован, размер: ${csv.length} символов`);
-
-      // Использовать ID плана вместо названия, чтобы избежать кириллицы в HTTP-заголовках
-      const safeFileName = planId === 'null' || planId === 'NULL' ? 'no_plan' : `plan_${planId}`;
-      const fileName = `users_${safeFileName}_${new Date().toISOString().split('T')[0]}.csv`;
-
-      return reply
-        .header('Content-Type', 'text/csv; charset=utf-8')
-        .header('Content-Disposition', `attachment; filename="${fileName}"`)
-        .send(csv);
-
-    } catch (err) {
-      console.error(`[ADMIN] Ошибка экспорта пользователей по плану:`, err);
-      console.error(`[ADMIN] Stack trace:`, err.stack);
-      return reply.code(500).send({
-        error: 'Ошибка сервера',
-        message: err.message
-      });
-    }
-  });
-
-  /**
-   * Получить список всех тарифных планов для фильтра
-   * GET /api/admin/subscription-plans
-   */
-  app.get('/api/admin/subscription-plans', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const result = await pool.query(
-        `SELECT id, name,
-          (SELECT COUNT(*) FROM users WHERE plan_id = sp.id) as user_count
-         FROM subscription_plans sp
-         ORDER BY id`
-      );
-
-      // Добавить "Без плана"
-      const nullPlanCount = await pool.query(
-        'SELECT COUNT(*) as count FROM users WHERE plan_id IS NULL'
-      );
-
-      return reply.send({
-        success: true,
-        plans: [
-          ...result.rows,
-          { id: null, name: 'Без плана', user_count: parseInt(nullPlanCount.rows[0].count) }
-        ]
-      });
-    } catch (err) {
-      console.error('[ADMIN] Ошибка получения списка планов:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });
-
-  console.log('✅ Маршруты админ-панели зарегистрированы');
 }
