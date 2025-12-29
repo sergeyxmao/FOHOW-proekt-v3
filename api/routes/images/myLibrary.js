@@ -1,27 +1,23 @@
-import { pool } from '../db.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { pool } from '../../db.js';
+import { authenticateToken } from '../../middleware/auth.js';
 import { randomBytes } from 'crypto';
 import {
   getUserLibraryFolderPath,
   getUserFilePath,
-  getSharedPendingFolderPath,
   ensureFolderExists,
   listFolderDirectories,
   uploadFile,
   publishFile,
   deleteFile,
-  copyFile,
   listFolderContents,
-  checkPathExists,
   deleteFolder,
-} from '../services/yandexDiskService.js';
-import { syncSharedFoldersWithYandexDisk } from '../services/sharedFoldersSync.js';
+} from '../../services/yandexDiskService.js';
 
 /**
- * Регистрация маршрутов для работы с библиотекой изображений
+ * Регистрация маршрутов личной библиотеки изображений
  * @param {import('fastify').FastifyInstance} app - экземпляр Fastify
  */
-export function registerImageRoutes(app) {
+export function registerMyLibraryRoutes(app) {
   /**
    * GET /api/images/my/folders - Получить список папок личной библиотеки
    *
@@ -1015,9 +1011,9 @@ export function registerImageRoutes(app) {
             `SELECT COUNT(*) as count FROM image_library WHERE user_id = $1 AND folder_name = $2 AND is_shared = FALSE`,
             [userId, folder_name]
           );
-          
+
           const count = parseInt(remainingFiles.rows[0]?.count || 0, 10);
-          
+
           if (count === 0) {
             console.log(`📁 Папка "${folder_name}" пуста. Удаляем с Яндекс.Диска...`);
             const folderPath = getUserLibraryFolderPath(userId, personal_id, folder_name);
@@ -1046,309 +1042,6 @@ export function registerImageRoutes(app) {
     }
   );
 
-  /**
-   * POST /api/images/:id/share-request - Отправить изображение на модерацию в общую библиотеку
-   *
-   * Эндпоинт для отправки изображения из личной библиотеки на модерацию
-   * для публикации в общей библиотеке. Перемещает файл в папку pending на Яндекс.Диске
-   * и обновляет запись в БД.
-   */
-  app.post(
-    '/api/images/:id/share-request',
-    {
-      preHandler: [authenticateToken]
-    },
-    async (req, reply) => {
-      try {
-        const userId = req.user.id;
-        const userRole = req.user.role;
-        const imageId = parseInt(req.params.id, 10);
-
-        // Валидация ID
-        if (!Number.isInteger(imageId) || imageId <= 0) {
-          return reply.code(400).send({
-            error: 'Некорректный ID изображения'
-          });
-        }
-
-        // Найти запись в image_library по id и user_id
-        const imageResult = await pool.query(
-          `
-          SELECT
-            il.id,
-            il.filename,
-            il.folder_name,
-            il.yandex_path,
-            il.pending_yandex_path,            
-            il.share_requested_at,
-            il.is_shared,
-            u.personal_id,
-            u.plan_id,
-            sp.features,
-            sp.name AS plan_name
-          FROM image_library il
-          JOIN users u ON il.user_id = u.id
-          JOIN subscription_plans sp ON u.plan_id = sp.id
-          WHERE il.id = $1
-            AND il.user_id = $2
-        `,
-          [imageId, userId]
-        );
-
-        // Если запись не найдена, возвращаем 404
-        if (imageResult.rows.length === 0) {
-          return reply.code(404).send({
-            error: 'Изображение не найдено'
-          });
-        }
-
-        const image = imageResult.rows[0];
-        const {
-          filename,
-          folder_name,
-          yandex_path,
-          share_requested_at,
-          is_shared,
-          features,
-          plan_name,
-          personal_id
-        } = image;
-
-        const featuresJson = features || {};
-
-        // Проверка лимитов тарифа (пропускаем для администраторов)
-        if (userRole !== 'admin') {
-          const canUseImages =
-            typeof featuresJson.can_use_images === 'boolean'
-              ? featuresJson.can_use_images
-              : false;
-
-          if (!canUseImages) {
-            return reply.code(403).send({
-              error: `Доступ к библиотеке изображений запрещён для вашего тарифа "${plan_name}".`,
-              code: 'IMAGE_LIBRARY_ACCESS_DENIED',
-              upgradeRequired: true
-            });
-          }
-        }
-
-        // Проверить, что картинка ещё не в процессе модерации и не в общей библиотеке
-        if (share_requested_at !== null) {
-          return reply.code(409).send({
-            error: 'Вы уже отправили это изображение на модерацию. Ожидайте решения администратора.',
-            code: 'ALREADY_REQUESTED',
-            share_requested_at: share_requested_at
-          });
-        }
-
-        if (is_shared) {
-          return reply.code(409).send({
-            error: 'Это изображение уже находится в общей библиотеке.',
-            code: 'ALREADY_SHARED'
-          });
-        }
-
-        // Текущий путь файла
-        let currentPath = yandex_path;
-
-        // Если yandex_path не сохранён в БД (для старых записей), вычисляем его
-        if (!currentPath) {
-          currentPath = getUserFilePath(
-            userId,
-            personal_id,
-            folder_name,
-            filename
-          );
-        }
-
-        // Путь папки pending
-        const pendingFolderPath = getSharedPendingFolderPath();
-
-        // Убедиться, что папка pending существует
-        await ensureFolderExists(pendingFolderPath);
-
-        // Путь к файлу в pending
-        const pendingFilePath = `${pendingFolderPath}/${filename}`;
-
-        // Скопировать файл из личной библиотеки в pending, оставляя оригинал у пользователя
-        await copyFile(currentPath, pendingFilePath);
-
-        console.log(
-          `✅ Файл скопирован из "${currentPath}" в "${pendingFilePath}"`
-        );
-
-        // Обновить запись в БД
-        const updateResult = await pool.query(
-          `
-          UPDATE image_library
-          SET
-            yandex_path = COALESCE(yandex_path, $1),
-            pending_yandex_path = $2,
-            share_requested_at = NOW(),
-            moderation_status = 'pending'
-          WHERE id = $3
-          RETURNING
-            id,
-            share_requested_at,
-            yandex_path,
-            pending_yandex_path,
-            moderation_status
-            `,
-          [currentPath, pendingFilePath, imageId]
-        );
-
-        const updatedImage = updateResult.rows[0];
-
-        // Возвращаем успешный ответ
-        return reply.code(200).send({
-          id: updatedImage.id,
-          share_requested_at: updatedImage.share_requested_at,
-          yandex_path: updatedImage.yandex_path,
-          pending_yandex_path: updatedImage.pending_yandex_path,
-          moderation_status: updatedImage.moderation_status,          
-          share_request_submitted: true
-        });
-      } catch (err) {
-        console.error('❌ Ошибка отправки изображения на модерацию:', err);
-
-        // Доп. лог по ошибкам Яндекс.Диска
-        if (err.status) {
-          console.error(`❌ Yandex.Disk API вернул статус: ${err.status}`);
-        }
-
-        const errorMessage =
-          process.env.NODE_ENV === 'development'
-            ? `Ошибка сервера: ${err.message}`
-            : 'Ошибка сервера. Попробуйте позже';
-
-        return reply.code(500).send({ error: errorMessage });
-      }
-    }
-  );
-
-  /**
-   * GET /api/images/shared - Получить структуру общей библиотеки изображений
-   *
-   * Эндпоинт для получения всех папок и изображений общей библиотеки.
-   * Возвращает структуру, готовую для отображения на фронтенде.
-   */
-  app.get(
-    '/api/images/shared',
-    {
-      preHandler: [authenticateToken]
-    },
-    async (req, reply) => {
-      try {
-        const userId = req.user.id;
-        const userRole = req.user.role;
-
-        // Информация о тарифе пользователя
-        const userResult = await pool.query(
-          `
-          SELECT
-            u.plan_id,
-            sp.features,
-            sp.name AS plan_name
-          FROM users u
-          JOIN subscription_plans sp ON u.plan_id = sp.id
-          WHERE u.id = $1
-        `,
-          [userId]
-        );
-
-        if (userResult.rows.length === 0) {
-          return reply.code(403).send({
-            error: 'Не удалось определить тарифный план пользователя.'
-          });
-        }
-
-        const user = userResult.rows[0];
-        const features = user.features || {};
-        const planName = user.plan_name;
-
-        // Проверка лимитов тарифа (пропускаем для администраторов)
-        if (userRole !== 'admin') {
-          const canUseImages =
-            typeof features.can_use_images === 'boolean'
-              ? features.can_use_images
-              : false;
-
-          if (!canUseImages) {
-            return reply.code(403).send({
-              error: `Доступ к библиотеке изображений запрещён для вашего тарифа "${planName}".`,
-              code: 'IMAGE_LIBRARY_ACCESS_DENIED',
-              upgradeRequired: true
-            });
-          }
-        }
-
-        // Все папки из shared_folders
-        try {
-          await syncSharedFoldersWithYandexDisk();
-        } catch (syncError) {
-          console.error('❌ Ошибка синхронизации папок с Яндекс.Диском:', syncError);
-          console.warn('⚠️ Продолжаем без синхронизации, используем данные из базы.');
-        }  
-        const foldersResult = await pool.query(
-          `
-          SELECT id, name
-          FROM shared_folders
-          ORDER BY name ASC
-        `
-        );
-
-        const folders = [];
-
-        // Для каждой папки получаем изображения
-        for (const folder of foldersResult.rows) {
-          const imagesResult = await pool.query(
-            `
-            SELECT
-              il.id,
-              il.original_name,
-              il.public_url,
-              il.preview_url,
-              il.width,
-              il.height,
-              il.file_size,
-              u.full_name AS author_full_name,
-              u.personal_id AS author_personal_id
-            FROM image_library il
-            JOIN users u ON il.user_id = u.id
-            WHERE il.is_shared = TRUE
-              AND il.shared_folder_id = $1
-            ORDER BY il.created_at DESC
-          `,
-            [folder.id]
-          );
-
-          folders.push({
-            id: folder.id,
-            name: folder.name,
-            images: imagesResult.rows
-          });
-        }
-
-        // Возвращаем структуру
-        return reply.code(200).send({
-          folders
-        });
-      } catch (err) {
-        console.error('❌ Ошибка получения общей библиотеки:', err);
-
-        if (err.status) {
-          console.error(`❌ Ошибка API: ${err.status}`);
-        }
-
-        const errorMessage =
-          process.env.NODE_ENV === 'development'
-            ? `Ошибка сервера: ${err.message}`
-            : 'Ошибка сервера. Попробуйте позже';
-
-        return reply.code(500).send({ error: errorMessage });
-      }
-    }
-  );
   /**
    * PATCH /api/images/:id/rename - Переименовать изображение в личной библиотеке
    */
@@ -1430,37 +1123,37 @@ export function registerImageRoutes(app) {
         const extension = image.original_name.match(/\.[^/.]+$/)?.[0] || '.webp';
         const newFullName = trimmedName + extension;
 
-// ИСПРАВЛЕНО: Проверяем дубли в папке пользователя
-// Разделяем на два случая: с папкой и без папки
-let duplicateCheck;
+        // ИСПРАВЛЕНО: Проверяем дубли в папке пользователя
+        // Разделяем на два случая: с папкой и без папки
+        let duplicateCheck;
 
-if (image.folder_name === null || image.folder_name === '') {
-  // Случай 1: Изображение в корне (без папки)
-  duplicateCheck = await pool.query(
-    `SELECT id
-     FROM image_library
-     WHERE user_id = $1
-       AND is_shared = FALSE
-       AND id <> $2
-       AND original_name = $3
-       AND folder_name IS NULL
-     LIMIT 1`,
-    [userId, imageId, newFullName]
-  );
-} else {
-  // Случай 2: Изображение в конкретной папке
-  duplicateCheck = await pool.query(
-    `SELECT id
-     FROM image_library
-     WHERE user_id = $1
-       AND is_shared = FALSE
-       AND id <> $2
-       AND original_name = $3
-       AND folder_name = $4::text
-     LIMIT 1`,
-    [userId, imageId, newFullName, image.folder_name]
-  );
-}
+        if (image.folder_name === null || image.folder_name === '') {
+          // Случай 1: Изображение в корне (без папки)
+          duplicateCheck = await pool.query(
+            `SELECT id
+             FROM image_library
+             WHERE user_id = $1
+               AND is_shared = FALSE
+               AND id <> $2
+               AND original_name = $3
+               AND folder_name IS NULL
+             LIMIT 1`,
+            [userId, imageId, newFullName]
+          );
+        } else {
+          // Случай 2: Изображение в конкретной папке
+          duplicateCheck = await pool.query(
+            `SELECT id
+             FROM image_library
+             WHERE user_id = $1
+               AND is_shared = FALSE
+               AND id <> $2
+               AND original_name = $3
+               AND folder_name = $4::text
+             LIMIT 1`,
+            [userId, imageId, newFullName, image.folder_name]
+          );
+        }
 
         if (duplicateCheck.rows.length > 0) {
           return reply.code(409).send({
@@ -1500,146 +1193,6 @@ if (image.folder_name === null || image.folder_name === '') {
           code: 'SERVER_ERROR',
           suggestion: 'Повторите попытку позже или обратитесь в поддержку.'
         });
-      }
-    }
-  );
-
-  /**
-   * GET /api/images/proxy/:id - Прокси для получения изображения
-   *
-   * Эндпоинт для проксирования изображений через свежие временные ссылки Yandex API.
-   * Получает свежую ссылку для скачивания файла и делает редирект на неё.
-   * Проверяет права доступа: личные изображения доступны только владельцу,
-   * общие изображения доступны всем авторизованным пользователям.
-   */
-  app.get(
-    '/api/images/proxy/:id',
-    {
-      preHandler: [authenticateToken]
-    },
-    async (req, reply) => {
-      try {
-        const imageId = parseInt(req.params.id, 10);
-        const userId = req.user.id;
-
-        // Валидация ID
-        if (!Number.isInteger(imageId) || imageId <= 0) {
-          return reply.code(400).send({
-            error: 'Некорректный ID изображения'
-          });
-        }
-
-        // Получить информацию об изображении
-        const result = await pool.query(
-          `
-          SELECT yandex_path, is_shared, user_id, moderation_status
-          FROM image_library
-          WHERE id = $1
-        `,
-          [imageId]
-        );
-
-        if (result.rows.length === 0) {
-          return reply.code(404).send({ error: 'Изображение не найдено' });
-        }
-
-        const image = result.rows[0];
-        
-        const isAdmin = req.user.role === 'admin'
-
-        // Проверка прав доступа:
-        // 1. Общие изображения (is_shared = TRUE) доступны всем авторизованным пользователям
-        // 2. Одобренные изображения (moderation_status = 'approved') доступны всем (для работы на shared досках)
-        // 3. Личные изображения (is_shared = FALSE) доступны только владельцу, кроме администратора
-        if (!isAdmin && !image.is_shared && image.moderation_status !== 'approved' && image.user_id !== userId) {
-          return reply.code(403).send({ error: 'Доступ запрещен' });
-        }
-
-        // Проверить наличие yandex_path
-        if (!image.yandex_path) {
-          console.error(
-            `❌ Отсутствует yandex_path для изображения id=${imageId}`
-          );
-          return reply.code(500).send({ error: 'Путь к файлу не найден' });
-        }
-
-        // Получить свежую ссылку для скачивания через Yandex API
-        const downloadUrl = `https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(
-          image.yandex_path
-        )}`;
-
-        const response = await fetch(downloadUrl, {
-          headers: {
-            Authorization: `OAuth ${process.env.YANDEX_DISK_TOKEN}`
-          }
-        });
-
-        if (!response.ok) {
-          console.error(
-            `❌ Yandex API вернул статус ${response.status} для изображения id=${imageId}, path=${image.yandex_path}`
-          );
-
-          const errorMessage =
-            process.env.NODE_ENV === 'development'
-              ? `Не удалось получить изображение от Yandex API (статус ${response.status})`
-              : 'Не удалось получить изображение';
-
-          return reply.code(500).send({ error: errorMessage });
-        }
-
-        const data = await response.json();
-
-        // Проверить наличие href в ответе
-        if (!data.href) {
-          console.error(
-            `❌ Yandex API не вернул href для изображения id=${imageId}`
-          );
-          return reply
-            .code(500)
-            .send({ error: 'Не удалось получить ссылку на изображение' });
-        }
-
-        console.log(
-          `✅ Получена свежая ссылка для изображения id=${imageId}`
-        );
-
-        // Загрузить изображение с временной ссылки Yandex
-        const imageResponse = await fetch(data.href);
-
-        if (!imageResponse.ok) {
-          console.error(
-            `❌ Ошибка загрузки с Yandex: ${imageResponse.status}`
-          );
-          return reply
-            .code(500)
-            .send({ error: 'Ошибка загрузки изображения' });
-        }
-
-        // Получить тело как буфер
-        const imageBuffer = await imageResponse.arrayBuffer();
-
-        console.log(
-          `✅ Изображение загружено, размер: ${imageBuffer.byteLength} байт`
-        );
-
-        // Отдать клиенту с правильными заголовками
-        return reply
-          .header(
-            'Content-Type',
-            imageResponse.headers.get('content-type') || 'image/webp'
-          )
-          .header('Content-Length', imageBuffer.byteLength)
-          .header('Cache-Control', 'private, max-age=3600')
-          .send(Buffer.from(imageBuffer));
-      } catch (err) {
-        console.error('❌ Ошибка прокси изображения:', err);
-
-        const errorMessage =
-          process.env.NODE_ENV === 'development'
-            ? `Ошибка сервера: ${err.message}`
-            : 'Ошибка сервера';
-
-        return reply.code(500).send({ error: errorMessage });
       }
     }
   );
