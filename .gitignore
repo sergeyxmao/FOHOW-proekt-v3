@@ -41,3 +41,17 @@ build/
 
 # Uploads
 uploads/
+
+# Backup файлы
+*.backup
+*.bak
+*.old
+
+# Server logs
+api/server.log
+server.log
+
+# Build артефакты в корне
+/assets/
+/Avatar.png
+/rank-*.png
