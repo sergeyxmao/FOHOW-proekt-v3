@@ -17,7 +17,7 @@ import NoteWindow from './NoteWindow.vue';
 import IncompatibilityWarningModal from '../Modals/IncompatibilityWarningModal.vue';
 import Sticker from './Sticker.vue';
 import CanvasImage from './CanvasImage.vue';
-import ObjectContextMenu from '../drawing/ObjectContextMenu.vue';
+import ObjectContextMenu from './ObjectContextMenu.vue';
 import AnchorPoint from './AnchorPoint.vue';  
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { useBezierCurves } from '../../composables/useBezierCurves';
