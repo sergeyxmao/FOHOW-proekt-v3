@@ -5,8 +5,14 @@ import { useStickersStore } from '../../stores/stickers.js';
 import ImagesPanel from '../Panels/ImagesPanel.vue';
 import { calculateImageDisplaySize } from '../../utils/imageSizing.js';
 import { toCanvasPoint } from '../../utils/canvasCoordinates.js';
-import { buildPlacedImage, movePlacedImage, resizePlacedImage } from '../../utils/placedImages.js';
-  
+
+// Composables
+import { usePencilHistory } from '../../composables/usePencilHistory.js';
+import { usePencilSelection } from '../../composables/usePencilSelection.js';
+import { usePencilDrawing, ERASER_MIN_SIZE, ERASER_MAX_SIZE, MARKER_MIN_SIZE, MARKER_MAX_SIZE } from '../../composables/usePencilDrawing.js';
+import { usePencilImages } from '../../composables/usePencilImages.js';
+import { usePencilZoom } from '../../composables/usePencilZoom.js';
+
 const props = defineProps({
   snapshot: {
     type: String,
@@ -27,7 +33,7 @@ const props = defineProps({
   },
   isModernTheme: {
     type: Boolean,
-    default: false    
+    default: false
   }
 });
 
@@ -35,372 +41,105 @@ const emit = defineEmits(['close']);
 const sidePanelsStore = useSidePanelsStore();
 const stickersStore = useStickersStore();
 
+// === Базовые refs ===
 const drawingCanvasRef = ref(null);
 const canvasContext = ref(null);
 const canvasWidth = ref(0);
 const canvasHeight = ref(0);
-const canvasScale = ref(1); // Масштаб между canvas и отображаемым размером
-const zoomScale = ref(1);
-const minZoomScale = ref(1);
+const canvasScale = ref(1);
 const isReady = ref(false);
-const activePointerId = ref(null);
-const lastPoint = ref(null);
-const isDrawing = ref(false);
-const hasStrokeChanges = ref(false);
-const currentTool = ref('brush');
-const previousToolBeforeImages = ref(currentTool.value);  
-const brushColor = ref('#ff4757');
-const brushSize = ref(4);
-const markerSize = ref(60);
-const markerOpacity = ref(0.01);
-const eraserSize = ref(24);
-const openDropdown = ref(null);
 const baseImage = ref(null);
+const openDropdown = ref(null);
+const previousToolBeforeImages = ref('brush');
 let previousHtmlOverflow = '';
 let previousBodyOverflow = '';
-const historyEntries = ref([]);
-const historyIndex = ref(-1);
-const isApplyingHistory = ref(false);
-let historySaveHandle = null;
-let pendingCanvasCapture = false;
-const selectionRect = ref(null);
-const isCreatingSelection = ref(false);
-const isMovingSelection = ref(false);
-const selectionPointerId = ref(null);
-const selectionStartPoint = ref(null);
-const activeSelection = ref(null);
-const selectionMoveStartPoint = ref(null);
-const selectionInitialRect = ref(null);
-const selectionMoveState = ref(null);
-const pointerPosition = ref(null);
-const panOffset = ref({ x: 0, y: 0 });
-const isPanning = ref(false);
-const panPointerId = ref(null);
-const panStartPoint = ref(null);
-const panInitialOffset = ref({ x: 0, y: 0 });
-const ERASER_MIN_SIZE = 4;
-const ERASER_MAX_SIZE = 80;
-const TEMP_IMAGE_MIN_SIZE = 24;
-const placedImages = ref([]);
-const activeImageId = ref(null);
-const imageTransformState = ref(null);  
-const isImagesPanelOpen = computed(() => sidePanelsStore.isImagesOpen);
 
-// Следим за открытием панели изображений - переключаемся в режим перемещения
-watch(isImagesPanelOpen, (isOpen) => {
-  if (isOpen) {
-    previousToolBeforeImages.value = currentTool.value;
-    currentTool.value = 'pan';
-    openDropdown.value = null; // Закрываем все выпадающие меню
-  } else if (currentTool.value === 'pan') {
-    currentTool.value = previousToolBeforeImages.value || 'brush';    
-  }
+// === Инициализация Composables ===
+
+// Zoom composable
+const {
+  zoomScale,
+  minZoomScale,
+  panOffset,
+  isPanning,
+  panPointerId,
+  isZoomedIn,
+  handleBoardWheel,
+  beginPan,
+  updatePan,
+  finishPan,
+  resetZoom
+} = usePencilZoom({ isReady });
+
+// Drawing composable
+const {
+  currentTool,
+  brushColor,
+  brushSize,
+  markerSize,
+  markerOpacity,
+  eraserSize,
+  isDrawing,
+  activePointerId,
+  pointerPosition,
+  markerOpacityPercent,
+  isDrawingToolActive,
+  isSelectionToolActive,
+  showEraserPreview,
+  startStroke,
+  continueStroke,
+  finishStroke,
+  updatePointerPreview,
+  clearPointerPreview
+} = usePencilDrawing({
+  canvasContext,
+  canvasScale,
+  scheduleHistorySave: null // Будет установлено после инициализации history
 });
 
-const MAX_HISTORY_LENGTH = 50;
-const MARKER_MIN_SIZE = 30;
-const MARKER_MAX_SIZE = 100;
-  
-const isZoomedIn = computed(() => {
-  const minZoom = minZoomScale.value || 1;
-  return (zoomScale.value || 1) > minZoom + 0.0001;
-});
-  
-const boardClasses = computed(() => {
-  const classes = ['pencil-overlay__board'];
-
-  switch (currentTool.value) {
-     case 'pan':
-      classes.push('pencil-overlay__board--pan');
-      break;     
-    case 'marker':
-      classes.push('pencil-overlay__board--marker');
-      break;
-    case 'eraser':
-      classes.push('pencil-overlay__board--eraser');
-      break;
-    case 'selection':
-      classes.push('pencil-overlay__board--selection');
-      break;
-    default:
-      classes.push('pencil-overlay__board--brush');
-  }
-  return classes;
-});
-const boardStyle = computed(() => {
-  const scale = zoomScale.value || 1;
-  const offset = panOffset.value || { x: 0, y: 0 };
-
-  // Используем bounds для отображаемых размеров, а не высокоразрешенные размеры canvas
-  return {
-    top: `${props.bounds.top}px`,
-    left: `${props.bounds.left}px`,
-    width: `${props.bounds.width}px`,
-    height: `${props.bounds.height}px`,
-    backgroundImage: `url(${props.snapshot})`,
-    backgroundSize: '100% 100%', // Масштабируем фон под размеры
-    transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-    transformOrigin: 'top left'
-  };
-});
-const selectionStyle = computed(() => {
-  if (!selectionRect.value) {
-    return null;
-  }
-
-  // Преобразуем координаты из canvas пикселей в экранные пиксели
-  const displayScale = canvasScale.value || 1;
-
-  return {
-    top: `${selectionRect.value.y / displayScale}px`,
-    left: `${selectionRect.value.x / displayScale}px`,
-    width: `${selectionRect.value.width / displayScale}px`,
-    height: `${selectionRect.value.height / displayScale}px`
-  };
+// История - нужна ссылка на cancelSelection из selection composable
+const {
+  historyEntries,
+  historyIndex,
+  isApplyingHistory,
+  canUndo,
+  canRedo,
+  scheduleHistorySave,
+  resetHistory,
+  undo: historyUndo,
+  redo: historyRedo
+} = usePencilHistory({
+  drawingCanvasRef,
+  canvasContext,
+  canvasWidth,
+  canvasHeight,
+  onBeforeApply: () => cancelSelection()
 });
 
-const markerOpacityPercent = computed(() => Math.round(markerOpacity.value * 100));
-const showEraserPreview = computed(() => currentTool.value === 'eraser' && Boolean(pointerPosition.value));
-const eraserPreviewStyle = computed(() => {
-  if (!showEraserPreview.value || !pointerPosition.value) {
-    return null;
-  }
-
-  // Преобразуем координаты и размеры из canvas пикселей в экранные пиксели
-  const displayScale = canvasScale.value || 1;
-
-  return {
-    width: `${eraserSize.value}px`,
-    height: `${eraserSize.value}px`,
-    top: `${pointerPosition.value.y / displayScale}px`,
-    left: `${pointerPosition.value.x / displayScale}px`
-  };
-});
-const panelStyle = computed(() => {
-  const offset = 16;
-  const top = Math.max(props.bounds.top - offset, offset);
-  const left = Math.max(props.bounds.left, offset);
-
-  return {
-    top: `${top}px`,
-    left: `${left}px`
-  };
-});
-const panelClasses = computed(() => [
-  'pencil-overlay__panel',
-  props.isModernTheme ? 'pencil-overlay__panel--modern' : 'pencil-overlay__panel--classic'
-]);
-
-const openImagesPanel = () => {
-  sidePanelsStore.openImages();
-};
-const hexToRgba = (hex, alpha) => {
-  if (typeof hex !== 'string') {
-    return `rgba(0, 0, 0, ${alpha})`;
-  }
-
-  let normalized = hex.trim();
-  if (normalized[0] === '#') {
-    normalized = normalized.slice(1);
-  }
-
-  if (normalized.length === 3) {
-    normalized = normalized.split('').map((char) => char + char).join('');
-  }
-
-  const int = Number.parseInt(normalized, 16);
-  if (Number.isNaN(int)) {
-    return `rgba(0, 0, 0, ${alpha})`;
-  }
-
-  const r = (int >> 16) & 255;
-  const g = (int >> 8) & 255;
-  const b = int & 255;
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
-const captureCanvasData = () => {
-  const canvas = drawingCanvasRef.value;
-  if (!canvas) {
-    return null;
-  }
-  return canvas.toDataURL('image/png');
-};
-
-const buildSnapshot = (captureCanvasExplicitly = false) => {
-  let canvasData;
-  if (captureCanvasExplicitly) {
-    canvasData = captureCanvasData();
-  } else if (historyIndex.value >= 0 && historyIndex.value < historyEntries.value.length) {
-    canvasData = historyEntries.value[historyIndex.value].canvas;
-  } else {
-    canvasData = captureCanvasData();
-  }
-
-  return {
-    canvas: canvasData
-  };
-};
-
-const pushHistoryEntry = (entry) => {
-  historyEntries.value = historyEntries.value.slice(0, historyIndex.value + 1);
-  historyEntries.value.push(entry);
-
-  if (historyEntries.value.length > MAX_HISTORY_LENGTH) {
-    historyEntries.value.shift();
-  }
-
-  historyIndex.value = historyEntries.value.length - 1;
-};
-
-const scheduleHistorySave = (captureCanvasExplicitly = false) => {
-  if (isApplyingHistory.value) {
-    return;
-  }
-
-  pendingCanvasCapture = pendingCanvasCapture || captureCanvasExplicitly;
-
-  if (historySaveHandle) {
-    clearTimeout(historySaveHandle);
-    historySaveHandle = null;
-  }
-
-  if (typeof window === 'undefined') {
-    const snapshot = buildSnapshot(pendingCanvasCapture);
-    pushHistoryEntry(snapshot);
-    pendingCanvasCapture = false;
-    return;
-  }
-
-  historySaveHandle = window.setTimeout(() => {
-    const snapshot = buildSnapshot(pendingCanvasCapture);
-    pushHistoryEntry(snapshot);
-    historySaveHandle = null;
-    pendingCanvasCapture = false;
-  }, 0);
-};
-
-const flushPendingHistorySave = () => {
-  if (!historySaveHandle) {
-    return;
-  }
-
-  clearTimeout(historySaveHandle);
-  historySaveHandle = null;
-
-  if (isApplyingHistory.value) {
-    return;
-  }
-
-  const snapshot = buildSnapshot(pendingCanvasCapture);
-  pushHistoryEntry(snapshot);
-  pendingCanvasCapture = false;
-};
-
-const drawCanvasFromSnapshot = (dataUrl) => new Promise((resolve) => {
-  const canvas = drawingCanvasRef.value;
-  const context = canvasContext.value;
-
-  if (!canvas || !context) {
-    resolve();
-    return;
-  }
-
-  context.save();
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.globalCompositeOperation = 'source-over';
-  context.globalAlpha = 1;
-  context.clearRect(0, 0, canvas.width, canvas.height);
-
-  if (!dataUrl) {
-    context.restore();
-    resolve();
-    return;
-  }
-
-  const image = new Image();
-  image.onload = () => {
-    context.drawImage(image, 0, 0);
-    context.restore();
-    resolve();
-  };
-  image.onerror = () => {
-    context.restore();
-    resolve();
-  };
-  image.src = dataUrl;
+// Selection composable
+const {
+  selectionRect,
+  isCreatingSelection,
+  isMovingSelection,
+  selectionPointerId,
+  activeSelection,
+  isPointInsideRect,
+  resetSelectionInteraction,
+  cancelSelection,
+  beginSelectionCreation,
+  updateSelectionCreation,
+  finalizeSelectionCreation,
+  beginSelectionMove,
+  updateSelectionMove,
+  finishSelectionMove
+} = usePencilSelection({
+  canvasContext,
+  canvasWidth,
+  canvasHeight,
+  scheduleHistorySave
 });
 
-const applySnapshot = async (snapshot) => {
-  if (!snapshot) {
-    return;
-  }
-
-  isApplyingHistory.value = true;
-  cancelSelection();
-
-  await nextTick();
-  await drawCanvasFromSnapshot(snapshot.canvas);
-  
-  isApplyingHistory.value = false;
-};
-
-const resetHistory = () => {
-  historyEntries.value = [];
-  historyIndex.value = -1;
-  pendingCanvasCapture = false;
-  const snapshot = buildSnapshot(true);
-  pushHistoryEntry(snapshot);
-};
-
-const undo = () => {
-  flushPendingHistorySave();
-  if (historyIndex.value <= 0) {
-    return;
-  }
-
-  historyIndex.value -= 1;
-  const snapshot = historyEntries.value[historyIndex.value];
-  applySnapshot(snapshot);
-};
-
-const redo = () => {
-  flushPendingHistorySave();
-  if (historyIndex.value < 0 || historyIndex.value >= historyEntries.value.length - 1) {
-    return;
-  }
-
-  historyIndex.value += 1;
-  const snapshot = historyEntries.value[historyIndex.value];
-  applySnapshot(snapshot);
-};
-
-const canUndo = computed(() => historyIndex.value > 0);
-const canRedo = computed(() => historyIndex.value >= 0 && historyIndex.value < historyEntries.value.length - 1);
-const isDrawingToolActive = computed(() => ['brush', 'marker', 'eraser'].includes(currentTool.value));
-const isSelectionToolActive = computed(() => currentTool.value === 'selection');
-const activePlacedImage = computed(() => placedImages.value.find((image) => image.id === activeImageId.value) || null);
-
-const updatePlacedImageRect = (imageId, updater) => {
-  placedImages.value = placedImages.value.map((image) => {
-    if (image.id !== imageId) {
-      return image;
-    }
-
-    const updated = typeof updater === 'function' ? updater(image) : updater;
-    return updated || image;
-  });
-};
-
-const getPlacedImageStyle = (image) => {
-  const displayScale = canvasScale.value || 1;
-
-  return {
-    width: `${image.width / displayScale}px`,
-    height: `${image.height / displayScale}px`,
-    transform: `translate(${image.x / displayScale}px, ${image.y / displayScale}px) rotate(${image.rotation}deg)`,
-    transformOrigin: 'top left'
-  };
-};  
+// Функция получения координат canvas из события
 const getCanvasPoint = (event) => {
   const canvas = drawingCanvasRef.value;
   if (!canvas) return null;
@@ -418,124 +157,150 @@ const getCanvasPoint = (event) => {
   });
 };
 
-const ensureImageElement = (src) => new Promise((resolve, reject) => {
-  const element = new Image();
-  element.crossOrigin = 'anonymous';
-  element.onload = () => resolve(element);
-  element.onerror = (error) => reject(error);
-  element.src = src;
+// Images composable
+const {
+  placedImages,
+  activeImageId,
+  imageTransformState,
+  activePlacedImage,
+  getPlacedImageStyle,
+  finalizeActiveImagePlacement,
+  cancelActiveImagePlacement,
+  beginImageTransform,
+  applyImageTransform,
+  finishImageTransform,
+  addDroppedImage,
+  resetImages
+} = usePencilImages({
+  canvasContext,
+  canvasWidth,
+  canvasHeight,
+  canvasScale,
+  getCanvasPoint,
+  scheduleHistorySave
 });
 
-const drawPlacedImageOnCanvas = async (image) => {
-  const context = canvasContext.value;
-  if (!context || !image) {
-    return;
+// === Computed ===
+const isImagesPanelOpen = computed(() => sidePanelsStore.isImagesOpen);
+
+const boardClasses = computed(() => {
+  const classes = ['pencil-overlay__board'];
+
+  switch (currentTool.value) {
+     case 'pan':
+      classes.push('pencil-overlay__board--pan');
+      break;
+    case 'marker':
+      classes.push('pencil-overlay__board--marker');
+      break;
+    case 'eraser':
+      classes.push('pencil-overlay__board--eraser');
+      break;
+    case 'selection':
+      classes.push('pencil-overlay__board--selection');
+      break;
+    default:
+      classes.push('pencil-overlay__board--brush');
   }
+  return classes;
+});
 
-  try {
-    const element = await ensureImageElement(image.src);
-    context.save();
-    context.translate(image.x + image.width / 2, image.y + image.height / 2);
-    context.rotate((image.rotation * Math.PI) / 180);
-    context.drawImage(element, -image.width / 2, -image.height / 2, image.width, image.height);
-    context.restore();
-    scheduleHistorySave(true);
-  } catch (error) {
-    console.error('Не удалось отрисовать временное изображение на холст', error);
-  }
-};
+const boardStyle = computed(() => {
+  const scale = zoomScale.value || 1;
+  const offset = panOffset.value || { x: 0, y: 0 };
 
-const finalizeActiveImagePlacement = async () => {
-  if (!activePlacedImage.value) {
-    return;
-  }
-
-  const imageId = activePlacedImage.value.id;
-  const imageToDraw = { ...activePlacedImage.value };
-  await drawPlacedImageOnCanvas(imageToDraw);
-  placedImages.value = placedImages.value.filter((image) => image.id !== imageId);
-  if (activeImageId.value === imageId) {
-    activeImageId.value = null;
-  }
-};
-
-const cancelActiveImagePlacement = () => {
-  if (!activePlacedImage.value) {
-    return;
-  }
-
-  const imageId = activePlacedImage.value.id;
-  placedImages.value = placedImages.value.filter((image) => image.id !== imageId);
-  if (activeImageId.value === imageId) {
-    activeImageId.value = null;
-  }
-};
-
-const beginImageTransform = (imageId, type, handle, event) => {
-  const point = getCanvasPoint(event);
-  if (!point) return;
-
-  const target = placedImages.value.find((image) => image.id === imageId);
-  if (!target) return;
-
-  activeImageId.value = imageId;
-  imageTransformState.value = {
-    pointerId: event.pointerId,
-    type,
-    handle,
-    startPoint: point,
-    startRect: { ...target },
-    captureTarget: event.currentTarget || null,
-    changed: false
+  return {
+    top: `${props.bounds.top}px`,
+    left: `${props.bounds.left}px`,
+    width: `${props.bounds.width}px`,
+    height: `${props.bounds.height}px`,
+    backgroundImage: `url(${props.snapshot})`,
+    backgroundSize: '100% 100%',
+    transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+    transformOrigin: 'top left'
   };
+});
 
-  if (imageTransformState.value.captureTarget && imageTransformState.value.captureTarget.setPointerCapture) {
-    imageTransformState.value.captureTarget.setPointerCapture(event.pointerId);
+const selectionStyle = computed(() => {
+  if (!selectionRect.value) {
+    return null;
   }
+
+  const displayScale = canvasScale.value || 1;
+
+  return {
+    top: `${selectionRect.value.y / displayScale}px`,
+    left: `${selectionRect.value.x / displayScale}px`,
+    width: `${selectionRect.value.width / displayScale}px`,
+    height: `${selectionRect.value.height / displayScale}px`
+  };
+});
+
+const eraserPreviewStyle = computed(() => {
+  if (!showEraserPreview.value || !pointerPosition.value) {
+    return null;
+  }
+
+  const displayScale = canvasScale.value || 1;
+
+  return {
+    width: `${eraserSize.value}px`,
+    height: `${eraserSize.value}px`,
+    top: `${pointerPosition.value.y / displayScale}px`,
+    left: `${pointerPosition.value.x / displayScale}px`
+  };
+});
+
+const panelStyle = computed(() => {
+  const offset = 16;
+  const top = Math.max(props.bounds.top - offset, offset);
+  const left = Math.max(props.bounds.left, offset);
+
+  return {
+    top: `${top}px`,
+    left: `${left}px`
+  };
+});
+
+const panelClasses = computed(() => [
+  'pencil-overlay__panel',
+  props.isModernTheme ? 'pencil-overlay__panel--modern' : 'pencil-overlay__panel--classic'
+]);
+
+// === Watchers ===
+watch(isImagesPanelOpen, (isOpen) => {
+  if (isOpen) {
+    previousToolBeforeImages.value = currentTool.value;
+    currentTool.value = 'pan';
+    openDropdown.value = null;
+  } else if (currentTool.value === 'pan') {
+    currentTool.value = previousToolBeforeImages.value || 'brush';
+  }
+});
+
+watch(currentTool, (tool, previous) => {
+  if (previous === 'selection' && tool !== 'selection') {
+    cancelSelection();
+  }
+  if (tool !== 'eraser') {
+    clearPointerPreview();
+  }
+  if (previous === 'pan' && tool !== 'pan') {
+    isPanning.value = false;
+  }
+});
+
+watch(() => props.snapshot, (value, previous) => {
+  if (value && value !== previous) {
+    loadBaseImage();
+  }
+});
+
+// === Функции ===
+const openImagesPanel = () => {
+  sidePanelsStore.openImages();
 };
 
-const applyImageTransform = (event) => {
-  if (!imageTransformState.value || imageTransformState.value.pointerId !== event.pointerId) {
-    return;
-  }
-
-  const point = getCanvasPoint(event);
-  if (!point) return;
-
-  const dx = point.x - imageTransformState.value.startPoint.x;
-  const dy = point.y - imageTransformState.value.startPoint.y;
-  const { type, handle, startRect } = imageTransformState.value;
-
-  if (type === 'move') {
-    const next = movePlacedImage(startRect, dx, dy, canvasWidth.value, canvasHeight.value);
-    updatePlacedImageRect(activeImageId.value, next);
-  } else if (type === 'resize') {
-    const next = resizePlacedImage(
-      startRect,
-      handle,
-      dx,
-      dy,
-      canvasWidth.value,
-      canvasHeight.value,
-      TEMP_IMAGE_MIN_SIZE
-    );
-    updatePlacedImageRect(activeImageId.value, next);
-  }
-
-  imageTransformState.value.changed = true;
-};
-
-const finishImageTransform = (event) => {
-  if (!imageTransformState.value || imageTransformState.value.pointerId !== event.pointerId) {
-    return;
-  }
-
-  if (imageTransformState.value.captureTarget?.releasePointerCapture) {
-    imageTransformState.value.captureTarget.releasePointerCapture(event.pointerId);
-  }
-
-  imageTransformState.value = null;
-};
 const placePendingImageOnCanvas = (point) => {
   const pendingImage = stickersStore.pendingImageData;
   const context = canvasContext.value;
@@ -563,326 +328,9 @@ const placePendingImageOnCanvas = (point) => {
   imageElement.src = pendingImage.dataUrl;
 };
 
-const startStroke = (point) => {
-  if (!canvasContext.value) return;
-
-  const context = canvasContext.value;
-  context.lineCap = 'round';
-  context.lineJoin = 'round';
-  context.globalAlpha = 1;
-
-  // Масштабируем размеры инструментов с учетом высокого разрешения canvas
-  const displayScale = canvasScale.value || 1;
-
-  if (currentTool.value === 'eraser') {
-    context.globalCompositeOperation = 'destination-out';
-    context.strokeStyle = 'rgba(0, 0, 0, 1)';
-    context.lineWidth = eraserSize.value * displayScale;
-  } else {
-    context.globalCompositeOperation = 'source-over';
-    if (currentTool.value === 'marker') {
-      context.strokeStyle = hexToRgba(brushColor.value, markerOpacity.value);
-      context.lineWidth = markerSize.value * displayScale;
-    } else {
-      context.strokeStyle = brushColor.value;
-      context.lineWidth = brushSize.value * displayScale;
-    }
-  }
-
-  context.beginPath();
-  context.moveTo(point.x, point.y);
-  lastPoint.value = point;
-  isDrawing.value = true;
-  hasStrokeChanges.value = false;
-};
-
-const continueStroke = (point) => {
-  if (!canvasContext.value || !isDrawing.value || !lastPoint.value) return;
-
-  canvasContext.value.lineTo(point.x, point.y);
-  canvasContext.value.stroke();
-  lastPoint.value = point;
-  hasStrokeChanges.value = true;  
-};
-
-const finishStroke = () => {
-  if (!canvasContext.value || !isDrawing.value) return;
-
-  canvasContext.value.closePath();
-  canvasContext.value.globalAlpha = 1;
-  canvasContext.value.globalCompositeOperation = 'source-over';
-  isDrawing.value = false;
-  lastPoint.value = null;
-  activePointerId.value = null;
-
-  if (hasStrokeChanges.value) {
-    scheduleHistorySave(true);
-  }
-};
-
-const clampValue = (value, min, max) => Math.min(Math.max(value, min), max);
-
-const normalizeSelectionRect = (start, current) => {
-  if (!start || !current) {
-    return null;
-  }
-
-  const clampedStart = {
-    x: clampValue(start.x, 0, canvasWidth.value),
-    y: clampValue(start.y, 0, canvasHeight.value)
-  };
-
-  const clampedCurrent = {
-    x: clampValue(current.x, 0, canvasWidth.value),
-    y: clampValue(current.y, 0, canvasHeight.value)
-  };
-
-  const left = Math.min(clampedStart.x, clampedCurrent.x);
-  const top = Math.min(clampedStart.y, clampedCurrent.y);
-  const right = Math.max(clampedStart.x, clampedCurrent.x);
-  const bottom = Math.max(clampedStart.y, clampedCurrent.y);
-
-  return {
-    x: Math.round(left),
-    y: Math.round(top),
-    width: Math.round(right - left),
-    height: Math.round(bottom - top)
-  };
-};
-
-const isPointInsideRect = (point, rect) => {
-  if (!rect) {
-    return false;
-  }
-
-  const withinX = point.x >= rect.x && point.x <= rect.x + rect.width;
-  const withinY = point.y >= rect.y && point.y <= rect.y + rect.height;
-  return withinX && withinY;
-};
-
-const resetSelectionInteraction = () => {
-  isCreatingSelection.value = false;
-  isMovingSelection.value = false;
-  selectionPointerId.value = null;
-  selectionStartPoint.value = null;
-  selectionMoveStartPoint.value = null;
-  selectionInitialRect.value = null;
-  selectionMoveState.value = null;
-  selectionHasChanges.value = false;
-};
-
-const selectionHasChanges = ref(false);
-
-const cancelSelection = () => {
-  if (isMovingSelection.value && activeSelection.value && selectionMoveState.value && selectionInitialRect.value) {
-    const context = canvasContext.value;
-    if (context && selectionMoveState.value.baseImageData) {
-      context.putImageData(selectionMoveState.value.baseImageData, 0, 0);
-      context.putImageData(
-        activeSelection.value.imageData,
-        selectionInitialRect.value.x,
-        selectionInitialRect.value.y
-      );
-    }
-
-    if (activeSelection.value) {
-      activeSelection.value.rect = { ...selectionInitialRect.value };
-    }
-  }
-
-  resetSelectionInteraction();
-  activeSelection.value = null;
-  selectionRect.value = null;
-};
-
-const captureSelectionSnapshot = (rect) => {
-  const context = canvasContext.value;
-  if (!context || !rect || rect.width <= 1 || rect.height <= 1) {
-    return null;
-  }
-
-  try {
-    const imageData = context.getImageData(rect.x, rect.y, rect.width, rect.height);
-
-    return {
-      rect: { ...rect },
-      imageData
-    };
-  } catch (error) {
-    console.error('Не удалось получить данные выделенной области', error);
-    return null;
-  }
-};
-
-const beginSelectionCreation = (point, pointerId) => {
-  isCreatingSelection.value = true;
-  selectionPointerId.value = pointerId;
-  selectionStartPoint.value = point;
-  selectionRect.value = {
-    x: point.x,
-    y: point.y,
-    width: 0,
-    height: 0
-  };
-};
-
-const updateSelectionCreation = (point) => {
-  if (!isCreatingSelection.value || !selectionStartPoint.value) {
-    return;
-  }
-
-  const rect = normalizeSelectionRect(selectionStartPoint.value, point);
-  selectionRect.value = rect;
-};
-
-const finalizeSelectionCreation = () => {
-  if (!isCreatingSelection.value) {
-    return;
-  }
-
-  const rect = selectionRect.value;
-  resetSelectionInteraction();
-
-  if (!rect || rect.width < 2 || rect.height < 2) {
-    selectionRect.value = null;
-    activeSelection.value = null;
-    return;
-  }
-
-  const snapshot = captureSelectionSnapshot(rect);
-  if (!snapshot) {
-    selectionRect.value = null;
-    activeSelection.value = null;
-    return;
-  }
-
-  activeSelection.value = snapshot;
-  selectionRect.value = { ...snapshot.rect };
-};
-
-const beginSelectionMove = (point, pointerId) => {
-  if (!activeSelection.value) {
-    return;
-  }
-
-  const context = canvasContext.value;
-  if (!context) {
-    return;
-  }
-
-  isMovingSelection.value = true;
-  selectionPointerId.value = pointerId;
-  selectionMoveStartPoint.value = point;
-  selectionInitialRect.value = { ...activeSelection.value.rect };
-
-  context.save();
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.globalCompositeOperation = 'source-over';
-  context.globalAlpha = 1;
-  context.clearRect(
-    activeSelection.value.rect.x,
-    activeSelection.value.rect.y,
-    activeSelection.value.rect.width,
-    activeSelection.value.rect.height
-  );
-
-  const baseImageData = context.getImageData(0, 0, canvasWidth.value, canvasHeight.value);
-  context.putImageData(
-    activeSelection.value.imageData,
-    activeSelection.value.rect.x,
-    activeSelection.value.rect.y
-  );
-  context.restore();
-
-  selectionMoveState.value = {
-    baseImageData
-  };
-  selectionHasChanges.value = false;
-};
-
-const updateSelectionMove = (point) => {
-  if (!isMovingSelection.value || !selectionMoveStartPoint.value || !selectionInitialRect.value) {
-    return;
-  }
-
-  const dx = point.x - selectionMoveStartPoint.value.x;
-  const dy = point.y - selectionMoveStartPoint.value.y;
-
-  const maxX = Math.max(0, canvasWidth.value - selectionInitialRect.value.width);
-  const maxY = Math.max(0, canvasHeight.value - selectionInitialRect.value.height);
-
-  const targetX = clampValue(selectionInitialRect.value.x + dx, 0, maxX);
-  const targetY = clampValue(selectionInitialRect.value.y + dy, 0, maxY);
-
-  const appliedDx = Math.round(targetX - selectionInitialRect.value.x);
-  const appliedDy = Math.round(targetY - selectionInitialRect.value.y);
-
-  const rect = {
-    x: selectionInitialRect.value.x + appliedDx,
-    y: selectionInitialRect.value.y + appliedDy,
-    width: selectionInitialRect.value.width,
-    height: selectionInitialRect.value.height
-  };
-
-  selectionRect.value = rect;
-
-  const context = canvasContext.value;
-  if (context && selectionMoveState.value?.baseImageData) {
-    context.putImageData(selectionMoveState.value.baseImageData, 0, 0);
-    context.putImageData(activeSelection.value.imageData, rect.x, rect.y);
-  }
-
-  if (appliedDx !== 0 || appliedDy !== 0) {
-    selectionHasChanges.value = true;
-  }
-};
-
-const finishSelectionMove = () => {
-  if (!isMovingSelection.value) {
-    return;
-  }
-
-  const rect = selectionRect.value ? { ...selectionRect.value } : null;
-  const context = canvasContext.value;
-
-  if (context && rect && selectionMoveState.value?.baseImageData) {
-    context.putImageData(selectionMoveState.value.baseImageData, 0, 0);
-    context.putImageData(activeSelection.value.imageData, rect.x, rect.y);
-
-    try {
-      activeSelection.value.imageData = context.getImageData(rect.x, rect.y, rect.width, rect.height);
-    } catch (error) {
-      console.error('Не удалось обновить данные выделенной области после перемещения', error);
-    }
-  }
-
-  if (activeSelection.value && rect) {
-    activeSelection.value.rect = rect;
-  }
-
-  const hasChanges = selectionHasChanges.value;
-  resetSelectionInteraction();
-
-  if (rect) {
-    selectionRect.value = { ...rect };
-  }
-
-  if (hasChanges) {
-    scheduleHistorySave(true);
-  } 
-};
-
-const updatePointerPreview = (point) => {
-  if (currentTool.value === 'eraser') {
-    pointerPosition.value = { ...point };
-  } else {
-    pointerPosition.value = null;
-  }
-};
-
 const handleCanvasPointerDown = (event) => {
   const isPrimaryButton = event.button === 0 || event.button === undefined || event.button === -1;
-  
+
   if (!isPrimaryButton) return;
 
   const point = getCanvasPoint(event);
@@ -890,6 +338,7 @@ const handleCanvasPointerDown = (event) => {
 
   const canvas = drawingCanvasRef.value;
   if (!canvas) return;
+
   if (stickersStore.isPlacementMode && stickersStore.placementTarget === 'drawing') {
     placePendingImageOnCanvas(point);
     stickersStore.pendingImageData = null;
@@ -920,6 +369,7 @@ const handleCanvasPointerMove = (event) => {
   const point = getCanvasPoint(event);
   if (!point) return;
   updatePointerPreview(point);
+
   if (isSelectionToolActive.value) {
     if (selectionPointerId.value !== event.pointerId) {
       return;
@@ -939,7 +389,7 @@ const handleCanvasPointerMove = (event) => {
   continueStroke(point);
 };
 
-const handleCanvasPointerUp = (event) => { 
+const handleCanvasPointerUp = (event) => {
   const canvas = drawingCanvasRef.value;
   if (!canvas) return;
 
@@ -959,6 +409,7 @@ const handleCanvasPointerUp = (event) => {
     resetSelectionInteraction();
     return;
   }
+
   if (!isDrawingToolActive.value) return;
   if (activePointerId.value !== event.pointerId) return;
   event.preventDefault();
@@ -970,9 +421,11 @@ const handleCanvasPointerUp = (event) => {
 const handleCanvasPointerLeave = (event) => {
   const canvas = drawingCanvasRef.value;
   if (!canvas) return;
+
   if (currentTool.value === 'eraser') {
-    pointerPosition.value = null;
+    clearPointerPreview();
   }
+
   if (isSelectionToolActive.value) {
     if (selectionPointerId.value !== event.pointerId) {
       return;
@@ -989,11 +442,12 @@ const handleCanvasPointerLeave = (event) => {
     resetSelectionInteraction();
     return;
   }
+
   if (!isDrawingToolActive.value) return;
   if (activePointerId.value !== event.pointerId) return;
 
   finishStroke();
-  pointerPosition.value = null;
+  clearPointerPreview();
 };
 
 const exportFinalImage = () => {
@@ -1018,6 +472,14 @@ const handleClose = async () => {
   emit('close', { image });
 };
 
+const undo = () => {
+  historyUndo();
+};
+
+const redo = () => {
+  historyRedo();
+};
+
 const handleKeydown = (event) => {
   const isModifier = event.ctrlKey || event.metaKey;
   const key = event.key.toLowerCase();
@@ -1037,19 +499,19 @@ const handleKeydown = (event) => {
     redo();
     return;
   }
-  
+
   if (event.key === 'Escape') {
     if (activePlacedImage.value) {
       event.preventDefault();
       cancelActiveImagePlacement();
       return;
-    }    
+    }
     if (currentTool.value === 'selection' && (activeSelection.value || isCreatingSelection.value || isMovingSelection.value)) {
       event.preventDefault();
       cancelSelection();
       return;
     }
-    
+
     event.preventDefault();
     handleClose();
   }
@@ -1060,21 +522,17 @@ const loadBaseImage = () => {
     return;
   }
 
-  isReady.value = false
+  isReady.value = false;
   const image = new Image();
   image.onload = () => {
     baseImage.value = image;
 
-    // Вычисляем масштаб между высокоразрешенным canvas и отображаемым размером
     canvasScale.value = image.width / props.bounds.width;
     canvasWidth.value = image.width;
     canvasHeight.value = image.height;
-    zoomScale.value = 1;
-    minZoomScale.value = 1;
+    resetZoom();
     isReady.value = true;
-     placedImages.value = [];
-    activeImageId.value = null;
-    imageTransformState.value = null;   
+    resetImages();
 
     nextTick(() => {
       const canvas = drawingCanvasRef.value;
@@ -1083,7 +541,6 @@ const loadBaseImage = () => {
         return;
       }
 
-      // Создаем canvas с высоким разрешением
       canvas.width = image.width;
       canvas.height = image.height;
 
@@ -1094,13 +551,12 @@ const loadBaseImage = () => {
       });
 
       if (canvasContext.value) {
-        // Настройки качества рендеринга
         canvasContext.value.imageSmoothingEnabled = true;
         canvasContext.value.imageSmoothingQuality = 'high';
         canvasContext.value.setTransform(1, 0, 0, 1, 0, 0);
         canvasContext.value.clearRect(0, 0, canvas.width, canvas.height);
       }
-      pointerPosition.value = null;
+      clearPointerPreview();
       cancelSelection();
       resetHistory();
     });
@@ -1110,151 +566,6 @@ const loadBaseImage = () => {
   };
   image.src = props.snapshot;
 };
-onMounted(() => {
-  previousHtmlOverflow = document.documentElement.style.overflow;
-  previousBodyOverflow = document.body.style.overflow;
-
-  document.documentElement.style.overflow = 'hidden';
-  document.body.style.overflow = 'hidden';
-  stickersStore.disablePlacementMode();
-  stickersStore.setPlacementTarget('drawing');
-  stickersStore.pendingImageData = null;
-
-  window.addEventListener('keydown', handleKeydown);
-  loadBaseImage();
-});
-
-watch(() => props.snapshot, (value, previous) => {
-  if (value && value !== previous) {
-    loadBaseImage();
-  }
-});
-
-watch(currentTool, (tool, previous) => {
-  if (previous === 'selection' && tool !== 'selection') {
-    cancelSelection();
-  }
-  if (tool !== 'eraser') {
-    pointerPosition.value = null;
-  }
-  if (previous === 'pan' && tool !== 'pan') {
-    isPanning.value = false;
-    panPointerId.value = null;
-    panStartPoint.value = null;
-    panInitialOffset.value = { x: 0, y: 0 };
-  }  
-});
-watch(isZoomedIn, (zoomed) => {
-  if (!zoomed) {
-    panOffset.value = { x: 0, y: 0 };
-    isPanning.value = false;
-    panPointerId.value = null;
-    panStartPoint.value = null;
-    panInitialOffset.value = { x: 0, y: 0 };    
-  }
-});
-
-onBeforeUnmount(() => {
-  document.documentElement.style.overflow = previousHtmlOverflow;
-  document.body.style.overflow = previousBodyOverflow;
-  window.removeEventListener('keydown', handleKeydown);
-  stickersStore.pendingImageData = null;
-  stickersStore.disablePlacementMode();
-  stickersStore.setPlacementTarget('board');  
-});
-
-const clampZoom = (value) => {
-  const MIN_ZOOM = minZoomScale.value || 1;
-  const MAX_ZOOM = 4;
-  return Math.min(Math.max(value, MIN_ZOOM), MAX_ZOOM);
-};
-
-const handleBoardWheel = (event) => {
-  if (!isReady.value) {
-    return;
-  }
-
-  event.preventDefault();
-  const currentScale = zoomScale.value || 1;
-
-  const STEP = 0.1;
-  const zoomIn = event.deltaY < 0;
-  const factor = zoomIn ? 1 + STEP : 1 / (1 + STEP);
-  const updatedScale = clampZoom(currentScale * factor);
-  if (Math.abs(updatedScale - currentScale) < 0.0001) {
-    return;
-  }
-
-  const boardElement = event.currentTarget;
-  if (!boardElement || typeof boardElement.getBoundingClientRect !== 'function') {
-    zoomScale.value = Number.parseFloat(updatedScale.toFixed(4));
-    return;
-  }
-
-  const rect = boardElement.getBoundingClientRect();
-  const pointerOffsetX = event.clientX - rect.left;
-  const pointerOffsetY = event.clientY - rect.top;
-
-  const localX = pointerOffsetX / currentScale;
-  const localY = pointerOffsetY / currentScale;
-  const currentPan = panOffset.value || { x: 0, y: 0 };
-  const scaleDifference = currentScale - updatedScale;
-
-  panOffset.value = {
-    x: currentPan.x + scaleDifference * localX,
-    y: currentPan.y + scaleDifference * localY
-  };
-
-  zoomScale.value = Number.parseFloat(updatedScale.toFixed(4));
-};
-
-const beginPan = (event) => {
-  if (!isZoomedIn.value) {
-    return;
-  }
-
-  const boardElement = event.currentTarget;
-  if (boardElement && typeof boardElement.setPointerCapture === 'function') {
-    boardElement.setPointerCapture(event.pointerId);
-  }
-
-  isPanning.value = true;
-  panPointerId.value = event.pointerId;
-  panStartPoint.value = { x: event.clientX, y: event.clientY };
-  const currentPan = panOffset.value || { x: 0, y: 0 };
-  panInitialOffset.value = { ...currentPan };
-};
-
-const updatePan = (event) => {
-  if (!isPanning.value || panPointerId.value !== event.pointerId || !panStartPoint.value) {
-    return;
-  }
-
-  const deltaX = event.clientX - panStartPoint.value.x;
-  const deltaY = event.clientY - panStartPoint.value.y;
-  const initial = panInitialOffset.value || { x: 0, y: 0 };
-
-  panOffset.value = {
-    x: initial.x + deltaX,
-    y: initial.y + deltaY
-  };
-};
-
-const finishPan = (event) => {
-  if (panPointerId.value !== event.pointerId) {
-    return;
-  }
-
-  const boardElement = event.currentTarget;
-  if (boardElement && typeof boardElement.releasePointerCapture === 'function') {
-    boardElement.releasePointerCapture(event.pointerId);
-  }
-
-  isPanning.value = false;
-  panPointerId.value = null;
-  panStartPoint.value = null;
-  panInitialOffset.value = { x: 0, y: 0 };
-};
 
 const handleBoardPointerDown = (event) => {
   const isPrimaryButton = event.button === 0 || event.button === undefined || event.button === -1;
@@ -1262,16 +573,16 @@ const handleBoardPointerDown = (event) => {
   if (isPrimaryButton && !imageTransformState.value && !event.target.closest('.pencil-overlay__image-wrapper')) {
     void finalizeActiveImagePlacement();
   }
+
   if (currentTool.value === 'pan' && isPrimaryButton) {
     beginPan(event);
     return;
   }
- 
+
   if (event.pointerType !== 'mouse' || event.button !== 1) {
     return;
   }
-  
-  // Функция перемещения холста средней кнопкой мыши отключена в режиме рисования
+
   event.preventDefault();
 };
 
@@ -1280,7 +591,8 @@ const handleBoardPointerMove = (event) => {
     event.preventDefault();
     applyImageTransform(event);
     return;
-  }  
+  }
+
   if (!isPanning.value || panPointerId.value !== event.pointerId) {
     return;
   }
@@ -1293,7 +605,8 @@ const handleBoardPointerUp = (event) => {
   if (imageTransformState.value && imageTransformState.value.pointerId === event.pointerId) {
     finishImageTransform(event);
     return;
-  }  
+  }
+
   if (panPointerId.value !== event.pointerId) {
     return;
   }
@@ -1305,7 +618,8 @@ const handleBoardPointerCancel = (event) => {
   if (imageTransformState.value && imageTransformState.value.pointerId === event.pointerId) {
     finishImageTransform(event);
     return;
-  }  
+  }
+
   if (panPointerId.value !== event.pointerId) {
     return;
   }
@@ -1330,7 +644,6 @@ const closeAllDropdowns = () => {
   openDropdown.value = null;
 };
 
-// Обработчики drag-and-drop для изображений из библиотеки
 const handleDragOver = (event) => {
   event.preventDefault();
   event.dataTransfer.dropEffect = 'copy';
@@ -1340,7 +653,6 @@ const handleDrop = async (event) => {
   event.preventDefault();
   await finalizeActiveImagePlacement();
 
-  // Получаем данные изображения
   const jsonData = event.dataTransfer.getData('application/json');
   if (!jsonData) return;
 
@@ -1352,11 +664,9 @@ const handleDrop = async (event) => {
     return;
   }
 
-  // Вычисляем координаты drop с учётом масштаба и offset
   const point = getCanvasPoint(event);
   if (!point) return;
 
-  // Получаем blob URL для изображения (если нужно)
   let imageUrl = imageData.url;
   if (imageData.imageId && !imageUrl) {
     try {
@@ -1373,27 +683,32 @@ const handleDrop = async (event) => {
     return;
   }
 
-  try {
-    const imageElement = await ensureImageElement(imageUrl);
-    const originalWidth = imageData.width || imageElement.width || 200;
-    const originalHeight = imageData.height || imageElement.height || 150;
-    const draftId = imageData.imageId || (crypto?.randomUUID ? crypto.randomUUID() : `temp-${Date.now()}`);
-    const draft = buildPlacedImage({
-      id: draftId,
-      src: imageUrl,
-      originalWidth,
-      originalHeight,
-      point,
-      canvasWidth: canvasWidth.value,
-      canvasHeight: canvasHeight.value
-    });
+  await addDroppedImage(imageUrl, imageData, point);
+};
 
-    placedImages.value = [...placedImages.value, draft];
-    activeImageId.value = draft.id;
-  } catch (error) {
-    console.error('Не удалось загрузить изображение для режима рисования', error);
-  }
-  };
+// === Lifecycle ===
+onMounted(() => {
+  previousHtmlOverflow = document.documentElement.style.overflow;
+  previousBodyOverflow = document.body.style.overflow;
+
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+  stickersStore.disablePlacementMode();
+  stickersStore.setPlacementTarget('drawing');
+  stickersStore.pendingImageData = null;
+
+  window.addEventListener('keydown', handleKeydown);
+  loadBaseImage();
+});
+
+onBeforeUnmount(() => {
+  document.documentElement.style.overflow = previousHtmlOverflow;
+  document.body.style.overflow = previousBodyOverflow;
+  window.removeEventListener('keydown', handleKeydown);
+  stickersStore.pendingImageData = null;
+  stickersStore.disablePlacementMode();
+  stickersStore.setPlacementTarget('board');
+});
 </script>
 
 <template>
@@ -1477,7 +792,7 @@ const handleDrop = async (event) => {
             ></span>
           </div>
         </div>
-      </div>      
+      </div>
       <div
         v-if="showEraserPreview && eraserPreviewStyle"
         class="pencil-overlay__eraser-preview"
@@ -1487,7 +802,7 @@ const handleDrop = async (event) => {
         v-if="selectionStyle"
         class="pencil-overlay__selection"
         :style="selectionStyle"
-      ></div>      
+      ></div>
     </div>
 
     <!-- Кнопка закрытия в правом верхнем углу -->
@@ -1676,7 +991,7 @@ const handleDrop = async (event) => {
         >
           🖼️
         </button>
-      </div>      
+      </div>
     </div>
 
     <!-- Кнопки отмена/повтор в центре сверху -->
@@ -2013,7 +1328,7 @@ const handleDrop = async (event) => {
   top: 50%;
   transform: translateY(-50%);
   cursor: ew-resize;
-}  
+}
 .pencil-overlay__selection {
   position: absolute;
   border: 2px dashed rgba(15, 98, 254, 0.85);
@@ -2061,5 +1376,5 @@ const handleDrop = async (event) => {
   box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.25);
   pointer-events: none;
   transform: translate(-50%, -50%);
-} 
+}
 </style>
