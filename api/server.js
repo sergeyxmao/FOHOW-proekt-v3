@@ -102,6 +102,39 @@ app.setErrorHandler((error, request, reply) => {
 });
 
 // ============================================
+// ХУКИ ДЛЯ ОТЛАДКИ (ЛОГИРОВАНИЕ ВСЕХ ЗАПРОСОВ К /api/login)
+// ============================================
+app.addHook('onRequest', async (request, reply) => {
+  if (request.url.includes('/api/login')) {
+    console.log('[HOOK onRequest /api/login]', {
+      method: request.method,
+      url: request.url,
+      contentType: request.headers['content-type'],
+      hasBody: !!request.body
+    });
+  }
+});
+
+app.addHook('preHandler', async (request, reply) => {
+  if (request.url.includes('/api/login')) {
+    console.log('[HOOK preHandler /api/login]', {
+      body: request.body,
+      bodyKeys: request.body ? Object.keys(request.body) : []
+    });
+  }
+});
+
+app.addHook('onError', async (request, reply, error) => {
+  if (request.url.includes('/api/login')) {
+    console.error('[HOOK onError /api/login]', {
+      error: error.message,
+      stack: error.stack,
+      statusCode: reply.statusCode
+    });
+  }
+});
+
+// ============================================
 // РЕГИСТРАЦИЯ РОУТОВ
 // ============================================
 console.log('[DEBUG] Начало регистрации маршрутов...');

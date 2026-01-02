@@ -232,9 +232,16 @@ export function registerAuthRoutes(app) {
 
   // === АВТОРИЗАЦИЯ ===
   app.post('/api/login', async (req, reply) => {
-    console.log('[DEBUG /api/login] Запрос на вход получен:', { email: req.body?.email });
+    console.log('[DEBUG /api/login ENTRY] === Вход в обработчик ===');
+    console.log('[DEBUG /api/login] req.body:', req.body);
+    console.log('[DEBUG /api/login] req.body type:', typeof req.body);
 
     const { email, password } = req.body;
+    console.log('[DEBUG /api/login] Распаковано:', {
+      email,
+      hasPassword: !!password,
+      passwordLength: password?.length
+    });
 
     if (!email || !password) {
       console.log('[DEBUG /api/login] Отсутствуют email или пароль');
@@ -369,9 +376,13 @@ export function registerAuthRoutes(app) {
       });
 
     } catch (err) {
-      console.error('❌ Ошибка авторизации:', err);
+      console.error('[DEBUG /api/login CATCH] === Поймана ошибка ===');
+      console.error('[DEBUG /api/login CATCH] Тип ошибки:', err.name);
+      console.error('[DEBUG /api/login CATCH] Сообщение:', err.message);
+      console.error('[DEBUG /api/login CATCH] Стек:', err.stack);
+      console.error('[DEBUG /api/login CATCH] Код ошибки:', err.code);
 
-      if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
+      if (err.code === 'ECONNREFUSED' || err.code === 'ECONNFOUND') {
         return reply.code(500).send({ error: 'Ошибка подключения к базе данных' });
       }
       if (err.name === 'JsonWebTokenError') {
