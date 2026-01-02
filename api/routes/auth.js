@@ -278,21 +278,27 @@ export function registerAuthRoutes(app) {
       console.log(`[LOGIN] Успешная аутентификация для пользователя ID: ${user.id}`);
 
       // === УПРАВЛЕНИЕ СЕССИЯМИ ===
-      const planResult = await pool.query(
-        `SELECT sp.session_limit
-         FROM users u
-         JOIN subscription_plans sp ON u.plan_id = sp.id
-         WHERE u.id = $1`,
-        [user.id]
-      );
-
       let sessionLimit = null;
-      if (planResult.rows.length > 0 && planResult.rows[0].session_limit != null) {
-        sessionLimit = planResult.rows[0].session_limit;
-        console.log(`[LOGIN] Лимит сессий: ${sessionLimit}`);
-      }
-
       const isAdmin = user.role === 'admin';
+
+      // Проверяем лимит сессий только если у пользователя есть тариф
+      if (user.plan_id != null) {
+        const planResult = await pool.query(
+          `SELECT session_limit
+           FROM subscription_plans
+           WHERE id = $1`,
+          [user.plan_id]
+        );
+
+        if (planResult.rows.length > 0 && planResult.rows[0].session_limit != null) {
+          sessionLimit = planResult.rows[0].session_limit;
+          console.log(`[LOGIN] Тариф найден. Лимит сессий: ${sessionLimit}`);
+        } else {
+          console.log(`[LOGIN] Тариф с ID ${user.plan_id} не найден или не имеет лимита сессий.`);
+        }
+      } else {
+        console.log(`[LOGIN] У пользователя нет тарифа (plan_id = NULL). Пропускаем проверку лимита сессий.`);
+      }
 
       // Если установлен лимит сессий и пользователь не админ
       if (!isAdmin && sessionLimit && !isNaN(sessionLimit) && sessionLimit > 0) {
@@ -317,6 +323,8 @@ export function registerAuthRoutes(app) {
             [user.id]
           );
         }
+      } else {
+        console.log(`[LOGIN] Проверка лимита сессий пропущена (админ или нет лимита).`);
       }
 
       // Удаляем хэш пароля перед отправкой
