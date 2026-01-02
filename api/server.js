@@ -83,8 +83,28 @@ await app.register(fastifyStatic, {
 });
 
 // ============================================
+// ГЛОБАЛЬНЫЙ ОБРАБОТЧИК ОШИБОК
+// ============================================
+app.setErrorHandler((error, request, reply) => {
+  console.error('[GLOBAL ERROR HANDLER]', {
+    url: request.url,
+    method: request.method,
+    error: error.message,
+    stack: error.stack
+  });
+
+  // В режиме разработки отправляем детальную информацию
+  const errorMessage = process.env.NODE_ENV === 'development'
+    ? `Ошибка сервера: ${error.message}`
+    : 'Ошибка сервера. Попробуйте позже';
+
+  reply.code(500).send({ error: errorMessage });
+});
+
+// ============================================
 // РЕГИСТРАЦИЯ РОУТОВ
 // ============================================
+console.log('[DEBUG] Начало регистрации маршрутов...');
 registerAuthRoutes(app);
 registerProfileRoutes(app);
 registerBoardRoutes(app);
@@ -204,12 +224,15 @@ try {
   const io = setupWebSocket(app.server);
   app.decorate('io', io);
   console.log(`🔌 WebSocket server initialized`);
-  
+
   await app.listen({ port: PORT, host: HOST });
 
-
-  console.log(`🔌 WebSocket server initialized`); 
+  console.log(`🔌 WebSocket server initialized`);
   app.log.info(`API listening on http://${HOST}:${PORT}`);
+
+  // Логирование зарегистрированных маршрутов
+  console.log('[DEBUG] Зарегистрированные маршруты:');
+  console.log(app.printRoutes());
 
   // Инициализируем крон-задачи после успешного запуска сервера
   initializeCronTasks();

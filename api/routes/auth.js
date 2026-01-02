@@ -107,6 +107,12 @@ async function generateUniquePersonalId(client) {
  */
 export function registerAuthRoutes(app) {
 
+  // === ТЕСТОВЫЙ РОУТ (ДЛЯ ОТЛАДКИ) ===
+  app.get('/api/test-auth', async (req, reply) => {
+    console.log('[TEST] Test auth route called');
+    return reply.send({ ok: true, message: 'Auth routes работают!' });
+  });
+
   // === ГЕНЕРАЦИЯ ПРОВЕРОЧНОГО КОДА (АНТИБОТ) ===
   app.post('/api/verification-code', async (req, reply) => {
     try {
@@ -226,13 +232,17 @@ export function registerAuthRoutes(app) {
 
   // === АВТОРИЗАЦИЯ ===
   app.post('/api/login', async (req, reply) => {
+    console.log('[DEBUG /api/login] Запрос на вход получен:', { email: req.body?.email });
+
     const { email, password } = req.body;
 
     if (!email || !password) {
+      console.log('[DEBUG /api/login] Отсутствуют email или пароль');
       return reply.code(400).send({ error: 'Email и пароль обязательны' });
     }
 
     try {
+      console.log('[DEBUG /api/login] Ищем пользователя в БД:', email);
       // 1. Найти пользователя
       const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
 
