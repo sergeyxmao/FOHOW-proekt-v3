@@ -152,7 +152,6 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async register(email, password, verificationCode, verificationToken) {
-      // ... (код регистрации остается без изменений) ...
       const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -165,7 +164,27 @@ export const useAuthStore = defineStore('auth', {
         throw new Error(data.error || 'Ошибка регистрации')
       }
 
-      await this.finalizeAuthentication(data.token, data.user)
+      // Проверить, требуется ли вход после регистрации
+      if (data.requiresLogin) {
+        // Регистрация успешна, но токен не выдан — пользователь должен войти
+        return {
+          success: true,
+          requiresLogin: true,
+          message: data.message || 'Регистрация успешна. Войдите под своими данными.'
+        }
+      }
+
+      // Если backend вернул токен (в будущем может быть такой сценарий)
+      if (data.token) {
+        await this.finalizeAuthentication(data.token, data.user)
+        return {
+          success: true,
+          requiresLogin: false
+        }
+      }
+
+      // Непредвиденный ответ
+      throw new Error('Неожиданный ответ сервера при регистрации')
     },
 
     async login(email, password, verificationCode, verificationToken) {

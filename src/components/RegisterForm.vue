@@ -152,18 +152,27 @@ async function handleRegister() {
       throw new Error('Проверочный код недоступен. Попробуйте обновить код и повторить попытку.')
     }
 
-    await authStore.register(
+    const result = await authStore.register(
       email.value,
       password.value,
       verificationInput.value,
       verificationToken.value
     )
-    success.value = 'Регистрация успешна! Теперь вы можете войти в систему.'
 
-    // Перенаправление на форму входа после успешной регистрации
-    setTimeout(() => {
-      emit('switch-to-login')
-    }, 2000)
+    // Обработка результата регистрации
+    if (result && result.requiresLogin) {
+      // Регистрация успешна, требуется вход
+      success.value = result.message || 'Регистрация успешна! Теперь вы можете войти в систему.'
+
+      // Перенаправление на форму входа после успешной регистрации
+      setTimeout(() => {
+        emit('switch-to-login')
+      }, 2000)
+    } else {
+      // Регистрация с автоматическим входом (в будущем)
+      success.value = 'Регистрация успешна!'
+      // Здесь может быть редирект в кабинет
+    }
   } catch (err) {
     error.value = err.message
     await fetchVerificationCode(false)
