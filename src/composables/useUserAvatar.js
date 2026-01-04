@@ -99,44 +99,53 @@ export function useUserAvatar({ user, authStore, API_URL }) {
         imageSmoothingQuality: 'high'
       })
 
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          throw new Error('Ошибка создания изображения')
-        }
-
-        const formData = new FormData()
-        formData.append('avatar', blob, 'avatar.jpg')
-
-        const response = await fetch(`${API_URL}/profile/avatar`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authStore.token}`
+      // Преобразуем callback-based toBlob в Promise
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob)
+            } else {
+              reject(new Error('Ошибка создания изображения'))
+            }
           },
-          body: formData
-        })
+          'image/jpeg',
+          0.95
+        )
+      })
 
-        const data = await response.json()
+      const formData = new FormData()
+      formData.append('avatar', blob, 'avatar.jpg')
 
-        if (!response.ok) {
-          throw new Error(data.error || 'Ошибка загрузки')
-        }
+      const response = await fetch(`${API_URL}/profile/avatar`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`
+        },
+        body: formData
+      })
 
-        // Обновляем аватар и увеличиваем ключ для перерисовки
-        user.value.avatar_url = data.avatar_url
-        authStore.user.avatar_url = data.avatar_url
-        localStorage.setItem('user', JSON.stringify(authStore.user))
+      const data = await response.json()
 
-        // Увеличиваем ключ для принудительной перерисовки аватарки
-        avatarKey.value++
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка загрузки')
+      }
 
-        alert('Аватар успешно обновлен!')
-        cancelCrop()
+      // Обновляем аватар и увеличиваем ключ для перерисовки
+      user.value.avatar_url = data.avatar_url
+      authStore.user.avatar_url = data.avatar_url
+      localStorage.setItem('user', JSON.stringify(authStore.user))
 
-        // Закрываем режим редактирования аватара если он открыт
-        if (isAvatarEditMode.value) {
-          closeAvatarEdit()
-        }
-      }, 'image/jpeg', 0.95)
+      // Увеличиваем ключ для принудительной перерисовки аватарки
+      avatarKey.value++
+
+      alert('Аватар успешно обновлен!')
+      cancelCrop()
+
+      // Закрываем режим редактирования аватара если он открыт
+      if (isAvatarEditMode.value) {
+        closeAvatarEdit()
+      }
     } catch (err) {
       alert(err.message || 'Ошибка загрузки аватара')
     } finally {
