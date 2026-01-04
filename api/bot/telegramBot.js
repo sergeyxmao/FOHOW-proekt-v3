@@ -206,7 +206,7 @@ async function sendWelcomeMessage(chatId, firstName) {
   try {
     // Проверяем, привязан ли этот chatId к какому-то аккаунту
     const userResult = await pool.query(
-      'SELECT first_name, last_name FROM users WHERE telegram_chat_id = $1',
+      'SELECT full_name FROM users WHERE telegram_chat_id = $1',
       [chatId.toString()]
     );
 
@@ -215,8 +215,8 @@ async function sendWelcomeMessage(chatId, firstName) {
     if (userResult.rows.length > 0) {
       // Пользователь привязан - берем имя из профиля
       const user = userResult.rows[0];
-      if (user.first_name || user.last_name) {
-        displayName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+      if (user.full_name) {
+        displayName = user.full_name;
       }
     } else if (firstName) {
       // Пользователь не привязан - используем имя из Telegram
