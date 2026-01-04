@@ -114,7 +114,7 @@ export function registerBoardPartnerRoutes(app) {
             userId: userRow.id,
             username: isEnabled(visibility, 'username') ? userRow.username : null,
             full_name: isEnabled(visibility, 'full_name') ? userRow.full_name : null,
-            avatar_url: isEnabled(visibility, 'avatar_url') ? userRow.avatar_url : '/Avatar.png',
+            avatar_url: isEnabled(visibility, 'avatar_url') ? (userRow.avatar_url?.split('|')[0] || userRow.avatar_url) : '/Avatar.png',
             personal_id: isEnabled(visibility, 'personal_id') ? userRow.personal_id : null,
             phone: isEnabled(visibility, 'phone') ? userRow.phone : null,
             city: isEnabled(visibility, 'city') ? userRow.city : null,
@@ -292,9 +292,16 @@ export function registerBoardPartnerRoutes(app) {
           'На доске указаны personal_id без подходящих верифицированных партнёров'
         );
       }
+
+      // Извлекаем только публичную часть avatar_url
+      const partners = result.rows.map(row => ({
+        ...row,
+        avatar_url: row.avatar_url?.split('|')[0] || row.avatar_url
+      }));
+
       return reply.send({
         success: true,
-        partners: result.rows
+        partners
       });
 
     } catch (err) {

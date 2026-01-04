@@ -209,7 +209,13 @@ export async function registerUserRoutes(app) {
 
       if (result.rows.length === 0) return reply.code(404).send({ error: 'Пользователь не найден' });
 
-      return reply.send({ success: true, user: result.rows[0] });
+      // Извлекаем только публичную часть avatar_url
+      const user = {
+        ...result.rows[0],
+        avatar_url: result.rows[0].avatar_url?.split('|')[0] || result.rows[0].avatar_url
+      };
+
+      return reply.send({ success: true, user });
 
     } catch (err) {
       console.error('[USERS] Ошибка обновления профиля:', err);

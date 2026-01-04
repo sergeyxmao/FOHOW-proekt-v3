@@ -115,12 +115,12 @@ function filterByVisibility(partner, requesterId) {
     city: partner.city,
     country: partner.country,
     rank: partner.rank,
-    avatar_url: partner.avatar_url,
+    avatar_url: partner.avatar_url?.split('|')[0] || partner.avatar_url,
     is_verified: partner.is_verified,
     office: partner.office, // Важно вернуть офис
     bio: partner.bio,
     fohow_role: partner.fohow_role,
-    
+
     // ВАЖНО: Отдаем настройки фронтенду, чтобы он мог рисовать "глазики" или "замки"
     visibility_settings: vis,
     search_settings: partner.search_settings
