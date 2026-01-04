@@ -446,12 +446,12 @@ export function registerProfileRoutes(app) {
       // Загружаем файл на Яндекс.Диск
       await uploadFile(yandexPath, buffer, data.mimetype);
 
-      // Публикуем файл и получаем прямую ссылку на изображение
+      // Публикуем файл и получаем preview_url
       const publishResult = await publishFile(yandexPath);
-      const publicUrl = publishResult.preview_url || publishResult.public_url;
+      const previewUrl = publishResult.preview_url || publishResult.public_url;
 
-      // Сохраняем в БД в формате: publicUrl|yandexPath
-      const avatarUrl = `${publicUrl}|${yandexPath}`;
+      // Сохраняем в БД в формате: preview_url|yandexPath
+      const avatarUrl = `${previewUrl}|${yandexPath}`;
       await pool.query(
         'UPDATE users SET avatar_url = $1 WHERE id = $2',
         [avatarUrl, userId]
@@ -459,15 +459,17 @@ export function registerProfileRoutes(app) {
 
       console.log(`✅ Аватар загружен для пользователя ${userId}: ${yandexPath}`);
 
+      // Возвращаем внутренний URL для проксирования
       return reply.send({
         success: true,
-        avatar_url: publicUrl // Возвращаем только публичную часть клиенту
+        avatar_url: `/api/avatar/${userId}`
       });
     } catch (err) {
       console.error('❌ Ошибка загрузки аватара:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });
+
 
   // === УДАЛЕНИЕ АВАТАРА ===
   app.delete('/api/profile/avatar', {
@@ -520,6 +522,74 @@ export function registerProfileRoutes(app) {
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });
+
+// === ПОЛУЧИТЬ АВАТАР (PROXY) ===
+app.get('/api/avatar/:userId', async (req, reply) => {
+  try {
+    const { userId } = req.params;
+    
+    // Получить avatar_url из БД
+    const result = await pool.query(
+      'SELECT avatar_url FROM users WHERE id = $1',
+      [userId]
+    );
+    
+    if (!result.rows[0]?.avatar_url) {
+      return reply.code(404).send({ error: 'Аватар не найден' });
+    }
+    
+    const avatarUrl = result.rows[0].avatar_url;
+    
+    // Извлечь yandexPath из формата: preview_url|yandexPath
+    const yandexPath = avatarUrl.split('|')[1];
+    
+    if (!yandexPath) {
+      return reply.code(404).send({ error: 'Путь к аватару не найден' });
+    }
+    
+    // Получить ссылку для скачивания с Яндекс.Диска
+    const response = await fetch(
+      `https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(yandexPath)}`,
+      {
+        headers: {
+          'Authorization': `OAuth ${process.env.YANDEX_DISK_TOKEN}`
+        }
+      }
+    );
+    
+    const data = await response.json();
+    
+    if (!response.ok || !data.href) {
+      console.error('Ошибка получения ссылки на аватар:', data);
+      return reply.code(404).send({ error: 'Не удалось получить аватар' });
+    }
+    
+    // Скачать файл по прямой ссылке
+    const imageResponse = await fetch(data.href);
+    const imageBuffer = await imageResponse.arrayBuffer();
+    
+    // Определить MIME-type из расширения файла
+    const ext = yandexPath.split('.').pop().toLowerCase();
+    const mimeTypes = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp'
+    };
+    const contentType = mimeTypes[ext] || 'image/jpeg';
+    
+    // Вернуть изображение с кэшированием
+    return reply
+      .header('Content-Type', contentType)
+      .header('Cache-Control', 'public, max-age=86400') // 24 часа
+      .send(Buffer.from(imageBuffer));
+      
+  } catch (err) {
+    console.error('❌ Ошибка получения аватара:', err);
+    return reply.code(500).send({ error: 'Ошибка сервера' });
+  }
+});  
 
   // === ПОИСК ПОЛЬЗОВАТЕЛЯ ПО КОМПЬЮТЕРНОМУ НОМЕРУ ===
   app.get('/api/users/search-by-personal-id/:personalId', {
