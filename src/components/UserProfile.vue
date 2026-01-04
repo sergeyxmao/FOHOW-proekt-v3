@@ -2755,7 +2755,7 @@ watch(activeTab, (newTab) => {
 }
 
 .cropper-modal {
-  background: var(--profile-modal-bg);
+  background: #ffffff;
   color: var(--profile-text);
   padding: 24px;
   border-radius: 20px;
@@ -2764,6 +2764,11 @@ watch(activeTab, (newTab) => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  opacity: 1;
+}
+
+.user-profile--modern .cropper-modal {
+  background: #111827;
 }
 
 .cropper-header {
