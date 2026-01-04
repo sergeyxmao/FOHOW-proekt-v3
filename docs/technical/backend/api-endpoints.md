@@ -398,7 +398,7 @@ Authorization: Bearer <token>
     "id": 3,
     "email": "user@example.com",
     "username": "johndoe",
-    "avatar_url": "https://example.com/avatar.jpg",
+    "avatar_url": "/api/avatar/3?v=1704369600000",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-12-29T14:20:00Z",
     "country": "Россия",
@@ -454,6 +454,34 @@ Authorization: Bearer <token>
 - Все поля социальных сетей опциональны и могут быть `null`
 - План подписки (`plan`) может быть `null` если пользователь не имеет активного плана
 
+#### Формат avatar_url (версионирование для cache busting)
+
+**Формат возвращаемого URL:** `/api/avatar/:userId?v=:timestamp`
+
+**Формат хранения в БД:** `preview_url|yandexPath|timestamp`
+
+**Описание:**
+- В базе данных `avatar_url` хранится в формате: `preview_url|yandexPath|timestamp`
+  - `preview_url` - публичная ссылка на Яндекс.Диск (не используется после внедрения proxy)
+  - `yandexPath` - путь к файлу на Яндекс.Диске для proxy-роута
+  - `timestamp` - метка времени обновления аватара (Date.now())
+
+- Клиенту возвращается URL вида: `/api/avatar/3?v=1704369600000`
+  - Параметр `?v=timestamp` обеспечивает cache busting при обновлении аватара
+  - Браузер интерпретирует изменение query parameter как новый ресурс
+  - Старые кэшированные версии автоматически становятся неактуальными
+
+- Backend-роут `/api/avatar/:userId` игнорирует параметр `?v=...`
+  - Параметр используется только для управления кэшем браузера
+  - Backend извлекает `yandexPath` из БД и проксирует изображение с Яндекс.Диска
+
+**Обратная совместимость:**
+- Для старых записей без timestamp используется fallback на `Date.now()`
+- Это обеспечивает корректную работу с данными, созданными до внедрения версионирования
+
+**Helper-функция:**
+- `api/utils/avatarUtils.js::getAvatarUrl(userId, avatarData)` - преобразует данные из БД в клиентский URL
+
 ### Связанные файлы
 
 - `api/server.js:743` - реализация endpoint
@@ -462,5 +490,6 @@ Authorization: Bearer <token>
 
 ### История изменений
 
+- **2026-01-04**: Добавлено версионирование avatar_url для решения проблемы кэширования браузера
 - **2024-12-29**: Добавлено поле `website` в response schema
 - **2024-12**: Создан endpoint для получения профиля пользователя

@@ -1,6 +1,7 @@
 // api/routes/partners.js
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { getAvatarUrl } from '../utils/avatarUtils.js';
 
 export function registerPartnerRoutes(app) {
   // GET /api/partners - Список верифицированных партнёров
@@ -115,7 +116,7 @@ function filterByVisibility(partner, requesterId) {
     city: partner.city,
     country: partner.country,
     rank: partner.rank,
-    avatar_url: partner.avatar_url ? `/api/avatar/${partner.id}` : null,
+    avatar_url: getAvatarUrl(partner.id, partner.avatar_url),
     is_verified: partner.is_verified,
     office: partner.office, // Важно вернуть офис
     bio: partner.bio,

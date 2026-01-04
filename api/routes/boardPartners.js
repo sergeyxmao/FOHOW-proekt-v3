@@ -1,5 +1,6 @@
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { getAvatarUrl } from '../utils/avatarUtils.js';
 
 /**
  * Регистрация роутов для работы с партнёрами на досках
@@ -114,7 +115,7 @@ export function registerBoardPartnerRoutes(app) {
             userId: userRow.id,
             username: isEnabled(visibility, 'username') ? userRow.username : null,
             full_name: isEnabled(visibility, 'full_name') ? userRow.full_name : null,
-            avatar_url: isEnabled(visibility, 'avatar_url') ? (userRow.avatar_url ? `/api/avatar/${userRow.id}` : '/Avatar.png') : '/Avatar.png',
+            avatar_url: isEnabled(visibility, 'avatar_url') ? (getAvatarUrl(userRow.id, userRow.avatar_url) || '/Avatar.png') : '/Avatar.png',
             personal_id: isEnabled(visibility, 'personal_id') ? userRow.personal_id : null,
             phone: isEnabled(visibility, 'phone') ? userRow.phone : null,
             city: isEnabled(visibility, 'city') ? userRow.city : null,
@@ -293,10 +294,10 @@ export function registerBoardPartnerRoutes(app) {
         );
       }
 
-      // Подменяем avatar_url на внутренний URL
+      // Подменяем avatar_url на внутренний URL с версионированием
       const partners = result.rows.map(row => ({
         ...row,
-        avatar_url: row.avatar_url ? `/api/avatar/${row.id}` : null
+        avatar_url: getAvatarUrl(row.id, row.avatar_url)
       }));
 
       return reply.send({

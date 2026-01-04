@@ -1,6 +1,7 @@
 import { pool } from '../../db.js';
 import { authenticateToken } from '../../middleware/auth.js';
 import { requireAdmin } from '../../middleware/requireAdmin.js';
+import { getAvatarUrl } from '../../utils/avatarUtils.js';
 
 /**
  * Регистрация маршрутов истории транзакций
@@ -86,10 +87,10 @@ export function registerAdminTransactionsRoutes(app) {
 
       console.log(`[ADMIN] История транзакций загружена: page=${page}, total=${total}, admin_id=${req.user.id}`);
 
-      // Подменяем avatar_url на внутренний proxy URL
+      // Подменяем avatar_url на внутренний proxy URL с версионированием
       const transactions = transactionsResult.rows.map(transaction => ({
         ...transaction,
-        user_avatar: transaction.user_avatar ? `/api/avatar/${transaction.user_id}` : null
+        user_avatar: getAvatarUrl(transaction.user_id, transaction.user_avatar)
       }));
 
       return reply.send({

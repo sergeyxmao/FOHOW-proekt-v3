@@ -1,6 +1,7 @@
 // api/routes/users.js
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { getAvatarUrl } from '../utils/avatarUtils.js';
 
 export async function registerUserRoutes(app) {
 
@@ -209,10 +210,10 @@ export async function registerUserRoutes(app) {
 
       if (result.rows.length === 0) return reply.code(404).send({ error: 'Пользователь не найден' });
 
-      // Извлекаем только публичную часть avatar_url
+      // Извлекаем публичную часть avatar_url с версионированием
       const user = {
         ...result.rows[0],
-        avatar_url: result.rows[0].avatar_url ? `/api/avatar/${result.rows[0].id}` : null
+        avatar_url: getAvatarUrl(result.rows[0].id, result.rows[0].avatar_url)
       };
 
       return reply.send({ success: true, user });

@@ -9,6 +9,7 @@
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { checkUsageLimit } from '../middleware/checkUsageLimit.js';
+import { getAvatarUrl } from '../utils/avatarUtils.js';
 
 /**
  * Регистрация маршрутов для работы со стикерами
@@ -54,10 +55,10 @@ export function registerStickerRoutes(app) {
         [boardId]
       );
 
-      // Подменяем avatar_url на внутренний proxy URL
+      // Подменяем avatar_url на внутренний proxy URL с версионированием
       const stickers = result.rows.map(sticker => ({
         ...sticker,
-        author_avatar: sticker.author_avatar ? `/api/avatar/${sticker.user_id}` : null
+        author_avatar: getAvatarUrl(sticker.user_id, sticker.author_avatar)
       }));
 
       return reply.send({ stickers });
@@ -112,10 +113,10 @@ export function registerStickerRoutes(app) {
         [result.rows[0].id]
       );
 
-      // Подменяем avatar_url на внутренний proxy URL
+      // Подменяем avatar_url на внутренний proxy URL с версионированием
       const sticker = {
         ...stickerWithAuthor.rows[0],
-        author_avatar: stickerWithAuthor.rows[0].author_avatar ? `/api/avatar/${stickerWithAuthor.rows[0].user_id}` : null
+        author_avatar: getAvatarUrl(stickerWithAuthor.rows[0].user_id, stickerWithAuthor.rows[0].author_avatar)
       };
 
       return reply.send({
@@ -201,10 +202,10 @@ export function registerStickerRoutes(app) {
         [result.rows[0].id]
       );
 
-      // Подменяем avatar_url на внутренний proxy URL
+      // Подменяем avatar_url на внутренний proxy URL с версионированием
       const sticker = {
         ...stickerWithAuthor.rows[0],
-        author_avatar: stickerWithAuthor.rows[0].author_avatar ? `/api/avatar/${stickerWithAuthor.rows[0].user_id}` : null
+        author_avatar: getAvatarUrl(stickerWithAuthor.rows[0].user_id, stickerWithAuthor.rows[0].author_avatar)
       };
 
       return reply.send({
