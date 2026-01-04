@@ -64,11 +64,19 @@ export function registerProfileRoutes(app) {
 
       const userData = result.rows[0];
 
+      // Извлекаем timestamp из avatar_url для cache busting
+      let avatarUrlForClient = null;
+      if (userData.avatar_url) {
+        const parts = userData.avatar_url.split('|');
+        const timestamp = parts[2] || Date.now(); // Fallback для старых записей
+        avatarUrlForClient = `/api/avatar/${userData.id}?v=${timestamp}`;
+      }
+
       const user = {
         id: userData.id,
         email: userData.email,
         username: userData.username,
-        avatar_url: userData.avatar_url ? `/api/avatar/${userData.id}` : null,
+        avatar_url: avatarUrlForClient,
         created_at: userData.created_at,
         updated_at: userData.updated_at,
         country: userData.country,
@@ -451,8 +459,9 @@ export function registerProfileRoutes(app) {
       const publishResult = await publishFile(yandexPath);
       const previewUrl = publishResult.preview_url || publishResult.public_url;
 
-      // Сохраняем в БД в формате: preview_url|yandexPath
-      const avatarUrl = `${previewUrl}|${yandexPath}`;
+      // Сохраняем в БД в формате: preview_url|yandexPath|timestamp
+      const timestamp = Date.now();
+      const avatarUrl = `${previewUrl}|${yandexPath}|${timestamp}`;
       await pool.query(
         'UPDATE users SET avatar_url = $1 WHERE id = $2',
         [avatarUrl, userId]
@@ -460,10 +469,10 @@ export function registerProfileRoutes(app) {
 
       console.log(`✅ Аватар загружен для пользователя ${userId}: ${yandexPath}`);
 
-      // Возвращаем внутренний URL для проксирования
+      // Возвращаем внутренний URL для проксирования с версией для cache busting
       return reply.send({
         success: true,
-        avatar_url: `/api/avatar/${userId}`
+        avatar_url: `/api/avatar/${userId}?v=${timestamp}`
       });
     } catch (err) {
       console.error('❌ Ошибка загрузки аватара:', err);
@@ -528,21 +537,23 @@ export function registerProfileRoutes(app) {
 app.get('/api/avatar/:userId', async (req, reply) => {
   try {
     const { userId } = req.params;
-    
+    // Параметр ?v=timestamp игнорируется - он используется только для cache busting на клиенте
+
     // Получить avatar_url из БД
     const result = await pool.query(
       'SELECT avatar_url FROM users WHERE id = $1',
       [userId]
     );
-    
+
     if (!result.rows[0]?.avatar_url) {
       return reply.code(404).send({ error: 'Аватар не найден' });
     }
-    
+
     const avatarUrl = result.rows[0].avatar_url;
-    
-    // Извлечь yandexPath из формата: preview_url|yandexPath
-    const yandexPath = avatarUrl.split('|')[1];
+
+    // Извлечь yandexPath из формата: preview_url|yandexPath|timestamp
+    const parts = avatarUrl.split('|');
+    const yandexPath = parts[1];
     
     if (!yandexPath) {
       return reply.code(404).send({ error: 'Путь к аватару не найден' });
@@ -625,11 +636,19 @@ app.get('/api/avatar/:userId', async (req, reply) => {
 
       const user = result.rows[0];
 
+      // Извлекаем timestamp из avatar_url для cache busting
+      let avatarUrlForClient = null;
+      if (user.avatar_url) {
+        const parts = user.avatar_url.split('|');
+        const timestamp = parts[2] || Date.now();
+        avatarUrlForClient = `/api/avatar/${user.id}?v=${timestamp}`;
+      }
+
       return reply.send({
         found: true,
         user: {
           id: user.id,
-          avatar_url: user.avatar_url ? `/api/avatar/${user.id}` : null,
+          avatar_url: avatarUrlForClient,
           username: user.username,
           full_name: user.full_name
         }
@@ -682,12 +701,20 @@ app.get('/api/avatar/:userId', async (req, reply) => {
         return reply.send({ success: false, error: 'SEARCH_DISABLED' });
       }
 
+      // Извлекаем timestamp из avatar_url для cache busting
+      let avatarUrlForClient = null;
+      if (user.avatar_url) {
+        const parts = user.avatar_url.split('|');
+        const timestamp = parts[2] || Date.now();
+        avatarUrlForClient = `/api/avatar/${user.id}?v=${timestamp}`;
+      }
+
       return reply.send({
         success: true,
         user: {
           id: user.id,
           username: user.username,
-          avatarUrl: user.avatar_url ? `/api/avatar/${user.id}` : null
+          avatarUrl: avatarUrlForClient
         }
       });
 

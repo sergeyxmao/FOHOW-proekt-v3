@@ -1,6 +1,7 @@
 // api/routes/chats.js
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { getAvatarUrl } from '../utils/avatarUtils.js';
 
 export async function registerChatRoutes(app) {
 
@@ -42,7 +43,7 @@ export async function registerChatRoutes(app) {
         participants: row.participants.map(p => ({
           userId: p.user_id.toString(),
           fullName: p.full_name,
-          avatarUrl: p.avatar_url ? `/api/avatar/${p.user_id}` : null
+          avatarUrl: getAvatarUrl(p.user_id, p.avatar_url)
         })),
         messages: [], // Сообщения грузим отдельно при открытии чата
         lastMessageTime: new Date(row.updated_at).getTime(),

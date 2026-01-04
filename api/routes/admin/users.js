@@ -1,6 +1,7 @@
 import { pool } from '../../db.js';
 import { authenticateToken } from '../../middleware/auth.js';
 import { requireAdmin } from '../../middleware/requireAdmin.js';
+import { getAvatarUrl } from '../../utils/avatarUtils.js';
 
 /**
  * Регистрация маршрутов управления пользователями
@@ -58,9 +59,15 @@ export function registerAdminUsersRoutes(app) {
         queryParams
       );
 
+      // Преобразуем avatar_url для всех пользователей
+      const users = usersResult.rows.map(user => ({
+        ...user,
+        avatar_url: getAvatarUrl(user.id, user.avatar_url)
+      }));
+
       return reply.send({
         success: true,
-        data: usersResult.rows,
+        data: users,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),
@@ -128,9 +135,15 @@ export function registerAdminUsersRoutes(app) {
         [userId]
       );
 
+      // Преобразуем avatar_url для пользователя
+      const user = {
+        ...result.rows[0],
+        avatar_url: getAvatarUrl(result.rows[0].id, result.rows[0].avatar_url)
+      };
+
       return reply.send({
         success: true,
-        user: result.rows[0],
+        user,
         subscriptionHistory: subscriptionHistory.rows,
         activeSessions: activeSessions.rows
       });
