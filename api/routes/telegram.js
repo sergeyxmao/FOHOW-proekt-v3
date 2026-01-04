@@ -189,6 +189,8 @@ export function registerTelegramRoutes(app) {
       console.error('❌ Ошибка получения статуса Telegram:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
+  });  // ← ВОТ ЭТА СКОБКА БЫЛА ПРОПУЩЕНА!
+
   // === ОТКЛЮЧЕНИЕ TELEGRAM ОТ АККАУНТА ===
   app.post('/api/user/telegram/unlink', {
     preHandler: [authenticateToken]
