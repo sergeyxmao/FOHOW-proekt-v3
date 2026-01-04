@@ -446,9 +446,9 @@ export function registerProfileRoutes(app) {
       // Загружаем файл на Яндекс.Диск
       await uploadFile(yandexPath, buffer, data.mimetype);
 
-      // Публикуем файл и получаем публичную ссылку
+      // Публикуем файл и получаем прямую ссылку на изображение
       const publishResult = await publishFile(yandexPath);
-      const publicUrl = publishResult.public_url;
+      const publicUrl = publishResult.preview_url || publishResult.public_url;
 
       // Сохраняем в БД в формате: publicUrl|yandexPath
       const avatarUrl = `${publicUrl}|${yandexPath}`;
