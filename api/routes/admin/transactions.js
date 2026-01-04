@@ -86,9 +86,15 @@ export function registerAdminTransactionsRoutes(app) {
 
       console.log(`[ADMIN] История транзакций загружена: page=${page}, total=${total}, admin_id=${req.user.id}`);
 
+      // Подменяем avatar_url на внутренний proxy URL
+      const transactions = transactionsResult.rows.map(transaction => ({
+        ...transaction,
+        user_avatar: transaction.user_avatar ? `/api/avatar/${transaction.user_id}` : null
+      }));
+
       return reply.send({
         success: true,
-        data: transactionsResult.rows,
+        data: transactions,
         pagination: {
           page: parseInt(page),
           limit: parseInt(limit),

@@ -54,10 +54,10 @@ export function registerStickerRoutes(app) {
         [boardId]
       );
 
-      // Извлекаем только публичную часть avatar_url
+      // Подменяем avatar_url на внутренний proxy URL
       const stickers = result.rows.map(sticker => ({
         ...sticker,
-        author_avatar: sticker.author_avatar?.split('|')[0] || sticker.author_avatar
+        author_avatar: sticker.author_avatar ? `/api/avatar/${sticker.user_id}` : null
       }));
 
       return reply.send({ stickers });
@@ -112,10 +112,10 @@ export function registerStickerRoutes(app) {
         [result.rows[0].id]
       );
 
-      // Извлекаем только публичную часть avatar_url
+      // Подменяем avatar_url на внутренний proxy URL
       const sticker = {
         ...stickerWithAuthor.rows[0],
-        author_avatar: stickerWithAuthor.rows[0].author_avatar?.split('|')[0] || stickerWithAuthor.rows[0].author_avatar
+        author_avatar: stickerWithAuthor.rows[0].author_avatar ? `/api/avatar/${stickerWithAuthor.rows[0].user_id}` : null
       };
 
       return reply.send({
@@ -201,10 +201,10 @@ export function registerStickerRoutes(app) {
         [result.rows[0].id]
       );
 
-      // Извлекаем только публичную часть avatar_url
+      // Подменяем avatar_url на внутренний proxy URL
       const sticker = {
         ...stickerWithAuthor.rows[0],
-        author_avatar: stickerWithAuthor.rows[0].author_avatar?.split('|')[0] || stickerWithAuthor.rows[0].author_avatar
+        author_avatar: stickerWithAuthor.rows[0].author_avatar ? `/api/avatar/${stickerWithAuthor.rows[0].user_id}` : null
       };
 
       return reply.send({

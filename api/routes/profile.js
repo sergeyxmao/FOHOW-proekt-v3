@@ -687,7 +687,7 @@ app.get('/api/avatar/:userId', async (req, reply) => {
         user: {
           id: user.id,
           username: user.username,
-          avatarUrl: user.avatar_url?.split('|')[0] || user.avatar_url
+          avatarUrl: user.avatar_url ? `/api/avatar/${user.id}` : null
         }
       });
 
