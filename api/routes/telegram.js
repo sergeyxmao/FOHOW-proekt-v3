@@ -155,48 +155,24 @@ export function registerTelegramRoutes(app) {
     }
   });
 
-  // === ПРОВЕРКА СТАТУСА ПРИВЯЗКИ TELEGRAM ===
-  app.get('/api/user/telegram-status', {
-    preHandler: [authenticateToken]
-  }, async (req, reply) => {
-    try {
-      const userId = req.user.id;
-
-      // Получаем информацию о Telegram-привязке пользователя
-      const result = await pool.query(
-        `SELECT id, email, telegram_chat_id, telegram_user, telegram_channel
-         FROM users
-         WHERE id = $1`,
-        [userId]
-      );
-
-      if (result.rows.length === 0) {
-        return reply.code(404).send({ error: 'Пользователь не найден' });
-      }
-
-      const user = result.rows[0];
-      const isConnected = !!user.telegram_chat_id;
-
-      return reply.send({
-        connected: isConnected,
-        telegram: isConnected ? {
-          chat_id: user.telegram_chat_id,
-          username: user.telegram_user,
-          channel: user.telegram_channel
-        } : null
-      });
-    } catch (err) {
-      console.error('❌ Ошибка получения статуса Telegram:', err);
-      return reply.code(500).send({ error: 'Ошибка сервера' });
-    }
-  });  // ← ВОТ ЭТА СКОБКА БЫЛА ПРОПУЩЕНА!
-
   // === ОТКЛЮЧЕНИЕ TELEGRAM ОТ АККАУНТА ===
   app.post('/api/user/telegram/unlink', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
+
+      // Получаем данные пользователя ПЕРЕД удалением
+      const userResult = await pool.query(
+        'SELECT telegram_chat_id, telegram_user FROM users WHERE id = $1',
+        [userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        return reply.code(404).send({ error: 'Пользователь не найден' });
+      }
+
+      const chatId = userResult.rows[0].telegram_chat_id;
 
       // Обнуляем данные Telegram у пользователя
       const result = await pool.query(
@@ -215,6 +191,26 @@ export function registerTelegramRoutes(app) {
       }
 
       console.log(`✅ Telegram отключен для пользователя ID=${userId}`);
+
+      // Отправить уведомление в Telegram (если chat_id был)
+      if (chatId) {
+        try {
+          const bot = app.telegramBot; // Получаем экземпляр бота из app
+          if (bot) {
+            await bot.telegram.sendMessage(
+              chatId,
+              '🔕 <b>Уведомления отключены</b>\n\n' +
+              'Ваш Telegram больше не привязан к аккаунту FOHOW Interactive Board.\n\n' +
+              'Чтобы снова включить уведомления, зайдите в настройки профиля.',
+              { parse_mode: 'HTML' }
+            );
+            console.log(`✅ Уведомление об отключении отправлено в Telegram: chat_id=${chatId}`);
+          }
+        } catch (botError) {
+          console.error('⚠️ Не удалось отправить уведомление в Telegram:', botError);
+          // Не прерываем выполнение, если бот недоступен
+        }
+      }
 
       return reply.send({
         success: true,
