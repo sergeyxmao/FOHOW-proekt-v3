@@ -204,9 +204,35 @@ async function unlinkTelegram() {
     return
   }
 
-  // TODO: Добавить API эндпоинт для отключения
-  console.log('Отключение Telegram (не реализовано)')
+  loading.value = true
+  error.value = null
+
+  try {
+    const response = await fetch(`${API_URL}/user/telegram/unlink`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Не удалось отключить Telegram')
+    }
+
+    // Успешно отключено
+    isLinked.value = false
+    telegramUsername.value = null
+    alert('✅ Telegram успешно отключен')
+    
+  } catch (err) {
+    error.value = err.message
+    console.error('Ошибка отключения Telegram:', err)
+  } finally {
+    loading.value = false
+  }
 }
+
 
 // Polling для проверки статуса подключения
 function startPolling() {
