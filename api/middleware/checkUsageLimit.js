@@ -78,9 +78,15 @@
               };
               break;
             case 'notes':
+              // Считаем заметки ПО ВСЕМ доскам пользователя (а не по одной доске)
               query = {
-                text: 'SELECT COUNT(*) FROM notes WHERE board_id = $1',
-                values: [boardId]
+                text: `
+                  SELECT COUNT(*)
+                  FROM notes n
+                  INNER JOIN boards b ON n.board_id = b.id
+                  WHERE b.owner_id = $1
+                `,
+                values: [userId]
               };
               break;
             case 'comments':
@@ -130,6 +136,19 @@
 
           // 5. Сравниваем лимит и текущее использование
           if (currentUsage >= limit) {
+            // Специальное подробное сообщение для заметок
+            if (resourceType === 'notes') {
+              return reply.code(403).send({
+                error: `Достигнут лимит заметок (${currentUsage}/${limit}). Удалите старые заметки или обновите тариф.`,
+                code: 'USAGE_LIMIT_REACHED',
+                upgradeRequired: true,
+                resourceType: 'notes',
+                limit: limit,
+                current: currentUsage
+              });
+            }
+
+            // Общее сообщение для других ресурсов
             return reply.code(403).send({
               error: `Достигнут лимит (${limit}) для ресурса "${resourceType}" на вашем тарифе "${planName}".`,
               code: 'USAGE_LIMIT_REACHED',
