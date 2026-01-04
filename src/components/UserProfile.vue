@@ -1653,7 +1653,7 @@ watch(activeTab, (newTab) => {
   --profile-control-text-hover: #0ea5e9;
   --profile-divider: rgba(148, 163, 184, 0.24);
   --profile-overlay: rgba(4, 10, 24, 0.72);
-  --profile-modal-bg: rgba(17, 24, 39, 0.96);
+  --profile-modal-bg: rgb(17, 24, 39);
   --profile-modal-shadow: 0 30px 60px rgba(2, 6, 23, 0.6);
   --profile-error-text: #fca5a5;
   --profile-error-bg: rgba(239, 68, 68, 0.18);
