@@ -38,7 +38,7 @@ const __dirname = dirname(__filename);
  */
 export function registerProfileRoutes(app) {
 
-  // === ПОЛУЧИТЬ ПРОФИЛЬ ===
+// === ПОЛУЧИТЬ ПРОФИЛЬ ===
   app.get('/api/profile', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
@@ -68,7 +68,7 @@ export function registerProfileRoutes(app) {
         id: userData.id,
         email: userData.email,
         username: userData.username,
-        avatar_url: userData.avatar_url?.split('|')[0] || userData.avatar_url,
+        avatar_url: userData.avatar_url ? `/api/avatar/${userData.id}` : null,
         created_at: userData.created_at,
         updated_at: userData.updated_at,
         country: userData.country,
@@ -105,6 +105,7 @@ export function registerProfileRoutes(app) {
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });
+
 
   // === ОБНОВЛЕНИЕ ПРОФИЛЯ ===
   app.put('/api/profile', {
@@ -628,7 +629,7 @@ app.get('/api/avatar/:userId', async (req, reply) => {
         found: true,
         user: {
           id: user.id,
-          avatar_url: user.avatar_url?.split('|')[0] || user.avatar_url,
+          avatar_url: user.avatar_url ? `/api/avatar/${user.id}` : null,
           username: user.username,
           full_name: user.full_name
         }
