@@ -8,6 +8,8 @@
 
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { getBot } from '../bot/telegramBot.js';
+
 
 /**
  * Регистрация маршрутов для интеграции с Telegram
@@ -195,7 +197,7 @@ export function registerTelegramRoutes(app) {
       // Отправить уведомление в Telegram (если chat_id был)
       if (chatId) {
         try {
-          const bot = app.telegramBot; // Получаем экземпляр бота из app
+          const bot = getBot(); // Получаем экземпляр бота через функцию getBot()
           if (bot) {
             await bot.telegram.sendMessage(
               chatId,
