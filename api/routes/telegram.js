@@ -189,5 +189,38 @@ export function registerTelegramRoutes(app) {
       console.error('❌ Ошибка получения статуса Telegram:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
+  // === ОТКЛЮЧЕНИЕ TELEGRAM ОТ АККАУНТА ===
+  app.post('/api/user/telegram/unlink', {
+    preHandler: [authenticateToken]
+  }, async (req, reply) => {
+    try {
+      const userId = req.user.id;
+
+      // Обнуляем данные Telegram у пользователя
+      const result = await pool.query(
+        `UPDATE users
+         SET telegram_chat_id = NULL,
+             telegram_user = NULL,
+             telegram_channel = NULL,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1
+         RETURNING id, email`,
+        [userId]
+      );
+
+      if (result.rows.length === 0) {
+        return reply.code(404).send({ error: 'Пользователь не найден' });
+      }
+
+      console.log(`✅ Telegram отключен для пользователя ID=${userId}`);
+
+      return reply.send({
+        success: true,
+        message: 'Telegram успешно отключен от аккаунта'
+      });
+    } catch (err) {
+      console.error('❌ Ошибка отключения Telegram:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
   });
 }
