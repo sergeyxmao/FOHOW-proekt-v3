@@ -21,6 +21,13 @@ import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateOffice, validatePersonalId } from './auth.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
+import {
+  uploadFile,
+  publishFile,
+  deleteFile,
+  getUserRootPath,
+  ensureFolderExists
+} from '../services/yandexDiskService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -61,7 +68,7 @@ export function registerProfileRoutes(app) {
         id: userData.id,
         email: userData.email,
         username: userData.username,
-        avatar_url: userData.avatar_url,
+        avatar_url: userData.avatar_url?.split('|')[0] || userData.avatar_url,
         created_at: userData.created_at,
         updated_at: userData.updated_at,
         country: userData.country,
@@ -389,6 +396,26 @@ export function registerProfileRoutes(app) {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
+      const userId = req.user.id;
+
+      // Получаем personal_id пользователя
+      const userResult = await pool.query(
+        'SELECT personal_id FROM users WHERE id = $1',
+        [userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        return reply.code(404).send({ error: 'Пользователь не найден' });
+      }
+
+      const personalId = userResult.rows[0].personal_id;
+
+      if (!personalId) {
+        return reply.code(400).send({
+          error: 'Для загрузки аватара необходимо указать компьютерный номер в профиле'
+        });
+      }
+
       const data = await req.file();
 
       if (!data) {
@@ -400,22 +427,41 @@ export function registerProfileRoutes(app) {
         return reply.code(400).send({ error: 'Разрешены только изображения (JPEG, PNG, GIF, WEBP)' });
       }
 
-      const ext = path.extname(data.filename);
-      const filename = `${req.user.id}-${randomBytes(8).toString('hex')}${ext}`;
-      const uploadsDir = path.join(__dirname, '..', 'uploads', 'avatars');
-      const filepath = path.join(uploadsDir, filename);
+      // Получаем buffer из потока
+      const chunks = [];
+      for await (const chunk of data.file) {
+        chunks.push(chunk);
+      }
+      const buffer = Buffer.concat(chunks);
 
-      await pipeline(data.file, createWriteStream(filepath));
+      // Формируем имя файла и путь на Яндекс.Диске
+      const ext = path.extname(data.filename) || '.jpg';
+      const filename = `${userId}-${randomBytes(8).toString('hex')}${ext}`;
+      const yandexPath = `${getUserRootPath(userId, personalId)}/avatars/${filename}`;
 
-      const avatarUrl = `/uploads/avatars/${filename}`;
+      // Создаем папку avatars если не существует
+      const avatarsFolderPath = `${getUserRootPath(userId, personalId)}/avatars`;
+      await ensureFolderExists(avatarsFolderPath);
+
+      // Загружаем файл на Яндекс.Диск
+      await uploadFile(yandexPath, buffer, data.mimetype);
+
+      // Публикуем файл и получаем публичную ссылку
+      const publishResult = await publishFile(yandexPath);
+      const publicUrl = publishResult.public_url;
+
+      // Сохраняем в БД в формате: publicUrl|yandexPath
+      const avatarUrl = `${publicUrl}|${yandexPath}`;
       await pool.query(
         'UPDATE users SET avatar_url = $1 WHERE id = $2',
-        [avatarUrl, req.user.id]
+        [avatarUrl, userId]
       );
+
+      console.log(`✅ Аватар загружен для пользователя ${userId}: ${yandexPath}`);
 
       return reply.send({
         success: true,
-        avatarUrl
+        avatar_url: publicUrl // Возвращаем только публичную часть клиенту
       });
     } catch (err) {
       console.error('❌ Ошибка загрузки аватара:', err);
@@ -428,9 +474,44 @@ export function registerProfileRoutes(app) {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
+      const userId = req.user.id;
+
+      // Получаем текущий avatar_url
+      const result = await pool.query(
+        'SELECT avatar_url FROM users WHERE id = $1',
+        [userId]
+      );
+
+      if (result.rows.length === 0) {
+        return reply.code(404).send({ error: 'Пользователь не найден' });
+      }
+
+      const avatarUrl = result.rows[0]?.avatar_url;
+
+      // Если аватар содержит путь на Яндекс.Диске, удаляем файл
+      if (avatarUrl && avatarUrl.includes('|')) {
+        const [publicUrl, yandexPath] = avatarUrl.split('|');
+
+        if (yandexPath) {
+          try {
+            await deleteFile(yandexPath);
+            console.log(`✅ Аватар удален с Яндекс.Диска: ${yandexPath}`);
+          } catch (deleteError) {
+            // Если файл не найден (404), продолжаем удаление из БД
+            if (!deleteError.status || deleteError.status !== 404) {
+              console.error('❌ Ошибка удаления аватара с Яндекс.Диска:', deleteError);
+              // Всё равно продолжаем удаление из БД
+            } else {
+              console.warn('⚠️ Файл аватара не найден на Яндекс.Диске, но запись будет удалена из БД');
+            }
+          }
+        }
+      }
+
+      // Обнуляем avatar_url в БД
       await pool.query(
         'UPDATE users SET avatar_url = NULL WHERE id = $1',
-        [req.user.id]
+        [userId]
       );
 
       return reply.send({ success: true });
@@ -477,7 +558,7 @@ export function registerProfileRoutes(app) {
         found: true,
         user: {
           id: user.id,
-          avatar_url: user.avatar_url,
+          avatar_url: user.avatar_url?.split('|')[0] || user.avatar_url,
           username: user.username,
           full_name: user.full_name
         }
@@ -535,7 +616,7 @@ export function registerProfileRoutes(app) {
         user: {
           id: user.id,
           username: user.username,
-          avatarUrl: user.avatar_url
+          avatarUrl: user.avatar_url?.split('|')[0] || user.avatar_url
         }
       });
 

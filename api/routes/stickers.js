@@ -54,7 +54,13 @@ export function registerStickerRoutes(app) {
         [boardId]
       );
 
-      return reply.send({ stickers: result.rows });
+      // Извлекаем только публичную часть avatar_url
+      const stickers = result.rows.map(sticker => ({
+        ...sticker,
+        author_avatar: sticker.author_avatar?.split('|')[0] || sticker.author_avatar
+      }));
+
+      return reply.send({ stickers });
     } catch (err) {
       console.error('❌ Ошибка получения стикеров:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
@@ -106,9 +112,15 @@ export function registerStickerRoutes(app) {
         [result.rows[0].id]
       );
 
+      // Извлекаем только публичную часть avatar_url
+      const sticker = {
+        ...stickerWithAuthor.rows[0],
+        author_avatar: stickerWithAuthor.rows[0].author_avatar?.split('|')[0] || stickerWithAuthor.rows[0].author_avatar
+      };
+
       return reply.send({
         success: true,
-        sticker: stickerWithAuthor.rows[0]
+        sticker
       });
     } catch (err) {
       console.error('❌ Ошибка создания стикера:', err);
@@ -189,9 +201,15 @@ export function registerStickerRoutes(app) {
         [result.rows[0].id]
       );
 
+      // Извлекаем только публичную часть avatar_url
+      const sticker = {
+        ...stickerWithAuthor.rows[0],
+        author_avatar: stickerWithAuthor.rows[0].author_avatar?.split('|')[0] || stickerWithAuthor.rows[0].author_avatar
+      };
+
       return reply.send({
         success: true,
-        sticker: stickerWithAuthor.rows[0]
+        sticker
       });
     } catch (err) {
       console.error('❌ Ошибка обновления стикера:', err);

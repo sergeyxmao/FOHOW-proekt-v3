@@ -42,7 +42,7 @@ export async function registerChatRoutes(app) {
         participants: row.participants.map(p => ({
           userId: p.user_id.toString(),
           fullName: p.full_name,
-          avatarUrl: p.avatar_url
+          avatarUrl: p.avatar_url?.split('|')[0] || p.avatar_url
         })),
         messages: [], // Сообщения грузим отдельно при открытии чата
         lastMessageTime: new Date(row.updated_at).getTime(),
