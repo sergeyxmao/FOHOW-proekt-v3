@@ -199,7 +199,7 @@ export function registerTelegramRoutes(app) {
         try {
           const bot = getBot(); // Получаем экземпляр бота через функцию getBot()
           if (bot) {
-            await bot.telegram.sendMessage(
+            await bot.sendMessage(
               chatId,
               '🔕 <b>Уведомления отключены</b>\n\n' +
               'Ваш Telegram больше не привязан к аккаунту FOHOW Interactive Board.\n\n' +
