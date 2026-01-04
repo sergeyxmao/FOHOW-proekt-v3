@@ -203,14 +203,34 @@ async function handleLinkCode(chatId, username, firstName, code) {
  * Отправка приветственного сообщения
  */
 async function sendWelcomeMessage(chatId, firstName) {
-  const message = `
-👋 <b>Привет, ${firstName}!</b>
+  try {
+    // Проверяем, привязан ли этот chatId к какому-то аккаунту
+    const userResult = await pool.query(
+      'SELECT first_name, last_name FROM users WHERE telegram_chat_id = $1',
+      [chatId.toString()]
+    );
+
+    let displayName = 'Друг'; // По умолчанию
+
+    if (userResult.rows.length > 0) {
+      // Пользователь привязан - берем имя из профиля
+      const user = userResult.rows[0];
+      if (user.first_name || user.last_name) {
+        displayName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+      }
+    } else if (firstName) {
+      // Пользователь не привязан - используем имя из Telegram
+      displayName = firstName;
+    }
+
+    const message = `
+👋 <b>Привет, ${displayName}!</b>
 
 Я бот FOHOW Interactive Board.
 
 Чтобы привязать ваш Telegram аккаунт к профилю:
 
-1️⃣ Зайдите в настройки профиля на сайте
+1️⃣ Зайдите в настройки профиля на <a href="https://interactive.marketingfohow.ru">FOHOW Interactive Board</a>
 2️⃣ Найдите раздел "Telegram уведомления"
 3️⃣ Нажмите "Подключить Telegram"
 4️⃣ Скопируйте код и отправьте мне команду:
@@ -221,10 +241,23 @@ async function sendWelcomeMessage(chatId, firstName) {
 • 📢 Новости и обновления
 • ⚡ Важные оповещения
 
-<i>Нужна помощь? Обратитесь в поддержку.</i>
-  `.trim();
+<i>Нужна помощь? Обратитесь в поддержку <a href="https://t.me/FOHOWadmin">@FOHOWadmin</a></i>
 
-  await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
+📢 Наш канал по маркетингу: <a href="https://t.me/MarketingFohow">@MarketingFohow</a>
+    `.trim();
+
+    await bot.sendMessage(chatId, message, { 
+      parse_mode: 'HTML',
+      disable_web_page_preview: true // Отключаем превью ссылок
+    });
+  } catch (error) {
+    console.error('❌ Ошибка отправки приветственного сообщения:', error);
+    // Отправляем упрощенное сообщение если произошла ошибка
+    await bot.sendMessage(
+      chatId, 
+      `👋 Привет! Я бот FOHOW Interactive Board.\n\nДля привязки аккаунта зайдите на сайт https://interactive.marketingfohow.ru`
+    );
+  }
 }
 
 /**
