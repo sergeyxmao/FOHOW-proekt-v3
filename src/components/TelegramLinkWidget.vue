@@ -213,7 +213,8 @@ async function unlinkTelegram() {
       headers: {
         'Authorization': `Bearer ${authStore.token}`,
         'Content-Type': 'application/json'
-      }
+      },
+      body: JSON.stringify({})  // ← ВАЖНО: отправляем пустой объект {}
     })
 
     if (!response.ok) {
