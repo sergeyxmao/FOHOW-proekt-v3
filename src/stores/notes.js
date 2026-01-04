@@ -141,7 +141,14 @@ export const useNotesStore = defineStore('notes', () => {
       });
 
       if (!response.ok) {
-        throw new Error('Ошибка сохранения заметки');
+        // Читаем детали ошибки из ответа сервера
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || 'Ошибка сохранения заметки';
+
+        // Показываем сообщение об ошибке пользователю
+        alert(errorMessage);
+
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
