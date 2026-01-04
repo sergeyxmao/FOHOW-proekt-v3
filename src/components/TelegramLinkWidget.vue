@@ -233,7 +233,6 @@ async function unlinkTelegram() {
   }
 }
 
-
 // Polling для проверки статуса подключения
 function startPolling() {
   stopPolling()
