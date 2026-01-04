@@ -212,7 +212,7 @@ export async function registerUserRoutes(app) {
       // Извлекаем только публичную часть avatar_url
       const user = {
         ...result.rows[0],
-        avatar_url: result.rows[0].avatar_url?.split('|')[0] || result.rows[0].avatar_url
+        avatar_url: result.rows[0].avatar_url ? `/api/avatar/${result.rows[0].id}` : null
       };
 
       return reply.send({ success: true, user });
