@@ -91,7 +91,7 @@ async function verifyCode() {
 
     // Перенаправить в личный кабинет
     alert('✅ Email подтверждён! Добро пожаловать!');
-    router.push('/boards');
+    router.push('/');
 
   } catch (err) {
     error.value = 'Ошибка сервера';
