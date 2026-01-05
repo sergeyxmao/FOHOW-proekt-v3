@@ -228,8 +228,11 @@ export const useSubscriptionStore = defineStore('subscription', {
      * @returns {Object} { current, max, canCreate, percentage }
      */
     checkLimit(resourceType) {
-      // Маппинг: comments → userComments (для совместимости с API)
-      const usageKey = resourceType === 'comments' ? 'userComments' : resourceType
+      // Маппинг: comments → userComments, cards → cards (для совместимости с API)
+      const usageKey = 
+        resourceType === 'comments' ? 'userComments' :
+        resourceType === 'cards' ? 'cards' :
+        resourceType
 
       const usageData = this.usage[usageKey]
       const limit = this.limits[resourceType]
