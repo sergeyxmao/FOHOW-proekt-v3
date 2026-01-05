@@ -1076,9 +1076,11 @@ onBeforeUnmount(() => {
   >
     <!-- Для публичных страниц показываем только компонент маршрута -->
     <template v-if="isSimpleLayout || isBoardsPage">
-      <transition name="page" mode="out-in">
-        <router-view />
-      </transition>
+      <router-view v-slot="{ Component }">
+        <transition name="page" mode="out-in">
+          <component :is="Component" :key="$route.fullPath" />
+        </transition>
+      </router-view>
     </template>
 
     <!-- Для основного приложения показываем полный интерфейс -->

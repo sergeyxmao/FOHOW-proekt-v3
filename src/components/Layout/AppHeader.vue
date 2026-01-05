@@ -89,7 +89,7 @@ function openRegister() {
 
 function openBoards() {
   closeUserMenu()
-  router.push('/board')  
+  router.push('/boards')
 }
 
 function handleOpenBoard(boardId) {
