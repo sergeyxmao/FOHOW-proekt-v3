@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import PricingPage from '../views/PricingPage.vue'
 import EmailVerification from '../views/EmailVerification.vue'
+import BoardsList from '../components/Board/BoardsList.vue'
 import { useAuthStore } from '../stores/auth'
 
 const routes = [
@@ -13,8 +14,8 @@ const routes = [
   {
     path: '/boards',
     name: 'boards',
-    component: () => import('../components/Board/BoardsList.vue'),
-    alias: '/board',    
+    component: BoardsList,
+    alias: '/board',
     meta: { requiresAuth: true }
   },
   {
