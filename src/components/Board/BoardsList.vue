@@ -1792,7 +1792,11 @@ onBeforeUnmount(() => {
   display: flex !important;
   flex-direction: column !important;
   min-height: 100vh;
-  background: #f5f5f5;
+  height: 100vh;
+  background: #f5f5f5 !important;
+  position: relative !important;
+  z-index: 100 !important;
+  overflow: hidden;
 }
 
 .boards-page .boards-header {
@@ -1808,9 +1812,10 @@ onBeforeUnmount(() => {
 .boards-page .boards-content {
   display: grid !important;
   grid-template-columns: 300px 1fr !important;
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
+  flex: 1 !important;
+  overflow: hidden !important;
+  min-height: 0 !important;
+  height: calc(100vh - 80px) !important;
 }
 
 .boards-page .folders-panel {

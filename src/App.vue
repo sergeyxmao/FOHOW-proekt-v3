@@ -1208,8 +1208,9 @@ onBeforeUnmount(() => {
       </div>
     </transition>
 
-    <!-- Canvas (shared between mobile and desktop) -->
+    <!-- Canvas (shared between mobile and desktop) - НЕ показываем на странице boards -->
     <div
+      v-if="!isBoardsPage"
       id="canvas"
       :class="{
         'canvas--inactive': isPencilMode || showResetPassword,
