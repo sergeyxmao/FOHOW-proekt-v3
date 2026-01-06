@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { useAuthStore } from './auth.js'
 import { useBoardStore } from './board.js'
 import { useCardsStore } from './cards.js'
+import { useNotesStore } from './notes.js'
+import { useStickersStore } from './stickers.js'
 
 // API_URL берем из переменных окружения
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
@@ -264,7 +266,73 @@ export const useSubscriptionStore = defineStore('subscription', {
         }
       }
 
-      // Для остальных ресурсов используем данные от API
+      // Специальная логика для notes: считаем по текущей открытой доске
+      if (resourceType === 'notes') {
+        const boardStore = useBoardStore()
+        const notesStore = useNotesStore()
+
+        // Если доска не открыта → возвращаем 0
+        if (!boardStore.isCurrentBoard || !boardStore.currentBoardId) {
+          return {
+            current: 0,
+            max: limit ?? -1,
+            canCreate: limit === -1 || limit > 0,
+            percentage: 0
+          }
+        }
+
+        // Получаем заметки текущей доски
+        const notesForBoard = notesStore.notesByBoard[boardStore.currentBoardId] || {}
+
+        // Считаем общее количество записей в заметках (по всем карточкам и датам)
+        let currentNotes = 0
+        Object.values(notesForBoard).forEach(cardNotes => {
+          currentNotes += Object.keys(cardNotes).length
+        })
+
+        const max = limit ?? -1
+        const canCreate = max === -1 || currentNotes < max
+        const percentage = max === -1 ? 0 : Math.round((currentNotes / max) * 100)
+
+        return {
+          current: currentNotes,
+          max,
+          canCreate,
+          percentage
+        }
+      }
+
+      // Специальная логика для stickers: считаем по текущей открытой доске
+      if (resourceType === 'stickers') {
+        const boardStore = useBoardStore()
+        const stickersStore = useStickersStore()
+
+        // Если доска не открыта → возвращаем 0
+        if (!boardStore.isCurrentBoard) {
+          return {
+            current: 0,
+            max: limit ?? -1,
+            canCreate: limit === -1 || limit > 0,
+            percentage: 0
+          }
+        }
+
+        // Считаем стикеры текущей доски
+        const currentStickers = stickersStore.stickers.length
+
+        const max = limit ?? -1
+        const canCreate = max === -1 || currentStickers < max
+        const percentage = max === -1 ? 0 : Math.round((currentStickers / max) * 100)
+
+        return {
+          current: currentStickers,
+          max,
+          canCreate,
+          percentage
+        }
+      }
+
+      // Для остальных ресурсов (boards, comments) используем данные от API
       // Маппинг: comments → userComments (для совместимости с API)
       const usageKey = resourceType === 'comments' ? 'userComments' : resourceType
       const usageData = this.usage[usageKey]
