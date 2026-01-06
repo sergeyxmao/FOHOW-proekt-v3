@@ -2640,6 +2640,16 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   cursor: grabbing !important;
 }
 
+/* Визуальный эффект при панорамировании холста - затемнение для обратной связи */
+.canvas-container--panning .canvas-content::after {
+  content: '';
+  position: absolute;
+  inset: -5000px;
+  background: rgba(0, 0, 0, 0.02);
+  pointer-events: none;
+  z-index: 999999;
+}
+
 .canvas-container--selection-mode .cards-container,
 .canvas-container--selection-mode .svg-layer {
   cursor: crosshair;
