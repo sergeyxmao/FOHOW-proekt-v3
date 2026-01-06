@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth.js'
+import { useBoardStore } from './board.js'
+import { useCardsStore } from './cards.js'
 
 // API_URL берем из переменных окружения
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
@@ -228,11 +230,44 @@ export const useSubscriptionStore = defineStore('subscription', {
      * @returns {Object} { current, max, canCreate, percentage }
      */
     checkLimit(resourceType) {
+      const limit = this.limits[resourceType]
+
+      // Специальная логика для cards: считаем по текущей открытой доске
+      if (resourceType === 'cards') {
+        const boardStore = useBoardStore()
+        const cardsStore = useCardsStore()
+
+        // Если доска не открыта → возвращаем 0
+        if (!boardStore.isCurrentBoard) {
+          return {
+            current: 0,
+            max: limit ?? -1,
+            canCreate: limit === -1 || limit > 0,
+            percentage: 0
+          }
+        }
+
+        // Считаем карточки текущей доски (только нужные типы)
+        const currentCards = cardsStore.cards.filter(
+          card => ['small', 'large', 'gold', 'avatar'].includes(card.type)
+        ).length
+
+        const max = limit ?? -1
+        const canCreate = max === -1 || currentCards < max
+        const percentage = max === -1 ? 0 : Math.round((currentCards / max) * 100)
+
+        return {
+          current: currentCards,
+          max,
+          canCreate,
+          percentage
+        }
+      }
+
+      // Для остальных ресурсов используем данные от API
       // Маппинг: comments → userComments (для совместимости с API)
       const usageKey = resourceType === 'comments' ? 'userComments' : resourceType
-
       const usageData = this.usage[usageKey]
-      const limit = this.limits[resourceType]
 
       // Если данных нет, возвращаем дефолтные значения
       if (!usageData) {
