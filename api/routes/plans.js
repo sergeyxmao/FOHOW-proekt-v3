@@ -38,7 +38,17 @@ export function registerPlanRoutes(app) {
           (SELECT COUNT(*) FROM notes n JOIN boards b ON n.board_id = b.id WHERE b.owner_id = u.id) as notes_count,
           (SELECT COUNT(*) FROM stickers s JOIN boards b ON s.board_id = b.id WHERE b.owner_id = u.id) as stickers_count,
           (SELECT COUNT(*) FROM user_comments WHERE user_id = u.id) as comments_count,
-          (SELECT COUNT(DISTINCT n.card_uid) FROM notes n JOIN boards b ON n.board_id = b.id WHERE b.owner_id = u.id) as cards_count
+          (
+            SELECT COALESCE(MAX(card_count), 0)
+            FROM (
+              SELECT COUNT(*) as card_count
+              FROM boards b,
+                   jsonb_array_elements(COALESCE(b.content->'objects', '[]'::jsonb)) obj
+              WHERE b.owner_id = u.id
+                AND obj->>'type' IN ('small', 'large', 'gold', 'avatar')
+              GROUP BY b.id
+            ) as board_cards
+          ) as cards_count
         FROM users u
         LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
         WHERE u.id = $1`,
