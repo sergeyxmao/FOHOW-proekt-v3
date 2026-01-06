@@ -493,3 +493,188 @@ Authorization: Bearer <token>
 - **2026-01-04**: Добавлено версионирование avatar_url для решения проблемы кэширования браузера
 - **2024-12-29**: Добавлено поле `website` в response schema
 - **2024-12**: Создан endpoint для получения профиля пользователя
+
+---
+
+## GET /api/user/plan
+
+**Описание:** Получение информации о тарифном плане пользователя и статистике использования ресурсов
+
+**Авторизация:** Требуется JWT токен
+
+**Метод:** GET
+
+**URL:** `/api/user/plan`
+
+### Response Schema
+
+```json
+{
+  "user": {
+    "id": number,
+    "username": string,
+    "email": string,
+    "subscriptionStartedAt": string (ISO 8601) | null,
+    "subscriptionExpiresAt": string (ISO 8601) | null,
+    "gracePeriodUntil": string (ISO 8601) | null
+  },
+  "plan": {
+    "id": number,
+    "name": string,
+    "code_name": string,
+    "priceMonthly": number
+  },
+  "features": object,
+  "usage": {
+    "boards": {
+      "current": number,
+      "limit": number | -1
+    },
+    "notes": {
+      "current": number,
+      "limit": number | -1
+    },
+    "stickers": {
+      "current": number,
+      "limit": number | -1
+    },
+    "userComments": {
+      "current": number,
+      "limit": number | -1
+    },
+    "cards": {
+      "current": number,
+      "limit": number | -1
+    }
+  }
+}
+```
+
+### Пример ответа
+
+```json
+{
+  "user": {
+    "id": 123,
+    "username": "johndoe",
+    "email": "user@example.com",
+    "subscriptionStartedAt": "2024-01-01T00:00:00Z",
+    "subscriptionExpiresAt": "2025-01-01T00:00:00Z",
+    "gracePeriodUntil": null
+  },
+  "plan": {
+    "id": 1,
+    "name": "Demo",
+    "code_name": "demo",
+    "priceMonthly": 0
+  },
+  "features": {
+    "max_boards": 3,
+    "max_notes": 100,
+    "max_stickers": 50,
+    "max_comments": 50,
+    "max_licenses": 36
+  },
+  "usage": {
+    "boards": {
+      "current": 3,
+      "limit": 3
+    },
+    "notes": {
+      "current": 45,
+      "limit": 100
+    },
+    "stickers": {
+      "current": 12,
+      "limit": 50
+    },
+    "userComments": {
+      "current": 8,
+      "limit": 50
+    },
+    "cards": {
+      "current": 8,
+      "limit": 36
+    }
+  }
+}
+```
+
+### Коды ответов
+
+- `200 OK` - Успешное получение информации о тарифе
+- `401 Unauthorized` - Отсутствует или невалидный JWT токен
+- `404 Not Found` - Пользователь или тарифный план не найден
+- `500 Internal Server Error` - Ошибка сервера
+
+### Логика подсчёта ресурсов
+
+#### boards
+Общее количество досок пользователя:
+```sql
+SELECT COUNT(*) FROM boards WHERE owner_id = u.id
+```
+
+#### notes
+Общее количество заметок на всех досках пользователя:
+```sql
+SELECT COUNT(*) FROM notes n JOIN boards b ON n.board_id = b.id WHERE b.owner_id = u.id
+```
+
+#### stickers
+Общее количество стикеров на всех досках пользователя:
+```sql
+SELECT COUNT(*) FROM stickers s JOIN boards b ON s.board_id = b.id WHERE b.owner_id = u.id
+```
+
+#### userComments
+Общее количество комментариев пользователя:
+```sql
+SELECT COUNT(*) FROM user_comments WHERE user_id = u.id
+```
+
+#### cards (лицензии и аватары)
+
+**ВАЖНО:** Лимит `max_licenses` — это лимит **на одну доску**, а не на все доски пользователя.
+
+Подсчёт возвращает **максимальное количество** карточек среди всех досок пользователя:
+```sql
+(
+  SELECT COALESCE(MAX(card_count), 0)
+  FROM (
+    SELECT COUNT(*) as card_count
+    FROM boards b,
+         jsonb_array_elements(COALESCE(b.content->'objects', '[]'::jsonb)) obj
+    WHERE b.owner_id = u.id
+      AND obj->>'type' IN ('small', 'large', 'gold', 'avatar')
+    GROUP BY b.id
+  ) as board_cards
+) as cards_count
+```
+
+**Учитываемые типы карточек:**
+- `small` - малая лицензия
+- `large` - большая лицензия
+- `gold` - золотая лицензия
+- `avatar` - аватар
+
+**Пример:**
+Если у пользователя 3 доски с количеством карточек: 2, 2, 8, то `usage.cards.current = 8`
+
+### Примечания
+
+- Значение `-1` в поле `limit` означает отсутствие ограничения
+- Карточки хранятся в JSONB-поле `boards.content->objects`
+- Подсчёт карточек учитывает только типы: `small`, `large`, `gold`, `avatar`
+- Лимит карточек применяется к одной доске, а не ко всем доскам пользователя
+
+### Связанные файлы
+
+- `api/routes/plans.js:17` - реализация endpoint
+- `src/stores/subscription.js` - frontend store для управления подпиской
+- `src/views/ProfileView.vue` - отображение информации о тарифе в профиле
+
+### История изменений
+
+- **2026-01-06**: Исправлен подсчёт карточек - теперь считает из `boards.content->objects` и возвращает максимальное значение среди досок, а не сумму
+- **2024-12**: Создан endpoint для получения информации о тарифном плане пользователя
