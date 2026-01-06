@@ -78,15 +78,10 @@
               };
               break;
             case 'notes':
-              // Считаем заметки ПО ВСЕМ доскам пользователя (а не по одной доске)
+              // Считаем заметки ТОЛЬКО для текущей доски
               query = {
-                text: `
-                  SELECT COUNT(*)
-                  FROM notes n
-                  INNER JOIN boards b ON n.board_id = b.id
-                  WHERE b.owner_id = $1
-                `,
-                values: [userId]
+                text: 'SELECT COUNT(*) FROM notes WHERE board_id = $1',
+                values: [boardId]
               };
               break;
             case 'comments':
@@ -139,7 +134,7 @@
             // Специальное подробное сообщение для заметок
             if (resourceType === 'notes') {
               return reply.code(403).send({
-                error: `Достигнут лимит заметок (${currentUsage}/${limit}). Удалите старые заметки или обновите тариф.`,
+                error: `Достигнут лимит заметок для этой доски (${currentUsage}/${limit}). Удалите старые заметки или обновите тариф.`,
                 code: 'USAGE_LIMIT_REACHED',
                 upgradeRequired: true,
                 resourceType: 'notes',
