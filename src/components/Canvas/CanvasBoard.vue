@@ -1487,6 +1487,12 @@ const handlePvChanged = (cardId) => {
 const handleStageClick = async (event) => {
   // Игнорируем среднюю кнопку мыши (используется для панорамирования)
   if (event.button === 1) {
+    event.preventDefault(); // Предотвращаем автоскролл браузера
+    return;
+  }
+
+  // Игнорируем правую кнопку мыши (контекстное меню)
+  if (event.button === 2) {
     return;
   }
 
@@ -2281,7 +2287,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   ref="canvasContainerRef"
   :class="['canvas-container', canvasContainerClasses, { 'canvas-container--modern': props.isModernTheme }]"
   :style="{ backgroundColor: backgroundColor }"
-  @click="handleStageClick"
+  @mousedown="handleStageClick"
   @dragover.prevent="handleImageDragOver"
   @drop.prevent="handleImageDrop"
 >
@@ -2332,7 +2338,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         :width="stageConfig.width"
         :height="stageConfig.height"
         style="position: absolute; top: 0; left: 0; z-index: 5; overflow: visible; pointer-events: none;"
-        @click="handleStageClick"
+        @mousedown="handleStageClick"
       >
         <defs>
           <marker
