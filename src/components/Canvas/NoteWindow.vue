@@ -258,13 +258,20 @@ async function handleColorSelect(color) {
   const content = textareaValue.value || '';
   if (content.trim()) {
     try {
-      await notesStore.saveNote({
+      const result = await notesStore.saveNote({
         boardId: boardStore.currentBoardId,
         cardUid: props.card.id,
         noteDate: selectedDate.value,
         content: content,
         color: color
       });
+
+      // Проверяем, не вернулась ли ошибка лимита
+      if (result && result.error && result.code === 'USAGE_LIMIT_REACHED') {
+        // Ошибка уже показана пользователю в alert, просто прекращаем выполнение
+        return;
+      }
+
       commitHistory('Изменен цвет заметки для карточки');
     } catch (error) {
       console.error('Ошибка сохранения цвета:', error);
@@ -287,13 +294,19 @@ async function handleTextareaBlur() {
   try {
     // Сохраняем заметку только если есть текст
     // Если текст пустой, отправляем пустое содержимое для удаления
-    await notesStore.saveNote({
+    const result = await notesStore.saveNote({
       boardId: boardStore.currentBoardId,
       cardUid: props.card.id,
       noteDate: selectedDate.value,
       content: content,
       color: selectedColor.value || ''
     });
+
+    // Проверяем, не вернулась ли ошибка лимита
+    if (result && result.error && result.code === 'USAGE_LIMIT_REACHED') {
+      // Ошибка уже показана пользователю в alert, просто прекращаем выполнение
+      return;
+    }
 
     if (content.trim()) {
       commitHistory('Обновлена заметка для карточки');
