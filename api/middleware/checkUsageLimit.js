@@ -16,6 +16,16 @@
             return; // Пропускаем проверку лимитов для админов
           }
 
+          // Для заметок: если это операция удаления (пустой content), пропускаем проверку лимита
+          // Удаление должно быть всегда разрешено, даже при достижении лимита
+          if (resourceType === 'notes' && req.body.content !== undefined) {
+            const content = req.body.content || '';
+            if (!content.trim()) {
+              // Пустой контент = удаление, пропускаем проверку лимита
+              return;
+            }
+          }
+
           // 1. Получаем лимит, дату истечения подписки и grace_period_until
           const planResult = await pool.query(
             `SELECT sp.features->'${limitFeatureName}' as limit, 
