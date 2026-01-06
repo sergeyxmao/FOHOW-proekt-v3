@@ -1485,6 +1485,11 @@ const handlePvChanged = (cardId) => {
 };
 
 const handleStageClick = async (event) => {
+  // Игнорируем среднюю кнопку мыши (используется для панорамирования)
+  if (event.button === 1) {
+    return;
+  }
+
   // *** ДОБАВЛЕНО ЛОГИРОВАНИЕ ***
   console.log('🎯 handleStageClick сработал!', {
     target: event.target.className,
