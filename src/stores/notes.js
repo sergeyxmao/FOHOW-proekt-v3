@@ -145,9 +145,22 @@ export const useNotesStore = defineStore('notes', () => {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error || 'Ошибка сохранения заметки';
 
-        // Показываем сообщение об ошибке пользователю
-        alert(errorMessage);
+        // Если это ошибка лимита - показываем alert, но НЕ выбрасываем исключение
+        // чтобы избежать бесконечных повторных попыток сохранения
+        if (errorData.code === 'USAGE_LIMIT_REACHED') {
+          alert(errorMessage);
+          // Возвращаем объект с информацией об ошибке без throw
+          return {
+            error: true,
+            code: errorData.code,
+            message: errorMessage,
+            limit: errorData.limit,
+            current: errorData.current
+          };
+        }
 
+        // Для других ошибок показываем alert и выбрасываем исключение
+        alert(errorMessage);
         throw new Error(errorMessage);
       }
 

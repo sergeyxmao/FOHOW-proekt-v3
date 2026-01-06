@@ -68,13 +68,20 @@ const handleNoteEntryDelete = async (cardId, date) => {
     // Синхронизируем с сервером (отправляем пустое содержимое для удаления)
     const boardStore = useBoardStore()
     if (boardStore.currentBoardId) {
-      await notesStore.saveNote({
+      const result = await notesStore.saveNote({
         boardId: boardStore.currentBoardId,
         cardUid: cardId,
         noteDate: date,
         content: '', // Пустое содержимое = удаление на сервере
         color: ''
       })
+
+      // Проверяем, не вернулась ли ошибка
+      if (result && result.error) {
+        console.error('❌ Ошибка удаления заметки:', result.message)
+        return
+      }
+
       console.log('✅ Заметка успешно удалена')
     }
   } catch (err) {
@@ -98,13 +105,20 @@ const handleCardNotesDelete = async (cardId) => {
     if (boardStore.currentBoardId && dates.length > 0) {
       // Удаляем каждую заметку на сервере
       for (const date of dates) {
-        await notesStore.saveNote({
+        const result = await notesStore.saveNote({
           boardId: boardStore.currentBoardId,
           cardUid: cardId,
           noteDate: date,
           content: '', // Пустое содержимое = удаление
           color: ''
         })
+
+        // Проверяем, не вернулась ли ошибка
+        if (result && result.error) {
+          console.error('❌ Ошибка удаления заметки:', result.message)
+          // Прерываем цикл при первой ошибке
+          return
+        }
       }
       console.log('✅ Все заметки успешно удалены')
     }
