@@ -21,8 +21,8 @@ export function useUserTariffs({ subscriptionStore }) {
     'max_boards': (value) => value === -1 ? '∞ Безлимитные доски' : `📊 До ${value} досок`,
     'max_notes': (value) => value === -1 ? '∞ Безлимитные заметки' : `📝 До ${value} заметок`,
     'max_stickers': (value) => value === -1 ? '∞ Безлимитные стикеры' : `🎨 До ${value} стикеров`,
-    'max_licenses': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек`,
-    'max_cards_per_board': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек на доске`,
+    'max_licenses': (value) => value === -1 ? '∞ Безлимитные лицензии' : `🗂️ До ${value} лицензий`,
+    'max_cards_per_board': (value) => value === -1 ? '∞ Безлимитные лицензии' : `🗂️ До ${value} лицензий на доске`,
     'max_comments': (value) => value === -1 ? '∞ Безлимитные комментарии' : `💬 До ${value} комментариев`,
 
     // Булевы функции
@@ -35,12 +35,8 @@ export function useUserTariffs({ subscriptionStore }) {
       }
       return '📏 Экспорт в разных форматах'
     },
-    'can_export_svg': '📐 Экспорт в SVG',
-    'can_save_project': '💾 Сохранение проекта',
-    'can_load_project': '📂 Загрузка проекта',
-    'can_share_project': '🔗 Поделиться проектом',
-    'can_share_boards': '🔗 Поделиться досками',
-    'can_invite_drawing': '✏️ Приглашение к рисованию',
+    'can_export_svg': '🌐 Экспорт в HTML',
+    'can_invite_drawing': '✏️ Режим рисования',
     'can_duplicate_boards': '📋 Дублирование досок'
   }
 
@@ -55,10 +51,6 @@ export function useUserTariffs({ subscriptionStore }) {
     'can_export_png_formats',
     'can_export_png_bw',
     'can_export_svg',
-    'can_save_project',
-    'can_load_project',
-    'can_share_project',
-    'can_share_boards',
     'can_invite_drawing',
     'can_duplicate_boards'
   ]
