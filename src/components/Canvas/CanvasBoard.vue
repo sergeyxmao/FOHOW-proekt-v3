@@ -2655,10 +2655,10 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 .canvas-container--panning .canvas-content::after {
   content: '';
   position: absolute;
-  inset: -5000px;
-  background: rgba(0, 0, 0, 0.02);
+  inset: -10000px; /* Большой запас для перекрытия всего холста */
+  background: rgba(0, 0, 0, 0.05); /* Легкое затемнение - увеличено для заметности */
   pointer-events: none;
-  z-index: 999999;
+  z-index: 9999;
 }
 
 .canvas-container--selection-mode .cards-container,
