@@ -42,8 +42,60 @@ export function usePanZoom(canvasElement) {
   const activeTouchPointers = new Map()
   let pinchState = null
   let panPointerId = null
-  let panPointerType = null 
+  let panPointerType = null
   let transformFrame = null
+
+  // Состояние для панорамирования комбинацией левая+правая кнопка мыши
+  let leftButtonDown = false
+  let rightButtonDown = false
+  let bothButtonsPanStarted = false
+
+  // Проверка условий для запуска панорамирования мышью (общая для middle и left+right)
+  const canStartMousePan = (event) => {
+    if (!canvasElement.value) {
+      return false
+    }
+
+    // Проверяем, что клик внутри canvas-элемента
+    if (!canvasElement.value.contains(event.target)) {
+      return false
+    }
+
+    // Отключаем панорамирование в режиме размещения стикера
+    if (canvasElement.value.classList.contains('canvas-container--sticker-placement')) {
+      return false
+    }
+
+    // Проверяем, что клик не на исключенных элементах
+    const target = event?.target
+    if (target && typeof target.closest === 'function' && PAN_EXCLUDE_SELECTOR && target.closest(PAN_EXCLUDE_SELECTOR)) {
+      return false
+    }
+
+    return true
+  }
+
+  // Попытка запуска панорамирования при нажатии обеих кнопок (левая + правая)
+  const tryStartBothButtonPan = (event) => {
+    // Уже панорамируем или ещё не обе кнопки нажаты
+    if (isPanning || bothButtonsPanStarted || !leftButtonDown || !rightButtonDown) {
+      return false
+    }
+
+    if (!canStartMousePan(event)) {
+      return false
+    }
+
+    // Предотвращаем стандартное поведение
+    event.preventDefault()
+    event.stopPropagation()
+
+    // Запускаем панорамирование
+    startPan(event)
+    bothButtonsPanStarted = true
+    return true
+  }
+
   const canStartTouchPan = (event) => {
     if (!canvasElement.value) {
       return false
@@ -392,22 +444,10 @@ export function usePanZoom(canvasElement) {
       event.preventDefault()    
       return
     }
-    // Панорамирование по средней кнопке мыши (колесико)
+    // Панорамирование по средней кнопке мыши (колесико) — fallback
     // button === 1 - средняя кнопка мыши
     if (event.button === 1 && event.pointerType !== 'touch') {
-      // Проверяем, что клик внутри canvas-элемента
-      if (!canvasElement.value.contains(event.target)) {
-        return
-      }
-
-      // Отключаем панорамирование, если активен режим размещения стикера
-      if (canvasElement.value.classList.contains('canvas-container--sticker-placement')) {
-        return
-      }
-
-      // Проверяем, что клик не на исключенных элементах (карточки, заметки и т.д.)
-      const target = event?.target
-      if (target && typeof target.closest === 'function' && PAN_EXCLUDE_SELECTOR && target.closest(PAN_EXCLUDE_SELECTOR)) {
+      if (!canStartMousePan(event)) {
         return
       }
 
@@ -418,6 +458,24 @@ export function usePanZoom(canvasElement) {
       // Запускаем режим панорамирования
       startPan(event)
       return
+    }
+
+    // Панорамирование комбинацией левая + правая кнопка мыши
+    if (event.pointerType !== 'touch') {
+      // Отслеживаем нажатие левой кнопки (button === 0)
+      if (event.button === 0) {
+        leftButtonDown = true
+        tryStartBothButtonPan(event)
+      }
+      // Отслеживаем нажатие правой кнопки (button === 2)
+      if (event.button === 2) {
+        rightButtonDown = true
+        // Пытаемся запустить панорамирование, если обе кнопки нажаты
+        if (tryStartBothButtonPan(event)) {
+          // Блокируем контекстное меню при успешном запуске панорамирования
+          event.preventDefault()
+        }
+      }
     }
   }
   
@@ -473,6 +531,23 @@ export function usePanZoom(canvasElement) {
       return
     }
 
+    // Сброс флагов кнопок мыши
+    if (event.pointerType !== 'touch') {
+      if (event.button === 0) {
+        leftButtonDown = false
+      }
+      if (event.button === 2) {
+        rightButtonDown = false
+      }
+
+      // Если было панорамирование по комбинации кнопок — останавливаем
+      if (bothButtonsPanStarted) {
+        stopPanning()
+        bothButtonsPanStarted = false
+        return
+      }
+    }
+
     if (isPanning && panPointerId === event.pointerId) {
       stopPanning()
     }
@@ -493,10 +568,10 @@ export function usePanZoom(canvasElement) {
     }
   }
 
-  // Предотвращаем контекстное меню при использовании средней кнопки
+  // Предотвращаем контекстное меню при панорамировании
   const handleContextMenu = (event) => {
-    // Если средняя кнопка была нажата, блокируем контекстное меню
-    if (isPanning) {
+    // Блокируем контекстное меню при панорамировании (средняя кнопка или комбо левая+правая)
+    if (isPanning || bothButtonsPanStarted) {
       event.preventDefault()
     }
   }
