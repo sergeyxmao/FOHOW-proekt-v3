@@ -13,7 +13,7 @@
 | `/board/:id` | board | HomeView | requiresAuth | Открытие конкретной доски |
 | `/pricing` | pricing | PricingPage | layout: public | Страница тарифов |
 | `/verify-email` | verify-email | EmailVerification | layout: public | Подтверждение email |
-| `/admin` | admin | AdminPanel (lazy) | requiresAuth, requiresAdmin | Админ-панель |
+| `/admin` | admin | AdminPanel | requiresAuth, requiresAdmin | Админ-панель |
 
 ## Импорты компонентов
 
@@ -22,13 +22,17 @@
 - `PricingPage` — тарифы
 - `EmailVerification` — верификация email
 - `BoardsList` — список структур
-
+- `AdminPanel` — админ-панель
+  
 **Динамические импорты** (lazy loading):
-- `AdminPanel` — админ-панель (загружается только при переходе)
-
-### Почему BoardsList импортируется статически
+- (нет)
+  
+### Почему BoardsList и AdminPanel импортируются статически
 
 BoardsList использует статический импорт для корректного применения CSS-стилей при первом рендеринге. При динамическом импорте стили могут загружаться с задержкой, что приводит к визуальным артефактам (сжатый layout, отсутствие grid).
+
+AdminPanel также подключён статически, чтобы избежать ошибок загрузки чанков и CSS при переходе в админ-панель в production.
+
 
 ## Защита маршрутов
 
