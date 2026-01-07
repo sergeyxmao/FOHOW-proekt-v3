@@ -9,6 +9,7 @@ export function usePanZoom(canvasElement) {
   const MAX_SCALE = 5     // Максимальное увеличение - 500%
 
   const PAN_CURSOR_CLASS = 'canvas-container--panning'
+  const SPACE_READY_CLASS = 'canvas-container--space-ready'
   const PAN_EXCLUDE_SELECTOR = [
 	'.card',
     '.note-window',
@@ -45,12 +46,11 @@ export function usePanZoom(canvasElement) {
   let panPointerType = null
   let transformFrame = null
 
-  // Состояние для панорамирования комбинацией левая+правая кнопка мыши
-  let leftButtonDown = false
-  let rightButtonDown = false
-  let bothButtonsPanStarted = false
+  // Состояние для панорамирования через Space + левая кнопка мыши
+  let isSpaceDown = false
+  let spaceStartedPan = false
 
-  // Проверка условий для запуска панорамирования мышью (общая для middle и left+right)
+  // Проверка условий для запуска панорамирования мышью (общая для middle и Space+LMB)
   const canStartMousePan = (event) => {
     if (!canvasElement.value) {
       return false
@@ -72,27 +72,6 @@ export function usePanZoom(canvasElement) {
       return false
     }
 
-    return true
-  }
-
-  // Попытка запуска панорамирования при нажатии обеих кнопок (левая + правая)
-  const tryStartBothButtonPan = (event) => {
-    // Уже панорамируем или ещё не обе кнопки нажаты
-    if (isPanning || bothButtonsPanStarted || !leftButtonDown || !rightButtonDown) {
-      return false
-    }
-
-    if (!canStartMousePan(event)) {
-      return false
-    }
-
-    // Предотвращаем стандартное поведение
-    event.preventDefault()
-    event.stopPropagation()
-
-    // Запускаем панорамирование
-    startPan(event)
-    bothButtonsPanStarted = true
     return true
   }
 
@@ -398,7 +377,46 @@ export function usePanZoom(canvasElement) {
       contentCenterY: (centerY - nextTranslateY) / nextScale
     }
     updateTransform()
-  }  
+  }
+
+  // Обработчик нажатия клавиши Space
+  const handleKeyDown = (event) => {
+    // Игнорируем, если фокус на поле ввода
+    const target = event.target
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable
+    ) {
+      return
+    }
+
+    if (event.code === 'Space' && !isSpaceDown) {
+      event.preventDefault() // Блокируем прокрутку страницы
+      isSpaceDown = true
+      // Добавляем класс для курсора "grab"
+      if (canvasElement.value) {
+        canvasElement.value.classList.add(SPACE_READY_CLASS)
+      }
+    }
+  }
+
+  // Обработчик отпускания клавиши Space
+  const handleKeyUp = (event) => {
+    if (event.code === 'Space') {
+      isSpaceDown = false
+      // Убираем класс курсора
+      if (canvasElement.value) {
+        canvasElement.value.classList.remove(SPACE_READY_CLASS)
+      }
+      // Останавливаем панорамирование, если было запущено через Space
+      if (spaceStartedPan) {
+        stopPanning()
+        spaceStartedPan = false
+      }
+    }
+  }
+  
   const handlePointerDown = (event) => {
     if (!canvasElement.value) return
 
@@ -407,16 +425,10 @@ export function usePanZoom(canvasElement) {
         return
       }
 	  
- 
-
       // Отключаем панорамирование, если активен режим размещения стикера
-
       if (canvasElement.value.classList.contains('canvas-container--sticker-placement')) {
-
         return
-
       }
-
  	  
 	  
       activeTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
@@ -460,22 +472,17 @@ export function usePanZoom(canvasElement) {
       return
     }
 
-    // Панорамирование комбинацией левая + правая кнопка мыши
-    if (event.pointerType !== 'touch') {
-      // Отслеживаем нажатие левой кнопки (button === 0)
-      if (event.button === 0) {
-        leftButtonDown = true
-        tryStartBothButtonPan(event)
+    // Панорамирование через Space + левая кнопка мыши
+    if (event.pointerType !== 'touch' && event.button === 0 && isSpaceDown) {
+      if (!canStartMousePan(event)) {
+        return
       }
-      // Отслеживаем нажатие правой кнопки (button === 2)
-      if (event.button === 2) {
-        rightButtonDown = true
-        // Пытаемся запустить панорамирование, если обе кнопки нажаты
-        if (tryStartBothButtonPan(event)) {
-          // Блокируем контекстное меню при успешном запуске панорамирования
-          event.preventDefault()
-        }
-      }
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      startPan(event)
+      spaceStartedPan = true
     }
   }
   
@@ -531,21 +538,11 @@ export function usePanZoom(canvasElement) {
       return
     }
 
-    // Сброс флагов кнопок мыши
-    if (event.pointerType !== 'touch') {
-      if (event.button === 0) {
-        leftButtonDown = false
-      }
-      if (event.button === 2) {
-        rightButtonDown = false
-      }
-
-      // Если было панорамирование по комбинации кнопок — останавливаем
-      if (bothButtonsPanStarted) {
-        stopPanning()
-        bothButtonsPanStarted = false
-        return
-      }
+    // При отпускании левой кнопки мыши — останавливаем панорамирование Space+LMB
+    if (event.pointerType !== 'touch' && event.button === 0 && spaceStartedPan) {
+      stopPanning()
+      spaceStartedPan = false
+      return
     }
 
     if (isPanning && panPointerId === event.pointerId) {
@@ -570,8 +567,8 @@ export function usePanZoom(canvasElement) {
 
   // Предотвращаем контекстное меню при панорамировании
   const handleContextMenu = (event) => {
-    // Блокируем контекстное меню при панорамировании (средняя кнопка или комбо левая+правая)
-    if (isPanning || bothButtonsPanStarted) {
+    // Блокируем контекстное меню при панорамировании (средняя кнопка или Space+LMB)
+    if (isPanning || spaceStartedPan) {
       event.preventDefault()
     }
   }
@@ -587,6 +584,8 @@ export function usePanZoom(canvasElement) {
     window.addEventListener('mousedown', handleMouseDown)
     window.addEventListener('auxclick', handleAuxClick)
     window.addEventListener('contextmenu', handleContextMenu)
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
 
     updateTransform()
   })
@@ -600,9 +599,12 @@ export function usePanZoom(canvasElement) {
     window.removeEventListener('mousedown', handleMouseDown)
     window.removeEventListener('auxclick', handleAuxClick)
     window.removeEventListener('contextmenu', handleContextMenu)
+    window.removeEventListener('keydown', handleKeyDown)
+    window.removeEventListener('keyup', handleKeyUp)
     setBodyCursor()
     if (canvasElement.value) {
       canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
+      canvasElement.value.classList.remove(SPACE_READY_CLASS)
     }
     if (transformFrame !== null) {
       cancelAnimationFrame(transformFrame)
