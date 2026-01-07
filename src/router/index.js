@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import PricingPage from '../views/PricingPage.vue'
 import EmailVerification from '../views/EmailVerification.vue'
 import BoardsList from '../components/Board/BoardsList.vue'
+import AdminPanel from '../views/AdminPanel.vue'
 import { useAuthStore } from '../stores/auth'
 
 const routes = [
@@ -39,7 +40,7 @@ const routes = [
   {
     path: '/admin',
     name: 'admin',
-    component: () => import('../views/AdminPanel.vue'),
+    component: AdminPanel,
     meta: { requiresAuth: true, requiresAdmin: true, layout: 'admin' }
   }
 ]
