@@ -151,20 +151,19 @@ const featureLabels = {
   // Булевы функции
   'can_export_pdf': '📄 Экспорт в PDF',
   'can_export_png': '🖼️ Экспорт в PNG',
-  'can_export_png_bw': '⬛ Экспорт PNG (Ч/Б)',
   'can_export_png_formats': (value) => {
     if (Array.isArray(value) && value.length > 0) {
-      return `📏 Форматы PNG: ${value.join(', ')}`
+      return `📏 Экспорт в PNG: ${value.join(', ')}`
     }
     return '📏 Экспорт в разных форматах'
   },
-  'can_export_svg': '📐 Экспорт в SVG',
   'can_export_html': '🌐 Экспорт в HTML',
+  'can_invite_drawing': '✏️ Режим рисования',
+  'can_use_images': '🖼️ Изображения',
   'can_save_project': '💾 Сохранение проекта',
   'can_load_project': '📂 Загрузка проекта',
   'can_share_project': '🔗 Поделиться проектом',
   'can_share_boards': '🔗 Поделиться досками',
-  'can_invite_drawing': '✏️ Приглашение к рисованию',
   'can_duplicate_boards': '📋 Дублирование досок',
   'can_use_templates': '📑 Готовые шаблоны',
   'can_invite_members': '👥 Приглашение участников',
@@ -188,16 +187,16 @@ const importantFeatures = [
   'max_notes',
   'max_stickers',
   'max_comments',
-  'can_export_pdf',
   'can_export_png',
   'can_export_png_formats',
-  'can_export_png_bw',
-  'can_export_svg',
+  'can_export_html',
+  'can_invite_drawing',
+  'can_use_images',
+  'can_export_pdf',
   'can_save_project',
   'can_load_project',
   'can_share_project',
   'can_share_boards',
-  'can_invite_drawing',
   'can_duplicate_boards',
   'can_use_templates',
   'can_invite_members',

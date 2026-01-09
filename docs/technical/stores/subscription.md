@@ -192,8 +192,94 @@ subscriptionStore.clear()
 - `src/views/ProfileView.vue` - отображение информации о тарифе в профиле
 - `api/routes/plans.js` - backend endpoint для получения данных о плане
 
+## Features (Возможности тарифов)
+
+### Структура данных features
+
+Объект `features` содержит информацию о возможностях текущего тарифного плана:
+
+```javascript
+{
+  // Лимиты ресурсов
+  max_boards: number,           // Максимальное количество досок (-1 = безлимит)
+  max_notes: number,            // Максимальное количество заметок (-1 = безлимит)
+  max_stickers: number,         // Максимальное количество стикеров (-1 = безлимит)
+  max_licenses: number,         // Максимальное количество лицензий (-1 = безлимит)
+  max_comments: number,         // Максимальное количество комментариев (-1 = безлимит)
+
+  // Экспортные возможности
+  can_export_pdf: boolean,      // Возможность экспорта в PDF
+  can_export_png: boolean,      // Возможность экспорта в PNG
+  can_export_html: boolean,     // Возможность экспорта в HTML
+  can_export_png_formats: array, // Доступные форматы PNG (например: ['A4', 'A3', 'A2', 'A1'])
+
+  // Функции рисования и контента
+  can_invite_drawing: boolean,  // Возможность приглашения к рисованию
+  can_use_images: boolean,      // Доступ к библиотеке изображений
+
+  // Другие возможности
+  can_duplicate_boards: boolean // Возможность дублирования досок
+}
+```
+
+### Примеры значений для разных тарифов
+
+**Гостевой тариф (guest):**
+```json
+{
+  "max_boards": 3,
+  "max_notes": 10,
+  "max_stickers": 10,
+  "max_licenses": 10,
+  "max_comments": 10,
+  "can_export_pdf": false,
+  "can_export_png": true,
+  "can_export_html": true,
+  "can_export_png_formats": ["A4"],
+  "can_invite_drawing": false,
+  "can_use_images": false
+}
+```
+
+**Индивидуальный тариф (individual):**
+```json
+{
+  "max_boards": 9,
+  "max_notes": 100,
+  "max_stickers": 100,
+  "max_licenses": 500,
+  "max_comments": 100,
+  "can_export_pdf": true,
+  "can_export_png": true,
+  "can_export_html": true,
+  "can_export_png_formats": ["A4", "A3", "A2", "A1"],
+  "can_invite_drawing": true,
+  "can_use_images": true
+}
+```
+
+**Премиум тариф (premium):**
+```json
+{
+  "max_boards": -1,
+  "max_notes": -1,
+  "max_stickers": -1,
+  "max_licenses": -1,
+  "max_comments": -1,
+  "can_export_pdf": true,
+  "can_export_png": true,
+  "can_export_html": true,
+  "can_export_png_formats": ["A4", "A3", "A2", "A1"],
+  "can_invite_drawing": true,
+  "can_use_images": true
+}
+```
+
+---
+
 ## История изменений
 
+- **2026-01-09**: Добавлена поддержка новых полей features: `can_export_png_formats` (массив доступных форматов PNG) и `can_use_images` (доступ к библиотеке изображений)
 - **2026-01-06**: Изменена логика подсчёта карточек - теперь считается по текущей открытой доске, а не максимум по всем доскам
 - **2026-01-06**: Исправлен маппинг `cards → userLicenses` на `cards → cards`
 - **2024-12**: Создан store для управления тарифными планами
