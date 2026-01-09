@@ -28,16 +28,16 @@ export function useUserTariffs({ subscriptionStore }) {
     // Булевы функции
     'can_export_pdf': '📄 Экспорт в PDF',
     'can_export_png': '🖼️ Экспорт в PNG',
-    'can_export_png_bw': '⬛ Экспорт PNG (Ч/Б)',
     'can_export_png_formats': (value) => {
       if (Array.isArray(value) && value.length > 0) {
-        return `📏 Форматы PNG: ${value.join(', ')}`
+        return `📏 Экспорт в PNG: ${value.join(', ')}`
       }
       return '📏 Экспорт в разных форматах'
     },
-    'can_export_svg': '🌐 Экспорт в HTML',
+    'can_export_html': '🌐 Экспорт в HTML',
     'can_invite_drawing': '✏️ Режим рисования',
-    'can_duplicate_boards': '📋 Дублирование досок'
+    'can_duplicate_boards': '📋 Дублирование досок',
+    'can_use_images': '🖼️ Изображения'
   }
 
   // Основные функции для краткого списка (первые 4)
@@ -46,12 +46,12 @@ export function useUserTariffs({ subscriptionStore }) {
   // Дополнительные функции для расширенного списка
   const secondaryFeatures = [
     'max_comments',
-    'can_export_pdf',
     'can_export_png',
     'can_export_png_formats',
-    'can_export_png_bw',
-    'can_export_svg',
+    'can_export_html',
     'can_invite_drawing',
+    'can_use_images',
+    'can_export_pdf',
     'can_duplicate_boards'
   ]
 

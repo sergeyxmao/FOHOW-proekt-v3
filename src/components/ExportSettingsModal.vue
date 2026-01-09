@@ -2,11 +2,45 @@
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useCardsStore } from '../stores/cards.js'
 import { useAuthStore } from '../stores/auth.js'
-  
+import { useSubscriptionStore } from '../stores/subscription.js'
+
 const emit = defineEmits(['close', 'export'])
 const cardsStore = useCardsStore()
 const authStore = useAuthStore()
-const isAdmin = computed(() => authStore.user?.role === 'admin')  
+const subscriptionStore = useSubscriptionStore()
+const isAdmin = computed(() => authStore.user?.role === 'admin')
+
+// Проверяем, является ли пользователь на guest тарифе
+const isGuestPlan = computed(() => {
+  return subscriptionStore.currentPlan?.code_name === 'guest'
+})
+
+// Получаем доступные форматы PNG из тарифа
+const availableFormats = computed(() => {
+  const formats = subscriptionStore.features?.can_export_png_formats
+  if (Array.isArray(formats) && formats.length > 0) {
+    // Преобразуем форматы к нижнему регистру для сравнения
+    return formats.map(f => f.toLowerCase())
+  }
+  // По умолчанию все форматы доступны (для админов и старых тарифов)
+  return ['original', 'a4', 'a3', 'a2', 'a1']
+})
+
+// Проверяем, доступен ли конкретный формат
+const isFormatAvailable = (formatId) => {
+  if (isAdmin.value) return true
+  return availableFormats.value.includes(formatId.toLowerCase())
+}
+
+// Проверяем, доступно ли конкретное DPI
+const isDpiAvailable = (dpi) => {
+  if (isAdmin.value) return true
+  // Для guest тарифа доступно только 300 DPI
+  if (isGuestPlan.value) {
+    return dpi === 300
+  }
+  return true
+}  
   
 // Форматы листа с размерами в миллиметрах
 const pageFormats = [
@@ -161,8 +195,9 @@ const handleClose = () => {
             v-for="format in pageFormats"
             :key="format.id"
             :value="format.id"
+            :disabled="!isFormatAvailable(format.id)"
           >
-            {{ format.label }}
+            {{ format.label }}{{ !isFormatAvailable(format.id) ? ' (недоступно)' : '' }}
           </option>
         </select>
       </div>
@@ -204,8 +239,9 @@ const handleClose = () => {
             v-for="dpi in dpiOptions"
             :key="dpi.value"
             :value="dpi.value"
+            :disabled="!isDpiAvailable(dpi.value)"
           >
-            {{ dpi.label }}
+            {{ dpi.label }}{{ !isDpiAvailable(dpi.value) ? ' (недоступно)' : '' }}
           </option>
         </select>
       </div>
@@ -214,21 +250,23 @@ const handleClose = () => {
       <div class="form-group">
         <label class="form-label">Дополнительные опции:</label>
         <div class="checkbox-group">
-          <label class="checkbox-label">
+          <label class="checkbox-label" :class="{ 'checkbox-label--disabled': isGuestPlan && !isAdmin }">
             <input
               type="checkbox"
               v-model="hideContent"
               class="checkbox-input"
+              :disabled="isGuestPlan && !isAdmin"
             />
-            <span class="checkbox-text">Скрыть содержимое</span>
+            <span class="checkbox-text">Скрыть содержимое{{ (isGuestPlan && !isAdmin) ? ' (недоступно)' : '' }}</span>
           </label>
-          <label class="checkbox-label">
+          <label class="checkbox-label" :class="{ 'checkbox-label--disabled': isGuestPlan && !isAdmin }">
             <input
               type="checkbox"
               v-model="blackAndWhite"
               class="checkbox-input"
+              :disabled="isGuestPlan && !isAdmin"
             />
-            <span class="checkbox-text">Ч/Б (контур)</span>
+            <span class="checkbox-text">Ч/Б (контур){{ (isGuestPlan && !isAdmin) ? ' (недоступно)' : '' }}</span>
           </label>
           <label
             v-if="isAdmin"
@@ -576,11 +614,32 @@ const handleClose = () => {
   font-weight: 500;
   color: inherit;
 }
+
+.checkbox-label--disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  background: rgba(248, 250, 252, 0.5) !important;
+}
+
+.checkbox-label--disabled .checkbox-input {
+  cursor: not-allowed;
+}
+
+.checkbox-label--disabled .checkbox-text {
+  color: #94a3b8;
+}
+
 .checkbox-label:hover {
   background: rgba(255, 255, 255, 1);
   border-color: rgba(59, 130, 246, 0.4);
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+}
+
+.checkbox-label--disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
 }
 
 .checkbox-label:has(.checkbox-input:checked) {
