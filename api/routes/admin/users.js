@@ -238,8 +238,18 @@ export function registerAdminUsersRoutes(app) {
 
         // Обновляем план пользователя
         const startDate = new Date();
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + parseInt(duration));
+
+        // Для тарифа "Гостевой" устанавливаем бесрочную подписку (NULL)
+        // Для остальных тарифов вычисляем срок действия
+        let endDate = null;
+        if (plan.code_name === 'guest') {
+          endDate = null;
+          console.log(`[ADMIN] Тариф "Гостевой" - устанавливаем бесрочную подписку (subscription_expires_at = NULL)`);
+        } else {
+          endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + parseInt(duration));
+          console.log(`[ADMIN] Тариф "${plan.name}" - устанавливаем срок действия: ${duration} дней`);
+        }
 
         const updateResult = await client.query(
           `UPDATE users
@@ -303,7 +313,8 @@ export function registerAdminUsersRoutes(app) {
 
         await client.query('COMMIT');
 
-        console.log(`[ADMIN] Тарифный план изменен: user_id=${userId}, plan=${plan.name}, duration=${duration} дней, admin_id=${req.user.id}`);
+        const durationInfo = plan.code_name === 'guest' ? 'бесрочно' : `${duration} дней`;
+        console.log(`[ADMIN] Тарифный план изменен: user_id=${userId}, plan=${plan.name}, duration=${durationInfo}, admin_id=${req.user.id}`);
 
         // Формируем ответ с информацией о разблокировке
         const response = {
@@ -317,8 +328,9 @@ export function registerAdminUsersRoutes(app) {
           },
           subscription: {
             startDate,
-            endDate,
-            duration
+            endDate: endDate || null,
+            duration: plan.code_name === 'guest' ? 'unlimited' : duration,
+            isPermanent: plan.code_name === 'guest'
           }
         };
 
