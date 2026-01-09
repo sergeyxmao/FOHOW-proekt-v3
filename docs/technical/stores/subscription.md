@@ -236,7 +236,7 @@ subscriptionStore.clear()
   "can_export_png": true,
   "can_export_html": true,
   "can_export_png_formats": ["A4"],
-  "can_invite_drawing": false,
+  "can_invite_drawing": true,
   "can_use_images": false
 }
 ```
@@ -279,6 +279,7 @@ subscriptionStore.clear()
 
 ## История изменений
 
+- **2026-01-09**: Для Гостевого тарифа (guest) включена функция "Режим рисования" (`can_invite_drawing: true`)
 - **2026-01-09**: Добавлена поддержка новых полей features: `can_export_png_formats` (массив доступных форматов PNG) и `can_use_images` (доступ к библиотеке изображений)
 - **2026-01-06**: Изменена логика подсчёта карточек - теперь считается по текущей открытой доске, а не максимум по всем доскам
 - **2026-01-06**: Исправлен маппинг `cards → userLicenses` на `cards → cards`
