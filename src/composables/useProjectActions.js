@@ -1220,14 +1220,30 @@ const handleExportPNG = async (exportSettings = null) => {
 
     // Опция "Скрыть содержимое"
     if (exportSettings?.hideContent) {
-      const elementsToHide = canvasContainer.querySelectorAll('.card-title, .card-body, .card-body-html')
-      elementsToHide.forEach(el => {
+      // ИСПРАВЛЕНИЕ: Скрываем заголовки карточек
+      const cardTitles = canvasContainer.querySelectorAll('.card-title')
+      cardTitles.forEach(el => {
         tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
         el.style.visibility = 'hidden'
       })
 
+      // ИСПРАВЛЕНИЕ: Скрываем HTML-содержимое карточек
+      const cardBodyHtml = canvasContainer.querySelectorAll('.card-body-html')
+      cardBodyHtml.forEach(el => {
+        tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+        el.style.visibility = 'hidden'
+      })
+
+      // ИСПРАВЛЕНИЕ: Скрываем ТОЛЬКО значения (.value), но НЕ подписи (.label)
       const values = canvasContainer.querySelectorAll('.value')
       values.forEach(el => {
+        tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
+        el.style.visibility = 'hidden'
+      })
+
+      // ИСПРАВЛЕНИЕ: Скрываем PV (монетка и значения)
+      const pvRows = canvasContainer.querySelectorAll('.pv-row, .coin-icon-wrapper, .pv-value-container')
+      pvRows.forEach(el => {
         tempStyles.push({ element: el, property: 'visibility', originalValue: el.style.visibility })
         el.style.visibility = 'hidden'
       })
@@ -1263,27 +1279,48 @@ const handleExportPNG = async (exportSettings = null) => {
 
     // Опция "Ч/Б (контур)"
     if (exportSettings?.blackAndWhite) {
+      // ИСПРАВЛЕНИЕ: Применяем Ч/Б ко ВСЕМ карточкам (включая Gold)
       const cards = canvasContainer.querySelectorAll('.card')
       cards.forEach(card => {
         tempStyles.push({ element: card, property: 'background', originalValue: card.style.background })
+        tempStyles.push({ element: card, property: 'backgroundColor', originalValue: card.style.backgroundColor })
         tempStyles.push({ element: card, property: 'backgroundImage', originalValue: card.style.backgroundImage })
         tempStyles.push({ element: card, property: 'boxShadow', originalValue: card.style.boxShadow })
         tempStyles.push({ element: card, property: 'border', originalValue: card.style.border })
+        tempStyles.push({ element: card, property: 'filter', originalValue: card.style.filter })
         card.style.background = '#ffffff'
+        card.style.backgroundColor = '#ffffff'
         card.style.backgroundImage = 'none'
         card.style.boxShadow = 'none'
         card.style.border = '2px solid #000000'
+        // КРИТИЧНО: Применяем grayscale ко ВСЕЙ карточке (включая все её дочерние элементы)
+        card.style.filter = 'grayscale(100%)'
+      })
+
+      // ИСПРАВЛЕНИЕ: Применяем Ч/Б к телу карточки (для Gold карточек с градиентами)
+      const cardBodies = canvasContainer.querySelectorAll('.card-body')
+      cardBodies.forEach(body => {
+        tempStyles.push({ element: body, property: 'background', originalValue: body.style.background })
+        tempStyles.push({ element: body, property: 'backgroundColor', originalValue: body.style.backgroundColor })
+        tempStyles.push({ element: body, property: 'backgroundImage', originalValue: body.style.backgroundImage })
+        body.style.background = '#ffffff'
+        body.style.backgroundColor = '#ffffff'
+        body.style.backgroundImage = 'none'
       })
 
       const cardHeaders = canvasContainer.querySelectorAll('.card-header, .card-title')
       cardHeaders.forEach(header => {
         tempStyles.push({ element: header, property: 'background', originalValue: header.style.background })
+        tempStyles.push({ element: header, property: 'backgroundColor', originalValue: header.style.backgroundColor })
         tempStyles.push({ element: header, property: 'backgroundImage', originalValue: header.style.backgroundImage })
         tempStyles.push({ element: header, property: 'borderBottom', originalValue: header.style.borderBottom })
         tempStyles.push({ element: header, property: 'color', originalValue: header.style.color })
+        tempStyles.push({ element: header, property: 'boxShadow', originalValue: header.style.boxShadow })
         header.style.background = '#ffffff'
+        header.style.backgroundColor = '#ffffff'
         header.style.backgroundImage = 'none'
         header.style.borderBottom = 'none'
+        header.style.boxShadow = 'none'
         header.style.color = '#000000'
       })
 
@@ -1293,14 +1330,32 @@ const handleExportPNG = async (exportSettings = null) => {
         el.style.visibility = 'hidden'
       })
 
-      // Применить черно-белый фильтр к аватарам в карточках
+      // ИСПРАВЛЕНИЕ: Применить grayscale к контейнерам И элементам аватаров в карточках
+      const cardAvatarContainers = canvasContainer.querySelectorAll('.card-avatar-container')
+      cardAvatarContainers.forEach(el => {
+        tempStyles.push({ element: el, property: 'filter', originalValue: el.style.filter })
+        el.style.filter = 'grayscale(100%)'
+      })
+
       const cardAvatars = canvasContainer.querySelectorAll('.card-avatar')
       cardAvatars.forEach(el => {
         tempStyles.push({ element: el, property: 'filter', originalValue: el.style.filter })
         el.style.filter = 'grayscale(100%)'
       })
 
-      // Применить черно-белый фильтр к отдельным аватарам
+      // Применить черно-белый фильтр к отдельным аватарам (Avatar.vue)
+      const avatarObjects = canvasContainer.querySelectorAll('.avatar-object')
+      avatarObjects.forEach(el => {
+        tempStyles.push({ element: el, property: 'filter', originalValue: el.style.filter })
+        el.style.filter = 'grayscale(100%)'
+      })
+
+      const avatarCircles = canvasContainer.querySelectorAll('.avatar-circle')
+      avatarCircles.forEach(el => {
+        tempStyles.push({ element: el, property: 'filter', originalValue: el.style.filter })
+        el.style.filter = 'grayscale(100%)'
+      })
+
       const avatarImages = canvasContainer.querySelectorAll('.avatar-circle img')
       avatarImages.forEach(el => {
         tempStyles.push({ element: el, property: 'filter', originalValue: el.style.filter })
@@ -1456,6 +1511,27 @@ const handleExportPNG = async (exportSettings = null) => {
               // Скрываем оригинальный img, так как используем background
               img.style.visibility = 'hidden'
               img.style.opacity = '0'
+            }
+          })
+
+          // ИСПРАВЛЕНИЕ: Специальная обработка аватаров в карточках (Card.vue)
+          // Аватары в Card.vue используют background-image, нужно убедиться что они видимы
+          const cardAvatarContainers = clonedElement.querySelectorAll('.card-avatar-container')
+          cardAvatarContainers.forEach(container => {
+            container.style.visibility = 'visible'
+            container.style.opacity = '1'
+          })
+
+          const cardAvatars = clonedElement.querySelectorAll('.card-avatar')
+          cardAvatars.forEach(avatar => {
+            avatar.style.visibility = 'visible'
+            avatar.style.opacity = '1'
+            // Если аватар использует background-image, убедимся что стили правильные
+            const computedStyle = clonedDoc.defaultView.getComputedStyle(avatar)
+            if (computedStyle.backgroundImage && computedStyle.backgroundImage !== 'none') {
+              avatar.style.backgroundSize = 'cover'
+              avatar.style.backgroundPosition = 'center'
+              avatar.style.backgroundRepeat = 'no-repeat'
             }
           })
 
@@ -1838,6 +1914,29 @@ const handleExportPNG = async (exportSettings = null) => {
             }
           })
           console.log(`Обработано avatar-circle: ${avatarCircles.length}`)
+
+          // ИСПРАВЛЕНИЕ: Специальная обработка аватаров в карточках (Card.vue)
+          // Аватары в Card.vue используют background-image, нужно убедиться что они видимы
+          const cardAvatarContainers = clonedElement.querySelectorAll('.card-avatar-container')
+          cardAvatarContainers.forEach(container => {
+            container.style.visibility = 'visible'
+            container.style.opacity = '1'
+          })
+          console.log(`Обработано контейнеров аватаров карточек: ${cardAvatarContainers.length}`)
+
+          const cardAvatars = clonedElement.querySelectorAll('.card-avatar')
+          cardAvatars.forEach(avatar => {
+            avatar.style.visibility = 'visible'
+            avatar.style.opacity = '1'
+            // Если аватар использует background-image, убедимся что стили правильные
+            const computedStyle = clonedDoc.defaultView.getComputedStyle(avatar)
+            if (computedStyle.backgroundImage && computedStyle.backgroundImage !== 'none') {
+              avatar.style.backgroundSize = 'cover'
+              avatar.style.backgroundPosition = 'center'
+              avatar.style.backgroundRepeat = 'no-repeat'
+            }
+          })
+          console.log(`Обработано аватаров карточек: ${cardAvatars.length}`)
 
           // ИСПРАВЛЕНИЕ: Убедимся, что изображения на канвасе видимы
           const canvasImages = clonedElement.querySelectorAll('.canvas-image')
