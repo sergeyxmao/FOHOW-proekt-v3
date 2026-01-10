@@ -37,7 +37,12 @@ export function useCanvasConnections(options) {
   const connectionStart = ref(null)
   const isDrawingLine = ref(false)
   const previewLine = ref(null)
-  const selectedConnectionIds = ref([])
+
+  // Используем selectedConnectionIds из store для глобального доступа
+  const selectedConnectionIds = computed({
+    get: () => connectionsStore.selectedConnectionIds,
+    set: (value) => connectionsStore.setSelectedConnections(value)
+  })
 
   // === Computed ===
 

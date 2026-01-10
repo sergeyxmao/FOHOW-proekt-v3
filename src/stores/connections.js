@@ -16,6 +16,7 @@ export const useConnectionsStore = defineStore('connections', {
   state: () => ({
     connections: [],
     avatarConnections: [], // Новый массив для соединений между аватарами
+    selectedConnectionIds: [], // Массив выбранных соединений
     defaultLineColor: '#0f62fe',
     defaultLineThickness: 5,
     defaultHighlightType: null,
@@ -161,9 +162,54 @@ export const useConnectionsStore = defineStore('connections', {
       return updatedConnections
     },
 
+    updateSelectedConnections(connectionIds, updates) {
+      if (!Array.isArray(connectionIds) || connectionIds.length === 0) {
+        return []
+      }
+
+      const updatedConnections = []
+
+      connectionIds.forEach(id => {
+        const connection = this.connections.find(conn => conn.id === id)
+        if (connection) {
+          const normalizedUpdates = { ...updates }
+
+          if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'animationDuration')) {
+            normalizedUpdates.animationDuration = clampAnimationDuration(normalizedUpdates.animationDuration)
+          }
+
+          Object.assign(connection, normalizedUpdates)
+          updatedConnections.push(connection)
+        }
+      })
+
+      // Также обновляем avatar-connections если они есть в выборке
+      connectionIds.forEach(id => {
+        const avatarConnection = this.avatarConnections.find(conn => conn.id === id)
+        if (avatarConnection) {
+          const normalizedUpdates = { ...updates }
+
+          if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'animationDuration')) {
+            normalizedUpdates.animationDuration = clampAnimationDuration(normalizedUpdates.animationDuration)
+          }
+
+          Object.assign(avatarConnection, normalizedUpdates)
+          updatedConnections.push(avatarConnection)
+        }
+      })
+
+      if (updatedConnections.length > 0) {
+        const historyStore = useHistoryStore()
+        historyStore.setActionMetadata('update', `Изменены параметры ${updatedConnections.length} соединений`)
+        historyStore.saveState()
+      }
+
+      return updatedConnections
+    },
+
     updateAllConnections(updates) {
       const updatedConnections = []
-      
+
       this.connections.forEach(connection => {
         const normalizedUpdates = { ...updates }
 
@@ -197,7 +243,7 @@ export const useConnectionsStore = defineStore('connections', {
         historyStore.setActionMetadata('update', 'Изменены параметры всех соединений')
         historyStore.saveState()
       }
-      
+
       return updatedConnections
     },
     
@@ -460,6 +506,24 @@ export const useConnectionsStore = defineStore('connections', {
 
       this.avatarConnections = normalizedConnections
       return this.avatarConnections
+    },
+
+    // Управление выбранными соединениями
+    setSelectedConnections(connectionIds) {
+      this.selectedConnectionIds = Array.isArray(connectionIds) ? connectionIds : []
+    },
+
+    clearSelectedConnections() {
+      this.selectedConnectionIds = []
+    },
+
+    toggleConnectionSelection(connectionId) {
+      const index = this.selectedConnectionIds.indexOf(connectionId)
+      if (index > -1) {
+        this.selectedConnectionIds.splice(index, 1)
+      } else {
+        this.selectedConnectionIds.push(connectionId)
+      }
     }
   }
 })
