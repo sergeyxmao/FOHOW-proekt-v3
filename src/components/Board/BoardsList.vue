@@ -394,18 +394,12 @@ const handleThumbnailError = (boardId) => {
 // Функция для формирования полного URL миниатюры
 const getThumbnailUrl = (thumbnailUrl) => {
   if (!thumbnailUrl) return ''
-  
-  // Если формат новый: preview_url|yandexPath|timestamp
-  if (thumbnailUrl.includes('|')) {
-    const parts = thumbnailUrl.split('|')
-    const previewUrl = parts[0] // Извлекаем preview_url (первая часть)
-    const timestamp = parts[2]   // Извлекаем timestamp (третья часть)
-    
-    // Добавляем timestamp как query parameter для cache busting
-    return timestamp ? `${previewUrl}&t=${timestamp}` : previewUrl
+  // Если URL уже полный (начинается с http:// или https://), возвращаем как есть
+  if (thumbnailUrl.startsWith('http://') || thumbnailUrl.startsWith('https://')) {
+    return thumbnailUrl
   }
-  
-  // Старый формат или placeholder - добавляем базовый URL API
+  // Иначе добавляем базовый URL API
+  // Убираем '/api' из конца API_URL, так как thumbnail_url начинается с '/'
   const baseUrl = API_URL.replace(/\/api$/, '')
   return `${baseUrl}${thumbnailUrl}`
 }
