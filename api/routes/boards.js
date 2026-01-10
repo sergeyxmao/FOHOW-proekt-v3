@@ -449,9 +449,9 @@ export function registerBoardRoutes(app) {
         // Загрузить файл на Яндекс.Диск
         await uploadFile(previewPath, buffer, 'image/png');
 
-        // Опубликовать файл и получить preview_url
+        // Опубликовать файл и получить public_url
         const publishResult = await publishFile(previewPath);
-        const previewUrl = publishResult.preview_url || publishResult.public_url;
+        const previewUrl = publishResult.public_url || publishResult.preview_url;
 
         // Сформировать значение для БД: preview_url|yandexPath|timestamp
         const timestamp = Date.now();
