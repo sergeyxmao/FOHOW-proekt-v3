@@ -138,6 +138,27 @@ function getUserFilePath(userId, personalId, folderName, filename) {
 }
 
 /**
+ * Получить путь к папке превью досок пользователя
+ * @param {number} userId - ID пользователя
+ * @param {string} personalId - Персональный ID пользователя
+ * @returns {string} Путь к папке board_previews
+ */
+function getUserBoardPreviewsFolderPath(userId, personalId) {
+  return `${YANDEX_DISK_BASE_DIR}/${userId}.${personalId}/board_previews`;
+}
+
+/**
+ * Получить путь к файлу превью доски
+ * @param {number} userId - ID пользователя
+ * @param {string} personalId - Персональный ID пользователя
+ * @param {number} boardId - ID доски
+ * @returns {string} Полный путь к файлу превью
+ */
+function getUserBoardPreviewPath(userId, personalId, boardId) {
+  return `${YANDEX_DISK_BASE_DIR}/${userId}.${personalId}/board_previews/board_${boardId}.png`;
+}
+
+/**
  * Получить корневой путь для общих (shared) ресурсов
  * @returns {string} Путь "{BASE_DIR}/SHARED"
  */
@@ -483,6 +504,8 @@ export {
   getUserRootPath,
   getUserLibraryFolderPath,
   getUserFilePath,
+  getUserBoardPreviewsFolderPath,  // ← ДОБАВИТЬ
+  getUserBoardPreviewPath,          // ← ДОБАВИТЬ
   getSharedRootPath,
   getSharedPendingFolderPath,
   getSharedFolderPath,
