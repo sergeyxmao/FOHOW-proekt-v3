@@ -171,9 +171,26 @@ connectionsStore.updateAllAvatarConnections(updates)
 connectionsStore.updateAllConnectionsColorIncludingAvatars(color)
 connectionsStore.updateAllConnectionsThicknessIncludingAvatars(thickness)
 connectionsStore.updateAllConnectionsIncludingAvatars(updates)
+
+// Синхронизация default значений для новых линий
+connectionsStore.setDefaultConnectionParameters(color, thickness)
 ```
 
+### Синхронизация default параметров
+
+При изменении `lineColor` или `lineThickness` автоматически вызывается `setDefaultConnectionParameters()`, чтобы новые создаваемые линии (как обычные, так и avatar) использовали актуальные настройки "кисти".
+
+Это решает проблему, когда пользователь:
+1. Выбирает красный цвет в ViewMenu
+2. Старые линии становятся красными (если включен соответствующий режим)
+3. Рисует новую линию → она также будет красной (а не синей по умолчанию)
+
 ## История изменений
+
+### 2026-01-10: Фикс синхронизации цвета для новых avatar-линий
+- `setLineColor` и `setLineThickness` теперь вызывают `setDefaultConnectionParameters`
+- Новые avatar-линии используют текущий выбранный цвет/толщину из ViewMenu
+- `useAvatarConnections.handleAvatarConnectionPointClick` передаёт color/thickness при создании
 
 ### 2026-01-10: Добавлена поддержка управления avatar-линиями
 - Добавлен state `isAvatarLineMode`
