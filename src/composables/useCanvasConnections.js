@@ -90,10 +90,15 @@ export function useCanvasConnections(options) {
       connectionOptions.toSide
     )
 
+    // Определяем, являются ли обе карточки лицензиями (type: 'license')
+    const bothAreLicenses = fromCard.type === 'license' && toCard.type === 'license'
+
     return connectionsStore.addConnection(fromCardId, toCardId, {
       ...connectionOptions,
       fromSide,
-      toSide
+      toSide,
+      // Для лицензий включаем принудительное создание (пропуск проверки на дубликаты)
+      force: bothAreLicenses || connectionOptions.force
     })
   }
 
