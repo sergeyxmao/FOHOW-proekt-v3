@@ -313,3 +313,94 @@ const handleKeydown = (event) => {
 1. Проверь `draggingControlPoint` — устанавливается ли
 2. Проверь обработчики событий на circle элементах
 3. Проверь z-index точек — кликабельны ли они
+
+## ИСПРАВЛЕННАЯ ПРОБЛЕМА: isDrawingLine сбрасывается между кликами (2026-01-10)
+
+### Описание проблемы
+
+При попытке создать соединение между двумя карточками происходило следующее:
+- **Клик 1** (point1): `startDrawingLine` → `isDrawingLine=true` ✓
+- **Клик 2** (point2): **СНОВА** `startDrawingLine` (вместо `endDrawingLine`) ❌
+- `connectionsStore.connections` оставался пустым
+- Логи показывали 2x "Начало рисования линии" с разными cardId/side
+
+### Причина
+
+Проблема была в **порядке срабатывания обработчиков событий** в `CanvasBoard.vue`:
+
+1. `handleStageClick` (строка 1487) висит на `@mousedown` корневого `.canvas-container` (строка 2290)
+2. `handlePointerDown` (строка 1262) висит на `@pointerdown` того же `.canvas-container`
+3. При клике на connection-point оба обработчика срабатывают:
+   - **СНАЧАЛА** `handleStageClick` (mousedown)
+   - **ЗАТЕМ** `handlePointerDown` (pointerdown)
+
+**Flow проблемы:**
+```
+Клик на connection-point карточки B (второй клик)
+    ↓
+1. handleStageClick срабатывает ПЕРВЫМ
+   - НЕ проверяет, что клик на connection-point
+   - Доходит до строки 1644: cancelDrawing()
+   - isDrawingLine.value = false ❌
+   - connectionStart.value = null ❌
+    ↓
+2. handlePointerDown срабатывает вторым
+   - event.stopPropagation() (не помогает, т.к. оба на одном элементе)
+   - Проверяет: !isDrawingLine.value → true (уже сброшен!)
+   - СНОВА вызывает startDrawingLine() ❌
+```
+
+**Почему stopPropagation не помогал:**
+`event.stopPropagation()` в `handlePointerDown` останавливает всплытие события вверх по DOM-дереву, но не влияет на другие обработчики **того же элемента**. Поскольку оба обработчика висят на `.canvas-container`, они оба срабатывают.
+
+### Решение
+
+**Файл:** `src/components/Canvas/CanvasBoard.vue:1644`
+
+**До:**
+```javascript
+selectedConnectionIds.value = [];
+cancelDrawing();
+```
+
+**После:**
+```javascript
+// Не отменяем рисование, если кликнули на connection-point
+const isConnectionPoint = event.target.closest('.connection-point');
+if (!isConnectionPoint) {
+  selectedConnectionIds.value = [];
+  cancelDrawing();
+}
+```
+
+Теперь `handleStageClick` проверяет, был ли клик на connection-point, и **НЕ** вызывает `cancelDrawing()` в этом случае, сохраняя состояние `isDrawingLine=true`.
+
+### Проверка исправления
+
+**Тест-кейс:**
+1. Открыть доску с двумя лицензиями
+2. Кликнуть на левую connection-point первой лицензии
+   - ✓ Появляется оранжевая пунктирная preview line
+   - ✓ Консоль: "Начало рисования линии: {cardId: ..., side: 'left'}"
+3. Кликнуть на правую connection-point второй лицензии
+   - ✓ Линия создаётся и становится постоянной
+   - ✓ Консоль: "Создано соединение: cardA -> cardB"
+   - ✓ Vue DevTools: `connectionsStore.connections` содержит новое соединение
+   - ✓ SVG слой: отображается путь линии
+
+**Debug логи для отладки:**
+```javascript
+// CanvasBoard.vue - в начале handlePointerDown
+console.log('🔵 pointerDown', {
+  isDrawingLine: isDrawingLine.value,
+  target: event.target.className,
+  isConnectionPoint: !!event.target.closest('.connection-point')
+});
+
+// CanvasBoard.vue - в начале handleStageClick
+console.log('🟡 stageClick', {
+  isDrawingLine: isDrawingLine.value,
+  target: event.target.className,
+  isConnectionPoint: !!event.target.closest('.connection-point')
+});
+```

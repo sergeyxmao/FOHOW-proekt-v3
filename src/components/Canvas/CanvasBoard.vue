@@ -1268,17 +1268,24 @@ const handlePointerDown = (event) => {
   if (placementMode.value === 'anchor') {
     return;
   }
-	
+
   const connectionPoint = event.target.closest('.connection-point');
-  
+
+  // Debug: Отслеживаем состояние isDrawingLine при каждом pointerdown
+  console.log('🔵 pointerDown', {
+    isDrawingLine: isDrawingLine.value,
+    target: event.target.className,
+    isConnectionPoint: !!connectionPoint
+  });
+
   if (connectionPoint) {
     event.stopPropagation();
-    
+
     const cardId = connectionPoint.dataset.cardId;
     const side = connectionPoint.dataset.side;
-    
+
     if (!cardId || !side) return;
-    
+
     if (!isDrawingLine.value) {
       startDrawingLine(cardId, side);
     } else {
@@ -1496,9 +1503,12 @@ const handleStageClick = async (event) => {
     return;
   }
 
-  // *** ДОБАВЛЕНО ЛОГИРОВАНИЕ ***
-  console.log('🎯 handleStageClick сработал!', {
+  // Debug: Отслеживаем состояние isDrawingLine и клик на connection-point
+  const isConnectionPoint = event.target.closest('.connection-point');
+  console.log('🟡 stageClick', {
+    isDrawingLine: isDrawingLine.value,
     target: event.target.className,
+    isConnectionPoint: !!isConnectionPoint,
     isPlacementMode: stickersStore.isPlacementMode,
     placementTarget: stickersStore.placementTarget
   });
@@ -1640,8 +1650,12 @@ const handleStageClick = async (event) => {
     clearObjectSelections({ preserveCardSelection });
   }
 
-  selectedConnectionIds.value = [];
-  cancelDrawing();
+  // Не отменяем рисование линии, если кликнули на connection-point
+  // (это обрабатывается в handlePointerDown)
+  if (!isConnectionPoint) {
+    selectedConnectionIds.value = [];
+    cancelDrawing();
+  }
 
 };
 

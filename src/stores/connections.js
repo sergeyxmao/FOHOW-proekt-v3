@@ -24,13 +24,17 @@ export const useConnectionsStore = defineStore('connections', {
   
   actions: {
     addConnection(fromCardId, toCardId, options = {}) {
-      const existingConnection = this.connections.find(
-        conn => (conn.from === fromCardId && conn.to === toCardId) ||
-                (conn.from === toCardId && conn.to === fromCardId)
-      )
-      
-      if (existingConnection) {
-        return null
+      // Если force=true, пропускаем проверку на существующие соединения
+      if (!options.force) {
+        const existingConnection = this.connections.find(
+          conn => (conn.from === fromCardId && conn.to === toCardId) ||
+                  (conn.from === toCardId && conn.to === fromCardId)
+        )
+
+        if (existingConnection) {
+          console.log('⚠️ Соединение уже существует:', existingConnection.id)
+          return null
+        }
       }
 
       const animationDuration = clampAnimationDuration(
