@@ -129,10 +129,11 @@
 
             <div class="board-thumbnail">
               <img
-                v-if="board.thumbnail_url"
+                v-if="board.thumbnail_url && !failedThumbnails.has(board.id)"
                 :src="getThumbnailUrl(board.thumbnail_url)"
                 alt="Preview"
                 class="board-thumb-image"
+                @error="handleThumbnailError(board.id)"
               >
               <div v-else class="board-placeholder">
                 🎨
@@ -159,9 +160,6 @@
                 <button @click="showBoardFolderMenu($event, board)">Управление папками</button>
                 <FeatureGate feature="can_duplicate_boards" displayMode="hide" :showUpgrade="false">
                   <button @click="duplicateBoard(board.id)">Дублировать</button>
-                </FeatureGate>
-                <FeatureGate feature="can_export_pdf" displayMode="hide" :showUpgrade="false">
-                  <button @click="exportBoardToPDF(board.id)">Экспорт PDF</button>
                 </FeatureGate>
                 <button @click="deleteBoard(board.id)" class="danger">Удалить</button>
               </div>
@@ -384,8 +382,14 @@ const selectedBoard = ref(null)
 const newFolderName = ref('')
 const folderContextMenu = ref({ show: false, x: 0, y: 0 })
 const boardContextMenu = ref({ show: false, x: 0, y: 0 })
+const failedThumbnails = ref(new Set())
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+
+// Обработчик ошибки загрузки миниатюры
+const handleThumbnailError = (boardId) => {
+  failedThumbnails.value = new Set([...failedThumbnails.value, boardId])
+}
 
 // Функция для формирования полного URL миниатюры
 const getThumbnailUrl = (thumbnailUrl) => {
@@ -408,7 +412,8 @@ const goBack = () => {
 async function loadBoards() {
   loading.value = true
   error.value = ''
-  
+  failedThumbnails.value = new Set()
+
   try {
     const response = await fetch(`${API_URL}/boards`, {
       headers: {
@@ -605,29 +610,6 @@ async function deleteBoard(id) {
     if (!response.ok) throw new Error('Ошибка удаления')
 
     await loadBoards()
-    activeMenu.value = null
-  } catch (err) {
-    error.value = err.message
-  }
-}
-
-async function exportBoardToPDF(id) {
-  try {
-    // Открываем доску в новом окне для печати/экспорта в PDF
-    const board = boards.value.find(b => b.id === id)
-    if (!board) return
-
-    // Сохраняем текущий URL
-    const currentUrl = window.location.href
-
-    // Открываем доску
-    router.push(`/board/${id}`)
-
-    // Даем время загрузиться доске, затем вызываем печать
-    setTimeout(() => {
-      window.print()
-    }, 1000)
-
     activeMenu.value = null
   } catch (err) {
     error.value = err.message
