@@ -69,8 +69,9 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       lineColor: lineColorFromProfile,
       lineThickness: lineThicknessFromProfile || connectionsStore.defaultLineThickness || 5,
       isGlobalLineMode: false,
+      isAvatarLineMode: false,
       animationColor: animationColorFromProfile,
-      isAnimationEnabled: animationEnabledFromProfile,      
+      isAnimationEnabled: animationEnabledFromProfile,
       animationSeconds: clampAnimationSeconds(initialAnimation / 1000),
       headerColor: '#5D8BF4',
       headerColorIndex: 0,
@@ -119,6 +120,9 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       // Если есть выбранные линии, применяем только к ним
       if (connectionsStore.selectedConnectionIds.length > 0) {
         connectionsStore.updateSelectedConnections(connectionsStore.selectedConnectionIds, { color })
+      } else if (this.isAvatarLineMode) {
+        // Иначе если включен режим avatar-линий, применяем только к avatar-линиям
+        connectionsStore.updateAllAvatarConnectionsColor(color)
       } else if (this.isGlobalLineMode) {
         // Иначе если включен глобальный режим, применяем ко всем
         connectionsStore.updateAllConnectionsColorIncludingAvatars(color)
@@ -136,6 +140,9 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       // Если есть выбранные линии, применяем только к ним
       if (connectionsStore.selectedConnectionIds.length > 0) {
         connectionsStore.updateSelectedConnections(connectionsStore.selectedConnectionIds, { thickness: normalized })
+      } else if (this.isAvatarLineMode) {
+        // Иначе если включен режим avatar-линий, применяем только к avatar-линиям
+        connectionsStore.updateAllAvatarConnectionsThickness(normalized)
       } else if (this.isGlobalLineMode) {
         // Иначе если включен глобальный режим, применяем ко всем
         connectionsStore.updateAllConnectionsThicknessIncludingAvatars(normalized)
@@ -147,6 +154,18 @@ export const useViewSettingsStore = defineStore('viewSettings', {
 
     toggleGlobalLineMode() {
       this.isGlobalLineMode = !this.isGlobalLineMode
+      // Автоматически отключаем режим avatar-линий при включении глобального
+      if (this.isGlobalLineMode && this.isAvatarLineMode) {
+        this.isAvatarLineMode = false
+      }
+    },
+
+    toggleAvatarLineMode() {
+      this.isAvatarLineMode = !this.isAvatarLineMode
+      // Автоматически отключаем глобальный режим при включении avatar-линий
+      if (this.isAvatarLineMode && this.isGlobalLineMode) {
+        this.isGlobalLineMode = false
+      }
     },
 
     setAnimationSeconds(value) {
@@ -157,6 +176,9 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       // Если есть выбранные линии, применяем только к ним
       if (connectionsStore.selectedConnectionIds.length > 0) {
         connectionsStore.updateSelectedConnections(connectionsStore.selectedConnectionIds, { animationDuration: seconds * 1000 })
+      } else if (this.isAvatarLineMode) {
+        // Иначе если включен режим avatar-линий, применяем только к avatar-линиям
+        connectionsStore.updateAllAvatarConnections({ animationDuration: seconds * 1000 })
       } else if (this.isGlobalLineMode) {
         // Иначе если включен глобальный режим, применяем ко всем
         connectionsStore.updateAllConnectionsIncludingAvatars({ animationDuration: seconds * 1000 })

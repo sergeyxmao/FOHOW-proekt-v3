@@ -22,11 +22,12 @@ const {
   lineThickness,
   animationSeconds,
   animationColor,
-  isAnimationEnabled,  
+  isAnimationEnabled,
   headerColor,
   headerColorIndex,
   backgroundGradient,
-  isGlobalLineMode
+  isGlobalLineMode,
+  isAvatarLineMode
 } = storeToRefs(viewSettingsStore)
 
 const openSubmenuId = ref(null)
@@ -94,6 +95,10 @@ function openBackgroundPicker() {
 
 function toggleGlobalLineMode() {
   viewSettingsStore.toggleGlobalLineMode()
+}
+
+function toggleAvatarLineMode() {
+  viewSettingsStore.toggleAvatarLineMode()
 }
 
 function handleAnimationChange(value) {
@@ -190,6 +195,16 @@ function changeLocale(newLocale) {
               @click.stop="toggleGlobalLineMode"
             >
               {{ t('viewMenu.applyToAllLines') }}
+            </button>
+          </div>
+          <div class="view-menu__controls">
+            <button
+              type="button"
+              class="view-menu__control view-menu__control--avatar"
+              :class="{ 'view-menu__control--active': isAvatarLineMode }"
+              @click.stop="toggleAvatarLineMode"
+            >
+              {{ t('viewMenu.applyToAvatarLines') }}
             </button>
           </div>
           <label class="view-menu__field" for="view-menu-line-thickness">

@@ -31,6 +31,7 @@ export default {
     lines: 'Линии',
     lineThickness: 'Толщина',
     applyToAllLines: 'Ко всем линиям',
+    applyToAvatarLines: 'Avatar линии',
     selectLineColor: 'Выбрать цвет линий',
     animation: 'Анимация',
     animationEnabled: 'Анимация включена',
