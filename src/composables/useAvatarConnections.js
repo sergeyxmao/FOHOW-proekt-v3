@@ -401,7 +401,10 @@ export function useAvatarConnections(options) {
           {
             fromPointIndex: avatarConnectionStart.value.pointIndex,
             toPointIndex: pointIndex,
-            controlPoints: [midpoint]
+            controlPoints: [midpoint],
+            color: viewSettingsStore.lineColor,
+            thickness: viewSettingsStore.lineThickness,
+            highlightType: null
           }
         )
       }

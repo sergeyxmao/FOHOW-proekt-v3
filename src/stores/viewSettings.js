@@ -127,7 +127,8 @@ export const useViewSettingsStore = defineStore('viewSettings', {
         // Иначе если включен глобальный режим, применяем ко всем
         connectionsStore.updateAllConnectionsColorIncludingAvatars(color)
       }
-      // Если нет выбранных и не глобальный режим, обновляем только default значение
+      // Синхронизируем default значения для новых линий
+      connectionsStore.setDefaultConnectionParameters(this.lineColor, this.lineThickness)
 
       await this.persistUiPreferences({ lineColor: color })
     },
@@ -147,7 +148,8 @@ export const useViewSettingsStore = defineStore('viewSettings', {
         // Иначе если включен глобальный режим, применяем ко всем
         connectionsStore.updateAllConnectionsThicknessIncludingAvatars(normalized)
       }
-      // Если нет выбранных и не глобальный режим, обновляем только default значение
+      // Синхронизируем default значения для новых линий
+      connectionsStore.setDefaultConnectionParameters(this.lineColor, this.lineThickness)
 
       await this.persistUiPreferences({ lineThickness: normalized })
     },
