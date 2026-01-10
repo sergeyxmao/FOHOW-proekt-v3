@@ -9,17 +9,17 @@
  * - POST /api/boards/:id/thumbnail - Загрузить миниатюру
  */
 
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { promises as fsPromises } from 'fs';
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { checkFeature } from '../middleware/checkFeature.js';
 import { checkUsageLimit } from '../middleware/checkUsageLimit.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import {
+  getUserBoardPreviewPath,
+  ensureFolderExists,
+  uploadFile,
+  publishFile,
+  deleteFile
+} from '../services/yandexDiskService.js';
 
 /**
  * Получить информацию о блокировке доски
@@ -259,6 +259,35 @@ export function registerBoardRoutes(app) {
         }
       }
 
+    // Получить thumbnail_url перед удалением доски
+    const thumbnailResult = await pool.query(
+      'SELECT thumbnail_url FROM boards WHERE id = $1',
+      [id]
+    );
+
+    const thumbnailUrl = thumbnailResult.rows[0]?.thumbnail_url;
+
+    // Если превью хранится на Яндекс.Диске, удалить файл
+    if (thumbnailUrl && thumbnailUrl.includes('|')) {
+      const parts = thumbnailUrl.split('|');
+      const yandexPath = parts[1]; // Извлекаем yandexPath
+
+      if (yandexPath) {
+        try {
+          await deleteFile(yandexPath);
+          console.log(`✅ Превью доски ${id} удалено с Яндекс.Диска: ${yandexPath}`);
+        } catch (deleteError) {
+          // Если файл не найден (404), игнорируем ошибку
+          if (deleteError.status === 404) {
+            console.warn(`⚠️ Превью доски ${id} не найдено на Яндекс.Диске (уже удалено или не существовало)`);
+          } else {
+            console.error(`❌ Ошибка удаления превью доски ${id} с Яндекс.Диска:`, deleteError);
+            // Продолжаем удаление доски из БД даже если не удалось удалить превью
+          }
+        }
+      }
+    }
+
       const query = isAdmin
         ? 'DELETE FROM boards WHERE id = $1 RETURNING id'
         : 'DELETE FROM boards WHERE id = $1 AND owner_id = $2 RETURNING id';
@@ -384,13 +413,60 @@ export function registerBoardRoutes(app) {
         }
       }
 
-      const boardsDir = path.join(__dirname, '..', 'uploads', 'boards');
-      await fsPromises.mkdir(boardsDir, { recursive: true });
+      // Получить personal_id пользователя-владельца доски
+      const userResult = await pool.query(
+        'SELECT personal_id FROM users WHERE id = $1',
+        [boardResult.rows[0].owner_id]
+      );
 
-      const filePath = path.join(boardsDir, `${boardId}.png`);
-      await fsPromises.writeFile(filePath, buffer);
+      if (userResult.rows.length === 0) {
+        return reply.code(500).send({ error: 'Владелец доски не найден' });
+      }
 
-      const thumbnailUrl = `/uploads/boards/${boardId}.png`;
+      const personalId = userResult.rows[0].personal_id;
+
+      if (!personalId) {
+        return reply.code(400).send({
+          error: 'Для загрузки превью необходимо указать компьютерный номер в профиле владельца доски'
+        });
+      }
+
+      // Загрузка превью на Яндекс.Диск
+      let thumbnailUrl;
+
+      try {
+        // Построить путь к файлу превью на ЯД
+        const previewPath = getUserBoardPreviewPath(
+          boardResult.rows[0].owner_id,
+          personalId,
+          boardId
+        );
+
+        // Создать папку board_previews если не существует
+        const previewsFolderPath = `${process.env.YANDEX_DISK_BASE_DIR}/${boardResult.rows[0].owner_id}.${personalId}/board_previews`;
+        await ensureFolderExists(previewsFolderPath);
+
+        // Загрузить файл на Яндекс.Диск
+        await uploadFile(previewPath, buffer, 'image/png');
+
+        // Опубликовать файл и получить preview_url
+        const publishResult = await publishFile(previewPath);
+        const previewUrl = publishResult.preview_url || publishResult.public_url;
+
+        // Сформировать значение для БД: preview_url|yandexPath|timestamp
+        const timestamp = Date.now();
+        thumbnailUrl = `${previewUrl}|${previewPath}|${timestamp}`;
+
+        console.log(`✅ Превью доски ${boardId} загружено на Яндекс.Диск: ${previewPath}`);
+
+      } catch (ydError) {
+        console.error(`❌ Ошибка загрузки превью доски ${boardId} на Яндекс.Диск:`, ydError);
+        
+        // Fallback: использовать локальный placeholder
+        thumbnailUrl = '/uploads/boards/placeholder.png';
+        
+        console.log(`⚠️ Для доски ${boardId} установлен placeholder`);
+      }
 
       const updateQuery = isAdmin
         ? 'UPDATE boards SET thumbnail_url = $1 WHERE id = $2'
@@ -407,4 +483,4 @@ export function registerBoardRoutes(app) {
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });
-}
+
