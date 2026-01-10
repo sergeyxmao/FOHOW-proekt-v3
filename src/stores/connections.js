@@ -460,6 +460,66 @@ export const useConnectionsStore = defineStore('connections', {
       return { connections: this.connections.length, avatarConnections: this.avatarConnections.length }
     },
 
+    // Обновить только avatar-соединения
+    updateAllAvatarConnections(updates) {
+      const updatedConnections = []
+
+      this.avatarConnections.forEach(connection => {
+        const normalizedUpdates = { ...updates }
+
+        if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'animationDuration')) {
+          normalizedUpdates.animationDuration = clampAnimationDuration(normalizedUpdates.animationDuration)
+        }
+
+        Object.assign(connection, normalizedUpdates)
+        updatedConnections.push(connection)
+      })
+
+      if (updatedConnections.length > 0) {
+        const historyStore = useHistoryStore()
+        historyStore.setActionMetadata('update', 'Изменены параметры всех avatar-соединений')
+        historyStore.saveState()
+      }
+
+      return updatedConnections
+    },
+
+    // Обновить цвет всех avatar-соединений
+    updateAllAvatarConnectionsColor(color) {
+      const updatedConnections = []
+
+      this.avatarConnections.forEach(connection => {
+        connection.color = color
+        updatedConnections.push(connection)
+      })
+
+      if (updatedConnections.length > 0) {
+        const historyStore = useHistoryStore()
+        historyStore.setActionMetadata('update', 'Изменен цвет всех avatar-соединений')
+        historyStore.saveState()
+      }
+
+      return updatedConnections
+    },
+
+    // Обновить толщину всех avatar-соединений
+    updateAllAvatarConnectionsThickness(thickness) {
+      const updatedConnections = []
+
+      this.avatarConnections.forEach(connection => {
+        connection.thickness = thickness
+        updatedConnections.push(connection)
+      })
+
+      if (updatedConnections.length > 0) {
+        const historyStore = useHistoryStore()
+        historyStore.setActionMetadata('update', 'Изменена толщина всех avatar-соединений')
+        historyStore.saveState()
+      }
+
+      return updatedConnections
+    },
+
     loadAvatarConnections(connectionsData = []) {
       if (!Array.isArray(connectionsData)) {
         this.avatarConnections = []
