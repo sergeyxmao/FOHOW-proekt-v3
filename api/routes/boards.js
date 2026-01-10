@@ -20,6 +20,7 @@ import {
   publishFile,
   deleteFile
 } from '../services/yandexDiskService.js';
+import { getBoardPreviewUrl } from '../utils/boardPreviewUtils.js';
 
 /**
  * Получить информацию о блокировке доски
@@ -78,7 +79,13 @@ export function registerBoardRoutes(app) {
         [req.user.id]
       );
 
-      return reply.send({ boards: result.rows });
+      // Преобразовать thumbnail_url в proxy URL
+      const boards = result.rows.map(board => ({
+        ...board,
+        thumbnail_url: getBoardPreviewUrl(board.id, board.thumbnail_url)
+      }));
+
+      return reply.send({ boards });
     } catch (err) {
       console.error('❌ Ошибка получения досок:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
@@ -119,7 +126,10 @@ export function registerBoardRoutes(app) {
         }
       }
 
-      return reply.send({ board: board });
+      // Преобразовать thumbnail_url в proxy URL
+      board.thumbnail_url = getBoardPreviewUrl(board.id, board.thumbnail_url);
+
+      return reply.send({ board });
     } catch (err) {
       console.error('❌ Ошибка получения доски:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
@@ -480,6 +490,81 @@ export function registerBoardRoutes(app) {
       return reply.send({ thumbnail_url: thumbnailUrl });
     } catch (err) {
       console.error('❌ Ошибка загрузки миниатюры доски:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  // === ПОЛУЧИТЬ ПРЕВЬЮ ДОСКИ (PROXY) ===
+  app.get('/api/boards/:boardId/preview', async (req, reply) => {
+    try {
+      const { boardId } = req.params;
+      // Параметр ?v=timestamp игнорируется - он используется только для cache busting на клиенте
+
+      // Получить thumbnail_url из БД
+      const result = await pool.query(
+        'SELECT thumbnail_url FROM boards WHERE id = $1',
+        [boardId]
+      );
+
+      if (!result.rows[0]?.thumbnail_url) {
+        return reply.code(404).send({ error: 'Превью не найдено' });
+      }
+
+      const thumbnailUrl = result.rows[0].thumbnail_url;
+
+      // Если это локальный placeholder, вернуть ошибку (файлы должны обслуживаться статически)
+      if (thumbnailUrl.startsWith('/uploads/')) {
+        return reply.code(404).send({ error: 'Превью не найдено' });
+      }
+
+      // Извлечь yandexPath из формата: preview_url|yandexPath|timestamp
+      const parts = thumbnailUrl.split('|');
+      const yandexPath = parts[1];
+
+      if (!yandexPath) {
+        return reply.code(404).send({ error: 'Путь к превью не найден' });
+      }
+
+      // Получить ссылку для скачивания с Яндекс.Диска
+      const response = await fetch(
+        `https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(yandexPath)}`,
+        {
+          headers: {
+            'Authorization': `OAuth ${process.env.YANDEX_DISK_TOKEN}`
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.href) {
+        console.error('Ошибка получения ссылки на превью доски:', data);
+        return reply.code(404).send({ error: 'Не удалось получить превью' });
+      }
+
+      // Скачать файл по прямой ссылке
+      const imageResponse = await fetch(data.href);
+      const imageBuffer = await imageResponse.arrayBuffer();
+
+      // Определить MIME-type из расширения файла
+      const ext = yandexPath.split('.').pop().toLowerCase();
+      const mimeTypes = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'webp': 'image/webp'
+      };
+      const contentType = mimeTypes[ext] || 'image/png';
+
+      // Вернуть изображение с кэшированием
+      return reply
+        .header('Content-Type', contentType)
+        .header('Cache-Control', 'public, max-age=86400') // 24 часа
+        .send(Buffer.from(imageBuffer));
+
+    } catch (err) {
+      console.error('❌ Ошибка получения превью доски:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });
