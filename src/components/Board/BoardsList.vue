@@ -130,7 +130,7 @@
             <div class="board-thumbnail">
               <img
                 v-if="board.thumbnail_url"
-                :src="board.thumbnail_url"
+                :src="getThumbnailUrl(board.thumbnail_url)"
                 alt="Preview"
                 class="board-thumb-image"
               >
@@ -386,6 +386,19 @@ const folderContextMenu = ref({ show: false, x: 0, y: 0 })
 const boardContextMenu = ref({ show: false, x: 0, y: 0 })
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+
+// Функция для формирования полного URL миниатюры
+const getThumbnailUrl = (thumbnailUrl) => {
+  if (!thumbnailUrl) return ''
+  // Если URL уже полный (начинается с http:// или https://), возвращаем как есть
+  if (thumbnailUrl.startsWith('http://') || thumbnailUrl.startsWith('https://')) {
+    return thumbnailUrl
+  }
+  // Иначе добавляем базовый URL API
+  // Убираем '/api' из конца API_URL, так как thumbnail_url начинается с '/'
+  const baseUrl = API_URL.replace(/\/api$/, '')
+  return `${baseUrl}${thumbnailUrl}`
+}
 
 // Функция возврата на главную страницу
 const goBack = () => {
