@@ -194,8 +194,8 @@ export function registerProfileRoutes(app) {
       const targetOffice = normalizedOffice ?? currentOffice;
       const targetPersonalId = normalizedPersonalId ?? currentPersonalId;
 
-      // Валидация office
-      if (normalizedOffice !== null && normalizedOffice !== '' && !validateOffice(normalizedOffice)) {
+      // Валидация office - ТОЛЬКО если пользователь ИЗМЕНЯЕТ значение
+      if (normalizedOffice && normalizedOffice !== currentOffice && !validateOffice(normalizedOffice)) {
         return reply.code(400).send({
           error: 'Представительство должно быть в формате: 3 английские буквы + 2-3 цифры (например: RUY68)',
           field: 'office'
@@ -212,9 +212,9 @@ export function registerProfileRoutes(app) {
         if (usernameCheck.rows.length > 0) return reply.code(409).send({ error: 'Это имя пользователя уже занято' });
       }
 
-      // Валидация personal_id
-      if (targetPersonalId) {
-        if (!validatePersonalId(targetPersonalId, targetOffice)) {
+      // Валидация personal_id - ТОЛЬКО если пользователь ИЗМЕНЯЕТ значение
+      if (normalizedPersonalId && normalizedPersonalId !== currentPersonalId) {
+        if (!validatePersonalId(normalizedPersonalId, targetOffice)) {
           return reply.code(400).send({
             error: 'Компьютерный номер должен начинаться с представительства и содержать 9 цифр (например: RUY68000000000)',
             field: 'personal_id'
