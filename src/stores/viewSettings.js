@@ -115,21 +115,34 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       }
       this.lineColor = color
       const connectionsStore = useConnectionsStore()
-      if (this.isGlobalLineMode) {
+
+      // Если есть выбранные линии, применяем только к ним
+      if (connectionsStore.selectedConnectionIds.length > 0) {
+        connectionsStore.updateSelectedConnections(connectionsStore.selectedConnectionIds, { color })
+      } else if (this.isGlobalLineMode) {
+        // Иначе если включен глобальный режим, применяем ко всем
         connectionsStore.updateAllConnectionsColorIncludingAvatars(color)
       }
-      await this.persistUiPreferences({ lineColor: color })      
+      // Если нет выбранных и не глобальный режим, обновляем только default значение
+
+      await this.persistUiPreferences({ lineColor: color })
     },
 
     async setLineThickness(value) {
       const normalized = clampThickness(value)
       this.lineThickness = normalized
       const connectionsStore = useConnectionsStore()
-      if (this.isGlobalLineMode) {
+
+      // Если есть выбранные линии, применяем только к ним
+      if (connectionsStore.selectedConnectionIds.length > 0) {
+        connectionsStore.updateSelectedConnections(connectionsStore.selectedConnectionIds, { thickness: normalized })
+      } else if (this.isGlobalLineMode) {
+        // Иначе если включен глобальный режим, применяем ко всем
         connectionsStore.updateAllConnectionsThicknessIncludingAvatars(normalized)
       }
+      // Если нет выбранных и не глобальный режим, обновляем только default значение
 
-      await this.persistUiPreferences({ lineThickness: normalized })      
+      await this.persistUiPreferences({ lineThickness: normalized })
     },
 
     toggleGlobalLineMode() {
@@ -140,9 +153,15 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       const seconds = clampAnimationSeconds(value)
       this.animationSeconds = seconds
       const connectionsStore = useConnectionsStore()
-      if (this.isGlobalLineMode) {
+
+      // Если есть выбранные линии, применяем только к ним
+      if (connectionsStore.selectedConnectionIds.length > 0) {
+        connectionsStore.updateSelectedConnections(connectionsStore.selectedConnectionIds, { animationDuration: seconds * 1000 })
+      } else if (this.isGlobalLineMode) {
+        // Иначе если включен глобальный режим, применяем ко всем
         connectionsStore.updateAllConnectionsIncludingAvatars({ animationDuration: seconds * 1000 })
       }
+
       connectionsStore.setDefaultConnectionParameters(this.lineColor, this.lineThickness, seconds * 1000)
     },
     async setAnimationColor(color) {
