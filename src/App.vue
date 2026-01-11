@@ -747,7 +747,7 @@ function getCanvasState() {
     zoom: 1, // пока фиксированное значение
     objects: cardsData,
     connections: connectionsData,
-    avatarConnections: userCardConnectionsData,    
+    userCardConnections: userCardConnectionsData,    
     stickers: stickersData,
     images: imagesData
   }
