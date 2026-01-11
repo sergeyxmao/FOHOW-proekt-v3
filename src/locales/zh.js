@@ -122,6 +122,7 @@ export default {
   },
   toolbar: {
     addCard: '添加卡片',
+    addUserCard: '添加合作伙伴卡',
     addSticker: '添加贴纸',
     addConnection: '添加连接',
     undo: '撤销',
