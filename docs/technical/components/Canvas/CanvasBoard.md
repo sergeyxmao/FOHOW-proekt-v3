@@ -1,0 +1,137 @@
+# CanvasBoard.vue
+
+> Главный компонент Canvas — интерактивная доска для работы с карточками и соединениями
+
+## Общая информация
+
+| Параметр | Значение |
+|----------|----------|
+| **Файл** | `src/components/Canvas/CanvasBoard.vue` |
+| **Размер** | ~3130 строк |
+| **Тип** | Vue 3 SFC (Single File Component) |
+| **Зависимости** | Pinia stores, composables, Konva.js |
+
+## Назначение
+
+CanvasBoard.vue — это центральный компонент приложения, который предоставляет:
+- Интерактивную Canvas доску для размещения карточек
+- Рисование соединений между карточками
+- Управление user-card линиями (партнёрские связи)
+- Pan & Zoom функциональность
+- Экспорт в PNG/PDF
+
+## Структура стилей
+
+### Два блока `<style>`
+
+Компонент использует **два отдельных блока стилей**:
+
+1. **`<style scoped>`** (строки 2636-3087)
+   - Основные стили компонента
+   - Изолированы через scoped атрибут
+   - Применяются только к элементам этого компонента
+
+2. **`<style>` без scoped** (строки 3088+)
+   - SVG-стили для user-card линий
+   - Глобальные стили для динамических элементов
+   - Необходимы для корректной работы анимаций
+
+### Почему два блока?
+
+Vue scoped styles добавляют уникальные атрибуты (`data-v-xxx`) к элементам, но динамически созданные SVG элементы (через JavaScript) не получают эти атрибуты. Поэтому стили для user-card линий вынесены в отдельный unscoped блок.
+
+## User-card линии
+
+### Классы стилей
+
+```css
+/* Базовый стиль линии */
+.user-card-line {
+  fill: none;
+  stroke: var(--line-color, #5D8BF4);
+  stroke-width: var(--line-width, 5px);
+  /* ... */
+}
+
+/* Анимированная линия */
+.user-card-line--animated {
+  stroke-dasharray: 16 12;
+  animation: userCardLineFlow 2s linear infinite;
+  /* ... */
+}
+
+/* Выделенная линия */
+.user-card-line.selected {
+  stroke: #5D8BF4 !important;
+  stroke-width: calc(var(--line-width, 5px) + 2px) !important;
+  /* ... */
+}
+```
+
+### Анимация потока
+
+```css
+@keyframes userCardLineFlow {
+  0% {
+    stroke-dashoffset: 0;
+    stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
+  }
+  50% {
+    stroke: rgba(var(--line-animation-rgb, 93, 139, 244), 0.9);
+  }
+  100% {
+    stroke-dashoffset: -32;
+    stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
+  }
+}
+```
+
+Анимация создаёт эффект "бегущих штрихов" вдоль линии, имитируя поток данных между партнёрами.
+
+## Связанные файлы
+
+- `src/composables/useUserCardConnections.js` — логика соединений user-card
+- `docs/technical/composables/useUserCardConnections.md` — документация composable
+- `src/stores/connections.js` — хранение соединений
+
+## История изменений
+
+### 2026-01-11: Исправление анимации user-card линий
+
+**Проблема:** Класс `.user-card-line--animated` не применялся к SVG `<path>` элементам, анимация не работала.
+
+**Причина:** Vue scoped styles блокировали стили для динамически созданных SVG элементов.
+
+**Решение:**
+- Вырезаны стили `.user-card-line*` из `<style scoped>` блока
+- Создан отдельный `<style>` блок БЕЗ scoped атрибута
+- Перенесены туда стили user-card линий и анимации
+
+**Коммит:** `fix: move user-card-line styles out of scoped for animation to work`
+
+## Отладка
+
+### Анимация линий не работает
+
+1. Проверь DevTools → Elements → найди `<path class="user-card-line">`
+2. Проверь что класс `.user-card-line--animated` применяется
+3. Убедись что стили находятся в **unscoped** блоке `<style>`
+4. Проверь `viewSettingsStore.isAnimationEnabled`
+
+### Стили не применяются к SVG
+
+Vue scoped styles не работают с динамически созданными элементами. Перемести стили в unscoped блок.
+
+## Best Practices
+
+1. **Scoped стили для статических элементов**
+   - Используй `<style scoped>` для обычных HTML элементов
+   - Изоляция стилей предотвращает конфликты
+
+2. **Unscoped стили для динамических SVG**
+   - Используй `<style>` без scoped для SVG элементов
+   - Добавляй чёткие селекторы (`.user-card-line`) чтобы избежать конфликтов
+
+3. **CSS переменные для кастомизации**
+   - Используй `var(--line-color)` для настраиваемых параметров
+   - Позволяет менять цвета/размеры без изменения CSS
