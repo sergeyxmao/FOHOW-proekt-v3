@@ -781,23 +781,23 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
 
       return true
     },
-    highlightAvatar(avatarId) {
-      const avatar = this.cards.find(c => c.id === avatarId && c.type === 'avatar')
-      if (!avatar) {
+    highlightUserCard(userCardId) {
+      const userCard = this.cards.find(c => c.id === userCardId && c.type === 'user_card')
+      if (!userCard) {
         return false
       }
 
-      avatar.highlighted = true
+      userCard.highlighted = true
 
       setTimeout(() => {
-        avatar.highlighted = false
+        userCard.highlighted = false
       }, 2000)
 
       return true
     },
-    resizeAvatar(avatarId, sizePercent) {
-      const avatar = this.cards.find(c => c.id === avatarId)
-      if (!avatar || avatar.type !== 'avatar') {
+    resizeUserCard(userCardId, sizePercent) {
+      const userCard = this.cards.find(c => c.id === userCardId)
+      if (!userCard || userCard.type !== 'user_card') {
         return false
       }
 
@@ -813,42 +813,42 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
       const newDiameter = BASE_DIAMETER * (sizePercent / 100)
 
       // Обновляем размер и диаметр
-      avatar.size = sizePercent
-      avatar.diameter = newDiameter
+      userCard.size = sizePercent
+      userCard.diameter = newDiameter
 
       // Записываем в историю
       const historyStore = useHistoryStore()
-      historyStore.setActionMetadata('update', `Изменён размер Аватара на ${sizePercent}%`)
+      historyStore.setActionMetadata('update', `Изменён размер карточки на ${sizePercent}%`)
       historyStore.saveState()
 
       return true
     },
 
-    updateAvatarUserData(avatarId, userData) {
-      const avatar = this.cards.find(c => c.id === avatarId && c.type === 'avatar')
-      if (!avatar) {
+    updateUserCardUserData(userCardId, userData) {
+      const userCard = this.cards.find(c => c.id === userCardId && c.type === 'user_card')
+      if (!userCard) {
         return false
       }
 
       if (userData === null) {
         // Сброс на дефолтные значения
-        avatar.personalId = ''
-        avatar.userId = null
-        avatar.avatarUrl = '/Avatar.png'
-        avatar.username = ''
+        userCard.personalId = ''
+        userCard.userId = null
+        userCard.avatarUrl = '/Avatar.png'
+        userCard.username = ''
       } else {
         // Подстановка данных пользователя
-        avatar.personalId = userData.personalId || ''
-        avatar.userId = userData.id || null
-        avatar.avatarUrl = userData.avatarUrl || '/Avatar.png'
-        avatar.username = userData.username || ''
+        userCard.personalId = userData.personalId || ''
+        userCard.userId = userData.id || null
+        userCard.avatarUrl = userData.avatarUrl || '/Avatar.png'
+        userCard.username = userData.username || ''
       }
 
       // Запись в историю
       const historyStore = useHistoryStore()
       historyStore.setActionMetadata('update', userData
-        ? `Привязан пользователь ${userData.username} к Аватару`
-        : 'Сброшена привязка пользователя к Аватару')
+        ? `Привязан пользователь ${userData.username} к карточке`
+        : 'Сброшена привязка пользователя к карточке')
       historyStore.saveState()
 
       return true

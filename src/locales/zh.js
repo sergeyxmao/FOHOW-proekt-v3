@@ -31,7 +31,7 @@ export default {
     lines: '线条',
     lineThickness: '粗细',
     applyToAllLines: '应用到所有线条',
-    applyToAvatarLines: 'Avatar线条',
+    applyToUserCardLines: '用户卡片线条',
     selectLineColor: '选择线条颜色',
     animation: '动画',
     animationEnabled: '动画已开启',

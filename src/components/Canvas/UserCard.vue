@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 
 const props = defineProps({
-  avatar: {
+  userCard: {
     type: Object,
     required: true
   },
@@ -21,40 +21,40 @@ const props = defineProps({
 })
 
 const emit = defineEmits([
-  'avatar-click',
-  'avatar-dblclick',
+  'user-card-click',
+  'user-card-dblclick',
   'start-drag',
   'connection-point-click'
 ])
 
 const ignoreNextClick = ref(false)
 
-const avatarStyle = computed(() => {
-  const diameter = props.avatar.diameter || 418
-  
+const userCardStyle = computed(() => {
+  const diameter = props.userCard.diameter || 418
+
   return {
     position: 'absolute',
-    left: `${props.avatar.x}px`,
-    top: `${props.avatar.y}px`,
+    left: `${props.userCard.x}px`,
+    top: `${props.userCard.y}px`,
     width: `${diameter}px`,
     height: 'auto'
   }
 })
 
 const shapeStyle = computed(() => {
-  const diameter = props.avatar.diameter || 418
+  const diameter = props.userCard.diameter || 418
 
   return {
     position: 'relative',
-    width: `${diameter}px`,    
+    width: `${diameter}px`,
     height: `${diameter}px`
   }
 })
 
 const circleStyle = computed(() => {
-  const diameter = props.avatar.diameter || 418
+  const diameter = props.userCard.diameter || 418
   const strokeWidth = adaptiveStrokeWidth.value
-  const stroke = props.avatar.stroke || '#5D8BF4'
+  const stroke = props.userCard.stroke || '#5D8BF4'
 
   return {
     width: `${diameter}px`,
@@ -68,8 +68,8 @@ const circleStyle = computed(() => {
     transition: 'all 0.2s ease'
   }
 })
-const ringSize = computed(() => props.avatar.diameter || 418)
-const ringStrokeWidth = computed(() => Math.max(3, (props.avatar.strokeWidth || 3) * 1.6))
+const ringSize = computed(() => props.userCard.diameter || 418)
+const ringStrokeWidth = computed(() => Math.max(3, (props.userCard.strokeWidth || 3) * 1.6))
 const ringRadius = computed(() => ringSize.value / 2 - ringStrokeWidth.value - 2)
 
 const imageStyle = computed(() => {
@@ -81,7 +81,7 @@ const imageStyle = computed(() => {
   }
 })
 
-const handleAvatarClick = (event) => {
+const handleUserCardClick = (event) => {
   event.stopPropagation()
 
   if (ignoreNextClick.value) {
@@ -89,12 +89,12 @@ const handleAvatarClick = (event) => {
     return
   }
 
-  emit('avatar-click', event, props.avatar.id)
+  emit('user-card-click', event, props.userCard.id)
 }
 
-const handleAvatarDblClick = (event) => {
+const handleUserCardDblClick = (event) => {
   event.stopPropagation()
-  emit('avatar-dblclick', event, props.avatar.id)
+  emit('user-card-dblclick', event, props.userCard.id)
 }
 
 const handlePointerDown = (event) => {
@@ -117,16 +117,16 @@ const handlePointerDown = (event) => {
     window.addEventListener('pointerup', clearIgnoreFlag, { once: true })
     window.addEventListener('pointercancel', clearIgnoreFlag, { once: true })
 
-    emit('avatar-click', event, props.avatar.id)
+    emit('user-card-click', event, props.userCard.id)
     return
   }
 
-  emit('start-drag', event, props.avatar.id)
+  emit('start-drag', event, props.userCard.id)
 }
 
 // Определение 10 точек соединения с углами (0°, 40°, 80°, 120°, 160°, 180°, 200°, 240°, 280°, 320°)
 const connectionPoints = computed(() => {
-  const diameter = props.avatar.diameter || 418
+  const diameter = props.userCard.diameter || 418
   const radius = diameter / 2
   const offset = 5 // Отступ точки от края
 
@@ -162,7 +162,7 @@ const connectionPoints = computed(() => {
 const handleConnectionPointClick = (event, pointIndex, pointAngle) => {
   event.stopPropagation()
   emit('connection-point-click', {
-    avatarId: props.avatar.id,
+    userCardId: props.userCard.id,
     pointIndex,
     pointAngle,
     event
@@ -173,9 +173,9 @@ const shouldShowConnectionPoints = computed(() => {
   return props.isSelected || props.isDrawingLine
 })
 
-// Вычисление размера шрифта для имени пользователя в зависимости от размера аватара
+// Вычисление размера шрифта для имени пользователя в зависимости от размера карточки
 const usernameFontSize = computed(() => {
-  const size = props.avatar.size || 100
+  const size = props.userCard.size || 100
 
   if (size <= 25) return '10px'
   if (size <= 50) return '12px'
@@ -183,10 +183,10 @@ const usernameFontSize = computed(() => {
   return '16px'
 })
 
-// Вычисление ширины обводки в зависимости от размера аватара
+// Вычисление ширины обводки в зависимости от размера карточки
 const adaptiveStrokeWidth = computed(() => {
-  const size = props.avatar.size || 100
-  const baseStrokeWidth = props.avatar.strokeWidth || 3
+  const size = props.userCard.size || 100
+  const baseStrokeWidth = props.userCard.strokeWidth || 3
 
   if (size <= 25) return Math.max(2, baseStrokeWidth - 1)
   if (size <= 50) return baseStrokeWidth
@@ -200,19 +200,19 @@ const handleImageError = (event) => {
 
 <template>
   <div
-    class="avatar-object"
-    :class="{ 'avatar-highlight': avatar.highlighted, 'avatar--animated': isAnimated }"
-    :style="avatarStyle"
-    :data-avatar-id="avatar.id"
-    @click="handleAvatarClick"
-    @dblclick="handleAvatarDblClick"
+    class="user-card-object"
+    :class="{ 'user-card-highlight': userCard.highlighted, 'user-card--animated': isAnimated }"
+    :style="userCardStyle"
+    :data-user-card-id="userCard.id"
+    @click="handleUserCardClick"
+    @dblclick="handleUserCardDblClick"
     @pointerdown="handlePointerDown"
   >
-    <div class="avatar-shape" :style="shapeStyle">
-      <div class="avatar-circle" :style="circleStyle">
+    <div class="user-card-shape" :style="shapeStyle">
+      <div class="user-card-circle" :style="circleStyle">
         <img
-          :src="avatar.avatarUrl || '/Avatar.png'"
-          :alt="avatar.username || 'Avatar'"
+          :src="userCard.avatarUrl || '/Avatar.png'"
+          :alt="userCard.username || 'Avatar'"
           :style="imageStyle"
           @error="handleImageError"
         />
@@ -230,7 +230,7 @@ const handleImageError = (event) => {
           width: `${point.size}px`,
           height: `${point.size}px`
         }"
-        :data-avatar-id="avatar.id"
+        :data-user-card-id="userCard.id"
         :data-point-index="point.index"
         :data-point-angle="point.angle"
         @click="handleConnectionPointClick($event, point.index, point.angle)"
@@ -238,35 +238,35 @@ const handleImageError = (event) => {
       ></div>
 
       <svg
-        class="avatar-connection-ring"
-        :class="{ 'avatar-connection-ring--active': isAnimated }"
+        class="user-card-connection-ring"
+        :class="{ 'user-card-connection-ring--active': isAnimated }"
         :width="ringSize"
         :height="ringSize"
         :viewBox="`0 0 ${ringSize} ${ringSize}`"
         aria-hidden="true"
       >
         <circle
-          class="avatar-connection-ring__circle"
+          class="user-card-connection-ring__circle"
           :cx="ringSize / 2"
           :cy="ringSize / 2"
           :r="ringRadius"
           :stroke-width="ringStrokeWidth"
         />
-      </svg>      
+      </svg>
     </div>
 
     <div
-      v-if="avatar.username"
-      class="avatar-username"
+      v-if="userCard.username"
+      class="user-card-username"
       :style="{ fontSize: usernameFontSize }"
     >
-      {{ avatar.username }}
+      {{ userCard.username }}
     </div>
   </div>
 </template>
 
 <style scoped>
-.avatar-object {
+.user-card-object {
   cursor: move;
   user-select: none;
   display: flex;
@@ -274,17 +274,17 @@ const handleImageError = (event) => {
   align-items: center;
   z-index: 10;
 }
-.avatar-shape {
+.user-card-shape {
   position: relative;
 }
 
-.avatar-circle {
+.user-card-circle {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.avatar-username {
+.user-card-username {
   margin-top: 8px;
   font-size: 14px;
   font-weight: 600;
@@ -310,7 +310,7 @@ const handleImageError = (event) => {
   pointer-events: none;
   z-index: 20;
 }
-.avatar-connection-ring {
+.user-card-connection-ring {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -318,65 +318,65 @@ const handleImageError = (event) => {
   transform-origin: center;
 }
 
-.avatar-connection-ring__circle {
+.user-card-connection-ring__circle {
   fill: none;
-  stroke: var(--avatar-animation-color, rgb(var(--avatar-animation-color-rgb, 93, 139, 244)));
+  stroke: var(--user-card-animation-color, rgb(var(--user-card-animation-color-rgb, 93, 139, 244)));
   stroke-dasharray: 18 12;
   stroke-linecap: round;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
 
-.avatar-connection-ring--active .avatar-connection-ring__circle {
+.user-card-connection-ring--active .user-card-connection-ring__circle {
   opacity: 1;
-  animation: avatar-ring-flow calc(var(--avatar-animation-duration, 2000ms) / 1.6) linear infinite;
+  animation: user-card-ring-flow calc(var(--user-card-animation-duration, 2000ms) / 1.6) linear infinite;
 }
-/* Показать точки при наведении на аватар */
-.avatar-object:hover .connection-point,
+/* Показать точки при наведении на карточку */
+.user-card-object:hover .connection-point,
 .connection-point--visible {
   opacity: 1;
   pointer-events: auto;
 }
-.avatar-object:hover .connection-point {
+.user-card-object:hover .connection-point {
   transform: scale(1.25);
 }
-.avatar-highlight {
-  animation: avatar-pulse 2s ease-in-out;
-  box-shadow: 0 0 0 4px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.8) !important;
+.user-card-highlight {
+  animation: user-card-pulse 2s ease-in-out;
+  box-shadow: 0 0 0 4px rgba(var(--user-card-animation-color-rgb, 93, 139, 244), 0.8) !important;
   z-index: 1000 !important;
 }
 
-.avatar-object.avatar--animated .avatar-shape {
+.user-card-object.user-card--animated .user-card-shape {
   position: relative;
 }
-.avatar-object.avatar--animated .avatar-shape::before {
+.user-card-object.user-card--animated .user-card-shape::before {
   content: '';
   position: absolute;
   inset: -14px;
   border-radius: 50%;
   pointer-events: none;
-  border: 2px solid rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.55);
-  animation: avatar-pulse-slow calc(var(--avatar-animation-duration, 2000ms) * 1.6) ease-in-out infinite;
+  border: 2px solid rgba(var(--user-card-animation-color-rgb, 93, 139, 244), 0.55);
+  animation: user-card-pulse-slow calc(var(--user-card-animation-duration, 2000ms) * 1.6) ease-in-out infinite;
   z-index: 4;
   transform-origin: center;
 }
-.avatar-object.avatar--animated .avatar-circle {
-  border-color: rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 1);
+.user-card-object.user-card--animated .user-card-circle {
+  border-color: rgba(var(--user-card-animation-color-rgb, 93, 139, 244), 1);
 }
 
-.avatar-object.avatar--animated .avatar-shape::after {
+.user-card-object.user-card--animated .user-card-shape::after {
   content: '';
   position: absolute;
   inset: -6px;
   border-radius: 50%;
   pointer-events: none;
-  box-shadow: 0 0 18px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.9);
-  border: 3px solid rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 1);
-  animation: avatar-glow var(--avatar-animation-duration, 2s) ease-in-out infinite;
+  box-shadow: 0 0 18px rgba(var(--user-card-animation-color-rgb, 93, 139, 244), 0.9);
+  border: 3px solid rgba(var(--user-card-animation-color-rgb, 93, 139, 244), 1);
+  animation: user-card-glow var(--user-card-animation-duration, 2s) ease-in-out infinite;
   z-index: 5;
 }
 
-@keyframes avatar-pulse-slow {
+@keyframes user-card-pulse-slow {
   0% {
     transform: scale(0.92);
     opacity: 0.65;
@@ -391,16 +391,16 @@ const handleImageError = (event) => {
   }
 }
 
-@keyframes avatar-glow {
+@keyframes user-card-glow {
   0%, 100% {
-    box-shadow: 0 0 10px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.6);
+    box-shadow: 0 0 10px rgba(var(--user-card-animation-color-rgb, 93, 139, 244), 0.6);
   }
   50% {
-    box-shadow: 0 0 18px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.9);
+    box-shadow: 0 0 18px rgba(var(--user-card-animation-color-rgb, 93, 139, 244), 0.9);
   }
 }
 
-@keyframes avatar-ring-flow {
+@keyframes user-card-ring-flow {
   from {
     stroke-dashoffset: 0;
   }
@@ -408,12 +408,12 @@ const handleImageError = (event) => {
     stroke-dashoffset: -64;
   }
 }
-@keyframes avatar-pulse {
+@keyframes user-card-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 4px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.8);
+    box-shadow: 0 0 0 4px rgba(var(--user-card-animation-color-rgb, 93, 139, 244), 0.8);
   }
   50% {
-    box-shadow: 0 0 0 12px rgba(var(--avatar-animation-color-rgb, 93, 139, 244), 0.3);
+    box-shadow: 0 0 0 12px rgba(var(--user-card-animation-color-rgb, 93, 139, 244), 0.3);
   }
 }
 </style>

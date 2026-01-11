@@ -1,7 +1,11 @@
 /**
- * Composable для управления Avatar-соединениями и их анимациями
- * Включает логику соединений между аватарами, контрольные точки Безье,
- * контекстное меню аватаров и модальное окно ввода номера
+ * Composable для управления UserCard-соединениями и их анимациями
+ * Включает логику соединений между карточками партнёров (UserCard), контрольные точки Безье,
+ * контекстное меню карточек и модальное окно ввода номера
+ *
+ * ВАЖНО: Терминология
+ * - UserCard (карточка пользователя) — геометрический объект на холсте с данными партнёра
+ * - avatarUrl — картинка профиля пользователя внутри карточки (НЕ путать с UserCard)
  */
 
 import { ref, computed, watch } from 'vue'
@@ -31,9 +35,9 @@ export function toRgbString(color) {
 }
 
 /**
- * @typedef {Object} UseAvatarConnectionsOptions
- * @property {import('vue').Ref<Array>} cards - Ref на массив карточек/аватаров
- * @property {import('vue').Ref<Array>} avatarConnections - Ref на массив avatar-соединений
+ * @typedef {Object} UseUserCardConnectionsOptions
+ * @property {import('vue').Ref<Array>} cards - Ref на массив карточек
+ * @property {import('vue').Ref<Array>} userCardConnections - Ref на массив user-card-соединений
  * @property {Object} connectionsStore - Pinia store для соединений
  * @property {Object} cardsStore - Pinia store для карточек
  * @property {Object} viewSettingsStore - Pinia store для настроек вида
@@ -43,13 +47,13 @@ export function toRgbString(color) {
  */
 
 /**
- * Composable для управления Avatar-соединениями
- * @param {UseAvatarConnectionsOptions} options
+ * Composable для управления UserCard-соединениями (карточки партнёров на холсте)
+ * @param {UseUserCardConnectionsOptions} options
  */
-export function useAvatarConnections(options) {
+export function useUserCardConnections(options) {
   const {
     cards,
-    avatarConnections,
+    userCardConnections,
     connectionsStore,
     cardsStore,
     viewSettingsStore,
@@ -61,7 +65,7 @@ export function useAvatarConnections(options) {
   // === Инициализация useBezierCurves ===
   const {
     buildBezierPath,
-    getAvatarConnectionPoint,
+    getUserCardConnectionPoint,
     calculateMidpoint,
     findClosestPointOnBezier
   } = useBezierCurves()
@@ -69,61 +73,61 @@ export function useAvatarConnections(options) {
   // === Refs и состояния ===
 
   // Начальная точка для рисования нового соединения
-  const avatarConnectionStart = ref(null) // { avatarId, pointIndex, pointAngle }
+  const userCardConnectionStart = ref(null) // { userCardId, pointIndex, pointAngle }
 
-  // Выделенные avatar-соединения
-  const selectedAvatarConnectionIds = ref([])
+  // Выделенные user-card-соединения
+  const selectedUserCardConnectionIds = ref([])
 
   // Контекстное меню для аватара
-  const avatarContextMenu = ref(null) // { avatarId }
-  const avatarContextMenuPosition = ref({ x: 0, y: 0 })
+  const userCardContextMenu = ref(null) // { userCardId }
+  const userCardContextMenuPosition = ref({ x: 0, y: 0 })
 
   // Модальное окно для ввода компьютерного номера
-  const avatarNumberModalVisible = ref(false)
-  const avatarNumberModalAvatarId = ref(null)
-  const avatarNumberModalCurrentId = ref('')
+  const userCardNumberModalVisible = ref(false)
+  const userCardNumberModalUserCardId = ref(null)
+  const userCardNumberModalCurrentId = ref('')
 
   // Анимация выделения аватаров и их линий
-  const animatedAvatarIds = ref(new Set())
-  const animatedAvatarConnectionIds = ref(new Set())
-  const avatarAnimationTimers = ref([])
-  const avatarAnimationRootId = ref(null)
+  const animatedUserCardIds = ref(new Set())
+  const animatedUserCardConnectionIds = ref(new Set())
+  const userCardAnimationTimers = ref([])
+  const userCardAnimationRootId = ref(null)
 
   // Перетаскивание контрольных точек
   const draggingControlPoint = ref(null) // { connectionId, pointIndex }
 
   // === Computed ===
 
-  const avatarAnimationDuration = computed(() => {
+  const userCardAnimationDuration = computed(() => {
     return viewSettingsStore?.animationDurationMs || 2000
   })
 
-  const avatarAnimationColor = computed(() => {
+  const userCardAnimationColor = computed(() => {
     return viewSettingsStore?.animationColor || '#5D8BF4'
   })
 
-  const avatarAnimationColorRgb = computed(() => {
-    return toRgbString(avatarAnimationColor.value) || '93, 139, 244'
+  const userCardAnimationColorRgb = computed(() => {
+    return toRgbString(userCardAnimationColor.value) || '93, 139, 244'
   })
 
-  const isAvatarAnimationEnabled = computed(() => {
+  const isUserCardAnimationEnabled = computed(() => {
     return viewSettingsStore?.isAnimationEnabled !== false
   })
 
-  // Пути для avatar-соединений с кривыми Безье
-  const avatarConnectionPaths = computed(() => {
-    if (!avatarConnections?.value) return []
+  // Пути для user-card-соединений с кривыми Безье
+  const userCardConnectionPaths = computed(() => {
+    if (!userCardConnections?.value) return []
 
-    return avatarConnections.value
+    return userCardConnections.value
       .map(connection => {
-        const fromAvatar = cards.value.find(card => card.id === connection.from && card.type === 'avatar')
-        const toAvatar = cards.value.find(card => card.id === connection.to && card.type === 'avatar')
+        const fromUserCard = cards.value.find(card => card.id === connection.from && card.type === 'user_card')
+        const toUserCard = cards.value.find(card => card.id === connection.to && card.type === 'user_card')
 
-        if (!fromAvatar || !toAvatar) return null
+        if (!fromUserCard || !toUserCard) return null
 
         // Получить координаты точек соединения
-        const fromPoint = getAvatarConnectionPoint(fromAvatar, connection.fromPointIndex)
-        const toPoint = getAvatarConnectionPoint(toAvatar, connection.toPointIndex)
+        const fromPoint = getUserCardConnectionPoint(fromUserCard, connection.fromPointIndex)
+        const toPoint = getUserCardConnectionPoint(toUserCard, connection.toPointIndex)
 
         // Построить массив точек для кривой Безье
         const points = [fromPoint, ...connection.controlPoints, toPoint]
@@ -144,7 +148,7 @@ export function useAvatarConnections(options) {
 
         return {
           id: connection.id,
-          type: 'avatar-connection',
+          type: 'user-card-connection',
           d,
           points, // Сохраняем точки для отображения контрольных точек
           handlePoints,
@@ -157,16 +161,16 @@ export function useAvatarConnections(options) {
       .filter(Boolean)
   })
 
-  // Preview линия для avatar-соединений
-  const avatarPreviewLinePath = computed(() => {
-    if (!avatarConnectionStart.value) return null
+  // Preview линия для user-card-соединений
+  const userCardPreviewLinePath = computed(() => {
+    if (!userCardConnectionStart.value) return null
 
-    const fromAvatar = cards.value.find(
-      card => card.id === avatarConnectionStart.value.avatarId && card.type === 'avatar'
+    const fromUserCard = cards.value.find(
+      card => card.id === userCardConnectionStart.value.userCardId && card.type === 'user_card'
     )
-    if (!fromAvatar) return null
+    if (!fromUserCard) return null
 
-    const startPoint = getAvatarConnectionPoint(fromAvatar, avatarConnectionStart.value.pointIndex)
+    const startPoint = getUserCardConnectionPoint(fromUserCard, userCardConnectionStart.value.pointIndex)
     const endPoint = mousePosition?.value || { x: 0, y: 0 }
 
     const d = `M ${startPoint.x} ${startPoint.y} L ${endPoint.x} ${endPoint.y}`
@@ -198,26 +202,26 @@ export function useAvatarConnections(options) {
   /**
    * Остановка анимации выделения аватаров
    */
-  const stopAvatarSelectionAnimation = () => {
-    avatarAnimationTimers.value.forEach(timerId => window.clearTimeout(timerId))
-    avatarAnimationTimers.value = []
-    animatedAvatarIds.value = new Set()
-    animatedAvatarConnectionIds.value = new Set()
-    avatarAnimationRootId.value = null
+  const stopUserCardSelectionAnimation = () => {
+    userCardAnimationTimers.value.forEach(timerId => window.clearTimeout(timerId))
+    userCardAnimationTimers.value = []
+    animatedUserCardIds.value = new Set()
+    animatedUserCardConnectionIds.value = new Set()
+    userCardAnimationRootId.value = null
   }
 
   /**
    * Поиск следующего аватара вверх по иерархии
-   * @param {string} avatarId - ID текущего аватара
+   * @param {string} userCardId - ID текущего аватара
    * @param {Set} visited - Посещенные аватары
    */
-  const findNextAvatarUp = (avatarId, visited = new Set()) => {
-    const currentAvatar = cards.value.find(card => card.id === avatarId && card.type === 'avatar')
-    if (!currentAvatar) return null
+  const findNextUserCardUp = (userCardId, visited = new Set()) => {
+    const currentUserCard = cards.value.find(card => card.id === userCardId && card.type === 'user_card')
+    if (!currentUserCard) return null
 
-    const candidates = avatarConnections.value.filter(connection => {
-      const isFromCurrent = connection.from === avatarId
-      const isToCurrent = connection.to === avatarId
+    const candidates = userCardConnections.value.filter(connection => {
+      const isFromCurrent = connection.from === userCardId
+      const isToCurrent = connection.to === userCardId
 
       if (!isFromCurrent && !isToCurrent) return false
 
@@ -229,13 +233,13 @@ export function useAvatarConnections(options) {
 
     const scored = candidates
       .map(connection => {
-        const nextAvatarId = connection.from === avatarId ? connection.to : connection.from
-        const nextAvatar = cards.value.find(card => card.id === nextAvatarId && card.type === 'avatar')
+        const nextUserCardId = connection.from === userCardId ? connection.to : connection.from
+        const nextUserCard = cards.value.find(card => card.id === nextUserCardId && card.type === 'user_card')
 
-        if (!nextAvatar || visited.has(nextAvatarId)) {
+        if (!nextUserCard || visited.has(nextUserCardId)) {
           return null
         }
-        return { connection, nextAvatar }
+        return { connection, nextUserCard }
       })
       .filter(Boolean)
 
@@ -243,33 +247,33 @@ export function useAvatarConnections(options) {
       return null
     }
 
-    const { connection, nextAvatar } = scored[0]
+    const { connection, nextUserCard } = scored[0]
 
     return {
       connectionId: connection.id,
-      nextAvatarId: nextAvatar.id
+      nextUserCardId: nextUserCard.id
     }
   }
 
   /**
    * Построение последовательности анимации аватаров
-   * @param {string} startAvatarId - ID начального аватара
+   * @param {string} startUserCardId - ID начальной карточки партнёра
    */
-  const buildAvatarAnimationSequence = (startAvatarId) => {
+  const buildUserCardAnimationSequence = (startUserCardId) => {
     const sequence = []
-    const visited = new Set([startAvatarId])
-    let currentId = startAvatarId
+    const visited = new Set([startUserCardId])
+    let currentId = startUserCardId
 
-    sequence.push({ type: 'avatar', id: startAvatarId })
+    sequence.push({ type: 'user_card', id: startUserCardId })
 
     while (true) {
-      const next = findNextAvatarUp(currentId, visited)
+      const next = findNextUserCardUp(currentId, visited)
       if (!next) break
 
       sequence.push({ type: 'connection', id: next.connectionId })
-      sequence.push({ type: 'avatar', id: next.nextAvatarId })
-      visited.add(next.nextAvatarId)
-      currentId = next.nextAvatarId
+      sequence.push({ type: 'user_card', id: next.nextUserCardId })
+      visited.add(next.nextUserCardId)
+      currentId = next.nextUserCardId
     }
 
     return sequence
@@ -277,55 +281,55 @@ export function useAvatarConnections(options) {
 
   /**
    * Запуск анимации выделения аватара
-   * @param {string} avatarId - ID аватара
+   * @param {string} userCardId - ID аватара
    */
-  const startAvatarSelectionAnimation = (avatarId) => {
-    const avatar = cards.value.find(card => card.id === avatarId && card.type === 'avatar')
-    if (!avatar) {
-      stopAvatarSelectionAnimation()
+  const startUserCardSelectionAnimation = (userCardId) => {
+    const userCard = cards.value.find(card => card.id === userCardId && card.type === 'user_card')
+    if (!userCard) {
+      stopUserCardSelectionAnimation()
       return
     }
 
-    stopAvatarSelectionAnimation()
-    avatarAnimationRootId.value = avatarId
+    stopUserCardSelectionAnimation()
+    userCardAnimationRootId.value = userCardId
 
-    const sequence = buildAvatarAnimationSequence(avatarId)
-    const nextAvatarIds = new Set()
+    const sequence = buildUserCardAnimationSequence(userCardId)
+    const nextUserCardIds = new Set()
     const nextConnectionIds = new Set()
 
     sequence.forEach(item => {
-      if (item.type === 'avatar') {
-        nextAvatarIds.add(item.id)
+      if (item.type === 'user_card') {
+        nextUserCardIds.add(item.id)
       } else if (item.type === 'connection') {
         nextConnectionIds.add(item.id)
       }
     })
 
-    animatedAvatarIds.value = nextAvatarIds
-    animatedAvatarConnectionIds.value = nextConnectionIds
+    animatedUserCardIds.value = nextUserCardIds
+    animatedUserCardConnectionIds.value = nextConnectionIds
 
-    const duration = avatarAnimationDuration.value
+    const duration = userCardAnimationDuration.value
 
     const timerId = window.setTimeout(() => {
-      if (avatarAnimationRootId.value !== avatarId) return
-      stopAvatarSelectionAnimation()
+      if (userCardAnimationRootId.value !== userCardId) return
+      stopUserCardSelectionAnimation()
     }, duration)
 
-    avatarAnimationTimers.value.push(timerId)
+    userCardAnimationTimers.value.push(timerId)
   }
 
   // === Сбор снимков для перетаскивания ===
 
   /**
-   * Сбор снимков avatar-соединений для групповых перемещений
+   * Сбор снимков user-card-соединений для групповых перемещений
    * @param {Set} movingIds - Set ID перемещаемых объектов
    */
-  const collectAvatarConnectionSnapshots = (movingIds) => {
+  const collectUserCardConnectionSnapshots = (movingIds) => {
     if (!movingIds || movingIds.size === 0) {
       return []
     }
 
-    return avatarConnections.value
+    return userCardConnections.value
       .filter(connection =>
         movingIds.has(connection.from)
         && movingIds.has(connection.to)
@@ -341,25 +345,25 @@ export function useAvatarConnections(options) {
   // === Обработчики событий ===
 
   /**
-   * Обработчик клика на avatar-соединение
+   * Обработчик клика на user-card-соединение
    */
-  const handleAvatarLineClick = (event, connectionId) => {
+  const handleUserCardLineClick = (event, connectionId) => {
     event.stopPropagation()
 
     const isCtrlPressed = event.ctrlKey || event.metaKey
 
     if (isCtrlPressed) {
-      const index = selectedAvatarConnectionIds.value.indexOf(connectionId)
+      const index = selectedUserCardConnectionIds.value.indexOf(connectionId)
       if (index > -1) {
-        selectedAvatarConnectionIds.value.splice(index, 1)
+        selectedUserCardConnectionIds.value.splice(index, 1)
       } else {
-        selectedAvatarConnectionIds.value.push(connectionId)
+        selectedUserCardConnectionIds.value.push(connectionId)
       }
     } else {
-      if (selectedAvatarConnectionIds.value.length === 1 && selectedAvatarConnectionIds.value[0] === connectionId) {
-        selectedAvatarConnectionIds.value = []
+      if (selectedUserCardConnectionIds.value.length === 1 && selectedUserCardConnectionIds.value[0] === connectionId) {
+        selectedUserCardConnectionIds.value = []
       } else {
-        selectedAvatarConnectionIds.value = [connectionId]
+        selectedUserCardConnectionIds.value = [connectionId]
       }
     }
 
@@ -367,39 +371,39 @@ export function useAvatarConnections(options) {
     if (cardsStore) {
       cardsStore.deselectAllCards()
     }
-    avatarConnectionStart.value = null
+    userCardConnectionStart.value = null
   }
 
   /**
    * Обработчик клика на точку соединения аватара
    */
-  const handleAvatarConnectionPointClick = (data) => {
-    const { avatarId, pointIndex, pointAngle, event } = data
+  const handleUserCardConnectionPointClick = (data) => {
+    const { userCardId, pointIndex, pointAngle, event } = data
 
     // Если уже начато рисование линии от другого аватара
-    if (avatarConnectionStart.value && avatarConnectionStart.value.avatarId !== avatarId) {
+    if (userCardConnectionStart.value && userCardConnectionStart.value.userCardId !== userCardId) {
       // Проверка: нельзя соединить аватар с лицензией
-      const fromAvatar = cards.value.find(c => c.id === avatarConnectionStart.value.avatarId)
-      const toCard = cards.value.find(c => c.id === avatarId)
+      const fromUserCard = cards.value.find(c => c.id === userCardConnectionStart.value.userCardId)
+      const toCard = cards.value.find(c => c.id === userCardId)
 
-      if (fromAvatar && toCard) {
-        if (fromAvatar.type === 'avatar' && toCard.type !== 'avatar') {
+      if (fromUserCard && toCard) {
+        if (fromUserCard.type === 'user_card' && toCard.type !== 'user_card') {
           // Нельзя соединить аватар с лицензией
           console.warn('Нельзя соединить аватар с лицензией')
-          avatarConnectionStart.value = null
+          userCardConnectionStart.value = null
           return
         }
 
         // Создать соединение
-        const fromPoint = getAvatarConnectionPoint(fromAvatar, avatarConnectionStart.value.pointIndex)
-        const toPoint = getAvatarConnectionPoint(toCard, pointIndex)
+        const fromPoint = getUserCardConnectionPoint(fromUserCard, userCardConnectionStart.value.pointIndex)
+        const toPoint = getUserCardConnectionPoint(toCard, pointIndex)
         const midpoint = calculateMidpoint(fromPoint, toPoint)
 
-        connectionsStore.addAvatarConnection(
-          avatarConnectionStart.value.avatarId,
-          avatarId,
+        connectionsStore.addUserCardConnection(
+          userCardConnectionStart.value.userCardId,
+          userCardId,
           {
-            fromPointIndex: avatarConnectionStart.value.pointIndex,
+            fromPointIndex: userCardConnectionStart.value.pointIndex,
             toPointIndex: pointIndex,
             controlPoints: [midpoint],
             color: viewSettingsStore.lineColor,
@@ -409,11 +413,11 @@ export function useAvatarConnections(options) {
         )
       }
 
-      avatarConnectionStart.value = null
+      userCardConnectionStart.value = null
     } else {
       // Начать рисование линии от этого аватара
-      avatarConnectionStart.value = {
-        avatarId,
+      userCardConnectionStart.value = {
+        userCardId,
         pointIndex,
         pointAngle
       }
@@ -421,25 +425,25 @@ export function useAvatarConnections(options) {
   }
 
   /**
-   * Обработчик двойного клика на avatar-линии (добавление точки изгиба)
+   * Обработчик двойного клика на user-card-линии (добавление точки изгиба)
    */
-  const handleAvatarLineDoubleClick = (event, connectionId) => {
+  const handleUserCardLineDoubleClick = (event, connectionId) => {
     event.stopPropagation()
 
-    const connection = avatarConnections.value.find(c => c.id === connectionId)
+    const connection = userCardConnections.value.find(c => c.id === connectionId)
     if (!connection) return
     if (Array.isArray(connection.controlPoints) && connection.controlPoints.length >= 3) {
       return
     }
 
     // Найти ближайшую точку на кривой
-    const fromAvatar = cards.value.find(card => card.id === connection.from && card.type === 'avatar')
-    const toAvatar = cards.value.find(card => card.id === connection.to && card.type === 'avatar')
+    const fromUserCard = cards.value.find(card => card.id === connection.from && card.type === 'user_card')
+    const toUserCard = cards.value.find(card => card.id === connection.to && card.type === 'user_card')
 
-    if (!fromAvatar || !toAvatar) return
+    if (!fromUserCard || !toUserCard) return
 
-    const fromPoint = getAvatarConnectionPoint(fromAvatar, connection.fromPointIndex)
-    const toPoint = getAvatarConnectionPoint(toAvatar, connection.toPointIndex)
+    const fromPoint = getUserCardConnectionPoint(fromUserCard, connection.fromPointIndex)
+    const toPoint = getUserCardConnectionPoint(toUserCard, connection.toPointIndex)
     const points = [fromPoint, ...connection.controlPoints, toPoint]
 
     const canvasCoords = screenToCanvas(event.clientX, event.clientY)
@@ -454,7 +458,7 @@ export function useAvatarConnections(options) {
       if (newControlPoints.length > 3) {
         newControlPoints.length = 3
       }
-      connectionsStore.updateAvatarConnection(connectionId, {
+      connectionsStore.updateUserCardConnection(connectionId, {
         controlPoints: newControlPoints
       })
     }
@@ -466,12 +470,12 @@ export function useAvatarConnections(options) {
   const handleControlPointDoubleClick = (event, connectionId, pointIndex) => {
     event.stopPropagation()
 
-    const connection = avatarConnections.value.find(c => c.id === connectionId)
+    const connection = userCardConnections.value.find(c => c.id === connectionId)
     if (!connection) return
 
     const newControlPoints = connection.controlPoints.filter((_, i) => i !== pointIndex)
 
-    connectionsStore.updateAvatarConnection(connectionId, {
+    connectionsStore.updateUserCardConnection(connectionId, {
       controlPoints: newControlPoints
     })
   }
@@ -498,7 +502,7 @@ export function useAvatarConnections(options) {
   const handleControlPointDrag = (event) => {
     if (!draggingControlPoint.value) return
 
-    const connection = avatarConnections.value.find(c => c.id === draggingControlPoint.value.connectionId)
+    const connection = userCardConnections.value.find(c => c.id === draggingControlPoint.value.connectionId)
     if (!connection) return
 
     event.preventDefault()
@@ -508,7 +512,7 @@ export function useAvatarConnections(options) {
     const newControlPoints = [...connection.controlPoints]
     newControlPoints[draggingControlPoint.value.pointIndex] = { x, y }
 
-    connectionsStore.updateAvatarConnection(draggingControlPoint.value.connectionId, {
+    connectionsStore.updateUserCardConnection(draggingControlPoint.value.connectionId, {
       controlPoints: newControlPoints
     })
   }
@@ -528,18 +532,18 @@ export function useAvatarConnections(options) {
   /**
    * Обработчик правого клика мыши на аватаре для открытия контекстного меню
    */
-  const handleAvatarContextMenu = (event, avatarId) => {
+  const handleUserCardContextMenu = (event, userCardId) => {
     event.preventDefault()
     event.stopPropagation()
 
     // Закрываем другие контекстные меню
-    closeAvatarContextMenu()
+    closeUserCardContextMenu()
 
     // Открываем контекстное меню для аватара
-    const avatar = cardsStore?.cards?.find(c => c.id === avatarId)
-    if (avatar && avatar.type === 'avatar') {
-      avatarContextMenu.value = { avatarId }
-      avatarContextMenuPosition.value = {
+    const foundUserCard = cardsStore?.cards?.find(c => c.id === userCardId)
+    if (foundUserCard && foundUserCard.type === 'user_card') {
+      userCardContextMenu.value = { userCardId }
+      userCardContextMenuPosition.value = {
         x: event.clientX,
         y: event.clientY
       }
@@ -549,8 +553,8 @@ export function useAvatarConnections(options) {
   /**
    * Закрытие контекстного меню аватара
    */
-  const closeAvatarContextMenu = () => {
-    avatarContextMenu.value = null
+  const closeUserCardContextMenu = () => {
+    userCardContextMenu.value = null
   }
 
   // === Модальное окно ввода номера ===
@@ -558,30 +562,30 @@ export function useAvatarConnections(options) {
   /**
    * Обработчик двойного клика на аватаре
    */
-  const handleAvatarDoubleClick = (event, avatarId) => {
+  const handleUserCardDoubleClick = (event, userCardId) => {
     event.stopPropagation()
 
-    const avatar = cardsStore?.cards?.find(c => c.id === avatarId && c.type === 'avatar')
-    if (!avatar) return
+    const foundUserCard = cardsStore?.cards?.find(c => c.id === userCardId && c.type === 'user_card')
+    if (!foundUserCard) return
 
-    avatarNumberModalAvatarId.value = avatarId
-    avatarNumberModalCurrentId.value = avatar.personalId || ''
-    avatarNumberModalVisible.value = true
+    userCardNumberModalUserCardId.value = userCardId
+    userCardNumberModalCurrentId.value = foundUserCard.personalId || ''
+    userCardNumberModalVisible.value = true
   }
 
   /**
    * Обработчик применения данных из модального окна
    */
-  const handleAvatarNumberApply = ({ avatarId, userData }) => {
+  const handleUserCardNumberApply = ({ userCardId, userData }) => {
     if (userData === null) {
       // Сброс данных аватара
-      if (cardsStore?.updateAvatarUserData) {
-        cardsStore.updateAvatarUserData(avatarId, null)
+      if (cardsStore?.updateUserCardData) {
+        cardsStore.updateUserCardData(userCardId, null)
       }
     } else {
       // Применение данных пользователя
-      if (cardsStore?.updateAvatarUserData) {
-        cardsStore.updateAvatarUserData(avatarId, userData)
+      if (cardsStore?.updateUserCardData) {
+        cardsStore.updateUserCardData(userCardId, userData)
       }
     }
   }
@@ -589,81 +593,81 @@ export function useAvatarConnections(options) {
   /**
    * Закрытие модального окна
    */
-  const closeAvatarNumberModal = () => {
-    avatarNumberModalVisible.value = false
-    avatarNumberModalAvatarId.value = null
-    avatarNumberModalCurrentId.value = ''
+  const closeUserCardNumberModal = () => {
+    userCardNumberModalVisible.value = false
+    userCardNumberModalUserCardId.value = null
+    userCardNumberModalCurrentId.value = ''
   }
 
   // === Удаление выбранных соединений ===
 
   /**
-   * Удаление выбранных avatar-соединений
+   * Удаление выбранных user-card-соединений
    */
-  const deleteSelectedAvatarConnections = () => {
-    if (selectedAvatarConnectionIds.value.length === 0) return
+  const deleteSelectedUserCardConnections = () => {
+    if (selectedUserCardConnectionIds.value.length === 0) return
 
-    console.log('Deleting avatar connections:', selectedAvatarConnectionIds.value)
+    console.log('Deleting user-card connections:', selectedUserCardConnectionIds.value)
 
-    selectedAvatarConnectionIds.value.forEach(connectionId => {
-      connectionsStore.removeAvatarConnection(connectionId)
+    selectedUserCardConnectionIds.value.forEach(connectionId => {
+      connectionsStore.removeUserCardConnection(connectionId)
     })
 
-    selectedAvatarConnectionIds.value = []
-    console.log('Avatar connections deleted')
+    selectedUserCardConnectionIds.value = []
+    console.log('User-card connections deleted')
   }
 
   /**
    * Сброс соединительной линии при рисовании
    */
-  const cancelAvatarDrawing = () => {
-    avatarConnectionStart.value = null
+  const cancelUserCardDrawing = () => {
+    userCardConnectionStart.value = null
   }
 
   // === Watch для отключения анимации ===
-  watch(() => isAvatarAnimationEnabled.value, (enabled) => {
+  watch(() => isUserCardAnimationEnabled.value, (enabled) => {
     if (!enabled) {
-      stopAvatarSelectionAnimation()
+      stopUserCardSelectionAnimation()
     }
   })
 
   // === Возвращаемые значения ===
   return {
     // Refs
-    avatarConnectionStart,
-    selectedAvatarConnectionIds,
-    avatarContextMenu,
-    avatarContextMenuPosition,
-    avatarNumberModalVisible,
-    avatarNumberModalAvatarId,
-    avatarNumberModalCurrentId,
-    animatedAvatarIds,
-    animatedAvatarConnectionIds,
-    avatarAnimationTimers,
-    avatarAnimationRootId,
+    userCardConnectionStart,
+    selectedUserCardConnectionIds,
+    userCardContextMenu,
+    userCardContextMenuPosition,
+    userCardNumberModalVisible,
+    userCardNumberModalUserCardId,
+    userCardNumberModalCurrentId,
+    animatedUserCardIds,
+    animatedUserCardConnectionIds,
+    userCardAnimationTimers,
+    userCardAnimationRootId,
     draggingControlPoint,
 
     // Computed
-    avatarAnimationDuration,
-    avatarAnimationColor,
-    avatarAnimationColorRgb,
-    isAvatarAnimationEnabled,
-    avatarConnectionPaths,
-    avatarPreviewLinePath,
+    userCardAnimationDuration,
+    userCardAnimationColor,
+    userCardAnimationColorRgb,
+    isUserCardAnimationEnabled,
+    userCardConnectionPaths,
+    userCardPreviewLinePath,
 
     // Функции анимации
-    stopAvatarSelectionAnimation,
-    startAvatarSelectionAnimation,
-    buildAvatarAnimationSequence,
-    findNextAvatarUp,
+    stopUserCardSelectionAnimation,
+    startUserCardSelectionAnimation,
+    buildUserCardAnimationSequence,
+    findNextUserCardUp,
 
     // Сбор снимков
-    collectAvatarConnectionSnapshots,
+    collectUserCardConnectionSnapshots,
 
     // Обработчики событий линий
-    handleAvatarLineClick,
-    handleAvatarConnectionPointClick,
-    handleAvatarLineDoubleClick,
+    handleUserCardLineClick,
+    handleUserCardConnectionPointClick,
+    handleUserCardLineDoubleClick,
 
     // Обработчики контрольных точек
     handleControlPointDoubleClick,
@@ -672,20 +676,20 @@ export function useAvatarConnections(options) {
     handleControlPointDragEnd,
 
     // Контекстное меню
-    handleAvatarContextMenu,
-    closeAvatarContextMenu,
+    handleUserCardContextMenu,
+    closeUserCardContextMenu,
 
     // Модальное окно номера
-    handleAvatarDoubleClick,
-    handleAvatarNumberApply,
-    closeAvatarNumberModal,
+    handleUserCardDoubleClick,
+    handleUserCardNumberApply,
+    closeUserCardNumberModal,
 
     // Удаление и отмена
-    deleteSelectedAvatarConnections,
-    cancelAvatarDrawing,
+    deleteSelectedUserCardConnections,
+    cancelUserCardDrawing,
 
     // Утилиты
     toRgbString,
-    getAvatarConnectionPoint
+    getUserCardConnectionPoint
   }
 }

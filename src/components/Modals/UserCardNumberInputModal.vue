@@ -65,7 +65,7 @@ const props = defineProps({
     type: Boolean,
     required: true
   },
-  avatarId: {
+  userCardId: {
     type: String,
     default: null
   },
@@ -112,10 +112,10 @@ async function handleConfirm() {
 
   const trimmedId = personalId.value.trim()
 
-  // Если номер пустой, сбрасываем данные аватара
+  // Если номер пустой, сбрасываем данные карточки
   if (!trimmedId) {
     emit('apply', {
-      avatarId: props.avatarId,
+      userCardId: props.userCardId,
       userData: null
     })
     emit('close')
@@ -158,7 +158,7 @@ async function handleConfirm() {
 
     // Успешная валидация - применяем данные
     emit('apply', {
-      avatarId: props.avatarId,
+      userCardId: props.userCardId,
       userData: {
         personalId: trimmedId,
         id: data.user.id,

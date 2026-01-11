@@ -3,7 +3,7 @@ import { computed, onMounted, onBeforeUnmount } from 'vue'
 import { useCardsStore } from '../../stores/cards'
 
 const props = defineProps({
-  avatar: {
+  userCard: {
     type: Object,
     required: true
   },
@@ -34,8 +34,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeyDown)
 })
 
-// Текущий размер аватара
-const currentSize = computed(() => props.avatar.size || 100)
+// Текущий размер карточки
+const currentSize = computed(() => props.userCard.size || 100)
 
 // Размеры в процентах
 const sizes = [
@@ -50,7 +50,7 @@ const sizes = [
 
 // Обработчик изменения размера
 const setSize = (sizePercent) => {
-  cardsStore.resizeAvatar(props.avatar.id, sizePercent)
+  cardsStore.resizeUserCard(props.userCard.id, sizePercent)
   emit('close')
 }
 
@@ -67,7 +67,7 @@ const handleClickOutside = () => {
     @contextmenu.prevent
   >
     <div
-      class="avatar-context-menu"
+      class="user-card-context-menu"
       :style="{
         left: position.x + 'px',
         top: position.y + 'px'
@@ -76,7 +76,7 @@ const handleClickOutside = () => {
     >
       <!-- Секция: Размер -->
       <div class="context-menu-section">
-        <div class="context-menu-header">Размер Аватара</div>
+        <div class="context-menu-header">Размер карточки</div>
 
         <div
           v-for="size in sizes"
@@ -102,7 +102,7 @@ const handleClickOutside = () => {
   background: transparent;
 }
 
-.avatar-context-menu {
+.user-card-context-menu {
   position: fixed;
   z-index: 10000;
   background: #ffffff;

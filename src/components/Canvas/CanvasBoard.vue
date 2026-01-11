@@ -10,9 +10,9 @@ import { useViewSettingsStore } from '../../stores/viewSettings';
 import { useImagesStore } from '../../stores/images';
 import { useAnchorsStore } from '../../stores/anchors';  
 import Card from './Card.vue';
-import Avatar from './Avatar.vue';
-import AvatarContextMenu from './AvatarContextMenu.vue';
-import AvatarNumberInputModal from '../Modals/AvatarNumberInputModal.vue';
+import UserCard from './UserCard.vue';
+import UserCardContextMenu from './UserCardContextMenu.vue';
+import UserCardNumberInputModal from '../Modals/UserCardNumberInputModal.vue';
 import NoteWindow from './NoteWindow.vue';
 import IncompatibilityWarningModal from '../Modals/IncompatibilityWarningModal.vue';
 import Sticker from './Sticker.vue';
@@ -21,7 +21,7 @@ import ObjectContextMenu from './ObjectContextMenu.vue';
 import AnchorPoint from './AnchorPoint.vue';  
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts';
 import { useBezierCurves } from '../../composables/useBezierCurves';
-import { useAvatarConnections, toRgbString } from '../../composables/useAvatarConnections';
+import { useUserCardConnections, toRgbString } from '../../composables/useUserCardConnections';
 import { useCanvasContextMenus } from '../../composables/useCanvasContextMenus';
 import { useCanvasDrag } from '../../composables/useCanvasDrag';
 import { useImageResize } from '../../composables/useImageResize';
@@ -81,7 +81,7 @@ const canvasStore = useCanvasStore();
 const viewSettingsStore = useViewSettingsStore();
 
 const { cards } = storeToRefs(cardsStore);
-const { connections, avatarConnections } = storeToRefs(connectionsStore);
+const { connections, userCardConnections } = storeToRefs(connectionsStore);
 const { images } = storeToRefs(imagesStore);
 const { selectedAnchorId, pendingFocusAnchorId, placementMode, targetViewPoint } = storeToRefs(boardStore);
 const { anchors } = storeToRefs(anchorsStore);
@@ -275,49 +275,49 @@ const stickerAnimationTimers = ref([])
 const stickerAnimationRootId = ref(null)
 
 // Инициализация composable для кривых Безье
-const { buildBezierPath, getAvatarConnectionPoint, calculateMidpoint, findClosestPointOnBezier, isPointNearBezier } = useBezierCurves();
+const { buildBezierPath, getUserCardConnectionPoint, calculateMidpoint, findClosestPointOnBezier, isPointNearBezier } = useBezierCurves();
 
-// Инициализация composable для Avatar-соединений
+// Инициализация composable для UserCard-соединений (карточки партнёров на холсте)
 const {
   // Refs
-  avatarConnectionStart,
-  selectedAvatarConnectionIds,
-  avatarContextMenu,
-  avatarContextMenuPosition,
-  avatarNumberModalVisible,
-  avatarNumberModalAvatarId,
-  avatarNumberModalCurrentId,
-  animatedAvatarIds,
-  animatedAvatarConnectionIds,
-  avatarAnimationTimers,
-  avatarAnimationRootId,
+  userCardConnectionStart,
+  selectedUserCardConnectionIds,
+  userCardContextMenu,
+  userCardContextMenuPosition,
+  userCardNumberModalVisible,
+  userCardNumberModalUserCardId,
+  userCardNumberModalCurrentId,
+  animatedUserCardIds,
+  animatedUserCardConnectionIds,
+  userCardAnimationTimers,
+  userCardAnimationRootId,
   draggingControlPoint,
   // Computed
-  avatarAnimationDuration,
-  avatarAnimationColor,
-  avatarAnimationColorRgb,
-  isAvatarAnimationEnabled,
-  avatarConnectionPaths,
-  avatarPreviewLinePath,
+  userCardAnimationDuration,
+  userCardAnimationColor,
+  userCardAnimationColorRgb,
+  isUserCardAnimationEnabled,
+  userCardConnectionPaths,
+  userCardPreviewLinePath,
   // Функции
-  stopAvatarSelectionAnimation,
-  startAvatarSelectionAnimation,
-  collectAvatarConnectionSnapshots,
-  handleAvatarLineClick,
-  handleAvatarConnectionPointClick,
-  handleAvatarLineDoubleClick,
+  stopUserCardSelectionAnimation,
+  startUserCardSelectionAnimation,
+  collectUserCardConnectionSnapshots,
+  handleUserCardLineClick,
+  handleUserCardConnectionPointClick,
+  handleUserCardLineDoubleClick,
   handleControlPointDoubleClick,
   handleControlPointDragStart,
-  handleAvatarContextMenu,
-  closeAvatarContextMenu,
-  handleAvatarDoubleClick,
-  handleAvatarNumberApply,
-  closeAvatarNumberModal,
-  deleteSelectedAvatarConnections,
-  cancelAvatarDrawing
-} = useAvatarConnections({
+  handleUserCardContextMenu,
+  closeUserCardContextMenu,
+  handleUserCardDoubleClick,
+  handleUserCardNumberApply,
+  closeUserCardNumberModal,
+  deleteSelectedUserCardConnections,
+  cancelUserCardDrawing
+} = useUserCardConnections({
   cards,
-  avatarConnections,
+  userCardConnections,
   connectionsStore,
   cardsStore,
   viewSettingsStore,
@@ -345,7 +345,7 @@ const {
   imagesStore,
   canvasContainerRef,
   selectedCardId,
-  stopAvatarSelectionAnimation,
+  stopUserCardSelectionAnimation,
   onSelectionStart: () => {
     // При начале выделения сбрасываем состояние соединений
     clearConnectionSelection()
@@ -624,7 +624,7 @@ const {
   screenToCanvas,
   getObjectAtPoint,
   clearObjectSelections,
-  closeAvatarContextMenu
+  closeUserCardContextMenu
 });
 
 
@@ -921,7 +921,7 @@ const removeAnimatedItem = (setRef, id) => {
 };
 
 // Watch для остановки анимации стикеров при отключении
-watch(() => isAvatarAnimationEnabled.value, (enabled) => {
+watch(() => isUserCardAnimationEnabled.value, (enabled) => {
   if (!enabled) {
     stopStickerSelectionAnimation();
   }
@@ -937,7 +937,7 @@ const stopStickerSelectionAnimation = () => {
 };
 
 const startStickerSelectionAnimation = (stickerId) => {
-  const sticker = cards.value.find(card => card.id === stickerId && card.type !== 'avatar');
+  const sticker = cards.value.find(card => card.id === stickerId && card.type !== 'user_card');
   if (!sticker) {
     stopStickerSelectionAnimation();
     return;
@@ -957,7 +957,7 @@ const startStickerSelectionAnimation = (stickerId) => {
   animatedStickerIds.value = new Set([stickerId]);
   animatedStickerConnectionIds.value = relatedConnectionIds;
 
-  const duration = avatarAnimationDuration.value;
+  const duration = userCardAnimationDuration.value;
 
   const timerId = window.setTimeout(() => {
     if (stickerAnimationRootId.value !== stickerId) return;
@@ -1221,7 +1221,7 @@ const {
   historyStore,
   screenToCanvas,
   findCardById,
-  collectAvatarConnectionSnapshots,
+  collectUserCardConnectionSnapshots,
   syncNoteWindowWithCard,
   updateStageSize,
   computeGuideSnap,
@@ -1296,19 +1296,19 @@ const handlePointerDown = (event) => {
 
   if (!isSelecting.value && !isDrawingLine.value) {
     const isCardTarget = event.target.closest('.card');
-    const isAvatarTarget = event.target.closest('.avatar-object');    
+    const isUserCardTarget = event.target.closest('.user-card-object');    
     const isStickerTarget = event.target.closest('.sticker');
     const isImageTarget = event.target.closest('.canvas-image');
     const isNoteTarget = event.target.closest('.note-window');
     const isAnchorTarget = event.target.closest('.anchor-point');
-    const isConnectionTarget = event.target.closest('.line-group, .avatar-line-group, .line');
+    const isConnectionTarget = event.target.closest('.line-group, .user-card-line-group, .line');
     const isControlPointTarget = event.target.closest('.control-point');    
     const interactiveTarget = event.target.closest('button, input, textarea, select, [contenteditable="true"], a[href]');
 
     // Начинаем выделение только если клик по пустой области
     if (
       !isCardTarget &&
-      !isAvatarTarget &&
+      !isUserCardTarget &&
       !isStickerTarget &&
       !isImageTarget &&
       !isNoteTarget &&
@@ -1353,20 +1353,20 @@ const handleCardClick = (event, cardId) => {
   selectedCardId.value = cardId;
 
   const clickedCard = cardsStore.cards.find(c => c.id === cardId);
-  const isAvatarCard = clickedCard?.type === 'avatar';
+  const isUserCardType = clickedCard?.type === 'user_card';
   const isNowSelected = cardsStore.selectedCardIds.includes(cardId);
 
   // Анимация для аватаров
-  if (isAvatarCard && isNowSelected && isAvatarAnimationEnabled.value) {
-    startAvatarSelectionAnimation(cardId);
-  } else if (isAvatarCard) {
-    stopAvatarSelectionAnimation();
+  if (isUserCardType && isNowSelected && isUserCardAnimationEnabled.value) {
+    startUserCardSelectionAnimation(cardId);
+  } else if (isUserCardType) {
+    stopUserCardSelectionAnimation();
   }
 
   // Анимация для обычных стикеров/лицензий
-  if (!isAvatarCard && isNowSelected && isAvatarAnimationEnabled.value) {
+  if (!isUserCardType && isNowSelected && isUserCardAnimationEnabled.value) {
     startStickerSelectionAnimation(cardId);
-  } else if (!isAvatarCard) {
+  } else if (!isUserCardType) {
     stopStickerSelectionAnimation();
   }
 };
@@ -1760,8 +1760,8 @@ const handleKeydown = (event) => {
     deleteSelectedImages();
     return;
   }
-  if (selectedAvatarConnectionIds.value.length > 0) {
-    deleteSelectedAvatarConnections();
+  if (selectedUserCardConnectionIds.value.length > 0) {
+    deleteSelectedUserCardConnections();
     return;
   }
   if (selectedConnectionIds.value.length > 0) {
@@ -1899,7 +1899,7 @@ const fitToContent = (options = {}) => {
   const padding = Number.isFinite(options.padding) ? Math.max(0, options.padding) : 120;
   const cardsList = cards.value;
   const connectionsList = connections.value;
-  const avatarConnectionsList = avatarConnections.value;  
+  const userCardConnectionsList = userCardConnections.value;  
   const imagesList = images.value;
   const stickersList = stickersStore.stickers;
   
@@ -1923,11 +1923,11 @@ const fitToContent = (options = {}) => {
 
     const left = Number.isFinite(card.x) ? card.x : 0;
     const top = Number.isFinite(card.y) ? card.y : 0;
-    const isAvatar = card.type === 'avatar';
-    const width = isAvatar
+    const isUserCard = card.type === 'user_card';
+    const width = isUserCard
       ? (Number.isFinite(card.diameter) ? card.diameter : 0)
       : (Number.isFinite(card.width) ? card.width : 0);
-    const height = isAvatar
+    const height = isUserCard
       ? (Number.isFinite(card.diameter) ? card.diameter : 0)
       : (Number.isFinite(card.height) ? card.height : 0);
 
@@ -1996,19 +1996,19 @@ const fitToContent = (options = {}) => {
       hasContent = true;
     });
   }
-  if (Array.isArray(avatarConnectionsList) && avatarConnectionsList.length > 0) {
+  if (Array.isArray(userCardConnectionsList) && userCardConnectionsList.length > 0) {
     const defaultThickness = connectionsStore.defaultLineThickness || 0;
 
-    avatarConnectionsList.forEach(connection => {
-      const fromAvatar = cardsList.find(card => card.id === connection.from && card.type === 'avatar');
-      const toAvatar = cardsList.find(card => card.id === connection.to && card.type === 'avatar');
+    userCardConnectionsList.forEach(connection => {
+      const fromUserCard = cardsList.find(card => card.id === connection.from && card.type === 'user_card');
+      const toUserCard = cardsList.find(card => card.id === connection.to && card.type === 'user_card');
 
-      if (!fromAvatar || !toAvatar) {
+      if (!fromUserCard || !toUserCard) {
         return;
       }
 
-      const startPoint = getAvatarConnectionPoint(fromAvatar, connection.fromPointIndex);
-      const endPoint = getAvatarConnectionPoint(toAvatar, connection.toPointIndex);
+      const startPoint = getUserCardConnectionPoint(fromUserCard, connection.fromPointIndex);
+      const endPoint = getUserCardConnectionPoint(toUserCard, connection.toPointIndex);
       const controlPoints = Array.isArray(connection.controlPoints) ? connection.controlPoints : [];
       const points = [startPoint, ...controlPoints, endPoint].filter(Boolean);
 
@@ -2398,60 +2398,60 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
             :style="{
               '--line-color': path.color,
               '--line-width': `${path.strokeWidth}px`,
-              '--line-animation-duration': `${avatarAnimationDuration}ms`,
-              '--line-animation-rgb': avatarAnimationColorRgb,
-              '--line-animation-color': avatarAnimationColor,
-              color: path.isAnimated ? avatarAnimationColor : path.color,
-              stroke: path.isAnimated ? avatarAnimationColor : path.color,
+              '--line-animation-duration': `${userCardAnimationDuration}ms`,
+              '--line-animation-rgb': userCardAnimationColorRgb,
+              '--line-animation-color': userCardAnimationColor,
+              color: path.isAnimated ? userCardAnimationColor : path.color,
+              stroke: path.isAnimated ? userCardAnimationColor : path.color,
               strokeWidth: path.strokeWidth,
               pointerEvents: 'stroke'
             }"
           />
         </g>
 
-        <!-- Avatar-соединения с кривыми Безье -->
+        <!-- UserCard-соединения с кривыми Безье -->
         <g
-          v-for="path in avatarConnectionPaths"
+          v-for="path in userCardConnectionPaths"
           :key="path.id"
-          class="avatar-line-group"
+          class="user-card-line-group"
           :data-connection-id="path.id"
-          @click.stop="(event) => handleAvatarLineClick(event, path.id)"
-          @dblclick.stop="(event) => handleAvatarLineDoubleClick(event, path.id)"
+          @click.stop="(event) => handleUserCardLineClick(event, path.id)"
+          @dblclick.stop="(event) => handleUserCardLineDoubleClick(event, path.id)"
         >
           <!-- Невидимая область для клика (hitbox) -->
           <path
             :d="path.d"
             class="line-hitbox"
-            @click.stop="(event) => handleAvatarLineClick(event, path.id)"
-            @dblclick.stop="(event) => handleAvatarLineDoubleClick(event, path.id)"
+            @click.stop="(event) => handleUserCardLineClick(event, path.id)"
+            @dblclick.stop="(event) => handleUserCardLineDoubleClick(event, path.id)"
           />
           <!-- Видимая линия -->
           <path
             :d="path.d"
             :class="[
               'line',
-              'avatar-line',
+              'user-card-line',
               {
-                selected: selectedAvatarConnectionIds.includes(path.id),
-                'avatar-line--animated': animatedAvatarConnectionIds.has(path.id)
+                selected: selectedUserCardConnectionIds.includes(path.id),
+                'user-card-line--animated': animatedUserCardConnectionIds.has(path.id)
               }
             ]"
             :style="{
               '--line-color': path.color,
               '--line-width': `${path.strokeWidth}px`,
-              '--line-animation-duration': `${avatarAnimationDuration.value}ms`,
-              '--line-animation-rgb': avatarAnimationColorRgb.value,
-              '--line-animation-color': avatarAnimationColor.value,
+              '--line-animation-duration': `${userCardAnimationDuration.value}ms`,
+              '--line-animation-rgb': userCardAnimationColorRgb.value,
+              '--line-animation-color': userCardAnimationColor.value,
               '--line-flow-direction': path.flowDirection,
-              color: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
-              stroke: animatedAvatarConnectionIds.has(path.id) ? avatarAnimationColor.value : path.color,
+              color: animatedUserCardConnectionIds.has(path.id) ? userCardAnimationColor.value : path.color,
+              stroke: animatedUserCardConnectionIds.has(path.id) ? userCardAnimationColor.value : path.color,
               strokeWidth: path.strokeWidth,
               pointerEvents: 'stroke'
             }"
           />
 
           <!-- Контрольные точки (видны только когда линия выделена) -->
-          <g v-if="selectedAvatarConnectionIds.includes(path.id)">
+          <g v-if="selectedUserCardConnectionIds.includes(path.id)">
             <circle
               v-for="(point, index) in path.handlePoints"
               :key="`control-${path.id}-${index}`"
@@ -2486,19 +2486,19 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           marker-end="url(#marker-dot)"
         />
 
-        <!-- Preview линия для avatar-соединений -->
+        <!-- Preview линия для user-card-соединений -->
         <path
-          v-if="avatarPreviewLinePath"
-          :d="avatarPreviewLinePath.d"
-          class="line line--preview avatar-preview-line"
+          v-if="userCardPreviewLinePath"
+          :d="userCardPreviewLinePath.d"
+          class="line line--preview user-card-preview-line"
           :style="{
-            '--line-color': avatarPreviewLinePath.color,
-            '--line-width': `${avatarPreviewLinePath.strokeWidth}px`,
-            color: avatarPreviewLinePath.color,
-            stroke: avatarPreviewLinePath.color,
+            '--line-color': userCardPreviewLinePath.color,
+            '--line-width': `${userCardPreviewLinePath.strokeWidth}px`,
+            color: userCardPreviewLinePath.color,
+            stroke: userCardPreviewLinePath.color,
             pointerEvents: 'stroke'
           }"
-          :stroke-dasharray="avatarPreviewLinePath.strokeDasharray"
+          :stroke-dasharray="userCardPreviewLinePath.strokeDasharray"
         />
       </svg>
             <div class="anchors-layer">
@@ -2524,7 +2524,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         @dragstart.prevent
       >
           <Card
-          v-for="card in cards.filter(c => c.type !== 'avatar')"
+          v-for="card in cards.filter(c => c.type !== 'user_card')"
           :key="card.id"
           :card="card"
           :is-selected="card.selected"
@@ -2535,22 +2535,22 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           @pv-changed="handlePvChanged"
           style="pointer-events: auto;"
           />
-          <Avatar
-          v-for="avatar in cards.filter(c => c.type === 'avatar')"
-          :key="avatar.id"
-          :avatar="avatar"
-          :is-selected="avatar.selected"
-          :is-drawing-line="!!avatarConnectionStart"
-          :is-animated="animatedAvatarIds.has(avatar.id)"
-          @avatar-click="(event) => handleCardClick(event, avatar.id)"
-          @avatar-dblclick="(event) => handleAvatarDoubleClick(event, avatar.id)"
+          <UserCard
+          v-for="userCard in cards.filter(c => c.type === 'user_card')"
+          :key="userCard.id"
+          :user-card="userCard"
+          :is-selected="userCard.selected"
+          :is-drawing-line="!!userCardConnectionStart"
+          :is-animated="animatedUserCardIds.has(userCard.id)"
+          @user-card-click="(event) => handleCardClick(event, userCard.id)"
+          @user-card-dblclick="(event) => handleUserCardDoubleClick(event, userCard.id)"
           @start-drag="startDrag"
-          @connection-point-click="handleAvatarConnectionPointClick"
-          @contextmenu.native="(event) => handleAvatarContextMenu(event, avatar.id)"
+          @connection-point-click="handleUserCardConnectionPointClick"
+          @contextmenu.native="(event) => handleUserCardContextMenu(event, userCard.id)"
           :style="{
-            '--avatar-animation-duration': `${avatarAnimationDuration}ms`,
-            '--avatar-animation-color': avatarAnimationColor.value,			  
-            '--avatar-animation-color-rgb': avatarAnimationColorRgb,
+            '--user-card-animation-duration': `${userCardAnimationDuration}ms`,
+            '--user-card-animation-color': userCardAnimationColor.value,
+            '--user-card-animation-color-rgb': userCardAnimationColorRgb,
             pointerEvents: 'auto'
           }"
             />
@@ -2597,12 +2597,12 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       @MarketingFohow
     </a>
 
-    <!-- Контекстное меню для аватара -->
-    <AvatarContextMenu
-      v-if="avatarContextMenu"
-      :avatar="cardsStore.cards.find(c => c.id === avatarContextMenu.avatarId)"
-      :position="avatarContextMenuPosition"
-      @close="closeAvatarContextMenu"
+    <!-- Контекстное меню для карточки партнёра -->
+    <UserCardContextMenu
+      v-if="userCardContextMenu"
+      :user-card="cardsStore.cards.find(c => c.id === userCardContextMenu.userCardId)"
+      :position="userCardContextMenuPosition"
+      @close="closeUserCardContextMenu"
     />
 
     <!-- Контекстное меню для изображения -->
@@ -2617,12 +2617,12 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
     />
 
     <!-- Модальное окно для ввода компьютерного номера -->
-    <AvatarNumberInputModal
-      :is-open="avatarNumberModalVisible"
-      :avatar-id="avatarNumberModalAvatarId"
-      :current-personal-id="avatarNumberModalCurrentId"
-      @close="closeAvatarNumberModal"
-      @apply="handleAvatarNumberApply"
+    <UserCardNumberInputModal
+      :is-open="userCardNumberModalVisible"
+      :user-card-id="userCardNumberModalUserCardId"
+      :current-personal-id="userCardNumberModalCurrentId"
+      @close="closeUserCardNumberModal"
+      @apply="handleUserCardNumberApply"
     />
 
     <IncompatibilityWarningModal
@@ -2755,14 +2755,14 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   --line-highlight: rgba(var(--line-animation-rgb, 93, 139, 244), 0.55);
   stroke-dasharray: 16 12;
   stroke-linecap: round;
-  animation: avatarLineFlow var(--line-animation-duration, 2000ms) linear infinite;
+  animation: userCardLineFlow var(--line-animation-duration, 2000ms) linear infinite;
   filter: drop-shadow(0 0 10px var(--line-highlight));
   stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
   color: var(--line-animation-color, var(--line-color, #5D8BF4));
 }
 
-/* Стили для avatar-линий */
-.avatar-line {
+/* Стили для user-card-линий */
+.user-card-line {
   fill: none;
   stroke: var(--line-color, #5D8BF4);
   stroke-width: var(--line-width, 5px);
@@ -2772,30 +2772,30 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.avatar-line--animated {
-  --avatar-line-highlight: rgba(var(--line-animation-rgb, 93, 139, 244), 0.55);
+.user-card-line--animated {
+  --user-card-line-highlight: rgba(var(--line-animation-rgb, 93, 139, 244), 0.55);
   --line-flow-direction: var(--line-flow-direction, 1);
   stroke-dasharray: 16 12;
   stroke-linecap: round;
-  animation: avatarLineFlow var(--line-animation-duration, 2000ms) linear infinite;
-  filter: drop-shadow(0 0 10px var(--avatar-line-highlight));
+  animation: userCardLineFlow var(--line-animation-duration, 2000ms) linear infinite;
+  filter: drop-shadow(0 0 10px var(--user-card-line-highlight));
   stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
   color: var(--line-animation-color, var(--line-color, #5D8BF4)); 
 }
-.avatar-line.selected {
+.user-card-line.selected {
   stroke: #5D8BF4 !important;
   stroke-width: calc(var(--line-width, 5px) + 2px) !important;
   filter: drop-shadow(0 0 12px rgba(93, 139, 244, 0.8));
 }
 
-.avatar-preview-line {
+.user-card-preview-line {
   stroke: #5D8BF4;
   stroke-width: var(--line-width, 2px);
   stroke-dasharray: 5 5;
   pointer-events: none;
 }
 
-/* Контрольные точки для avatar-линий */
+/* Контрольные точки для user-card-линий */
 .control-point {
   cursor: move;
   transition: r 0.2s ease;
@@ -2974,7 +2974,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.6));
   animation: balancePropagationFlow var(--line-animation-duration, 2000ms) ease-in-out infinite;
 }
-@keyframes avatarLineFlow {
+@keyframes userCardLineFlow {
   0% {
     stroke-dashoffset: 0;
     stroke: var(--line-animation-color, var(--line-color, #5D8BF4));

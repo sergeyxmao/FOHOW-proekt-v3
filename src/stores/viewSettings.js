@@ -69,7 +69,7 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       lineColor: lineColorFromProfile,
       lineThickness: lineThicknessFromProfile || connectionsStore.defaultLineThickness || 5,
       isGlobalLineMode: false,
-      isAvatarLineMode: false,
+      isUserCardLineMode: false,
       animationColor: animationColorFromProfile,
       isAnimationEnabled: animationEnabledFromProfile,
       animationSeconds: clampAnimationSeconds(initialAnimation / 1000),
@@ -120,12 +120,12 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       // Если есть выбранные линии, применяем только к ним
       if (connectionsStore.selectedConnectionIds.length > 0) {
         connectionsStore.updateSelectedConnections(connectionsStore.selectedConnectionIds, { color })
-      } else if (this.isAvatarLineMode) {
-        // Иначе если включен режим avatar-линий, применяем только к avatar-линиям
-        connectionsStore.updateAllAvatarConnectionsColor(color)
+      } else if (this.isUserCardLineMode) {
+        // Иначе если включен режим user-card-линий, применяем только к линиям карточек партнёров
+        connectionsStore.updateAllUserCardConnectionsColor(color)
       } else if (this.isGlobalLineMode) {
         // Иначе если включен глобальный режим, применяем ко всем
-        connectionsStore.updateAllConnectionsColorIncludingAvatars(color)
+        connectionsStore.updateAllConnectionsColorIncludingUserCards(color)
       }
       // Синхронизируем default значения для новых линий
       connectionsStore.setDefaultConnectionParameters(this.lineColor, this.lineThickness)
@@ -141,12 +141,12 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       // Если есть выбранные линии, применяем только к ним
       if (connectionsStore.selectedConnectionIds.length > 0) {
         connectionsStore.updateSelectedConnections(connectionsStore.selectedConnectionIds, { thickness: normalized })
-      } else if (this.isAvatarLineMode) {
-        // Иначе если включен режим avatar-линий, применяем только к avatar-линиям
-        connectionsStore.updateAllAvatarConnectionsThickness(normalized)
+      } else if (this.isUserCardLineMode) {
+        // Иначе если включен режим user-card-линий, применяем только к линиям карточек партнёров
+        connectionsStore.updateAllUserCardConnectionsThickness(normalized)
       } else if (this.isGlobalLineMode) {
         // Иначе если включен глобальный режим, применяем ко всем
-        connectionsStore.updateAllConnectionsThicknessIncludingAvatars(normalized)
+        connectionsStore.updateAllConnectionsThicknessIncludingUserCards(normalized)
       }
       // Синхронизируем default значения для новых линий
       connectionsStore.setDefaultConnectionParameters(this.lineColor, this.lineThickness)
@@ -156,16 +156,16 @@ export const useViewSettingsStore = defineStore('viewSettings', {
 
     toggleGlobalLineMode() {
       this.isGlobalLineMode = !this.isGlobalLineMode
-      // Автоматически отключаем режим avatar-линий при включении глобального
-      if (this.isGlobalLineMode && this.isAvatarLineMode) {
-        this.isAvatarLineMode = false
+      // Автоматически отключаем режим user-card-линий при включении глобального
+      if (this.isGlobalLineMode && this.isUserCardLineMode) {
+        this.isUserCardLineMode = false
       }
     },
 
-    toggleAvatarLineMode() {
-      this.isAvatarLineMode = !this.isAvatarLineMode
-      // Автоматически отключаем глобальный режим при включении avatar-линий
-      if (this.isAvatarLineMode && this.isGlobalLineMode) {
+    toggleUserCardLineMode() {
+      this.isUserCardLineMode = !this.isUserCardLineMode
+      // Автоматически отключаем глобальный режим при включении user-card-линий
+      if (this.isUserCardLineMode && this.isGlobalLineMode) {
         this.isGlobalLineMode = false
       }
     },
@@ -178,12 +178,12 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       // Если есть выбранные линии, применяем только к ним
       if (connectionsStore.selectedConnectionIds.length > 0) {
         connectionsStore.updateSelectedConnections(connectionsStore.selectedConnectionIds, { animationDuration: seconds * 1000 })
-      } else if (this.isAvatarLineMode) {
-        // Иначе если включен режим avatar-линий, применяем только к avatar-линиям
-        connectionsStore.updateAllAvatarConnections({ animationDuration: seconds * 1000 })
+      } else if (this.isUserCardLineMode) {
+        // Иначе если включен режим user-card-линий, применяем только к линиям карточек партнёров
+        connectionsStore.updateAllUserCardConnections({ animationDuration: seconds * 1000 })
       } else if (this.isGlobalLineMode) {
         // Иначе если включен глобальный режим, применяем ко всем
-        connectionsStore.updateAllConnectionsIncludingAvatars({ animationDuration: seconds * 1000 })
+        connectionsStore.updateAllConnectionsIncludingUserCards({ animationDuration: seconds * 1000 })
       }
 
       connectionsStore.setDefaultConnectionParameters(this.lineColor, this.lineThickness, seconds * 1000)
