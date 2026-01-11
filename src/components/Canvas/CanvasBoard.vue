@@ -2761,33 +2761,6 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   color: var(--line-animation-color, var(--line-color, #5D8BF4));
 }
 
-/* Стили для user-card-линий */
-.user-card-line {
-  fill: none;
-  stroke: var(--line-color, #5D8BF4);
-  stroke-width: var(--line-width, 5px);
-  pointer-events: none;
-  filter: drop-shadow(0 0 5px rgba(0, 0, 0, .15));
-  transition: stroke-width 0.2s ease, filter 0.2s ease, stroke 0.2s ease;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.user-card-line--animated {
-  --user-card-line-highlight: rgba(var(--line-animation-rgb, 93, 139, 244), 0.55);
-  --line-flow-direction: var(--line-flow-direction, 1);
-  stroke-dasharray: 16 12;
-  stroke-linecap: round;
-  animation: userCardLineFlow var(--line-animation-duration, 2000ms) linear infinite;
-  filter: drop-shadow(0 0 10px var(--user-card-line-highlight));
-  stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
-  color: var(--line-animation-color, var(--line-color, #5D8BF4)); 
-}
-.user-card-line.selected {
-  stroke: #5D8BF4 !important;
-  stroke-width: calc(var(--line-width, 5px) + 2px) !important;
-  filter: drop-shadow(0 0 12px rgba(93, 139, 244, 0.8));
-}
-
 .user-card-preview-line {
   stroke: #5D8BF4;
   stroke-width: var(--line-width, 2px);
@@ -2974,19 +2947,6 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.6));
   animation: balancePropagationFlow var(--line-animation-duration, 2000ms) ease-in-out infinite;
 }
-@keyframes userCardLineFlow {
-  0% {
-    stroke-dashoffset: 0;
-    stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
-  }
-  50% {
-    stroke: rgba(var(--line-animation-rgb, 93, 139, 244), 0.9);
-  }
-  100% {
-    stroke-dashoffset: -32;
-    stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
-  }
-}
 @keyframes balancePropagationFlow {
   0% {
     stroke-dashoffset: 0;
@@ -3122,6 +3082,51 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   /* Карточки остаются на своих позициях */
   .card {
     page-break-inside: avoid !important;
+  }
+}
+</style>
+
+<style>
+/* SVG-стили для user-card линий (без scoped для корректной работы) */
+.user-card-line {
+  fill: none;
+  stroke: var(--line-color, #5D8BF4);
+  stroke-width: var(--line-width, 5px);
+  pointer-events: none;
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, .15));
+  transition: stroke-width 0.2s ease, filter 0.2s ease, stroke 0.2s ease;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.user-card-line--animated {
+  --user-card-line-highlight: rgba(var(--line-animation-rgb, 93, 139, 244), 0.55);
+  --line-flow-direction: var(--line-flow-direction, 1);
+  stroke-dasharray: 16 12;
+  stroke-linecap: round;
+  animation: userCardLineFlow var(--line-animation-duration, 2000ms) linear infinite;
+  filter: drop-shadow(0 0 10px var(--user-card-line-highlight));
+  stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
+  color: var(--line-animation-color, var(--line-color, #5D8BF4));
+}
+
+.user-card-line.selected {
+  stroke: #5D8BF4 !important;
+  stroke-width: calc(var(--line-width, 5px) + 2px) !important;
+  filter: drop-shadow(0 0 12px rgba(93, 139, 244, 0.8));
+}
+
+@keyframes userCardLineFlow {
+  0% {
+    stroke-dashoffset: 0;
+    stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
+  }
+  50% {
+    stroke: rgba(var(--line-animation-rgb, 93, 139, 244), 0.9);
+  }
+  100% {
+    stroke-dashoffset: -32;
+    stroke: var(--line-animation-color, var(--line-color, #5D8BF4));
   }
 }
 </style>
