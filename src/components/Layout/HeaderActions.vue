@@ -127,8 +127,8 @@ function addGoldCard() {
   })
 }
 
-function addAvatar() {
-  cardsStore.addAvatar()
+function addUserCard() {
+  cardsStore.addUserCard()
 }
 
 function closeTemplateMenu() {
@@ -353,11 +353,11 @@ function handleToggleTheme() {
         <button
           class="header-actions__grid-button header-actions__grid-button--avatar"
           type="button"
-          title="Добавить Аватар"
-          @click="addAvatar"
+          title="Добавить карточку партнёра"
+          @click="addUserCard"
         >
           <img src="/Avatar.png" alt="" class="header-actions__avatar-icon" aria-hidden="true" />
-          <span class="visually-hidden">Добавить Аватар</span>
+          <span class="visually-hidden">Добавить карточку партнёра</span>
         </button>
       </div>
       <button
@@ -436,11 +436,11 @@ function handleToggleTheme() {
         <button
           class="header-actions__button header-actions__button--avatar"
           type="button"
-          title="Добавить Аватар"
-          @click="addAvatar"
+          title="Добавить карточку партнёра"
+          @click="addUserCard"
         >
           <img src="/Avatar.png" alt="" class="header-actions__avatar-icon" aria-hidden="true" />
-          <span class="visually-hidden">Добавить Аватар</span>
+          <span class="visually-hidden">Добавить карточку партнёра</span>
         </button>
       </div>
 

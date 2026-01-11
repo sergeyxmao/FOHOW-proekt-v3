@@ -454,23 +454,23 @@ export const useCardsStore = defineStore('cards', {
       return newCard;
     },
 
-    addAvatar(options = {}) {
+    addUserCard(options = {}) {
          const hasLicenses = this.cards.some(card =>
         ['small', 'large', 'gold'].includes(card.type)
       )
 
       if (hasLicenses) {
-        this.showIncompatibilityWarning('avatar')
+        this.showIncompatibilityWarning('user_card')
         return false
-      }   
-      const { ...avatarData } = options
-      const hasCustomX = Object.prototype.hasOwnProperty.call(avatarData, 'x')
-      const hasCustomY = Object.prototype.hasOwnProperty.call(avatarData, 'y')
-      const { x: providedX, y: providedY, ...restData } = avatarData
+      }
+      const { ...userCardData } = options
+      const hasCustomX = Object.prototype.hasOwnProperty.call(userCardData, 'x')
+      const hasCustomY = Object.prototype.hasOwnProperty.call(userCardData, 'y')
+      const { x: providedX, y: providedY, ...restData } = userCardData
 
       // Базовый диаметр = ширина малой лицензии
       const baseDiameter = 418
-      const size = avatarData.size || 100
+      const size = userCardData.size || 100
       const diameter = (baseDiameter * size) / 100
 
       // Позиционирование в центре видимой области
@@ -480,9 +480,9 @@ export const useCardsStore = defineStore('cards', {
       const normalizedX = hasCustomX ? providedX : defaultX
       const normalizedY = hasCustomY ? providedY : defaultY
 
-      const newAvatar = {
-        id: 'avatar_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9),
-        type: 'avatar',
+      const newUserCard = {
+        id: 'user_card_' + Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9),
+        type: 'user_card',
         x: normalizedX,
         y: normalizedY,
         size: size,
@@ -498,13 +498,13 @@ export const useCardsStore = defineStore('cards', {
         ...restData
       }
 
-      this.cards.push(newAvatar)
+      this.cards.push(newUserCard)
 
       const historyStore = useHistoryStore()
-      historyStore.setActionMetadata('create', 'Добавлен Аватар')
+      historyStore.setActionMetadata('create', 'Добавлена карточка партнёра')
       historyStore.saveState()
 
-      return newAvatar
+      return newUserCard
     },
 
 async removeCard(cardId) {

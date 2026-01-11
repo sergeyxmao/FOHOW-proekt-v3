@@ -127,6 +127,7 @@ export default {
   },
   toolbar: {
     addCard: 'Add Card',
+    addUserCard: 'Add partner card',
     addSticker: 'Add Sticker',
     addConnection: 'Add Connection',
     undo: 'Undo',

@@ -127,6 +127,7 @@ export default {
   },
   toolbar: {
     addCard: 'Добавить карточку',
+    addUserCard: 'Добавить карточку партнёра',
     addSticker: 'Добавить стикер',
     addConnection: 'Добавить связь',
     undo: 'Отменить',
