@@ -122,10 +122,10 @@ const selectedPartner = ref(null)
 let searchTimeout = null
 const boardType = computed(() => {
   const hasLicenses = cardsStore.cards.some(card => ['large', 'gold'].includes(card.type))
-  const hasAvatars = cardsStore.cards.some(card => card.type === 'avatar')
+  const hasUserCards = cardsStore.cards.some(card => card.type === 'user_card')
 
   if (hasLicenses) return 'licenses'
-  if (hasAvatars) return 'avatars'
+  if (hasUserCards) return 'avatars'
   return null
 })
 
