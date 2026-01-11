@@ -476,10 +476,10 @@ async function loadBoard(boardId) {
       ? content.connections
       : []
     connectionsStore.loadConnections(connectionsData)
-    const avatarConnectionsData = Array.isArray(content.avatarConnections)
+    const userCardConnectionsData = Array.isArray(content.avatarConnections)
       ? content.avatarConnections
       : []
-    connectionsStore.loadUserCardConnections(avatarConnectionsData)
+    connectionsStore.loadUserCardConnections(userCardConnectionsData)
     // Восстанавливаем стикеры из сохраненных данных
     const stickersData = Array.isArray(content.stickers)
       ? content.stickers
@@ -709,7 +709,7 @@ function getCanvasState() {
     highlightType: conn.highlightType,
     animationDuration: conn.animationDuration
   }))
-  const avatarConnectionsData = connectionsStore.avatarConnections.map(conn => ({
+  const userCardConnectionsData = connectionsStore.userCardConnections.map(conn => ({
     id: conn.id,
     type: conn.type,
     from: conn.from,
@@ -747,7 +747,7 @@ function getCanvasState() {
     zoom: 1, // пока фиксированное значение
     objects: cardsData,
     connections: connectionsData,
-    avatarConnections: avatarConnectionsData,    
+    avatarConnections: userCardConnectionsData,    
     stickers: stickersData,
     images: imagesData
   }
