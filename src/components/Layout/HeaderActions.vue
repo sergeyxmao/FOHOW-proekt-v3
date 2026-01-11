@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 
+import { useAuthStore } from '../../stores/auth'
 import { useCardsStore } from '../../stores/cards'
 import { useConnectionsStore } from '../../stores/connections'
 import { useViewSettingsStore } from '../../stores/viewSettings'
@@ -24,6 +25,7 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle-theme'])
 
+const authStore = useAuthStore()
 const cardsStore = useCardsStore()
 const connectionsStore = useConnectionsStore()
 const viewSettingsStore = useViewSettingsStore()
@@ -351,6 +353,7 @@ function handleToggleTheme() {
           </transition>
         </div>
         <button
+          v-if="authStore.user?.role === 'admin'"
           class="header-actions__grid-button header-actions__grid-button--avatar"
           type="button"
           title="Добавить карточку партнёра"
@@ -434,6 +437,7 @@ function handleToggleTheme() {
           </transition>
         </div>
         <button
+          v-if="authStore.user?.role === 'admin'"
           class="header-actions__button header-actions__button--avatar"
           type="button"
           title="Добавить карточку партнёра"
