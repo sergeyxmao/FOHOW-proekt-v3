@@ -228,11 +228,10 @@ export function useUserCardConnections(options) {
       const currentPointIndex = isFromCurrent ? connection.fromPointIndex : connection.toPointIndex
       const otherPointIndex = isFromCurrent ? connection.toPointIndex : connection.fromPointIndex
 
-      // ИСПРАВЛЕНО: Ищем соединения, где родитель подключен точкой 1 (верхней)
-      return otherPointIndex === 1 && currentPointIndex !== 1
+      // ИСПРАВЛЕНО: Ищем соединения К точке 1 (родительская карточка сверху),
       // а не ОТ точки 1 (что означало бы движение вниз).
       // Это позволяет находить родителей независимо от того, от какой точки идёт соединение (боковой, нижней и т.д.)
-      return otherPointIndex === 1 && currentPointIndex !== undefined && currentPointIndex !== 1
+      return otherPointIndex === 1 && currentPointIndex !== 1
     })
 
     const scored = candidates
