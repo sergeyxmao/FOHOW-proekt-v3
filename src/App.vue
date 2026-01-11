@@ -479,7 +479,7 @@ async function loadBoard(boardId) {
     const avatarConnectionsData = Array.isArray(content.avatarConnections)
       ? content.avatarConnections
       : []
-    connectionsStore.loadAvatarConnections(avatarConnectionsData)
+    connectionsStore.loadUserCardConnections(avatarConnectionsData)
     // Восстанавливаем стикеры из сохраненных данных
     const stickersData = Array.isArray(content.stickers)
       ? content.stickers
