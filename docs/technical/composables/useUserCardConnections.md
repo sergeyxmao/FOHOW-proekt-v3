@@ -1,26 +1,26 @@
-# useAvatarConnections.js
+# useUserCardConnections.js
 
-> Управление соединениями между аватарами с анимациями
+> Управление соединениями между user_card (партнёрами) с анимациями
 
 ## Общая информация
 
 | Параметр | Значение |
 |----------|----------|
-| **Файл** | `src/composables/useAvatarConnections.js` |
+| **Файл** | `src/composables/useUserCardConnections.js` |
 | **Размер** | ~688 строк |
 | **Создан** | Декабрь 2025 (рефакторинг CanvasBoard.vue) |
 | **Зависимости** | connectionsStore, viewSettingsStore, useBezierCurves |
 
 ## Назначение
 
-Этот composable управляет специальным типом соединений — линиями между аватарами.
-Аватары — это визуальные представления партнёров в MLM-структуре.
+Этот composable управляет специальным типом соединений — линиями между user_card (партнёрами).
+User cards — это визуальные представления партнёров в MLM-структуре.
 
 ### Ключевые возможности:
-- Рисование Bezier-кривых между аватарами
+- Рисование Bezier-кривых между user_card (партнёрами)
 - Анимация пульсации соединений
-- Контекстное меню аватара
-- Модальное окно для ввода номера аватара
+- Контекстное меню user_card
+- Модальное окно для ввода номера user_card
 - Выделение и редактирование соединений
 
 ## API
@@ -28,7 +28,7 @@
 ### Входные параметры
 
 ```javascript
-useAvatarConnections({
+useUserCardConnections({
   connectionsStore,    // Pinia store с соединениями
   viewSettingsStore,   // Store настроек отображения
   cardsStore,          // Store карточек (для позиций)
@@ -56,7 +56,7 @@ useAvatarConnections({
   
   // Модальное окно номера
   avatarNumberModalVisible,    // ref<boolean>
-  avatarNumberModalAvatarId,   // ref - ID аватара
+  avatarNumberModalAvatarId,   // ref - ID user_card
   avatarNumberModalCurrentId,  // ref - текущий номер
   
   // Анимации
@@ -87,7 +87,7 @@ useAvatarConnections({
 ┌─────────────────┐
 │     IDLE        │ ← Начальное состояние
 └────────┬────────┘
-         │ Клик на точку аватара
+         │ Клик на точку user_card
          ▼
 ┌─────────────────┐
 │    DRAWING      │ ← Рисуется preview линия
@@ -109,7 +109,7 @@ useAvatarConnections({
 3. Через `animationDuration` анимация останавливается
 
 ```javascript
-// Запуск анимации для аватара и его соединений
+// Запуск анимации для user_card и его соединений
 startAvatarAnimation(avatarId)
 
 // Остановка всех анимаций
@@ -129,7 +129,7 @@ stopAvatarAnimation()
 }
 ```
 
-## Контекстное меню аватара
+## Контекстное меню user_card
 
 При правом клике на аватар:
 
@@ -177,7 +177,7 @@ const path = buildBezierPath(startPoint, endPoint, controlPoints)
 ## Использование в CanvasBoard.vue
 
 ```javascript
-import { useAvatarConnections } from '@/composables/useAvatarConnections'
+import { useUserCardConnections } from '@/composables/useUserCardConnections'
 import { useBezierCurves } from '@/composables/useBezierCurves'
 
 const { buildBezierPath, getAvatarConnectionPoint } = useBezierCurves()
@@ -191,7 +191,7 @@ const {
   handleAvatarLineClick,
   handleAvatarContextMenu,
   animatedAvatarConnectionIds,
-} = useAvatarConnections({
+} = useUserCardConnections({
   connectionsStore,
   viewSettingsStore,
   cardsStore,
@@ -208,7 +208,7 @@ const {
 <!-- Соединения -->
 <svg class="avatar-connections-layer">
   <path
-    v-for="conn in avatarConnections"
+    v-for="conn in userCardConnections"
     :key="conn.id"
     :d="buildBezierPath(conn)"
     :class="{ 
@@ -238,7 +238,7 @@ const {
 ## Отладка
 
 ### Линии не рисуются
-1. Проверь `connectionsStore.avatarConnections`
+1. Проверь `connectionsStore.userCardConnections`
 2. Проверь что `buildBezierPath` возвращает валидный path
 3. Проверь SVG layer в DOM
 
