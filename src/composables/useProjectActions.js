@@ -1343,7 +1343,7 @@ const handleExportPNG = async (exportSettings = null) => {
         el.style.filter = 'grayscale(100%)'
       })
 
-      // Применить черно-белый фильтр к отдельным аватарам (UserCard.vue)
+      // Применить черно-белый фильтр к отдельным карточкам партнёров (UserCard.vue)
       const avatarObjects = canvasContainer.querySelectorAll('.avatar-object')
       avatarObjects.forEach(el => {
         tempStyles.push({ element: el, property: 'filter', originalValue: el.style.filter })
