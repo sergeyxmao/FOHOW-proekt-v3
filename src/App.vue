@@ -660,7 +660,7 @@ async function uploadBoardThumbnail(boardId) {
 function getCanvasState() {
   // Получаем все карточки и соединения из stores
   const cardsData = cardsStore.cards.map(card => {
-    if (card.type === 'avatar') {
+    if (card.type === 'user_card') {
       return {
         id: card.id,
         type: card.type,

@@ -350,9 +350,9 @@ export const useCardsStore = defineStore('cards', {
     addCard(options = {}) {
       const { type = 'large', ...rawCardData } = options;
       if (['small', 'large', 'gold'].includes(type)) {
-        const hasAvatars = this.cards.some(card => card.type === 'avatar')
+        const hasUserCards = this.cards.some(card => card.type === 'user_card')
 
-        if (hasAvatars) {
+        if (hasUserCards) {
           this.showIncompatibilityWarning('license')
           return false
         }
@@ -658,14 +658,14 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
         small: { width: 418, height: 280 }
       }
       cardsData.forEach(cardData => {
-        // Если это аватар, обрабатываем его отдельно
-        if (cardData.type === 'avatar') {
+        // Если это карточка партнёра (UserCard), обрабатываем её отдельно
+        if (cardData.type === 'user_card') {
           const size = Number.isFinite(cardData.size) ? cardData.size : 100
           const diameter = Number.isFinite(cardData.diameter) ? cardData.diameter : (418 * size / 100)
 
-          const normalizedAvatar = {
-            id: cardData.id || 'avatar_' + Date.now().toString(),
-            type: 'avatar',
+          const normalizedUserCard = {
+            id: cardData.id || 'user_card_' + Date.now().toString(),
+            type: 'user_card',
             x: Number.isFinite(cardData.x) ? cardData.x : 0,
             y: Number.isFinite(cardData.y) ? cardData.y : 0,
             size: size,
@@ -680,7 +680,7 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
             created_at: cardData.created_at || new Date().toISOString()
           }
 
-          this.cards.push(normalizedAvatar)
+          this.cards.push(normalizedUserCard)
           return
         }
 

@@ -41,7 +41,7 @@ const { placementMode } = storeToRefs(boardStore)
 const { currentBoardId } = storeToRefs(boardStore)
 const isGeolocationMenuOpen = ref(false)
 const isStickersMenuOpen = ref(false)
-const isAvatarBoard = computed(() => cardsStore.cards.some(card => card.type === 'avatar'))  
+const isUserCardBoard = computed(() => cardsStore.cards.some(card => card.type === 'user_card'))  
 const createDefaultCounters = () => ({
   partners: 0,
   notes: 0,
@@ -103,7 +103,7 @@ const handlePartnersToggle = () => {
 }
 
 const handleNotesToggle = () => {
-  if (isAvatarBoard.value) {
+  if (isUserCardBoard.value) {
     return
   }  
   sidePanelsStore.toggleNotes()
@@ -120,7 +120,7 @@ const handleImagesToggle = () => {
 }
 
 const toggleGeolocationMenu = () => {
-  if (isAvatarBoard.value) {
+  if (isUserCardBoard.value) {
     return
   }  
   isGeolocationMenuOpen.value = !isGeolocationMenuOpen.value
@@ -142,7 +142,7 @@ const handleStickerMessagesToggle = () => {
   emit('request-close')
 }
 const handleAnchorsToggle = () => {
-  if (isAvatarBoard.value) {
+  if (isUserCardBoard.value) {
     return
   }  
   const nextMode = placementMode.value === 'anchor' ? null : 'anchor'
@@ -155,14 +155,14 @@ const handleAnchorsToggle = () => {
 }
 
 const handleAnchorsPanelOpen = () => {
-  if (isAvatarBoard.value) {
+  if (isUserCardBoard.value) {
     return
   }  
   sidePanelsStore.openAnchors()
   isGeolocationMenuOpen.value = false
   emit('request-close')
 }
-watch(isAvatarBoard, (isAvatarMode) => {
+watch(isUserCardBoard, (isAvatarMode) => {
   if (!isAvatarMode) {
     return
   }
@@ -226,7 +226,7 @@ const handleAddSticker = () => {
         type="button"
         class="discussion-menu__action"
         :class="{ 'discussion-menu__action--active': isNotesOpen }"
-        :disabled="isAvatarBoard"        
+        :disabled="isUserCardBoard"        
         @click="handleNotesToggle"
       >
         {{ t('discussionMenu.notesList') }}
@@ -280,7 +280,7 @@ const handleAddSticker = () => {
           <button
             type="button"
             class="discussion-menu__action"
-            :disabled="isAvatarBoard"          
+            :disabled="isUserCardBoard"          
             :class="{ 'discussion-menu__action--active': isAnchorsOpen || placementMode === 'anchor' }"
             @click="toggleGeolocationMenu"
           >
@@ -297,7 +297,7 @@ const handleAddSticker = () => {
               type="button"
               class="discussion-menu__subaction"
               :class="{ 'discussion-menu__subaction--active': placementMode === 'anchor' }"
-               :disabled="isAvatarBoard"            
+               :disabled="isUserCardBoard"            
               @click="handleAnchorsToggle"
             >
               {{ t('discussionMenu.setAnchor') }}
@@ -306,7 +306,7 @@ const handleAddSticker = () => {
               type="button"
               class="discussion-menu__subaction"
               :class="{ 'discussion-menu__subaction--active': isAnchorsOpen }"
-               :disabled="isAvatarBoard"             
+               :disabled="isUserCardBoard"             
               @click="handleAnchorsPanelOpen"
             >
               {{ t('discussionMenu.boardAnchors') }}
