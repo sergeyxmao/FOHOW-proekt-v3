@@ -1,5 +1,5 @@
 /**
- * Composable для работы с кривыми Безье для соединений аватаров
+ * Composable для работы с кривыми Безье для соединений карточек партнёров (UserCard)
  */
 
 /**
@@ -36,13 +36,13 @@ export function buildBezierPath(points) {
 }
 
 /**
- * Получить координаты точки соединения аватара
- * @param {Object} avatar - Объект аватара
+ * Получить координаты точки соединения карточки партнёра (UserCard)
+ * @param {Object} userCard - Объект карточки партнёра
  * @param {number} pointIndex - Индекс точки (1-10)
  * @returns {Object} Координаты {x, y}
  */
-export function getAvatarConnectionPoint(avatar, pointIndex) {
-  const diameter = avatar.diameter || 418
+export function getUserCardConnectionPoint(userCard, pointIndex) {
+  const diameter = userCard.diameter || 418
   const radius = diameter / 2
   const offset = 5
 
@@ -51,8 +51,8 @@ export function getAvatarConnectionPoint(avatar, pointIndex) {
   const angle = angles[pointIndex - 1] || 0
 
   const angleRad = angle * Math.PI / 180
-  const centerX = avatar.x + diameter / 2
-  const centerY = avatar.y + diameter / 2
+  const centerX = userCard.x + diameter / 2
+  const centerY = userCard.y + diameter / 2
 
   const pointX = centerX + (radius + offset) * Math.sin(angleRad)
   const pointY = centerY - (radius + offset) * Math.cos(angleRad)
@@ -163,7 +163,7 @@ export function isPointNearBezier(points, x, y, threshold = 10) {
 export function useBezierCurves() {
   return {
     buildBezierPath,
-    getAvatarConnectionPoint,
+    getUserCardConnectionPoint,
     calculateMidpoint,
     findClosestPointOnBezier,
     isPointNearBezier

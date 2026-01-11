@@ -205,7 +205,7 @@ const handleSearch = () => {
 // Навигация к карточке партнёра на доске
 const navigateToPartnerCard = (partner) => {
   if (boardType.value === 'avatars') {
-    navigateToAvatarPartner(partner)
+    navigateToUserCardPartner(partner)
     return
   }  
   // Нормализация personal_id (убрать пробелы, верхний регистр)
@@ -233,20 +233,20 @@ const navigateToPartnerCard = (partner) => {
   // Подсветить карточку
   cardsStore.highlightCard(targetCard.id)
 }
-const navigateToAvatarPartner = (partner) => {
-  const avatar = cardsStore.cards.find(card => card.id === partner.avatarObjectId)
+const navigateToUserCardPartner = (partner) => {
+  const userCard = cardsStore.cards.find(card => card.id === partner.avatarObjectId)
 
-  if (!avatar) {
-    console.warn('Аватар партнёра не найден на доске:', partner.avatarObjectId)
+  if (!userCard) {
+    console.warn('Карточка партнёра не найдена на доске:', partner.avatarObjectId)
     return
   }
 
-  const diameter = avatar.diameter || 418
-  const centerX = avatar.x + diameter / 2
-  const centerY = avatar.y + diameter / 2
+  const diameter = userCard.diameter || 418
+  const centerX = userCard.x + diameter / 2
+  const centerY = userCard.y + diameter / 2
 
   boardStore.centerViewOnPoint(centerX, centerY)
-  cardsStore.highlightAvatar(avatar.id)
+  cardsStore.highlightUserCard(userCard.id)
 }
 
 // Открытие модального окна с деталями (БЕЗ фокусировки на карточке)

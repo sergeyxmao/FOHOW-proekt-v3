@@ -15,7 +15,7 @@ function clampAnimationDuration(duration) {
 export const useConnectionsStore = defineStore('connections', {
   state: () => ({
     connections: [],
-    avatarConnections: [], // Новый массив для соединений между аватарами
+    userCardConnections: [], // Массив соединений между карточками партнёров (UserCard) на холсте
     selectedConnectionIds: [], // Массив выбранных соединений
     defaultLineColor: '#0f62fe',
     defaultLineThickness: 5,
@@ -183,18 +183,18 @@ export const useConnectionsStore = defineStore('connections', {
         }
       })
 
-      // Также обновляем avatar-connections если они есть в выборке
+      // Также обновляем user-card-connections если они есть в выборке
       connectionIds.forEach(id => {
-        const avatarConnection = this.avatarConnections.find(conn => conn.id === id)
-        if (avatarConnection) {
+        const userCardConnection = this.userCardConnections.find(conn => conn.id === id)
+        if (userCardConnection) {
           const normalizedUpdates = { ...updates }
 
           if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'animationDuration')) {
             normalizedUpdates.animationDuration = clampAnimationDuration(normalizedUpdates.animationDuration)
           }
 
-          Object.assign(avatarConnection, normalizedUpdates)
-          updatedConnections.push(avatarConnection)
+          Object.assign(userCardConnection, normalizedUpdates)
+          updatedConnections.push(userCardConnection)
         }
       })
 
@@ -326,12 +326,12 @@ export const useConnectionsStore = defineStore('connections', {
       return removedConnections
     },
 
-    // ========== Методы для Avatar-соединений ==========
+    // ========== Методы для UserCard-соединений (карточки партнёров на холсте) ==========
 
-    addAvatarConnection(fromAvatarId, toAvatarId, options = {}) {
-      const existingConnection = this.avatarConnections.find(
-        conn => (conn.from === fromAvatarId && conn.to === toAvatarId) ||
-                (conn.from === toAvatarId && conn.to === fromAvatarId)
+    addUserCardConnection(fromUserCardId, toUserCardId, options = {}) {
+      const existingConnection = this.userCardConnections.find(
+        conn => (conn.from === fromUserCardId && conn.to === toUserCardId) ||
+                (conn.from === toUserCardId && conn.to === fromUserCardId)
       )
 
       if (existingConnection) {
@@ -346,10 +346,10 @@ export const useConnectionsStore = defineStore('connections', {
       const controlPoints = options.controlPoints || []
 
       const newConnection = {
-        id: `avatar-${Date.now().toString()}-${Math.random().toString(36).slice(2, 9)}`,
-        type: 'avatar-connection',
-        from: fromAvatarId,
-        to: toAvatarId,
+        id: `user-card-${Date.now().toString()}-${Math.random().toString(36).slice(2, 9)}`,
+        type: 'user-card-connection',
+        from: fromUserCardId,
+        to: toUserCardId,
         fromPointIndex: options.fromPointIndex || 1,
         toPointIndex: options.toPointIndex || 1,
         controlPoints,
@@ -359,41 +359,41 @@ export const useConnectionsStore = defineStore('connections', {
         highlightType: options.highlightType ?? this.defaultHighlightType
       }
 
-      this.avatarConnections.push(newConnection)
+      this.userCardConnections.push(newConnection)
 
       const historyStore = useHistoryStore()
-      historyStore.setActionMetadata('create', `Создано соединение между аватарами`)
+      historyStore.setActionMetadata('create', `Создано соединение между карточками партнёров`)
       historyStore.saveState()
 
       return newConnection
     },
 
-    removeAvatarConnection(connectionId) {
-      const index = this.avatarConnections.findIndex(conn => conn.id === connectionId)
+    removeUserCardConnection(connectionId) {
+      const index = this.userCardConnections.findIndex(conn => conn.id === connectionId)
       if (index !== -1) {
         const historyStore = useHistoryStore()
-        historyStore.setActionMetadata('delete', `Удалено соединение аватаров`)
+        historyStore.setActionMetadata('delete', `Удалено соединение карточек партнёров`)
 
-        this.avatarConnections.splice(index, 1)
+        this.userCardConnections.splice(index, 1)
         historyStore.saveState()
         return true
       }
       return false
     },
 
-    removeAvatarConnectionsByAvatarId(avatarId, options = { saveToHistory: true }) {
-      const removedCount = this.avatarConnections.filter(
-        conn => conn.from === avatarId || conn.to === avatarId
+    removeUserCardConnectionsByUserCardId(userCardId, options = { saveToHistory: true }) {
+      const removedCount = this.userCardConnections.filter(
+        conn => conn.from === userCardId || conn.to === userCardId
       ).length
 
       if (removedCount > 0) {
-        this.avatarConnections = this.avatarConnections.filter(
-          conn => conn.from !== avatarId && conn.to !== avatarId
+        this.userCardConnections = this.userCardConnections.filter(
+          conn => conn.from !== userCardId && conn.to !== userCardId
         )
 
         if (options.saveToHistory) {
           const historyStore = useHistoryStore()
-          historyStore.setActionMetadata('delete', `Удалено ${removedCount} соединений аватаров`)
+          historyStore.setActionMetadata('delete', `Удалено ${removedCount} соединений карточек партнёров`)
           historyStore.saveState()
         }
       }
@@ -401,8 +401,8 @@ export const useConnectionsStore = defineStore('connections', {
       return removedCount
     },
 
-    updateAvatarConnection(connectionId, updates, options = { saveToHistory: true }) {
-      const connection = this.avatarConnections.find(conn => conn.id === connectionId)
+    updateUserCardConnection(connectionId, updates, options = { saveToHistory: true }) {
+      const connection = this.userCardConnections.find(conn => conn.id === connectionId)
       if (connection) {
         const normalizedUpdates = { ...updates }
 
@@ -414,40 +414,40 @@ export const useConnectionsStore = defineStore('connections', {
 
         if (options.saveToHistory) {
           const historyStore = useHistoryStore()
-          historyStore.setActionMetadata('update', 'Изменены свойства соединения аватаров')
+          historyStore.setActionMetadata('update', 'Изменены свойства соединения карточек партнёров')
           historyStore.saveState()
         }
       }
       return connection
     },
 
-    // Обновить цвет всех соединений (включая avatar-соединения)
-    updateAllConnectionsColorIncludingAvatars(color) {
+    // Обновить цвет всех соединений (включая user-card-соединения)
+    updateAllConnectionsColorIncludingUserCards(color) {
       this.updateAllConnectionsColor(color)
 
-      this.avatarConnections.forEach(connection => {
+      this.userCardConnections.forEach(connection => {
         connection.color = color
       })
 
-      return { connections: this.connections.length, avatarConnections: this.avatarConnections.length }
+      return { connections: this.connections.length, userCardConnections: this.userCardConnections.length }
     },
 
-    // Обновить толщину всех соединений (включая avatar-соединения)
-    updateAllConnectionsThicknessIncludingAvatars(thickness) {
+    // Обновить толщину всех соединений (включая user-card-соединения)
+    updateAllConnectionsThicknessIncludingUserCards(thickness) {
       this.updateAllConnectionsThickness(thickness)
 
-      this.avatarConnections.forEach(connection => {
+      this.userCardConnections.forEach(connection => {
         connection.thickness = thickness
       })
 
-      return { connections: this.connections.length, avatarConnections: this.avatarConnections.length }
+      return { connections: this.connections.length, userCardConnections: this.userCardConnections.length }
     },
 
-    // Обновить все соединения (включая avatar-соединения)
-    updateAllConnectionsIncludingAvatars(updates) {
+    // Обновить все соединения (включая user-card-соединения)
+    updateAllConnectionsIncludingUserCards(updates) {
       this.updateAllConnections(updates)
 
-      this.avatarConnections.forEach(connection => {
+      this.userCardConnections.forEach(connection => {
         const normalizedUpdates = { ...updates }
 
         if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'animationDuration')) {
@@ -457,14 +457,14 @@ export const useConnectionsStore = defineStore('connections', {
         Object.assign(connection, normalizedUpdates)
       })
 
-      return { connections: this.connections.length, avatarConnections: this.avatarConnections.length }
+      return { connections: this.connections.length, userCardConnections: this.userCardConnections.length }
     },
 
-    // Обновить только avatar-соединения
-    updateAllAvatarConnections(updates) {
+    // Обновить только user-card-соединения (карточки партнёров)
+    updateAllUserCardConnections(updates) {
       const updatedConnections = []
 
-      this.avatarConnections.forEach(connection => {
+      this.userCardConnections.forEach(connection => {
         const normalizedUpdates = { ...updates }
 
         if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'animationDuration')) {
@@ -477,53 +477,53 @@ export const useConnectionsStore = defineStore('connections', {
 
       if (updatedConnections.length > 0) {
         const historyStore = useHistoryStore()
-        historyStore.setActionMetadata('update', 'Изменены параметры всех avatar-соединений')
+        historyStore.setActionMetadata('update', 'Изменены параметры всех соединений карточек партнёров')
         historyStore.saveState()
       }
 
       return updatedConnections
     },
 
-    // Обновить цвет всех avatar-соединений
-    updateAllAvatarConnectionsColor(color) {
+    // Обновить цвет всех user-card-соединений (карточки партнёров)
+    updateAllUserCardConnectionsColor(color) {
       const updatedConnections = []
 
-      this.avatarConnections.forEach(connection => {
+      this.userCardConnections.forEach(connection => {
         connection.color = color
         updatedConnections.push(connection)
       })
 
       if (updatedConnections.length > 0) {
         const historyStore = useHistoryStore()
-        historyStore.setActionMetadata('update', 'Изменен цвет всех avatar-соединений')
+        historyStore.setActionMetadata('update', 'Изменен цвет всех соединений карточек партнёров')
         historyStore.saveState()
       }
 
       return updatedConnections
     },
 
-    // Обновить толщину всех avatar-соединений
-    updateAllAvatarConnectionsThickness(thickness) {
+    // Обновить толщину всех user-card-соединений (карточки партнёров)
+    updateAllUserCardConnectionsThickness(thickness) {
       const updatedConnections = []
 
-      this.avatarConnections.forEach(connection => {
+      this.userCardConnections.forEach(connection => {
         connection.thickness = thickness
         updatedConnections.push(connection)
       })
 
       if (updatedConnections.length > 0) {
         const historyStore = useHistoryStore()
-        historyStore.setActionMetadata('update', 'Изменена толщина всех avatar-соединений')
+        historyStore.setActionMetadata('update', 'Изменена толщина всех соединений карточек партнёров')
         historyStore.saveState()
       }
 
       return updatedConnections
     },
 
-    loadAvatarConnections(connectionsData = []) {
+    loadUserCardConnections(connectionsData = []) {
       if (!Array.isArray(connectionsData)) {
-        this.avatarConnections = []
-        return this.avatarConnections
+        this.userCardConnections = []
+        return this.userCardConnections
       }
 
       const normalizedConnections = connectionsData
@@ -547,8 +547,8 @@ export const useConnectionsStore = defineStore('connections', {
           )
 
           return {
-            id: connection.id || `avatar-${Date.now().toString()}-${Math.random().toString(36).slice(2, 9)}`,
-            type: 'avatar-connection',
+            id: connection.id || `user-card-${Date.now().toString()}-${Math.random().toString(36).slice(2, 9)}`,
+            type: 'user-card-connection',
             from: connection.from,
             to: connection.to,
             fromPointIndex: connection.fromPointIndex || 1,
@@ -564,8 +564,8 @@ export const useConnectionsStore = defineStore('connections', {
         })
         .filter(Boolean)
 
-      this.avatarConnections = normalizedConnections
-      return this.avatarConnections
+      this.userCardConnections = normalizedConnections
+      return this.userCardConnections
     },
 
     // Управление выбранными соединениями

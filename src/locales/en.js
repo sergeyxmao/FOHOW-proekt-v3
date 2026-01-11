@@ -31,7 +31,7 @@ export default {
     lines: 'Lines',
     lineThickness: 'Thickness',
     applyToAllLines: 'Apply to all lines',
-    applyToAvatarLines: 'Avatar lines',
+    applyToUserCardLines: 'User card lines',
     selectLineColor: 'Select line color',
     animation: 'Animation',
     animationEnabled: 'Animation on',
