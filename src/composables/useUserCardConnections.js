@@ -365,9 +365,31 @@ const startUserCardSelectionAnimation = (userCardId) => {
     if (item.type === 'user_card') {
       nextUserCardIds.add(item.id)
       console.log('➕ Добавлена user_card в анимацию:', item.id);
+
+      // Прямая DOM-манипуляция для стикеров и карточек (PV changed)
+      const element = document.querySelector(`[data-card-id="${item.id}"]`) ||
+                      document.querySelector(`[data-sticker-id="${item.id}"]`) ||
+                      document.getElementById(`sticker-${item.id}`) ||
+                      document.getElementById(`card-${item.id}`);
+
+      if (element) {
+        element.classList.add('is-animated');
+        console.log('🎨 DOM: добавлен класс is-animated для элемента:', item.id);
+      } else {
+        console.log('⚠️ DOM: элемент не найден для:', item.id);
+      }
     } else if (item.type === 'connection') {
       nextConnectionIds.add(item.id)
       console.log('➕ Добавлено connection в анимацию:', item.id);
+
+      // Прямая DOM-манипуляция для линий (PV changed)
+      const line = document.getElementById(item.id);
+      if (line) {
+        line.classList.add('line--balance-propagation');
+        console.log('🎨 DOM: добавлен класс line--balance-propagation для линии:', item.id);
+      } else {
+        console.log('⚠️ DOM: линия не найдена для:', item.id);
+      }
     }
   })
 
@@ -384,6 +406,27 @@ const startUserCardSelectionAnimation = (userCardId) => {
   const timerId = window.setTimeout(() => {
     if (userCardAnimationRootId.value !== userCardId) return
     console.log('⏰ Таймер завершён, остановка анимации');
+
+    // Удаление классов анимации из DOM (PV changed)
+    nextUserCardIds.forEach(id => {
+      const element = document.querySelector(`[data-card-id="${id}"]`) ||
+                      document.querySelector(`[data-sticker-id="${id}"]`) ||
+                      document.getElementById(`sticker-${id}`) ||
+                      document.getElementById(`card-${id}`);
+      if (element) {
+        element.classList.remove('is-animated');
+        console.log('🎨 DOM: удалён класс is-animated для элемента:', id);
+      }
+    });
+
+    nextConnectionIds.forEach(id => {
+      const line = document.getElementById(id);
+      if (line) {
+        line.classList.remove('line--balance-propagation');
+        console.log('🎨 DOM: удалён класс line--balance-propagation для линии:', id);
+      }
+    });
+
     stopUserCardSelectionAnimation()
   }, duration)
 
