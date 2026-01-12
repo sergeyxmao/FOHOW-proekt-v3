@@ -1840,16 +1840,16 @@ watch(
     color: #111827;
   }
   25% {
-    transform: scale(1.2);
+    transform: scale(1.3);
     color: var(--user-card-animation-color, #ef4444);
   }
   50% {
-    transform: scale(1.3);
+    transform: scale(1.6);
     color: var(--user-card-animation-color, #ef4444);
     font-weight: 700;
   }
   75% {
-    transform: scale(1.15);
+    transform: scale(1.3);
     color: var(--user-card-animation-color, #ef4444);
   }
   100% {
@@ -1870,16 +1870,16 @@ watch(
     color: #111827;
   }
   25% {
-    transform: scale(1.2);
+    transform: scale(1.5);
     color: var(--user-card-animation-color, #ef4444);
   }
   50% {
-    transform: scale(1.3);
+    transform: scale(2.0);
     color: var(--user-card-animation-color, #ef4444);
     font-weight: 900;
   }
   75% {
-    transform: scale(1.15);
+    transform: scale(1.5);
     color: var(--user-card-animation-color, #ef4444);
   }
   100% {
