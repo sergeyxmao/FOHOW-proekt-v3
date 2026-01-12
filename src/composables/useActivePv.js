@@ -225,7 +225,11 @@ export function useActivePv(options) {
       const animationColor = viewSettingsStore?.animationColor || '#ef4444';
       const rgb = toRgbString(animationColor);
       if (rgb) {
+        // Применяем к контейнеру линии
         lineElement.style.setProperty('--user-card-animation-color-rgb', rgb);
+        // Применяем ко всем path элементам внутри линии
+        const paths = lineElement.querySelectorAll('path');
+        paths.forEach(p => p.style.setProperty('--user-card-animation-color-rgb', rgb));
       }
 
       lineElement.classList.add('line--balance-propagation')
