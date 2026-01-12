@@ -1483,15 +1483,15 @@ const handleAddNoteClick = (cardId) => {
 };
 
 const handlePvChanged = (cardId) => {
-
   console.log('🔵 PV changed for card:', cardId);
 
-  // Запускаем анимацию для карточки, у которой изменился PV
-
-  // Это вызовет пересчет баланса и анимацию распространения вверх
-
+  // Анимация линий вверх по цепочке
   animateBalancePropagation(cardId);
 
+  // Анимация карточек (user_card и license) вверх по цепочке
+  if (isUserCardAnimationEnabled.value) {
+    startUserCardSelectionAnimation(cardId);
+  }
 };
 
 const handleStageClick = async (event) => {
