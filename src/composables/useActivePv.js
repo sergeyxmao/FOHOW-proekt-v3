@@ -139,6 +139,12 @@ export function useActivePv(options) {
       return
     }
 
+    // Проверяем настройки анимации (PV changed)
+    if (viewSettingsStore && !viewSettingsStore.isAnimationEnabled) {
+      console.log('🛑 Анимация отключена пользователем (+10)');
+      return;
+    }
+
     // Получаем длительность анимации из настроек
     const animationDuration = viewSettingsStore.animationDurationMs || 2000
 

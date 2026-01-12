@@ -355,6 +355,12 @@ const getCardElement = (cardId) => {
 const startUserCardSelectionAnimation = (userCardId) => {
   console.log('🟢 startUserCardSelectionAnimation (Direct DOM Mode) для:', userCardId);
 
+  // Проверяем настройки анимации (PV changed)
+  if (viewSettingsStore && !viewSettingsStore.isAnimationEnabled) {
+    console.log('🛑 Анимация отключена пользователем (нажатие на монетку)');
+    return;
+  }
+
   // Проверяем существование карточки
   const userCard = cards.value.find(card => card.id === userCardId)
 
