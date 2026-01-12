@@ -331,107 +331,91 @@ export function useUserCardConnections(options) {
   }
 
 /**
+ * Поиск DOM-элемента карточки или стикера (PV changed)
+ * Копирует логику из useActivePv для совместимости
+ * @param {string} cardId - ID карточки
+ * @returns {HTMLElement|null} DOM-элемент или null
+ */
+const getCardElement = (cardId) => {
+  // Ищем стикеры (small/license)
+  const stickerEl = document.getElementById(`sticker-${cardId}`);
+  if (stickerEl) return stickerEl;
+
+  // Ищем обычные карточки (user_card)
+  // Пробуем все возможные варианты селекторов
+  return document.querySelector(`[data-card-id="${cardId}"]`) ||
+         document.getElementById(`card-${cardId}`) ||
+         document.getElementById(cardId);
+}
+
+/**
  * Запуск анимации выделения аватара
  * @param {string} userCardId - ID аватара
  */
 const startUserCardSelectionAnimation = (userCardId) => {
-  console.log('🟢 startUserCardSelectionAnimation вызвана для:', userCardId);
-  
-  // ИЗМЕНЕНО: убран фильтр типа, ищем любую карточку с этим ID
+  console.log('🟢 startUserCardSelectionAnimation (Direct DOM Mode) для:', userCardId);
+
+  // Проверяем существование карточки
   const userCard = cards.value.find(card => card.id === userCardId)
-  
-  console.log('🔍 Найденная карточка:', userCard);
-  console.log('🔍 Тип карточки:', userCard?.type);
-  
+
   if (!userCard) {
     console.log('❌ Карточка НЕ найдена! Остановка анимации.');
     console.log('🔍 Доступные карточки:', cards.value.map(c => ({ id: c.id, type: c.type })));
-    stopUserCardSelectionAnimation()
     return
   }
 
-  console.log('✅ Карточка найдена, продолжаем...');
-  stopUserCardSelectionAnimation()
-  userCardAnimationRootId.value = userCardId
+  console.log('✅ Карточка найдена:', userCard.type);
 
+  // 1. Строим последовательность анимации
   const sequence = buildUserCardAnimationSequence(userCardId)
   console.log('📊 Построенная последовательность анимации:', sequence);
   console.log('📊 Длина последовательности:', sequence.length);
-  
-  const nextUserCardIds = new Set()
-  const nextConnectionIds = new Set()
 
+  if (!sequence || sequence.length === 0) {
+    console.warn('⚠️ Пустая последовательность анимации');
+    return;
+  }
+
+  // 2. Анимируем каждый элемент напрямую через DOM (как в useActivePv)
   sequence.forEach(item => {
     if (item.type === 'user_card') {
-      nextUserCardIds.add(item.id)
-      console.log('➕ Добавлена user_card в анимацию:', item.id);
+      const el = getCardElement(item.id);
+      if (el) {
+        console.log(`✨ Анимация карточки ${item.id} (DOM) - добавляем классы`);
 
-      // Прямая DOM-манипуляция для стикеров и карточек (PV changed)
-      const element = document.querySelector(`[data-card-id="${item.id}"]`) ||
-                      document.querySelector(`[data-sticker-id="${item.id}"]`) ||
-                      document.getElementById(`sticker-${item.id}`) ||
-                      document.getElementById(`card-${item.id}`);
+        // Добавляем ТОТ ЖЕ класс, что и при +10
+        el.classList.add('card--balance-propagation');
+        // И наш новый класс для стикеров (на всякий случай)
+        el.classList.add('is-animated');
 
-      if (element) {
-        element.classList.add('is-animated');
-        console.log('🎨 DOM: добавлен класс is-animated для элемента:', item.id);
+        // Автоматическое удаление классов через 2 секунды
+        setTimeout(() => {
+          el.classList.remove('card--balance-propagation');
+          el.classList.remove('is-animated');
+          console.log(`🧹 Классы удалены для карточки ${item.id}`);
+        }, 2000);
       } else {
-        console.log('⚠️ DOM: элемент не найден для:', item.id);
-      }
-    } else if (item.type === 'connection') {
-      nextConnectionIds.add(item.id)
-      console.log('➕ Добавлено connection в анимацию:', item.id);
-
-      // Прямая DOM-манипуляция для линий (PV changed)
-      const line = document.getElementById(item.id);
-      if (line) {
-        line.classList.add('line--balance-propagation');
-        console.log('🎨 DOM: добавлен класс line--balance-propagation для линии:', item.id);
-      } else {
-        console.log('⚠️ DOM: линия не найдена для:', item.id);
+        console.warn(`❌ Элемент карточки ${item.id} не найден в DOM`);
       }
     }
-  })
+    else if (item.type === 'connection') {
+      const lineEl = document.getElementById(item.id);
+      if (lineEl) {
+        console.log(`✨ Анимация линии ${item.id} (DOM)`);
+        lineEl.classList.add('line--balance-propagation');
 
-  console.log('🎯 Финальные sets:');
-  console.log('   - animatedUserCardIds:', Array.from(nextUserCardIds));
-  console.log('   - animatedUserCardConnectionIds:', Array.from(nextConnectionIds));
-
-  animatedUserCardIds.value = nextUserCardIds
-  animatedUserCardConnectionIds.value = nextConnectionIds
-
-  const duration = userCardAnimationDuration.value
-  console.log('⏱️ Длительность анимации:', duration, 'ms');
-
-  const timerId = window.setTimeout(() => {
-    if (userCardAnimationRootId.value !== userCardId) return
-    console.log('⏰ Таймер завершён, остановка анимации');
-
-    // Удаление классов анимации из DOM (PV changed)
-    nextUserCardIds.forEach(id => {
-      const element = document.querySelector(`[data-card-id="${id}"]`) ||
-                      document.querySelector(`[data-sticker-id="${id}"]`) ||
-                      document.getElementById(`sticker-${id}`) ||
-                      document.getElementById(`card-${id}`);
-      if (element) {
-        element.classList.remove('is-animated');
-        console.log('🎨 DOM: удалён класс is-animated для элемента:', id);
+        // Автоматическое удаление класса через 2 секунды
+        setTimeout(() => {
+          lineEl.classList.remove('line--balance-propagation');
+          console.log(`🧹 Класс удалён для линии ${item.id}`);
+        }, 2000);
+      } else {
+        console.warn(`❌ Элемент линии ${item.id} не найден в DOM`);
       }
-    });
+    }
+  });
 
-    nextConnectionIds.forEach(id => {
-      const line = document.getElementById(id);
-      if (line) {
-        line.classList.remove('line--balance-propagation');
-        console.log('🎨 DOM: удалён класс line--balance-propagation для линии:', id);
-      }
-    });
-
-    stopUserCardSelectionAnimation()
-  }, duration)
-
-  userCardAnimationTimers.value.push(timerId)
-  console.log('✅ Анимация запущена успешно!');
+  console.log('✅ Анимация запущена успешно через прямую DOM-манипуляцию!');
 }
 
 
