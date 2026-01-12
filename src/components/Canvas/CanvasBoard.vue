@@ -1484,13 +1484,18 @@ const handleAddNoteClick = (cardId) => {
 
 const handlePvChanged = (cardId) => {
   console.log('🔵 PV changed for card:', cardId);
+  console.log('🔍 isUserCardAnimationEnabled:', isUserCardAnimationEnabled);
+  console.log('🔍 isUserCardAnimationEnabled.value:', isUserCardAnimationEnabled.value);
 
   // Анимация линий вверх по цепочке
   animateBalancePropagation(cardId);
 
   // Анимация карточек (user_card и license) вверх по цепочке
   if (isUserCardAnimationEnabled.value) {
+    console.log('✅ Вызов startUserCardSelectionAnimation');
     startUserCardSelectionAnimation(cardId);
+  } else {
+    console.log('❌ Анимация карточек отключена');
   }
 };
 
