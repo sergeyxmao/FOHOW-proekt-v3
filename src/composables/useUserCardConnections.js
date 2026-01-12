@@ -291,14 +291,15 @@ export function useUserCardConnections(options) {
 const startUserCardSelectionAnimation = (userCardId) => {
   console.log('🟢 startUserCardSelectionAnimation вызвана для:', userCardId);
   
-  // Поддержка user_card и license для анимации вверх по цепочке
-  const userCard = cards.value.find(card => card.id === userCardId && (card.type === 'user_card' || card.type === 'license'))
+  // ИЗМЕНЕНО: убран фильтр типа, ищем любую карточку с этим ID
+  const userCard = cards.value.find(card => card.id === userCardId)
   
   console.log('🔍 Найденная карточка:', userCard);
   console.log('🔍 Тип карточки:', userCard?.type);
   
   if (!userCard) {
     console.log('❌ Карточка НЕ найдена! Остановка анимации.');
+    console.log('🔍 Доступные карточки:', cards.value.map(c => ({ id: c.id, type: c.type })));
     stopUserCardSelectionAnimation()
     return
   }
