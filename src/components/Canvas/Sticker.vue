@@ -94,6 +94,8 @@ const closeEditing = () => {
 // Обработчик кликов вне стикера для закрытия редактирования
 const handleClickOutside = (event) => {
   if (!isEditing.value) return;
+  // Игнорируем клики по самому текстовому полю (на всякий случай)
+  if (event.target.classList.contains('sticker__textarea')) return;
 
   // Проверяем, кликнули ли вне стикера
   if (stickerRef.value && !stickerRef.value.contains(event.target)) {
@@ -107,7 +109,7 @@ watch(isEditing, (newValue) => {
     // Добавляем обработчик с небольшой задержкой, чтобы не закрыть сразу после открытия
     setTimeout(() => {
       document.addEventListener('click', handleClickOutside);
-    }, 100);
+    }, 300);
   } else {
     document.removeEventListener('click', handleClickOutside);
   }
