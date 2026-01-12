@@ -389,6 +389,14 @@ const startUserCardSelectionAnimation = (userCardId) => {
       if (el) {
         console.log(`✨ Анимация карточки ${item.id} (DOM) - добавляем классы`);
 
+        // Устанавливаем цвет анимации (PV changed)
+        const animationColor = viewSettingsStore?.animationColor || '#ef4444';
+        const rgb = toRgbString(animationColor);
+        if (rgb) {
+          el.style.setProperty('--user-card-animation-color', animationColor);
+          el.style.setProperty('--user-card-animation-color-rgb', rgb);
+        }
+
         // Добавляем ТОТ ЖЕ класс, что и при +10
         el.classList.add('card--balance-propagation');
         // И наш новый класс для стикеров (на всякий случай)
@@ -408,6 +416,14 @@ const startUserCardSelectionAnimation = (userCardId) => {
       const lineEl = document.getElementById(item.id);
       if (lineEl) {
         console.log(`✨ Анимация линии ${item.id} (DOM)`);
+
+        // Устанавливаем цвет анимации для линии (PV changed)
+        const animationColor = viewSettingsStore?.animationColor || '#ef4444';
+        const rgb = toRgbString(animationColor);
+        if (rgb) {
+          lineEl.style.setProperty('--user-card-animation-color-rgb', rgb);
+        }
+
         lineEl.classList.add('line--balance-propagation');
 
         // Автоматическое удаление класса через 2 секунды
