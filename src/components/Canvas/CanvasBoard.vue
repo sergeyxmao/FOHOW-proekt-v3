@@ -1488,9 +1488,11 @@ const handlePvChanged = (cardId) => {
   // Анимация линий вверх по цепочке
   animateBalancePropagation(cardId);
 
-  // ВРЕМЕННО: принудительно запускаем анимацию карточек (убрана проверка isUserCardAnimationEnabled)
-  console.log('✅ Вызов startUserCardSelectionAnimation (ПРИНУДИТЕЛЬНО)');
-  startUserCardSelectionAnimation(cardId);
+  // Анимация карточек вверх по цепочке (если включена в настройках)
+  if (isUserCardAnimationEnabled.value) {
+    console.log('✅ Вызов startUserCardSelectionAnimation');
+    startUserCardSelectionAnimation(cardId);
+  }
 };
 
 const handleStageClick = async (event) => {
