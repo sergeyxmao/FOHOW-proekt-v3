@@ -1492,11 +1492,6 @@ const handlePvChanged = (cardId) => {
 
   animateBalancePropagation(cardId);
 
-  // Запускаем анимацию карточек вверх по цепочке (если анимация включена)
-  if (isUserCardAnimationEnabled.value) {
-    startStickerSelectionAnimation(cardId);
-  }
-
 };
 
 const handleStageClick = async (event) => {
