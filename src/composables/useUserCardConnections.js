@@ -284,45 +284,66 @@ export function useUserCardConnections(options) {
     return sequence
   }
 
-  /**
-   * Запуск анимации выделения аватара
-   * @param {string} userCardId - ID аватара
-   */
-  const startUserCardSelectionAnimation = (userCardId) => {
-    // Поддержка user_card и license для анимации вверх по цепочке
-    const userCard = cards.value.find(card => card.id === userCardId && (card.type === 'user_card' || card.type === 'license'))
-    if (!userCard) {
-      stopUserCardSelectionAnimation()
-      return
-    }
-
+/**
+ * Запуск анимации выделения аватара
+ * @param {string} userCardId - ID аватара
+ */
+const startUserCardSelectionAnimation = (userCardId) => {
+  console.log('🟢 startUserCardSelectionAnimation вызвана для:', userCardId);
+  
+  // Поддержка user_card и license для анимации вверх по цепочке
+  const userCard = cards.value.find(card => card.id === userCardId && (card.type === 'user_card' || card.type === 'license'))
+  
+  console.log('🔍 Найденная карточка:', userCard);
+  console.log('🔍 Тип карточки:', userCard?.type);
+  
+  if (!userCard) {
+    console.log('❌ Карточка НЕ найдена! Остановка анимации.');
     stopUserCardSelectionAnimation()
-    userCardAnimationRootId.value = userCardId
-
-    const sequence = buildUserCardAnimationSequence(userCardId)
-    const nextUserCardIds = new Set()
-    const nextConnectionIds = new Set()
-
-    sequence.forEach(item => {
-      if (item.type === 'user_card') {
-        nextUserCardIds.add(item.id)
-      } else if (item.type === 'connection') {
-        nextConnectionIds.add(item.id)
-      }
-    })
-
-    animatedUserCardIds.value = nextUserCardIds
-    animatedUserCardConnectionIds.value = nextConnectionIds
-
-    const duration = userCardAnimationDuration.value
-
-    const timerId = window.setTimeout(() => {
-      if (userCardAnimationRootId.value !== userCardId) return
-      stopUserCardSelectionAnimation()
-    }, duration)
-
-    userCardAnimationTimers.value.push(timerId)
+    return
   }
+
+  console.log('✅ Карточка найдена, продолжаем...');
+  stopUserCardSelectionAnimation()
+  userCardAnimationRootId.value = userCardId
+
+  const sequence = buildUserCardAnimationSequence(userCardId)
+  console.log('📊 Построенная последовательность анимации:', sequence);
+  console.log('📊 Длина последовательности:', sequence.length);
+  
+  const nextUserCardIds = new Set()
+  const nextConnectionIds = new Set()
+
+  sequence.forEach(item => {
+    if (item.type === 'user_card') {
+      nextUserCardIds.add(item.id)
+      console.log('➕ Добавлена user_card в анимацию:', item.id);
+    } else if (item.type === 'connection') {
+      nextConnectionIds.add(item.id)
+      console.log('➕ Добавлено connection в анимацию:', item.id);
+    }
+  })
+
+  console.log('🎯 Финальные sets:');
+  console.log('   - animatedUserCardIds:', Array.from(nextUserCardIds));
+  console.log('   - animatedUserCardConnectionIds:', Array.from(nextConnectionIds));
+
+  animatedUserCardIds.value = nextUserCardIds
+  animatedUserCardConnectionIds.value = nextConnectionIds
+
+  const duration = userCardAnimationDuration.value
+  console.log('⏱️ Длительность анимации:', duration, 'ms');
+
+  const timerId = window.setTimeout(() => {
+    if (userCardAnimationRootId.value !== userCardId) return
+    console.log('⏰ Таймер завершён, остановка анимации');
+    stopUserCardSelectionAnimation()
+  }, duration)
+
+  userCardAnimationTimers.value.push(timerId)
+  console.log('✅ Анимация запущена успешно!');
+}
+
 
   // === Сбор снимков для перетаскивания ===
 
