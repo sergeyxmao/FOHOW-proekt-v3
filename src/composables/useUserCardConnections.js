@@ -261,53 +261,74 @@ export function useUserCardConnections(options) {
   }
 
   /**
-   * Построение последовательности анимации аватаров
-   * @param {string} startUserCardId - ID начальной карточки партнёра
+   * Построение последовательности анимации карточек вверх по цепочке
+   * ИСПРАВЛЕНО: Использует cardsStore.calculationMeta.parentOf (как animateBalancePropagation)
+   * вместо userCardConnections, которые пусты для small/license карточек
+   * @param {string} startCardId - ID начальной карточки (любого типа: user_card, license, small)
+   * @returns {Array<{type: 'user_card'|'connection', id: string}>} Последовательность для анимации
    */
-const buildUserCardAnimationSequence = (userCardId) => {
-  console.log('🔍 buildUserCardAnimationSequence вызвана для:', userCardId);
-  
-  const sequence = []
-  const visited = new Set()
+  const buildUserCardAnimationSequence = (startCardId) => {
+    console.log('🔍 buildUserCardAnimationSequence вызвана для:', startCardId)
 
-  const traverse = (currentId) => {
-    console.log('  ↗️ Обработка карточки:', currentId);
-    
-    if (visited.has(currentId)) {
-      console.log('    ⏭️ Уже посещена, пропускаем');
-      return
+    const sequence = []
+    const visited = new Set()
+
+    // Получаем метаданные parentOf из cardsStore (как в animateBalancePropagation)
+    const meta = cardsStore?.calculationMeta || {}
+    const parentOf = meta.parentOf || {}
+
+    console.log('📊 Метаданные parentOf:', Object.keys(parentOf).length, 'записей')
+
+    let currentId = startCardId
+
+    // Строим путь от текущей карточки до корня
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId)
+
+      const currentCard = cards.value.find(c => c.id === currentId)
+      console.log('  ↗️ Обработка карточки:', currentId, 'тип:', currentCard?.type)
+
+      if (!currentCard) {
+        console.log('    ❌ Карточка не найдена в массиве!')
+        break
+      }
+
+      // Добавляем карточку в последовательность
+      sequence.push({ type: 'user_card', id: currentId })
+      console.log('    ✅ Добавлена карточка в последовательность')
+
+      // Ищем родительскую связь через calculationMeta.parentOf
+      const relation = parentOf[currentId]
+
+      if (!relation || !relation.parentId) {
+        console.log('    🏁 Достигнута вершина (нет родителя в parentOf)')
+        break
+      }
+
+      const parentId = relation.parentId
+      console.log(`    🔗 Найдена связь: ${currentId} -> ${parentId} (сторона: ${relation.side})`)
+
+      // Находим соединение между текущей карточкой и родителем через connectionsStore
+      const connection = connectionsStore?.connections?.find(conn =>
+        (conn.from === currentId && conn.to === parentId) ||
+        (conn.from === parentId && conn.to === currentId)
+      )
+
+      if (connection) {
+        sequence.push({ type: 'connection', id: connection.id })
+        console.log('    ✅ Добавлено соединение:', connection.id)
+      } else {
+        console.warn(`    ⚠️ Соединение НЕ найдено между ${currentId} и ${parentId}`)
+      }
+
+      // Переходим к родительской карточке
+      currentId = parentId
     }
-    visited.add(currentId)
 
-    const currentCard = cards.value.find(c => c.id === currentId)
-    console.log('    🔍 Карточка найдена:', currentCard?.type, currentCard?.id);
-    
-    if (!currentCard) {
-      console.log('    ❌ Карточка не найдена в массиве!');
-      return
-    }
-
-    sequence.push({ type: 'user_card', id: currentId })
-    console.log('    ✅ Добавлена в последовательность');
-
-    // Найти родительское соединение
-    const parentConnection = userCardConnections.value.find(conn => conn.to === currentId)
-    console.log('    🔗 Поиск родительского соединения для:', currentId);
-    console.log('    🔗 Найдено:', parentConnection);
-    
-    if (parentConnection) {
-      sequence.push({ type: 'connection', id: parentConnection.id })
-      console.log('    ✅ Добавлено соединение:', parentConnection.id);
-      traverse(parentConnection.from)
-    } else {
-      console.log('    🏁 Достигнута вершина (нет родителя)');
-    }
+    console.log('📊 Финальная последовательность:', sequence)
+    console.log('📊 Длина последовательности:', sequence.length)
+    return sequence
   }
-
-  traverse(userCardId)
-  console.log('📊 Финальная последовательность:', sequence);
-  return sequence
-}
 
 /**
  * Запуск анимации выделения аватара
