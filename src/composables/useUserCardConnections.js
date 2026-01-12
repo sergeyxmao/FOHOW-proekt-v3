@@ -264,25 +264,50 @@ export function useUserCardConnections(options) {
    * Построение последовательности анимации аватаров
    * @param {string} startUserCardId - ID начальной карточки партнёра
    */
-  const buildUserCardAnimationSequence = (startUserCardId) => {
-    const sequence = []
-    const visited = new Set([startUserCardId])
-    let currentId = startUserCardId
+const buildUserCardAnimationSequence = (userCardId) => {
+  console.log('🔍 buildUserCardAnimationSequence вызвана для:', userCardId);
+  
+  const sequence = []
+  const visited = new Set()
 
-    sequence.push({ type: 'user_card', id: startUserCardId })
+  const traverse = (currentId) => {
+    console.log('  ↗️ Обработка карточки:', currentId);
+    
+    if (visited.has(currentId)) {
+      console.log('    ⏭️ Уже посещена, пропускаем');
+      return
+    }
+    visited.add(currentId)
 
-    while (true) {
-      const next = findNextUserCardUp(currentId, visited)
-      if (!next) break
-
-      sequence.push({ type: 'connection', id: next.connectionId })
-      sequence.push({ type: 'user_card', id: next.nextUserCardId })
-      visited.add(next.nextUserCardId)
-      currentId = next.nextUserCardId
+    const currentCard = cards.value.find(c => c.id === currentId)
+    console.log('    🔍 Карточка найдена:', currentCard?.type, currentCard?.id);
+    
+    if (!currentCard) {
+      console.log('    ❌ Карточка не найдена в массиве!');
+      return
     }
 
-    return sequence
+    sequence.push({ type: 'user_card', id: currentId })
+    console.log('    ✅ Добавлена в последовательность');
+
+    // Найти родительское соединение
+    const parentConnection = userCardConnections.value.find(conn => conn.to === currentId)
+    console.log('    🔗 Поиск родительского соединения для:', currentId);
+    console.log('    🔗 Найдено:', parentConnection);
+    
+    if (parentConnection) {
+      sequence.push({ type: 'connection', id: parentConnection.id })
+      console.log('    ✅ Добавлено соединение:', parentConnection.id);
+      traverse(parentConnection.from)
+    } else {
+      console.log('    🏁 Достигнута вершина (нет родителя)');
+    }
   }
+
+  traverse(userCardId)
+  console.log('📊 Финальная последовательность:', sequence);
+  return sequence
+}
 
 /**
  * Запуск анимации выделения аватара
