@@ -216,7 +216,8 @@ export function useUserCardConnections(options) {
    * @param {Set} visited - Посещенные аватары
    */
   const findNextUserCardUp = (userCardId, visited = new Set()) => {
-    const currentUserCard = cards.value.find(card => card.id === userCardId && card.type === 'user_card')
+    // Поддержка user_card и license для анимации вверх по цепочке
+    const currentUserCard = cards.value.find(card => card.id === userCardId && (card.type === 'user_card' || card.type === 'license'))
     if (!currentUserCard) return null
 
     const candidates = userCardConnections.value.filter(connection => {
@@ -237,7 +238,8 @@ export function useUserCardConnections(options) {
     const scored = candidates
       .map(connection => {
         const nextUserCardId = connection.from === userCardId ? connection.to : connection.from
-        const nextUserCard = cards.value.find(card => card.id === nextUserCardId && card.type === 'user_card')
+        // Поддержка user_card и license для анимации вверх по цепочке
+        const nextUserCard = cards.value.find(card => card.id === nextUserCardId && (card.type === 'user_card' || card.type === 'license'))
 
         if (!nextUserCard || visited.has(nextUserCardId)) {
           return null
@@ -287,7 +289,8 @@ export function useUserCardConnections(options) {
    * @param {string} userCardId - ID аватара
    */
   const startUserCardSelectionAnimation = (userCardId) => {
-    const userCard = cards.value.find(card => card.id === userCardId && card.type === 'user_card')
+    // Поддержка user_card и license для анимации вверх по цепочке
+    const userCard = cards.value.find(card => card.id === userCardId && (card.type === 'user_card' || card.type === 'license'))
     if (!userCard) {
       stopUserCardSelectionAnimation()
       return
