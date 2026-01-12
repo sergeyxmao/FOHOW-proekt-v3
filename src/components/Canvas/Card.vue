@@ -110,6 +110,9 @@ const cardStyle = computed(() => {
     style[name] = value;
   });
 
+  // Добавляем CSS-переменную для цвета анимации (PV changed)
+  style['--user-card-animation-color'] = viewSettingsStore.animationColor || '#ef4444';
+
   return style;
 });
 
@@ -669,7 +672,8 @@ watch(
 
     if (!oldValue || newValue === oldValue) return;
 
-
+    // Проверяем, включена ли анимация (PV changed)
+    if (!viewSettingsStore.isAnimationEnabled) return;
 
     const prev = parseBalanceValue(oldValue);
 
@@ -733,7 +737,8 @@ watch(
 
     if (!oldValue || newValue === oldValue) return;
 
-
+    // Проверяем, включена ли анимация (PV changed)
+    if (!viewSettingsStore.isAnimationEnabled) return;
 
     const prev = parseBalanceValue(oldValue);
 
@@ -1836,16 +1841,16 @@ watch(
   }
   25% {
     transform: scale(1.2);
-    color: #ef4444;
+    color: var(--user-card-animation-color, #ef4444);
   }
   50% {
     transform: scale(1.3);
-    color: #dc2626;
+    color: var(--user-card-animation-color, #ef4444);
     font-weight: 700;
   }
   75% {
     transform: scale(1.15);
-    color: #ef4444;
+    color: var(--user-card-animation-color, #ef4444);
   }
   100% {
     transform: scale(1);
@@ -1866,16 +1871,16 @@ watch(
   }
   25% {
     transform: scale(1.2);
-    color: #ef4444;
+    color: var(--user-card-animation-color, #ef4444);
   }
   50% {
     transform: scale(1.3);
-    color: #dc2626;
+    color: var(--user-card-animation-color, #ef4444);
     font-weight: 900;
   }
   75% {
     transform: scale(1.15);
-    color: #ef4444;
+    color: var(--user-card-animation-color, #ef4444);
   }
   100% {
     transform: scale(1);

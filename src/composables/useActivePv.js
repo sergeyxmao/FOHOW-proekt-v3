@@ -4,6 +4,7 @@ import {
   applyActivePvDelta,
   applyActivePvClear
 } from '../utils/activePv'
+import { toRgbString } from './useUserCardConnections'
 
 /**
  * Composable для управления Active PV логикой и анимациями баланса
@@ -160,6 +161,15 @@ export function useActivePv(options) {
     const cardElement = getCardElement(changedCardId)
     if (cardElement) {
       console.log('✅ Карточка найдена, добавляем класс card--balance-propagation')
+
+      // Устанавливаем цвет анимации (PV changed)
+      const animationColor = viewSettingsStore?.animationColor || '#ef4444';
+      const rgb = toRgbString(animationColor);
+      if (rgb) {
+        cardElement.style.setProperty('--user-card-animation-color', animationColor);
+        cardElement.style.setProperty('--user-card-animation-color-rgb', rgb);
+      }
+
       cardElement.classList.add('card--balance-propagation')
       const cardTimer = window.setTimeout(() => {
         cardElement.classList.remove('card--balance-propagation')
@@ -210,6 +220,14 @@ export function useActivePv(options) {
       console.log(`Линия ${index + 1}/${pathUp.length}:`, connectionId, '→ элемент найден:', !!lineElement)
 
       if (!lineElement) return
+
+      // Устанавливаем цвет анимации для линии (PV changed)
+      const animationColor = viewSettingsStore?.animationColor || '#ef4444';
+      const rgb = toRgbString(animationColor);
+      if (rgb) {
+        lineElement.style.setProperty('--user-card-animation-color-rgb', rgb);
+      }
+
       lineElement.classList.add('line--balance-propagation')
       console.log('✅ Класс line--balance-propagation добавлен к линии:', connectionId)
       const lineTimer = window.setTimeout(() => {
