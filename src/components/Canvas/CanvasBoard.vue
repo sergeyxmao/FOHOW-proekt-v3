@@ -1260,6 +1260,11 @@ const handleMouseMoveInternal = (event) => {
 const handleMouseMove = useThrottleFn(handleMouseMoveInternal, 16, true, false);
 
 const handlePointerDown = (event) => {
+  // Игнорируем среднюю кнопку мыши — используется для панорамирования
+  if (event.button === 1) {
+    return;
+  }
+
   if (stickersStore.isPlacementMode && stickersStore.placementTarget === 'board') {
     return;
   }
@@ -1270,13 +1275,6 @@ const handlePointerDown = (event) => {
   }
 
   const connectionPoint = event.target.closest('.connection-point');
-
-  // Debug: Отслеживаем состояние isDrawingLine при каждом pointerdown
-  console.log('🔵 pointerDown', {
-    isDrawingLine: isDrawingLine.value,
-    target: event.target.className,
-    isConnectionPoint: !!connectionPoint
-  });
 
   if (connectionPoint) {
     event.stopPropagation();
@@ -1422,6 +1420,11 @@ const handleImageClick = ({ event, imageId }) => {
 };
 
 const handleStageMouseDown = (event) => {
+  // Игнорируем среднюю кнопку мыши — используется для панорамирования
+  if (event.button === 1) {
+    return;
+  }
+
   // Проверяем только левую кнопку мыши
   if (event.button !== 0) {
     return;
@@ -1503,15 +1506,8 @@ const handleStageClick = async (event) => {
     return;
   }
 
-  // Debug: Отслеживаем состояние isDrawingLine и клик на connection-point
   const isConnectionPoint = event.target.closest('.connection-point');
-  console.log('🟡 stageClick', {
-    isDrawingLine: isDrawingLine.value,
-    target: event.target.className,
-    isConnectionPoint: !!isConnectionPoint,
-    isPlacementMode: stickersStore.isPlacementMode,
-    placementTarget: stickersStore.placementTarget
-  });
+
   if (getSuppressNextStageClick()) {
     setSuppressNextStageClick(false);
     return;
