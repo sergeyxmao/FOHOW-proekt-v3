@@ -2728,11 +2728,11 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 }
 
 .line.selected {
-  stroke: #ff0000 !important;
+  stroke: rgb(var(--user-card-animation-color-rgb, 239, 68, 68)) !important;
   stroke-dasharray: 8 8;
   stroke-width: calc(var(--line-width, 5px) + 3px) !important;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 12px rgba(255, 0, 0, 0.8));
+  filter: drop-shadow(0 0 12px rgba(var(--user-card-animation-color-rgb, 239, 68, 68), 0.8));
   animation: dash-animation 0.5s linear infinite;
 }
 
@@ -2938,11 +2938,11 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 
 /* Анимация красных пунктирных линий при автоматическом расчете баланса */
 .line--balance-propagation {
-  stroke: #ff0000 !important;
+  stroke: rgb(var(--user-card-animation-color-rgb, 239, 68, 68)) !important;
   stroke-dasharray: 8 8;
   stroke-width: calc(var(--line-width, 5px) + 2px) !important;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.6));
+  filter: drop-shadow(0 0 10px rgba(var(--user-card-animation-color-rgb, 239, 68, 68), 0.6));
   animation: balancePropagationFlow var(--line-animation-duration, 2000ms) ease-in-out infinite;
 }
 @keyframes balancePropagationFlow {

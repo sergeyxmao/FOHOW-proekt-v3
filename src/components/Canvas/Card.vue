@@ -1769,31 +1769,31 @@ watch(
 
 .card.card--balance-propagation {
 
-  box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.45), 0 22px 36px rgba(255, 0, 0, 0.25);
+  box-shadow: 0 0 0 3px rgba(var(--user-card-animation-color-rgb, 239, 68, 68), 0.45), 0 22px 36px rgba(var(--user-card-animation-color-rgb, 239, 68, 68), 0.25);
 
   animation: cardBalancePulse 1.5s ease-in-out infinite;
 
 }
 
- 
+
 
 @keyframes cardBalancePulse {
 
   0% {
 
-    box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.45), 0 22px 36px rgba(255, 0, 0, 0.25);
+    box-shadow: 0 0 0 3px rgba(var(--user-card-animation-color-rgb, 239, 68, 68), 0.45), 0 22px 36px rgba(var(--user-card-animation-color-rgb, 239, 68, 68), 0.25);
 
   }
 
   50% {
 
-    box-shadow: 0 0 0 6px rgba(255, 0, 0, 0.65), 0 26px 42px rgba(255, 0, 0, 0.35);
+    box-shadow: 0 0 0 6px rgba(var(--user-card-animation-color-rgb, 239, 68, 68), 0.65), 0 26px 42px rgba(var(--user-card-animation-color-rgb, 239, 68, 68), 0.35);
 
   }
 
   100% {
 
-    box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.45), 0 22px 36px rgba(255, 0, 0, 0.25);
+    box-shadow: 0 0 0 3px rgba(var(--user-card-animation-color-rgb, 239, 68, 68), 0.45), 0 22px 36px rgba(var(--user-card-animation-color-rgb, 239, 68, 68), 0.25);
 
   }
 
