@@ -261,8 +261,9 @@ export function useUserCardConnections(options) {
   }
 
   /**
-   * Построение последовательности анимации аватаров
-   * @param {string} startUserCardId - ID начальной карточки партнёра
+   * Построение последовательности анимации карточек вверх по цепочке
+   * Использует cardsStore.calculationMeta.parentOf для навигации (как в animateBalancePropagation)
+   * @param {string} startUserCardId - ID начальной карточки
    */
   const buildUserCardAnimationSequence = (startUserCardId) => {
     const sequence = []
@@ -271,27 +272,62 @@ export function useUserCardConnections(options) {
 
     sequence.push({ type: 'user_card', id: startUserCardId })
 
-    while (true) {
-      const next = findNextUserCardUp(currentId, visited)
-      if (!next) break
+    // Используем cardsStore.calculationMeta.parentOf как в animateBalancePropagation
+    const meta = cardsStore.calculationMeta || {}
+    const parentOf = meta.parentOf || {}
 
-      sequence.push({ type: 'connection', id: next.connectionId })
-      sequence.push({ type: 'user_card', id: next.nextUserCardId })
-      visited.add(next.nextUserCardId)
-      currentId = next.nextUserCardId
+    console.log('📊 buildUserCardAnimationSequence: startId =', startUserCardId)
+    console.log('📊 buildUserCardAnimationSequence: parentOf keys =', Object.keys(parentOf))
+
+    while (parentOf[currentId]) {
+      const relation = parentOf[currentId]
+      const parentId = relation.parentId
+
+      console.log(`🔗 Связь через parentOf: ${currentId} -> ${parentId} (side: ${relation.side})`)
+
+      if (!parentId || visited.has(parentId)) {
+        console.log('🏁 Достигнута вершина или цикл')
+        break
+      }
+
+      // Находим линию между текущей карточкой и родителем через connectionsStore
+      const allConnections = connectionsStore.connections || []
+      const connection = allConnections.find(conn =>
+        (conn.from === currentId && conn.to === parentId) ||
+        (conn.from === parentId && conn.to === currentId)
+      )
+
+      if (connection) {
+        console.log(`✅ Соединение найдено: ${connection.id}`)
+        sequence.push({ type: 'connection', id: connection.id })
+      } else {
+        console.warn(`❌ Соединение НЕ найдено между ${currentId} и ${parentId}`)
+      }
+
+      sequence.push({ type: 'user_card', id: parentId })
+      visited.add(parentId)
+      currentId = parentId
     }
 
+    console.log('📊 Финальная последовательность анимации:', sequence)
     return sequence
   }
 
   /**
-   * Запуск анимации выделения аватара
-   * @param {string} userCardId - ID аватара
+   * Запуск анимации выделения карточки вверх по цепочке
+   * @param {string} userCardId - ID карточки (user_card, license или small)
    */
   const startUserCardSelectionAnimation = (userCardId) => {
-    // Поддержка user_card и license для анимации вверх по цепочке
-    const userCard = cards.value.find(card => card.id === userCardId && (card.type === 'user_card' || card.type === 'license'))
+    // Поддержка user_card, license и small для анимации вверх по цепочке
+    const userCard = cards.value.find(card =>
+      card.id === userCardId &&
+      (card.type === 'user_card' || card.type === 'license' || card.type === 'small')
+    )
+
+    console.log('🎯 startUserCardSelectionAnimation:', userCardId, 'type:', userCard?.type)
+
     if (!userCard) {
+      console.warn('❌ Карточка не найдена для анимации:', userCardId)
       stopUserCardSelectionAnimation()
       return
     }
@@ -300,6 +336,7 @@ export function useUserCardConnections(options) {
     userCardAnimationRootId.value = userCardId
 
     const sequence = buildUserCardAnimationSequence(userCardId)
+    console.log('📊 Длина последовательности:', sequence.length)
     const nextUserCardIds = new Set()
     const nextConnectionIds = new Set()
 

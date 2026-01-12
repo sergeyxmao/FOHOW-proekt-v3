@@ -277,6 +277,51 @@ UserCard A (точка 1) → UserCard B (точка 6): НЕ найдёт (дв
   - Стало: `otherPointIndex === 1 && currentPointIndex !== 1`
   - Причина: пользователи соединяют карточки от любых точек (боковых, нижних), а не только от верхней
 
+### buildUserCardAnimationSequence(startUserCardId)
+
+**Назначение:** Построение последовательности анимации карточек вверх по цепочке (для анимации при клике на монетку).
+
+**Параметры:**
+- `startUserCardId` - ID начальной карточки
+
+**Возвращает:**
+Массив объектов: `[{ type: 'user_card', id }, { type: 'connection', id }, ...]`
+
+**Алгоритм:**
+1. Использует `cardsStore.calculationMeta.parentOf` для навигации (как в `animateBalancePropagation`)
+2. Для каждой карточки ищет родителя через `parentOf[currentId].parentId`
+3. Находит соединение между карточками через `connectionsStore.connections`
+4. Строит последовательность: `[card, connection, parent, connection, ...]` до корня
+
+**Поддерживаемые типы карточек:**
+- `user_card` — карточки партнёров
+- `license` — лицензии
+- `small` — малые карточки
+
+**История изменений:**
+- **2026-01-12**: Полностью переписана функция для использования `cardsStore.calculationMeta.parentOf`
+  - Было: использовала `userCardConnections.value` (пустой для small/license карточек)
+  - Стало: использует `cardsStore.calculationMeta.parentOf` (как в `animateBalancePropagation`)
+  - Причина: `userCardConnections` содержит только user-card-соединения, а связи small/license карточек хранятся в `connections`
+
+### startUserCardSelectionAnimation(userCardId)
+
+**Назначение:** Запуск анимации выделения карточки вверх по цепочке.
+
+**Параметры:**
+- `userCardId` - ID карточки (user_card, license или small)
+
+**Поведение:**
+1. Проверяет, что карточка существует и имеет поддерживаемый тип
+2. Вызывает `buildUserCardAnimationSequence` для построения последовательности
+3. Устанавливает `animatedUserCardIds` и `animatedUserCardConnectionIds`
+4. Запускает таймер для автоматической остановки анимации
+
+**История изменений:**
+- **2026-01-12**: Добавлена поддержка типа `small`
+  - Было: `card.type === 'user_card' || card.type === 'license'`
+  - Стало: `card.type === 'user_card' || card.type === 'license' || card.type === 'small'`
+
 ## Отладка
 
 ### Линии не рисуются
