@@ -6,6 +6,10 @@ const props = defineProps({
   sticker: {
     type: Object,
     required: true
+  },
+  isAnimated: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -229,7 +233,8 @@ const handleDelete = async (event) => {
     :class="{
       'sticker--dragging': isDragging,
       'sticker--editing': isEditing,
-      'sticker--selected': isSelected
+      'sticker--selected': isSelected,
+      'is-animated': isAnimated
     }"
     :style="stickerStyle"
     :data-sticker-id="sticker.id"
@@ -466,5 +471,17 @@ const handleDelete = async (event) => {
     transform: scale(1.05);
     box-shadow: 0 8px 24px rgba(33, 150, 243, 0.6);
   }
+}
+
+/* Анимация при клике на монетку (PV changed) */
+.sticker.is-animated {
+  animation: sticker-pulse 2s ease-in-out;
+  box-shadow: 0 0 20px rgba(93, 139, 244, 0.6) !important;
+  border: 2px solid rgb(93, 139, 244) !important;
+}
+
+@keyframes sticker-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
 </style>

@@ -2577,6 +2577,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         v-for="sticker in sortedStickers"
         :key="`sticker-${sticker.id}`"
         :sticker="sticker"
+        :is-animated="animatedUserCardIds.has(sticker.id)"
         :ref="(el) => handleStickerRefRegister(sticker.id, el)"
         @sticker-click="handleStickerClick"
         @start-drag="startStickerDrag"
