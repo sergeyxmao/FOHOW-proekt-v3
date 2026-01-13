@@ -10,6 +10,7 @@
 import TelegramBot from 'node-telegram-bot-api';
 import dotenv from 'dotenv';
 import { pool } from '../db.js';
+import { processPendingTributeWebhooks } from '../services/processPendingTributeWebhooks.js';
 
 dotenv.config();
 
@@ -164,6 +165,17 @@ async function handleLinkCode(chatId, username, firstName, code) {
       await client.query('COMMIT');
 
       console.log(`✅ Telegram привязан: пользователь ${userEmail}, chatId=${chatId}`);
+
+      // Обработать отложенные webhook от Tribute (если есть)
+      try {
+        const pendingResult = await processPendingTributeWebhooks(chatId);
+        if (pendingResult.processed > 0) {
+          console.log(`✅ Обработано ${pendingResult.processed} отложенных Tribute webhook для chatId=${chatId}`);
+        }
+      } catch (pendingError) {
+        console.error('⚠️ Ошибка обработки отложенных Tribute webhook:', pendingError);
+        // Не прерываем выполнение — привязка уже прошла
+      }
 
       // Отправляем сообщение об успешной привязке
       await bot.sendMessage(
