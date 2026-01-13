@@ -142,12 +142,15 @@ export function useUserTariffs({ subscriptionStore }) {
   }
 
   /**
-   * Маппинг code_name тарифа на Tribute product_id
-   * Соответствует маппингу в api/services/tributeService.js
+   * Маппинг code_name тарифа на Tribute product_id для веб-ссылок
+   *
+   * ВАЖНО: Для веб-ссылок (web.tribute.tg/s/{id}) НЕ нужен префикс 's'
+   * В backend (tributeService.js) используется формат с префиксом 's' (sLe1, sLc8)
+   * для обработки webhook'ов от Tribute — это разные форматы!
    */
   const TRIBUTE_PRODUCTS = {
-    'premium': 'sLe1',     // Premium - 399₽/мес
-    'individual': 'sLc8'   // Individual - 249₽/мес
+    'premium': 'Le1',      // Premium - 399₽/мес
+    'individual': 'Lc8'    // Individual - 249₽/мес
   }
 
   /**

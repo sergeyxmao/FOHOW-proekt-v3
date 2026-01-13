@@ -233,10 +233,14 @@ watch(activeTab, (newTab) => {
 
 ```javascript
 const TRIBUTE_PRODUCTS = {
-  'premium': 'sLe1',     // Premium - 399₽/мес
-  'individual': 'sLc8'   // Individual - 249₽/мес
+  'premium': 'Le1',      // Premium - 399₽/мес
+  'individual': 'Lc8'    // Individual - 249₽/мес
 }
 ```
+
+> **ВАЖНО:** Для веб-ссылок (web.tribute.tg) НЕ нужен префикс 's'.
+> В backend (`tributeService.js`) используется формат с префиксом 's' (`sLe1`, `sLc8`)
+> для обработки webhook'ов от Tribute — это разные форматы!
 
 ### Формат URL
 
@@ -245,8 +249,8 @@ https://web.tribute.tg/s/{product_id}
 ```
 
 Примеры:
-- Premium: `https://web.tribute.tg/s/sLe1`
-- Individual: `https://web.tribute.tg/s/sLc8`
+- Premium: `https://web.tribute.tg/s/Le1`
+- Individual: `https://web.tribute.tg/s/Lc8`
 
 ### Поведение
 
