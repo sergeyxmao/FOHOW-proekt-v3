@@ -1601,10 +1601,13 @@ const handleStageClick = async (event) => {
         clearObjectSelections();
         stickersStore.selectSticker(newSticker.id);
         stickersStore.disablePlacementMode();
+
         await nextTick();
-        const elem = document.querySelector(`[data-sticker-id="${newSticker.id}"]`);
-        if (elem) {
-          elem.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+        // Находим компонент стикера по ref и напрямую вызываем метод startEditing
+        const stickerComponent = stickerRefs.value.get(newSticker.id);
+        if (stickerComponent && typeof stickerComponent.startEditing === 'function') {
+          stickerComponent.startEditing();
         }
       } catch (error) {
         console.error(error);

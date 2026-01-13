@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useStickersStore } from '../../stores/stickers';
 
 const props = defineProps({
@@ -28,6 +28,8 @@ const isHovering = ref(false);
 const tempPosition = ref({ x: null, y: null });
 // Реф для стикера
 const stickerRef = ref(null);
+// Время начала редактирования (для защиты от ложных срабатываний handleClickOutside)
+const editingStartTime = ref(0);
 
 // Вычисляемые свойства
 const stickerStyle = computed(() => ({
@@ -46,6 +48,19 @@ const handleDoubleClick = () => {
   isEditing.value = true;
   editableContent.value = props.sticker.content || '';
   originalContent.value = props.sticker.content || ''; // Сохраняем оригинальный текст для отмены
+};
+
+// Программное открытие редактирования (для вызова извне, например при создании стикера)
+const startEditing = () => {
+  isEditing.value = true;
+  editableContent.value = props.sticker.content || '';
+  originalContent.value = props.sticker.content || '';
+  nextTick(() => {
+    const textarea = stickerRef.value?.querySelector('.sticker__textarea');
+    if (textarea) {
+      textarea.focus();
+    }
+  });
 };
 
 const saveChanges = async () => {
@@ -105,6 +120,11 @@ const closeEditing = () => {
 // Обработчик кликов вне стикера для закрытия редактирования
 const handleClickOutside = (event) => {
   if (!isEditing.value) return;
+
+  // Игнорируем клики, которые произошли сразу после открытия редактирования
+  // Это защищает от синтетических событий и "эха" кликов
+  if (performance.now() - editingStartTime.value < 300) return;
+
   // Игнорируем клики по самому текстовому полю (на всякий случай)
   if (event.target.classList.contains('sticker__textarea')) return;
 
@@ -117,7 +137,9 @@ const handleClickOutside = (event) => {
 // Watch для добавления/удаления обработчика кликов при входе/выходе из режима редактирования
 watch(isEditing, (newValue) => {
   if (newValue) {
-    // Добавляем обработчик с небольшой задержкой, чтобы не закрыть сразу после открытия
+    // Запоминаем время начала редактирования
+    editingStartTime.value = performance.now();
+    // Добавляем обработчик с задержкой, чтобы не закрыть сразу после открытия
     setTimeout(() => {
       document.addEventListener('click', handleClickOutside);
     }, 300);
@@ -131,9 +153,10 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
 });
 
-// Экспортировать метод для доступа из родительского компонента
+// Экспортировать методы для доступа из родительского компонента
 defineExpose({
-  closeEditing
+  closeEditing,
+  startEditing
 });
 
 // Перетаскивание
