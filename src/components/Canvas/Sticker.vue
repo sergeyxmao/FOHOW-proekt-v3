@@ -130,10 +130,19 @@ const handlePointerDown = (e) => {
   // Игнорируем правую кнопку мыши
   if (e.button === 2) return;
 
-  // Если стикер в режиме редактирования - НЕ обрабатываем клики вообще
-  // Редактирование закроется через @blur на textarea
+  // Если стикер в режиме редактирования
   if (isEditing.value) {
-    return; // НЕ останавливаем всплытие - пусть textarea обработает
+    // Если клик НЕ на textarea, предотвращаем потерю фокуса
+    if (!e.target.classList.contains('sticker__textarea')) {
+      e.preventDefault(); // Предотвращаем потерю фокуса
+      e.stopPropagation(); // Останавливаем всплытие
+      // Возвращаем фокус на textarea
+      const textarea = e.currentTarget.querySelector('.sticker__textarea');
+      if (textarea) {
+        textarea.focus();
+      }
+    }
+    return;
   }
 
   // Останавливаем всплытие для ВСЕХ остальных случаев
