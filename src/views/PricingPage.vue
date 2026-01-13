@@ -114,6 +114,7 @@
             <button
               v-else-if="plan.code_name !== 'guest'"
               class="select-plan-btn"
+              @click="handleUpgrade(plan)"
             >
               Выбрать тариф
             </button>
@@ -127,10 +128,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useSubscriptionStore } from '@/stores/subscription'
+import { useUserTariffs } from '@/composables/useUserTariffs'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
 const subscriptionStore = useSubscriptionStore()
+
+// Извлекаем handleUpgrade из композабла для обработки клика на кнопку оплаты
+const { handleUpgrade } = useUserTariffs({ subscriptionStore })
 
 const plans = ref([])
 const billingPeriod = ref('monthly')

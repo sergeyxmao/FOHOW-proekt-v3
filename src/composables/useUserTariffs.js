@@ -142,12 +142,29 @@ export function useUserTariffs({ subscriptionStore }) {
   }
 
   /**
-   * Переход на другой тариф
+   * Маппинг code_name тарифа на Tribute product_id
+   * Соответствует маппингу в api/services/tributeService.js
+   */
+  const TRIBUTE_PRODUCTS = {
+    'premium': 'sLe1',     // Premium - 399₽/мес
+    'individual': 'sLc8'   // Individual - 249₽/мес
+  }
+
+  /**
+   * Переход на другой тариф через Tribute
+   * Открывает страницу оплаты Tribute в новой вкладке
    */
   function handleUpgrade(plan) {
-    // Открываем страницу оплаты или показываем модальное окно
-    // TODO: Реализовать переход на страницу оплаты
-    alert(`Переход на тариф "${plan.name}" будет реализован в ближайшее время`)
+    const productId = TRIBUTE_PRODUCTS[plan.code_name]
+
+    if (!productId) {
+      alert(`Оплата для тарифа "${plan.name}" временно недоступна. Пожалуйста, свяжитесь с поддержкой.`)
+      return
+    }
+
+    // Открываем ссылку Tribute в новой вкладке
+    const tributeUrl = `https://web.tribute.tg/s/${productId}`
+    window.open(tributeUrl, '_blank')
   }
 
   return {

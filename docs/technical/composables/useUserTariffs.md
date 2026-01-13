@@ -225,8 +225,49 @@ watch(activeTab, (newTab) => {
 </div>
 ```
 
+## Интеграция с Tribute Payment
+
+Функция `handleUpgrade` открывает страницу оплаты Tribute для выбранного тарифа.
+
+### Маппинг тарифов на Tribute product_id
+
+```javascript
+const TRIBUTE_PRODUCTS = {
+  'premium': 'sLe1',     // Premium - 399₽/мес
+  'individual': 'sLc8'   // Individual - 249₽/мес
+}
+```
+
+### Формат URL
+
+```
+https://web.tribute.tg/s/{product_id}
+```
+
+Примеры:
+- Premium: `https://web.tribute.tg/s/sLe1`
+- Individual: `https://web.tribute.tg/s/sLc8`
+
+### Поведение
+
+1. При клике на кнопку "Выбрать тариф" вызывается `handleUpgrade(plan)`
+2. Функция ищет `plan.code_name` в маппинге `TRIBUTE_PRODUCTS`
+3. Если найден — открывает ссылку Tribute в новой вкладке
+4. Если не найден — показывает alert с сообщением об ошибке
+
+### Обработка webhook
+
+После оплаты Tribute отправляет webhook на `/api/webhook/tribute`, который:
+- Обновляет `users.plan_id` и `subscription_expires_at`
+- Создаёт запись в `subscription_history`
+- Активирует подписку автоматически
+
+См. также: `api/services/tributeService.js`
+
 ## Связанные файлы
 
 - `src/components/UserProfile.vue` — основной компонент профиля
+- `src/views/PricingPage.vue` — публичная страница тарифов
 - `src/stores/subscription.js` — store подписок
+- `api/services/tributeService.js` — backend обработка Tribute webhook
 - API endpoint: `GET /plans`
