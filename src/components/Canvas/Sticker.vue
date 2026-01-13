@@ -69,6 +69,17 @@ const saveChanges = async () => {
   originalContent.value = '';
 };
 
+// Обработчик blur с проверкой, действительно ли фокус ушел за пределы стикера
+const handleBlur = () => {
+  // Используем setTimeout, чтобы дать браузеру время обновить activeElement
+  setTimeout(() => {
+    // Проверяем, находится ли новый активный элемент внутри стикера
+    if (isEditing.value && stickerRef.value && !stickerRef.value.contains(document.activeElement)) {
+      saveChanges();
+    }
+  }, 0);
+};
+
 // Отмена редактирования по Esc
 const cancelEditing = (event) => {
   if (!isEditing.value) return;
@@ -322,7 +333,7 @@ const handleDelete = async (event) => {
       v-model="editableContent"
       class="sticker__textarea"
       placeholder="Введите текст..."
-      @blur="saveChanges"
+      @blur="handleBlur"
       @click.stop
       @pointerdown.stop
       @keydown.esc="cancelEditing"
