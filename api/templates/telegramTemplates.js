@@ -184,8 +184,147 @@ function getWelcomeMessage(userName, demoDays = 3, dashboardUrl = 'https://fohow
   };
 }
 
+/**
+ * Сообщение об активации новой подписки
+ * @param {string} userName - Имя пользователя
+ * @param {string} planName - Название тарифа (Premium, Individual)
+ * @param {number} amount - Сумма оплаты
+ * @param {string} currency - Валюта (RUB)
+ * @param {string} expiresDate - Дата окончания (DD.MM.YYYY)
+ * @param {string} boardsUrl - URL к доскам (опционально)
+ * @returns {Object} Объект сообщения для Telegram Bot API
+ */
+function getSubscriptionActivatedMessage(userName, planName, amount, currency, expiresDate, boardsUrl = 'https://interactive.marketingfohow.ru/boards') {
+  const text = `✅ *Подписка активирована!*
+
+Здравствуйте, *${userName}*!
+
+🎉 Спасибо за оплату подписки на FOHOW Interactive Board!
+
+━━━━━━━━━━━━━━━━━━━━
+*📋 Детали подписки:*
+
+💎 Тариф: *${planName}*
+💰 Стоимость: *${amount} ${currency}*
+📅 Действует до: *${expiresDate}*
+
+━━━━━━━━━━━━━━━━━━━━
+
+*🚀 Ваши возможности:*
+${planName === 'Premium'
+  ? '✅ Безлимитное количество досок\n✅ Все премиум-функции\n✅ Приоритетная поддержка'
+  : '✅ До 9 интерактивных досок\n✅ Расширенные функции\n✅ Экспорт в PNG'}
+
+Приятной работы! 🎨`;
+
+  return {
+    text,
+    parse_mode: 'Markdown',
+    disable_web_page_preview: true,
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: '🚀 Начать работу',
+            url: boardsUrl
+          }
+        ]
+      ]
+    }
+  };
+}
+
+/**
+ * Сообщение о продлении подписки
+ * @param {string} userName - Имя пользователя
+ * @param {string} planName - Название тарифа
+ * @param {number} amount - Сумма оплаты
+ * @param {string} currency - Валюта
+ * @param {string} expiresDate - Новая дата окончания (DD.MM.YYYY)
+ * @param {string} boardsUrl - URL к доскам (опционально)
+ * @returns {Object} Объект сообщения для Telegram Bot API
+ */
+function getSubscriptionRenewedMessage(userName, planName, amount, currency, expiresDate, boardsUrl = 'https://interactive.marketingfohow.ru/boards') {
+  const text = `🔄 *Подписка продлена!*
+
+Здравствуйте, *${userName}*!
+
+Оплата успешно прошла, подписка автоматически продлена. ✅
+
+━━━━━━━━━━━━━━━━━━━━
+*📋 Детали продления:*
+
+💎 Тариф: *${planName}*
+💰 Сумма: *${amount} ${currency}*
+📅 Действует до: *${expiresDate}*
+
+━━━━━━━━━━━━━━━━━━━━
+
+Спасибо за то, что остаётесь с нами! 💙`;
+
+  return {
+    text,
+    parse_mode: 'Markdown',
+    disable_web_page_preview: true,
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: '📊 Перейти к доскам',
+            url: boardsUrl
+          }
+        ]
+      ]
+    }
+  };
+}
+
+/**
+ * Сообщение об отмене подписки
+ * @param {string} userName - Имя пользователя
+ * @param {string} planName - Название отменённого тарифа
+ * @param {string} expiresDate - Дата окончания доступа (DD.MM.YYYY)
+ * @param {string} pricingUrl - URL страницы с тарифами (опционально)
+ * @returns {Object} Объект сообщения для Telegram Bot API
+ */
+function getSubscriptionCancelledMessage(userName, planName, expiresDate, pricingUrl = 'https://interactive.marketingfohow.ru/pricing') {
+  const text = `⚠️ *Подписка отменена*
+
+Здравствуйте, *${userName}*!
+
+Подписка *${planName}* была отменена. Вы переведены на гостевой тариф.
+
+━━━━━━━━━━━━━━━━━━━━
+*⏰ Доступ сохраняется до:* ${expiresDate}
+
+После этой даты будут доступны только функции гостевого тарифа.
+
+━━━━━━━━━━━━━━━━━━━━
+
+💡 Вы можете продлить подписку в любой момент и снова получить полный доступ ко всем возможностям! 🚀`;
+
+  return {
+    text,
+    parse_mode: 'Markdown',
+    disable_web_page_preview: true,
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: '🔄 Продлить подписку',
+            url: pricingUrl
+          }
+        ]
+      ]
+    }
+  };
+}
+
 export {
   getSubscriptionExpiringMessage,
   getSubscriptionExpiredMessage,
-  getWelcomeMessage
+  getWelcomeMessage,
+  getSubscriptionActivatedMessage,
+  getSubscriptionRenewedMessage,
+  getSubscriptionCancelledMessage
 };
