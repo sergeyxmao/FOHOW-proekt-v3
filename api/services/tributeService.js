@@ -11,6 +11,7 @@
 
 import crypto from 'crypto';
 import { pool } from '../db.js';
+import { sendSubscriptionEmail } from '../utils/email.js';
 
 /**
  * Маппинг Tribute product_id на plan_id в БД
@@ -154,6 +155,36 @@ export async function handleNewSubscription(data) {
     console.log(`✅ Подписка активирована для user_id=${userId}, plan_id=${planId}`);
 
     await client.query('COMMIT');
+
+    // Отправка email-уведомления (НЕ блокирует основной процесс)
+    try {
+      // Получить данные пользователя и тарифа для email
+      const userData = await pool.query(
+        `SELECT u.email, u.name, sp.name as plan_name
+         FROM users u
+         JOIN subscription_plans sp ON u.plan_id = sp.id
+         WHERE u.id = $1`,
+        [userId]
+      );
+
+      if (userData.rows.length > 0) {
+        const user = userData.rows[0];
+        const interval = period === 'year' ? 365 : 30;
+
+        await sendSubscriptionEmail(user.email, 'new', {
+          userName: user.name || 'Пользователь',
+          planName: user.plan_name,
+          amount: amount,
+          currency: currency,
+          startDate: new Date().toISOString(),
+          expiresDate: new Date(Date.now() + interval * 24 * 60 * 60 * 1000).toISOString()
+        });
+      }
+    } catch (emailError) {
+      // Ошибка отправки email НЕ должна ломать основной процесс
+      console.error('❌ Не удалось отправить email о новой подписке:', emailError.message);
+    }
+
     return { success: true, userId, planId };
 
   } catch (error) {
@@ -232,6 +263,33 @@ export async function handleSubscriptionRenewed(data) {
     console.log(`✅ Подписка продлена для user_id=${user_id}`);
 
     await client.query('COMMIT');
+
+    // Отправка email-уведомления
+    try {
+      const userData = await pool.query(
+        `SELECT u.email, u.name, sp.name as plan_name, u.subscription_expires_at
+         FROM users u
+         JOIN subscription_plans sp ON u.plan_id = sp.id
+         WHERE u.id = $1`,
+        [user_id]
+      );
+
+      if (userData.rows.length > 0) {
+        const user = userData.rows[0];
+
+        await sendSubscriptionEmail(user.email, 'renewed', {
+          userName: user.name || 'Пользователь',
+          planName: user.plan_name,
+          amount: amount,
+          currency: currency,
+          startDate: new Date().toISOString(),
+          expiresDate: user.subscription_expires_at
+        });
+      }
+    } catch (emailError) {
+      console.error('❌ Не удалось отправить email о продлении подписки:', emailError.message);
+    }
+
     return { success: true, userId: user_id };
 
   } catch (error) {
@@ -305,6 +363,35 @@ export async function handleSubscriptionCancelled(data) {
     console.log(`✅ Пользователь user_id=${user_id} переведён на гостевой тариф (plan_id=${guestPlanId})`);
 
     await client.query('COMMIT');
+
+    // Отправка email-уведомления
+    try {
+      const userData = await pool.query(
+        `SELECT u.email, u.name, ts.tribute_product_id, u.subscription_expires_at
+         FROM users u
+         JOIN tribute_subscriptions ts ON ts.user_id = u.id AND ts.tribute_subscription_id = $1
+         WHERE u.id = $2`,
+        [subscription_id, user_id]
+      );
+
+      if (userData.rows.length > 0) {
+        const user = userData.rows[0];
+        // Определить название тарифа по product_id
+        const planName = user.tribute_product_id === 'sLe1' ? 'Premium' : 'Individual';
+
+        await sendSubscriptionEmail(user.email, 'cancelled', {
+          userName: user.name || 'Пользователь',
+          planName: planName,
+          amount: 0,
+          currency: 'RUB',
+          startDate: new Date().toISOString(),
+          expiresDate: user.subscription_expires_at || new Date().toISOString()
+        });
+      }
+    } catch (emailError) {
+      console.error('❌ Не удалось отправить email об отмене подписки:', emailError.message);
+    }
+
     return { success: true, userId: user_id, guestPlanId };
 
   } catch (error) {

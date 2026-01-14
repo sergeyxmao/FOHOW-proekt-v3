@@ -289,3 +289,361 @@ export async function sendWelcomeEmail(email) {
     console.error('❌ Ошибка отправки Welcome Email:', error);
   }
 }
+
+
+
+// =======================================================================
+// 🔔 4. УВЕДОМЛЕНИЯ О ПОДПИСКЕ — ШАБЛОН №4 (new, renewed, cancelled)
+// =======================================================================
+
+/**
+ * Отправка email-уведомлений о событиях подписки
+ * @param {string} email - Email получателя
+ * @param {string} eventType - Тип события: 'new', 'renewed', 'cancelled'
+ * @param {Object} data - Данные подписки
+ * @param {string} data.userName - Имя пользователя
+ * @param {string} data.planName - Название тарифа (Premium, Individual)
+ * @param {number} data.amount - Сумма оплаты
+ * @param {string} data.currency - Валюта (RUB)
+ * @param {string} data.startDate - Дата начала (ISO строка)
+ * @param {string} data.expiresDate - Дата окончания (ISO строка)
+ */
+export async function sendSubscriptionEmail(email, eventType, data) {
+  const { userName, planName, amount, currency, startDate, expiresDate } = data;
+
+  // Форматирование дат на русском
+  const formatDate = (isoDate) => {
+    return new Date(isoDate).toLocaleDateString('ru-RU', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const formattedStartDate = formatDate(startDate);
+  const formattedExpiresDate = formatDate(expiresDate);
+
+  // Определить возможности тарифа
+  const planFeatures = planName === 'Premium'
+    ? 'Безлимитное количество досок, все премиум-функции'
+    : planName === 'Individual'
+      ? 'До 9 интерактивных досок, расширенные функции'
+      : 'Базовые функции';
+
+  const boardsUrl = `${process.env.FRONTEND_URL}/boards`;
+  const pricingUrl = `${process.env.FRONTEND_URL}/pricing`;
+
+  let subject, html;
+
+  // ===== ШАБЛОН: НОВАЯ ПОДПИСКА =====
+  if (eventType === 'new') {
+    subject = '✅ Подписка активирована — FOHOW Interactive Board';
+    html = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Подписка активирована</title>
+<style>
+  body {
+    margin: 0; padding: 0;
+    background: #f3f3f3;
+    font-family: Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0e0e0e; color: #fff; }
+    .email-container { background: #1a1a1a; }
+    .details-box { background: #252525; }
+  }
+  .email-container {
+    max-width: 600px;
+    margin: 25px auto;
+    background: #fff;
+    padding: 40px 32px;
+    border-radius: 18px;
+    text-align: center;
+  }
+  h1 {
+    color: #4CAF50;
+    font-size: 26px;
+    margin-bottom: 15px;
+  }
+  p {
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 10px 0;
+  }
+  .details-box {
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 25px 0;
+    text-align: left;
+  }
+  .details-box p {
+    margin: 8px 0;
+    font-size: 15px;
+  }
+  .details-box strong {
+    color: #333;
+  }
+  .features {
+    background: #e8f5e9;
+    border-left: 4px solid #4CAF50;
+    padding: 15px 20px;
+    margin: 20px 0;
+    text-align: left;
+    border-radius: 0 8px 8px 0;
+  }
+  .button {
+    background: #4CAF50;
+    display: inline-block;
+    color: #fff !important;
+    padding: 14px 36px;
+    text-decoration: none;
+    border-radius: 9px;
+    margin-top: 25px;
+    font-size: 18px;
+  }
+  .footer {
+    margin-top: 30px;
+    font-size: 13px;
+    color: #777;
+  }
+</style>
+</head>
+<body>
+  <div class="email-container">
+    <h1>Подписка успешно активирована! 🎉</h1>
+    <p>Здравствуйте, ${userName}!</p>
+    <p>Спасибо за оплату подписки на FOHOW Interactive Board!</p>
+
+    <div class="details-box">
+      <p><strong>Тариф:</strong> ${planName}</p>
+      <p><strong>Стоимость:</strong> ${amount} ${currency}</p>
+      <p><strong>Начало:</strong> ${formattedStartDate}</p>
+      <p><strong>Действует до:</strong> ${formattedExpiresDate}</p>
+    </div>
+
+    <div class="features">
+      <strong>Ваши возможности:</strong><br>
+      ${planFeatures}
+    </div>
+
+    <a href="${boardsUrl}" class="button">Начать работу</a>
+
+    <div class="footer">
+      С уважением, команда FOHOW Interactive Board
+    </div>
+  </div>
+</body>
+</html>
+    `;
+  }
+
+  // ===== ШАБЛОН: ПРОДЛЕНИЕ ПОДПИСКИ =====
+  else if (eventType === 'renewed') {
+    subject = '🔄 Подписка продлена — FOHOW Interactive Board';
+    html = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Подписка продлена</title>
+<style>
+  body {
+    margin: 0; padding: 0;
+    background: #f3f3f3;
+    font-family: Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0e0e0e; color: #fff; }
+    .email-container { background: #1a1a1a; }
+    .details-box { background: #252525; }
+  }
+  .email-container {
+    max-width: 600px;
+    margin: 25px auto;
+    background: #fff;
+    padding: 40px 32px;
+    border-radius: 18px;
+    text-align: center;
+  }
+  h1 {
+    color: #4CAF50;
+    font-size: 26px;
+    margin-bottom: 15px;
+  }
+  p {
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 10px 0;
+  }
+  .details-box {
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 25px 0;
+    text-align: left;
+  }
+  .details-box p {
+    margin: 8px 0;
+    font-size: 15px;
+  }
+  .details-box strong {
+    color: #333;
+  }
+  .button {
+    background: #4CAF50;
+    display: inline-block;
+    color: #fff !important;
+    padding: 14px 36px;
+    text-decoration: none;
+    border-radius: 9px;
+    margin-top: 25px;
+    font-size: 18px;
+  }
+  .footer {
+    margin-top: 30px;
+    font-size: 13px;
+    color: #777;
+  }
+</style>
+</head>
+<body>
+  <div class="email-container">
+    <h1>Ваша подписка продлена 🔄</h1>
+    <p>Здравствуйте, ${userName}!</p>
+    <p>Оплата успешно прошла, подписка автоматически продлена.</p>
+
+    <div class="details-box">
+      <p><strong>Тариф:</strong> ${planName}</p>
+      <p><strong>Сумма:</strong> ${amount} ${currency}</p>
+      <p><strong>Действует до:</strong> ${formattedExpiresDate}</p>
+    </div>
+
+    <a href="${boardsUrl}" class="button">Перейти к доскам</a>
+
+    <div class="footer">
+      С уважением, команда FOHOW Interactive Board
+    </div>
+  </div>
+</body>
+</html>
+    `;
+  }
+
+  // ===== ШАБЛОН: ОТМЕНА ПОДПИСКИ =====
+  else if (eventType === 'cancelled') {
+    subject = '⚠️ Подписка отменена — FOHOW Interactive Board';
+    html = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Подписка отменена</title>
+<style>
+  body {
+    margin: 0; padding: 0;
+    background: #f3f3f3;
+    font-family: Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0e0e0e; color: #fff; }
+    .email-container { background: #1a1a1a; }
+    .info-box { background: #252525; }
+  }
+  .email-container {
+    max-width: 600px;
+    margin: 25px auto;
+    background: #fff;
+    padding: 40px 32px;
+    border-radius: 18px;
+    text-align: center;
+  }
+  h1 {
+    color: #ff9800;
+    font-size: 26px;
+    margin-bottom: 15px;
+  }
+  p {
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 10px 0;
+  }
+  .info-box {
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+    padding: 20px;
+    margin: 25px 0;
+    text-align: left;
+    border-radius: 0 8px 8px 0;
+  }
+  .info-box p {
+    margin: 8px 0;
+    font-size: 15px;
+  }
+  .button {
+    background: #4CAF50;
+    display: inline-block;
+    color: #fff !important;
+    padding: 14px 36px;
+    text-decoration: none;
+    border-radius: 9px;
+    margin-top: 25px;
+    font-size: 18px;
+  }
+  .footer {
+    margin-top: 30px;
+    font-size: 13px;
+    color: #777;
+  }
+</style>
+</head>
+<body>
+  <div class="email-container">
+    <h1>Ваша подписка отменена ⚠️</h1>
+    <p>Здравствуйте, ${userName}!</p>
+    <p>Подписка <strong>${planName}</strong> была отменена. Вы переведены на гостевой тариф.</p>
+
+    <div class="info-box">
+      <p><strong>Доступ сохраняется до:</strong> ${formattedExpiresDate}</p>
+      <p>После этой даты будут доступны только функции гостевого тарифа.</p>
+    </div>
+
+    <p>Вы можете продлить подписку в любой момент:</p>
+
+    <a href="${pricingUrl}" class="button">Продлить подписку</a>
+
+    <div class="footer">
+      С уважением, команда FOHOW Interactive Board
+    </div>
+  </div>
+</body>
+</html>
+    `;
+  }
+
+  // Неизвестный тип события
+  else {
+    console.error(`❌ Email error: Неизвестный eventType: ${eventType}`);
+    throw new Error(`Неизвестный тип события: ${eventType}`);
+  }
+
+  // Отправка письма
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to: email,
+      subject,
+      html,
+    });
+    console.log(`✅ Email sent (${eventType}):`, email);
+  } catch (error) {
+    console.error(`❌ Email error (${eventType}):`, error);
+    throw new Error(`Не удалось отправить email: ${error.message}`);
+  }
+}
