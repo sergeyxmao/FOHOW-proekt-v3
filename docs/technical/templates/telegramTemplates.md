@@ -1,7 +1,3 @@
-## ✅ Полный готовый файл `telegramTemplates.md`
-
-Вот полностью исправленная версия:
-
 ```markdown
 # Telegram Templates — Шаблоны Telegram-уведомлений
 
@@ -208,8 +204,3 @@ import {
 ```
 
 ***
-
-**Сохрани этот файл как `docs/technical/templates/telegramTemplates.md`** и дай знать "готово" — перейдём к **финальной проверке всего задания**! 🎯
-
-[1](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/collection_ee548c73-5e0b-43ff-83c4-76ded8f10bef/6d5c208c-6571-4e51-973b-abdcfabaedb5/FOHOW_Server_Documentation.docx)
-[2](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/51796594/ce6eb91a-003d-4467-a604-4bdc7c617235/telegramTemplates.md)
