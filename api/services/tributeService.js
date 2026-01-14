@@ -12,6 +12,12 @@
 import crypto from 'crypto';
 import { pool } from '../db.js';
 import { sendSubscriptionEmail } from '../utils/email.js';
+import { sendTelegramMessage } from '../utils/telegramService.js';
+import {
+  getSubscriptionActivatedMessage,
+  getSubscriptionRenewedMessage,
+  getSubscriptionCancelledMessage
+} from '../templates/telegramTemplates.js';
 
 /**
  * Маппинг Tribute product_id на plan_id в БД
