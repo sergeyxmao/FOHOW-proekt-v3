@@ -48,6 +48,16 @@ const handleDoubleClick = () => {
   isEditing.value = true;
   editableContent.value = props.sticker.content || '';
   originalContent.value = props.sticker.content || ''; // Сохраняем оригинальный текст для отмены
+  
+  // Устанавливаем фокус после рендера textarea
+  nextTick(() => {
+    const textarea = stickerRef.value?.querySelector('.sticker__textarea');
+    if (textarea) {
+      textarea.focus();
+      // Устанавливаем курсор в конец текста
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }
+  });
 };
 
 // Программное открытие редактирования (для вызова извне, например при создании стикера)
