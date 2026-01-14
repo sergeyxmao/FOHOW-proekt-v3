@@ -165,17 +165,17 @@ export async function handleNewSubscription(data) {
     // Отправка email-уведомления (НЕ блокирует основной процесс)
     try {
       // Получить данные пользователя и тарифа для email
-const userData = await pool.query(
-  `SELECT u.email, u.name, u.telegram_chat_id, sp.name as plan_name
-   FROM users u
-   JOIN subscription_plans sp ON u.plan_id = sp.id
-   WHERE u.id = $1`,
-  [userId]
-);
+      const userData = await pool.query(
+        `SELECT u.email, u.name, u.telegram_chat_id, sp.name as plan_name
+         FROM users u
+         JOIN subscription_plans sp ON u.plan_id = sp.id
+         WHERE u.id = $1`,
+        [userId]
+      );
 
       if (userData.rows.length > 0) {
         const user = userData.rows[0];
-        const interval = period === 'year' ? 365 : 30;
+        const intervalDays = period === 'year' ? 365 : 30;
 
         await sendSubscriptionEmail(user.email, 'new', {
           userName: user.name || 'Пользователь',
@@ -183,41 +183,41 @@ const userData = await pool.query(
           amount: amount,
           currency: currency,
           startDate: new Date().toISOString(),
-          expiresDate: new Date(Date.now() + interval * 24 * 60 * 60 * 1000).toISOString()
+          expiresDate: new Date(Date.now() + intervalDays * 24 * 60 * 60 * 1000).toISOString()
         });
+
+        // Отправка Telegram-уведомления (НЕ блокирует основной процесс)
+        if (user.telegram_chat_id) {
+          try {
+            const expiresDateFormatted = new Date(Date.now() + intervalDays * 24 * 60 * 60 * 1000)
+              .toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            const telegramMessage = getSubscriptionActivatedMessage(
+              user.name || 'Пользователь',
+              user.plan_name,
+              amount,
+              currency,
+              expiresDateFormatted,
+              process.env.FRONTEND_URL + '/boards'
+            );
+
+            await sendTelegramMessage(user.telegram_chat_id, telegramMessage.text, {
+              parse_mode: telegramMessage.parse_mode,
+              reply_markup: telegramMessage.reply_markup,
+              disable_web_page_preview: telegramMessage.disable_web_page_preview
+            });
+
+            console.log(`✅ Telegram-уведомление о новой подписке отправлено: ${user.telegram_chat_id}`);
+          } catch (telegramError) {
+            console.error('❌ Не удалось отправить Telegram-уведомление о новой подписке:', telegramError.message);
+          }
+        } else {
+          console.log('ℹ️ telegram_chat_id не указан, пропускаем отправку Telegram-уведомления');
+        }
       }
     } catch (emailError) {
       // Ошибка отправки email НЕ должна ломать основной процесс
       console.error('❌ Не удалось отправить email о новой подписке:', emailError.message);
-    }
-    // Отправка Telegram-уведомления (НЕ блокирует основной процесс)
-    if (user.telegram_chat_id) {
-      try {
-        const intervalDays = period === 'year' ? 365 : 30;
-        const expiresDateFormatted = new Date(Date.now() + intervalDays * 24 * 60 * 60 * 1000)
-          .toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' });
-
-        const telegramMessage = getSubscriptionActivatedMessage(
-          user.name || 'Пользователь',
-          user.plan_name,
-          amount,
-          currency,
-          expiresDateFormatted,
-          process.env.FRONTEND_URL + '/boards'
-        );
-
-        await sendTelegramMessage(user.telegram_chat_id, telegramMessage.text, {
-          parse_mode: telegramMessage.parse_mode,
-          reply_markup: telegramMessage.reply_markup,
-          disable_web_page_preview: telegramMessage.disable_web_page_preview
-        });
-
-        console.log(`✅ Telegram-уведомление о новой подписке отправлено: ${user.telegram_chat_id}`);
-      } catch (telegramError) {
-        console.error('❌ Не удалось отправить Telegram-уведомление о новой подписке:', telegramError.message);
-      }
-    } else {
-      console.log('ℹ️ telegram_chat_id не указан, пропускаем отправку Telegram-уведомления');
     }
 
     return { success: true, userId, planId };
@@ -302,7 +302,7 @@ export async function handleSubscriptionRenewed(data) {
     // Отправка email-уведомления
     try {
       const userData = await pool.query(
-        `SELECT u.email, u.name, sp.name as plan_name, u.subscription_expires_at
+        `SELECT u.email, u.name, u.telegram_chat_id, sp.name as plan_name, u.subscription_expires_at
          FROM users u
          JOIN subscription_plans sp ON u.plan_id = sp.id
          WHERE u.id = $1`,
@@ -320,6 +320,35 @@ export async function handleSubscriptionRenewed(data) {
           startDate: new Date().toISOString(),
           expiresDate: user.subscription_expires_at
         });
+
+        // Отправка Telegram-уведомления
+        if (user.telegram_chat_id) {
+          try {
+            const expiresDateFormatted = new Date(user.subscription_expires_at)
+              .toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            const telegramMessage = getSubscriptionRenewedMessage(
+              user.name || 'Пользователь',
+              user.plan_name,
+              amount,
+              currency,
+              expiresDateFormatted,
+              process.env.FRONTEND_URL + '/boards'
+            );
+
+            await sendTelegramMessage(user.telegram_chat_id, telegramMessage.text, {
+              parse_mode: telegramMessage.parse_mode,
+              reply_markup: telegramMessage.reply_markup,
+              disable_web_page_preview: telegramMessage.disable_web_page_preview
+            });
+
+            console.log(`✅ Telegram-уведомление о продлении подписки отправлено: ${user.telegram_chat_id}`);
+          } catch (telegramError) {
+            console.error('❌ Не удалось отправить Telegram-уведомление о продлении:', telegramError.message);
+          }
+        } else {
+          console.log('ℹ️ telegram_chat_id не указан, пропускаем отправку Telegram-уведомления');
+        }
       }
     } catch (emailError) {
       console.error('❌ Не удалось отправить email о продлении подписки:', emailError.message);
@@ -402,7 +431,7 @@ export async function handleSubscriptionCancelled(data) {
     // Отправка email-уведомления
     try {
       const userData = await pool.query(
-        `SELECT u.email, u.name, ts.tribute_product_id, u.subscription_expires_at
+        `SELECT u.email, u.name, u.telegram_chat_id, ts.tribute_product_id, u.subscription_expires_at
          FROM users u
          JOIN tribute_subscriptions ts ON ts.user_id = u.id AND ts.tribute_subscription_id = $1
          WHERE u.id = $2`,
@@ -422,6 +451,34 @@ export async function handleSubscriptionCancelled(data) {
           startDate: new Date().toISOString(),
           expiresDate: user.subscription_expires_at || new Date().toISOString()
         });
+
+        // Отправка Telegram-уведомления
+        if (user.telegram_chat_id) {
+          try {
+            const expiresDateFormatted = user.subscription_expires_at
+              ? new Date(user.subscription_expires_at).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })
+              : 'неизвестно';
+
+            const telegramMessage = getSubscriptionCancelledMessage(
+              user.name || 'Пользователь',
+              planName,
+              expiresDateFormatted,
+              process.env.FRONTEND_URL + '/pricing'
+            );
+
+            await sendTelegramMessage(user.telegram_chat_id, telegramMessage.text, {
+              parse_mode: telegramMessage.parse_mode,
+              reply_markup: telegramMessage.reply_markup,
+              disable_web_page_preview: telegramMessage.disable_web_page_preview
+            });
+
+            console.log(`✅ Telegram-уведомление об отмене подписки отправлено: ${user.telegram_chat_id}`);
+          } catch (telegramError) {
+            console.error('❌ Не удалось отправить Telegram-уведомление об отмене:', telegramError.message);
+          }
+        } else {
+          console.log('ℹ️ telegram_chat_id не указан, пропускаем отправку Telegram-уведомления');
+        }
       }
     } catch (emailError) {
       console.error('❌ Не удалось отправить email об отмене подписки:', emailError.message);
