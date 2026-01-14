@@ -165,13 +165,13 @@ export async function handleNewSubscription(data) {
     // Отправка email-уведомления (НЕ блокирует основной процесс)
     try {
       // Получить данные пользователя и тарифа для email
-      const userData = await pool.query(
-        `SELECT u.email, u.name, sp.name as plan_name
-         FROM users u
-         JOIN subscription_plans sp ON u.plan_id = sp.id
-         WHERE u.id = $1`,
-        [userId]
-      );
+const userData = await pool.query(
+  `SELECT u.email, u.name, u.telegram_chat_id, sp.name as plan_name
+   FROM users u
+   JOIN subscription_plans sp ON u.plan_id = sp.id
+   WHERE u.id = $1`,
+  [userId]
+);
 
       if (userData.rows.length > 0) {
         const user = userData.rows[0];
@@ -189,6 +189,35 @@ export async function handleNewSubscription(data) {
     } catch (emailError) {
       // Ошибка отправки email НЕ должна ломать основной процесс
       console.error('❌ Не удалось отправить email о новой подписке:', emailError.message);
+    }
+    // Отправка Telegram-уведомления (НЕ блокирует основной процесс)
+    if (user.telegram_chat_id) {
+      try {
+        const intervalDays = period === 'year' ? 365 : 30;
+        const expiresDateFormatted = new Date(Date.now() + intervalDays * 24 * 60 * 60 * 1000)
+          .toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        const telegramMessage = getSubscriptionActivatedMessage(
+          user.name || 'Пользователь',
+          user.plan_name,
+          amount,
+          currency,
+          expiresDateFormatted,
+          process.env.FRONTEND_URL + '/boards'
+        );
+
+        await sendTelegramMessage(user.telegram_chat_id, telegramMessage.text, {
+          parse_mode: telegramMessage.parse_mode,
+          reply_markup: telegramMessage.reply_markup,
+          disable_web_page_preview: telegramMessage.disable_web_page_preview
+        });
+
+        console.log(`✅ Telegram-уведомление о новой подписке отправлено: ${user.telegram_chat_id}`);
+      } catch (telegramError) {
+        console.error('❌ Не удалось отправить Telegram-уведомление о новой подписке:', telegramError.message);
+      }
+    } else {
+      console.log('ℹ️ telegram_chat_id не указан, пропускаем отправку Telegram-уведомления');
     }
 
     return { success: true, userId, planId };
