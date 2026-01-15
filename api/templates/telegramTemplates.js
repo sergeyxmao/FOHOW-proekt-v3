@@ -327,7 +327,7 @@ function getSubscriptionCancelledMessage(userName, planName, expiresDate, pricin
  * @param {string} profileUrl - URL настроек профиля
  * @returns {Object} Объект сообщения для Telegram
  */
-export function getTelegramDisconnectedMessage(userName, profileUrl) {
+function getTelegramDisconnectedMessage(userName, profileUrl) {
   const text = `
 🔕 *Уведомления отключены*
 
