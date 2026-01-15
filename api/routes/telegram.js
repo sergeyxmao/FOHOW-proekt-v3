@@ -9,7 +9,7 @@
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { getBot } from '../bot/telegramBot.js';
-
+import { getTelegramDisconnectedMessage } from '../templates/telegramTemplates.js';
 
 /**
  * Регистрация маршрутов для интеграции с Telegram
