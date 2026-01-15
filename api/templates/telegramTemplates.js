@@ -320,11 +320,60 @@ function getSubscriptionCancelledMessage(userName, planName, expiresDate, pricin
   };
 }
 
+/**
+ * Уведомление об отключении Telegram-уведомлений
+ *
+ * @param {string} userName - Имя пользователя
+ * @param {string} profileUrl - URL настроек профиля
+ * @returns {Object} Объект сообщения для Telegram
+ */
+export function getTelegramDisconnectedMessage(userName, profileUrl) {
+  const text = `
+🔕 *Уведомления отключены*
+
+Здравствуйте, *${userName}*!
+
+Вы отключили важные уведомления своего аккаунта Интерактивной доски FOHOW.
+
+⚠️ *Теперь вы не будете получать:*
+• Напоминания о сроках подписки
+• Уведомления о продлении подписки
+• Информацию об истечении подписки
+• Важные обновления и новости
+
+━━━━━━━━━━━━━━━━━━━━
+
+💡 Чтобы снова включить уведомления, зайдите в [настройки профиля](${profileUrl}).
+
+━━━━━━━━━━━━━━━━━━━━
+
+📢 Наш канал по маркетингу: @MarketingFohow
+  `.trim();
+
+  return {
+    text,
+    parse_mode: 'Markdown',
+    disable_web_page_preview: true,
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '⚙️ Настройки профиля', url: profileUrl }
+        ],
+        [
+          { text: '📢 Канал по маркетингу', url: 'https://t.me/MarketingFohow' }
+        ]
+      ]
+    }
+  };
+}
+
 export {
   getSubscriptionExpiringMessage,
   getSubscriptionExpiredMessage,
   getWelcomeMessage,
   getSubscriptionActivatedMessage,
   getSubscriptionRenewedMessage,
-  getSubscriptionCancelledMessage
+  getSubscriptionCancelledMessage,
+  getTelegramDisconnectedMessage
 };
+
