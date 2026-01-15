@@ -35,22 +35,15 @@ function getDaysWord(days) {
  * @param {string} renewUrl - URL для продления подписки (опционально)
  * @returns {Object} Объект сообщения для Telegram Bot API
  */
-function getSubscriptionExpiringMessage(userName, daysLeft, expirationDate, renewUrl = 'https://fohow.ru/subscription') {
-  const urgencyEmoji = daysLeft <= 3 ? '🚨' : '⏰';
-  const urgencyText = daysLeft <= 3 ? '*СРОЧНО*' : 'скоро';
-
+function getSubscriptionExpiringMessage(userName, daysLeft, expirationDate, renewUrl = 'https://interactive.marketingfohow.ru') {
+  const urgencyEmoji = '🚨';
+  
   const text = `${urgencyEmoji} *Здравствуйте, ${userName}!*
 
-Ваша подписка ${urgencyText} истекает!
+Ваша подписка *СРОЧНО* истекает!
 
 📅 *Осталось:* ${daysLeft} ${getDaysWord(daysLeft)}
 🗓 *Дата истечения:* ${expirationDate}
-
-💎 *Что вы получаете с премиум-подпиской:*
-✅ Неограниченный доступ ко всем материалам
-✅ Приоритетная поддержка
-✅ Эксклюзивный контент
-✅ Без рекламы
 
 Продлите подписку прямо сейчас, чтобы не потерять доступ к премиум-функциям! 🚀`;
 
@@ -63,12 +56,6 @@ function getSubscriptionExpiringMessage(userName, daysLeft, expirationDate, rene
           {
             text: '🔄 Продлить подписку',
             url: renewUrl
-          }
-        ],
-        [
-          {
-            text: '💬 Связаться с поддержкой',
-            url: 'https://t.me/fohow_support'
           }
         ]
       ]
