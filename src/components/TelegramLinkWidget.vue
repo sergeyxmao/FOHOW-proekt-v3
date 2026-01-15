@@ -69,25 +69,28 @@
   <ol class="telegram-widget__instructions-list">
     <li>Откройте Telegram</li>
     <li>
-      Откройте бота 
+      Найдите бота 
       <a href="https://t.me/fohow_Interactive_bot" target="_blank" style="color: #0088cc; text-decoration: none; font-weight: bold;">
         @fohow_Interactive_bot
       </a>
     </li>
-    <li>Введите <code>/start {{ linkCode }}</code></li>
+    <li>Отправьте команду: <code>/start {{ linkCode }}</code></li>
   </ol>
   
-  <div style="text-align: center; margin-top: 16px;">
-    <p style="margin-bottom: 8px; color: #666; font-size: 14px;">или нажмите</p>
+  <div style="text-align: center; margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px; border: 1px solid #0088cc;">
+    <p style="margin: 0 0 8px 0; color: #666; font-size: 13px;">💡 Быстрый переход (только для первого запуска бота)</p>
     <a 
       :href="`https://t.me/fohow_Interactive_bot?start=${linkCode}`" 
       target="_blank"
       class="telegram-widget__connect-button"
+      style="font-size: 14px; padding: 10px 24px;"
     >
-      🔗 ПОДКЛЮЧИТЬ
+      🚀 Открыть бота
     </a>
+    <p style="margin: 8px 0 0 0; color: #999; font-size: 12px;">Если бот уже был запущен ранее, отправьте код вручную</p>
   </div>
 </div>
+
 
         <div class="telegram-widget__status telegram-widget__status--waiting">
           <div class="telegram-widget__spinner"></div>
