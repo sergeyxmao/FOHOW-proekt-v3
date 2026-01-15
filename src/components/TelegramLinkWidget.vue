@@ -64,30 +64,30 @@
           </button>
         </div>
 
-        <div class="telegram-widget__instructions">
-          <p class="telegram-widget__instructions-title">Как подключить:</p>
-          <ol class="telegram-widget__instructions-list">
-            <li>Откройте Telegram</li>
-            <li>
-              Откройте бота 
-              <a :href="`https://t.me/${botUsername}?start=${linkCode}`" target="_blank" style="color: #0088cc; text-decoration: none; font-weight: bold;">
-                @{{ botUsername }}
-              </a>
-            </li>
-            <li>Введите <code>/start {{ linkCode }}</code></li>
-          </ol>
-          
-          <div style="text-align: center; margin-top: 16px;">
-            <p style="margin-bottom: 8px; color: #666; font-size: 14px;">или нажмите</p>
-            <a 
-              :href="`https://t.me/${botUsername}?start=${linkCode}`" 
-              target="_blank"
-              class="telegram-widget__connect-button"
-            >
-              🔗 ПОДКЛЮЧИТЬ
-            </a>
-          </div>
-        </div>
+<div class="telegram-widget__instructions">
+  <p class="telegram-widget__instructions-title">Как подключить:</p>
+  <ol class="telegram-widget__instructions-list">
+    <li>Откройте Telegram</li>
+    <li>
+      Откройте бота 
+      <a href="https://t.me/fohow_Interactive_bot" target="_blank" style="color: #0088cc; text-decoration: none; font-weight: bold;">
+        @fohow_Interactive_bot
+      </a>
+    </li>
+    <li>Введите <code>/start {{ linkCode }}</code></li>
+  </ol>
+  
+  <div style="text-align: center; margin-top: 16px;">
+    <p style="margin-bottom: 8px; color: #666; font-size: 14px;">или нажмите</p>
+    <a 
+      :href="`https://t.me/fohow_Interactive_bot?start=${linkCode}`" 
+      target="_blank"
+      class="telegram-widget__connect-button"
+    >
+      🔗 ПОДКЛЮЧИТЬ
+    </a>
+  </div>
+</div>
 
         <div class="telegram-widget__status telegram-widget__status--waiting">
           <div class="telegram-widget__spinner"></div>
