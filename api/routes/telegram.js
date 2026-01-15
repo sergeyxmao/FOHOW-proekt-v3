@@ -66,7 +66,7 @@ export function registerTelegramRoutes(app) {
 
       // Получаем информацию о пользователе
       const result = await pool.query(
-        'SELECT telegram_chat_id, telegram_user, name FROM users WHERE id = $1',
+        'SELECT telegram_chat_id, telegram_user, full_name FROM users WHERE id = $1',
         [userId]
       );
 
@@ -178,7 +178,7 @@ export function registerTelegramRoutes(app) {
 
       // Получаем данные пользователя ПЕРЕД удалением
       const userResult = await pool.query(
-        'SELECT telegram_chat_id, telegram_user FROM users WHERE id = $1',
+        'SELECT telegram_chat_id, telegram_user, full_name FROM users WHERE id = $1',
         [userId]
       );
 
@@ -212,7 +212,7 @@ export function registerTelegramRoutes(app) {
           const bot = getBot(); // Получаем экземпляр бота через функцию getBot()
           if (bot) {
 // Получаем имя пользователя для персонализации
-const userName = userResult.rows[0].name || 'Пользователь';
+const userName = userResult.rows[0].full_name || 'Пользователь';
 const profileUrl = `${process.env.FRONTEND_URL || 'https://interactive.marketingfohow.ru'}/profile`;
 
 // Используем шаблон
