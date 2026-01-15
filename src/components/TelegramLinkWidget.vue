@@ -68,15 +68,25 @@
           <p class="telegram-widget__instructions-title">Как подключить:</p>
           <ol class="telegram-widget__instructions-list">
             <li>Откройте Telegram</li>
-<li>
-  Откройте бота 
-  <a :href="`https://t.me/${botUsername}?start=${linkCode}`" target="_blank" style="color: #0088cc; text-decoration: none; font-weight: bold;">
-    @{{ botUsername }}
-  </a>
-</li>
-<li>Команда будет отправлена автоматически при переходе по ссылке</li>
-
+            <li>
+              Откройте бота 
+              <a :href="`https://t.me/${botUsername}?start=${linkCode}`" target="_blank" style="color: #0088cc; text-decoration: none; font-weight: bold;">
+                @{{ botUsername }}
+              </a>
+            </li>
+            <li>Введите <code>/start {{ linkCode }}</code></li>
           </ol>
+          
+          <div style="text-align: center; margin-top: 16px;">
+            <p style="margin-bottom: 8px; color: #666; font-size: 14px;">или нажмите</p>
+            <a 
+              :href="`https://t.me/${botUsername}?start=${linkCode}`" 
+              target="_blank"
+              class="telegram-widget__connect-button"
+            >
+              🔗 ПОДКЛЮЧИТЬ
+            </a>
+          </div>
         </div>
 
         <div class="telegram-widget__status telegram-widget__status--waiting">
@@ -220,7 +230,7 @@ async function unlinkTelegram() {
         'Authorization': `Bearer ${authStore.token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({})  // ← ВАЖНО: отправляем пустой объект {}
+      body: JSON.stringify({})
     })
 
     if (!response.ok) {
@@ -434,6 +444,25 @@ function stopPolling() {
 
 .telegram-widget__button--secondary:hover {
   background: var(--color-background-mute);
+}
+
+.telegram-widget__connect-button {
+  display: inline-block;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #0088cc 0%, #005580 100%);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);
+}
+
+.telegram-widget__connect-button:hover {
+  background: linear-gradient(135deg, #0099dd 0%, #006690 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 136, 204, 0.4);
 }
 
 .telegram-widget__error {
