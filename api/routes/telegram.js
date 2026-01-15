@@ -66,7 +66,7 @@ export function registerTelegramRoutes(app) {
 
       // Получаем информацию о пользователе
       const result = await pool.query(
-        'SELECT telegram_chat_id, telegram_user FROM users WHERE id = $1',
+        'SELECT telegram_chat_id, telegram_user, name FROM users WHERE id = $1',
         [userId]
       );
 
