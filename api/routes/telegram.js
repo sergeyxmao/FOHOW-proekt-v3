@@ -213,7 +213,7 @@ export function registerTelegramRoutes(app) {
           if (bot) {
 // Получаем имя пользователя для персонализации
 const userName = userResult.rows[0].full_name || 'Пользователь';
-const profileUrl = `${process.env.FRONTEND_URL || 'https://interactive.marketingfohow.ru'}/profile`;
+const profileUrl = process.env.FRONTEND_URL || 'https://interactive.marketingfohow.ru';
 
 // Используем шаблон
 const message = getTelegramDisconnectedMessage(userName, profileUrl);
