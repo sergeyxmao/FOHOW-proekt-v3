@@ -55,3 +55,4 @@ server.log
 /assets/
 /Avatar.png
 /rank-*.png
+api/test/
