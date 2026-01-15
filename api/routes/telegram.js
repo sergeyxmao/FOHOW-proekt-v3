@@ -211,14 +211,20 @@ export function registerTelegramRoutes(app) {
         try {
           const bot = getBot(); // Получаем экземпляр бота через функцию getBot()
           if (bot) {
-            await bot.sendMessage(
-              chatId,
-              '🔕 <b>Уведомления отключены</b>\n\n' +
-              'Ваш Telegram больше не привязан к аккаунту FOHOW Interactive Board.\n\n' +
-              'Чтобы снова включить уведомления, зайдите в настройки профиля.',
-              { parse_mode: 'HTML' }
-            );
-            console.log(`✅ Уведомление об отключении отправлено в Telegram: chat_id=${chatId}`);
+// Получаем имя пользователя для персонализации
+const userName = userResult.rows[0].name || 'Пользователь';
+const profileUrl = `${process.env.FRONTEND_URL || 'https://interactive.marketingfohow.ru'}/profile`;
+
+// Используем шаблон
+const message = getTelegramDisconnectedMessage(userName, profileUrl);
+
+await bot.sendMessage(chatId, message.text, {
+  parse_mode: message.parse_mode,
+  disable_web_page_preview: message.disable_web_page_preview,
+  reply_markup: message.reply_markup
+});
+console.log(`✅ Уведомление об отключении отправлено в Telegram: chat_id=${chatId}`);
+
           }
         } catch (botError) {
           console.error('⚠️ Не удалось отправить уведомление в Telegram:', botError);
