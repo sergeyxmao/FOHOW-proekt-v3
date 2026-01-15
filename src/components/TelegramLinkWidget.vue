@@ -68,8 +68,14 @@
           <p class="telegram-widget__instructions-title">Как подключить:</p>
           <ol class="telegram-widget__instructions-list">
             <li>Откройте Telegram</li>
-            <li>Найдите бота <strong>@{{ botUsername }}</strong></li>
-            <li>Отправьте команду: <code>/start {{ linkCode }}</code></li>
+<li>
+  Откройте бота 
+  <a :href="`https://t.me/${botUsername}?start=${linkCode}`" target="_blank" style="color: #0088cc; text-decoration: none; font-weight: bold;">
+    @{{ botUsername }}
+  </a>
+</li>
+<li>Команда будет отправлена автоматически при переходе по ссылке</li>
+
           </ol>
         </div>
 
@@ -101,7 +107,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 const isLinked = ref(false)
 const telegramUsername = ref(null)
 const linkCode = ref(null)
-const botUsername = ref('fohow_bot')
+const botUsername = ref('fohow_Interactive_bot')
 const loading = ref(false)
 const error = ref(null)
 const copied = ref(false)
@@ -170,7 +176,7 @@ async function generateCode() {
 
     const data = await response.json()
     linkCode.value = data.code
-    botUsername.value = data.botUsername || 'fohow_bot'
+    botUsername.value = data.botUsername || 'fohow_Interactive_bot'
 
     // Начинаем polling для проверки статуса
     startPolling()
