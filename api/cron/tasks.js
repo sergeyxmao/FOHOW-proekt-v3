@@ -220,11 +220,24 @@ async function handleSubscriptionExpiry() {
 
         // Отправить Telegram
         if (user.telegram_chat_id) {
-          const message = gracePeriodUntil
-            ? `⚠️ Подписка "${user.current_plan_name}" истекла.\n🎁 Льготный период: 7 дней.\nВсе доски доступны до ${formatDate(gracePeriodUntil)}.\n\n💳 Продлите: ${process.env.FRONTEND_URL}/pricing`
-            : `⚠️ Подписка "${user.current_plan_name}" истекла.\nТариф: Гостевой (1 доска).\nОстальные доски заархивированы.\n\n💳 Улучшите: ${process.env.FRONTEND_URL}/pricing`;
-          await sendTelegramMessage(user.telegram_chat_id, message);
+          try {
+            const telegramMessage = getSubscriptionExpiredMessage(
+              user.email.split('@')[0] || 'Пользователь',
+              process.env.FRONTEND_URL + '/pricing'
+            );
+            
+            await sendTelegramMessage(user.telegram_chat_id, telegramMessage.text, {
+              parse_mode: telegramMessage.parseMode,
+              reply_markup: telegramMessage.replyMarkup,
+              disable_web_page_preview: telegramMessage.disable_web_page_preview
+            });
+            
+            console.log(`  ✅ Telegram-уведомление об истечении отправлено: ${user.telegram_chat_id}`);
+          } catch (telegramError) {
+            console.error(`  ❌ Не удалось отправить Telegram-уведомление:`, telegramError.message);
+          }
         }
+
 
         console.log(`  ✅ ${user.email}: ${user.current_plan_name} → Guest` + (gracePeriodUntil ? ' (grace 7д)' : ''));
         successCount++;
@@ -702,13 +715,13 @@ export function initializeCronTasks() {
   });
   console.log('✅ Задача 1: Уведомления о истечении подписок (ежедневно 09:00 МСК)');
 
-  // 2. Обработка истекших подписок - каждый день в 01:00
-  cron.schedule('0 1 * * *', () => {
+  // 2. Обработка истекших подписок - каждый день в 09:00
+  cron.schedule('0 9 * * *', () => {
     handleSubscriptionExpiry();
   }, {
     timezone: 'Europe/Moscow'
   });
-  console.log('✅ Задача 2: Обработка истекших подписок (ежедневно 01:00 МСК)');
+  console.log('✅ Задача 2: Обработка истекших подписок (ежедневно 09:00 МСК)');
 
   // 2.1. Окончание grace-периода - каждый день в 01:30
   cron.schedule('30 1 * * *', () => {
