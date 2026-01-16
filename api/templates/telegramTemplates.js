@@ -193,9 +193,7 @@ function getSubscriptionActivatedMessage(userName, planName, amount, currency, e
 ✅ Безлимитное количество заметок и комментариев
 ✅ До 30 папок
 ✅ Экспорт в PNG (A4, A3, A2, A1)
-✅ Экспорт в SVG и HTML
-✅ Совместная работа над досками
-✅ Сохранение и загрузка проектов
+✅ Экспорт в HTML
 ✅ Приглашение к рисованию`;
       break;
       
@@ -207,7 +205,6 @@ function getSubscriptionActivatedMessage(userName, planName, amount, currency, e
 ✅ До 3 папок
 ✅ Экспорт в PNG (A4, A3, A2, A1)
 ✅ Экспорт в HTML
-✅ Сохранение и загрузка проектов
 ✅ Приглашение к рисованию`;
       break;
       
