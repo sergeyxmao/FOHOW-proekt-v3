@@ -109,12 +109,12 @@ async function notifyExpiringSubscriptions() {
         const expirationDate = formatDate(user.subscription_expires_at);
 
         // Формируем Telegram сообщение из шаблона
-        const telegramMessage = getSubscriptionExpiringMessage(
-          user.email.split('@')[0], // Используем имя из email
-          daysLeft,
-          expirationDate,
-          process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/pricing` : 'https://fohow.ru/subscription'
-        );
+const telegramMessage = getSubscriptionExpiringMessage(
+  user.email.split('@')[0],
+  daysLeft,
+  expirationDate,
+  process.env.FRONTEND_URL || 'https://interactive.marketingfohow.ru'
+);
 
         // Отправляем Telegram сообщение
         await sendTelegramMessage(
