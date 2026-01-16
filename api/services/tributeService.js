@@ -178,11 +178,15 @@ const userData = await pool.query(
       if (userData.rows.length > 0) {
         const user = userData.rows[0];
         const intervalDays = period === 'year' ? 365 : 30;
+		// Определить правильную сумму платежа
+        const actualAmount = period === 'year' 
+        ? user.price_yearly 
+        : user.price_monthly;
 
         await sendSubscriptionEmail(user.email, 'new', {
           userName: user.name || 'Пользователь',
           planName: user.plan_name,
-          amount: amount,
+          amount: actualAmount,
           currency: currency,
           startDate: new Date().toISOString(),
           expiresDate: new Date(Date.now() + intervalDays * 24 * 60 * 60 * 1000).toISOString()
@@ -197,7 +201,7 @@ const userData = await pool.query(
             const telegramMessage = getSubscriptionActivatedMessage(
               user.name || 'Пользователь',
               user.plan_name,
-              amount,
+              actualAmount,
               currency,
               expiresDateFormatted,
               process.env.FRONTEND_URL + '/boards'
