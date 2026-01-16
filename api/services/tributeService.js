@@ -166,14 +166,13 @@ export async function handleNewSubscription(data) {
     try {
       // Получить данные пользователя и тарифа для email
 const userData = await pool.query(
-  `SELECT u.email, u.name, u.telegram_chat_id, sp.name as plan_name,
+  `SELECT u.email, u.full_name, u.telegram_chat_id, sp.name as plan_name,
           sp.price_monthly, sp.price_yearly
    FROM users u
    JOIN subscription_plans sp ON u.plan_id = sp.id
    WHERE u.id = $1`,
   [userId]
 );
-
 
       if (userData.rows.length > 0) {
         const user = userData.rows[0];
@@ -184,7 +183,7 @@ const userData = await pool.query(
         : user.price_monthly;
 
         await sendSubscriptionEmail(user.email, 'new', {
-          userName: user.name || 'Пользователь',
+          userName: user.full_name || 'Пользователь',
           planName: user.plan_name,
           amount: actualAmount,
           currency: currency,
