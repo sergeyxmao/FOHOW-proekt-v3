@@ -165,13 +165,15 @@ export async function handleNewSubscription(data) {
     // Отправка email-уведомления (НЕ блокирует основной процесс)
     try {
       // Получить данные пользователя и тарифа для email
-      const userData = await pool.query(
-        `SELECT u.email, u.name, u.telegram_chat_id, sp.name as plan_name
-         FROM users u
-         JOIN subscription_plans sp ON u.plan_id = sp.id
-         WHERE u.id = $1`,
-        [userId]
-      );
+const userData = await pool.query(
+  `SELECT u.email, u.name, u.telegram_chat_id, sp.name as plan_name,
+          sp.price_monthly, sp.price_yearly
+   FROM users u
+   JOIN subscription_plans sp ON u.plan_id = sp.id
+   WHERE u.id = $1`,
+  [userId]
+);
+
 
       if (userData.rows.length > 0) {
         const user = userData.rows[0];
