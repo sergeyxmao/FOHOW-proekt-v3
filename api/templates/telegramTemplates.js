@@ -274,7 +274,7 @@ function getSubscriptionRenewedMessage(userName, planName, amount, currency, exp
  * @param {string} pricingUrl - URL страницы с тарифами (опционально)
  * @returns {Object} Объект сообщения для Telegram Bot API
  */
-function getSubscriptionCancelledMessage(userName, planName, expiresDate, pricingUrl = 'https://interactive.marketingfohow.ru/pricing') {
+function getSubscriptionCancelledMessage(userName, planName, expiresDate, pricingUrl = 'https://interactive.marketingfohow.ru') {
   const text = `⚠️ *Подписка отменена*
 
 Здравствуйте, *${userName}*!
@@ -285,10 +285,11 @@ function getSubscriptionCancelledMessage(userName, planName, expiresDate, pricin
 *⏰ Доступ сохраняется до:* ${expiresDate}
 
 После этой даты будут доступны только функции гостевого тарифа.
+Все доски сверх лимита гостевого тарифа будут заблокированы на 14 дней. По истечении 14 дней, если вы не подключите один из тарифов, поддерживающих ваши доски, они будут удалены безвозвратно.
 
 ━━━━━━━━━━━━━━━━━━━━
 
-💡 Вы можете продлить подписку в любой момент и снова получить полный доступ ко всем возможностям! 🚀`;
+💡 Вы можете подключить тариф в любой момент и снова получить полный доступ ко всем возможностям! 🚀`;
 
   return {
     text,
@@ -298,7 +299,7 @@ function getSubscriptionCancelledMessage(userName, planName, expiresDate, pricin
       inline_keyboard: [
         [
           {
-            text: '🔄 Продлить подписку',
+            text: '🚀 Подключить тариф',
             url: pricingUrl
           }
         ]
@@ -306,6 +307,7 @@ function getSubscriptionCancelledMessage(userName, planName, expiresDate, pricin
     }
   };
 }
+
 
 /**
  * Уведомление об отключении Telegram-уведомлений
