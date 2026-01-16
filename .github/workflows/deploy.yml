@@ -58,7 +58,7 @@ jobs:
             cd ${{ secrets.PROJECT_PATH }}
             git pull origin main
             cd api
-            npm ci --production
+            npm ci
             cd ..
             systemctl restart fohow-api
             echo "✅ API service restarted!"
