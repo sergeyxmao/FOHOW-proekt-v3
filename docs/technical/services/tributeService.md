@@ -65,14 +65,10 @@
 4. Обновить `users.plan_id` и `subscription_expires_at`
 5. Создать/обновить запись в `tribute_subscriptions`
 6. Создать запись в `subscription_history`
+7. **Получить актуальную стоимость из тарифного плана** (`price_monthly` или `price_yearly` в зависимости от `period`)
+8. Отправить email и Telegram уведомления с **правильной суммой** (из тарифа, а не из webhook)
 
-**Возвращает:**
-```javascript
-{ success: true, userId, planId }
-// или
-{ success: true, pending: true } // если пользователь не найден
-// или
-{ success: false, error: string }
+**Примечание:** Сумма `amount` из webhook **НЕ используется** для отображения в уведомлениях, т.к. Tribute может передавать некорректные значения (0 или годовую цену для месячных подписок). Вместо этого берётся актуальная цена из таблицы `subscription_plans` в зависимости от периода подписки.
 ```
 
 ---
