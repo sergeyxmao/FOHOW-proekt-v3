@@ -2572,7 +2572,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         @image-click="handleImageClick"
         @start-drag="startImageDrag"
         @redraw="handleImageRedraw"
-        @contextmenu="({ event, imageId }) => handleImageContextMenu(event, imageId)"
+        @contextmenu="(payload) => handleImageContextMenu(payload.event, payload.imageId)"
       />
       <!-- Стикеры отсортированные по z-index -->
       <!-- Диапазон z-index для стикеров: 10000+ (всегда на переднем плане) -->

@@ -138,6 +138,22 @@ if (event.button === 1) {
 
 ## История изменений
 
+### 2026-01-16: Исправление контекстного меню для изображений
+
+**Проблема:** При правом клике (ПКМ) на изображении на холсте контекстное меню не появлялось. В консоли браузера появлялась ошибка `Uncaught TypeError: A is not a function`.
+
+**Причина:** В строке 2575 обработчик `@contextmenu` неправильно деструктурировал объект, передаваемый из `CanvasImage.vue`. Компонент `CanvasImage` эмитит объект `{ event, imageId }`, но обработчик пытался деструктурировать его непосредственно в параметрах стрелочной функции: `({ event, imageId }) => handleImageContextMenu(event, imageId)`. Vue emit передает объект как первый параметр целиком, поэтому деструктуризация приводила к тому, что в функцию `handleImageContextMenu` первым параметром попадал весь объект вместо DOM события.
+
+**Решение:**
+- Изменен обработчик с `@contextmenu="({ event, imageId }) => handleImageContextMenu(event, imageId)"` на `@contextmenu="(payload) => handleImageContextMenu(payload.event, payload.imageId)"`
+- Обновлена документация `useCanvasContextMenus.md` с добавлением раздела "Обработка emit событий с объектами", объясняющего правильный способ обработки кастомных emit событий
+
+**Файлы:**
+- `src/components/Canvas/CanvasBoard.vue:2575`
+- `docs/technical/composables/useCanvasContextMenus.md`
+
+**Коммит:** `fix: correct image context menu event handler emit payload`
+
 ### 2026-01-12: Анимация карточек при клике на монетку в лицензии
 
 **Проблема:** При клике на синюю монетку в карточке лицензии анимировались только линии, но не анимировались карточки партнёров (user_card) и лицензии вверх по цепочке.

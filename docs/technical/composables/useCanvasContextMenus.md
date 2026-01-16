@@ -202,7 +202,60 @@ onBeforeUnmount(() => {
   @add-card="handleAddCard"
   @add-sticker="handleAddSticker"
 />
+
+<!-- CanvasImage компонент -->
+<CanvasImage
+  v-for="image in sortedImages"
+  :key="image.id"
+  :image="image"
+  @contextmenu="(payload) => handleImageContextMenu(payload.event, payload.imageId)"
+/>
 ```
+
+## Обработка emit событий с объектами
+
+**ВАЖНО:** При обработке кастомных emit событий, которые передают объект, нужно учитывать, что Vue передает весь объект как первый параметр.
+
+### Неправильно (вызывает ошибку)
+
+```javascript
+// CanvasImage.vue эмитит объект
+emit('contextmenu', { event, imageId: props.image.id })
+
+// CanvasBoard.vue - НЕПРАВИЛЬНАЯ обработка
+@contextmenu="({ event, imageId }) => handleImageContextMenu(event, imageId)"
+// ❌ Деструктуризация происходит неправильно!
+// В handleImageContextMenu первым параметром придет весь объект { event, imageId }
+```
+
+**Ошибка:** `TypeError: A is not a function` - потому что `event` на самом деле содержит объект, а не DOM событие.
+
+### Правильно
+
+```javascript
+// CanvasImage.vue эмитит объект (без изменений)
+emit('contextmenu', { event, imageId: props.image.id })
+
+// CanvasBoard.vue - ПРАВИЛЬНАЯ обработка
+@contextmenu="(payload) => handleImageContextMenu(payload.event, payload.imageId)"
+// ✅ Получаем весь объект как payload, затем извлекаем нужные свойства
+```
+
+### Почему так?
+
+Vue emit всегда передает аргументы в том виде, как они были переданы в `emit()`. Если вы передаете один объект, он приходит как первый параметр целиком. Деструктуризация в параметрах обработчика не работает с Vue emit.
+
+**Альтернативный способ (если можно изменить emit):**
+
+```javascript
+// CanvasImage.vue - передать отдельные параметры
+emit('contextmenu', event, imageId)  // два отдельных параметра
+
+// CanvasBoard.vue - принять отдельные параметры
+@contextmenu="handleImageContextMenu"  // функция получит (event, imageId)
+```
+
+Но в нашем случае мы сохраняем передачу объекта для единообразия с другими компонентами.
 
 ## Пункты меню изображения
 
