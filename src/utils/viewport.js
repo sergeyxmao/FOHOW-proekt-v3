@@ -112,10 +112,10 @@ export function getViewportAnchoredPosition(objectWidth = 0, objectHeight = 0) {
  * Вычисляет смещение для позиционирования шаблона в нижнем левом углу viewport
  *
  * Алгоритм:
- * 1. Находит минимальные координаты (minX, minY) среди всех карточек шаблона
- * 2. Находит максимальные размеры среди всех карточек
- * 3. Получает целевую позицию через getViewportAnchoredPosition
- * 4. Вычисляет смещение dx = targetX - minX, dy = targetY - minY
+ * 1. Находит минимальный X (самая левая карточка) и максимальный Y (самая нижняя карточка)
+ * 2. Находит карточку, которая ближе всего к точке (minX, maxY) - это левая нижняя карточка шаблона
+ * 3. Получает целевую позицию для этой конкретной карточки через getViewportAnchoredPosition
+ * 4. Вычисляет смещение dx = targetX - leftBottomCard.x, dy = targetY - leftBottomCard.y
  *
  * @param {Array} templateCards - Массив карточек шаблона с координатами x, y
  * @returns {{ dx: number, dy: number } | null} Смещение или null если нет карточек
@@ -125,41 +125,55 @@ export function calculateTemplateOffset(templateCards) {
     return null
   }
 
-  // Находим минимальные координаты и максимальные размеры
+  // Находим минимальный X (самая левая) и максимальный Y (самая нижняя)
   let minX = Infinity
-  let minY = Infinity
-  let maxWidth = 0
-  let maxHeight = 0
+  let maxY = -Infinity
 
   templateCards.forEach(card => {
     if (card && Number.isFinite(card.x) && Number.isFinite(card.y)) {
       minX = Math.min(minX, card.x)
-      minY = Math.min(minY, card.y)
-
-      if (Number.isFinite(card.width)) {
-        maxWidth = Math.max(maxWidth, card.width)
-      }
-      if (Number.isFinite(card.height)) {
-        maxHeight = Math.max(maxHeight, card.height)
-      }
+      maxY = Math.max(maxY, card.y)
     }
   })
 
   // Если не нашли валидных координат
-  if (minX === Infinity || minY === Infinity) {
+  if (minX === Infinity || maxY === -Infinity) {
     return null
   }
 
-  // Получаем целевую позицию в viewport (используем максимальные размеры как референс)
-  const targetPosition = getViewportAnchoredPosition(maxWidth, maxHeight)
+  // Находим карточку, которая ближе всего к левому нижнему углу шаблона (minX, maxY)
+  let leftBottomCard = null
+  let minDistance = Infinity
+
+  templateCards.forEach(card => {
+    if (card && Number.isFinite(card.x) && Number.isFinite(card.y)) {
+      // Евклидово расстояние до точки (minX, maxY)
+      const distance = Math.sqrt(
+        Math.pow(card.x - minX, 2) + Math.pow(card.y - maxY, 2)
+      )
+      if (distance < minDistance) {
+        minDistance = distance
+        leftBottomCard = card
+      }
+    }
+  })
+
+  if (!leftBottomCard) {
+    return null
+  }
+
+  // Получаем целевую позицию для левой нижней карточки
+  const cardWidth = leftBottomCard.width || 0
+  const cardHeight = leftBottomCard.height || 0
+  const targetPosition = getViewportAnchoredPosition(cardWidth, cardHeight)
 
   if (!targetPosition) {
     return null
   }
 
-  // Вычисляем смещение
-  const dx = targetPosition.x - minX
-  const dy = targetPosition.y - minY
+  // Вычисляем смещение относительно позиции левой нижней карточки
+  const dx = targetPosition.x - leftBottomCard.x
+  const dy = targetPosition.y - leftBottomCard.y
 
   return { dx, dy }
 }
