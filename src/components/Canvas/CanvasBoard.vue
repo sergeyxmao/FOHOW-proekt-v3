@@ -624,7 +624,7 @@ const {
   screenToCanvas,
   getObjectAtPoint,
   clearObjectSelections,
-  closeUserCardContextMenu
+  closeAvatarContextMenu: closeUserCardContextMenu
 });
 
 
