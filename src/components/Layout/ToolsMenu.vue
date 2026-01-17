@@ -92,7 +92,7 @@ const cancelNewStructure = () => {
     <h3 class="tools-menu__title">{{ t('toolsMenu.title') }}</h3>
     <div class="tools-menu__list">
       <div class="tools-menu__item">
-        <span class="tools-menu__icon" aria-hidden="true">🌳</span>
+        <span class="tools-menu__icon" aria-hidden="true">✏️</span>
         <button
           type="button"
           class="tools-menu__action"
@@ -102,7 +102,7 @@ const cancelNewStructure = () => {
         </button>
       </div>
       <div class="tools-menu__item">
-        <span class="tools-menu__icon" aria-hidden="true">🔗</span>
+        <span class="tools-menu__icon" aria-hidden="true">🌳</span>
         <button
           type="button"
           class="tools-menu__action"
