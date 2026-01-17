@@ -1434,6 +1434,11 @@ const handleStageMouseDown = (event) => {
     return;
   }
 
+  // Если клик по интерактивному объекту (стикер, карточка и т.д.) - не перехватываем событие
+  if (event.target.closest('.sticker, .card, .user-card-object, .note-window, .anchor-point, .control-point, .line')) {
+    return;
+  }
+
   // Проверяем, есть ли изображение под курсором (даже если оно на заднем плане)
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
   const imageUnderCursor = getObjectAtPoint(canvasPos.x, canvasPos.y);
