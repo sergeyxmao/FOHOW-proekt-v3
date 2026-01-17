@@ -199,7 +199,7 @@ export function useCanvasConnections(options) {
     console.log('Deleting connections:', selectedConnectionIds.value)
 
     selectedConnectionIds.value.forEach(connectionId => {
-      connectionsStore.deleteConnection(connectionId)
+      connectionsStore.removeConnection(connectionId)
     })
 
     selectedConnectionIds.value = []
