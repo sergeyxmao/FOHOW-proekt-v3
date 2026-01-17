@@ -7,6 +7,7 @@ import { useViewSettingsStore } from '@/stores/viewSettings'
 import { useMobileStore } from '@/stores/mobile'
 import { useAuthStore } from '@/stores/auth'
 import { checkAndAlertCardLimit } from '@/utils/limitsCheck'
+import { calculateTemplateOffset } from '@/utils/viewport'
  
 const props = defineProps({
   isModernTheme: {
@@ -115,6 +116,11 @@ function insertTemplate(templateData) {
     return
   }
 
+  // Вычисляем смещение для позиционирования шаблона в viewport
+  const offset = calculateTemplateOffset(templateData.cards)
+  const dx = offset?.dx ?? 0
+  const dy = offset?.dy ?? 0
+
   const createdCardsMap = new Map()
   const createdCardIds = []
 
@@ -125,9 +131,19 @@ function insertTemplate(templateData) {
     if (!templateKey) return
 
     const { key: _legacyKey, id: _legacyId, type = 'large', ...cardPayload } = cardDef
+
+    // Применяем смещение к координатам карточки
+    const adjustedPayload = { ...cardPayload }
+    if (Number.isFinite(cardPayload.x)) {
+      adjustedPayload.x = cardPayload.x + dx
+    }
+    if (Number.isFinite(cardPayload.y)) {
+      adjustedPayload.y = cardPayload.y + dy
+    }
+
     const cardData = cardsStore.addCard({
       type,
-      ...cardPayload,
+      ...adjustedPayload,
       headerBg: headerColor.value,
       colorIndex: headerColorIndex.value
     })
