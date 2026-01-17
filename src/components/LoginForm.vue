@@ -25,19 +25,17 @@
       </div>
       <div class="auth-card__group">
         <label for="verification">Проверочный код:</label>
-        <div class="auth-card__verification-row">
-          <input
-            id="verification"
-            v-model="verificationInput"
-            type="text"
-            inputmode="numeric"
-            maxlength="4"
-            required
-            placeholder="Введите код"
-          />
-          <div class="auth-card__verification-code" @click="regenerateVerificationCode">
-            {{ verificationLoading ? '••••' : verificationCode }}
-          </div>
+        <input
+          id="verification"
+          v-model="verificationInput"
+          type="text"
+          inputmode="numeric"
+          maxlength="4"
+          required
+          placeholder="Введите код"
+        />
+        <div class="auth-card__verification-code" @click="regenerateVerificationCode">
+          {{ verificationLoading ? '••••' : verificationCode }}
         </div>
         <button
           type="button"
@@ -287,18 +285,13 @@ input:focus {
   text-decoration: underline;
 }
 
-.auth-card__verification-row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
 .auth-card__verification-code {
-  min-width: 96px;
-  padding: 12px 16px;
+  width: 100%;
+  padding: 16px;
   text-align: center;
+  font-size: 26px;
   font-weight: 700;
-  letter-spacing: 0.4em;
+  letter-spacing: 0.8em;
   background: var(--auth-input-bg);
   border: 1px solid var(--auth-input-border);
   border-radius: 12px;
