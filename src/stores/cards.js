@@ -12,86 +12,11 @@ import {
   normalizeNoteForExport,
   normalizeYMD
 } from '../utils/noteUtils'
+import { getViewportAnchoredPosition } from '../utils/viewport'
+
 const COIN_FULL_COLOR = '#ffd700'
 const COIN_EMPTY_COLOR = '#3d85c6'
-const CANVAS_SAFE_MARGIN = 32
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
-
-function parseCanvasTransform(transformValue) {
-  if (!transformValue || transformValue === 'none') {
-    return { scale: 1, translateX: 0, translateY: 0 }
-  }
-
-  if (typeof DOMMatrixReadOnly === 'function') {
-    try {
-      const matrix = new DOMMatrixReadOnly(transformValue)
-      const scaleX = Number.isFinite(matrix.a) ? matrix.a : 1
-      const scaleY = Number.isFinite(matrix.d) ? matrix.d : 1
-      const translateX = Number.isFinite(matrix.m41) ? matrix.m41 : 0
-      const translateY = Number.isFinite(matrix.m42) ? matrix.m42 : 0
-      const scale = scaleX || scaleY || 1
-
-      return { scale: scale || 1, translateX, translateY }
-    } catch (error) {
-      // Игнорируем и пробуем разобрать строку вручную
-    }
-  }
-
-  const matrixMatch = transformValue.match(/^matrix\(([^)]+)\)$/)
-  if (matrixMatch) {
-    const parts = matrixMatch[1].split(',').map(part => Number(part.trim()))
-    if (parts.length >= 6) {
-      const [a, , , d, e, f] = parts
-      const scale = a || d || 1
-      return {
-        scale: scale || 1,
-        translateX: Number.isFinite(e) ? e : 0,
-        translateY: Number.isFinite(f) ? f : 0
-      }
-    }
-  }
-
-  const translateMatch = transformValue.match(/translate\(\s*([-0-9.]+)px(?:,\s*([-0-9.]+)px)?\s*\)/)
-  const scaleMatch = transformValue.match(/scale\(\s*([-0-9.]+)\s*\)/)
-
-  return {
-    scale: scaleMatch ? Number(scaleMatch[1]) || 1 : 1,
-    translateX: translateMatch ? Number(translateMatch[1]) || 0 : 0,
-    translateY: translateMatch ? Number(translateMatch[2]) || 0 : 0
-  }
-}
-
-function getViewportAnchoredPosition(cardWidth = 0, cardHeight = 0) {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return null
-  }
-
-  const container = document.querySelector('.canvas-container')
-  const content = container?.querySelector('.canvas-content')
-
-  if (!container || !content) {
-    return null
-  }
-
-  const { height } = container.getBoundingClientRect()
-  const transformValue = content.style.transform || window.getComputedStyle(content).transform
-  const { scale, translateX, translateY } = parseCanvasTransform(transformValue)
-
-  const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1
-  const safeTranslateX = Number.isFinite(translateX) ? translateX : 0
-  const safeTranslateY = Number.isFinite(translateY) ? translateY : 0
-
-  const viewportX = CANVAS_SAFE_MARGIN
-  const viewportY = height - CANVAS_SAFE_MARGIN
-
-  const canvasX = (viewportX - safeTranslateX) / safeScale
-  const canvasY = (viewportY - safeTranslateY) / safeScale - cardHeight
-
-  return {
-    x: Math.max(0, Math.round(canvasX)),
-    y: Math.max(0, Math.round(canvasY))
-  }
-}
 const DEFAULT_CALCULATION = Object.freeze({
   L: 0,
   R: 0,
