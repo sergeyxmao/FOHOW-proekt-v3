@@ -86,8 +86,12 @@ export function getViewportAnchoredPosition(objectWidth = 0, objectHeight = 0) {
     return null
   }
 
+  // Принудительный reflow для получения актуальных координат
+  container.getBoundingClientRect()
+
   const { height } = container.getBoundingClientRect()
-  const transformValue = content.style.transform || window.getComputedStyle(content).transform
+  // Всегда используем getComputedStyle для получения актуального transform после pan/zoom
+  const transformValue = window.getComputedStyle(content).transform
   const { scale, translateX, translateY } = parseCanvasTransform(transformValue)
 
   const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1
