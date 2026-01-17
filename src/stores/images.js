@@ -131,7 +131,8 @@ export const useImagesStore = defineStore('images', {
         type: 'image',
         imageId: imageData.imageId, // ID из библиотеки
         dataUrl: resolvedDataUrl || imageData.previewDataUrl || imageData.preview_url || imageData.thumbnail || '', // Blob URL для отображения
-        previewDataUrl: imageData.previewDataUrl || imageData.preview_url || imageData.thumbnail || null,        x: imageData.x,
+        previewDataUrl: imageData.previewDataUrl || imageData.preview_url || imageData.thumbnail || null,
+        x: imageData.x,
         y: imageData.y,
         width: displaySize.width,
         height: displaySize.height,
@@ -480,7 +481,7 @@ export const useImagesStore = defineStore('images', {
           type: 'image',
           imageId: imageId, // Сохраняем imageId из библиотеки
           dataUrl: dataUrl,
-           previewDataUrl: imageData.previewDataUrl || imageData.preview_url || imageData.thumbnail || null,         
+          previewDataUrl: imageData.previewDataUrl || imageData.preview_url || imageData.thumbnail || null,
           x: Number.isFinite(imageData.x) ? imageData.x : 0,
           y: Number.isFinite(imageData.y) ? imageData.y : 0,
           width: Number.isFinite(imageData.width) ? imageData.width : 100,
@@ -515,9 +516,9 @@ export const useImagesStore = defineStore('images', {
         // Если есть imageId, не сохраняем blob URL и прямые ссылки (они временные)
         if (image.imageId) {
           delete exportData.dataUrl // Удаляем blob URL, будет получен заново при загрузке
-           delete exportData.originalUrl
+          delete exportData.originalUrl
           delete exportData.public_url
-          delete exportData.preview_url         
+          delete exportData.preview_url
         }
 
         return exportData
