@@ -1,5 +1,6 @@
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import boardLockService from '../services/boardLockService.js';
 
 /**
  * Регистрация маршрутов для работы с промокодами
@@ -152,19 +153,35 @@ export function registerPromoRoutes(app) {
           [promo.target_plan_id, newExpiration, userId]
         );
 
-    // Записываем в историю подписок
-    await client.query(
-      `INSERT INTO subscription_history
-       (user_id, plan_id, start_date, end_date, source, promo_code_id)
-       VALUES ($1, $2, $3, $4, 'промокод', $5)`,
-      [
-        userId,
-        promo.target_plan_id, // Записываем ID нового плана, на который перешли
-        user.subscription_expires_at || new Date(), // Когда началась "новая" подписка
-        newExpiration, // Когда она закончится
-        promo.id // ID использованного промокода
-      ]
-    );
+        // Увеличиваем счетчик использований промокода
+        await client.query(
+          `UPDATE promo_codes
+           SET current_uses = current_uses + 1,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1`,
+          [promo.id]
+        );
+
+        // Записываем использование промокода пользователем
+        await client.query(
+          `INSERT INTO promo_code_usages (promo_code_id, user_id)
+           VALUES ($1, $2)`,
+          [promo.id, userId]
+        );
+
+        // Записываем в историю подписок
+        await client.query(
+          `INSERT INTO subscription_history
+           (user_id, plan_id, start_date, end_date, source, promo_code_id)
+           VALUES ($1, $2, $3, $4, 'промокод', $5)`,
+          [
+            userId,
+            promo.target_plan_id, // ID нового плана
+            user.subscription_expires_at || new Date(), // Дата начала - старая дата окончания или сейчас
+            newExpiration, // Новая дата окончания
+            promo.id // ID использованного промокода
+          ]
+        );
 
         // Получаем информацию о новом тарифном плане
         const planResult = await client.query(
@@ -176,24 +193,23 @@ export function registerPromoRoutes(app) {
 
         const newPlan = planResult.rows[0];
 
-  // Записываем в историю подписок
-    await client.query(
-      `INSERT INTO subscription_history
-       (user_id, plan_id, start_date, end_date, source, promo_code_id)
-       VALUES ($1, $2, $3, $4, 'промокод', $5)`,
-      [
-        userId,
-        promo.target_plan_id, // ID нового плана
-        user.subscription_expires_at || new Date(), // Дата начала - старая дата окончания или сейчас
-        newExpiration, // Новая дата окончания
-        promo.id // ID использованного промокода
-      ]
-    );
-
         // ============================================
         // ЗАВЕРШЕНИЕ ТРАНЗАКЦИИ
         // ============================================
         await client.query('COMMIT');
+
+        // ============================================
+        // ОБНОВЛЕНИЕ БЛОКИРОВОК ДОСОК (BoardLockService)
+        // ============================================
+        // Пересчитываем блокировки после смены тарифа
+        // Делаем это после COMMIT, чтобы не задерживать ответ, но до send
+        try {
+          const boardsStatus = await boardLockService.recalcUserBoardLocks(userId);
+          console.log(`[PROMO] Блокировки обновлены для user_id=${userId}: unlocked=${boardsStatus.unlocked}, softLocked=${boardsStatus.softLocked}`);
+        } catch (lockError) {
+          console.error('[PROMO] Ошибка при пересчете блокировок досок:', lockError);
+          // Не прерываем выполнение, так как промокод уже применен
+        }
 
         // Возвращаем успешный ответ
         return reply.code(200).send({
