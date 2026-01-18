@@ -21,6 +21,7 @@ import {
   deleteFile
 } from '../services/yandexDiskService.js';
 import { getBoardPreviewUrl } from '../utils/boardPreviewUtils.js';
+import boardLockService from '../services/boardLockService.js';
 
 /**
  * Вычислить информацию о блокировке доски (days until block/delete)
@@ -176,6 +177,14 @@ export function registerBoardRoutes(app) {
         ]
       );
 
+      // Пересчитываем блокировки после создания (новая доска может быть "тяжелой" или сместить другие)
+      try {
+        await boardLockService.recalcUserBoardLocks(req.user.id);
+      } catch (calcError) {
+        console.error('⚠️ Ошибка пересчета блокировок при создании доски:', calcError);
+        // Не блокируем ответ
+      }
+
       return reply.send({ board: result.rows[0] });
     } catch (err) {
       console.error('❌ Ошибка создания доски:', err);
@@ -258,6 +267,15 @@ export function registerBoardRoutes(app) {
         return reply.code(404).send({ error: 'Доска не найдена' });
       }
 
+      // Пересчет блокировок (если изменилось кол-во объектов, доска может стать "тяжелой")
+      if (!isAdmin) {
+          try {
+            await boardLockService.recalcUserBoardLocks(userId);
+          } catch (calcError) {
+            console.error('⚠️ Ошибка пересчета блокировок при обновлении доски:', calcError);
+          }
+      }
+
       return reply.send({ board: result.rows[0] });
     } catch (err) {
       console.error('❌ Ошибка обновления доски:', err);
@@ -328,6 +346,15 @@ export function registerBoardRoutes(app) {
         return reply.code(404).send({ error: 'Доска не найдена' });
       }
 
+      // Пересчет блокировок (освободилось место или объектный лимит)
+      if (!isAdmin) {
+        try {
+            await boardLockService.recalcUserBoardLocks(req.user.id);
+        } catch (calcError) {
+            console.error('⚠️ Ошибка пересчета блокировок при удалении доски:', calcError);
+        }
+      }
+
       return reply.send({ success: true });
     } catch (err) {
       console.error('❌ Ошибка удаления доски:', err);
@@ -383,6 +410,13 @@ export function registerBoardRoutes(app) {
           board.object_count
         ]
       );
+
+      // Пересчет блокировок (новая доска может превысить лимит)
+      try {
+        await boardLockService.recalcUserBoardLocks(req.user.id);
+      } catch (calcError) {
+        console.error('⚠️ Ошибка пересчета блокировок при дублировании доски:', calcError);
+      }
 
       return reply.send({ board: result.rows[0] });
     } catch (err) {
