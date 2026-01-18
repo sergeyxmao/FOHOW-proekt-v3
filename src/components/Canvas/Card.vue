@@ -1,11 +1,14 @@
 <script setup>
-import { ref, nextTick, computed, watch } from 'vue';
+import { ref, nextTick, computed, watch, inject } from 'vue';
 import { useCardsStore } from '../../stores/cards';
 import { useViewSettingsStore } from '../../stores/viewSettings';
 import { useNotesStore } from '../../stores/notes';
 import { parseActivePV } from '../../utils/activePv';
 import { calcStagesAndCycles } from '../../utils/calculationEngine';
 import { buildCardCssVariables } from '../../utils/constants';
+
+// Inject isReadOnly from parent (CanvasBoard)
+const isReadOnly = inject('isReadOnly', ref(false));
 
 const props = defineProps({
   card: {
@@ -163,6 +166,9 @@ const handleAddNoteClick = (event) => {
 };
 
 const startEditing = () => {
+  // Запрещаем редактирование в readonly режиме
+  if (isReadOnly.value) return;
+
   isEditing.value = true;
   editText.value = props.card.text;
   nextTick(() => {
@@ -176,6 +182,8 @@ const startEditing = () => {
 const handleTitleDblClick = (event) => {
   event.stopPropagation();
   event.preventDefault();
+  // Запрещаем редактирование в readonly режиме
+  if (isReadOnly.value) return;
   if (!isEditing.value) {
     startEditing();
   }
@@ -407,6 +415,8 @@ const handleDelete = async (event) => {
 const startEditingPv = (event) => {
   event.stopPropagation();
   event.preventDefault();
+  // Запрещаем редактирование в readonly режиме
+  if (isReadOnly.value) return;
   if (!isEditingPv.value) {
     isEditingPv.value = true;
     editPvLeft.value = pvLeftValue.value;

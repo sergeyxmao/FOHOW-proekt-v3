@@ -23,24 +23,28 @@ import {
 import { getBoardPreviewUrl } from '../utils/boardPreviewUtils.js';
 
 /**
- * Получить информацию о блокировке доски
- * @param {number} userId - ID пользователя
- * @returns {Promise<{daysLeft: number}|null>} Информация о блокировке
+ * Вычислить информацию о блокировке доски (days until block/delete)
+ * @param {string} lockStatus - Статус блокировки ('active', 'soft_lock', 'hard_lock')
+ * @param {Date|string|null} lockTimerStartedAt - Дата начала таймера
+ * @returns {{daysUntilBlock: number|null, daysUntilDelete: number|null}}
  */
-async function getBoardLockInfo(userId) {
-  const userResult = await pool.query(
-    'SELECT boards_locked_at FROM users WHERE id = $1',
-    [userId]
-  );
+function calculateBoardLockDays(lockStatus, lockTimerStartedAt) {
+  let daysUntilBlock = null;
+  let daysUntilDelete = null;
 
-  if (userResult.rows.length > 0 && userResult.rows[0].boards_locked_at) {
-    const lockedAt = new Date(userResult.rows[0].boards_locked_at);
+  if (lockTimerStartedAt) {
+    const timerStart = new Date(lockTimerStartedAt);
     const now = new Date();
-    const daysPassed = Math.floor((now - lockedAt) / (1000 * 60 * 60 * 24));
-    const daysLeft = Math.max(0, 14 - daysPassed);
-    return { daysLeft };
+    const daysPassed = Math.floor((now - timerStart) / (1000 * 60 * 60 * 24));
+
+    if (lockStatus === 'soft_lock') {
+      daysUntilBlock = Math.max(0, 14 - daysPassed);
+    } else if (lockStatus === 'hard_lock') {
+      daysUntilDelete = Math.max(0, 14 - daysPassed);
+    }
   }
-  return null;
+
+  return { daysUntilBlock, daysUntilDelete };
 }
 
 /**
@@ -64,6 +68,8 @@ export function registerBoardRoutes(app) {
           b.created_at,
           b.updated_at,
           b.object_count,
+          b.lock_status,
+          b.lock_timer_started_at,
           COALESCE(
             json_agg(
               json_build_object('id', bf.id, 'name', bf.name)
@@ -79,11 +85,17 @@ export function registerBoardRoutes(app) {
         [req.user.id]
       );
 
-      // Преобразовать thumbnail_url в proxy URL
-      const boards = result.rows.map(board => ({
-        ...board,
-        thumbnail_url: getBoardPreviewUrl(board.id, board.thumbnail_url)
-      }));
+      // Преобразовать thumbnail_url в proxy URL и добавить информацию о блокировках
+      const boards = result.rows.map(board => {
+        const lockDays = calculateBoardLockDays(board.lock_status, board.lock_timer_started_at);
+        return {
+          ...board,
+          thumbnail_url: getBoardPreviewUrl(board.id, board.thumbnail_url),
+          lock_status: board.lock_status || 'active',
+          daysUntilBlock: lockDays.daysUntilBlock,
+          daysUntilDelete: lockDays.daysUntilDelete
+        };
+      });
 
       return reply.send({ boards });
     } catch (err) {
@@ -112,15 +124,18 @@ export function registerBoardRoutes(app) {
       }
 
       const board = result.rows[0];
+      const lockStatus = board.lock_status || 'active';
+      const lockDays = calculateBoardLockDays(lockStatus, board.lock_timer_started_at);
 
       // Проверяем блокировку (только для не-администраторов)
-      if (!isAdmin && board.is_locked) {
-        const lockInfo = await getBoardLockInfo(req.user.id);
-        if (lockInfo) {
+      if (!isAdmin) {
+        // Hard Lock - доска полностью недоступна
+        if (lockStatus === 'hard_lock') {
           return reply.code(403).send({
             error: 'Доска заблокирована',
-            message: `Эта доска заблокирована. Если в течение ${lockInfo.daysLeft} дней не произойдёт продление тарифа минимум на «Индивидуальный», доска будет автоматически удалена.`,
-            daysLeft: lockInfo.daysLeft,
+            message: `Эта доска заблокирована. Если в течение ${lockDays.daysUntilDelete || 0} дней не произойдёт продление тарифа, доска будет автоматически удалена.`,
+            daysUntilDelete: lockDays.daysUntilDelete,
+            lockStatus: 'hard_lock',
             locked: true
           });
         }
@@ -128,6 +143,12 @@ export function registerBoardRoutes(app) {
 
       // Преобразовать thumbnail_url в proxy URL
       board.thumbnail_url = getBoardPreviewUrl(board.id, board.thumbnail_url);
+
+      // Добавляем информацию о блокировке и readOnly флаг
+      board.lock_status = lockStatus;
+      board.daysUntilBlock = lockDays.daysUntilBlock;
+      board.daysUntilDelete = lockDays.daysUntilDelete;
+      board.readOnly = !isAdmin && lockStatus === 'soft_lock';
 
       return reply.send({ board });
     } catch (err) {
@@ -175,7 +196,7 @@ export function registerBoardRoutes(app) {
       // Проверяем блокировку (только для не-администраторов)
       if (!isAdmin) {
         const boardCheck = await pool.query(
-          'SELECT is_locked FROM boards WHERE id = $1 AND owner_id = $2',
+          'SELECT lock_status, lock_timer_started_at FROM boards WHERE id = $1 AND owner_id = $2',
           [id, userId]
         );
 
@@ -183,16 +204,23 @@ export function registerBoardRoutes(app) {
           return reply.code(404).send({ error: 'Доска не найдена' });
         }
 
-        if (boardCheck.rows[0].is_locked) {
-          const lockInfo = await getBoardLockInfo(userId);
-          if (lockInfo) {
-            return reply.code(403).send({
-              error: 'Доска заблокирована',
-              message: `Эта доска заблокирована. Если в течение ${lockInfo.daysLeft} дней не произойдёт продление тарифа минимум на «Индивидуальный», доска будет автоматически удалена.`,
-              daysLeft: lockInfo.daysLeft,
-              locked: true
-            });
-          }
+        const lockStatus = boardCheck.rows[0].lock_status || 'active';
+
+        // Soft Lock или Hard Lock - редактирование запрещено
+        if (lockStatus === 'soft_lock' || lockStatus === 'hard_lock') {
+          const lockDays = calculateBoardLockDays(lockStatus, boardCheck.rows[0].lock_timer_started_at);
+          const daysInfo = lockStatus === 'soft_lock' ? lockDays.daysUntilBlock : lockDays.daysUntilDelete;
+
+          return reply.code(403).send({
+            error: 'Редактирование запрещено',
+            message: lockStatus === 'soft_lock'
+              ? `Эта доска в режиме только для чтения. До полной блокировки осталось ${daysInfo || 0} дней. Продлите подписку для сохранения доступа.`
+              : `Эта доска заблокирована. До удаления осталось ${daysInfo || 0} дней. Продлите подписку для сохранения.`,
+            lockStatus,
+            daysUntilBlock: lockDays.daysUntilBlock,
+            daysUntilDelete: lockDays.daysUntilDelete,
+            locked: true
+          });
         }
       }
 
@@ -238,6 +266,8 @@ export function registerBoardRoutes(app) {
   });
 
   // === УДАЛИТЬ ДОСКУ ===
+  // ВАЖНО: Удаление разрешено даже для заблокированных досок,
+  // чтобы пользователь мог освободить место и разблокировать другие доски
   app.delete('/api/boards/:id', {
     preHandler: [authenticateToken]
   }, async (req, reply) => {
@@ -245,28 +275,17 @@ export function registerBoardRoutes(app) {
       const { id } = req.params;
       const isAdmin = req.user.role === 'admin';
 
-      // Проверяем блокировку (только для не-администраторов)
+      // Проверяем, что доска существует и принадлежит пользователю
       if (!isAdmin) {
         const boardCheck = await pool.query(
-          'SELECT is_locked FROM boards WHERE id = $1 AND owner_id = $2',
+          'SELECT id FROM boards WHERE id = $1 AND owner_id = $2',
           [id, req.user.id]
         );
 
         if (boardCheck.rows.length === 0) {
           return reply.code(404).send({ error: 'Доска не найдена' });
         }
-
-        if (boardCheck.rows[0].is_locked) {
-          const lockInfo = await getBoardLockInfo(req.user.id);
-          if (lockInfo) {
-            return reply.code(403).send({
-              error: 'Доска заблокирована',
-              message: `Эта доска заблокирована. Если в течение ${lockInfo.daysLeft} дней не произойдёт продление тарифа минимум на «Индивидуальный», доска будет автоматически удалена.`,
-              daysLeft: lockInfo.daysLeft,
-              locked: true
-            });
-          }
-        }
+        // Удаление разрешено для всех статусов блокировки
       }
 
     // Получить thumbnail_url перед удалением доски
@@ -336,18 +355,20 @@ export function registerBoardRoutes(app) {
       }
 
       const board = original.rows[0];
+      const lockStatus = board.lock_status || 'active';
 
       // Проверяем блокировку (только для не-администраторов)
-      if (!isAdmin && board.is_locked) {
-        const lockInfo = await getBoardLockInfo(req.user.id);
-        if (lockInfo) {
-          return reply.code(403).send({
-            error: 'Доска заблокирована',
-            message: `Эта доска заблокирована. Если в течение ${lockInfo.daysLeft} дней не произойдёт продление тарифа минимум на «Индивидуальный», доска будет автоматически удалена.`,
-            daysLeft: lockInfo.daysLeft,
-            locked: true
-          });
-        }
+      // Дублирование запрещено для soft_lock и hard_lock
+      if (!isAdmin && (lockStatus === 'soft_lock' || lockStatus === 'hard_lock')) {
+        const lockDays = calculateBoardLockDays(lockStatus, board.lock_timer_started_at);
+        return reply.code(403).send({
+          error: 'Дублирование запрещено',
+          message: 'Эта доска заблокирована. Дублирование недоступно. Продлите подписку для полного доступа.',
+          lockStatus,
+          daysUntilBlock: lockDays.daysUntilBlock,
+          daysUntilDelete: lockDays.daysUntilDelete,
+          locked: true
+        });
       }
 
       const result = await pool.query(
@@ -397,7 +418,7 @@ export function registerBoardRoutes(app) {
       }
 
       const boardResult = await pool.query(
-        'SELECT owner_id, is_locked FROM boards WHERE id = $1',
+        'SELECT owner_id, lock_status FROM boards WHERE id = $1',
         [boardId]
       );
 
@@ -410,17 +431,15 @@ export function registerBoardRoutes(app) {
         return reply.code(403).send({ error: 'Нет доступа' });
       }
 
-      // Проверяем блокировку
-      if (!isAdmin && boardResult.rows[0].is_locked) {
-        const lockInfo = await getBoardLockInfo(req.user.id);
-        if (lockInfo) {
-          return reply.code(403).send({
-            error: 'Доска заблокирована',
-            message: `Эта доска заблокирована. Если в течение ${lockInfo.daysLeft} дней не произойдёт продление тарифа минимум на «Индивидуальный», доска будет автоматически удалена.`,
-            daysLeft: lockInfo.daysLeft,
-            locked: true
-          });
-        }
+      // Проверяем блокировку - загрузка превью запрещена для заблокированных досок
+      const lockStatus = boardResult.rows[0].lock_status || 'active';
+      if (!isAdmin && (lockStatus === 'soft_lock' || lockStatus === 'hard_lock')) {
+        return reply.code(403).send({
+          error: 'Загрузка превью запрещена',
+          message: 'Эта доска заблокирована. Редактирование недоступно.',
+          lockStatus,
+          locked: true
+        });
       }
 
       // Получить personal_id пользователя-владельца доски

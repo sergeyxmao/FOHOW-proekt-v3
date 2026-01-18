@@ -8,11 +8,14 @@ export const useBoardStore = defineStore('board', () => {
   const lastSaved = ref(null)
   const isSaving = ref(false)
   const hasUnsavedChanges = ref(false)
+  const isReadOnly = ref(false) // Флаг readonly режима (для soft_lock досок)
+  const lockStatus = ref('active') // 'active' | 'soft_lock' | 'hard_lock'
+  const daysUntilBlock = ref(null) // Дней до полной блокировки (для soft_lock)
   const anchors = ref([])
   const selectedAnchorId = ref(null)
   const pendingFocusAnchorId = ref(null)
   const pendingEditAnchorId = ref(null)
-  const animatingAnchorId = ref(null)  
+  const animatingAnchorId = ref(null)
   const placementMode = ref(null) // 'anchor' | null
   const isNavigating = ref(false) // Флаг для предотвращения конфликтов при программной навигации
   const targetViewPoint = ref(null) // { x, y, timestamp } - целевая точка для центрирования
@@ -21,11 +24,15 @@ export const useBoardStore = defineStore('board', () => {
   
   let anchorAnimationTimeout = null
   
-  function setCurrentBoard(id, name) {
+  function setCurrentBoard(id, name, options = {}) {
     currentBoardId.value = id
     currentBoardName.value = name || 'Без названия'
     hasUnsavedChanges.value = false
     lastSaved.value = new Date()
+    // Устанавливаем статус блокировки и readonly режим
+    isReadOnly.value = options.readOnly || false
+    lockStatus.value = options.lockStatus || 'active'
+    daysUntilBlock.value = options.daysUntilBlock ?? null
   }
 
   function clearCurrentBoard() {
@@ -33,6 +40,9 @@ export const useBoardStore = defineStore('board', () => {
     currentBoardName.value = 'Без названия'
     hasUnsavedChanges.value = false
     lastSaved.value = null
+    isReadOnly.value = false
+    lockStatus.value = 'active'
+    daysUntilBlock.value = null
     anchors.value = []
     selectedAnchorId.value = null
     pendingFocusAnchorId.value = null
@@ -215,12 +225,15 @@ export const useBoardStore = defineStore('board', () => {
     lastSaved,
     isSaving,
     hasUnsavedChanges,
+    isReadOnly,
+    lockStatus,
+    daysUntilBlock,
     isCurrentBoard,
     anchors,
     selectedAnchorId,
     pendingFocusAnchorId,
     pendingEditAnchorId,
-    animatingAnchorId,    
+    animatingAnchorId,
     placementMode,
     isNavigating,
     targetViewPoint,
@@ -236,7 +249,7 @@ export const useBoardStore = defineStore('board', () => {
     selectAnchor,
     focusAnchor,
     startAnchorAnimation,
-    stopAnchorAnimation,    
+    stopAnchorAnimation,
     requestAnchorEdit,
     clearPendingAnchorEdit,
     setPlacementMode,
