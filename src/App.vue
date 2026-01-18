@@ -442,7 +442,7 @@ async function openBoard(boardId) {
 async function loadBoard(boardId) {
   try {
     boardStore.isSaving = true
-    
+
     const response = await fetch(`${API_URL}/boards/${boardId}`, {
       headers: {
         'Authorization': `Bearer ${authStore.token}`
@@ -450,13 +450,39 @@ async function loadBoard(boardId) {
     })
 
     if (!response.ok) {
+      // Обработка блокировки доски (hard_lock)
+      if (response.status === 403) {
+        try {
+          const errorData = await response.json()
+          if (errorData.lockStatus === 'hard_lock' || errorData.locked) {
+            alert(errorData.message || 'Эта доска заблокирована.')
+            boardStore.isSaving = false
+            return
+          }
+        } catch (parseError) {
+          // Если не удалось распарсить JSON, показываем общую ошибку
+        }
+      }
       throw new Error('Ошибка загрузки структуры')
     }
 
     const data = await response.json()
-    
-    // Устанавливаем текущую доску
-    boardStore.setCurrentBoard(data.board.id, data.board.name)
+
+    // Устанавливаем текущую доску с информацией о блокировке
+    boardStore.setCurrentBoard(data.board.id, data.board.name, {
+      readOnly: data.board.readOnly || false,
+      lockStatus: data.board.lock_status || 'active',
+      daysUntilBlock: data.board.daysUntilBlock
+    })
+
+    // Показываем предупреждение для soft_lock досок
+    if (data.board.lock_status === 'soft_lock') {
+      notificationsStore.addNotification({
+        type: 'warning',
+        message: `⏱️ Режим только для чтения. Доска будет заблокирована через ${data.board.daysUntilBlock || 0} дней.`,
+        duration: 6000
+      })
+    }
 
     const content = data.board.content || {}
 

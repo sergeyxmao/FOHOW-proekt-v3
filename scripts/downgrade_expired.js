@@ -43,6 +43,7 @@ if (!process.env.DB_HOST || !process.env.DB_NAME) {
 }
 
 import { pool } from '../api/db.js';
+import { recalcUserBoardLocks } from '../api/services/boardLockService.js';
 
 /**
  * Основная функция скрипта
@@ -123,9 +124,7 @@ async function downgradeExpiredUsers() {
         plan_id = $1,
         subscription_expires_at = NULL,
         subscription_started_at = NOW(),
-        grace_period_until = NULL,
-        boards_locked = FALSE,
-        boards_locked_at = NULL
+        grace_period_until = NULL
       WHERE plan_id != $1
         AND subscription_expires_at < NOW()
         AND (grace_period_until IS NULL OR grace_period_until < NOW())
@@ -136,15 +135,34 @@ async function downgradeExpiredUsers() {
 
     console.log(`✅ Обновлено записей: ${updatedCount}`);
 
+    // 5. Пересчитываем блокировки досок для каждого пользователя
+    console.log('\n🔒 Пересчёт блокировок досок...');
+    let lockStatsTotal = { unlocked: 0, softLocked: 0 };
+
+    for (const user of usersToDowngrade.rows) {
+      try {
+        const lockStats = await recalcUserBoardLocks(user.id);
+        lockStatsTotal.unlocked += lockStats.unlocked;
+        lockStatsTotal.softLocked += lockStats.softLocked;
+        console.log(`  ✅ ${user.email}: ${lockStats.softLocked} досок → soft_lock`);
+      } catch (lockError) {
+        console.error(`  ❌ Ошибка пересчёта блокировок для ${user.email}:`, lockError.message);
+      }
+    }
+
+    console.log(`\n📊 Блокировки: ${lockStatsTotal.softLocked} досок в soft_lock, ${lockStatsTotal.unlocked} разблокировано`);
+
     // Подтверждаем транзакцию
     await client.query('COMMIT');
 
-    // 5. Финальный отчет
+    // 6. Финальный отчет
     console.log('\n========================================');
     console.log('📊 ИТОГИ ВЫПОЛНЕНИЯ:');
     console.log(`   Найдено пользователей: ${userCount}`);
     console.log(`   Обновлено записей: ${updatedCount}`);
     console.log(`   Новый тариф: ${guestPlan.name} (ID: ${guestPlan.id})`);
+    console.log(`   Досок в soft_lock: ${lockStatsTotal.softLocked}`);
+    console.log(`   Досок разблокировано: ${lockStatsTotal.unlocked}`);
     console.log(`   Время завершения: ${new Date().toISOString()}`);
     console.log('========================================\n');
 

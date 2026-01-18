@@ -8,14 +8,16 @@
  * 3. Очистка старых сессий (каждый час)
  * 4. Закрытие демо-периодов (ежедневно 02:00)
  * 5. Автоматическая смена тарифа с Демо на Гостевой (ежедневно 02:30)
- * 6. Удаление заблокированных досок через 14 дней (ежедневно 03:00)
+ * 6. Удаление заблокированных досок через 14 дней (ежедневно 03:00) [DEPRECATED - replaced by task 8]
  * 7. Очистка устаревших кодов подтверждения email (каждый час)
+ * 8. Обработка Soft/Hard Lock досок (ежедневно 03:30)
  */
 
 import cron from 'node-cron';
 import { pool } from '../db.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 import { getSubscriptionExpiringMessage, getSubscriptionExpiredMessage } from '../templates/telegramTemplates.js';
+import { processDailyLocks } from '../services/boardLockService.js';
 
 // ============================================
 // Вспомогательные функции для логирования
@@ -767,6 +769,26 @@ export function initializeCronTasks() {
   });
   console.log('✅ Задача 7: Очистка устаревших кодов подтверждения email (каждый час)');
 
+  // 8. Обработка Soft/Hard Lock досок - каждый день в 03:30
+  // soft_lock > 14 дней → hard_lock, hard_lock > 14 дней → удаление
+  cron.schedule('30 3 * * *', async () => {
+    console.log('\n🔒 Крон-задача: Обработка Soft/Hard Lock досок');
+    try {
+      const result = await processDailyLocks();
+      await logToSystem('info', 'process_daily_locks_completed', {
+        toHardLock: result.toHardLock,
+        deleted: result.deleted,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ Ошибка обработки блокировок досок:', error);
+      await logToSystem('error', 'process_daily_locks_failed', { error: error.message });
+    }
+  }, {
+    timezone: 'Europe/Moscow'
+  });
+  console.log('✅ Задача 8: Обработка Soft/Hard Lock досок (ежедневно 03:30 МСК)');
+
   console.log('\n✅ Все крон-задачи успешно инициализированы!\n');
 }
 
@@ -779,5 +801,6 @@ export {
   closeDemoPeriods,
   switchDemoToGuest,
   deleteLockedBoardsAfter14Days,
-  cleanupExpiredVerificationCodes
+  cleanupExpiredVerificationCodes,
+  processDailyLocks
 };

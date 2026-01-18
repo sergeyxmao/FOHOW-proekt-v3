@@ -1,6 +1,9 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, inject } from 'vue';
 import { useStickersStore } from '../../stores/stickers';
+
+// Inject isReadOnly from parent (CanvasBoard)
+const isReadOnly = inject('isReadOnly', ref(false));
 
 const props = defineProps({
   sticker: {
@@ -44,6 +47,8 @@ const isSelected = computed(() => props.sticker.selected === true);
 
 // Редактирование
 const handleDoubleClick = () => {
+  // Запрещаем редактирование в readonly режиме
+  if (isReadOnly.value) return;
   if (isDragging.value) return;
   isEditing.value = true;
   editableContent.value = props.sticker.content || '';

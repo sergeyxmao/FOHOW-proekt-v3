@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick, provide } from 'vue';
 import html2canvas from 'html2canvas';
 import { storeToRefs } from 'pinia';
 import { useDebounceFn, useThrottleFn } from '@vueuse/core';
@@ -83,8 +83,11 @@ const viewSettingsStore = useViewSettingsStore();
 const { cards } = storeToRefs(cardsStore);
 const { connections, userCardConnections } = storeToRefs(connectionsStore);
 const { images } = storeToRefs(imagesStore);
-const { selectedAnchorId, pendingFocusAnchorId, placementMode, targetViewPoint } = storeToRefs(boardStore);
+const { selectedAnchorId, pendingFocusAnchorId, placementMode, targetViewPoint, isReadOnly } = storeToRefs(boardStore);
 const { anchors } = storeToRefs(anchorsStore);
+
+// Provide isReadOnly для дочерних компонентов (карточки, стикеры и т.д.)
+provide('isReadOnly', isReadOnly);
   
 const {
   backgroundColor,
