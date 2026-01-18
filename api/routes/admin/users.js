@@ -2,6 +2,7 @@ import { pool } from '../../db.js';
 import { authenticateToken } from '../../middleware/auth.js';
 import { requireAdmin } from '../../middleware/requireAdmin.js';
 import { getAvatarUrl } from '../../utils/avatarUtils.js';
+import boardLockService from '../../services/boardLockService.js';
 
 /**
  * Регистрация маршрутов управления пользователями
@@ -267,42 +268,6 @@ export function registerAdminUsersRoutes(app) {
           return reply.code(404).send({ error: 'Пользователь не найден' });
         }
 
-        // ============================================
-        // РАЗБЛОКИРОВКА ДОСОК ПРИ ПРОДЛЕНИИ ТАРИФА
-        // ============================================
-        // Проверяем, были ли доски заблокированы, и разблокируем их
-        const userCheck = await client.query(
-          'SELECT boards_locked FROM users WHERE id = $1',
-          [userId]
-        );
-
-        let unlockedBoardsCount = 0;
-
-        if (userCheck.rows.length > 0 && userCheck.rows[0].boards_locked) {
-          console.log(`[ADMIN] Обнаружены заблокированные доски для пользователя ID=${userId}, разблокировка...`);
-
-          // Разблокируем доски на уровне пользователя
-          await client.query(
-            `UPDATE users
-             SET boards_locked = FALSE,
-                 boards_locked_at = NULL
-             WHERE id = $1`,
-            [userId]
-          );
-
-          // Разблокируем все доски пользователя
-          const unlockedBoardsResult = await client.query(
-            `UPDATE boards
-             SET is_locked = FALSE
-             WHERE owner_id = $1`,
-            [userId]
-          );
-
-          unlockedBoardsCount = unlockedBoardsResult.rowCount;
-
-          console.log(`[ADMIN] ✅ Разблокировано досок для пользователя ID=${userId}: ${unlockedBoardsCount}`);
-        }
-
         // Создаем запись в истории подписок
         await client.query(
           `INSERT INTO subscription_history
@@ -316,7 +281,18 @@ export function registerAdminUsersRoutes(app) {
         const durationInfo = plan.code_name === 'guest' ? 'бесрочно' : `${duration} дней`;
         console.log(`[ADMIN] Тарифный план изменен: user_id=${userId}, plan=${plan.name}, duration=${durationInfo}, admin_id=${req.user.id}`);
 
-        // Формируем ответ с информацией о разблокировке
+        // ============================================
+        // ОБНОВЛЕНИЕ БЛОКИРОВОК ДОСОК (BoardLockService)
+        // ============================================
+        let boardsStatus = { unlocked: 0, softLocked: 0 };
+        try {
+          boardsStatus = await boardLockService.recalcUserBoardLocks(userId);
+          console.log(`[ADMIN] Блокировки обновлены: unlocked=${boardsStatus.unlocked}, softLocked=${boardsStatus.softLocked}`);
+        } catch (lockError) {
+          console.error('[ADMIN] Ошибка при пересчете блокировок досок:', lockError);
+        }
+
+        // Формируем ответ
         const response = {
           success: true,
           message: `Тарифный план изменен на "${plan.name}"`,
@@ -331,16 +307,9 @@ export function registerAdminUsersRoutes(app) {
             endDate: endDate || null,
             duration: plan.code_name === 'guest' ? 'unlimited' : duration,
             isPermanent: plan.code_name === 'guest'
-          }
+          },
+          boardsStatus
         };
-
-        // Добавляем информацию о разблокировке досок, если они были разблокированы
-        if (unlockedBoardsCount > 0) {
-          response.boardsUnlocked = {
-            count: unlockedBoardsCount,
-            message: `Разблокировано досок: ${unlockedBoardsCount}`
-          };
-        }
 
         return reply.send(response);
       } catch (err) {
