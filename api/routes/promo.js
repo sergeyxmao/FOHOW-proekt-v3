@@ -1,6 +1,9 @@
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import boardLockService from '../services/boardLockService.js';
+import { sendSubscriptionEmail } from '../utils/email.js';
+import { sendTelegramMessage } from '../utils/telegramService.js';
+import { getSubscriptionActivatedMessage } from '../templates/telegramTemplates.js';
 
 /**
  * Регистрация маршрутов для работы с промокодами
@@ -112,7 +115,7 @@ export function registerPromoRoutes(app) {
 
         // Получаем текущую подписку пользователя
         const userResult = await client.query(
-          `SELECT subscription_expires_at, plan_id
+          `SELECT subscription_expires_at, plan_id, email, full_name, telegram_chat_id
            FROM users
            WHERE id = $1`,
           [userId]
@@ -185,7 +188,7 @@ export function registerPromoRoutes(app) {
 
         // Получаем информацию о новом тарифном плане
         const planResult = await client.query(
-          `SELECT id, name, features
+          `SELECT id, name, features, price_monthly
            FROM subscription_plans
            WHERE id = $1`,
           [promo.target_plan_id]
@@ -201,14 +204,64 @@ export function registerPromoRoutes(app) {
         // ============================================
         // ОБНОВЛЕНИЕ БЛОКИРОВОК ДОСОК (BoardLockService)
         // ============================================
-        // Пересчитываем блокировки после смены тарифа
-        // Делаем это после COMMIT, чтобы не задерживать ответ, но до send
         try {
           const boardsStatus = await boardLockService.recalcUserBoardLocks(userId);
           console.log(`[PROMO] Блокировки обновлены для user_id=${userId}: unlocked=${boardsStatus.unlocked}, softLocked=${boardsStatus.softLocked}`);
         } catch (lockError) {
           console.error('[PROMO] Ошибка при пересчете блокировок досок:', lockError);
-          // Не прерываем выполнение, так как промокод уже применен
+        }
+
+        // ============================================
+        // ОТПРАВКА УВЕДОМЛЕНИЙ (Email & Telegram)
+        // ============================================
+        try {
+          // 1. Email уведомление
+          if (user.email) {
+            await sendSubscriptionEmail(user.email, 'new', {
+              userName: user.full_name || 'Пользователь',
+              planName: newPlan.name,
+              amount: 0, // Промокод бесплатный (или можно указать скидку)
+              currency: 'RUB',
+              startDate: new Date().toISOString(),
+              expiresDate: newExpiration.toISOString()
+            });
+            console.log(`[PROMO] Email уведомление отправлено пользователю ${user.email}`);
+          }
+
+          // 2. Telegram уведомление
+          if (user.telegram_chat_id) {
+            try {
+              const expiresDateFormatted = newExpiration.toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              });
+
+              // Формируем сообщение (используем шаблон активации подписки)
+              // Т.к. сумма 0, шаблон может выглядеть странно, но технически это активация
+              const telegramMessage = getSubscriptionActivatedMessage(
+                user.full_name || 'Пользователь',
+                newPlan.name,
+                0, // Сумма 0
+                'RUB (Промокод)', // Валюта с пометкой
+                expiresDateFormatted,
+                process.env.FRONTEND_URL + '/boards'
+              );
+
+              await sendTelegramMessage(user.telegram_chat_id, telegramMessage.text, {
+                parse_mode: telegramMessage.parse_mode,
+                reply_markup: telegramMessage.reply_markup,
+                disable_web_page_preview: telegramMessage.disable_web_page_preview
+              });
+
+              console.log(`[PROMO] Telegram уведомление отправлено пользователю ${user.telegram_chat_id}`);
+            } catch (tgError) {
+              console.error('[PROMO] Ошибка отправки Telegram уведомления:', tgError);
+            }
+          }
+        } catch (notifyError) {
+          // Не прерываем ответ клиенту, если уведомления упали
+          console.error('[PROMO] Ошибка системы уведомлений:', notifyError);
         }
 
         // Возвращаем успешный ответ
