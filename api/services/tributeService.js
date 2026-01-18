@@ -13,6 +13,7 @@ import crypto from 'crypto';
 import { pool } from '../db.js';
 import { sendSubscriptionEmail } from '../utils/email.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
+import boardLockService from '../services/boardLockService.js';
 import {
   getSubscriptionActivatedMessage,
   getSubscriptionRenewedMessage,
@@ -162,6 +163,16 @@ export async function handleNewSubscription(data) {
 
     await client.query('COMMIT');
 
+    // ============================================
+    // ОБНОВЛЕНИЕ БЛОКИРОВОК ДОСОК (BoardLockService)
+    // ============================================
+    try {
+      const boardsStatus = await boardLockService.recalcUserBoardLocks(userId);
+      console.log(`[Tribute] Блокировки обновлены для user_id=${userId}: unlocked=${boardsStatus.unlocked}, softLocked=${boardsStatus.softLocked}`);
+    } catch (lockError) {
+      console.error('[Tribute] Ошибка при пересчете блокировок досок:', lockError);
+    }
+
     // Отправка email-уведомления (НЕ блокирует основной процесс)
     try {
       // Получить данные пользователя и тарифа для email
@@ -304,6 +315,16 @@ export async function handleSubscriptionRenewed(data) {
 
     await client.query('COMMIT');
 
+    // ============================================
+    // ОБНОВЛЕНИЕ БЛОКИРОВОК ДОСОК (BoardLockService)
+    // ============================================
+    try {
+      const boardsStatus = await boardLockService.recalcUserBoardLocks(user_id);
+      console.log(`[Tribute] Блокировки обновлены для user_id=${user_id} (renew): unlocked=${boardsStatus.unlocked}, softLocked=${boardsStatus.softLocked}`);
+    } catch (lockError) {
+      console.error('[Tribute] Ошибка при пересчете блокировок досок (renew):', lockError);
+    }
+
     // Отправка email-уведомления
     try {
       const userData = await pool.query(
@@ -432,6 +453,16 @@ export async function handleSubscriptionCancelled(data) {
     console.log(`✅ Пользователь user_id=${user_id} переведён на гостевой тариф (plan_id=${guestPlanId})`);
 
     await client.query('COMMIT');
+
+    // ============================================
+    // ОБНОВЛЕНИЕ БЛОКИРОВОК ДОСОК (BoardLockService)
+    // ============================================
+    try {
+      const boardsStatus = await boardLockService.recalcUserBoardLocks(user_id);
+      console.log(`[Tribute] Блокировки обновлены для user_id=${user_id} (cancel): unlocked=${boardsStatus.unlocked}, softLocked=${boardsStatus.softLocked}`);
+    } catch (lockError) {
+      console.error('[Tribute] Ошибка при пересчете блокировок досок (cancel):', lockError);
+    }
 
     // Отправка email-уведомления
     try {
