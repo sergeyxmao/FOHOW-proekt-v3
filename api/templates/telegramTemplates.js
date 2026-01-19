@@ -84,7 +84,6 @@ function getSubscriptionExpiredMessage(userName, pricingUrl = 'https://interacti
 ✅ До 10 стикеров
 ✅ До 10 заметок и комментариев
 ✅ Экспорт в PNG (A4)
-✅ Экспорт в HTML
 ✅ Приглашение к рисованию
 
 ━━━━━━━━━━━━━━━━━━━━
@@ -225,7 +224,6 @@ function getSubscriptionActivatedMessage(userName, planName, amount, currency, e
 ✅ До 10 стикеров
 ✅ До 10 заметок и комментариев
 ✅ Экспорт в PNG (A4)
-✅ Экспорт в HTML
 ✅ Приглашение к рисованию`;
       break;
       
