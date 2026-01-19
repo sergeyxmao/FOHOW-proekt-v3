@@ -627,6 +627,112 @@ export async function sendSubscriptionEmail(email, eventType, data) {
     `;
   }
 
+  // ===== ШАБЛОН: ПРИМЕНЕНИЕ ПРОМОКОДА =====
+  else if (eventType === 'promo') {
+    const promoCodeValue = data.promoCode || 'PROMO';
+    subject = '✅ Промокод успешно применён | FOHOW Interactive Board';
+    html = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Промокод применён</title>
+<style>
+  body {
+    margin: 0; padding: 0;
+    background: #f3f3f3;
+    font-family: Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0e0e0e; color: #fff; }
+    .email-container { background: #1a1a1a; }
+    .details-box { background: #252525; }
+  }
+  .email-container {
+    max-width: 600px;
+    margin: 25px auto;
+    background: #fff;
+    padding: 40px 32px;
+    border-radius: 18px;
+    text-align: center;
+  }
+  h1 {
+    color: #4CAF50;
+    font-size: 26px;
+    margin-bottom: 15px;
+  }
+  p {
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 10px 0;
+  }
+  .details-box {
+    background: #f9f9f9;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 25px 0;
+    text-align: left;
+  }
+  .details-box p {
+    margin: 8px 0;
+    font-size: 15px;
+  }
+  .details-box strong {
+    color: #333;
+  }
+  .promo-code {
+    display: inline-block;
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-weight: bold;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 16px;
+  }
+  .button {
+    background: #4CAF50;
+    display: inline-block;
+    color: #fff !important;
+    padding: 14px 36px;
+    text-decoration: none;
+    border-radius: 9px;
+    margin-top: 25px;
+    font-size: 18px;
+  }
+  .footer {
+    margin-top: 30px;
+    font-size: 13px;
+    color: #777;
+  }
+</style>
+</head>
+<body>
+  <div class="email-container">
+    <h1>✅ Промокод применён!</h1>
+    <p>Здравствуйте, ${userName}!</p>
+    <p>Промокод <span class="promo-code">${promoCodeValue}</span> успешно активирован.</p>
+
+    <div class="details-box">
+      <p><strong>💎 Тариф:</strong> ${planName}</p>
+      <p><strong>💰 Стоимость:</strong> 0 ${currency} (Промокод)</p>
+      <p><strong>📅 Действует до:</strong> ${formattedExpiresDate}</p>
+    </div>
+
+    <p>Приятной работы! 🎨</p>
+
+    <a href="${boardsUrl}" class="button">🚀 Начать работу</a>
+
+    <div class="footer">
+      С уважением, команда FOHOW Interactive Board
+    </div>
+  </div>
+</body>
+</html>
+    `;
+  }
+
   // Неизвестный тип события
   else {
     console.error(`❌ Email error: Неизвестный eventType: ${eventType}`);
