@@ -3,7 +3,7 @@ import { authenticateToken } from '../middleware/auth.js';
 import boardLockService from '../services/boardLockService.js';
 import { sendSubscriptionEmail } from '../utils/email.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
-import { getSubscriptionActivatedMessage } from '../templates/telegramTemplates.js';
+import { getPromoCodeAppliedMessage } from '../templates/telegramTemplates.js';
 
 /**
  * Регистрация маршрутов для работы с промокодами
@@ -85,7 +85,7 @@ export function registerPromoRoutes(app) {
         }
 
         // Проверка 4: Лимит использований не исчерпан
-        if (promo.max_uses_total !== null && promo.current_uses >= promo.max_uses_total) {
+        if (promo.max_uses !== null && promo.current_uses >= promo.max_uses) {
           await client.query('ROLLBACK');
           return reply.code(400).send({
             error: 'Лимит использований промокода исчерпан'
@@ -215,15 +215,22 @@ export function registerPromoRoutes(app) {
         // ОТПРАВКА УВЕДОМЛЕНИЙ (Email & Telegram)
         // ============================================
         try {
+          const expiresDateFormatted = newExpiration.toLocaleDateString('ru-RU', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+
           // 1. Email уведомление
           if (user.email) {
-            await sendSubscriptionEmail(user.email, 'new', {
+            await sendSubscriptionEmail(user.email, 'promo', {
               userName: user.full_name || 'Пользователь',
               planName: newPlan.name,
-              amount: 0, // Промокод бесплатный (или можно указать скидку)
+              amount: 0,
               currency: 'RUB',
               startDate: new Date().toISOString(),
-              expiresDate: newExpiration.toISOString()
+              expiresDate: newExpiration.toISOString(),
+              promoCode
             });
             console.log(`[PROMO] Email уведомление отправлено пользователю ${user.email}`);
           }
@@ -231,19 +238,10 @@ export function registerPromoRoutes(app) {
           // 2. Telegram уведомление
           if (user.telegram_chat_id) {
             try {
-              const expiresDateFormatted = newExpiration.toLocaleDateString('ru-RU', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              });
-
-              // Формируем сообщение (используем шаблон активации подписки)
-              // Т.к. сумма 0, шаблон может выглядеть странно, но технически это активация
-              const telegramMessage = getSubscriptionActivatedMessage(
+              const telegramMessage = getPromoCodeAppliedMessage(
                 user.full_name || 'Пользователь',
+                promoCode,
                 newPlan.name,
-                0, // Сумма 0
-                'RUB (Промокод)', // Валюта с пометкой
                 expiresDateFormatted,
                 process.env.FRONTEND_URL + '/boards'
               );
