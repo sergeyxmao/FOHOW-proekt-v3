@@ -63,7 +63,7 @@
 
 **Параметры:**
 - `email` (string) — Email получателя
-- `eventType` (string) — Тип события: `'new'`, `'renewed'`, `'cancelled'`
+- `eventType` (string) — Тип события: `'new'`, `'renewed'`, `'cancelled'`, `'promo'`
 - `data` (Object) — Данные подписки:
   - `userName` (string) — Имя пользователя
   - `planName` (string) — Название тарифа
@@ -103,6 +103,11 @@ await sendSubscriptionEmail('user@example.com', 'new', {
 3. **'cancelled'** — Отмена
    - Тема: "⚠️ Подписка отменена — FOHOW Interactive Board"
    - Содержание: уведомление об отмене, предложение продлить
+
+4. **'promo'** — Применение промокода
+   - Тема: "✅ Промокод успешно применён | FOHOW Interactive Board"
+   - Содержание: подтверждение активации промокода, детали тарифа (стоимость 0 RUB), кнопка "Начать работу"
+   - Дополнительные данные: `data.promoCode` — код применённого промокода
 
 **Стиль писем:**
 - Адаптивный дизайн (max-width: 600px)

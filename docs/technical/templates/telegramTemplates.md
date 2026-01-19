@@ -68,6 +68,57 @@ await sendTelegramMessage(chatId, message.text, {
 
 ---
 
+#### `getPromoCodeAppliedMessage(userName, promoCode, planName, expiresDate, boardsUrl)`
+
+Шаблон для уведомления о применении промокода.
+
+**Параметры:**
+- `userName` (string) — Имя пользователя
+- `promoCode` (string) — Код применённого промокода
+- `planName` (string) — Название тарифа (Premium, Individual, Demo, Guest)
+- `expiresDate` (string) — Дата окончания в формате "DD Month YYYY" (например, "14 января 2026 г.")
+- `boardsUrl` (string) — URL к доскам (по умолчанию: `https://interactive.marketingfohow.ru/boards`)
+
+**Возвращает:**
+```javascript
+{
+  text: string,           // Markdown-текст сообщения
+  parse_mode: 'Markdown',
+  disable_web_page_preview: true,
+  reply_markup: {         // Кнопка "Начать работу"
+    inline_keyboard: [[...]]
+  }
+}
+```
+
+**Особенности:**
+- Заголовок: "✅ Промокод ${promoCode} применён!"
+- Стоимость всегда 0 RUB (Промокод)
+- Без блока возможностей тарифа (более лаконичный)
+- Кнопка: "🚀 Начать работу"
+
+**Пример использования:**
+```javascript
+import { getPromoCodeAppliedMessage } from '../templates/telegramTemplates.js';
+import { sendTelegramMessage } from '../utils/telegramService.js';
+
+const message = getPromoCodeAppliedMessage(
+  'Иван Иванов',
+  'GUEST_DOWNGRADE',
+  'Гостевой',
+  '14 февраля 2026 г.',
+  'https://interactive.marketingfohow.ru/boards'
+);
+
+await sendTelegramMessage(chatId, message.text, {
+  parse_mode: message.parse_mode,
+  reply_markup: message.reply_markup,
+  disable_web_page_preview: message.disable_web_page_preview
+});
+```
+
+---
+
 #### `getSubscriptionRenewedMessage(userName, planName, amount, currency, expiresDate, boardsUrl)`
 
 Шаблон для уведомления о продлении подписки.
