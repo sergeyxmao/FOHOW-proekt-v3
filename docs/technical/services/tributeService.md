@@ -1,219 +1,223 @@
-# Tribute Service
+# tributeService.js
 
-Сервис для интеграции с платёжной системой Tribute (Telegram подписки).
+**Расположение**: `api/services/tributeService.js`
 
-## Расположение
+## Описание
 
-`api/services/tributeService.js`
+Сервис для интеграции с платёжной системой Tribute (подписки через Telegram). 
 
-## Зависимости
+Основные функции:
+- Маппинг `product_id` от Tribute на `plan_id` в БД
+- Проверка подписи webhook
+- Обработка новых подписок
+- Обработка продления подписок
+- Обработка отмены/истечения подписок
 
-- `crypto` - для проверки подписи webhook
-- `pool` из `../db.js` - для работы с PostgreSQL
+## Константы
 
-## Маппинг продуктов
+### TRIBUTE_PRODUCT_MAPPING
 
-| Tribute product_id | plan_id | Название | Цена |
-|--------------------|---------|----------|------|
-| `sLc8` | 6 | Individual | 249₽/мес, 2490₽/год |
-| `sLe1` | 7 | Premium | 399₽/мес, 3990₽/год |
+Маппинг Tribute `product_id` на `plan_id` в БД:
+
+```javascript
+const TRIBUTE_PRODUCT_MAPPING = {
+  'sLc8': 6,  // Individual - 249₽/мес
+  'sLe1': 7   // Premium - 399₽/мес
+};
+```
 
 ## Функции
 
-### `mapTributeProductToPlan(tributeProductId)`
+### mapTributeProductToPlan(tributeProductId)
 
-Преобразует `product_id` от Tribute в `plan_id` базы данных.
+**Описание**: Определяет `plan_id` по `product_id` от Tribute.
 
-**Параметры:**
-- `tributeProductId` (string) - ID продукта от Tribute
+**Параметры**:
+- `tributeProductId` (string): Product ID от Tribute (sLc8, sLe1)
 
-**Возвращает:** `number | null` - ID тарифа или null если продукт неизвестен
+**Возвращает**: (number|null) - `plan_id` или null, если product_id неизвестен
 
----
-
-### `verifyTributeWebhook(payload, signature)`
-
-Проверяет HMAC-подпись webhook от Tribute.
-
-**Параметры:**
-- `payload` (Object) - тело запроса
-- `signature` (string) - значение заголовка `x-tribute-signature`
-
-**Возвращает:** `boolean` - true если подпись валидна или проверка пропущена
-
-**Примечание:** Если `TRIBUTE_WEBHOOK_SECRET` не настроен, проверка пропускается.
-
----
-
-### `handleNewSubscription(data)`
-
-Обработка события создания новой подписки.
-
-**Параметры:**
-- `data` (Object) - данные от Tribute:
-  - `subscription_id` (string) - ID подписки
-  - `telegram_user_id` (number) - Telegram user ID
-  - `product_id` (string) - ID продукта (sLc8 или sLe1)
-  - `amount` (number) - сумма платежа
-  - `currency` (string) - валюта (по умолчанию 'RUB')
-  - `period` (string) - период ('month' или 'year')
-
-**Алгоритм:**
-1. Определить `plan_id` по `product_id`
-2. Найти пользователя по `telegram_chat_id`
-3. Если пользователь не найден — сохранить в `pending_tribute_webhooks`
-4. Обновить `users.plan_id` и `subscription_expires_at`
-5. Создать/обновить запись в `tribute_subscriptions`
-6. Создать запись в `subscription_history`
-7. **Получить актуальную стоимость из тарифного плана** (`price_monthly` или `price_yearly` в зависимости от `period`)
-8. Отправить email и Telegram уведомления с **правильной суммой** (из тарифа, а не из webhook)
-
-**Примечание:** Сумма `amount` из webhook **НЕ используется** для отображения в уведомлениях, т.к. Tribute может передавать некорректные значения (0 или годовую цену для месячных подписок). Вместо этого берётся актуальная цена из таблицы `subscription_plans` в зависимости от периода подписки.
+**Пример**:
+```javascript
+mapTributeProductToPlan('sLc8') // → 6 (Individual)
+mapTributeProductToPlan('sLe1') // → 7 (Premium)
+mapTributeProductToPlan('unknown') // → null
 ```
 
 ---
 
-### `handleSubscriptionRenewed(data)`
+### verifyTributeWebhook(payload, signature)
 
-Обработка продления подписки (автопродление).
+**Описание**: Проверяет подпись webhook от Tribute.
 
-**Параметры:**
-- `data` (Object):
-  - `subscription_id` (string)
-  - `amount` (number)
-  - `currency` (string)
-  - `period` (string)
+**Параметры**:
+- `payload` (Object): Тело запроса webhook
+- `signature` (string): Подпись из заголовка `X-Tribute-Signature`
 
-**Алгоритм:**
-1. Найти подписку в `tribute_subscriptions`
-2. Продлить `subscription_expires_at` у пользователя
-3. Обновить `tribute_subscriptions`
-4. Создать запись в `subscription_history` с source='tribute_renewal'
+**Возвращает**: (boolean) - true, если подпись верна, или если `TRIBUTE_WEBHOOK_SECRET` не установлен
+
+**Алгоритм**:
+1. Если `TRIBUTE_WEBHOOK_SECRET` не установлен → вернуть `true` (пропустить проверку)
+2. Вычислить HMAC-SHA256 от `JSON.stringify(payload)` с использованием `TRIBUTE_WEBHOOK_SECRET`
+3. Сравнить вычисленную подпись с `signature`
+
+**Пример**:
+```javascript
+const isValid = verifyTributeWebhook(
+  { event: 'subscription.created', data: {...} },
+  'sha256_hash_from_header'
+);
+```
 
 ---
 
-### `handleSubscriptionCancelled(data)`
+### handleNewSubscription(data)
 
-Обработка отмены/истечения подписки.
+**Описание**: Обрабатывает новую подписку от Tribute.
 
-**Параметры:**
-- `data` (Object):
-  - `subscription_id` (string)
+**Параметры**:
+- `data` (Object): Данные от Tribute
+  - `subscription_id` (string): ID подписки от Tribute
+  - `telegram_user_id` (string): Telegram user ID
+  - `product_id` (string): Product ID от Tribute (sLc8, sLe1)
+  - `amount` (number): Сумма платежа
+  - `currency` (string): Валюта (RUB, USD)
+  - `period` (string): Период (month, year)
 
-**Алгоритм:**
-1. Найти подписку в `tribute_subscriptions`
-2. Получить ID гостевого тарифа
-3. Перевести пользователя на гостевой тариф
-4. Обновить статус в `tribute_subscriptions` на 'cancelled'
+**Возвращает**: (Object)
+- `{ success: true, userId, planId }` — при успехе
+- `{ success: true, pending: true }` — если пользователь не найден (сохранено в pending)
+- `{ success: false, error }` — при ошибке
 
-## События от Tribute
+**Алгоритм**:
+1. Определить `plan_id` через `mapTributeProductToPlan(product_id)`
+2. Найти пользователя по `telegram_chat_id = telegram_user_id`
+3. Если пользователь не найден:
+   - Сохранить в `pending_tribute_webhooks`
+   - Вернуть `{ success: true, pending: true }`
+4. Обновить `users`:
+   ```sql
+   UPDATE users
+   SET plan_id = {plan_id},
+       subscription_started_at = NOW(),
+       subscription_expires_at = NOW() + INTERVAL '{period}',
+       payment_method = 'tribute',
+       auto_renew = TRUE
+   WHERE id = {user_id}
+   ```
+5. Создать/обновить `tribute_subscriptions` (UPSERT по `tribute_subscription_id`)
+6. Записать в `subscription_history`
+7. Обновить блокировки досок: `boardLockService.recalcUserBoardLocks(user_id)`
+8. Отправить email и Telegram уведомления
 
-| Событие | Обработчик |
-|---------|------------|
-| `subscription.created` | `handleNewSubscription` |
-| `subscription.started` | `handleNewSubscription` |
-| `subscription.renewed` | `handleSubscriptionRenewed` |
-| `subscription.payment_received` | `handleSubscriptionRenewed` |
-| `subscription.cancelled` | `handleSubscriptionCancelled` |
-| `subscription.expired` | `handleSubscriptionCancelled` |
-| `subscription.failed` | `handleSubscriptionCancelled` |
+**Важно**: Все операции выполняются в транзакции (BEGIN → COMMIT / ROLLBACK).
 
-## Таблицы БД
+---
 
-### tribute_subscriptions
+### handleSubscriptionRenewed(data)
 
-Хранит информацию о подписках Tribute:
-- `user_id` - связь с users
-- `telegram_user_id` - Telegram ID пользователя
-- `tribute_subscription_id` - ID подписки в Tribute
-- `plan_id` - текущий тариф
-- `status` - статус (active, cancelled)
-- `expires_at` - дата истечения
-- `last_payment_at` - дата последнего платежа
-- `tribute_product_id` - ID продукта Tribute
-- `amount_paid` - сумма последнего платежа
-- `currency` - валюта
+**Описание**: Обрабатывает продление подписки от Tribute.
 
-### pending_tribute_webhooks
+**Параметры**:
+- `data` (Object): Данные от Tribute
+  - `subscription_id` (string): ID подписки от Tribute
+  - `amount` (number): Сумма платежа
+  - `currency` (string): Валюта
+  - `period` (string): Период (month, year)
 
-Хранит webhook'и, пришедшие до привязки Telegram:
-- `telegram_user_id` - Telegram ID
-- `tribute_subscription_id` - ID подписки
-- `payload` - полный JSON webhook'а
-- `processed` - обработан ли
-- `processed_at` - когда обработан
+**Возвращает**: (Object)
+- `{ success: true, userId }` — при успехе
+- `{ success: false, error }` — при ошибке
 
-## Пример использования
+**Алгоритм**:
+1. Найти подписку по `subscription_id` в `tribute_subscriptions`
+2. Продлить `subscription_expires_at` в `users` на 1 month/year
+3. Обновить `tribute_subscriptions`:
+   - `expires_at = NOW() + INTERVAL '{period}'`
+   - `last_payment_at = NOW()`
+   - `status = 'active'`
+   - `amount_paid = {amount}`
+4. Записать в `subscription_history` с `source = 'tribute_renewal'`
+5. Обновить блокировки досок
+6. Отправить email и Telegram уведомления
+
+---
+
+### handleSubscriptionCancelled(data)
+
+**Описание**: Обрабатывает отмену/истечение подписки.
+
+**Параметры**:
+- `data` (Object): Данные от Tribute
+  - `subscription_id` (string): ID подписки от Tribute
+
+**Возвращает**: (Object)
+- `{ success: true, userId, guestPlanId }` — при успехе
+- `{ success: false, error }` — при ошибке
+
+**Алгоритм**:
+1. Найти подписку по `subscription_id` в `tribute_subscriptions`
+2. Получить ID гостевого тарифа (`code_name = 'guest'`)
+3. Перевести пользователя на гостевой тариф:
+   ```sql
+   UPDATE users
+   SET plan_id = {guest_plan_id},
+       auto_renew = FALSE
+   WHERE id = {user_id}
+   ```
+4. Обновить `tribute_subscriptions`:
+   - `status = 'cancelled'`
+5. Обновить блокировки досок
+6. Отправить email и Telegram уведомления
+
+---
+
+## Зависимости
+
+- **api/db.js** — Пул соединений PostgreSQL
+- **api/utils/email.js** — `sendSubscriptionEmail()`
+- **api/utils/telegramService.js** — `sendTelegramMessage()`
+- **api/services/boardLockService.js** — `recalcUserBoardLocks()`
+- **api/templates/telegramTemplates.js** — Шаблоны Telegram-сообщений
+
+## Переменные окружения
+
+```env
+TRIBUTE_WEBHOOK_SECRET=your_webhook_secret_from_tribute
+FRONTEND_URL=https://interactive.marketingfohow.ru
+```
+
+## Логирование
+
+Все операции логируются с префиксом `[Tribute]`:
 
 ```javascript
-import { handleNewSubscription } from './services/tributeService.js';
-
-const data = {
-  subscription_id: 'sub_abc123',
-  telegram_user_id: 123456789,
-  product_id: 'sLc8',
-  amount: 249,
-  currency: 'RUB',
-  period: 'month'
-};
-
-const result = await handleNewSubscription(data);
-console.log(result); // { success: true, userId: 42, planId: 6 }
+console.log(`[Tribute] 🆕 Новая подписка: subscription_id=${subscription_id}, telegram_user_id=${telegram_user_id}`)
+console.log(`[Tribute] 🔄 Продление подписки: subscription_id=${subscription_id}`)
+console.log(`[Tribute] ❌ Отмена подписки: subscription_id=${subscription_id}`)
+console.log(`[Tribute] Блокировки обновлены для user_id=${user_id}: unlocked=${unlocked}, softLocked=${softLocked}`)
 ```
 
-## Уведомления о подписках
+## Примечания
 
-После успешной обработки webhook'а отправляются **два типа уведомлений**:
+1. **Отложенные webhook'и** (`pending_tribute_webhooks`):
+   - Если пользователь ещё не зарегистрирован в системе (нет `telegram_chat_id` в `users`), webhook сохраняется.
+   - После регистрации пользователя система должна обработать отложенные платежи.
 
-### 1. Email-уведомления
+2. **Email/Telegram уведомления**:
+   - Отправка уведомлений не блокирует основной процесс.
+   - Ошибки отправки логируются, но не приводят к ROLLBACK транзакции.
 
-Отправляются через `sendSubscriptionEmail()` из `api/utils/email.js`.
+3. **BoardLockService**:
+   - После любого изменения тарифа вызывается `recalcUserBoardLocks()` для пересчета блокировок досок.
+   - Это критично для корректной работы системы ограничений.
 
-**Типы:**
-- `'new'` — Новая подписка
-- `'renewed'` — Продление
-- `'cancelled'` — Отмена
-
-**Обработка ошибок:**
-- Ошибки отправки **НЕ блокируют** основной процесс обработки webhook
-- Все ошибки логируются с префиксом `❌ Не удалось отправить email:`
-- Функция отправки обёрнута в `try/catch`
+4. **Цены в уведомлениях**:
+   - Для годовой подписки используется `price_yearly`, для месячной — `price_monthly`.
+   - Не полагаться на `amount` из Tribute payload, так как он может быть некорректным.
 
 ---
 
-### 2. Telegram-уведомления
+## История изменений
 
-Отправляются через `sendTelegramMessage()` из `api/utils/telegramService.js`.
-
-**Шаблоны:**
-- `getSubscriptionActivatedMessage()` — Новая подписка
-- `getSubscriptionRenewedMessage()` — Продление
-- `getSubscriptionCancelledMessage()` — Отмена
-
-**Условия отправки:**
-- Отправка происходит **ПОСЛЕ** успешной отправки email
-- Требуется наличие `telegram_chat_id` в таблице `users`
-- Если `telegram_chat_id` не указан — пропускается без ошибок
-
-**Обработка ошибок:**
-- Ошибки отправки **НЕ блокируют** основной процесс
-- Детальное логирование:
-  - `✅ Telegram-уведомление отправлено: {chat_id}`
-  - `❌ Не удалось отправить Telegram-уведомление: {error}`
-  - `ℹ️ telegram_chat_id не указан, пропускаем отправку`
-
-**Формат сообщений:**
-- `parse_mode: 'Markdown'`
-- Кнопки для быстрого перехода (inline_keyboard)
-- Эмодзи для визуального выделения
-
-**Примечание:**  
-Все шаблоны находятся в `api/templates/telegramTemplates.js`. См. подробную документацию в `docs/technical/templates/telegramTemplates.md`.
-
-- Ошибки отправки email **НЕ блокируют** основной процесс обработки webhook
-- Все ошибки логируются с префиксом `❌ Не удалось отправить email:`
-- Функция отправки обёрнута в `try/catch`
-
-### Используемый сервис:
-
-Функция `sendSubscriptionEmail()` из `api/utils/email.js`
+- **2026-01-19**: Создана документация tributeService.js
