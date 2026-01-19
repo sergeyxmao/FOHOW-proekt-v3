@@ -2,7 +2,8 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useProjectActions } from '../../composables/useProjectActions.js'
-import { useAuthStore } from '../../stores/auth.js'  
+import { useAuthStore } from '../../stores/auth.js'
+import { useSubscriptionStore } from '../../stores/subscription.js'
 import ExportSettingsModal from '../ExportSettingsModal.vue'
 
 const props = defineProps({
@@ -15,7 +16,9 @@ const props = defineProps({
 const emit = defineEmits(['request-close'])
 const { t } = useI18n()
 const authStore = useAuthStore()
+const subscriptionStore = useSubscriptionStore()
 const isAdmin = computed(() => authStore.user?.role === 'admin')
+const isGuest = computed(() => subscriptionStore.currentPlan?.code_name === 'guest')
 const {
   handleSaveProject,
   handleLoadProject,
@@ -77,7 +80,9 @@ const items = computed(() => {
       id: 'export-html',
       icon: '🌐',
       label: t('projectMenu.exportHtml'),
-      action: handleExportHTML
+      action: handleExportHTML,
+      disabled: isGuest.value,
+      hint: isGuest.value ? '(Индивидуальный/Премиум)' : null
     },
     {
       id: 'export-svg',
@@ -105,6 +110,11 @@ const items = computed(() => {
 })
 
 const handleItemClick = async (item) => {
+  // Предотвращаем выполнение для отключенных элементов
+  if (item.disabled) {
+    return
+  }
+
   if (item.hasSubmenu) {
     toggleSubmenu(item.id)
     return
@@ -142,12 +152,20 @@ const handleItemClick = async (item) => {
           <button
             type="button"
             class="project-menu__item"
-            :class="{ 'project-menu__item--has-submenu': item.hasSubmenu, 'project-menu__item--active': isSubmenuActive(item.id) }"
+            :class="{
+              'project-menu__item--has-submenu': item.hasSubmenu,
+              'project-menu__item--active': isSubmenuActive(item.id),
+              'project-menu__item--disabled': item.disabled
+            }"
+            :disabled="item.disabled"
             role="menuitem"
             @click="handleItemClick(item)"
           >
             <span class="project-menu__icon" aria-hidden="true">{{ item.icon }}</span>
-            <span class="project-menu__label">{{ item.label }}</span>
+            <span class="project-menu__label">
+              {{ item.label }}
+              <span v-if="item.hint" class="project-menu__hint">{{ item.hint }}</span>
+            </span>
             <span v-if="item.hasSubmenu" class="project-menu__arrow">▸</span>
           </button>
 
@@ -384,5 +402,44 @@ const handleItemClick = async (item) => {
 .export-panel-fade-leave-to {
   opacity: 0;
   transform: translateX(-10px);
+}
+
+/* Стили для отключенного состояния */
+.project-menu__item--disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  filter: grayscale(0.6);
+  pointer-events: auto;
+}
+
+.project-menu__item--disabled:hover {
+  transform: none !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+}
+
+.project-menu--modern .project-menu__item--disabled {
+  opacity: 0.4;
+}
+
+.project-menu--modern .project-menu__item--disabled:hover {
+  background: rgba(24, 34, 58, 0.92) !important;
+  color: #e5f3ff !important;
+  box-shadow: 0 16px 32px rgba(6, 11, 21, 0.55) !important;
+}
+
+/* Стили для подсказки */
+.project-menu__hint {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  opacity: 0.85;
+}
+
+.project-menu--modern .project-menu__hint {
+  color: #94a3b8;
 }
 </style>
