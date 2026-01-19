@@ -271,6 +271,47 @@ ${features}
   };
 }
 
+/**
+ * Сообщение о применении промокода
+ * @param {string} userName - Имя пользователя
+ * @param {string} promoCode - Код промокода
+ * @param {string} planName - Название тарифа
+ * @param {string} expiresDate - Дата окончания (DD.MM.YYYY)
+ * @param {string} boardsUrl - URL к доскам
+ * @returns {Object} Объект сообщения для Telegram Bot API
+ */
+function getPromoCodeAppliedMessage(userName, promoCode, planName, expiresDate, boardsUrl = 'https://interactive.marketingfohow.ru/boards') {
+  const text = `✅ *Промокод ${promoCode} применён!*
+
+Здравствуйте, *${userName}*!
+
+━━━━━━━━━━━━━━━━━━━━
+*📋 Детали промокода:*
+
+💎 Тариф: *${planName}*
+💰 Стоимость: *0 RUB (Промокод)*
+📅 Действует до: *${expiresDate}*
+
+━━━━━━━━━━━━━━━━━━━━
+
+Приятной работы! 🎨`;
+
+  return {
+    text,
+    parse_mode: 'Markdown',
+    disable_web_page_preview: true,
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: '🚀 Начать работу',
+            url: boardsUrl
+          }
+        ]
+      ]
+    }
+  };
+}
 
 /**
  * Сообщение о продлении подписки
@@ -412,6 +453,7 @@ export {
   getSubscriptionExpiredMessage,
   getWelcomeMessage,
   getSubscriptionActivatedMessage,
+  getPromoCodeAppliedMessage,
   getSubscriptionRenewedMessage,
   getSubscriptionCancelledMessage,
   getTelegramDisconnectedMessage
