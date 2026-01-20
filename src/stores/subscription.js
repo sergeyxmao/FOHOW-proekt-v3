@@ -129,11 +129,11 @@ export const useSubscriptionStore = defineStore('subscription', {
           }
           // Устанавливаем лимиты Guest-тарифа
           this.features = {
-            max_boards: 1,
+            max_boards: 3,
             max_stickers: 10,
             max_notes: 10,
             max_comments: 10,
-            max_licenses: 0,
+            max_licenses: 10,
             can_export_html: false,
             can_export_png: true,
             can_use_images: false

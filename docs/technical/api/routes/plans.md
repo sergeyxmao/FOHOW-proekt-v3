@@ -33,7 +33,7 @@
     "id": 6,
     "name": "Individual",
     "code_name": "individual",
-    "priceMonthly": 249
+    "priceMonthly": 299
   },
   "features": {
     "max_boards": 50,
@@ -107,8 +107,8 @@
       "name": "Individual",
       "code_name": "individual",
       "description": "Для личного использования",
-      "price_monthly": 249,
-      "price_yearly": 2490,
+      "price_monthly": 299,
+      "price_yearly": 2990,
       "features": {
         "max_boards": 50,
         "max_notes": 1000,

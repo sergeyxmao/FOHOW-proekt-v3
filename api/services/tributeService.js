@@ -22,12 +22,12 @@ import {
 
 /**
  * Маппинг Tribute product_id на plan_id в БД
- * sLc8 → Individual (249₽/мес, 2490₽/год)
- * sLe1 → Premium (399₽/мес, 3990₽/год)
+ * sLc8 → Individual (299₽/мес, 2990₽/год)
+ * sLe1 → Premium (499₽/мес, 4990₽/год)
  */
 const TRIBUTE_PRODUCT_MAPPING = {
-  'sLc8': 6,  // Individual - 249₽/мес
-  'sLe1': 7   // Premium - 399₽/мес
+  'sLc8': 6,  // Individual - 299₽/мес
+  'sLe1': 7   // Premium - 499₽/мес
 };
 
 /**
