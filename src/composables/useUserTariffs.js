@@ -149,8 +149,8 @@ export function useUserTariffs({ subscriptionStore }) {
    * для обработки webhook'ов от Tribute — это разные форматы!
    */
   const TRIBUTE_PRODUCTS = {
-    'premium': 'Le1',      // Premium - 399₽/мес
-    'individual': 'Lc8'    // Individual - 249₽/мес
+    'premium': 'Le1',      // Premium - 499₽/мес
+    'individual': 'Lc8'    // Individual - 299₽/мес
   }
 
   /**

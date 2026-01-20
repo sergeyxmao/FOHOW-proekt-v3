@@ -21,8 +21,8 @@
 
 ```javascript
 const TRIBUTE_PRODUCT_MAPPING = {
-  'sLc8': 6,  // Individual - 249₽/мес
-  'sLe1': 7   // Premium - 399₽/мес
+  'sLc8': 6,  // Individual - 299₽/мес
+  'sLe1': 7   // Premium - 499₽/мес
 };
 ```
 
