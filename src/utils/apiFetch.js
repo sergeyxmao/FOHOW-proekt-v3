@@ -37,16 +37,21 @@ export function initFetchInterceptor() {
       try {
         const data = await clonedResponse.json()
 
-        // Если сервер вернул reason: 'forced_logout', генерируем событие
-        if (data.reason === 'forced_logout' && !isForcedLogoutInProgress) {
+        // Если сервер вернул reason: 'forced_logout' или 'session_expired', генерируем событие
+        const isSessionTerminated = ['forced_logout', 'session_expired'].includes(data.reason)
+
+        if (isSessionTerminated && !isForcedLogoutInProgress) {
           isForcedLogoutInProgress = true
 
-          console.log('[ApiFetch] Получен forced_logout от сервера, генерируем событие')
+          console.log(`[ApiFetch] Получен ${data.reason} от сервера, генерируем событие`)
 
           // Используем setTimeout чтобы не блокировать текущий запрос
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('session_forced_logout', {
-              detail: { reason: 'session_terminated_by_server' }
+              detail: {
+                reason: data.reason, // 'forced_logout' или 'session_expired'
+                message: data.error
+              }
             }))
 
             // Сбрасываем флаг через 5 секунд (время на обработку logout)

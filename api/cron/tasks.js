@@ -364,6 +364,51 @@ async function cleanupOldSessions() {
 }
 
 // ============================================
+// 3.1. Автовыход неактивных сессий (1 час)
+// ============================================
+
+/**
+ * Удаляет сессии пользователей, которые неактивны более 1 часа
+ * Это обеспечивает автоматический выход пользователей по неактивности
+ * Запускается каждые 5 минут
+ */
+async function cleanupInactiveSessions() {
+  console.log('\n⏱️  Крон-задача: Автовыход неактивных сессий (1 час)');
+
+  try {
+    // Удаляем сессии, неактивные более 1 часа
+    const deleteQuery = `
+      DELETE FROM active_sessions
+      WHERE last_seen < NOW() - INTERVAL '1 hour'
+      RETURNING user_id, token_signature
+    `;
+
+    const result = await pool.query(deleteQuery);
+    const deletedCount = result.rowCount;
+
+    if (deletedCount > 0) {
+      console.log(`✅ Удалено неактивных сессий: ${deletedCount}`);
+
+      // Логируем ID пользователей для отладки
+      const userIds = [...new Set(result.rows.map(r => r.user_id))];
+      console.log(`   Затронутые пользователи: ${userIds.join(', ')}`);
+    } else {
+      console.log('✅ Неактивных сессий не найдено');
+    }
+
+    // Логируем результат
+    await logToSystem('info', 'cleanup_inactive_sessions', {
+      deletedCount: deletedCount,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Ошибка в задаче cleanupInactiveSessions:', error);
+    await logToSystem('error', 'cleanup_inactive_sessions_failed', { error: error.message });
+  }
+}
+
+// ============================================
 // 4. Закрытие демо-периодов
 // ============================================
 
@@ -739,6 +784,12 @@ export function initializeCronTasks() {
   });
   console.log('✅ Задача 3: Очистка старых сессий (каждый час)');
 
+  // 3.1. Автовыход неактивных сессий - каждые 5 минут
+  cron.schedule('*/5 * * * *', () => {
+    cleanupInactiveSessions();
+  });
+  console.log('✅ Задача 3.1: Автовыход неактивных сессий (каждые 5 минут)');
+
   // 4. Закрытие демо-периодов - каждый день в 02:00
   cron.schedule('0 2 * * *', () => {
     closeDemoPeriods();
@@ -798,6 +849,7 @@ export {
   handleSubscriptionExpiry,
   handleGracePeriodExpiry,
   cleanupOldSessions,
+  cleanupInactiveSessions,
   closeDemoPeriods,
   switchDemoToGuest,
   deleteLockedBoardsAfter14Days,
