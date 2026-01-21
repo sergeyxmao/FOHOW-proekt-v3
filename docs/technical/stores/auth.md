@@ -299,6 +299,14 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 - `api/routes/auth.js` - Backend роуты аутентификации
 - `api/middleware/auth.js` - Middleware для проверки JWT токена
 
+## Forced Logout (Принудительный выход)
+
+При событии `session_forced_logout` выполняется:
+1. Автосохранение текущей структуры (с таймаутом 5 сек)
+2. Вызов `authStore.logout()`
+
+Подробнее: [FORCED_LOGOUT_FLOW.md](../FORCED_LOGOUT_FLOW.md)
+
 ## История изменений
 
 - **2026-01-02**: Исправлена логика метода `register()` для корректной обработки сценария с `requiresLogin`

@@ -192,6 +192,13 @@ systemctl status fohow-api
 
 ## Частые задачи
 
+### Forced Logout Flow
+
+Подробная документация по механизму принудительного выхода с автосохранением:
+[FORCED_LOGOUT_FLOW.md](FORCED_LOGOUT_FLOW.md)
+
+---
+
 ### Добавить новый composable
 1. Создать файл в `src/composables/useXxx.js`
 2. Экспортировать функцию `export function useXxx(options) { ... }`

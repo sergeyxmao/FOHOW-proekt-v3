@@ -409,10 +409,20 @@ export function registerAuthRoutes(app) {
         return reply.code(401).send({ error: 'Токен не предоставлен' });
       }
 
-      await pool.query(
-        'DELETE FROM active_sessions WHERE token_signature = $1',
-        [token]
+      // Извлекаем signature из JWT токена (последняя часть после второй точки)
+      const tokenParts = token.split('.');
+      const tokenSignature = tokenParts.length === 3 ? tokenParts[2] : token;
+
+      const result = await pool.query(
+        'DELETE FROM active_sessions WHERE token_signature = $1 RETURNING id',
+        [tokenSignature]
       );
+
+      if (result.rowCount > 0) {
+        console.log(`[LOGOUT] Сессия удалена для пользователя ID: ${req.user.id}`);
+      } else {
+        console.log(`[LOGOUT] Сессия не найдена для пользователя ID: ${req.user.id}`);
+      }
 
       return reply.send({ success: true });
     } catch (err) {
