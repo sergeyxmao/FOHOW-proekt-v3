@@ -805,6 +805,89 @@ function stopAutoSave() {
   }
 }
 
+/**
+ * Обработчик принудительного выхода (forced logout)
+ * Выполняет автосохранение с таймаутом и затем logout
+ *
+ * Используется при получении события session_forced_logout
+ * (например, при истечении сессии или принудительном завершении другим устройством)
+ */
+async function handleForcedLogout() {
+  console.log('🔒 Forced logout: начинаем graceful завершение сессии')
+
+  // Если пользователь не авторизован — просто очищаем состояние
+  if (!authStore.isAuthenticated) {
+    console.log('🔒 Forced logout: пользователь не авторизован, пропускаем')
+    return
+  }
+
+  const SAVE_TIMEOUT_MS = 5000 // 5 секунд таймаут на сохранение
+
+  // Проверяем есть ли активная доска и несохраненные изменения
+  const shouldSave = currentBoardId.value && boardStore.hasUnsavedChanges
+
+  if (shouldSave) {
+    console.log('🔒 Forced logout: есть несохраненные изменения, выполняем автосохранение')
+
+    try {
+      // Создаем Promise для сохранения с таймаутом
+      const savePromise = (async () => {
+        const boardId = currentBoardId.value
+        if (!boardId) return false
+
+        const canvasState = getCanvasState()
+
+        const response = await fetch(`${API_URL}/boards/${boardId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ content: canvasState })
+        })
+
+        if (response.ok) {
+          boardStore.markAsSaved()
+          console.log('💾 Forced logout: структура сохранена перед выходом')
+          return true
+        }
+
+        console.warn('⚠️ Forced logout: ошибка сохранения, код:', response.status)
+        return false
+      })()
+
+      // Таймаут Promise
+      const timeoutPromise = new Promise((resolve) => {
+        setTimeout(() => {
+          console.warn('⏱️ Forced logout: таймаут сохранения (5 сек)')
+          resolve(false)
+        }, SAVE_TIMEOUT_MS)
+      })
+
+      // Ждем первый завершившийся промис
+      await Promise.race([savePromise, timeoutPromise])
+
+    } catch (error) {
+      console.error('❌ Forced logout: ошибка при сохранении:', error)
+      // Продолжаем с logout независимо от ошибки
+    }
+  } else {
+    console.log('🔒 Forced logout: нет несохраненных изменений, пропускаем сохранение')
+  }
+
+  // Выполняем logout (очищает сторы и localStorage)
+  console.log('🔒 Forced logout: выполняем authStore.logout()')
+  await authStore.logout()
+
+  // Очищаем состояние доски
+  boardStore.clearCurrentBoard()
+
+  // Останавливаем автосохранение
+  stopAutoSave()
+
+  console.log('✅ Forced logout: завершено, UI в публичном состоянии')
+}
+
 // Mobile-specific functions
 async function handleAddLicense() {
   // Проверяем лимит перед добавлением карточки
@@ -1080,12 +1163,17 @@ onMounted(async () => {
 
   window.addEventListener('keydown', handleGlobalKeydown)
 
+  // Слушатель события принудительного выхода (forced logout)
+  // Событие может быть вызвано при: истечении сессии, завершении сессии с другого устройства и т.д.
+  window.addEventListener('session_forced_logout', handleForcedLogout)
+
   // В самом конце мы безопасно говорим, что приложение готово к отображению.
   isAppInitialized.value = true
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleGlobalKeydown)
+  window.removeEventListener('session_forced_logout', handleForcedLogout)
   stopAutoSave()
 })
 </script>
