@@ -645,7 +645,74 @@
             </div>
           </div>
 
-          <!-- ===== TAB 5: Лимиты / Используемые ресурсы ===== -->
+          <!-- ===== TAB 5: Безопасность ===== -->
+          <div v-if="activeTab === 'security' && !isAvatarEditMode" class="tab-panel">
+            <div class="security-section">
+              <h3 class="security-title">Смена пароля</h3>
+              <p class="security-hint">
+                Для повышения безопасности вашего аккаунта рекомендуем использовать надежный пароль длиной не менее 6 символов.
+              </p>
+
+              <form @submit.prevent="savePassword" class="info-form security-form">
+                <div class="form-group">
+                  <label for="current-password">Текущий пароль:</label>
+                  <input
+                    id="current-password"
+                    v-model="securityForm.currentPassword"
+                    type="password"
+                    placeholder="Введите текущий пароль"
+                    autocomplete="current-password"
+                    :disabled="savingSecurity"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label for="new-password">Новый пароль:</label>
+                  <input
+                    id="new-password"
+                    v-model="securityForm.newPassword"
+                    type="password"
+                    placeholder="Введите новый пароль (мин. 6 символов)"
+                    autocomplete="new-password"
+                    :class="{ 'input-error': securityForm.newPassword && !isNewPasswordValid }"
+                    :disabled="savingSecurity"
+                  />
+                  <span v-if="securityForm.newPassword && !isNewPasswordValid" class="form-hint form-hint--error">
+                    Пароль должен содержать минимум 6 символов
+                  </span>
+                </div>
+
+                <div class="form-group">
+                  <label for="confirm-password">Подтверждение нового пароля:</label>
+                  <input
+                    id="confirm-password"
+                    v-model="securityForm.confirmPassword"
+                    type="password"
+                    placeholder="Повторите новый пароль"
+                    autocomplete="new-password"
+                    :class="{ 'input-error': securityForm.confirmPassword && !passwordsMatch }"
+                    :disabled="savingSecurity"
+                  />
+                  <span v-if="securityForm.confirmPassword && !passwordsMatch" class="form-hint form-hint--error">
+                    Пароли не совпадают
+                  </span>
+                </div>
+
+                <div v-if="securityError" class="error-message">{{ securityError }}</div>
+                <div v-if="securitySuccess" class="success-message">{{ securitySuccess }}</div>
+
+                <button
+                  type="submit"
+                  class="btn-save btn-security"
+                  :disabled="!isFormFilled || savingSecurity || !passwordsMatch || !isNewPasswordValid"
+                >
+                  {{ savingSecurity ? 'Сохранение...' : '🔐 Изменить пароль' }}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- ===== TAB 6: Лимиты / Используемые ресурсы ===== -->
           <div v-if="activeTab === 'limits' && !isAvatarEditMode" class="tab-panel">
             <div v-if="imageStatsError" class="limit-error">
               {{ imageStatsError }}
@@ -813,7 +880,7 @@
             </div>
           </div>
 
-          <!-- ===== TAB 6: Уведомления ===== -->
+          <!-- ===== TAB 7: Уведомления ===== -->
           <div v-if="activeTab === 'notifications' && !isAvatarEditMode" class="tab-panel">
             <div class="notifications-section">
               <div class="notification-block">
@@ -842,7 +909,7 @@
             </div>
           </div>
 
-          <!-- ===== TAB 7: Промокод ===== -->
+          <!-- ===== TAB 8: Промокод ===== -->
           <div v-if="activeTab === 'promo' && !isAvatarEditMode" class="tab-panel">
             <div class="promo-section">
               <div class="promo-description">
@@ -870,7 +937,7 @@
             </div>
           </div>
 
-          <!-- ===== TAB 8: Тарифы ===== -->
+          <!-- ===== TAB 9: Тарифы ===== -->
           <div v-if="activeTab === 'tariffs' && !isAvatarEditMode" class="tab-panel">
             <div class="tariffs-section">
               <!-- Текущий тариф -->
@@ -1302,6 +1369,7 @@ import { useUserPrivacy } from '@/composables/useUserPrivacy'
 import { useUserLimits } from '@/composables/useUserLimits'
 import { useUserTariffs } from '@/composables/useUserTariffs'
 import { useUserPromo } from '@/composables/useUserPromo'
+import { useUserSecurity } from '@/composables/useUserSecurity'
 
 const props = defineProps({
   isModernTheme: {
@@ -1325,6 +1393,7 @@ const tabs = [
   { id: 'personal', label: 'Личная информация', icon: '👤' },
   { id: 'social', label: 'Соц. сети', icon: '🌐' },
   { id: 'privacy', label: 'Настройки конфиденциальности', icon: '🔒' },
+  { id: 'security', label: 'Безопасность', icon: '🛡️' },
   { id: 'limits', label: 'Лимиты', icon: '📊' },
   { id: 'notifications', label: 'Уведомления', icon: '🔔' },
   { id: 'promo', label: 'Промокод', icon: '🎟️' },
@@ -1477,6 +1546,18 @@ const {
   applyingPromo,
   handleApplyPromo
 } = useUserPromo({ authStore, subscriptionStore })
+
+// Security
+const {
+  securityForm,
+  securityError,
+  securitySuccess,
+  savingSecurity,
+  isFormFilled,
+  passwordsMatch,
+  isNewPasswordValid,
+  savePassword
+} = useUserSecurity({ authStore })
 
 // === Вспомогательные функции ===
 
