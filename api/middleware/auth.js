@@ -25,6 +25,42 @@ export async function authenticateToken(request, reply) {
       return reply.code(401).send({ error: 'Пользователь не найден' });
     }
 
+    // Извлекаем signature из токена (последняя часть после второй точки)
+    const tokenParts = token.split('.');
+    const tokenSignature = tokenParts.length === 3 ? tokenParts[2] : null;
+
+    // ПРОВЕРКА СУЩЕСТВОВАНИЯ СЕССИИ В active_sessions
+    // Если сессия была удалена (например, при логине на другом устройстве),
+    // возвращаем 401 с reason: 'forced_logout' для автоматического выхода на клиенте
+    if (tokenSignature) {
+      const sessionResult = await pool.query(
+        'SELECT id FROM active_sessions WHERE token_signature = $1',
+        [tokenSignature]
+      );
+
+      if (sessionResult.rows.length === 0) {
+        console.log(`[AUTH] Сессия не найдена для токена: ${token.substring(0, 10)}... — forced logout`);
+        return reply.code(401).send({
+          error: 'Сессия завершена',
+          reason: 'forced_logout'
+        });
+      }
+
+      // Асинхронное обновление last_seen для отслеживания активности пользователя
+      // Обновляем last_seen без await, чтобы не замедлять основной запрос
+      (async () => {
+        try {
+          await pool.query(
+            'UPDATE active_sessions SET last_seen = NOW() WHERE token_signature = $1',
+            [tokenSignature]
+          );
+        } catch (err) {
+          // Логируем ошибку, но не прерываем выполнение основного запроса
+          console.error(`[AUTH] ОШИБКА при выполнении UPDATE last_seen:`, err);
+        }
+      })();
+    }
+
     // Используем userId из токена и роль из БД
     request.user = {
       id: decoded.userId,
@@ -32,28 +68,6 @@ export async function authenticateToken(request, reply) {
       role: userResult.rows[0].role || 'user'
     };
 
-    // Асинхронное обновление last_seen для отслеживания активности пользователя
-    // Извлекаем signature из токена (последняя часть после второй точки)
-    const tokenParts = token.split('.');
-    if (tokenParts.length === 3) {
-      const tokenSignature = tokenParts[2];
-
-      // Обновляем last_seen без await, чтобы не замедлять основной запрос
-      console.log(`[AUTH] Пытаюсь выполнить UPDATE last_seen для токена: ${token.substring(0, 10)}...`);
-
-      (async () => {
-        try {
-          await pool.query(
-            'UPDATE active_sessions SET last_seen = NOW() WHERE token_signature = $1',
-            [tokenSignature]
-          );
-          console.log(`[AUTH] UPDATE last_seen успешно выполнен для токена: ${token.substring(0, 10)}...`);
-        } catch (err) {
-          // Логируем ошибку, но не прерываем выполнение основного запроса
-          console.error(`[AUTH] ОШИБКА при выполнении UPDATE last_seen для токена ${token.substring(0, 10)}...:`, err);
-        }
-      })();
-    }
   } catch (err) {
     return reply.code(403).send({ error: 'Недействительный токен' });
   }

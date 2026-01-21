@@ -8,9 +8,14 @@ import App from './App.vue'
 import router from './router'
 import i18n from './i18n'
 import { useAuthStore } from './stores/auth'
+import { initFetchInterceptor } from './utils/apiFetch'
 
 // Эта функция будет запускать наше приложение
 async function startApp() {
+  // Инициализируем глобальный перехватчик fetch ДО любых API вызовов
+  // Это позволяет автоматически обрабатывать forced_logout при любом запросе
+  initFetchInterceptor()
+
   const app = createApp(App)
   const pinia = createPinia()
 
