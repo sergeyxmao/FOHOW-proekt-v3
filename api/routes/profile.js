@@ -591,6 +591,12 @@ app.get('/api/avatar/:userId', async (req, reply) => {
     };
     const contentType = mimeTypes[ext] || 'image/jpeg';
     
+    // Установить CORS-заголовки для кросс-доменной загрузки
+    reply.header('Access-Control-Allow-Origin', process.env.FRONTEND_URL || 'https://interactive.marketingfohow.ru');
+    reply.header('Access-Control-Allow-Credentials', 'true');
+    reply.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    reply.header('Cross-Origin-Resource-Policy', 'cross-origin');
+
     // Вернуть изображение с кэшированием
     return reply
       .header('Content-Type', contentType)
