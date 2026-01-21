@@ -30,8 +30,9 @@ export async function authenticateToken(request, reply) {
     const tokenSignature = tokenParts.length === 3 ? tokenParts[2] : null;
 
     // ПРОВЕРКА СУЩЕСТВОВАНИЯ СЕССИИ В active_sessions
-    // Если сессия была удалена (например, при логине на другом устройстве),
-    // возвращаем 401 с reason: 'forced_logout' для автоматического выхода на клиенте
+    // Если сессия была удалена, определяем причину:
+    // - forced_logout: вход с другого устройства (есть другая активная сессия)
+    // - session_expired: неактивность более 1 часа (нет других активных сессий)
     if (tokenSignature) {
       const sessionResult = await pool.query(
         'SELECT id FROM active_sessions WHERE token_signature = $1',
@@ -39,10 +40,22 @@ export async function authenticateToken(request, reply) {
       );
 
       if (sessionResult.rows.length === 0) {
-        console.log(`[AUTH] Сессия не найдена для токена: ${token.substring(0, 10)}... — forced logout`);
+        // Проверяем, есть ли у пользователя другие активные сессии
+        const otherSessionsResult = await pool.query(
+          'SELECT id FROM active_sessions WHERE user_id = $1 LIMIT 1',
+          [decoded.userId]
+        );
+
+        const hasOtherSessions = otherSessionsResult.rows.length > 0;
+        const reason = hasOtherSessions ? 'forced_logout' : 'session_expired';
+        const errorMessage = hasOtherSessions
+          ? 'Сессия завершена (вход с другого устройства)'
+          : 'Сессия истекла по неактивности';
+
+        console.log(`[AUTH] Сессия не найдена для токена: ${token.substring(0, 10)}... — ${reason}`);
         return reply.code(401).send({
-          error: 'Сессия завершена',
-          reason: 'forced_logout'
+          error: errorMessage,
+          reason: reason
         });
       }
 

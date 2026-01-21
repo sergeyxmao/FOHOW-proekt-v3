@@ -41,6 +41,7 @@ import ImagesPanel from './components/Panels/ImagesPanel.vue'
 import BoardAnchorsPanel from './components/Panels/BoardAnchorsPanel.vue'
 import PartnersPanel from './components/Panels/PartnersPanel.vue'  
 import TheNotifications from './components/TheNotifications.vue'
+import SessionExpiredModal from './components/Common/SessionExpiredModal.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
 import { useNotificationsStore } from './stores/notifications'
 
@@ -110,6 +111,10 @@ const pendingAction = ref(null)
 const showResetPassword = ref(false)
 const resetToken = ref('')
 const graceNotificationShown = ref(false) // Флаг показа уведомления о grace-периоде
+
+// Состояние для модала завершения сессии
+const isSessionExpiredModalOpen = ref(false)
+const sessionExpiredReason = ref('forced_logout') // 'forced_logout' | 'session_expired'
 
 let autoSaveInterval = null
 const API_URL = import.meta.env.VITE_API_URL || '/api' // Используем относительный путь для прокси
@@ -806,14 +811,49 @@ function stopAutoSave() {
 }
 
 /**
+ * Полностью очищает все данные холста (карточки, соединения, стикеры, изображения, заметки)
+ * Вызывается при logout для обеспечения чистого состояния UI
+ */
+function clearAllCanvasData() {
+  console.log('🧹 Очистка всех данных холста')
+
+  // Очищаем карточки
+  cardsStore.cards = []
+  cardsStore.selectedCardIds = []
+
+  // Очищаем соединения
+  connectionsStore.connections = []
+  connectionsStore.userCardConnections = []
+
+  // Очищаем стикеры
+  stickersStore.clearStickers()
+
+  // Очищаем изображения
+  imagesStore.clearImages()
+
+  // Очищаем заметки
+  notesStore.notes = []
+
+  // Сбрасываем историю
+  const historyStore = useHistoryStore()
+  historyStore.clearHistory()
+
+  console.log('✅ Все данные холста очищены')
+}
+
+/**
  * Обработчик принудительного выхода (forced logout)
  * Выполняет автосохранение с таймаутом и затем logout
  *
  * Используется при получении события session_forced_logout
- * (например, при истечении сессии или принудительном завершении другим устройством)
+ * @param {CustomEvent} event - событие с detail.reason: 'forced_logout' | 'session_expired'
  */
-async function handleForcedLogout() {
-  console.log('🔒 Forced logout: начинаем graceful завершение сессии')
+async function handleForcedLogout(event) {
+  // Извлекаем причину из события (по умолчанию forced_logout)
+  const reason = event?.detail?.reason || 'forced_logout'
+  sessionExpiredReason.value = reason
+
+  console.log(`🔒 Forced logout (${reason}): начинаем graceful завершение сессии`)
 
   // Если пользователь не авторизован — просто очищаем состояние
   if (!authStore.isAuthenticated) {
@@ -875,17 +915,43 @@ async function handleForcedLogout() {
     console.log('🔒 Forced logout: нет несохраненных изменений, пропускаем сохранение')
   }
 
-  // Выполняем logout (очищает сторы и localStorage)
-  console.log('🔒 Forced logout: выполняем authStore.logout()')
-  await authStore.logout()
+  // ВАЖНО: Сначала очищаем ВСЕ данные холста (до logout)
+  clearAllCanvasData()
 
   // Очищаем состояние доски
   boardStore.clearCurrentBoard()
 
+  // Выполняем logout (очищает сторы и localStorage)
+  console.log('🔒 Forced logout: выполняем authStore.logout()')
+  await authStore.logout()
+
   // Останавливаем автосохранение
   stopAutoSave()
 
+  // Показываем модальное окно с уведомлением
+  isSessionExpiredModalOpen.value = true
+
   console.log('✅ Forced logout: завершено, UI в публичном состоянии')
+}
+
+/**
+ * Обработчик закрытия модала сессии
+ */
+function handleSessionModalClose() {
+  isSessionExpiredModalOpen.value = false
+}
+
+/**
+ * Обработчик кнопки "Войти" в модале сессии (для session_expired)
+ */
+function handleSessionModalLogin() {
+  isSessionExpiredModalOpen.value = false
+  // Открываем модал авторизации
+  if (isMobileMode.value) {
+    mobileAuthModalView.value = 'login'
+    isMobileAuthModalOpen.value = true
+  }
+  // Для десктопа пользователь может использовать кнопки в хедере
 }
 
 // Mobile-specific functions
@@ -1454,6 +1520,14 @@ onBeforeUnmount(() => {
 
     <!-- Контейнер для тост-уведомлений -->
     <TheNotifications />
+
+    <!-- Модал завершения сессии (forced logout / session expired) -->
+    <SessionExpiredModal
+      :is-open="isSessionExpiredModalOpen"
+      :reason="sessionExpiredReason"
+      @close="handleSessionModalClose"
+      @login="handleSessionModalLogin"
+    />
     </template>
   </div>
 
