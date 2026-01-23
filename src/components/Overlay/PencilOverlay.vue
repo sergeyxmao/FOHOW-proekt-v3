@@ -1047,18 +1047,12 @@ onBeforeUnmount(() => {
   inset: 0;
   z-index: 4000;
   pointer-events: auto;
-  background: #1f2937;
-  /* Учитываем safe-area на мобильных устройствах */
-  padding-top: env(safe-area-inset-top, 0);
-  padding-bottom: env(safe-area-inset-bottom, 0);
-  padding-left: env(safe-area-inset-left, 0);
-  padding-right: env(safe-area-inset-right, 0);
 }
 
 .pencil-overlay__backdrop {
   position: absolute;
   inset: 0;
-  background: #1f2937;
+  background: transparent;
   pointer-events: none;
 }
 
