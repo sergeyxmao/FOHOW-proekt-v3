@@ -810,7 +810,7 @@ onBeforeUnmount(() => {
       type="button"
       :class="[
         'pencil-overlay__close-button',
-        { 'pencil-overlay__close-button--modern': !props.isModernTheme }
+        { 'pencil-overlay__close-button--modern': props.isModernTheme }
       ]"
       title="Сохранить и выйти"
       @click="handleClose"
@@ -827,7 +827,7 @@ onBeforeUnmount(() => {
           :class="[
             'pencil-overlay__tool-btn',
             { 'pencil-overlay__tool-btn--active': currentTool === 'brush' },
-            { 'pencil-overlay__tool-btn--modern': !props.isModernTheme }
+            { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
           ]"
           title="Карандаш"
           @click="toggleDropdown('brush')"
@@ -870,7 +870,7 @@ onBeforeUnmount(() => {
           :class="[
             'pencil-overlay__tool-btn',
             { 'pencil-overlay__tool-btn--active': currentTool === 'marker' },
-            { 'pencil-overlay__tool-btn--modern': !props.isModernTheme }
+            { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
           ]"
           title="Маркер"
           @click="toggleDropdown('marker')"
@@ -923,7 +923,7 @@ onBeforeUnmount(() => {
           :class="[
             'pencil-overlay__tool-btn',
             { 'pencil-overlay__tool-btn--active': currentTool === 'eraser' },
-            { 'pencil-overlay__tool-btn--modern': !props.isModernTheme }
+            { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
           ]"
           title="Ластик"
           @click="toggleDropdown('eraser')"
@@ -962,7 +962,7 @@ onBeforeUnmount(() => {
           :class="[
             'pencil-overlay__tool-btn',
             { 'pencil-overlay__tool-btn--active': currentTool === 'selection' },
-            { 'pencil-overlay__tool-btn--modern': !props.isModernTheme }
+            { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
           ]"
           title="Выделение"
           @click="toggleDropdown('selection')"
@@ -994,7 +994,7 @@ onBeforeUnmount(() => {
           type="button"
           :class="[
             'pencil-overlay__tool-btn',
-            { 'pencil-overlay__tool-btn--modern': !props.isModernTheme }
+            { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
           ]"
           title="Изображения"
           @click="openImagesPanel"
@@ -1010,7 +1010,7 @@ onBeforeUnmount(() => {
         type="button"
         :class="[
           'pencil-overlay__undo-redo-btn',
-          { 'pencil-overlay__undo-redo-btn--modern': !props.isModernTheme }
+          { 'pencil-overlay__undo-redo-btn--modern': props.isModernTheme }
         ]"
         :disabled="!canUndo"
         @click="undo"
@@ -1022,7 +1022,7 @@ onBeforeUnmount(() => {
         type="button"
         :class="[
           'pencil-overlay__undo-redo-btn',
-          { 'pencil-overlay__undo-redo-btn--modern': !props.isModernTheme }
+          { 'pencil-overlay__undo-redo-btn--modern': props.isModernTheme }
         ]"
         :disabled="!canRedo"
         @click="redo"
@@ -1064,8 +1064,8 @@ onBeforeUnmount(() => {
   width: 40px;
   height: 40px;
   border: none;
-  background: transparent;
-  color: white;
+  background: white;
+  color: #1f2937;
   border-radius: 50%;
   font-size: 20px;
   cursor: pointer;
@@ -1074,21 +1074,22 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .pencil-overlay__close-button:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: #f3f4f6;
   transform: scale(1.1);
 }
 
 .pencil-overlay__close-button--modern {
-  background: white;
-  color: #1f2937;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: transparent;
+  color: white;
+  box-shadow: none;
 }
 
 .pencil-overlay__close-button--modern:hover {
-  background: #f3f4f6;
+  background: rgba(0, 0, 0, 0.2);
   transform: scale(1.1);
 }
 
@@ -1125,16 +1126,17 @@ onBeforeUnmount(() => {
 .pencil-overlay__tool-btn {
   width: 48px;
   height: 48px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid #d1d5db;
   border-radius: 12px;
-  background: transparent;
-  color: white;
+  background: white;
+  color: #1f2937;
   font-size: 24px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 @media (max-width: 480px) {
@@ -1146,26 +1148,27 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__tool-btn:hover {
-  background: rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: #f3f4f6;
+  border-color: #9ca3af;
 }
 
 .pencil-overlay__tool-btn--active {
   background: #0f62fe;
+  color: white;
   border-color: #0f62fe;
   box-shadow: 0 4px 12px rgba(15, 98, 254, 0.4);
 }
 
 .pencil-overlay__tool-btn--modern {
-  background: white;
-  color: #1f2937;
-  border-color: #d1d5db;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: transparent;
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: none;
 }
 
 .pencil-overlay__tool-btn--modern:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  background: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .pencil-overlay__tool-btn--modern.pencil-overlay__tool-btn--active {
@@ -1234,9 +1237,9 @@ onBeforeUnmount(() => {
 
 .pencil-overlay__undo-redo-btn {
   padding: 10px 20px;
-  background: transparent;
-  color: white;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: white;
+  color: #1f2937;
+  border: 2px solid #d1d5db;
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
@@ -1246,8 +1249,8 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__undo-redo-btn:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: #f3f4f6;
+  border-color: #9ca3af;
 }
 
 .pencil-overlay__undo-redo-btn:disabled {
@@ -1256,21 +1259,21 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__undo-redo-btn--modern {
-  background: white;
-  color: #1f2937;
-  border-color: #d1d5db;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: transparent;
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: none;
 }
 
 .pencil-overlay__undo-redo-btn--modern:hover:not(:disabled) {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  background: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .pencil-overlay__undo-redo-btn--modern:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  background: white;
+  background: transparent;
 }
 /* Панель изображений в режиме рисования */
 .pencil-overlay .images-panel {
