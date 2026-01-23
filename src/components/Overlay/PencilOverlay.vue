@@ -815,7 +815,7 @@ onBeforeUnmount(() => {
       ✕
     </button>
 
-    <!-- Кнопки инструментов в левом верхнем углу -->
+    <!-- Кнопки инструментов в левом нижнем углу -->
     <div class="pencil-overlay__tools-bar">
       <!-- Карандаш -->
       <div class="pencil-overlay__tool-item">
@@ -1048,7 +1048,7 @@ onBeforeUnmount(() => {
   width: 40px;
   height: 40px;
   border: none;
-  background: rgba(0, 0, 0, 0.7);
+  background: transparent;
   color: white;
   border-radius: 50%;
   font-size: 20px;
@@ -1061,14 +1061,14 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__close-button:hover {
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.2);
   transform: scale(1.1);
 }
 
-/* Панель инструментов в левом верхнем углу */
+/* Панель инструментов в левом нижнем углу */
 .pencil-overlay__tools-bar {
   position: fixed;
-  top: 16px;
+  bottom: 16px;
   left: 16px;
   display: flex;
   gap: 8px;
@@ -1084,7 +1084,7 @@ onBeforeUnmount(() => {
   height: 48px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.7);
+  background: transparent;
   color: white;
   font-size: 24px;
   cursor: pointer;
@@ -1095,7 +1095,7 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__tool-btn:hover {
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.2);
   border-color: rgba(255, 255, 255, 0.5);
 }
 
@@ -1108,7 +1108,7 @@ onBeforeUnmount(() => {
 /* Выпадающее меню */
 .pencil-overlay__dropdown {
   position: absolute;
-  top: 56px;
+  bottom: 56px;
   left: 0;
   min-width: 280px;
   background: rgba(0, 0, 0, 0.9);
@@ -1155,7 +1155,7 @@ onBeforeUnmount(() => {
 
 .pencil-overlay__undo-redo-btn {
   padding: 10px 20px;
-  background: rgba(0, 0, 0, 0.7);
+  background: transparent;
   color: white;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 12px;
@@ -1166,7 +1166,7 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__undo-redo-btn:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.2);
   border-color: rgba(255, 255, 255, 0.5);
 }
 
