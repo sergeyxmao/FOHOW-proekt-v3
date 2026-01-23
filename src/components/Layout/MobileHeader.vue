@@ -418,7 +418,7 @@ watch(
 <style scoped>
 .mobile-header {
   position: fixed;
-  top: 0;
+  top: env(safe-area-inset-top, 0);
   left: 0;
   right: 0;
   height: 56px;
@@ -426,6 +426,8 @@ watch(
   display: flex;
   align-items: center;
   padding: 0 8px;
+  padding-left: calc(8px + env(safe-area-inset-left, 0));
+  padding-right: calc(8px + env(safe-area-inset-right, 0));
   z-index: 1000;
 }
 
