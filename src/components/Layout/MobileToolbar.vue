@@ -168,7 +168,7 @@ const handleProfileClick = () => {
 <style scoped>
 .mobile-toolbar {
   position: fixed;
-  bottom: 0;
+  bottom: env(safe-area-inset-bottom, 0);
   left: 0;
   right: 0;
   height: 56px;
@@ -176,6 +176,8 @@ const handleProfileClick = () => {
   display: flex;
   align-items: center;
   padding: 0 8px;
+  padding-left: calc(8px + env(safe-area-inset-left, 0));
+  padding-right: calc(8px + env(safe-area-inset-right, 0));
   z-index: 1000;
 }
 
