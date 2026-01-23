@@ -810,7 +810,7 @@ onBeforeUnmount(() => {
       type="button"
       :class="[
         'pencil-overlay__close-button',
-        { 'pencil-overlay__close-button--modern': props.isModernTheme }
+        { 'pencil-overlay__close-button--modern': !props.isModernTheme }
       ]"
       title="Сохранить и выйти"
       @click="handleClose"
@@ -827,7 +827,7 @@ onBeforeUnmount(() => {
           :class="[
             'pencil-overlay__tool-btn',
             { 'pencil-overlay__tool-btn--active': currentTool === 'brush' },
-            { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
+            { 'pencil-overlay__tool-btn--modern': !props.isModernTheme }
           ]"
           title="Карандаш"
           @click="toggleDropdown('brush')"
@@ -870,7 +870,7 @@ onBeforeUnmount(() => {
           :class="[
             'pencil-overlay__tool-btn',
             { 'pencil-overlay__tool-btn--active': currentTool === 'marker' },
-            { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
+            { 'pencil-overlay__tool-btn--modern': !props.isModernTheme }
           ]"
           title="Маркер"
           @click="toggleDropdown('marker')"
@@ -923,7 +923,7 @@ onBeforeUnmount(() => {
           :class="[
             'pencil-overlay__tool-btn',
             { 'pencil-overlay__tool-btn--active': currentTool === 'eraser' },
-            { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
+            { 'pencil-overlay__tool-btn--modern': !props.isModernTheme }
           ]"
           title="Ластик"
           @click="toggleDropdown('eraser')"
@@ -962,7 +962,7 @@ onBeforeUnmount(() => {
           :class="[
             'pencil-overlay__tool-btn',
             { 'pencil-overlay__tool-btn--active': currentTool === 'selection' },
-            { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
+            { 'pencil-overlay__tool-btn--modern': !props.isModernTheme }
           ]"
           title="Выделение"
           @click="toggleDropdown('selection')"
@@ -994,7 +994,7 @@ onBeforeUnmount(() => {
           type="button"
           :class="[
             'pencil-overlay__tool-btn',
-            { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
+            { 'pencil-overlay__tool-btn--modern': !props.isModernTheme }
           ]"
           title="Изображения"
           @click="openImagesPanel"
@@ -1010,7 +1010,7 @@ onBeforeUnmount(() => {
         type="button"
         :class="[
           'pencil-overlay__undo-redo-btn',
-          { 'pencil-overlay__undo-redo-btn--modern': props.isModernTheme }
+          { 'pencil-overlay__undo-redo-btn--modern': !props.isModernTheme }
         ]"
         :disabled="!canUndo"
         @click="undo"
@@ -1022,7 +1022,7 @@ onBeforeUnmount(() => {
         type="button"
         :class="[
           'pencil-overlay__undo-redo-btn',
-          { 'pencil-overlay__undo-redo-btn--modern': props.isModernTheme }
+          { 'pencil-overlay__undo-redo-btn--modern': !props.isModernTheme }
         ]"
         :disabled="!canRedo"
         @click="redo"
