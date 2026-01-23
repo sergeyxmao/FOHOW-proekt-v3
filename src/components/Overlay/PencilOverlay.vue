@@ -815,7 +815,7 @@ onBeforeUnmount(() => {
       ✕
     </button>
 
-    <!-- Кнопки инструментов в левом нижнем углу -->
+    <!-- Кнопки инструментов в центре нижней части экрана -->
     <div class="pencil-overlay__tools-bar">
       <!-- Карандаш -->
       <div class="pencil-overlay__tool-item">
@@ -1065,14 +1065,30 @@ onBeforeUnmount(() => {
   transform: scale(1.1);
 }
 
-/* Панель инструментов в левом нижнем углу */
+/* Панель инструментов в нижней части экрана */
 .pencil-overlay__tools-bar {
   position: fixed;
   bottom: 16px;
-  left: 16px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
+  justify-content: center;
   gap: 8px;
   z-index: 4002;
+  max-width: calc(100vw - 32px);
+}
+
+@media (min-width: 768px) {
+  .pencil-overlay__tools-bar {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pencil-overlay__tools-bar {
+    gap: 6px;
+    bottom: 12px;
+  }
 }
 
 .pencil-overlay__tool-item {
@@ -1094,6 +1110,14 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
+@media (max-width: 480px) {
+  .pencil-overlay__tool-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+}
+
 .pencil-overlay__tool-btn:hover {
   background: rgba(0, 0, 0, 0.2);
   border-color: rgba(255, 255, 255, 0.5);
@@ -1107,16 +1131,25 @@ onBeforeUnmount(() => {
 
 /* Выпадающее меню */
 .pencil-overlay__dropdown {
-  position: absolute;
-  bottom: 56px;
-  left: 0;
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
   min-width: 280px;
+  max-width: calc(100vw - 32px);
   background: rgba(0, 0, 0, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   padding: 12px;
   z-index: 4003;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 480px) {
+  .pencil-overlay__dropdown {
+    min-width: 260px;
+    bottom: 76px;
+  }
 }
 
 .pencil-overlay__dropdown-content {
