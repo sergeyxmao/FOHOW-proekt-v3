@@ -1234,19 +1234,20 @@ onBeforeUnmount(() => {
 
 .pencil-overlay__undo-redo-btn {
   padding: 10px 20px;
-  background: transparent;
+  background: #6b7280;
   color: white;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid #6b7280;
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .pencil-overlay__undo-redo-btn:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: #4b5563;
+  border-color: #4b5563;
 }
 
 .pencil-overlay__undo-redo-btn:disabled {
@@ -1255,21 +1256,21 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__undo-redo-btn--modern {
-  background: white;
-  color: #1f2937;
-  border-color: #d1d5db;
+  background: #6b7280;
+  color: white;
+  border-color: #6b7280;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .pencil-overlay__undo-redo-btn--modern:hover:not(:disabled) {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  background: #4b5563;
+  border-color: #4b5563;
 }
 
 .pencil-overlay__undo-redo-btn--modern:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  background: #f9fafb;
+  background: #6b7280;
 }
 /* Панель изображений в режиме рисования */
 .pencil-overlay .images-panel {
