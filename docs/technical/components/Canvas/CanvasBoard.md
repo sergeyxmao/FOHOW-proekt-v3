@@ -206,6 +206,59 @@ if (event.button === 1) {
 
 Vue scoped styles не работают с динамически созданными элементами. Перемести стили в unscoped блок.
 
+## Мобильная версия
+
+### Стили для мобильных устройств
+
+В мобильной версии холст (`#canvas`) использует специальные отступы для корректного отображения между фиксированными панелями `MobileHeader` и `MobileToolbar`.
+
+**App.vue (строки 1852-1858):**
+```css
+.app--mobile #canvas {
+  padding-top: calc(56px + env(safe-area-inset-top, 0));
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
+  height: 100vh;
+  box-sizing: border-box;
+}
+```
+
+**Назначение:**
+- `padding-top`: Отступ для `MobileHeader` (56px) + safe-area iOS
+- `padding-bottom`: Отступ для `MobileToolbar` (56px) + safe-area iOS
+- `env(safe-area-inset-*)`: CSS функция для учета вырезов экрана на iOS (notch)
+
+**Требования:**
+- В `index.html` должен быть `viewport-fit=cover` в meta viewport
+- `MobileHeader` и `MobileToolbar` используют `position: fixed` с учетом safe-area
+- Изменения в высоте панелей требуют синхронного обновления padding в App.vue
+
+### Safe-area поддержка
+
+Для корректной работы на iOS устройствах с вырезами экрана (iPhone X и новее):
+
+1. **index.html:**
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+```
+
+2. **MobileHeader.vue:**
+```css
+.mobile-header {
+  top: env(safe-area-inset-top, 0);
+  padding-left: calc(8px + env(safe-area-inset-left, 0));
+  padding-right: calc(8px + env(safe-area-inset-right, 0));
+}
+```
+
+3. **MobileToolbar.vue:**
+```css
+.mobile-toolbar {
+  bottom: env(safe-area-inset-bottom, 0);
+  padding-left: calc(8px + env(safe-area-inset-left, 0));
+  padding-right: calc(8px + env(safe-area-inset-right, 0));
+}
+```
+
 ## Best Practices
 
 1. **Scoped стили для статических элементов**
@@ -219,3 +272,7 @@ Vue scoped styles не работают с динамически созданн
 3. **CSS переменные для кастомизации**
    - Используй `var(--line-color)` для настраиваемых параметров
    - Позволяет менять цвета/размеры без изменения CSS
+
+4. **Safe-area для мобильных**
+   - Всегда используй `env(safe-area-inset-*)` для мобильных панелей
+   - Синхронизируй значения padding между панелями и контейнером холста
