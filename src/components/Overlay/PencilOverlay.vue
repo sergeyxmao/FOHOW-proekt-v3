@@ -1016,7 +1016,7 @@ onBeforeUnmount(() => {
         @click="undo"
         title="Отмена"
       >
-        ↶ Отмена
+        <span class="pencil-overlay__btn-icon">↶</span>
       </button>
       <button
         type="button"
@@ -1028,7 +1028,7 @@ onBeforeUnmount(() => {
         @click="redo"
         title="Повтор"
       >
-        Повтор ↷
+        <span class="pencil-overlay__btn-icon">↷</span>
       </button>
     </div>
 
@@ -1236,21 +1236,28 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__undo-redo-btn {
-  padding: 10px 20px;
-  background: white;
-  color: #1f2937;
-  border: 2px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #111827;
+  font-size: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  user-select: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .pencil-overlay__undo-redo-btn:hover:not(:disabled) {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  background: rgba(243, 244, 246, 0.95);
+  border-color: rgba(0, 0, 0, 0.12);
 }
 
 .pencil-overlay__undo-redo-btn:disabled {
@@ -1259,22 +1266,42 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__undo-redo-btn--modern {
-  background: transparent;
-  color: white;
-  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(28, 38, 58, 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e5f3ff;
   box-shadow: none;
 }
 
 .pencil-overlay__undo-redo-btn--modern:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(38, 48, 68, 0.95);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .pencil-overlay__undo-redo-btn--modern:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  background: transparent;
 }
+
+.pencil-overlay__btn-icon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 480px) {
+  .pencil-overlay__undo-redo-btn {
+    min-width: 40px;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .pencil-overlay__btn-icon {
+    font-size: 18px;
+  }
+}
+
 /* Панель изображений в режиме рисования */
 .pencil-overlay .images-panel {
   position: fixed;
