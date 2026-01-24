@@ -34,7 +34,7 @@ const mobileStore = useMobileStore()
 
 const { isAuthenticated, user, isLoadingProfile } = storeToRefs(authStore)
 const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
-const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
+const { isMenuScaled, menuScale, isMobileMode } = storeToRefs(mobileStore)
 
 const { handleSaveAsHTML, handleShareProject } = useProjectActions()
 
@@ -193,6 +193,17 @@ watch(
   (value) => {
     if (!value) {
       closeUserMenu()
+    }
+  }
+)
+
+// Автоматически включаем режим иерархии при переходе на мобильную версию
+watch(
+  isMobileMode,
+  (newValue, oldValue) => {
+    // Когда переключаемся с десктопной на мобильную версию
+    if (newValue === true && oldValue === false) {
+      canvasStore.setHierarchicalDragMode(true)
     }
   }
 ) 
