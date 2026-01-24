@@ -3,7 +3,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js';
 import { useStickersStore } from '../../stores/stickers.js';
 import ImagesPanel from '../Panels/ImagesPanel.vue';
-import { calculateImageDisplaySize } from '../../utils/imageSizing.js';
 import { toCanvasPoint } from '../../utils/canvasCoordinates.js';
 
 // Composables
@@ -301,34 +300,32 @@ const openImagesPanel = () => {
   sidePanelsStore.openImages();
 };
 
-const placePendingImageOnCanvas = (point) => {
+const placePendingImageOnCanvas = async (point) => {
   const pendingImage = stickersStore.pendingImageData;
-  const context = canvasContext.value;
+  if (!pendingImage) return false;
 
-  if (!pendingImage || !pendingImage.dataUrl || !context) {
-    return;
+  let imageUrl = pendingImage.dataUrl;
+  if (!imageUrl && pendingImage.imageId) {
+    try {
+      const { useImageProxy } = await import('../../composables/useImageProxy');
+      const { getImageUrl } = useImageProxy();
+      imageUrl = await getImageUrl(pendingImage.imageId);
+    } catch (error) {
+      console.error('Ошибка получения URL изображения для режима рисования:', error);
+    }
   }
 
-  const imageElement = new Image();
-  imageElement.crossOrigin = 'anonymous';
+  if (!imageUrl) {
+    console.error('Не удалось вставить изображение: отсутствует URL/dataUrl');
+    return false;
+  }
 
-  imageElement.onload = () => {
-    const originalWidth = pendingImage.width || imageElement.width || 200;
-    const originalHeight = pendingImage.height || imageElement.height || 150;
-    const displaySize = calculateImageDisplaySize(originalWidth, originalHeight);
-
-    context.drawImage(imageElement, point.x, point.y, displaySize.width, displaySize.height);
-    scheduleHistorySave(true);
-  };
-
-  imageElement.onerror = () => {
-    console.error('Не удалось загрузить изображение для режима рисования');
-  };
-
-  imageElement.src = pendingImage.dataUrl;
+  // В режиме рисования вставляем как "временное" изображение (overlay) с выделением и хэндлами
+  await addDroppedImage(imageUrl, pendingImage, point);
+  return true;
 };
 
-const handleCanvasPointerDown = (event) => {
+const handleCanvasPointerDown = async (event) => {
   const isPrimaryButton = event.button === 0 || event.button === undefined || event.button === -1;
 
   if (!isPrimaryButton) return;
@@ -340,9 +337,13 @@ const handleCanvasPointerDown = (event) => {
   if (!canvas) return;
 
   if (stickersStore.isPlacementMode && stickersStore.placementTarget === 'drawing') {
-    placePendingImageOnCanvas(point);
+    await finalizeActiveImagePlacement();
+    const placed = await placePendingImageOnCanvas(point);
     stickersStore.pendingImageData = null;
     stickersStore.disablePlacementMode();
+    if (placed) {
+      sidePanelsStore.closePanel();
+    }
     return;
   }
 
