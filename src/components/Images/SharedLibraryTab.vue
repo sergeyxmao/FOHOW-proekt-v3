@@ -3,12 +3,14 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useStickersStore } from '../../stores/stickers'
 import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
+import { useSidePanelsStore } from '../../stores/sidePanels'
 import { getSharedLibrary } from '../../services/imageService'
 import ImageCard from './ImageCard.vue'
 
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
 const notificationsStore = useNotificationsStore()
+const sidePanelsStore = useSidePanelsStore()
 const props = defineProps({
   placementTarget: {
     type: String,
@@ -276,6 +278,11 @@ async function handleImageClick(image) {
   }
 
   console.log('📌 Pending image data установлен, режим размещения активирован')
+
+  // В режиме рисования автоматически закрываем панель
+  if (props.placementTarget === 'drawing') {
+    sidePanelsStore.closePanel()
+  }
 }
 
 function updateIndicator() {

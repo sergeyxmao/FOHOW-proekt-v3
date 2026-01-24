@@ -1439,6 +1439,7 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__image-wrapper {
+  touch-action: none;
   position: absolute;
   pointer-events: auto;
   user-select: none;
