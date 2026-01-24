@@ -267,13 +267,51 @@ const panelClasses = computed(() => [
 ]);
 
 // === Watchers ===
-watch(isImagesPanelOpen, (isOpen) => {
+watch(isImagesPanelOpen, async (isOpen) => {
   if (isOpen) {
     previousToolBeforeImages.value = currentTool.value;
     currentTool.value = 'pan';
     openDropdown.value = null;
-  } else if (currentTool.value === 'pan') {
-    currentTool.value = previousToolBeforeImages.value || 'brush';
+  } else {
+    // Панель закрылась
+    if (currentTool.value === 'pan') {
+      currentTool.value = previousToolBeforeImages.value || 'brush';
+    }
+
+    // Автоматически добавляем изображение в центр холста, если есть pendingImageData
+    if (stickersStore.isPlacementMode && stickersStore.placementTarget === 'drawing' && stickersStore.pendingImageData) {
+      const pendingImage = stickersStore.pendingImageData;
+
+      // Получаем URL изображения
+      let imageUrl = pendingImage.dataUrl;
+      if (!imageUrl && pendingImage.imageId) {
+        try {
+          const { useImageProxy } = await import('../../composables/useImageProxy');
+          const { getImageUrl } = useImageProxy();
+          imageUrl = await getImageUrl(pendingImage.imageId);
+        } catch (error) {
+          console.error('Ошибка получения URL изображения для режима рисования:', error);
+        }
+      }
+
+      if (imageUrl) {
+        // Финализируем предыдущее активное изображение
+        await finalizeActiveImagePlacement();
+
+        // Вычисляем центр холста для размещения
+        const centerPoint = {
+          x: canvasWidth.value / 2,
+          y: canvasHeight.value / 2
+        };
+
+        // Добавляем изображение как перемещаемый объект (с выделением)
+        await addDroppedImage(imageUrl, pendingImage, centerPoint);
+      }
+
+      // Очищаем режим размещения
+      stickersStore.pendingImageData = null;
+      stickersStore.disablePlacementMode();
+    }
   }
 });
 

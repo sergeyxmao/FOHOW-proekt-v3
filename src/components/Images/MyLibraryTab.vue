@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useStickersStore } from '../../stores/stickers'
 import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
+import { useSidePanelsStore } from '../../stores/sidePanels'
 import { getMyFolders, getMyImages, uploadImage, deleteImage, requestShareImage, renameImage, createFolder } from '../../services/imageService'
 import { convertToWebP, isImageFile } from '../../utils/imageUtils'
 import ImageCard from './ImageCard.vue'
@@ -10,6 +11,7 @@ import ImageCard from './ImageCard.vue'
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
 const notificationsStore = useNotificationsStore()
+const sidePanelsStore = useSidePanelsStore()
 const props = defineProps({
  placementTarget: {
     type: String,
@@ -413,6 +415,12 @@ async function handleImageClick(image) {
   }
 
   console.log('📌 Pending image data установлен, режим размещения активирован')
+
+  // В режиме рисования автоматически закрываем панель
+  // Изображение будет вставлено автоматически через watcher в PencilOverlay
+  if (props.placementTarget === 'drawing') {
+    sidePanelsStore.closePanel()
+  }
 }
 
 /**
