@@ -1561,10 +1561,20 @@ html,body{
   user-select: none;
 }
 
+/* Убираем фон body в мобильной версии */
+body:has(.app--mobile) {
+  background: transparent;
+}
+
 #app {
   position: relative;
   width: 100%;
   min-height: 100vh;
+}
+
+/* Убираем фон в мобильной версии, чтобы canvas был виден в safe-area */
+.app--mobile {
+  background: transparent;
 }
 
 .canvas--inactive {
