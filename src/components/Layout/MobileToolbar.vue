@@ -172,7 +172,7 @@ const handleProfileClick = () => {
   left: 0;
   right: 0;
   height: 56px;
-  background: rgba(255, 255, 255, 0.85);
+  background: transparent;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   display: flex;
@@ -184,7 +184,7 @@ const handleProfileClick = () => {
 }
 
 .mobile-toolbar--dark {
-  background: rgba(28, 38, 58, 0.85);
+  background: transparent;
 }
 
 .mobile-toolbar-layout {
@@ -323,7 +323,7 @@ const handleProfileClick = () => {
   content: '';
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
+  background: transparent;
 }
 
 .theme-icon::before {

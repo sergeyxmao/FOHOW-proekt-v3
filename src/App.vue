@@ -1867,8 +1867,8 @@ body:has(.app--mobile) {
   height: 100vh;
 
   /* Сохраняем padding для отступов от панелей */
-  padding-top: calc(56px + env(safe-area-inset-top, 0));
-  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
+  padding-top: 0;
+  padding-bottom: 0;
 
   box-sizing: border-box;
 }

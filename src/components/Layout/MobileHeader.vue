@@ -422,7 +422,7 @@ watch(
   left: 0;
   right: 0;
   height: 56px;
-  background: rgba(255, 255, 255, 0.85);
+  background: transparent; /* force-rebuild-001 */
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   display: flex;
@@ -434,7 +434,7 @@ watch(
 }
 
 .mobile-header--dark {
-  background: rgba(28, 38, 58, 0.85);
+  background: transparent;
 }
 
 .mobile-header-layout {
