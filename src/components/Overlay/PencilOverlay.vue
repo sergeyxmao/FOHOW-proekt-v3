@@ -320,9 +320,46 @@ const placePendingImageOnCanvas = async (point) => {
     return false;
   }
 
-  // В режиме рисования вставляем как "временное" изображение (overlay) с выделением и хэндлами
-  await addDroppedImage(imageUrl, pendingImage, point);
-  return true;
+  const canvas = drawingCanvasRef.value;
+  const ctx = canvasContext.value;
+  if (!canvas || !ctx) return false;
+
+  // Рассчитываем размеры, чтобы вписать в разумные пределы, но сохранить пропорции
+  const MAX_SIZE = 400; // Максимальный размер при вставке
+  let width = pendingImage.width || 200;
+  let height = pendingImage.height || 150;
+
+  if (width > MAX_SIZE || height > MAX_SIZE) {
+    const ratio = width / height;
+    if (width > height) {
+      width = MAX_SIZE;
+      height = MAX_SIZE / ratio;
+    } else {
+      height = MAX_SIZE;
+      width = MAX_SIZE * ratio;
+    }
+  }
+
+  // Центрируем относительно точки клика
+  const x = point.x - width / 2;
+  const y = point.y - height / 2;
+
+  // Вставляем изображение на canvas
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Рисуем на canvas
+      ctx.drawImage(img, x, y, width, height);
+      scheduleHistorySave(); // Сохраняем в историю
+      resolve(true);
+    };
+    img.onerror = (e) => {
+      console.error('Ошибка загрузки изображения для отрисовки:', e);
+      resolve(false);
+    };
+    img.src = imageUrl;
+  });
 };
 
 const handleCanvasPointerDown = async (event) => {
