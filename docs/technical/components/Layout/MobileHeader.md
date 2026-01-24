@@ -1,0 +1,104 @@
+# MobileHeader
+
+Компонент верхней панели мобильной версии приложения.
+
+## Расположение
+
+```
+src/components/Layout/MobileHeader.vue
+```
+
+## Описание
+
+`MobileHeader` — фиксированная верхняя панель для мобильной версии, содержащая:
+- Кнопки отмены/повтора действий (undo/redo)
+- Кнопку режима иерархии
+- Кнопку режима рисования
+- Кнопку экспорта/шаринга
+- Аватар пользователя с меню
+
+## Props
+
+| Prop | Тип | По умолчанию | Описание |
+|------|-----|--------------|----------|
+| `isModernTheme` | `Boolean` | `false` | Флаг тёмной темы интерфейса |
+
+## Events
+
+| Event | Payload | Описание |
+|-------|---------|----------|
+| `toggle-theme` | - | Переключение темы |
+| `open-profile` | - | Открытие профиля |
+| `request-auth` | - | Запрос авторизации |
+| `open-boards` | - | Открытие списка проектов |
+| `export-html` | - | Экспорт в HTML |
+| `activate-pencil` | - | Активация режима рисования |
+
+## Stores
+
+- **`useAuthStore`** — авторизация пользователя
+- **`useHistoryStore`** — история действий (undo/redo)
+- **`useCanvasStore`** — управление холстом
+- **`useBoardStore`** — управление досками
+- **`useMobileStore`** — мобильные настройки (масштаб меню)
+
+## Стили
+
+### Основные классы
+
+- `.mobile-header` — основной контейнер, фиксированное позиционирование сверху
+- `.mobile-header--dark` — модификатор для тёмной темы
+- `.mobile-header--scaled` — модификатор для масштабированного меню
+- `.mobile-header-button` — кнопка с "стеклянным" эффектом
+- `.mobile-header-avatar` — аватар пользователя
+
+### Визуальное оформление
+
+Контейнер использует полупрозрачный фон с blur-эффектом:
+
+```css
+.mobile-header {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.mobile-header--dark {
+  background: rgba(28, 38, 58, 0.85);
+}
+```
+
+Кнопки имеют аналогичный "стеклянный" эффект:
+- Светлая тема: `background: rgba(255, 255, 255, 0.95)`
+- Тёмная тема: `background: rgba(28, 38, 58, 0.95)`
+
+### Адаптивность
+
+На экранах `max-width: 480px`:
+- Высота уменьшается с 56px до 52px
+- Размер кнопок уменьшается с 44px до 40px
+
+## Примеры использования
+
+```vue
+<MobileHeader
+  :is-modern-theme="isDarkMode"
+  @toggle-theme="handleThemeToggle"
+  @open-profile="openProfile"
+  @request-auth="showAuthModal"
+  @open-boards="showBoardsList"
+  @activate-pencil="activatePencilMode"
+/>
+```
+
+## История изменений
+
+### 2026-01-24
+- Добавлен полупрозрачный фон с blur-эффектом на контейнер `.mobile-header`
+- Добавлен стиль `.mobile-header--dark` для тёмной темы
+- Исправлена проблема белых полупрозрачных полос между кнопками
+
+## См. также
+
+- [MobileToolbar](./MobileToolbar.md)
+- [HeaderActions](./HeaderActions.md)
