@@ -422,7 +422,7 @@ watch(
   left: 0;
   right: 0;
   height: 56px;
-  background: transparent; /* force-rebuild-001 */
+  background: transparent;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   display: flex;
