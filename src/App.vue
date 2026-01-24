@@ -1851,8 +1851,8 @@ html,body{
 
 /* Mobile adjustments */
 .app--mobile #canvas {
-  padding-top: 56px;
-  padding-bottom: 68px;
+  padding-top: calc(56px + env(safe-area-inset-top, 0));
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
   height: 100vh;
   box-sizing: border-box;
 }
@@ -1880,15 +1880,15 @@ html,body{
 
 @media (max-width: 480px) {
   .app--mobile #canvas {
-    padding-top: 52px;
-    padding-bottom: 64px;
+    padding-top: calc(56px + env(safe-area-inset-top, 0));
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
   }
 }
 
 @media (max-width: 360px) {
   .app--mobile #canvas {
-    padding-top: 52px;
-    padding-bottom: 64px;
+    padding-top: calc(56px + env(safe-area-inset-top, 0));
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
   }
 }
 
