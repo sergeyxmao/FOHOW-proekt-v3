@@ -1851,9 +1851,16 @@ html,body{
 
 /* Mobile adjustments */
 .app--mobile #canvas {
-  top: calc(56px + env(safe-area-inset-top, 0));
-  bottom: calc(56px + env(safe-area-inset-bottom, 0));
-  height: auto;
+  /* Растягиваем холст на весь экран, убирая белые полосы */
+  top: 0;
+  bottom: 0;
+  height: 100vh;
+
+  /* Сохраняем padding для отступов от панелей */
+  padding-top: calc(56px + env(safe-area-inset-top, 0));
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0));
+
+  box-sizing: border-box;
 }
 
 .canvas--mobile {
@@ -1877,17 +1884,16 @@ html,body{
   }
 }
 
+/* Media queries для очень маленьких экранов (если потребуется дополнительная настройка) */
 @media (max-width: 480px) {
   .app--mobile #canvas {
-    top: calc(56px + env(safe-area-inset-top, 0));
-    bottom: calc(56px + env(safe-area-inset-bottom, 0));
+    /* Настройки наследуются от основного .app--mobile #canvas */
   }
 }
 
 @media (max-width: 360px) {
   .app--mobile #canvas {
-    top: calc(56px + env(safe-area-inset-top, 0));
-    bottom: calc(56px + env(safe-area-inset-bottom, 0));
+    /* Настройки наследуются от основного .app--mobile #canvas */
   }
 }
 
