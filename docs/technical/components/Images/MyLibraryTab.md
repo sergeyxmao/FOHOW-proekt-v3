@@ -86,6 +86,7 @@ import {
 - Проверяет наличие `boardId`
 - Включает placement mode через `stickersStore.enablePlacementMode()`
 - Сохраняет данные изображения в `stickersStore.pendingImageData`
+- **В режиме рисования** (`placementTarget === 'drawing'`): автоматически закрывает панель через `sidePanelsStore.closePanel()`. Изображение будет добавлено на холст через watcher в `PencilOverlay.vue`.
 
 ### handleImageDelete(image)
 Удаляет изображение:
