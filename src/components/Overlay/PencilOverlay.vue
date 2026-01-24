@@ -283,8 +283,8 @@ watch(isImagesPanelOpen, async (isOpen) => {
       const pendingImage = stickersStore.pendingImageData;
 
       // Получаем URL изображения
-      let imageUrl = pendingImage.dataUrl;
-      if (!imageUrl && pendingImage.imageId) {
+      let imageUrl = null;
+      if (pendingImage.imageId) {
         try {
           const { useImageProxy } = await import('../../composables/useImageProxy');
           const { getImageUrl } = useImageProxy();
@@ -342,8 +342,8 @@ const placePendingImageOnCanvas = async (point) => {
   const pendingImage = stickersStore.pendingImageData;
   if (!pendingImage) return false;
 
-  let imageUrl = pendingImage.dataUrl;
-  if (!imageUrl && pendingImage.imageId) {
+  let imageUrl = null;
+  if (pendingImage.imageId) {
     try {
       const { useImageProxy } = await import('../../composables/useImageProxy');
       const { getImageUrl } = useImageProxy();
