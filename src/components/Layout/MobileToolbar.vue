@@ -172,13 +172,19 @@ const handleProfileClick = () => {
   left: 0;
   right: 0;
   height: 56px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   padding: 0 8px;
   padding-left: calc(8px + env(safe-area-inset-left, 0));
   padding-right: calc(8px + env(safe-area-inset-right, 0));
   z-index: 1000;
+}
+
+.mobile-toolbar--dark {
+  background: rgba(28, 38, 58, 0.85);
 }
 
 .mobile-toolbar-layout {
