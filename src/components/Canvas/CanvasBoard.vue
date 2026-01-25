@@ -2179,12 +2179,6 @@ const handleImageDrop = async (event) => {
   // Вычисляем координаты drop с учётом масштаба
   const { x, y } = screenToCanvas(event.clientX, event.clientY);
 
-  // Проверяем наличие boardId
-  if (!boardStore.currentBoardId) {
-    console.error('Не удалось добавить изображение: boardId не определён');
-    return;
-  }
-
   // Получаем blob URL для изображения (если нужно)
   let imageUrl = imageData.url;
   if (imageData.imageId && !imageUrl) {
