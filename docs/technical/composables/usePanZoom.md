@@ -56,12 +56,29 @@
 
 ### Входные параметры
 
- 
+
 
 ```javascript
 
-usePanZoom(canvasElement)  // ref к DOM-элементу canvas-container
+usePanZoom(canvasElement, options?)
 
+// canvasElement - ref к DOM-элементу canvas-container
+// options - опциональный объект конфигурации
+
+```
+
+#### Параметр options
+
+| Свойство | Тип | Описание |
+|----------|-----|----------|
+| `canPan` | `Function \| Ref<Boolean> \| Boolean` | Функция или значение, определяющее разрешено ли панорамирование одним пальцем (touch). Если `false` — pan одним пальцем блокируется, но pinch-zoom двумя пальцами работает. |
+
+**Пример использования:**
+```javascript
+// Блокировать pan одним пальцем в мобильном режиме выделения
+usePanZoom(canvasContainerRef, {
+  canPan: () => !isMobileMode.value || !isSelectionMode.value
+})
 ```
 
  
@@ -366,17 +383,17 @@ translateY.value = mouseY - (mouseY - translateY.value) * scaleRatio
 
 ## Использование в CanvasBoard.vue
 
- 
+
 
 ```javascript
 
 import { usePanZoom } from '@/composables/usePanZoom'
 
- 
+
 
 const canvasContainer = ref(null)
 
- 
+
 
 const {
 
@@ -390,7 +407,13 @@ const {
 
   resetTransform,
 
-} = usePanZoom(canvasContainer)
+} = usePanZoom(canvasContainer, {
+
+  // В мобильном режиме с включенным режимом выделения блокируем pan одним пальцем
+
+  canPan: () => !isMobileMode.value || !isSelectionMode.value
+
+})
 
 ```
 

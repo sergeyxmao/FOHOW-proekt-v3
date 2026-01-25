@@ -1,6 +1,6 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, isRef } from 'vue'
 
-export function usePanZoom(canvasElement) {
+export function usePanZoom(canvasElement, options = {}) {
   const scale = ref(1)
   const translateX = ref(0)
   const translateY = ref(0)
@@ -78,6 +78,17 @@ export function usePanZoom(canvasElement) {
   const canStartTouchPan = (event) => {
     if (!canvasElement.value) {
       return false
+    }
+
+    // Проверяем опцию canPan (функция или ref)
+    // Если canPan вернул false — блокируем pan для одного пальца
+    if (options.canPan !== undefined) {
+      const canPanValue = typeof options.canPan === 'function'
+        ? options.canPan()
+        : (isRef(options.canPan) ? options.canPan.value : options.canPan)
+      if (!canPanValue) {
+        return false
+      }
     }
 
     const target = event?.target

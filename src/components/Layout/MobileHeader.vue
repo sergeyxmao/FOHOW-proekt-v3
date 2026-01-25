@@ -204,12 +204,14 @@ watch(
 // Автоматически включаем режим иерархии при переходе на мобильную версию
 watch(
   isMobileMode,
-  (newValue, oldValue) => {
-    // Когда переключаемся с десктопной на мобильную версию
-    if (newValue === true && oldValue === false) {
+  (newValue) => {
+    // Включаем режим иерархии когда активируется мобильный режим
+    // (работает и при начальной загрузке благодаря immediate: true)
+    if (newValue === true) {
       canvasStore.setHierarchicalDragMode(true)
     }
-  }
+  },
+  { immediate: true }
 ) 
 </script>
 
