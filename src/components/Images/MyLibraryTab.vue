@@ -386,7 +386,7 @@ async function handleImageClick(image) {
   // Проверяем все возможные источники boardId
   const boardId = stickersStore.currentBoardId || boardStore.currentBoardId
 
-  if (!boardId) {
+  if (!boardId && props.placementTarget !== 'drawing') {
     console.log('❌ Board ID не найден:', {
       stickersStore: stickersStore.currentBoardId,
       boardStore: boardStore.currentBoardId
