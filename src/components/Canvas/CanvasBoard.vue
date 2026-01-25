@@ -140,7 +140,11 @@ const {
   clampScale: clampZoomScale,
   setTransform: setZoomTransform,
   resetTransform: resetZoomTransform
-} = usePanZoom(canvasContainerRef);
+} = usePanZoom(canvasContainerRef, {
+  // В мобильном режиме с включенным режимом выделения блокируем pan одним пальцем
+  // (pan двумя пальцами продолжает работать через pinch-zoom)
+  canPan: () => !isMobileMode.value || !isSelectionMode.value
+});
 const viewportStore = useViewportStore();
 watch(zoomScale, (value) => {
   viewportStore.setZoomScale(value);
