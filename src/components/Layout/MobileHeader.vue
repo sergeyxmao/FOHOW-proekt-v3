@@ -144,10 +144,18 @@ const handleRenameCurrentBoard = async () => {
 
 const toggleHierarchyMode = () => {
   canvasStore.toggleHierarchicalDragMode()
+  // Если режим иерархии включён, отключаем режим выделения
+  if (canvasStore.isHierarchicalDragMode) {
+    mobileStore.setSelectionMode(false)
+  }
 }
 
 const toggleSelectionMode = () => {
   mobileStore.toggleSelectionMode()
+  // Если режим выделения включён, отключаем режим иерархии
+  if (mobileStore.isSelectionMode) {
+    canvasStore.setHierarchicalDragMode(false)
+  }
 }
 
 const handleActivatePencil = () => {
