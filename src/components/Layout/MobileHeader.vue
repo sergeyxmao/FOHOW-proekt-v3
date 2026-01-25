@@ -460,8 +460,8 @@ watch(
   right: 0;
   height: 56px;
   background: transparent;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   display: flex;
   align-items: center;
   padding: 0 8px;
@@ -511,7 +511,7 @@ watch(
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
   color: #111827;
   font-size: 20px;
   cursor: pointer;
