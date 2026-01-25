@@ -143,7 +143,18 @@ const {
 } = usePanZoom(canvasContainerRef, {
   // В мобильном режиме с включенным режимом выделения блокируем pan одним пальцем
   // (pan двумя пальцами продолжает работать через pinch-zoom)
-  canPan: () => !isMobileMode.value || !isSelectionMode.value
+  canPan: () => !isMobileMode.value || !isSelectionMode.value,
+  onTouchStart: (event) => {
+    // Проверяем что touch на пустом месте
+    const target = event.target;
+    if (target.closest(".card, .sticker, .canvas-image, .note-window, .anchor-point, .line, .user-card-object")) {
+      return;
+    }
+    if (isMobileMode.value && !isSelectionMode.value) {
+      closeAllStickerEditing();
+      clearObjectSelections({ preserveCardSelection: false });
+    }
+  }
 });
 const viewportStore = useViewportStore();
 watch(zoomScale, (value) => {
@@ -1324,6 +1335,9 @@ const handlePointerDown = (event) => {
     ) {
       // В мобильном режиме выделение работает только если включен isSelectionMode
       if (isMobileMode.value && !isSelectionMode.value) {
+        // Снимаем выделение при клике на пустое место
+      closeAllStickerEditing();
+        clearObjectSelections({ preserveCardSelection: false });
         return; // Не начинаем выделение, позволяем работать pan
       }
       startSelection(event);
@@ -1509,6 +1523,21 @@ const handlePvChanged = (cardId) => {
     console.log('✅ Вызов startUserCardSelectionAnimation');
     startUserCardSelectionAnimation(cardId);
   }
+};
+
+// Обработчик touch для снятия выделения в мобильном режиме
+const handleMobileTouchStart = (event) => {
+  if (!isMobileMode.value || isSelectionMode.value) return;
+  
+  const target = event.target;
+  // Проверяем что touch на пустом месте (не на карточке, стикере и т.д.)
+  if (target.closest(".card, .sticker, .canvas-image, .note-window, .anchor-point, .line, .user-card-object")) {
+    return;
+  }
+  
+  // Снимаем выделение
+      closeAllStickerEditing();
+  clearObjectSelections({ preserveCardSelection: false });
 };
 
 const handleStageClick = async (event) => {
@@ -2316,6 +2345,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   :class="['canvas-container', canvasContainerClasses, { 'canvas-container--modern': props.isModernTheme }]"
   :style="{ backgroundColor: backgroundColor }"
   @mousedown="handleStageClick"
+  @pointerdown="handleStageClick"
+  @touchstart.capture="handleMobileTouchStart"
   @dragover.prevent="handleImageDragOver"
   @drop.prevent="handleImageDrop"
 >
@@ -2367,6 +2398,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         :height="stageConfig.height"
         style="position: absolute; top: 0; left: 0; z-index: 5; overflow: visible; pointer-events: none;"
         @mousedown="handleStageClick"
+  @pointerdown="handleStageClick"
+  @touchstart.capture="handleMobileTouchStart"
       >
         <defs>
           <marker

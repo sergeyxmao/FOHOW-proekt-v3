@@ -445,7 +445,15 @@ export function usePanZoom(canvasElement, options = {}) {
       activeTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
 
       if (activeTouchPointers.size === 1) {
+        // Вызываем callback при любом одиночном touch на canvas
+        if (options.onTouchStart) {
+          options.onTouchStart(event)
+        }
         if (canStartTouchPan(event)) {
+          // Вызываем callback при touch на пустом месте (для снятия выделения)
+          if (options.onEmptyTouchStart) {
+            options.onEmptyTouchStart(event)
+          }
           event.preventDefault()
           startPan(event)
         }
