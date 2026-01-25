@@ -1639,7 +1639,25 @@ const handleStageClick = async (event) => {
   const canvasPos = screenToCanvas(event.clientX, event.clientY);
   const imageUnderCursor = getObjectAtPoint(canvasPos.x, canvasPos.y);
 
-  if (imageUnderCursor && !imageUnderCursor.isLocked) {
+  // Если НЕТ объекта под курсором - снимаем выделение
+  if (!imageUnderCursor) {
+    const preserveCardSelection = true;
+    if (!event.ctrlKey && !event.metaKey) {
+      closeAllStickerEditing();
+      clearObjectSelections({ preserveCardSelection });
+    }
+
+    // Не отменяем рисование линии, если кликнули на connection-point
+    if (!isConnectionPoint) {
+      selectedConnectionIds.value = [];
+      cancelDrawing();
+    }
+
+    return; // Завершаем, т.к. кликнули на пустое место
+  }
+
+  // ЕСЛИ объект найден и не заблокирован - выделяем его
+  if (!imageUnderCursor.isLocked) {
     // Если найдено изображение под курсором, выделяем его
     event.stopPropagation();
 
@@ -1657,20 +1675,6 @@ const handleStageClick = async (event) => {
     selectedConnectionIds.value = [];
     selectedCardId.value = null;
     return;
-  }
-
-  // Логика для снятия выделения при клике на пустое место
-  const preserveCardSelection = true;
-  if (!event.ctrlKey && !event.metaKey) {
-    closeAllStickerEditing();
-    clearObjectSelections({ preserveCardSelection });
-  }
-
-  // Не отменяем рисование линии, если кликнули на connection-point
-  // (это обрабатывается в handlePointerDown)
-  if (!isConnectionPoint) {
-    selectedConnectionIds.value = [];
-    cancelDrawing();
   }
 
 };
