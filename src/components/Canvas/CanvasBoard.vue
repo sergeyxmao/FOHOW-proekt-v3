@@ -96,7 +96,7 @@ const {
   gridStep: gridStepRef,
   isGridBackgroundVisible
 } = storeToRefs(canvasStore);
-const { isMobileMode } = storeToRefs(mobileStore);
+const { isMobileMode, isSelectionMode } = storeToRefs(mobileStore);
   watch(() => cardsStore.cards, (newCards, oldCards) => {
   console.log('=== Cards array updated ===');
   console.log('Previous cards count:', oldCards.length);
@@ -1318,6 +1318,10 @@ const handlePointerDown = (event) => {
       !isControlPointTarget &&
       !interactiveTarget
     ) {
+      // В мобильном режиме выделение работает только если включен isSelectionMode
+      if (isMobileMode.value && !isSelectionMode.value) {
+        return; // Не начинаем выделение, позволяем работать pan
+      }
       startSelection(event);
       return;
     }
