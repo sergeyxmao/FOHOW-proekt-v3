@@ -35,6 +35,9 @@ export const useMobileStore = defineStore('mobile', () => {
   // Показывать ли диалог о мобильной версии
   const showMobileDialog = ref(false)
 
+  // Режим выделения для мобильной версии (по умолчанию выключен)
+  const isSelectionMode = ref(false)
+
   // Вычисляемое свойство для определения текущего режима
   const isMobileMode = computed(() => {
     if (forceDesktopMode.value) return false
@@ -111,6 +114,16 @@ export const useMobileStore = defineStore('mobile', () => {
 
   const isMenuScaled = computed(() => menuScale.value > 1.01)
 
+  // Переключение режима выделения
+  const toggleSelectionMode = () => {
+    isSelectionMode.value = !isSelectionMode.value
+  }
+
+  // Установка режима выделения
+  const setSelectionMode = (value) => {
+    isSelectionMode.value = Boolean(value)
+  }
+
   return {
     isMobileDevice,
     forceMobileMode,
@@ -119,11 +132,14 @@ export const useMobileStore = defineStore('mobile', () => {
     showMobileDialog,
     isMenuScaled,
     menuScale,
+    isSelectionMode,
     detectDevice,
     switchToMobile,
     switchToDesktop,
     closeMobileDialog,
     setMenuScale,
-    resetMenuScale
+    resetMenuScale,
+    toggleSelectionMode,
+    setSelectionMode
   }
 })

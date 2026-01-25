@@ -34,7 +34,7 @@ const mobileStore = useMobileStore()
 
 const { isAuthenticated, user, isLoadingProfile } = storeToRefs(authStore)
 const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
-const { isMenuScaled, menuScale, isMobileMode } = storeToRefs(mobileStore)
+const { isMenuScaled, menuScale, isMobileMode, isSelectionMode } = storeToRefs(mobileStore)
 
 const { handleSaveAsHTML, handleShareProject } = useProjectActions()
 
@@ -144,6 +144,10 @@ const handleRenameCurrentBoard = async () => {
 
 const toggleHierarchyMode = () => {
   canvasStore.toggleHierarchicalDragMode()
+}
+
+const toggleSelectionMode = () => {
+  mobileStore.toggleSelectionMode()
 }
 
 const handleActivatePencil = () => {
@@ -275,6 +279,18 @@ watch(
           title="Поделиться проектом"
         >
           <span class="button-icon">📄</span>
+        </button>
+
+        <!-- Режим выделения -->
+        <button
+          v-if="isAuthenticated"
+          class="mobile-header-button"
+          :class="{ 'mobile-header-button--active': isSelectionMode }"
+          type="button"
+          @click="toggleSelectionMode"
+          title="Режим выделения"
+        >
+          <span class="button-icon">⬚</span>
         </button>
       </div>
 
