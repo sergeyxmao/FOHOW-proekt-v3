@@ -63,6 +63,10 @@ const {
   isPanning,
   panPointerId,
   isZoomedIn,
+  isPinching,
+  handlePointerDown: handleZoomPointerDown,
+  handlePointerMove: handleZoomPointerMove,
+  handlePointerUp: handleZoomPointerUp,
   handleBoardWheel,
   beginPan,
   updatePan,
@@ -338,6 +342,21 @@ watch(() => props.snapshot, (value, previous) => {
   }
 });
 
+// === Вспомогательное: отложенный старт штриха для touch (чтобы pinch не оставлял точку) ===
+const TOUCH_STROKE_DELAY = 90;
+let pendingStrokeTimeout = null;
+let pendingStrokePointerId = null;
+let pendingStrokePoint = null;
+
+const clearPendingStroke = () => {
+  if (pendingStrokeTimeout) {
+    clearTimeout(pendingStrokeTimeout);
+    pendingStrokeTimeout = null;
+  }
+  pendingStrokePointerId = null;
+  pendingStrokePoint = null;
+};
+
 // === Функции ===
 const openImagesPanel = () => {
   sidePanelsStore.openImages();
@@ -410,6 +429,18 @@ const handleCanvasPointerDown = async (event) => {
 
   if (!isPrimaryButton) return;
 
+  // Для touch сначала регистрируем pointer в pinch-zoom
+  if (event.pointerType === 'touch') {
+    handleZoomPointerDown(event);
+
+    // Если начался pinch (второй палец) — не даём canvas логике стартовать рисование/выделение
+    if (isPinching.value) {
+      event.preventDefault();
+      clearPendingStroke();
+      return;
+    }
+  }
+
   const point = getCanvasPoint(event);
   if (!point) return;
 
@@ -443,10 +474,54 @@ const handleCanvasPointerDown = async (event) => {
   canvas.setPointerCapture(event.pointerId);
   activePointerId.value = event.pointerId;
   updatePointerPreview(point);
+
+  // ✅ Touch: откладываем старт штриха, чтобы pinch не оставлял точку
+  if (event.pointerType === 'touch') {
+    clearPendingStroke();
+    pendingStrokePointerId = event.pointerId;
+    pendingStrokePoint = point;
+
+    pendingStrokeTimeout = setTimeout(() => {
+      pendingStrokeTimeout = null;
+      if (isPinching.value) {
+        return;
+      }
+      if (activePointerId.value !== pendingStrokePointerId) {
+        return;
+      }
+      if (isDrawing.value) {
+        return;
+      }
+
+      startStroke(pendingStrokePoint);
+      // Не очищаем pendingStrokePointerId здесь: он нужен, чтобы pointermove сразу мог continueStroke
+    }, TOUCH_STROKE_DELAY);
+
+    return;
+  }
+
+  // Mouse/прочие: стартуем сразу
   startStroke(point);
 };
 
 const handleCanvasPointerMove = (event) => {
+  // Для touch сначала обновляем pinch-zoom
+  if (event.pointerType === 'touch') {
+    handleZoomPointerMove(event);
+
+    if (isPinching.value) {
+      event.preventDefault();
+      clearPendingStroke();
+      // На всякий случай сбрасываем рисование, чтобы не зависнуть
+      if (activePointerId.value === event.pointerId) {
+        activePointerId.value = null;
+        isDrawing.value = false;
+        clearPointerPreview();
+      }
+      return;
+    }
+  }
+
   const point = getCanvasPoint(event);
   if (!point) return;
   updatePointerPreview(point);
@@ -466,13 +541,49 @@ const handleCanvasPointerMove = (event) => {
   }
 
   if (!isDrawingToolActive.value) return;
-  if (!isDrawing.value || activePointerId.value !== event.pointerId) return;
+  if (activePointerId.value !== event.pointerId) return;
+
+  // Если touch-штрих ещё не стартовал, стартуем его на первом движении (уменьшаем лаг)
+  if (!isDrawing.value && pendingStrokePointerId === event.pointerId) {
+    clearPendingStroke();
+    startStroke(pendingStrokePoint || point);
+  }
+
+  if (!isDrawing.value) return;
   continueStroke(point);
 };
 
 const handleCanvasPointerUp = (event) => {
   const canvas = drawingCanvasRef.value;
   if (!canvas) return;
+
+  const wasPinching = isPinching.value;
+  if (event.pointerType === 'touch') {
+    handleZoomPointerUp(event);
+  }
+
+  // Всегда чистим pending, если это был тот pointer
+  if (pendingStrokePointerId === event.pointerId) {
+    clearPendingStroke();
+  }
+
+  // Если это был pinch-жест — выходим без finishStroke/selection логики
+  if (wasPinching) {
+    event.preventDefault();
+    // освобождаем захват, если был
+    try {
+      canvas.releasePointerCapture(event.pointerId);
+    } catch (e) {
+      // ignore
+    }
+    // сбрасываем активный pointer, чтобы не зависнуть
+    if (activePointerId.value === event.pointerId) {
+      activePointerId.value = null;
+      isDrawing.value = false;
+      clearPointerPreview();
+    }
+    return;
+  }
 
   if (isSelectionToolActive.value) {
     if (selectionPointerId.value !== event.pointerId) {
@@ -502,6 +613,31 @@ const handleCanvasPointerUp = (event) => {
 const handleCanvasPointerLeave = (event) => {
   const canvas = drawingCanvasRef.value;
   if (!canvas) return;
+
+  // Для touch сначала обновляем pinch-zoom
+  if (event.pointerType === 'touch') {
+    const wasPinching = isPinching.value;
+    handleZoomPointerUp(event);
+
+    if (pendingStrokePointerId === event.pointerId) {
+      clearPendingStroke();
+    }
+
+    if (wasPinching) {
+      event.preventDefault();
+      try {
+        canvas.releasePointerCapture(event.pointerId);
+      } catch (e) {
+        // ignore
+      }
+      if (activePointerId.value === event.pointerId) {
+        activePointerId.value = null;
+        isDrawing.value = false;
+        clearPointerPreview();
+      }
+      return;
+    }
+  }
 
   if (currentTool.value === 'eraser') {
     clearPointerPreview();
@@ -649,6 +785,16 @@ const loadBaseImage = () => {
 };
 
 const handleBoardPointerDown = (event) => {
+  // Touch: регистрируем pinch-zoom
+  if (event.pointerType === 'touch') {
+    handleZoomPointerDown(event);
+    if (isPinching.value) {
+      event.preventDefault();
+      clearPendingStroke();
+      return;
+    }
+  }
+
   const isPrimaryButton = event.button === 0 || event.button === undefined || event.button === -1;
 
   if (isPrimaryButton && !imageTransformState.value && !event.target.closest('.pencil-overlay__image-wrapper')) {
@@ -668,6 +814,17 @@ const handleBoardPointerDown = (event) => {
 };
 
 const handleBoardPointerMove = (event) => {
+  // Touch: обновляем pinch-zoom
+  if (event.pointerType === 'touch') {
+    handleZoomPointerMove(event);
+
+    if (isPinching.value) {
+      event.preventDefault();
+      clearPendingStroke();
+      return;
+    }
+  }
+
   if (imageTransformState.value && imageTransformState.value.pointerId === event.pointerId) {
     event.preventDefault();
     applyImageTransform(event);
@@ -683,29 +840,48 @@ const handleBoardPointerMove = (event) => {
 };
 
 const handleBoardPointerUp = (event) => {
+  const wasPinching = isPinching.value;
+  if (event.pointerType === 'touch') {
+    handleZoomPointerUp(event);
+  }
+
   if (imageTransformState.value && imageTransformState.value.pointerId === event.pointerId) {
     finishImageTransform(event);
     return;
   }
 
-  if (panPointerId.value !== event.pointerId) {
-    return;
+  // Важно: finishPan должен отработать даже если это был pinch (иначе можно зависнуть в isPanning)
+  if (panPointerId.value === event.pointerId) {
+    finishPan(event);
   }
 
-  finishPan(event);
+  if (wasPinching) {
+    event.preventDefault();
+    clearPendingStroke();
+    return;
+  }
 };
 
 const handleBoardPointerCancel = (event) => {
+  const wasPinching = isPinching.value;
+  if (event.pointerType === 'touch') {
+    handleZoomPointerUp(event);
+  }
+
   if (imageTransformState.value && imageTransformState.value.pointerId === event.pointerId) {
     finishImageTransform(event);
     return;
   }
 
-  if (panPointerId.value !== event.pointerId) {
-    return;
+  if (panPointerId.value === event.pointerId) {
+    finishPan(event);
   }
 
-  finishPan(event);
+  if (wasPinching) {
+    event.preventDefault();
+    clearPendingStroke();
+    return;
+  }
 };
 
 const toggleDropdown = (toolName) => {
@@ -789,6 +965,7 @@ onBeforeUnmount(() => {
   stickersStore.pendingImageData = null;
   stickersStore.disablePlacementMode();
   stickersStore.setPlacementTarget('board');
+  clearPendingStroke();
 });
 </script>
 
