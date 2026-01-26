@@ -21,7 +21,7 @@ export function usePencilZoom(options = {}) {
 
   // === Refs и состояния ===
   const zoomScale = ref(1)
-  const minZoomScale = ref(1)
+  const minZoomScale = ref(0.1) // Разрешаем уменьшение до 0.1
   const panOffset = ref({ x: 0, y: 0 })
   const isPanning = ref(false)
   const panPointerId = ref(null)
@@ -35,16 +35,12 @@ export function usePencilZoom(options = {}) {
 
   // === Computed ===
   const isZoomedIn = computed(() => {
-    const minZoom = minZoomScale.value || 1
-    return (zoomScale.value || 1) > minZoom + 0.0001
+    // Считаем, что "увеличено", если масштаб отличается от 1
+    // Но для pan теперь это не важно, т.к. мы разрешаем двигать всегда
+    return zoomScale.value > 1.0001
   })
 
-  // === Watcher для сброса pan при выходе из зума ===
-  watch(isZoomedIn, (zoomed) => {
-    if (!zoomed) {
-      resetPan()
-    }
-  })
+  // Watcher удален: мы больше не сбрасываем pan автоматически при zoomScale <= 1
 
   // === Вспомогательные функции ===
 
@@ -54,7 +50,7 @@ export function usePencilZoom(options = {}) {
    * @returns {number}
    */
   const clampZoom = (value) => {
-    const MIN_ZOOM = minZoomScale.value || 1
+    const MIN_ZOOM = minZoomScale.value || 0.1
     return Math.min(Math.max(value, MIN_ZOOM), MAX_ZOOM)
   }
 
@@ -252,10 +248,8 @@ export function usePencilZoom(options = {}) {
    * @param {PointerEvent} event - Событие указателя
    */
   const beginPan = (event) => {
-    if (!isZoomedIn.value) {
-      return
-    }
-
+    // Убрали проверку isZoomedIn, чтобы можно было двигать всегда
+    
     const boardElement = event.currentTarget
     if (boardElement && typeof boardElement.setPointerCapture === 'function') {
       boardElement.setPointerCapture(event.pointerId)
@@ -329,7 +323,7 @@ export function usePencilZoom(options = {}) {
    */
   const resetZoom = () => {
     zoomScale.value = 1
-    minZoomScale.value = 1
+    minZoomScale.value = 0.1
     resetPan()
   }
 
