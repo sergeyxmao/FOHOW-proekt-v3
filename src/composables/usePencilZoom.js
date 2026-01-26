@@ -27,6 +27,11 @@ export function usePencilZoom(options = {}) {
   const panPointerId = ref(null)
   const panStartPoint = ref(null)
   const panInitialOffset = ref({ x: 0, y: 0 })
+  
+  // Состояние для pinch-zoom
+  const activePointers = new Map()
+  const isPinching = ref(false)
+  let pinchState = null
 
   // === Computed ===
   const isZoomedIn = computed(() => {
@@ -62,6 +67,10 @@ export function usePencilZoom(options = {}) {
     panPointerId.value = null
     panStartPoint.value = null
     panInitialOffset.value = { x: 0, y: 0 }
+    // Сбрасываем pinch при сбросе панорамирования
+    activePointers.clear()
+    isPinching.value = false
+    pinchState = null
   }
 
   /**
@@ -106,6 +115,139 @@ export function usePencilZoom(options = {}) {
     zoomScale.value = Number.parseFloat(updatedScale.toFixed(4))
   }
 
+  // === Logic for Pinch Zoom ===
+  
+  const updatePinchState = (boardElement) => {
+    if (activePointers.size < 2) {
+      pinchState = null
+      isPinching.value = false
+      return
+    }
+
+    const pointers = Array.from(activePointers.values())
+    // Берем первые два поинтера
+    const p1 = pointers[0]
+    const p2 = pointers[1]
+
+    const dx = p1.x - p2.x
+    const dy = p1.y - p2.y
+    const distance = Math.hypot(dx, dy)
+
+    if (distance === 0) return
+
+    const rect = boardElement.getBoundingClientRect()
+    // Центр между пальцами в координатах viewport
+    const centerClientX = (p1.x + p2.x) / 2
+    const centerClientY = (p1.y + p2.y) / 2
+    
+    // Центр относительно элемента
+    const centerX = centerClientX - rect.left
+    const centerY = centerClientY - rect.top
+
+    const currentScale = zoomScale.value || 1
+    const currentPan = panOffset.value || { x: 0, y: 0 }
+
+    // Точка в контенте, которая находится под центром щипка
+    // formula: contentX = (centerX - panX) / scale
+    const contentCenterX = (centerX - currentPan.x) / currentScale
+    const contentCenterY = (centerY - currentPan.y) / currentScale
+
+    pinchState = {
+      initialDistance: distance,
+      initialScale: currentScale,
+      contentCenterX,
+      contentCenterY,
+      centerStartX: centerX,
+      centerStartY: centerY
+    }
+    isPinching.value = true
+  }
+
+  const handlePinchMove = (boardElement) => {
+    if (!pinchState || activePointers.size < 2) return
+
+    const pointers = Array.from(activePointers.values())
+    const p1 = pointers[0]
+    const p2 = pointers[1]
+
+    const dx = p1.x - p2.x
+    const dy = p1.y - p2.y
+    const distance = Math.hypot(dx, dy)
+
+    if (distance === 0) return
+
+    const rect = boardElement.getBoundingClientRect()
+    const centerClientX = (p1.x + p2.x) / 2
+    const centerClientY = (p1.y + p2.y) / 2
+    const centerX = centerClientX - rect.left
+    const centerY = centerClientY - rect.top
+
+    // Вычисляем новый масштаб
+    const distanceRatio = distance / pinchState.initialDistance
+    const newScale = clampZoom(pinchState.initialScale * distanceRatio)
+
+    // Вычисляем новый pan, чтобы contentCenter остался под пальцами
+    // formula: panX = centerX - contentX * newScale
+    const newPanX = centerX - pinchState.contentCenterX * newScale
+    const newPanY = centerY - pinchState.contentCenterY * newScale
+
+    zoomScale.value = newScale
+    panOffset.value = { x: newPanX, y: newPanY }
+  }
+
+
+  /**
+   * Универсальный обработчик PointerDown (вызывать из компонента)
+   */
+  const handlePointerDown = (event) => {
+    if (event.pointerType !== 'touch') {
+      // Для мыши используем старую логику (только если вызов идет для pan tool)
+      // Но здесь мы просто регистрируем поинтер для pinch
+      return
+    }
+    
+    activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+
+    if (activePointers.size === 2) {
+      // Начинаем pinch
+      updatePinchState(event.currentTarget)
+    }
+  }
+
+  /**
+   * Универсальный обработчик PointerMove
+   */
+  const handlePointerMove = (event) => {
+    if (event.pointerType !== 'touch') return
+
+    if (activePointers.has(event.pointerId)) {
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+    }
+
+    if (isPinching.value && activePointers.size >= 2) {
+      event.preventDefault() // Предотвращаем скролл/зум браузера
+      handlePinchMove(event.currentTarget)
+    }
+  }
+
+  /**
+   * Универсальный обработчик PointerUp/Cancel
+   */
+  const handlePointerUp = (event) => {
+    if (event.pointerType !== 'touch') return
+
+    activePointers.delete(event.pointerId)
+    
+    if (activePointers.size < 2) {
+      isPinching.value = false
+      pinchState = null
+    } else {
+      // Если осталось 2+ пальца, пересчитываем состояние (на всякий случай)
+      updatePinchState(event.currentTarget)
+    }
+  }
+
+  // === Старая логика панорамирования (для одного пальца/мыши) ===
   /**
    * Начало панорамирования
    * @param {PointerEvent} event - Событие указателя
@@ -125,6 +267,11 @@ export function usePencilZoom(options = {}) {
     panStartPoint.value = { x: event.clientX, y: event.clientY }
     const currentPan = panOffset.value || { x: 0, y: 0 }
     panInitialOffset.value = { ...currentPan }
+    
+    // Регистрируем поинтер также для pinch (если это touch)
+    if (event.pointerType === 'touch') {
+       handlePointerDown(event)
+    }
   }
 
   /**
@@ -132,6 +279,13 @@ export function usePencilZoom(options = {}) {
    * @param {PointerEvent} event - Событие указателя
    */
   const updatePan = (event) => {
+    // Обновляем состояние поинтеров для pinch
+    if (event.pointerType === 'touch') {
+       handlePointerMove(event)
+    }
+    
+    if (isPinching.value) return // Если щипок, то обычный pan не делаем
+
     if (!isPanning.value || panPointerId.value !== event.pointerId || !panStartPoint.value) {
       return
     }
@@ -151,6 +305,11 @@ export function usePencilZoom(options = {}) {
    * @param {PointerEvent} event - Событие указателя
    */
   const finishPan = (event) => {
+    // Обновляем состояние поинтеров для pinch
+    if (event.pointerType === 'touch') {
+       handlePointerUp(event)
+    }
+    
     if (panPointerId.value !== event.pointerId) {
       return
     }
@@ -183,6 +342,7 @@ export function usePencilZoom(options = {}) {
     panOffset,
     isPanning,
     panPointerId,
+    isPinching, // Экспортируем состояние pinch
 
     // Computed
     isZoomedIn,
@@ -193,6 +353,9 @@ export function usePencilZoom(options = {}) {
     beginPan,
     updatePan,
     finishPan,
+    handlePointerDown, // Экспортируем обработчики для использования в других местах
+    handlePointerMove,
+    handlePointerUp,
     resetPan,
     resetZoom
   }
