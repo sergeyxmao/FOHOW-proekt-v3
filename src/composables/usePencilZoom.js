@@ -140,30 +140,31 @@ export function usePencilZoom(options = {}) {
     const centerClientX = (p1.x + p2.x) / 2
     const centerClientY = (p1.y + p2.y) / 2
     
-    // Центр относительно элемента
-    const centerX = centerClientX - rect.left
-    const centerY = centerClientY - rect.top
-
     const currentScale = zoomScale.value || 1
     const currentPan = panOffset.value || { x: 0, y: 0 }
 
+    // Вычисляем "базовую" позицию элемента (где он был бы без transform: translate)
+    // rect.left = baseOriginX + currentPan.x
+    const baseOriginX = rect.left - currentPan.x
+    const baseOriginY = rect.top - currentPan.y
+
     // Точка в контенте, которая находится под центром щипка
-    // formula: contentX = (centerX - panX) / scale
-    const contentCenterX = (centerX - currentPan.x) / currentScale
-    const contentCenterY = (centerY - currentPan.y) / currentScale
+    // contentX = (centerClientX - rect.left) / currentScale
+    const contentCenterX = (centerClientX - rect.left) / currentScale
+    const contentCenterY = (centerClientY - rect.top) / currentScale
 
     pinchState = {
       initialDistance: distance,
       initialScale: currentScale,
       contentCenterX,
       contentCenterY,
-      centerStartX: centerX,
-      centerStartY: centerY
+      baseOriginX,
+      baseOriginY
     }
     isPinching.value = true
   }
 
-  const handlePinchMove = (boardElement) => {
+  const handlePinchMove = () => {
     if (!pinchState || activePointers.size < 2) return
 
     const pointers = Array.from(activePointers.values())
@@ -176,20 +177,18 @@ export function usePencilZoom(options = {}) {
 
     if (distance === 0) return
 
-    const rect = boardElement.getBoundingClientRect()
     const centerClientX = (p1.x + p2.x) / 2
     const centerClientY = (p1.y + p2.y) / 2
-    const centerX = centerClientX - rect.left
-    const centerY = centerClientY - rect.top
 
     // Вычисляем новый масштаб
     const distanceRatio = distance / pinchState.initialDistance
     const newScale = clampZoom(pinchState.initialScale * distanceRatio)
 
     // Вычисляем новый pan, чтобы contentCenter остался под пальцами
-    // formula: panX = centerX - contentX * newScale
-    const newPanX = centerX - pinchState.contentCenterX * newScale
-    const newPanY = centerY - pinchState.contentCenterY * newScale
+    // centerClientX = baseOriginX + newPanX + contentCenterX * newScale
+    // => newPanX = centerClientX - baseOriginX - contentCenterX * newScale
+    const newPanX = centerClientX - pinchState.baseOriginX - pinchState.contentCenterX * newScale
+    const newPanY = centerClientY - pinchState.baseOriginY - pinchState.contentCenterY * newScale
 
     zoomScale.value = newScale
     panOffset.value = { x: newPanX, y: newPanY }
@@ -226,7 +225,7 @@ export function usePencilZoom(options = {}) {
 
     if (isPinching.value && activePointers.size >= 2) {
       event.preventDefault() // Предотвращаем скролл/зум браузера
-      handlePinchMove(event.currentTarget)
+      handlePinchMove()
     }
   }
 
