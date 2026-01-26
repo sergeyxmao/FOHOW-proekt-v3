@@ -1,8 +1,4 @@
 <template>
-  <!-- 
-    Один Teleport для управления обоими модальными окнами.
-    Это правильный подход, чтобы избежать вложенности.
-  -->
   <Teleport to="body">
     <!-- Основное модальное окно -->
     <Transition name="modal">
@@ -13,11 +9,9 @@
           <div class="boards-container">
             <div class="boards-header">
               <h2>📋 Мои структуры</h2>
-              <FeatureGate feature="max_boards">
-                <button class="btn-create" @click="createNewBoard">
-                  ➕ Создать структуру
-                </button>
-              </FeatureGate>
+              <button class="btn-create" @click="createNewBoard">
+                ➕ Создать структуру
+              </button>
             </div>
   
             <UsageLimitBar
@@ -31,7 +25,6 @@
               <p>Загрузка структур...</p>
             </div>
 
-            <!-- ШАГ 1: Блок ошибки исправлен и теперь использует "error" -->
             <div v-if="error" class="error-message">
               ❌ {{ error }}
             </div>
@@ -40,11 +33,9 @@
               <div class="empty-icon">🎨</div>
               <h3>У вас пока нет структур</h3>
               <p>Создайте первую структуру, чтобы начать работу</p>
-              <FeatureGate feature="max_boards">
-                <button class="btn-create-big" @click="createNewBoard">
-                  ➕ Создать первую структуру
-                </button>
-              </FeatureGate>
+              <button class="btn-create-big" @click="createNewBoard">
+                ➕ Создать первую структуру
+              </button>
             </div>
 
             <div v-else class="boards-grid">
@@ -52,11 +43,28 @@
                 v-for="board in boards"
                 :key="board.id"
                 class="board-card"
-                :class="{ 'locked': board.is_locked }"
+                :class="{
+                  'soft-locked': board.lock_status === 'soft_lock',
+                  'hard-locked': board.lock_status === 'hard_lock'
+                }"
                 @click="openBoard(board)"
               >
-                <div v-if="board.is_locked" class="lock-indicator">
-                  <span class="lock-icon">🔒</span>
+                <!-- Оверлей для Soft Lock -->
+                <div v-if="board.lock_status === 'soft_lock'" class="lock-overlay soft-lock-overlay">
+                  <div class="lock-overlay-content">
+                    <span class="lock-timer-icon">⏱️</span>
+                    <span class="lock-timer-text">Блокировка через {{ board.daysUntilBlock }} дн.</span>
+                    <button class="lock-info-btn" @click.stop="showLockInfoModal(board)" title="Подробнее">?</button>
+                  </div>
+                </div>
+
+                <!-- Оверлей для Hard Lock -->
+                <div v-if="board.lock_status === 'hard_lock'" class="lock-overlay hard-lock-overlay">
+                  <div class="lock-overlay-content">
+                    <span class="lock-icon">🔒</span>
+                    <span class="lock-timer-text">Удаление через {{ board.daysUntilDelete }} дн.</span>
+                    <button class="lock-info-btn" @click.stop="showLockInfoModal(board)" title="Подробнее">?</button>
+                  </div>
                 </div>
 
                 <div class="board-thumbnail">
@@ -98,7 +106,7 @@
       </div>
     </Transition>
 
-    <!-- Модальное окно для заблокированной доски -->
+    <!-- Модальное окно для заблокированной доски (Hard Lock) -->
     <Transition name="modal-fade">
       <div v-if="showLockedModal" class="locked-modal-overlay" @click="showLockedModal = false">
         <div class="locked-modal-content" @click.stop>
@@ -113,6 +121,51 @@
               Продлить тариф
             </button>
             <button class="btn-cancel" @click="showLockedModal = false">
+              Закрыть
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Модальное окно с информацией о лимите тарифа -->
+    <Transition name="modal-fade">
+      <div v-if="showLockInfoModalVisible" class="locked-modal-overlay" @click="showLockInfoModalVisible = false">
+        <div class="locked-modal-content lock-info-modal" @click.stop>
+          <button class="locked-modal-close" @click="showLockInfoModalVisible = false">✕</button>
+
+          <div class="locked-modal-icon">{{ selectedBoardForInfo?.lock_status === 'soft_lock' ? '⏱️' : '🔒' }}</div>
+          <h2>Лимит тарифного плана</h2>
+
+          <div class="lock-info-details">
+            <p v-if="selectedBoardForInfo?.lock_status === 'soft_lock'" class="locked-modal-message">
+              Ваша подписка истекла. Эта доска превышает лимит бесплатного тарифа.
+              <br><br>
+              <strong>Сейчас она доступна только для чтения (Soft Lock).</strong>
+              <br><br>
+              Через <strong>{{ selectedBoardForInfo?.daysUntilBlock }} дней</strong> она будет заблокирована полностью,
+              а затем удалена.
+            </p>
+            <p v-else class="locked-modal-message">
+              Эта доска полностью заблокирована (Hard Lock) и недоступна для просмотра.
+              <br><br>
+              Через <strong>{{ selectedBoardForInfo?.daysUntilDelete }} дней</strong> она будет автоматически удалена.
+            </p>
+
+            <div class="lock-info-tip">
+              <strong>Чтобы сохранить доску:</strong>
+              <ul>
+                <li>Продлите подписку</li>
+                <li>Или удалите другие доски, чтобы освободить место</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="locked-modal-actions">
+            <button class="btn-upgrade" @click="goToPayment">
+              Продлить подписку
+            </button>
+            <button class="btn-cancel" @click="showLockInfoModalVisible = false">
               Закрыть
             </button>
           </div>
@@ -150,6 +203,8 @@ const error = ref('')
 const activeMenu = ref(null)
 const showLockedModal = ref(false)
 const lockedMessage = ref('')
+const showLockInfoModalVisible = ref(false)
+const selectedBoardForInfo = ref(null)
 const failedThumbnails = ref(new Set())
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
@@ -282,6 +337,11 @@ async function createNewBoard() {
   }
 }
 
+function showLockInfoModal(board) {
+  selectedBoardForInfo.value = board
+  showLockInfoModalVisible.value = true
+}
+
 function openBoard(board) {
   // Если передан только ID (из меню), найдем доску
   const boardData = typeof board === 'object' ? board : boards.value.find(b => b.id === board)
@@ -290,17 +350,16 @@ function openBoard(board) {
     return
   }
 
-  // Проверяем, заблокирована ли доска
-  if (boardData.is_locked) {
-    // Вычисляем количество дней до удаления
-    const daysUntilDeletion = calculateDaysUntilDeletion(boardData.locked_at)
+  const lockStatus = boardData.lock_status || 'active'
 
-    lockedMessage.value = `Эта доска заблокирована. Если в течение ${daysUntilDeletion} дней не произойдет продление тарифа минимум на «Индивидуальный», доска будет автоматически удалена.`
+  // Hard Lock - доска полностью недоступна
+  if (lockStatus === 'hard_lock') {
+    lockedMessage.value = `Эта доска полностью заблокирована. Через ${boardData.daysUntilDelete || 0} дней она будет автоматически удалена. Продлите подписку для восстановления доступа.`
     showLockedModal.value = true
     return
   }
 
-  // Если доска не заблокирована, открываем ее
+  // Soft Lock или Active - открываем доску (для soft_lock будет readonly режим на стороне редактора)
   emit('open-board', boardData.id)
   close()
 }
@@ -321,6 +380,7 @@ function calculateDaysUntilDeletion(lockedAt) {
 
 function goToPayment() {
   showLockedModal.value = false
+  showLockInfoModalVisible.value = false
   close()
   window.location.href = '/pricing'
 }
@@ -757,43 +817,95 @@ function formatDate(dateString) {
   color: #f44336;
 }
 
-/* Стили для заблокированных досок */
-.board-card.locked {
-  opacity: 0.6;
-  filter: grayscale(50%);
+/* Стили для заблокированных досок - Soft Lock */
+.board-card.soft-locked {
   position: relative;
 }
 
-.board-card.locked::before {
-  content: '';
+.board-card.soft-locked .board-thumbnail {
+  filter: grayscale(30%);
+}
+
+/* Стили для заблокированных досок - Hard Lock */
+.board-card.hard-locked {
+  position: relative;
+}
+
+.board-card.hard-locked .board-thumbnail {
+  filter: grayscale(70%);
+  opacity: 0.6;
+}
+
+/* Оверлей для блокировок */
+.lock-overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.1);
-  pointer-events: none;
-  border-radius: 16px;
-  z-index: 1;
+  height: 160px; /* Высота thumbnail */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  border-radius: 16px 16px 0 0;
 }
 
-.board-card.locked:hover {
-  opacity: 0.7;
+.soft-lock-overlay {
+  background: linear-gradient(180deg, rgba(255, 152, 0, 0.85) 0%, rgba(255, 152, 0, 0.7) 100%);
 }
 
-.lock-indicator {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 2;
-  pointer-events: none;
+.hard-lock-overlay {
+  background: linear-gradient(180deg, rgba(244, 67, 54, 0.9) 0%, rgba(244, 67, 54, 0.75) 100%);
+}
+
+.lock-overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  text-align: center;
+  padding: 16px;
+}
+
+.lock-timer-icon {
+  font-size: 32px;
 }
 
 .lock-icon {
-  font-size: 48px;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+  font-size: 32px;
+}
+
+.lock-timer-text {
+  font-size: 14px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.lock-info-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid white;
+  background: transparent;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.lock-info-btn:hover {
+  background: white;
+  color: #ff9800;
+}
+
+.hard-lock-overlay .lock-info-btn:hover {
+  color: #f44336;
 }
 
 /* Стили для модального окна заблокированной доски */
@@ -897,6 +1009,39 @@ function formatDate(dateString) {
 
 .btn-cancel:hover {
   background: #e0e0e0;
+}
+
+/* Стили для информационного модального окна о блокировке */
+.lock-info-modal {
+  max-width: 520px;
+}
+
+.lock-info-details {
+  text-align: left;
+  margin-bottom: 24px;
+}
+
+.lock-info-tip {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.lock-info-tip strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.lock-info-tip ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #666;
+}
+
+.lock-info-tip li {
+  margin: 4px 0;
 }
 
 .modal-enter-active,
