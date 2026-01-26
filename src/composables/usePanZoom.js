@@ -82,6 +82,8 @@ export function usePanZoom(canvasElement, options = {}) {
 
     // Проверяем опцию canPan (функция или ref)
     // Если canPan вернул false — блокируем pan для одного пальца
+    // ⚠️ ВАЖНО: Эта проверка применяется ТОЛЬКО для одного пальца!
+    // Pinch-zoom (два пальца) работает ВСЕГДА, независимо от canPan
     if (options.canPan !== undefined) {
       const canPanValue = typeof options.canPan === 'function'
         ? options.canPan()
@@ -444,11 +446,13 @@ export function usePanZoom(canvasElement, options = {}) {
 	  
       activeTouchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
 
+      // ✅ ИСПРАВЛЕНИЕ: Для ОДНОГО пальца проверяем canPan
       if (activeTouchPointers.size === 1) {
         // Вызываем callback при любом одиночном touch на canvas
         if (options.onTouchStart) {
           options.onTouchStart(event)
         }
+        // Проверяем canPan ТОЛЬКО для одного пальца
         if (canStartTouchPan(event)) {
           // Вызываем callback при touch на пустом месте (для снятия выделения)
           if (options.onEmptyTouchStart) {
@@ -459,6 +463,9 @@ export function usePanZoom(canvasElement, options = {}) {
         }
         return
       }
+
+      // ✅ ИСПРАВЛЕНИЕ: Для ДВУХ и более пальцев — ВСЕГДА разрешаем pinch
+      // НЕ проверяем canPan для многопальцевых жестов
       if (activeTouchPointers.size >= 3) {
         if (isPanning && panPointerType === 'touch') {
           stopPanning()
@@ -467,6 +474,7 @@ export function usePanZoom(canvasElement, options = {}) {
         return
       }
 
+      // Два пальца — обрабатываем pinch
       if (isPanning && panPointerType === 'touch') {
         stopPanning()
       }
