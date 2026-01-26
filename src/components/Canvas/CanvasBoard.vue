@@ -2147,6 +2147,43 @@ const fitToContent = (options = {}) => {
 };
 const SNAPSHOT_CLASS = 'canvas-container--capturing';
 
+/**
+ * Вычисляет bounding box SVG-контента (линий связи)
+ * Включает элементы с отрицательными координатами
+ * @param {HTMLElement} svgLayer - SVG элемент слоя линий
+ * @returns {Object|null} - { minX, minY, maxX, maxY } или null если контента нет
+ */
+const getSvgContentBounds = (svgLayer) => {
+  if (!svgLayer) return null;
+
+  const lineGroups = svgLayer.querySelectorAll('.line-group, .user-card-line-group');
+  if (lineGroups.length === 0) return null;
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let hasValidBounds = false;
+
+  lineGroups.forEach(group => {
+    try {
+      const bbox = group.getBBox();
+      // Пропускаем пустые bbox
+      if (bbox.width === 0 && bbox.height === 0) return;
+
+      minX = Math.min(minX, bbox.x);
+      minY = Math.min(minY, bbox.y);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasValidBounds = true;
+    } catch (e) {
+      // getBBox может бросить ошибку для невидимых элементов
+    }
+  });
+
+  return hasValidBounds ? { minX, minY, maxX, maxY } : null;
+};
+
 const captureViewportSnapshot = async () => {
   const element = canvasContainerRef.value;
 
@@ -2164,6 +2201,16 @@ const captureViewportSnapshot = async () => {
     const deviceScale = Math.max(1, window.devicePixelRatio || 1);
     // Увеличиваем масштаб до 4 для лучшего качества в режиме рисования
     const captureScale = Math.min(deviceScale, 4);
+
+    // Вычисляем bounding box SVG контента для обработки отрицательных координат
+    const svgLayer = element.querySelector('.svg-layer');
+    const svgBounds = getSvgContentBounds(svgLayer);
+
+    // Определяем нужен ли сдвиг для отрицательных координат
+    const needsOffset = svgBounds && (svgBounds.minX < 0 || svgBounds.minY < 0);
+    const offsetX = needsOffset && svgBounds.minX < 0 ? Math.ceil(Math.abs(svgBounds.minX)) : 0;
+    const offsetY = needsOffset && svgBounds.minY < 0 ? Math.ceil(Math.abs(svgBounds.minY)) : 0;
+
     const canvas = await html2canvas(element, {
       backgroundColor: null,
       logging: false,
@@ -2172,7 +2219,44 @@ const captureViewportSnapshot = async () => {
       scrollX: window.scrollX,
       scrollY: window.scrollY,
       width,
-      height
+      height,
+      // Модифицируем клонированный DOM перед рендерингом
+      // чтобы включить SVG-контент с отрицательными координатами
+      onclone: needsOffset ? (clonedDoc, clonedElement) => {
+        const clonedSvg = clonedElement.querySelector('.svg-layer');
+        if (!clonedSvg) return;
+
+        // Получаем текущие размеры SVG
+        const currentWidth = parseFloat(clonedSvg.getAttribute('width')) || clonedSvg.clientWidth || 0;
+        const currentHeight = parseFloat(clonedSvg.getAttribute('height')) || clonedSvg.clientHeight || 0;
+
+        // Расширяем SVG для включения контента с отрицательными координатами
+        clonedSvg.setAttribute('width', currentWidth + offsetX);
+        clonedSvg.setAttribute('height', currentHeight + offsetY);
+
+        // Сдвигаем SVG влево/вверх чтобы расширенная область была на месте оригинала
+        clonedSvg.style.left = `${-offsetX}px`;
+        clonedSvg.style.top = `${-offsetY}px`;
+
+        // Создаём обёртывающую группу и переносим в неё весь контент (кроме defs)
+        // с transform="translate(offsetX, offsetY)" для компенсации отрицательных координат
+        const wrapperGroup = clonedDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
+        wrapperGroup.setAttribute('transform', `translate(${offsetX}, ${offsetY})`);
+
+        // Собираем все дочерние элементы кроме defs
+        const childrenToMove = [];
+        for (const child of clonedSvg.children) {
+          if (child.tagName.toLowerCase() !== 'defs') {
+            childrenToMove.push(child);
+          }
+        }
+
+        // Перемещаем элементы в обёртку
+        childrenToMove.forEach(child => wrapperGroup.appendChild(child));
+
+        // Добавляем обёртку в SVG
+        clonedSvg.appendChild(wrapperGroup);
+      } : undefined
     });
 
     // Возвращаем canvas в полном разрешении без уменьшения
@@ -2182,7 +2266,7 @@ const captureViewportSnapshot = async () => {
     console.error('Не удалось сделать снимок полотна', error);
     return null;
   } finally {
-    element.classList.remove(SNAPSHOT_CLASS);    
+    element.classList.remove(SNAPSHOT_CLASS);
   }
 };
 
