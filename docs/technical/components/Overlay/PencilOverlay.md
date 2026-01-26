@@ -91,6 +91,33 @@ src/components/Overlay/PencilOverlay.vue
 
 ## История изменений
 
+### 2026-01-26: Исправление системы undo/redo для инструментов рисования
+
+**Проблема:** При рисовании карандашом, маркером или ластиком кнопка "Отмена" (undo) оставалась неактивной (disabled). Ctrl+Z не работал после рисования линий. При этом другие действия (добавление картинки, перемещение выделения) корректно сохранялись в историю.
+
+**Техническая причина:**
+- `usePencilDrawing` инициализировался с `scheduleHistorySave: null`
+- После инициализации `usePencilHistory` функция `scheduleHistorySave` не передавалась обратно в `usePencilDrawing`
+- В `finishStroke()` проверка `if (hasStrokeChanges.value && scheduleHistorySave)` всегда возвращала `false`, потому что `scheduleHistorySave` оставался `null`
+
+**Решение:**
+- В `usePencilDrawing.js` добавлен ref `scheduleHistorySaveRef` и метод `setScheduleHistorySave(fn)` для установки функции после инициализации
+- В `PencilOverlay.vue` добавлен вызов `setScheduleHistorySave(scheduleHistorySave)` после инициализации `usePencilHistory`
+- Это решает проблему циклической зависимости между composables
+
+**Поведение после исправления:**
+- После рисования линии кнопка "Отмена" становится активной
+- Ctrl+Z корректно отменяет нарисованные штрихи
+- Ctrl+Shift+Z / Ctrl+Y повторяет отменённые действия
+- Работает для всех инструментов: brush (карандаш), marker (маркер), eraser (ластик)
+
+**Файлы:**
+- `src/composables/usePencilDrawing.js` — добавлен `scheduleHistorySaveRef` и `setScheduleHistorySave()`
+- `src/components/Overlay/PencilOverlay.vue` — добавлен вызов `setScheduleHistorySave()`
+- `docs/technical/components/Overlay/PencilOverlay.md` — обновлена документация
+
+**Коммит:** `fix: undo/redo not working for pencil drawing tools`
+
 ### 2026-01-24
 - Добавлено автодобавление изображений при закрытии панели ImagesPanel в режиме рисования
 - Изображения добавляются как перемещаемые объекты (с выделением) через `addDroppedImage()`

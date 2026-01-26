@@ -26,8 +26,12 @@ export function usePencilDrawing(options) {
   const {
     canvasContext,
     canvasScale,
-    scheduleHistorySave
+    scheduleHistorySave: initialScheduleHistorySave
   } = options
+
+  // Храним scheduleHistorySave как ref для возможности обновления после инициализации
+  // (решает проблему циклической зависимости между composables)
+  const scheduleHistorySaveRef = ref(initialScheduleHistorySave)
 
   // === Refs и состояния ===
   const currentTool = ref('brush')
@@ -144,9 +148,18 @@ export function usePencilDrawing(options) {
     lastPoint.value = null
     activePointerId.value = null
 
-    if (hasStrokeChanges.value && scheduleHistorySave) {
-      scheduleHistorySave(true)
+    if (hasStrokeChanges.value && scheduleHistorySaveRef.value) {
+      scheduleHistorySaveRef.value(true)
     }
+  }
+
+  /**
+   * Установка функции сохранения в историю
+   * Используется для разрешения циклической зависимости между composables
+   * @param {Function} fn - Функция scheduleHistorySave из usePencilHistory
+   */
+  const setScheduleHistorySave = (fn) => {
+    scheduleHistorySaveRef.value = fn
   }
 
   /**
@@ -199,6 +212,7 @@ export function usePencilDrawing(options) {
     continueStroke,
     finishStroke,
     updatePointerPreview,
-    clearPointerPreview
+    clearPointerPreview,
+    setScheduleHistorySave
   }
 }
