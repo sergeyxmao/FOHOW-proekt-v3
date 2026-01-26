@@ -1607,7 +1607,8 @@ watch(
   z-index: 101;
 }
 
-.card:hover .connection-point {
+.card:hover .connection-point,
+.card.connecting .connection-point {
   display: block;
 }
 

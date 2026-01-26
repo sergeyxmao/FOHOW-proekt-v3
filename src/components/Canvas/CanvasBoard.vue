@@ -2575,7 +2575,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           :key="card.id"
           :card="card"
           :is-selected="card.selected"
-          :is-connecting="isDrawingLine && connectionStart?.cardId === card.id"
+          :is-connecting="isDrawingLine"
           @card-click="(event) => handleCardClick(event, card.id)"
           @start-drag="startDrag"
           @add-note="handleAddNoteClick"
