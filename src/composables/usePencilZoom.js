@@ -21,7 +21,7 @@ export function usePencilZoom(options = {}) {
 
   // === Refs и состояния ===
   const zoomScale = ref(1)
-  const minZoomScale = ref(0.1) // Разрешаем уменьшение до 0.1
+  const minZoomScale = ref(1) // Вернули ограничение: минимум 1 (оригинал)
   const panOffset = ref({ x: 0, y: 0 })
   const isPanning = ref(false)
   const panPointerId = ref(null)
@@ -35,12 +35,16 @@ export function usePencilZoom(options = {}) {
 
   // === Computed ===
   const isZoomedIn = computed(() => {
-    // Считаем, что "увеличено", если масштаб отличается от 1
-    // Но для pan теперь это не важно, т.к. мы разрешаем двигать всегда
-    return zoomScale.value > 1.0001
+    const minZoom = minZoomScale.value || 1
+    return (zoomScale.value || 1) > minZoom + 0.0001
   })
 
-  // Watcher удален: мы больше не сбрасываем pan автоматически при zoomScale <= 1
+  // === Watcher для сброса pan при выходе из зума (возвращаем поведение) ===
+  watch(isZoomedIn, (zoomed) => {
+    if (!zoomed) {
+      resetPan()
+    }
+  })
 
   // === Вспомогательные функции ===
 
@@ -50,7 +54,7 @@ export function usePencilZoom(options = {}) {
    * @returns {number}
    */
   const clampZoom = (value) => {
-    const MIN_ZOOM = minZoomScale.value || 0.1
+    const MIN_ZOOM = minZoomScale.value || 1
     return Math.min(Math.max(value, MIN_ZOOM), MAX_ZOOM)
   }
 
@@ -180,9 +184,14 @@ export function usePencilZoom(options = {}) {
     const distanceRatio = distance / pinchState.initialDistance
     const newScale = clampZoom(pinchState.initialScale * distanceRatio)
 
+    // Если масштаб стал 1 (или меньше из-за clamp), сбрасываем pan в 0
+    if (newScale <= (minZoomScale.value || 1) + 0.0001) {
+      zoomScale.value = minZoomScale.value || 1
+      panOffset.value = { x: 0, y: 0 }
+      return
+    }
+
     // Вычисляем новый pan, чтобы contentCenter остался под пальцами
-    // centerClientX = baseOriginX + newPanX + contentCenterX * newScale
-    // => newPanX = centerClientX - baseOriginX - contentCenterX * newScale
     const newPanX = centerClientX - pinchState.baseOriginX - pinchState.contentCenterX * newScale
     const newPanY = centerClientY - pinchState.baseOriginY - pinchState.contentCenterY * newScale
 
@@ -248,8 +257,11 @@ export function usePencilZoom(options = {}) {
    * @param {PointerEvent} event - Событие указателя
    */
   const beginPan = (event) => {
-    // Убрали проверку isZoomedIn, чтобы можно было двигать всегда
-    
+    // Вернули проверку: pan возможен только если есть зум
+    if (!isZoomedIn.value) {
+      return
+    }
+
     const boardElement = event.currentTarget
     if (boardElement && typeof boardElement.setPointerCapture === 'function') {
       boardElement.setPointerCapture(event.pointerId)
@@ -323,7 +335,7 @@ export function usePencilZoom(options = {}) {
    */
   const resetZoom = () => {
     zoomScale.value = 1
-    minZoomScale.value = 0.1
+    minZoomScale.value = 1
     resetPan()
   }
 
