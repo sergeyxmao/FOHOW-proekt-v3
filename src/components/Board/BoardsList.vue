@@ -28,11 +28,9 @@
         >
           + Создать папку
         </button>
-        <FeatureGate feature="max_boards" displayMode="hide">
-          <button class="btn-create" @click="createNewBoard">
-            + Создать структуру
-          </button>
-        </FeatureGate>
+        <button class="btn-create" @click="createNewBoard">
+          + Создать структуру
+        </button>
       </div>
     </div>
 
@@ -51,11 +49,9 @@
       <div class="empty-icon">🎨</div>
       <h2>У вас пока нет структур</h2>
       <p>Создайте первую структуру, чтобы начать работу</p>
-      <FeatureGate feature="max_boards" displayMode="hide">
-        <button class="btn-create-big" @click="createNewBoard">
-          + Создать первую структуру
-        </button>
-      </FeatureGate>
+      <button class="btn-create-big" @click="createNewBoard">
+        + Создать первую структуру
+      </button>
     </div>
 
     <!-- Двухпанельный контент -->
