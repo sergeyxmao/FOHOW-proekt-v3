@@ -89,7 +89,8 @@ const {
   continueStroke,
   finishStroke,
   updatePointerPreview,
-  clearPointerPreview
+  clearPointerPreview,
+  setScheduleHistorySave
 } = usePencilDrawing({
   canvasContext,
   canvasScale,
@@ -114,6 +115,10 @@ const {
   canvasHeight,
   onBeforeApply: () => cancelSelection()
 });
+
+// Устанавливаем scheduleHistorySave в usePencilDrawing после инициализации истории
+// (решает проблему циклической зависимости между composables)
+setScheduleHistorySave(scheduleHistorySave);
 
 // Selection composable
 const {

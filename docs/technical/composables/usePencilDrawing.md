@@ -71,6 +71,7 @@ usePencilDrawing({
   finishStroke,         // () => void - сохранение в историю
   updatePointerPreview, // (point) => void
   clearPointerPreview,  // () => void
+  setScheduleHistorySave, // (fn) => void - установка callback'а после инициализации
 }
 ```
 
@@ -249,6 +250,38 @@ finishStroke():
   }
 ```
 
+### Отложенная установка scheduleHistorySave
+Из-за циклической зависимости между composables, `scheduleHistorySave` может быть
+установлен после инициализации через метод `setScheduleHistorySave()`:
+
+```javascript
+// В PencilOverlay.vue
+const { setScheduleHistorySave, ... } = usePencilDrawing({
+  canvasContext,
+  canvasScale,
+  scheduleHistorySave: null  // Изначально null
+})
+
+const { scheduleHistorySave, ... } = usePencilHistory({ ... })
+
+// Устанавливаем после инициализации history
+setScheduleHistorySave(scheduleHistorySave)
+```
+
+Внутри composable `scheduleHistorySave` хранится как ref для возможности обновления:
+```javascript
+const scheduleHistorySaveRef = ref(initialScheduleHistorySave)
+
+const setScheduleHistorySave = (fn) => {
+  scheduleHistorySaveRef.value = fn
+}
+
+// В finishStroke():
+if (hasStrokeChanges.value && scheduleHistorySaveRef.value) {
+  scheduleHistorySaveRef.value(true)
+}
+```
+
 ### Ограничения размеров
 ```javascript
 // Ластик: 4-80 px
@@ -272,6 +305,17 @@ updatePointerPreview(point):
     pointerPosition.value = null
   }
 ```
+
+## История изменений
+
+### 2026-01-26: Исправление undo/redo для инструментов рисования
+
+**Проблема:** `scheduleHistorySave` передавался как `null` при инициализации и никогда не обновлялся, из-за чего `finishStroke()` не сохранял штрихи в историю.
+
+**Решение:**
+- Добавлен `scheduleHistorySaveRef` — ref для хранения callback'а
+- Добавлен метод `setScheduleHistorySave(fn)` для установки callback'а после инициализации
+- В `finishStroke()` теперь используется `scheduleHistorySaveRef.value`
 
 ## Связанные файлы
 
