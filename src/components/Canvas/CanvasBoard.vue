@@ -277,7 +277,9 @@ const {
   cancelDrawing,
   handleLineClick,
   deleteSelectedConnections,
-  clearConnectionSelection
+  clearConnectionSelection,
+  // Функции для "магнитного" соединения
+  tryMagneticConnection
 } = useCanvasConnections({
   connectionsStore,
   cardsStore,
@@ -1277,6 +1279,29 @@ const handleMouseMoveInternal = (event) => {
 // Throttle handleMouseMove с задержкой 16ms (60 FPS) для оптимизации производительности
 const handleMouseMove = useThrottleFn(handleMouseMoveInternal, 16, true, false);
 
+/**
+ * Обработчик pointerup для "магнитного" соединения линий
+ * Срабатывает когда пользователь отпускает палец/мышь во время рисования линии
+ */
+const handlePointerUp = (event) => {
+  // Обрабатываем только если идёт рисование линии
+  if (!isDrawingLine.value) {
+    return;
+  }
+
+  // Если отпустили на connection-point — пропускаем, т.к. это обрабатывается в handlePointerDown
+  const connectionPoint = event.target.closest('.connection-point');
+  if (connectionPoint) {
+    return;
+  }
+
+  // Получаем координаты в системе координат canvas
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+
+  // Пытаемся создать "магнитное" соединение
+  tryMagneticConnection(canvasPos.x, canvasPos.y, isMobileMode.value);
+};
+
 const handlePointerDown = (event) => {
   // Игнорируем среднюю кнопку мыши — используется для панорамирования
   if (event.button === 1) {
@@ -1917,6 +1942,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', handleWindowResize);
   window.removeEventListener('scroll', handleViewportChange, true);
   window.removeEventListener('pointermove', handleMouseMove); // Управляем подпиской в watch
+  window.removeEventListener('pointerup', handlePointerUp); // Магнитное соединение
   window.removeEventListener('pointermove', handleDrag);
   window.removeEventListener('pointerup', endDrag);
   window.removeEventListener('pointercancel', endDrag);
@@ -1932,8 +1958,11 @@ onBeforeUnmount(() => {
 watch(isDrawingLine, (isActive) => {
   if (isActive) {
     window.addEventListener('pointermove', handleMouseMove);
+    // Добавляем обработчик pointerup для "магнитного" соединения
+    window.addEventListener('pointerup', handlePointerUp);
   } else {
     window.removeEventListener('pointermove', handleMouseMove);
+    window.removeEventListener('pointerup', handlePointerUp);
   }
 });
 const resetView = () => {

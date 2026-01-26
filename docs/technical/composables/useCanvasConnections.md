@@ -291,6 +291,89 @@ const handleKeydown = (event) => {
 </svg>
 ```
 
+## "Магнитное" соединение линий (2026-01-26)
+
+### Описание функциональности
+
+При рисовании соединительной линии между карточками пользователю не нужно точно попадать в маленькую точку соединения (connection-point). Вместо этого, при отпускании пальца/мыши вблизи карточки, соединение автоматически создаётся к ближайшей стороне этой карточки.
+
+### Константы
+
+```javascript
+const DESKTOP_SNAP_MARGIN = 30 // Отступ для захвата карточки на ПК (px)
+const MOBILE_SNAP_MARGIN = 50  // Увеличенный отступ для мобильных (px)
+```
+
+### Новые функции
+
+```javascript
+// Поиск карточки под точкой с учётом "магнитного" отступа
+findCardAtPoint(pointX, pointY, {
+  isMobile: boolean,      // Использовать увеличенный отступ
+  excludeCardId: string   // Исключить карточку из поиска
+}) => Card | null
+
+// Определение ближайшей стороны карточки
+getClosestSide(card, pointX, pointY) => 'top' | 'right' | 'bottom' | 'left'
+
+// Попытка создать "магнитное" соединение при pointerup
+tryMagneticConnection(pointX, pointY, isMobile) => boolean
+```
+
+### Алгоритм магнитного соединения
+
+```
+1. Пользователь начинает рисовать линию (pointerdown на connection-point)
+   └── startDrawingLine(cardId, side)
+           │
+2. Пользователь отпускает палец/мышь (pointerup)
+   ├── Если на connection-point
+   │   └── endDrawingLine(cardId, side) — точное соединение
+   │
+   └── Если НЕ на connection-point
+       └── tryMagneticConnection(x, y, isMobile)
+           │
+           ├── Ищем карточку в зоне захвата (findCardAtPoint)
+           │   └── Зона: 30px на ПК, 50px на мобильных
+           │
+           ├── Если карточка найдена (и это не исходная карточка)
+           │   ├── Определяем ближайшую сторону (getClosestSide)
+           │   └── endDrawingLine(targetCardId, closestSide)
+           │
+           └── Если карточка НЕ найдена
+               └── cancelDrawing()
+```
+
+### Приоритет точного клика
+
+Клик непосредственно по connection-point имеет приоритет над магнитным соединением:
+- В `handlePointerUp` проверяется `event.target.closest('.connection-point')`
+- Если клик на connection-point — пропускаем обработку (уже обработано в `handlePointerDown`)
+
+### Использование в CanvasBoard.vue
+
+```javascript
+// Обработчик pointerup добавляется когда начинается рисование линии
+watch(isDrawingLine, (isActive) => {
+  if (isActive) {
+    window.addEventListener('pointerup', handlePointerUp);
+  } else {
+    window.removeEventListener('pointerup', handlePointerUp);
+  }
+});
+
+// Обработчик
+const handlePointerUp = (event) => {
+  if (!isDrawingLine.value) return;
+
+  // Пропускаем если клик на connection-point
+  if (event.target.closest('.connection-point')) return;
+
+  const canvasPos = screenToCanvas(event.clientX, event.clientY);
+  tryMagneticConnection(canvasPos.x, canvasPos.y, isMobileMode.value);
+};
+```
+
 ## Связанные файлы
 
 - `src/stores/connections.js` — хранение соединений
