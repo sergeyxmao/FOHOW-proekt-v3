@@ -1,3 +1,10 @@
+Почти! Но форматирование сбилось. Вот правильная версия (скопируй целиком и замени весь файл):
+
+bash
+nano /var/www/FOHOW-proekt-v3/docs/technical/DEPLOYMENT_STAGING.md
+Удали всё (Ctrl+K несколько раз) и вставь это:
+
+text
 # Деплой Staging-окружения на Beget VPS
 
 ## Общая информация
@@ -187,7 +194,7 @@ journalctl -u fohow-api-staging.service -n 50 -f
 7.1 Обновление кода
 bash
 cd /var/www/FOHOW-proekt-v3
-git pull origin main
+git pull origin dev
 7.2 Обновление Backend
 bash
 cd /var/www/FOHOW-proekt-v3/api
@@ -206,18 +213,18 @@ Telegram бот	@FOHOWtest_bot	@FOHOW_bot
 БД	default_db (shared)	fohow_production (отдельная)
 NODE_ENV	staging	production
 9. Решение проблем
-Ошибка 500 при certbot
+9.1. Ошибка 500 при certbot
 Причина: API не запущен или падает
 Решение:
 
 bash
 systemctl status fohow-api-staging.service
 journalctl -u fohow-api-staging.service -n 50
-Telegram bot conflict
+9.2. Telegram bot conflict
 Причина: Два бота с одним токеном
 Решение: Создать отдельного бота для staging через @BotFather
 
-API не стартует
+9.3. API не стартует
 Проверить:
 
 .env существует и заполнен
@@ -226,15 +233,47 @@ API не стартует
 
 Порт 4000 свободен: netstat -tuln | grep 4000
 
+9.4. Настройка Git SSH для беспарольного push
+Проблема: При git push постоянно запрашивает Username/Password, токены не работают.
+
+Решение:
+
+Генерация SSH-ключа:
+
+bash
+ssh-keygen -t ed25519 -C "sergeixmao@gmail.com"
+# Нажать Enter три раза (без пароля)
+Копирование публичного ключа:
+
+bash
+cat ~/.ssh/id_ed25519.pub
+# Скопировать вывод (начинается с ssh-ed25519)
+Добавление ключа в GitHub:
+
+Открыть: https://github.com/settings/ssh/new
+
+Title: beget-vps-staging
+
+Key: вставить скопированный ключ
+
+Нажать Add SSH key
+
+Изменение remote URL на SSH:
+
+bash
+git remote set-url origin git@github.com:sergeyxmao/FOHOW-proekt-v3.git
+git remote -v  # Проверка
+Первый push:
+
+bash
+git push origin dev
+# Спросит: "Are you sure you want to continue connecting?"
+# Ответить: yes
+Результат: Git больше не спрашивает пароль.
+
 10. Контакты и ссылки
 Репозиторий: https://github.com/sergeyxmao/FOHOW-proekt-v3
 
 Документация: /var/www/FOHOW-proekt-v3/docs/technical/
 
 Adminer (БД): https://oshifotkleeshuln.beget.app/adminer/
-
-text
-
-Сохрани (Ctrl+O, Enter, Ctrl+X).
-
-**Готово!** Теперь есть полная инструкция по деплою staging.
