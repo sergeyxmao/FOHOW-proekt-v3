@@ -1175,26 +1175,19 @@
             </div>
 
             <div class="form-group">
-              <label for="verification-shot-1">Скриншот 1 (JPG/PNG, до 5MB)</label>
-              <input
-                id="verification-shot-1"
-                type="file"
-                accept="image/jpeg,image/png"
-                @change="(event) => handleScreenshotChange(event, 1)"
-              />
             </div>
 
-            <div class="form-group">
-              <label for="verification-shot-2">Скриншот 2 (JPG/PNG, до 5MB)</label>
-              <input
-                id="verification-shot-2"
-                type="file"
-                accept="image/jpeg,image/png"
-                @change="(event) => handleScreenshotChange(event, 2)"
-              />
-            </div>
+                        <div class="form-group">
+                                        <label for="verification-link">Реферальная ссылка</label>
+                                        <input
+                                                          id="verification-link"
+                                                          v-model="verificationForm.referral_link"
+                                                          type="text"
+                                                          placeholder="http://www.fohow.cc/index.php?m=home&c=index&a=index&id=..."
+                                                        />
+                                      </div>
 
-            <p class="helper-text">Загрузите скриншоты кабинета FOHOW, чтобы подтвердить компьютерный номер.</p>
+            <p class="helper-text">Укажите вашу персональную реферальную ссылку из личного кабинета FOHOW (раздел "Рекомендовать"), содержащую ваш ID. подтвердить компьютерный номер.</p>
 
             <div v-if="verificationError" class="error-message">{{ verificationError }}</div>
           </div>
@@ -1494,12 +1487,11 @@ const {
   getStatusClass,
   openVerificationModal,
   closeVerificationModal,
-  handleScreenshotChange,
   submitVerification,
   cancelVerification,
   startVerificationCheck,
   cleanup: cleanupVerification
-} = useUserVerification({ user, authStore, API_URL })
+} = useUserVerification({ user, authStore, API_URL , personalForm})
 
 // Privacy
 const {
