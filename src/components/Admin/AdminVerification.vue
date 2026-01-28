@@ -1,5 +1,6 @@
 <template>
   <div class="verification-moderation">
+
     <!-- Верхняя панель с заголовком и статистикой -->
     <div class="moderation-header">
       <div class="header-content">
@@ -122,36 +123,28 @@
           </div>
         </div>
 
-        <!-- Скриншоты -->
-        <div class="screenshots-section">
-          <h4>Скриншоты верификации:</h4>
-          <div class="screenshots-grid">
-            <div class="screenshot-wrapper" @click="openScreenshotPreview(verification, 1)">
-              <img
-                v-if="getScreenshotUrl(verification.screenshot_1_path)"
-                :src="getScreenshotUrl(verification.screenshot_1_path)"
-                alt="Скриншот 1"
-                class="screenshot-thumb"
-              />
-              <div v-else class="screenshot-placeholder">
-                <span v-if="screenshotErrors[verification.screenshot_1_path]">Ошибка загрузки</span>
-                <span v-else>Загрузка...</span>
-              </div>
-              <span class="screenshot-label">Скриншот 1</span>
-            </div>
-            <div class="screenshot-wrapper" @click="openScreenshotPreview(verification, 2)">
-              <img
-                v-if="getScreenshotUrl(verification.screenshot_2_path)"
-                :src="getScreenshotUrl(verification.screenshot_2_path)"
-                alt="Скриншот 2"
-                class="screenshot-thumb"
-              />
-              <div v-else class="screenshot-placeholder">
-                <span v-if="screenshotErrors[verification.screenshot_2_path]">Ошибка загрузки</span>
-                <span v-else>Загрузка...</span>
-              </div>
-              <span class="screenshot-label">Скриншот 2</span>
-            </div>
+        <!-- Реферальная ссылка -->
+        <div class="referral-link-section">
+          <h4>Реферальная ссылка:</h4>
+          <div class="referral-link-display">
+            <template v-if="verification.referral_link">
+              <a
+                :href="verification.referral_link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="referral-link"
+              >
+                {{ verification.referral_link }}
+              </a>
+              <button
+                class="copy-button"
+                title="Скопировать ссылку"
+                @click="copyToClipboard(verification.referral_link)"
+              >
+                📋
+              </button>
+            </template>
+            <span v-else class="referral-link-empty">Не указана</span>
           </div>
         </div>
 
@@ -232,46 +225,30 @@
             </div>
           </div>
 
-          <!-- Скриншоты (миниатюры) -->
-          <div v-if="verification.screenshot_1_path" class="screenshots-section">
-            <h4>Скриншоты:</h4>
-            <div class="screenshots-grid-mini">
-              <img
-                :src="getScreenshotUrl(verification.screenshot_1_path)"
-                alt="Скриншот 1"
-                class="screenshot-preview-small"
-                @click="openArchiveScreenshotPreview(getScreenshotUrl(verification.screenshot_1_path))"
-              />
-              <img
-                v-if="verification.screenshot_2_path"
-                :src="getScreenshotUrl(verification.screenshot_2_path)"
-                alt="Скриншот 2"
-                class="screenshot-preview-small"
-                @click="openArchiveScreenshotPreview(getScreenshotUrl(verification.screenshot_2_path))"
-              />
+          <!-- Реферальная ссылка -->
+          <div class="referral-link-section">
+            <h4>Реферальная ссылка:</h4>
+            <div class="referral-link-display">
+              <template v-if="verification.referral_link">
+                <a
+                  :href="verification.referral_link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="referral-link"
+                >
+                  {{ verification.referral_link }}
+                </a>
+                <button
+                  class="copy-button"
+                  title="Скопировать ссылку"
+                  @click="copyToClipboard(verification.referral_link)"
+                >
+                  📋
+                </button>
+              </template>
+              <span v-else class="referral-link-empty">Не указана</span>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Модальное окно для просмотра скриншота -->
-    <div v-if="selectedScreenshot" class="modal-overlay" @click="closeScreenshotPreview">
-      <div class="modal-content" @click.stop>
-        <button class="modal-close" @click="closeScreenshotPreview" title="Закрыть">x</button>
-
-        <div class="modal-image-wrapper">
-          <img
-            :src="selectedScreenshot.url"
-            :alt="selectedScreenshot.label"
-            class="modal-image"
-          />
-        </div>
-
-        <div class="modal-info">
-          <h3 class="modal-title">{{ selectedScreenshot.label }}</h3>
-          <p><strong>Пользователь:</strong> {{ selectedScreenshot.verification.full_name }}</p>
-          <p><strong>Компьютерный номер:</strong> {{ selectedScreenshot.verification.personal_id || 'Не указан' }}</p>
         </div>
       </div>
     </div>
@@ -322,10 +299,6 @@ const adminStore = useAdminStore()
 const authStore = useAuthStore()
 const notificationsStore = useNotificationsStore()
 const processingId = ref(null)
-const selectedScreenshot = ref(null)
-const screenshotCache = ref({})
-const screenshotErrors = ref({})
-const screenshotLoading = ref({})
 
 const rejectModal = ref({
   visible: false,
@@ -354,68 +327,25 @@ const pendingCount = computed(() => {
 })
 
 /**
- * Получить URL скриншота для отображения
+ * Скопировать текст в буфер обмена
  */
-function getScreenshotUrl(path) {
-  if (!path) return ''
-
-  if (!screenshotCache.value[path] && !screenshotErrors.value[path] && !screenshotLoading.value[path]) {
-    loadScreenshot(path)
-  }
-
-  return screenshotCache.value[path] || ''
-}
-
-/**
- * Загрузить скриншот через админ-прокси с авторизацией
- */
-async function loadScreenshot(path) {
-  if (!path || screenshotCache.value[path] || screenshotLoading.value[path]) return
-
-  screenshotLoading.value = { ...screenshotLoading.value, [path]: true }
-
+async function copyToClipboard(text) {
+  if (!text) return
   try {
-    const token = authStore.token
-
-    if (!token) {
-      throw new Error('Требуется авторизация администратора')
-    }
-
-    const response = await fetch(`${API_URL}/admin/screenshot-proxy?path=${encodeURIComponent(path)}`, {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+    await navigator.clipboard.writeText(text)
+    notificationsStore.addNotification({
+      message: 'Ссылка скопирована в буфер обмена',
+      type: 'success',
+      duration: 2500
     })
-
-    if (!response.ok) {
-      throw new Error('Не удалось загрузить скриншот')
-    }
-
-    const blob = await response.blob()
-    const objectUrl = URL.createObjectURL(blob)
-
-    screenshotCache.value = { ...screenshotCache.value, [path]: objectUrl }
-  } catch (error) {
-    console.error('[VERIFICATION] Ошибка загрузки скриншота:', error)
-    screenshotErrors.value = { ...screenshotErrors.value, [path]: true }
-  } finally {
-    const { [path]: _removed, ...rest } = screenshotLoading.value
-    screenshotLoading.value = rest
+  } catch (err) {
+    console.error('[ADMIN VERIFICATION] Ошибка копирования:', err)
+    notificationsStore.addNotification({
+      message: 'Не удалось скопировать ссылку',
+      type: 'error',
+      duration: 3000
+    })
   }
-}
-
-/**
- * Предзагрузить все скриншоты в очереди
- */
-async function preloadScreenshots(verifications = []) {
-  const paths = []
-
-  verifications.forEach((verification) => {
-    if (verification.screenshot_1_path) paths.push(verification.screenshot_1_path)
-    if (verification.screenshot_2_path) paths.push(verification.screenshot_2_path)
-  })
-
-  await Promise.all(paths.map(loadScreenshot))
 }
 
 /**
@@ -424,7 +354,6 @@ async function preloadScreenshots(verifications = []) {
 async function loadVerifications() {
   try {
     await adminStore.fetchPendingVerifications()
-    await preloadScreenshots(adminStore.pendingVerifications || [])    
   } catch (err) {
     console.error('[VERIFICATION] Ошибка загрузки заявок:', err)
   }
@@ -436,27 +365,6 @@ async function loadVerifications() {
 async function handleRetry() {
   adminStore.clearError()
   await loadVerifications()
-}
-
-/**
- * Открыть модальное окно с скриншотом
- */
-function openScreenshotPreview(verification, screenshotNumber) {
-  const path = screenshotNumber === 1 ? verification.screenshot_1_path : verification.screenshot_2_path
-  loadScreenshot(path).then(() => {
-    selectedScreenshot.value = {
-      url: getScreenshotUrl(path),
-      label: `Скриншот ${screenshotNumber}`,
-      verification
-    }
-  })
-}
-
-/**
- * Закрыть модальное окно с скриншотом
- */
-function closeScreenshotPreview() {
-  selectedScreenshot.value = null
 }
 
 /**
@@ -605,9 +513,6 @@ async function loadArchive() {
 
     const data = await response.json()
     archiveVerifications.value = data.items || []
-
-    // Предзагрузка скриншотов для архива
-    await preloadScreenshots(archiveVerifications.value)
   } catch (err) {
     console.error('[ADMIN VERIFICATION] Ошибка загрузки архива:', err)
     archiveError.value = err.message || 'Не удалось загрузить архив'
@@ -788,18 +693,6 @@ async function exportByPlan(plan) {
   }
 }
 
-/**
- * Открыть скриншот в модальном окне (для архива)
- */
-function openArchiveScreenshotPreview(url) {
-  if (!url) return
-  selectedScreenshot.value = {
-    url,
-    label: 'Скриншот',
-    verification: { full_name: '', personal_id: '' }
-  }
-}
-
 // Загрузить заявки при монтировании
 onMounted(async () => {
   await loadVerifications()
@@ -808,7 +701,6 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  Object.values(screenshotCache.value).forEach((url) => URL.revokeObjectURL(url))
   document.removeEventListener('click', closeExportMenu)
 })  
 </script>
@@ -981,6 +873,43 @@ onBeforeUnmount(() => {
   transition: transform 0.3s, box-shadow 0.3s;
 }
 
+.referral-link-section {
+  margin-top: 12px;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+}
+
+.referral-link-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  word-break: break-all;
+}
+
+.referral-link {
+  color: #6c63ff;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.referral-link-empty {
+  color: #777;
+}
+
+.copy-button {
+  border: 1px solid #e0e0e0;
+  background: #f7f7f7;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+.copy-button:hover {
+  background: #eeeeee;
+}
+
 .verification-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -1011,63 +940,6 @@ onBeforeUnmount(() => {
   color: #333;
 }
 
-.screenshots-section {
-  padding: 15px 20px;
-  background: #fff;
-}
-
-.screenshots-section h4 {
-  margin: 0 0 15px 0;
-  font-size: 14px;
-  color: #666;
-  font-weight: 600;
-}
-
-.screenshots-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-}
-
-.screenshot-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: opacity 0.3s;
-}
-
-.screenshot-wrapper:hover {
-  opacity: 0.8;
-}
-
-.screenshot-thumb {
-  width: 100%;
-  height: 120px;
-  object-fit: cover;
-  border-radius: 8px;
-  background: #e0e0e0;
-}
-.screenshot-placeholder {
-  width: 100%;
-  height: 120px;
-  border-radius: 8px;
-  background: #f3f3f3;
-  border: 1px dashed #d0d0d0;
-  color: #777;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 10px;
-}
-
-.screenshot-label {
-  font-size: 12px;
-  color: #666;
-}
 
 .verification-actions {
   display: flex;
@@ -1408,29 +1280,6 @@ onBeforeUnmount(() => {
   font-size: 14px;
   line-height: 1.5;
   color: #333;
-}
-
-/* Сетка миниатюр скриншотов */
-.screenshots-grid-mini {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.screenshot-preview-small {
-  width: 100%;
-  height: 120px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 2px solid #e0e0e0;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.screenshot-preview-small:hover {
-  border-color: #6c63ff;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
 }
 
 /* Действия в шапке */
