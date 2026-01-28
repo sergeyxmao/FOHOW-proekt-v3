@@ -22,8 +22,7 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
   const showVerificationModal = ref(false)
   const verificationForm = reactive({
     full_name: '',
-    screenshot_1: null,
-    screenshot_2: null
+    referral_link: ''
   })
 
   const verificationError = ref('')
@@ -255,8 +254,7 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
 
     // Предзаполнить ФИО из профиля
     verificationForm.full_name = user.value.full_name || ''
-    verificationForm.screenshot_1 = null
-    verificationForm.screenshot_2 = null
+    verificationForm.referral_link = ''
     verificationError.value = ''
 
     showVerificationModal.value = true
@@ -268,42 +266,7 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
   function closeVerificationModal() {
     showVerificationModal.value = false
     verificationForm.full_name = ''
-    verificationForm.screenshot_1 = null
-    verificationForm.screenshot_2 = null
-    verificationError.value = ''
-  }
-
-  /**
-   * Обработка выбора файла скриншота
-   */
-  function handleScreenshotChange(event, screenshotNumber) {
-    const file = event.target.files[0]
-
-    if (!file) {
-      return
-    }
-
-    // Валидация типа файла
-    if (!file.type.match(/^image\/(jpeg|png)$/)) {
-      verificationError.value = 'Допустимы только файлы JPG и PNG'
-      event.target.value = ''
-      return
-    }
-
-    // Валидация размера файла (5MB)
-    const maxSize = 5 * 1024 * 1024
-    if (file.size > maxSize) {
-      verificationError.value = `Файл ${screenshotNumber === 1 ? '1' : '2'} превышает максимальный размер 5MB`
-      event.target.value = ''
-      return
-    }
-
-    if (screenshotNumber === 1) {
-      verificationForm.screenshot_1 = file
-    } else {
-      verificationForm.screenshot_2 = file
-    }
-
+    verificationForm.referral_link = ''
     verificationError.value = ''
   }
 
@@ -319,13 +282,26 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
       return
     }
 
-    if (!verificationForm.screenshot_1) {
-      verificationError.value = 'Загрузите первый скриншот'
+    if (!verificationForm.referral_link.trim()) {
+      verificationError.value = 'Введите персональную реферальную ссылку'
       return
     }
 
-    if (!verificationForm.screenshot_2) {
-      verificationError.value = 'Загрузите второй скриншот'
+    const link = verificationForm.referral_link.trim()
+
+    // Валидация реферальной ссылки
+    if (!link.startsWith('http://www.fohow')) {
+      verificationError.value = 'Ссылка должна начинаться с http://www.fohow'
+      return
+    }
+
+    if (!link.includes('id=')) {
+      verificationError.value = 'Ссылка должна содержать параметр id='
+      return
+    }
+
+    if (link.length > 60) {
+      verificationError.value = 'Ссылка не должна превышать 60 символов'
       return
     }
 
@@ -334,8 +310,7 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
     try {
       const formData = new FormData()
       formData.append('full_name', verificationForm.full_name.trim())
-      formData.append('screenshot_1', verificationForm.screenshot_1)
-      formData.append('screenshot_2', verificationForm.screenshot_2)
+      formData.append('referral_link', link)
 
       const response = await fetch(`${API_URL}/verification/submit`, {
         method: 'POST',
@@ -446,7 +421,6 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
     getStatusClass,
     openVerificationModal,
     closeVerificationModal,
-    handleScreenshotChange,
     submitVerification,
     cancelVerification,
     startVerificationCheck,
