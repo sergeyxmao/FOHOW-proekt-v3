@@ -503,7 +503,6 @@ export function registerAuthRoutes(app) {
          WHERE email = $1
            AND code = $2
            AND expires_at > NOW()
-           AND used = FALSE
          ORDER BY created_at DESC
          LIMIT 1`,
         [email, code]
@@ -517,13 +516,7 @@ export function registerAuthRoutes(app) {
         });
       }
 
-      // 2. Отметить код как использованный
-      await client.query(
-        'UPDATE email_verification_codes SET used = TRUE, used_at = NOW() WHERE id = $1',
-        [codeResult.rows[0].id]
-      );
-
-      // 3. Получить пользователя
+      // 2. Получить пользователя
       const userResult = await client.query(
         'SELECT * FROM users WHERE email = $1',
         [email]
@@ -535,6 +528,44 @@ export function registerAuthRoutes(app) {
       }
 
       const user = userResult.rows[0];
+
+      // 3. Отметить код как использованный (если ещё не был использован)
+      if (!codeResult.rows[0].used) {
+        await client.query(
+          'UPDATE email_verification_codes SET used = TRUE, used_at = NOW() WHERE id = $1',
+          [codeResult.rows[0].id]
+        );
+      }
+
+      const demoTrialResult = await client.query(
+        'SELECT 1 FROM demo_trials WHERE user_id = $1',
+        [user.id]
+      );
+      const demoTrialExists = demoTrialResult.rows.length > 0;
+
+      if (user.email_verified || demoTrialExists) {
+        const verifiedToken = jwt.sign(
+          { userId: user.id, email: user.email, role: user.role },
+          process.env.JWT_SECRET,
+          { expiresIn: '7d' }
+        );
+
+        await client.query('COMMIT');
+
+        return reply.send({
+          success: true,
+          token: verifiedToken,
+          message: demoTrialExists
+            ? 'Демо-тариф уже активирован'
+            : 'Email уже подтверждён',
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            personal_id: user.personal_id
+          }
+        });
+      }
 
       // 4. Получить Демо-тариф
       const demoPlanResult = await client.query(
@@ -548,31 +579,68 @@ export function registerAuthRoutes(app) {
 
       const demoPlanId = demoPlanResult.rows[0].id;
 
-      // 5. Генерировать personal_id
-      const personalId = await generateUniquePersonalId(client);
+      // 5. Генерировать personal_id (только если отсутствует)
+      const personalId = user.personal_id ?? await generateUniquePersonalId(client);
 
       // 6. Активировать аккаунт
-      await client.query(`
+      const activationResult = await client.query(`
         UPDATE users
         SET email_verified = TRUE,
-            plan_id = $1,
-            subscription_started_at = NOW(),
-            subscription_expires_at = NOW() + INTERVAL '7 days',
-            personal_id = $2
+            plan_id = COALESCE(plan_id, $1),
+            subscription_started_at = COALESCE(subscription_started_at, NOW()),
+            subscription_expires_at = COALESCE(subscription_expires_at, NOW() + INTERVAL '7 days'),
+            personal_id = COALESCE(personal_id, $2)
         WHERE id = $3
+          AND email_verified = FALSE
+        RETURNING personal_id
       `, [demoPlanId, personalId, user.id]);
+
+      if (activationResult.rowCount === 0) {
+        const refreshedUserResult = await client.query(
+          'SELECT personal_id FROM users WHERE id = $1',
+          [user.id]
+        );
+        const refreshedPersonalId = refreshedUserResult.rows[0]?.personal_id ?? user.personal_id;
+
+        const verifiedToken = jwt.sign(
+          { userId: user.id, email: user.email, role: user.role },
+          process.env.JWT_SECRET,
+          { expiresIn: '7d' }
+        );
+
+        await client.query('COMMIT');
+
+        return reply.send({
+          success: true,
+          token: verifiedToken,
+          message: 'Email уже подтверждён',
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            personal_id: refreshedPersonalId
+          }
+        });
+      }
 
       // 7. Создать запись в demo_trials
       await client.query(
         `INSERT INTO demo_trials (user_id, started_at, converted_to_paid)
-         VALUES ($1, NOW(), false)`,
+         VALUES ($1, NOW(), false)
+         ON CONFLICT (user_id) DO NOTHING`,
         [user.id]
       );
 
       // 8. Создать запись в subscription_history
       await client.query(
         `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
-         VALUES ($1, $2, NOW(), NOW() + INTERVAL '7 days', 'email_verification', 0.00, 'RUB')`,
+         SELECT $1, $2, NOW(), NOW() + INTERVAL '7 days', 'email_verification', 0.00, 'RUB'
+         WHERE NOT EXISTS (
+           SELECT 1
+           FROM subscription_history
+           WHERE user_id = $1
+             AND source = 'email_verification'
+         )`,
         [user.id, demoPlanId]
       );
 
