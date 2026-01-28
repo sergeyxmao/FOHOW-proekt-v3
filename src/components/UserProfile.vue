@@ -1499,7 +1499,7 @@ const {
   cancelVerification,
   startVerificationCheck,
   cleanup: cleanupVerification
-} = useUserVerification({ user, authStore, API_URL, personalForm })
+} = useUserVerification({ user, authStore, API_URL })
 
 // Privacy
 const {
