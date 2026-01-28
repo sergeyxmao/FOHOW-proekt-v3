@@ -63,7 +63,7 @@ export default async function verificationRoutes(app) {
         fullName = req.body.full_name;
         referralLink = req.body.referral_link;
       } else {
-        return reply.code(415).send({ error: 'Форма должна отправляться как multipart/form-data' });
+        return reply.code(415).send({ error: 'Форма должна отправляться как multipart/form-data или application/json' });
       }
 
       // Валидация обязательных полей

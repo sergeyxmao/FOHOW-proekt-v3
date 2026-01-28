@@ -323,12 +323,7 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
       const data = await response.json()
 
       if (!response.ok) {
-        if (response.status === 409 && data?.error === 'Вы уже верифицированы') {
-          verificationError.value = data.error
-          return
-        }
-
-        if (response.status === 400) {
+        if (response.status === 400 || response.status === 409 || response.status === 415) {
           verificationError.value = data?.error || 'Ошибка отправки заявки'
           return
         }
