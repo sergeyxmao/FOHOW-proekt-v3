@@ -95,23 +95,20 @@ export default async function verificationRoutes(app) {
       }
 
       // Отправить заявку
-      const result = await submitVerification(userId, fullName.trim(), screenshot1Buffer, screenshot2Buffer);
+      } catch (err) {
+        console.error('[VERIFICATION] Ошибка отправки заявки:', err);
 
-      return reply.code(201).send({
-        success: true,
-        message: 'Заявка на верификацию отправлена. Ожидайте проверки администратором.',
-        verificationId: result.verificationId
-      });
+        // Если пользователь уже верифицирован — это НЕ 500, а нормальная бизнес-ошибка
+        if (err && err.message === 'Вы уже верифицированы') {
+          return reply.code(409).send({ error: 'Вы уже верифицированы' });
+        }
 
-    } catch (err) {
-      console.error('[VERIFICATION] Ошибка отправки заявки:', err);
+        const errorMessage = process.env.NODE_ENV === 'development'
+          ? `Ошибка: ${err.message}`
+          : 'Не удалось отправить заявку. Попробуйте позже.';
 
-      const errorMessage = process.env.NODE_ENV === 'development'
-        ? `Ошибка: ${err.message}`
-        : 'Не удалось отправить заявку. Попробуйте позже.';
-
-      return reply.code(500).send({ error: errorMessage });
-    }
+        return reply.code(500).send({ error: errorMessage });
+      }
   });
 
   // Получить историю верификации пользователя
