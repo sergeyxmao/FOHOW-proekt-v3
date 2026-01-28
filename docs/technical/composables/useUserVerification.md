@@ -15,7 +15,7 @@
 
 Composable для управления процессом верификации пользователя:
 - Проверка статуса верификации
-- Отправка заявки на верификацию со скриншотом
+- Отправка заявки на верификацию
 - История заявок
 - Cooldown между повторными заявками
 - Отмена заявки
@@ -69,12 +69,34 @@ useUserVerification({
   getStatusClass,          // (status) => string - CSS класс для статуса
   openVerificationModal,   // () => void
   closeVerificationModal,  // () => void
-  handleScreenshotChange,  // (event) => void - выбор скриншота
   submitVerification,      // () => Promise<void> - отправить заявку
   cancelVerification,      // () => Promise<void> - отменить заявку
   startVerificationCheck,  // () => void - запустить периодическую проверку
   cleanup                  // () => void - очистка таймеров
 }
+```
+
+## Форма верификации
+
+```javascript
+verificationForm = {
+  full_name: '',      // обязательное
+  referral_link: ''   // обязательное
+}
+```
+
+### Валидация referral_link
+
+- Поле `referral_link` обязательно.
+- Ссылка должна:
+  - начинаться с `http://www.fohow`
+  - содержать параметр `id=`
+  - иметь длину не более 60 символов
+
+Пример корректной ссылки:
+
+```
+http://www.fohow.plus/clientRegProm?id=2891936
 ```
 
 ## Статусы верификации
@@ -99,7 +121,7 @@ useUserVerification({
    - Прошёл cooldown
         │
         ▼
-3. Пользователь загружает скриншот и отправляет
+3. Пользователь заполняет форму и отправляет
         │
         ▼
 4. submitVerification()
@@ -159,7 +181,8 @@ async function submitVerification() {
   try {
     const formData = new FormData()
     formData.append('personal_id', personalForm.value.personal_id)
-    formData.append('screenshot', verificationForm.value.screenshot)
+    formData.append('full_name', verificationForm.value.full_name.trim())
+    formData.append('referral_link', verificationForm.value.referral_link.trim())
 
     const response = await fetch(`${API_URL}/verification/submit`, {
       method: 'POST',
