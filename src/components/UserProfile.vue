@@ -1175,17 +1175,14 @@
             </div>
 
             <div class="form-group">
+              <label for="verification-link">Реферальная ссылка</label>
+              <input
+                id="verification-link"
+                v-model="verificationForm.referral_link"
+                type="text"
+                placeholder="http://www.fohow.cc/index.php?m=home&c=index&a=index&id=..."
+              />
             </div>
-
-                        <div class="form-group">
-                                        <label for="verification-link">Реферальная ссылка</label>
-                                        <input
-                                                          id="verification-link"
-                                                          v-model="verificationForm.referral_link"
-                                                          type="text"
-                                                          placeholder="http://www.fohow.cc/index.php?m=home&c=index&a=index&id=..."
-                                                        />
-                                      </div>
 
             <p class="helper-text">Укажите вашу персональную реферальную ссылку из личного кабинета FOHOW (раздел "Рекомендовать"), содержащую ваш ID. подтвердить компьютерный номер.</p>
 
@@ -2926,14 +2923,6 @@ watch(activeTab, (newTab) => {
   margin-top: 6px;
 }
 
-.verification-modal__body .form-group input[type="file"] {
-  padding: 10px;
-  background: var(--profile-input-bg, #ffffff);
-  border: 1px solid var(--profile-input-border, #d1d5db);
-  border-radius: 12px;
-  color: var(--profile-text);
-}
-
 .verification-modal__body label {
   font-weight: 600;
   margin-bottom: 6px;
@@ -2951,11 +2940,6 @@ watch(activeTab, (newTab) => {
   margin: 0;
   color: var(--profile-muted, #666666);
   font-size: 14px;
-}
-
-.user-profile--modern .verification-modal__body .form-group input[type="file"] {
-  background: var(--profile-input-bg);
-  border-color: var(--profile-input-border);
 }
 
 .user-profile--modern .verification-modal__header h3 {
