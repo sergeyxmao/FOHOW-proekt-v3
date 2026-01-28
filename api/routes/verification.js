@@ -43,20 +43,27 @@ export default async function verificationRoutes(app) {
     try {
       const userId = req.user.id;
 
-      // Получить multipart данные
-      const parts = req.parts();
-
+      const contentType = req.headers['content-type'] || '';
       let fullName = null;
       let referralLink = null;
 
-      for await (const part of parts) {
-        if (part.type === 'field') {
-          if (part.fieldname === 'full_name') {
-            fullName = part.value;
-          } else if (part.fieldname === 'referral_link') {
-            referralLink = part.value;
+      if (req.isMultipart()) {
+        const parts = req.parts();
+
+        for await (const part of parts) {
+          if (part.type === 'field') {
+            if (part.fieldname === 'full_name') {
+              fullName = part.value;
+            } else if (part.fieldname === 'referral_link') {
+              referralLink = part.value;
+            }
           }
         }
+      } else if (contentType.includes('application/json') && req.body && typeof req.body === 'object') {
+        fullName = req.body.full_name;
+        referralLink = req.body.referral_link;
+      } else {
+        return reply.code(415).send({ error: 'Форма должна отправляться как multipart/form-data' });
       }
 
       // Валидация обязательных полей
