@@ -3,8 +3,7 @@ import {
   canSubmitVerification,
   submitVerification,
   getUserVerificationStatus,
-  cancelVerificationByUser,
-  MAX_SCREENSHOT_SIZE
+  cancelVerificationByUser
 } from '../services/verificationService.js';
 
 export default async function verificationRoutes(app) {
@@ -48,35 +47,14 @@ export default async function verificationRoutes(app) {
       const parts = req.parts();
 
       let fullName = null;
-      let screenshot1Buffer = null;
-      let screenshot2Buffer = null;
+      let referralLink = null;
 
       for await (const part of parts) {
         if (part.type === 'field') {
           if (part.fieldname === 'full_name') {
             fullName = part.value;
-          }
-        } else if (part.type === 'file') {
-          const buffer = await part.toBuffer();
-
-          // Валидация MIME-типа
-          if (part.mimetype !== 'image/jpeg' && part.mimetype !== 'image/png') {
-            return reply.code(400).send({
-              error: `Недопустимый формат файла ${part.fieldname}. Разрешены только JPG и PNG.`
-            });
-          }
-
-          // Валидация размера
-          if (buffer.length > MAX_SCREENSHOT_SIZE) {
-            return reply.code(400).send({
-              error: `Файл ${part.fieldname} превышает максимальный размер 5MB.`
-            });
-          }
-
-          if (part.fieldname === 'screenshot_1') {
-            screenshot1Buffer = buffer;
-          } else if (part.fieldname === 'screenshot_2') {
-            screenshot2Buffer = buffer;
+          } else if (part.fieldname === 'referral_link') {
+            referralLink = part.value;
           }
         }
       }
@@ -86,16 +64,27 @@ export default async function verificationRoutes(app) {
         return reply.code(400).send({ error: 'Поле "Полное ФИО" обязательно для заполнения.' });
       }
 
-      if (!screenshot1Buffer) {
-        return reply.code(400).send({ error: 'Первый скриншот обязателен.' });
+      if (!referralLink || !referralLink.trim()) {
+        return reply.code(400).send({ error: 'Поле "Персональная реферальная ссылка" обязательно для заполнения.' });
       }
 
-      if (!screenshot2Buffer) {
-        return reply.code(400).send({ error: 'Второй скриншот обязателен.' });
+      const link = referralLink.trim();
+
+      // Валидация реферальной ссылки
+      if (!link.startsWith('http://www.fohow')) {
+        return reply.code(400).send({ error: 'Ссылка должна начинаться с http://www.fohow' });
+      }
+
+      if (!link.includes('id=')) {
+        return reply.code(400).send({ error: 'Ссылка должна содержать параметр id=' });
+      }
+
+      if (link.length > 60) {
+        return reply.code(400).send({ error: 'Ссылка не должна превышать 60 символов' });
       }
 
       // Отправить заявку
-      const result = await submitVerification(userId, fullName.trim(), screenshot1Buffer, screenshot2Buffer);
+      const result = await submitVerification(userId, fullName.trim(), link);
 
       return reply.code(201).send({
         success: true,
