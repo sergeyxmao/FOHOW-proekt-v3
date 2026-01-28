@@ -323,7 +323,22 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Ошибка отправки заявки')
+        if (response.status === 409 && data?.error === 'Вы уже верифицированы') {
+          verificationError.value = data.error
+          return
+        }
+
+        if (response.status === 400) {
+          verificationError.value = data?.error || 'Ошибка отправки заявки'
+          return
+        }
+
+        if (response.status >= 500) {
+          verificationError.value = 'Не удалось отправить заявку. Попробуйте позже.'
+          return
+        }
+
+        throw new Error(data?.error || 'Ошибка отправки заявки')
       }
 
       // Закрыть модальное окно
