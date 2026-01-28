@@ -95,8 +95,20 @@ export default async function verificationRoutes(app) {
     } catch (err) {
       console.error('[VERIFICATION] Ошибка отправки заявки:', err);
 
+      const msg = String(err?.message || '');
+
+      // уже верифицирован → 409
+      if (msg === 'Вы уже верифицированы' || msg.includes('уже верифицирован')) {
+        return reply.code(409).send({ error: 'Вы уже верифицированы' });
+      }
+
+      // на всякий: уже есть активная заявка → 409
+      if (msg.includes('активная заявка') || msg.includes('hasPendingRequest')) {
+        return reply.code(409).send({ error: msg });
+      }
+
       const errorMessage = process.env.NODE_ENV === 'development'
-        ? `Ошибка: ${err.message}`
+        ? `Ошибка: ${msg}`
         : 'Не удалось отправить заявку. Попробуйте позже.';
 
       return reply.code(500).send({ error: errorMessage });
