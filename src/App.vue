@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed, watch, provide } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CanvasBoard from './components/Canvas/CanvasBoard.vue'
 import AppHeader from './components/Layout/AppHeader.vue'
@@ -50,6 +50,7 @@ const isAppInitialized = ref(false)
 
 // Определяем layout для текущего маршрута
 const route = useRoute()
+const router = useRouter()
 const layout = computed(() => route.meta.layout)
 const isSimpleLayout = computed(() => layout.value === 'public' || layout.value === 'admin')
 const isBoardsPage = computed(() => route.name === 'boards')
@@ -292,6 +293,11 @@ function handleFitToContent() {
 
 function handleResetPasswordSuccess() {
   showResetPassword.value = false
+  resetToken.value = ''
+
+  router.replace({ name: 'home' }).catch(() => {
+    router.replace('/').catch(() => {})
+  })
 }
 
 async function ensureStructureExists(action) {

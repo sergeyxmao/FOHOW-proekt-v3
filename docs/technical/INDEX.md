@@ -197,6 +197,11 @@ systemctl status fohow-api
 Подробная документация по механизму принудительного выхода с автосохранением:
 [FORCED_LOGOUT_FLOW.md](FORCED_LOGOUT_FLOW.md)
 
+### Reset Password Flow
+
+Краткое описание поведения оверлея сброса пароля и редиректа после успеха:
+[routes/reset-password.md](routes/reset-password.md)
+
 ---
 
 ### Добавить новый composable
