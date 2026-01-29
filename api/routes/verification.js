@@ -93,15 +93,6 @@ export default async function verificationRoutes(app) {
       // Отправить заявку
       const result = await submitVerification(userId, fullName.trim(), link);
 
-        // Если пользователь уже верифицирован — это НЕ 500, а нормальная бизнес-ошибка
-        if (err && err.message === 'Вы уже верифицированы') {
-          return reply.code(409).send({ error: 'Вы уже верифицированы' });
-        }
-
-        const errorMessage = process.env.NODE_ENV === 'development'
-          ? `Ошибка: ${err.message}`
-          : 'Не удалось отправить заявку. Попробуйте позже.';
-
       const msg = String(err?.message || '');
 
       // уже верифицирован → 409
