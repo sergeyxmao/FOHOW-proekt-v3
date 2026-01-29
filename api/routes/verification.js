@@ -3,8 +3,7 @@ import {
   canSubmitVerification,
   submitVerification,
   getUserVerificationStatus,
-  cancelVerificationByUser,
-  MAX_SCREENSHOT_SIZE
+  cancelVerificationByUser
 } from '../services/verificationService.js';
 
 export default async function verificationRoutes(app) {
@@ -44,41 +43,27 @@ export default async function verificationRoutes(app) {
     try {
       const userId = req.user.id;
 
-      // Получить multipart данные
-      const parts = req.parts();
-
+      const contentType = req.headers['content-type'] || '';
       let fullName = null;
-      let screenshot1Buffer = null;
-      let screenshot2Buffer = null;
+      let referralLink = null;
 
-      for await (const part of parts) {
-        if (part.type === 'field') {
-          if (part.fieldname === 'full_name') {
-            fullName = part.value;
-          }
-        } else if (part.type === 'file') {
-          const buffer = await part.toBuffer();
+      if (req.isMultipart()) {
+        const parts = req.parts();
 
-          // Валидация MIME-типа
-          if (part.mimetype !== 'image/jpeg' && part.mimetype !== 'image/png') {
-            return reply.code(400).send({
-              error: `Недопустимый формат файла ${part.fieldname}. Разрешены только JPG и PNG.`
-            });
-          }
-
-          // Валидация размера
-          if (buffer.length > MAX_SCREENSHOT_SIZE) {
-            return reply.code(400).send({
-              error: `Файл ${part.fieldname} превышает максимальный размер 5MB.`
-            });
-          }
-
-          if (part.fieldname === 'screenshot_1') {
-            screenshot1Buffer = buffer;
-          } else if (part.fieldname === 'screenshot_2') {
-            screenshot2Buffer = buffer;
+        for await (const part of parts) {
+          if (part.type === 'field') {
+            if (part.fieldname === 'full_name') {
+              fullName = part.value;
+            } else if (part.fieldname === 'referral_link') {
+              referralLink = part.value;
+            }
           }
         }
+      } else if (contentType.includes('application/json') && req.body && typeof req.body === 'object') {
+        fullName = req.body.full_name;
+        referralLink = req.body.referral_link;
+      } else {
+        return reply.code(415).send({ error: 'Форма должна отправляться как multipart/form-data или application/json' });
       }
 
       // Валидация обязательных полей
@@ -86,17 +71,27 @@ export default async function verificationRoutes(app) {
         return reply.code(400).send({ error: 'Поле "Полное ФИО" обязательно для заполнения.' });
       }
 
-      if (!screenshot1Buffer) {
-        return reply.code(400).send({ error: 'Первый скриншот обязателен.' });
+      if (!referralLink || !referralLink.trim()) {
+        return reply.code(400).send({ error: 'Поле "Персональная реферальная ссылка" обязательно для заполнения.' });
       }
 
-      if (!screenshot2Buffer) {
-        return reply.code(400).send({ error: 'Второй скриншот обязателен.' });
+      const link = referralLink.trim();
+
+      // Валидация реферальной ссылки
+      if (!link.startsWith('http://www.fohow')) {
+        return reply.code(400).send({ error: 'Ссылка должна начинаться с http://www.fohow' });
+      }
+
+      if (!link.includes('id=')) {
+        return reply.code(400).send({ error: 'Ссылка должна содержать параметр id=' });
+      }
+
+      if (link.length > 60) {
+        return reply.code(400).send({ error: 'Ссылка не должна превышать 60 символов' });
       }
 
       // Отправить заявку
-      } catch (err) {
-        console.error('[VERIFICATION] Ошибка отправки заявки:', err);
+      const result = await submitVerification(userId, fullName.trim(), link);
 
         // Если пользователь уже верифицирован — это НЕ 500, а нормальная бизнес-ошибка
         if (err && err.message === 'Вы уже верифицированы') {
@@ -107,8 +102,24 @@ export default async function verificationRoutes(app) {
           ? `Ошибка: ${err.message}`
           : 'Не удалось отправить заявку. Попробуйте позже.';
 
-        return reply.code(500).send({ error: errorMessage });
+      const msg = String(err?.message || '');
+
+      // уже верифицирован → 409
+      if (msg === 'Вы уже верифицированы' || msg.includes('уже верифицирован')) {
+        return reply.code(409).send({ error: 'Вы уже верифицированы' });
       }
+
+      // на всякий: уже есть активная заявка → 409
+      if (msg.includes('активная заявка') || msg.includes('hasPendingRequest')) {
+        return reply.code(409).send({ error: msg });
+      }
+
+      const errorMessage = process.env.NODE_ENV === 'development'
+        ? `Ошибка: ${msg}`
+        : 'Не удалось отправить заявку. Попробуйте позже.';
+
+      return reply.code(500).send({ error: errorMessage });
+    }
   });
 
   // Получить историю верификации пользователя

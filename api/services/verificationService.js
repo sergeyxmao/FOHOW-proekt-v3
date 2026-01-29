@@ -4,25 +4,9 @@
  */
 
 import { pool } from '../db.js';
-import {
-  uploadFile,
-  publishFile,
-  deleteFile,
-  ensureFolderExists
-} from './yandexDiskService.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 
 const VERIFICATION_COOLDOWN_HOURS = 24; // 1 раз в сутки
-const MAX_SCREENSHOT_SIZE = 5 * 1024 * 1024; // 5MB
-
-/**
- * Получить путь к папке верификации пользователя на Яндекс.Диске
- * @param {number} userId - ID пользователя
- * @returns {string} Путь вида "/verifications/{userId}"
- */
-function getUserVerificationPath(userId) {
-  return `/verifications/${userId}`;
-}
 
 /**
  * Проверка возможности подачи заявки на верификацию
@@ -94,23 +78,14 @@ async function canSubmitVerification(userId) {
  * Отправка заявки на верификацию
  * @param {number} userId - ID пользователя
  * @param {string} fullName - Полное ФИО пользователя
- * @param {Buffer} screenshot1Buffer - Буфер первого скриншота
- * @param {Buffer} screenshot2Buffer - Буфер второго скриншота
+ * @param {string} referralLink - Персональная реферальная ссылка FOHOW
  * @returns {Promise<{success: boolean, verificationId: number}>} Результат отправки
  */
-async function submitVerification(userId, fullName, screenshot1Buffer, screenshot2Buffer) {
+async function submitVerification(userId, fullName, referralLink) {
   // Проверка возможности подачи заявки
   const canSubmit = await canSubmitVerification(userId);
   if (!canSubmit.canSubmit) {
     throw new Error(canSubmit.reason);
-  }
-
-  // Валидация размера файлов
-  if (screenshot1Buffer.length > MAX_SCREENSHOT_SIZE) {
-    throw new Error('Первый скриншот превышает максимальный размер 5MB');
-  }
-  if (screenshot2Buffer.length > MAX_SCREENSHOT_SIZE) {
-    throw new Error('Второй скриншот превышает максимальный размер 5MB');
   }
 
   const client = await pool.connect();
@@ -118,30 +93,13 @@ async function submitVerification(userId, fullName, screenshot1Buffer, screensho
   try {
     await client.query('BEGIN');
 
-    // Создать папку для верификации пользователя
-    const verificationPath = getUserVerificationPath(userId);
-    await ensureFolderExists(verificationPath);
-
-    // Генерация уникальных имен файлов с временной меткой
-    const timestamp = Date.now();
-    const screenshot1Path = `${verificationPath}/screenshot_1_${timestamp}.jpg`;
-    const screenshot2Path = `${verificationPath}/screenshot_2_${timestamp}.jpg`;
-
-    // Загрузка скриншотов на Yandex.Disk
-    await uploadFile(screenshot1Path, screenshot1Buffer, 'image/jpeg');
-    await uploadFile(screenshot2Path, screenshot2Buffer, 'image/jpeg');
-
-    // Публикация файлов (для доступа админом)
-    await publishFile(screenshot1Path);
-    await publishFile(screenshot2Path);
-
     // Создание записи в таблице user_verifications
     const insertResult = await client.query(
       `INSERT INTO user_verifications
-        (user_id, full_name, screenshot_1_path, screenshot_2_path, status)
-       VALUES ($1, $2, $3, $4, 'pending')
+        (user_id, full_name, referral_link, status)
+       VALUES ($1, $2, $3, 'pending')
        RETURNING id`,
-      [userId, fullName, screenshot1Path, screenshot2Path]
+      [userId, fullName, referralLink]
     );
 
     // Обновление времени последней попытки
@@ -178,7 +136,8 @@ async function submitVerification(userId, fullName, screenshot1Buffer, screensho
           `👤 ФИО: ${fullName}\n` +
           `🔢 Номер: ${user.personal_id || 'не указан'}\n` +
           `📧 Email: ${user.email}\n` +
-          `👥 Username: ${user.username || 'не указан'}\n\n` +
+          `👥 Username: ${user.username || 'не указан'}\n` +
+          `🔗 Реферальная ссылка: ${referralLink}\n\n` +
           `⚡ Перейдите в админ-панель для проверки заявки.`;
 
         // Отправить уведомление каждому админу
@@ -223,8 +182,7 @@ async function getPendingVerifications() {
       v.id,
       v.user_id,
       v.full_name,
-      v.screenshot_1_path,
-      v.screenshot_2_path,
+      v.referral_link,
       v.submitted_at,
       u.personal_id,
       u.email,
@@ -324,7 +282,7 @@ async function rejectVerification(verificationId, adminId, rejectionReason) {
 
     // Получить информацию о заявке
     const verificationResult = await client.query(
-      `SELECT v.user_id, v.status, v.screenshot_1_path, v.screenshot_2_path, u.telegram_chat_id
+      `SELECT v.user_id, v.status, u.telegram_chat_id
        FROM user_verifications v
        JOIN users u ON v.user_id = u.id
        WHERE v.id = $1`,
@@ -348,14 +306,6 @@ async function rejectVerification(verificationId, adminId, rejectionReason) {
        WHERE id = $3`,
       [rejectionReason, adminId, verificationId]
     );
-
-    // Удалить скриншоты с Yandex.Disk
-    try {
-      await deleteFile(verification.screenshot_1_path);
-      await deleteFile(verification.screenshot_2_path);
-    } catch (deleteError) {
-      console.error('[VERIFICATION] Ошибка удаления скриншотов (игнорируем):', deleteError.message);
-    }
 
     await client.query('COMMIT');
 
@@ -471,7 +421,7 @@ async function cancelVerificationByUser(userId) {
 
     // Найти pending заявку
     const verificationResult = await client.query(
-      `SELECT v.id, v.screenshot_1_path, v.screenshot_2_path, u.email, u.telegram_chat_id
+      `SELECT v.id, u.email, u.telegram_chat_id
        FROM user_verifications v
        JOIN users u ON v.user_id = u.id
        WHERE v.user_id = $1 AND v.status = 'pending'`,
@@ -499,15 +449,6 @@ async function cancelVerificationByUser(userId) {
     await client.query('COMMIT');
 
     console.log(`[VERIFICATION] Заявка отменена пользователем: user_id=${userId}, verification_id=${verification.id}`);
-
-    // Удалить скриншоты с Yandex.Disk (асинхронно, не блокируем ответ)
-    try {
-      await deleteFile(verification.screenshot_1_path);
-      await deleteFile(verification.screenshot_2_path);
-      console.log(`[VERIFICATION] Скриншоты удалены для verification_id=${verification.id}`);
-    } catch (deleteError) {
-      console.error('[VERIFICATION] Ошибка удаления скриншотов (игнорируем):', deleteError.message);
-    }
 
     // Отправить Telegram-уведомление пользователю
     if (verification.telegram_chat_id) {
@@ -561,6 +502,5 @@ export {
   rejectVerification,
   getUserVerificationStatus,
   revokeVerification,
-  cancelVerificationByUser,
-  MAX_SCREENSHOT_SIZE
+  cancelVerificationByUser
 };

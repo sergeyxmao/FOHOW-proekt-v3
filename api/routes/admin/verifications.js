@@ -6,102 +6,11 @@ import {
   approveVerification,
   rejectVerification
 } from '../../services/verificationService.js';
-
 /**
  * Регистрация маршрутов модерации верификации
  * @param {import('fastify').FastifyInstance} app - Экземпляр Fastify
  */
 export function registerAdminVerificationsRoutes(app) {
-
-  /**
-   * Прокси для скриншотов верификации
-   * GET /api/admin/screenshot-proxy
-   *
-   * Позволяет админу получить скриншот верификации по пути на Yandex.Disk.
-   * Скриншоты хранятся в /verifications/{userId}/ и недоступны напрямую.
-   */
-  app.get('/api/admin/screenshot-proxy', {
-    preHandler: [authenticateToken, requireAdmin]
-  }, async (req, reply) => {
-    try {
-      const { path } = req.query;
-
-      if (!path) {
-        return reply.code(400).send({ error: 'Параметр path обязателен' });
-      }
-
-      console.log(`[ADMIN] Запрос прокси скриншота: path=${path}`);
-
-      // Проверка, что путь начинается с /verifications/ (безопасность)
-      if (!path.startsWith('/verifications/')) {
-        return reply.code(403).send({ error: 'Доступ к данному пути запрещён' });
-      }
-
-      // Получить ссылку для скачивания через Yandex API
-      const downloadUrl = `https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(path)}`;
-
-      const response = await fetch(downloadUrl, {
-        headers: {
-          Authorization: `OAuth ${process.env.YANDEX_DISK_TOKEN}`
-        }
-      });
-
-      if (!response.ok) {
-        console.error(`[ADMIN] Yandex API вернул статус ${response.status} для path=${path}`);
-
-        if (response.status === 404) {
-          return reply.code(404).send({ error: 'Файл не найден' });
-        }
-
-        return reply.code(500).send({ error: 'Не удалось получить файл' });
-      }
-
-      const data = await response.json();
-
-      if (!data.href) {
-        console.error(`[ADMIN] Yandex API не вернул href для path=${path}`);
-        return reply.code(500).send({ error: 'Не удалось получить ссылку на файл' });
-      }
-
-      // Загрузить файл с временной ссылки Yandex
-      const fileResponse = await fetch(data.href);
-
-      if (!fileResponse.ok) {
-        console.error(`[ADMIN] Ошибка загрузки с Yandex: ${fileResponse.status}`);
-        return reply.code(500).send({ error: 'Ошибка загрузки файла' });
-      }
-
-      // Получить тело как буфер
-      const fileBuffer = await fileResponse.arrayBuffer();
-
-      console.log(`[ADMIN] Скриншот загружен, размер: ${fileBuffer.byteLength} байт`);
-
-      // Определить Content-Type по расширению
-      let contentType = 'image/jpeg';
-      if (path.endsWith('.png')) {
-        contentType = 'image/png';
-      } else if (path.endsWith('.webp')) {
-        contentType = 'image/webp';
-      }
-
-      // Отдать клиенту с правильными заголовками
-      return reply
-        .header('Content-Type', contentType)
-        .header('Content-Length', fileBuffer.byteLength)
-        .header('Cache-Control', 'private, max-age=3600')
-        .send(Buffer.from(fileBuffer));
-
-    } catch (err) {
-      console.error('[ADMIN] Ошибка прокси скриншота:', err);
-
-      const errorMessage = process.env.NODE_ENV === 'development'
-        ? `Ошибка сервера: ${err.message}`
-        : 'Ошибка сервера';
-
-      return reply.code(500).send({ error: errorMessage });
-    }
-  });
-
   /**
    * Получить список заявок на верификацию
    * GET /api/admin/verifications/pending
@@ -111,11 +20,8 @@ export function registerAdminVerificationsRoutes(app) {
   }, async (req, reply) => {
     try {
       console.log('[ADMIN] Запрос списка заявок на верификацию, admin_id=' + req.user.id);
-
       const verifications = await getPendingVerifications();
-
       console.log(`[ADMIN] Найдено заявок на верификацию: ${verifications.length}`);
-
       return reply.send({
         success: true,
         items: verifications,
@@ -126,7 +32,6 @@ export function registerAdminVerificationsRoutes(app) {
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });
-
   /**
    * Одобрить заявку на верификацию
    * POST /api/admin/verifications/:id/approve
@@ -137,34 +42,25 @@ export function registerAdminVerificationsRoutes(app) {
     try {
       const adminId = req.user.id;
       const verificationId = parseInt(req.params.id, 10);
-
       console.log(`[ADMIN] Запрос на одобрение верификации: verification_id=${verificationId}, admin_id=${adminId}`);
-
       // Валидация ID
       if (!Number.isInteger(verificationId) || verificationId <= 0) {
         return reply.code(400).send({ error: 'Некорректный ID заявки' });
       }
-
       await approveVerification(verificationId, adminId);
-
       console.log(`[ADMIN] ✅ Верификация одобрена: verification_id=${verificationId}`);
-
       return reply.send({
         success: true,
         message: 'Заявка одобрена. Пользователь верифицирован.'
       });
-
     } catch (err) {
       console.error('[ADMIN] Ошибка одобрения верификации:', err);
-
       const errorMessage = process.env.NODE_ENV === 'development'
         ? `Ошибка: ${err.message}`
         : 'Не удалось одобрить заявку. Попробуйте позже.';
-
       return reply.code(500).send({ error: errorMessage });
     }
   });
-
   /**
    * Отклонить заявку на верификацию
    * POST /api/admin/verifications/:id/reject
@@ -176,39 +72,29 @@ export function registerAdminVerificationsRoutes(app) {
       const adminId = req.user.id;
       const verificationId = parseInt(req.params.id, 10);
       const { rejection_reason } = req.body;
-
       console.log(`[ADMIN] Запрос на отклонение верификации: verification_id=${verificationId}, admin_id=${adminId}`);
-
       // Валидация ID
       if (!Number.isInteger(verificationId) || verificationId <= 0) {
         return reply.code(400).send({ error: 'Некорректный ID заявки' });
       }
-
       // Валидация причины отклонения
       if (!rejection_reason || !rejection_reason.trim()) {
         return reply.code(400).send({ error: 'Необходимо указать причину отклонения' });
       }
-
       await rejectVerification(verificationId, adminId, rejection_reason.trim());
-
       console.log(`[ADMIN] ✅ Верификация отклонена: verification_id=${verificationId}`);
-
       return reply.send({
         success: true,
         message: 'Заявка отклонена. Пользователю отправлено уведомление.'
       });
-
     } catch (err) {
       console.error('[ADMIN] Ошибка отклонения верификации:', err);
-
       const errorMessage = process.env.NODE_ENV === 'development'
         ? `Ошибка: ${err.message}`
         : 'Не удалось отклонить заявку. Попробуйте позже.';
-
       return reply.code(500).send({ error: errorMessage });
     }
   });
-
   /**
    * Получить архив верификации (одобренные и отклонённые)
    * GET /api/admin/verifications/archive
@@ -218,14 +104,12 @@ export function registerAdminVerificationsRoutes(app) {
   }, async (req, reply) => {
     try {
       console.log('[ADMIN] Запрос архива верификации, admin_id=' + req.user.id);
-
       const result = await pool.query(
         `SELECT
           v.id,
           v.user_id,
           v.full_name,
-          v.screenshot_1_path,
-          v.screenshot_2_path,
+          v.referral_link,
           v.status,
           v.rejection_reason,
           v.submitted_at,
@@ -241,9 +125,7 @@ export function registerAdminVerificationsRoutes(app) {
          LIMIT 100`,
         []
       );
-
       console.log(`[ADMIN] Найдено записей в архиве: ${result.rows.length}`);
-
       return reply.send({
         success: true,
         items: result.rows,

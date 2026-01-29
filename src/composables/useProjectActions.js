@@ -896,7 +896,7 @@ ${connectionPathsSvg}
       // Ждём применения стилей
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
 
-      // 4. ИСПРАВЛЕНИЕ: Создаём скриншот с foreignObjectRendering для SVG
+      // 4. ИСПРАВЛЕНИЕ: Создаём изображение с foreignObjectRendering для SVG
       const canvas = await html2canvas(canvasContainer, {
         backgroundColor: backgroundColor.value || '#ffffff',
         logging: false,
