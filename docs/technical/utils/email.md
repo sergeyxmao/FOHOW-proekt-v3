@@ -125,6 +125,8 @@ await sendSubscriptionEmail('user@example.com', 'new', {
 - `email` (string) — Email получателя
 - `data` (Object):
   - `ipAddress` (string, optional) — IP-адрес, с которого сменили пароль
+  - `geo` (Object, optional) — Геолокация `{country, city}` (см. `geoLocation.js`)
+  - `locationString` (string, optional) — Форматированная строка местоположения (например: "Россия, Москва")
   - `changedAt` (Date, optional) — Время смены (по умолчанию — текущее)
 
 **Тема письма:** "🔐 Пароль изменён — FOHOW Interactive Board"
@@ -132,16 +134,23 @@ await sendSubscriptionEmail('user@example.com', 'new', {
 **Пример:**
 ```javascript
 import { sendPasswordChangedEmail } from '../utils/email.js';
+import { getGeoLocation, formatGeoLocation } from '../utils/geoLocation.js';
+
+const ip = '144.31.19.203';
+const geo = await getGeoLocation(ip);
+const locationString = formatGeoLocation(geo, ip);
 
 await sendPasswordChangedEmail('user@example.com', {
-  ipAddress: '192.168.1.1',
+  ipAddress: ip,
+  geo,
+  locationString,
   changedAt: new Date()
 });
 ```
 
 **Содержание письма:**
 - Дата и время смены пароля (МСК)
-- IP-адрес (если доступен)
+- Местоположение (если доступно, иначе IP-адрес)
 - Предупреждение с рекомендацией связаться с поддержкой, если пользователь не менял пароль
 
 **Стиль:**
