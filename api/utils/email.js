@@ -753,3 +753,136 @@ export async function sendSubscriptionEmail(email, eventType, data) {
     throw new Error(`Не удалось отправить email: ${error.message}`);
   }
 }
+
+
+// =======================================================================
+// 🔐 5. УВЕДОМЛЕНИЕ О СМЕНЕ ПАРОЛЯ — ШАБЛОН №5 (безопасность)
+// =======================================================================
+
+/**
+ * Отправка уведомления о смене пароля
+ * @param {string} email — Email получателя
+ * @param {Object} data — Данные события
+ * @param {string} data.ipAddress — IP-адрес (опционально)
+ * @param {Date} data.changedAt — Время смены пароля
+ */
+export async function sendPasswordChangedEmail(email, data = {}) {
+  const changedAt = data.changedAt || new Date();
+  const formattedDate = changedAt.toLocaleString('ru-RU', {
+    timeZone: 'Europe/Moscow',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const html = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Пароль изменён</title>
+<style>
+  body {
+    margin: 0; padding: 0;
+    background: #f3f3f3;
+    font-family: Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #0e0e0e; color: #fff; }
+    .email-container { background: #1a1a1a; }
+    .info-table td { color: #ccc; }
+    .warning-box { background: #3d3000; }
+  }
+  .email-container {
+    max-width: 600px;
+    margin: 25px auto;
+    background: #fff;
+    padding: 40px 32px;
+    border-radius: 18px;
+    text-align: center;
+  }
+  h1 {
+    color: #e53935;
+    font-size: 26px;
+    margin-bottom: 15px;
+  }
+  p {
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 10px 0;
+  }
+  .info-table {
+    margin: 25px auto;
+    border-collapse: collapse;
+  }
+  .info-table td {
+    padding: 8px 16px;
+    text-align: left;
+  }
+  .info-table td:first-child {
+    color: #666;
+  }
+  .info-table td:last-child {
+    font-weight: bold;
+  }
+  .warning-box {
+    background: #fff3cd;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border-left: 4px solid #ffc107;
+    margin: 25px 0;
+    text-align: left;
+  }
+  .footer {
+    margin-top: 30px;
+    font-size: 13px;
+    color: #777;
+  }
+</style>
+</head>
+<body>
+  <div class="email-container">
+    <h1>🔐 Пароль изменён</h1>
+    <p>Ваш пароль в FOHOW Interactive Board был успешно изменён.</p>
+
+    <table class="info-table">
+      <tr>
+        <td>Дата и время:</td>
+        <td>${formattedDate} (МСК)</td>
+      </tr>
+      ${data.ipAddress ? `
+      <tr>
+        <td>IP-адрес:</td>
+        <td>${data.ipAddress}</td>
+      </tr>
+      ` : ''}
+    </table>
+
+    <div class="warning-box">
+      ⚠️ Если вы не меняли пароль, немедленно свяжитесь с поддержкой или восстановите доступ через форму "Забыли пароль?"
+    </div>
+
+    <div class="footer">
+      С уважением, команда FOHOW Interactive Board
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to: email,
+      subject: '🔐 Пароль изменён — FOHOW Interactive Board',
+      html,
+    });
+    console.log('✅ Password changed email sent to:', email);
+  } catch (error) {
+    console.error('❌ Ошибка отправки email о смене пароля:', error);
+    throw new Error(`Не удалось отправить email: ${error.message}`);
+  }
+}
