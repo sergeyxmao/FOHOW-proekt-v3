@@ -316,8 +316,9 @@ input:focus {
 }
 
 .auth-card__verification-code {
-  min-width: 96px;
-  padding: 12px 16px;
+  width: 100%;
+  padding: 16px;
+  font-size: 26px;
   text-align: center;
   font-weight: 700;
   letter-spacing: 0.4em;

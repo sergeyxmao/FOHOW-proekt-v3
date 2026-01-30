@@ -21,6 +21,7 @@ import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateOffice, validatePersonalId } from './auth.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
+import { sendPasswordChangedEmail } from '../utils/email.js';
 import {
   uploadFile,
   publishFile,
@@ -295,6 +296,34 @@ export function registerProfileRoutes(app) {
       ];
 
       const updateResult = await pool.query(queryText, queryParams);
+
+      // Отправка уведомлений о смене пароля
+      if (newPassword && newPassword.trim().length > 0) {
+        const changedAt = new Date();
+        const ipAddress = req.headers['x-real-ip'] || req.headers['x-forwarded-for']?.split(',')[0] || req.ip || null;
+
+        // Email-уведомление
+        try {
+          await sendPasswordChangedEmail(user.email, { changedAt, ipAddress });
+        } catch (emailErr) {
+          console.error('❌ Ошибка отправки email о смене пароля:', emailErr);
+        }
+
+        // Telegram-уведомление (если привязан)
+        if (user.telegram_chat_id) {
+          try {
+            const formattedDate = changedAt.toLocaleString('ru-RU', {
+              timeZone: 'Europe/Moscow',
+              day: '2-digit', month: '2-digit', year: 'numeric',
+              hour: '2-digit', minute: '2-digit'
+            });
+            const tgMessage = `🔐 *Пароль изменён*\n\nВаш пароль в FOHOW Interactive Board был изменён.\n\n📅 Дата: ${formattedDate} (МСК)${ipAddress ? `\n🌐 IP: ${ipAddress}` : ''}\n\n🔗 Сайт: https://interactive.marketingfohow.ru/\n\n⚠️ Если это были не вы — срочно восстановите доступ!\n📞 Связь с админом: @FOHOWadmin`;
+            await sendTelegramMessage(user.telegram_chat_id, tgMessage, { parse_mode: 'Markdown' });
+          } catch (tgErr) {
+            console.error('❌ Ошибка отправки Telegram о смене пароля:', tgErr);
+          }
+        }
+      }
 
       return reply.send({
         success: true,
