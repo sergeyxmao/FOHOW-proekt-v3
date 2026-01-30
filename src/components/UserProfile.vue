@@ -893,14 +893,6 @@
 
               <div class="notification-block notification-block--coming-soon">
                 <h3 class="notification-title">
-                  <span class="notification-icon">📧</span>
-                  Email-уведомления
-                </h3>
-                <p class="coming-soon-text">Скоро появится</p>
-              </div>
-
-              <div class="notification-block notification-block--coming-soon">
-                <h3 class="notification-title">
                   <span class="notification-icon">🔔</span>
                   Push-уведомления
                 </h3>
