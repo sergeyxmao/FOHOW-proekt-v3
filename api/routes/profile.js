@@ -22,6 +22,7 @@ import { authenticateToken } from '../middleware/auth.js';
 import { validateOffice, validatePersonalId } from './auth.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 import { sendPasswordChangedEmail } from '../utils/email.js';
+import { getGeoLocation, formatGeoLocation } from '../utils/geoLocation.js';
 import {
   uploadFile,
   publishFile,
@@ -302,9 +303,13 @@ export function registerProfileRoutes(app) {
         const changedAt = new Date();
         const ipAddress = req.headers['x-real-ip'] || req.headers['x-forwarded-for']?.split(',')[0] || req.ip || null;
 
+        // Получаем геолокацию (не блокируем если не удалось)
+        const geo = await getGeoLocation(ipAddress);
+        const locationString = formatGeoLocation(geo, ipAddress);
+
         // Email-уведомление
         try {
-          await sendPasswordChangedEmail(user.email, { changedAt, ipAddress });
+          await sendPasswordChangedEmail(user.email, { changedAt, ipAddress, geo, locationString });
         } catch (emailErr) {
           console.error('❌ Ошибка отправки email о смене пароля:', emailErr);
         }
@@ -317,7 +322,7 @@ export function registerProfileRoutes(app) {
               day: '2-digit', month: '2-digit', year: 'numeric',
               hour: '2-digit', minute: '2-digit'
             });
-            const tgMessage = `🔐 *Пароль изменён*\n\nВаш пароль в FOHOW Interactive Board был изменён.\n\n📅 Дата: ${formattedDate} (МСК)${ipAddress ? `\n🌐 IP: ${ipAddress}` : ''}\n\n🔗 Сайт: https://interactive.marketingfohow.ru/\n\n⚠️ Если это были не вы — срочно восстановите доступ!\n📞 Связь с админом: @FOHOWadmin`;
+            const tgMessage = `🔐 *Пароль изменён*\n\nВаш пароль в FOHOW Interactive Board был изменён.\n\n📅 Дата: ${formattedDate} (МСК)\n📍 Местоположение: ${locationString}\n\n🔗 Сайт: https://interactive.marketingfohow.ru/\n\n⚠️ Если это были не вы — срочно восстановите доступ!\n📞 Связь с админом: @FOHOWadmin`;
             await sendTelegramMessage(user.telegram_chat_id, tgMessage, { parse_mode: 'Markdown' });
           } catch (tgErr) {
             console.error('❌ Ошибка отправки Telegram о смене пароля:', tgErr);

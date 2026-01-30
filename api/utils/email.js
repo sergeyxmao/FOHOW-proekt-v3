@@ -853,10 +853,10 @@ export async function sendPasswordChangedEmail(email, data = {}) {
         <td>Дата и время:</td>
         <td>${formattedDate} (МСК)</td>
       </tr>
-      ${data.ipAddress ? `
+      ${data.locationString ? `
       <tr>
-        <td>IP-адрес:</td>
-        <td>${data.ipAddress}</td>
+        <td>Местоположение:</td>
+        <td>${data.locationString}</td>
       </tr>
       ` : ''}
     </table>
