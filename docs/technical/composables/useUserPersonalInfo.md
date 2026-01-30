@@ -205,34 +205,66 @@ function initializeForm() {
 
 ## Использование в UserProfile.vue
 
-```javascript
-import { useUserPersonalInfo } from '@/composables/useUserPersonalInfo'
+### Порядок инициализации и ref-обёртки
 
+Из-за циклической зависимости между composables требуется особый порядок инициализации:
+
+1. `useUserVerification` требует `personalForm` из `useUserPersonalInfo`
+2. `useUserPersonalInfo` требует `cancelVerification` из `useUserVerification`
+
+**Решение:** Использовать ref-обёртки для функций из `useUserVerification`:
+
+```javascript
+import { ref } from 'vue'
+import { useUserPersonalInfo } from '@/composables/useUserPersonalInfo'
+import { useUserVerification } from '@/composables/useUserVerification'
+
+// Ref-обёртки для функций из useUserVerification
+// Нужны для решения циклической зависимости
+const cancelVerificationFn = ref(async () => {})
+const loadVerificationStatusFn = ref(async () => {})
+
+// Personal - передаём вызов через ref-обёртку
 const {
   personalForm,
   personalError,
   personalSuccess,
   savingPersonal,
   officeError,
-  personalIdEditable,
   validateOffice,
   savePersonalInfo,
   updatePersonalId,
+  confirmCancelVerification,
   initializeForm
 } = useUserPersonalInfo({
   user,
   authStore,
-  verificationStatus,
-  cancelVerification,
-  loadVerificationStatus
+  verificationStatus: { hasPendingRequest: false }, // Временно
+  cancelVerification: (...args) => cancelVerificationFn.value(...args),
+  loadVerificationStatus: (...args) => loadVerificationStatusFn.value(...args)
 })
+
+// Verification - теперь имеет доступ к personalForm
+const {
+  cancelVerification,
+  loadVerificationStatus,
+  verificationStatus,
+  // ...остальные
+} = useUserVerification({ user, authStore, API_URL, personalForm })
+
+// Обновляем ref-обёртки настоящими функциями
+cancelVerificationFn.value = cancelVerification
+loadVerificationStatusFn.value = loadVerificationStatus
 
 // Инициализация при монтировании
 onMounted(() => {
   initializeForm()
 })
+```
 
-// В template
+### Шаблон компонента
+
+```html
 <input
   v-model="personalForm.office"
   @input="validateOffice"

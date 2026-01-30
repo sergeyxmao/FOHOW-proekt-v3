@@ -1384,6 +1384,11 @@ const tabs = [
 
 // === Инициализация Composables ===
 
+// Ref-обёртки для функций из useUserVerification
+// Нужны для решения циклической зависимости: Personal → cancelVerification → Verification → personalForm → Personal
+const cancelVerificationFn = ref(async () => {})
+const loadVerificationStatusFn = ref(async () => {})
+
 // Avatar
 const {
   avatarKey,
@@ -1450,8 +1455,8 @@ const {
   user,
   authStore,
   verificationStatus: { hasPendingRequest: false }, // Временно, будет обновлено
-  cancelVerification: async () => {}, // Временно
-  loadVerificationStatus: async () => {} // Временно
+  cancelVerification: (...args) => cancelVerificationFn.value(...args), // Вызов через ref-обёртку
+  loadVerificationStatus: (...args) => loadVerificationStatusFn.value(...args) // Вызов через ref-обёртку
 })
 
 // Verification
@@ -1481,6 +1486,10 @@ const {
   startVerificationCheck,
   cleanup: cleanupVerification
 } = useUserVerification({ user, authStore, API_URL , personalForm})
+
+// Обновляем ref-обёртки настоящими функциями из useUserVerification
+cancelVerificationFn.value = cancelVerification
+loadVerificationStatusFn.value = loadVerificationStatus
 
 // Privacy
 const {
