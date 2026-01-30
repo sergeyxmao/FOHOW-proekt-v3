@@ -318,6 +318,144 @@ function getWelcomeTemplate({ userName, demoDays = 3, dashboardUrl = '#' }) {
 }
 
 /**
+ * Шаблон письма об одобрении верификации
+ * @param {Object} params - Параметры шаблона
+ * @param {string} params.userName - Имя пользователя
+ * @param {string} params.personalId - Компьютерный номер
+ * @param {string} params.profileUrl - URL профиля
+ * @returns {string} HTML-шаблон письма
+ */
+function getVerificationApprovedTemplate({ userName, personalId, profileUrl = 'https://interactive.marketingfohow.ru/' }) {
+  return `
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Верификация одобрена</title>
+    </head>
+    <body style="margin: 0; padding: 20px; background-color: #f7fafc;">
+      <div style="${baseStyles.container}">
+        <!-- Header -->
+        <div style="${baseStyles.header}">
+          <h1 style="${baseStyles.headerTitle}">✅ FOHOW</h1>
+        </div>
+
+        <!-- Content -->
+        <div style="${baseStyles.content}">
+          <h2 style="${baseStyles.title}">Верификация одобрена!</h2>
+
+          <p style="${baseStyles.text}">
+            Здравствуйте, <strong>${userName}</strong>!
+          </p>
+
+          <!-- Highlight Box -->
+          <div style="${baseStyles.highlight} background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left-color: #48bb78;">
+            <p style="${baseStyles.highlightText}">
+              <strong style="font-size: 18px; color: #48bb78;">
+                🎉 Поздравляем! Ваша заявка на верификацию одобрена!
+              </strong>
+            </p>
+            <p style="${baseStyles.highlightText} margin-top: 15px;">
+              ⭐ Компьютерный номер <strong>${personalId}</strong> успешно верифицирован.
+            </p>
+          </div>
+
+          <p style="${baseStyles.text}">
+            Теперь ваш профиль отмечен значком верификации.
+          </p>
+
+          <!-- Button -->
+          <div style="${baseStyles.buttonContainer}">
+            <a href="${profileUrl}" style="${baseStyles.button}">
+              👤 Перейти в профиль
+            </a>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="${baseStyles.footer}">
+          <p style="${baseStyles.footerText}">
+            С уважением,<br>
+            <strong>Команда FOHOW</strong>
+          </p>
+          <p style="${baseStyles.footerText} font-size: 12px;">
+            Это автоматическое уведомление. Пожалуйста, не отвечайте на него.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Шаблон письма об отмене верификации
+ * @param {Object} params - Параметры шаблона
+ * @param {string} params.userName - Имя пользователя
+ * @param {string} params.profileUrl - URL профиля
+ * @returns {string} HTML-шаблон письма
+ */
+function getVerificationRevokedTemplate({ userName, profileUrl = 'https://interactive.marketingfohow.ru/' }) {
+  return `
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Статус верификации снят</title>
+    </head>
+    <body style="margin: 0; padding: 20px; background-color: #f7fafc;">
+      <div style="${baseStyles.container}">
+        <!-- Header -->
+        <div style="${baseStyles.header}">
+          <h1 style="${baseStyles.headerTitle}">⚠️ FOHOW</h1>
+        </div>
+
+        <!-- Content -->
+        <div style="${baseStyles.content}">
+          <h2 style="${baseStyles.title}">Статус верификации снят</h2>
+
+          <p style="${baseStyles.text}">
+            Здравствуйте, <strong>${userName}</strong>!
+          </p>
+
+          <!-- Highlight Box -->
+          <div style="${baseStyles.highlight} border-left-color: #ed8936;">
+            <p style="${baseStyles.highlightText}">
+              Ваш статус верификации был снят из-за изменения компьютерного номера или представительства.
+            </p>
+          </div>
+
+          <p style="${baseStyles.text}">
+            Вы можете подать новую заявку на верификацию в личном кабинете.
+          </p>
+
+          <!-- Button -->
+          <div style="${baseStyles.buttonContainer}">
+            <a href="${profileUrl}" style="${baseStyles.button}">
+              👤 Перейти в профиль
+            </a>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="${baseStyles.footer}">
+          <p style="${baseStyles.footerText}">
+            С уважением,<br>
+            <strong>Команда FOHOW</strong>
+          </p>
+          <p style="${baseStyles.footerText} font-size: 12px;">
+            Это автоматическое уведомление. Пожалуйста, не отвечайте на него.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
  * Вспомогательная функция для склонения слова "день"
  * @param {number} days - Количество дней
  * @returns {string} Правильное склонение
@@ -344,5 +482,7 @@ function getDaysWord(days) {
 export {
   getSubscriptionExpiringTemplate,
   getSubscriptionExpiredTemplate,
-  getWelcomeTemplate
+  getWelcomeTemplate,
+  getVerificationApprovedTemplate,
+  getVerificationRevokedTemplate
 };

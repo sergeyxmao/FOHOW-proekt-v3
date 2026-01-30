@@ -21,8 +21,11 @@ import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { validateOffice, validatePersonalId } from './auth.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
+import { sendEmail } from '../utils/emailService.js';
 import { sendPasswordChangedEmail } from '../utils/email.js';
 import { getGeoLocation, formatGeoLocation } from '../utils/geoLocation.js';
+import { getVerificationRevokedMessage } from '../templates/telegramTemplates.js';
+import { getVerificationRevokedTemplate } from '../templates/emailTemplates.js';
 import {
   uploadFile,
   publishFile,
@@ -238,13 +241,31 @@ export function registerProfileRoutes(app) {
         verificationRevoked = true;
         console.log(`⚠️ Верификация отменена для пользователя ${userId}`);
 
-        // Отправить Telegram-уведомление
+        const profileUrl = 'https://interactive.marketingfohow.ru/';
+
+        // Отправить Telegram-уведомление с кнопкой
         if (user.telegram_chat_id) {
           try {
-            const message = '⚠️ Ваш статус верификации был снят из-за изменения компьютерного номера или представительства.';
-            await sendTelegramMessage(user.telegram_chat_id, message);
+            const tgMessage = getVerificationRevokedMessage(profileUrl);
+            await sendTelegramMessage(user.telegram_chat_id, tgMessage.text, {
+              parse_mode: tgMessage.parse_mode,
+              reply_markup: tgMessage.reply_markup
+            });
           } catch (telegramError) {
             console.error('[PROFILE] Ошибка отправки Telegram-уведомления:', telegramError.message);
+          }
+        }
+
+        // Отправить Email-уведомление
+        if (user.email) {
+          try {
+            const emailHtml = getVerificationRevokedTemplate({
+              userName: user.full_name || 'Пользователь',
+              profileUrl
+            });
+            await sendEmail(user.email, '⚠️ Статус верификации снят — FOHOW Interactive', emailHtml);
+          } catch (emailError) {
+            console.error('[PROFILE] Ошибка отправки Email-уведомления:', emailError.message);
           }
         }
       }
