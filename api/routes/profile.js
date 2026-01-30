@@ -300,7 +300,7 @@ export function registerProfileRoutes(app) {
       // Отправка уведомлений о смене пароля
       if (newPassword && newPassword.trim().length > 0) {
         const changedAt = new Date();
-        const ipAddress = req.ip || req.headers['x-forwarded-for'] || null;
+        const ipAddress = req.headers['x-real-ip'] || req.headers['x-forwarded-for']?.split(',')[0] || req.ip || null;
 
         // Email-уведомление
         try {
