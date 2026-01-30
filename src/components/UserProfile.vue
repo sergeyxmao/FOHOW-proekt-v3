@@ -1049,7 +1049,7 @@
                       </ul>
                     </div>
 
-                    <button class="btn-upgrade" @click="handleUpgrade(plan)">
+                    <button v-if="plan.code_name !== 'guest'" class="btn-upgrade" @click="handleUpgrade(plan)">
                       Перейти на тариф
                     </button>
                   </div>
