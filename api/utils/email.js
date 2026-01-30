@@ -865,6 +865,12 @@ export async function sendPasswordChangedEmail(email, data = {}) {
       ⚠️ Если вы не меняли пароль, немедленно свяжитесь с поддержкой или восстановите доступ через форму "Забыли пароль?"
     </div>
 
+    <a href="https://interactive.marketingfohow.ru/" style="display: inline-block; background: #4CAF50; color: #fff !important; padding: 14px 36px; text-decoration: none; border-radius: 9px; margin-top: 25px; font-size: 18px;">Перейти на сайт</a>
+
+    <p style="margin-top: 20px; font-size: 14px;">
+      📞 Связь с админом: <a href="https://t.me/FOHOWadmin" style="color: #4CAF50;">@FOHOWadmin</a>
+    </p>
+
     <div class="footer">
       С уважением, команда FOHOW Interactive Board
     </div>

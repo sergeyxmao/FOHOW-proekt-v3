@@ -317,7 +317,7 @@ export function registerProfileRoutes(app) {
               day: '2-digit', month: '2-digit', year: 'numeric',
               hour: '2-digit', minute: '2-digit'
             });
-            const tgMessage = `🔐 *Пароль изменён*\n\nВаш пароль в FOHOW Interactive Board был изменён.\n\n📅 Дата: ${formattedDate} (МСК)${ipAddress ? `\n🌐 IP: ${ipAddress}` : ''}\n\n⚠️ Если это были не вы — срочно восстановите доступ!`;
+            const tgMessage = `🔐 *Пароль изменён*\n\nВаш пароль в FOHOW Interactive Board был изменён.\n\n📅 Дата: ${formattedDate} (МСК)${ipAddress ? `\n🌐 IP: ${ipAddress}` : ''}\n\n🔗 Сайт: https://interactive.marketingfohow.ru/\n\n⚠️ Если это были не вы — срочно восстановите доступ!\n📞 Связь с админом: @FOHOWadmin`;
             await sendTelegramMessage(user.telegram_chat_id, tgMessage, { parse_mode: 'Markdown' });
           } catch (tgErr) {
             console.error('❌ Ошибка отправки Telegram о смене пароля:', tgErr);
