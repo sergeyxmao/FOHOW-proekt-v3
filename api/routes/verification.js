@@ -93,6 +93,15 @@ export default async function verificationRoutes(app) {
       // Отправить заявку
       const result = await submitVerification(userId, fullName.trim(), link);
 
+      return reply.code(200).send({
+        success: true,
+        message: 'Заявка на верификацию отправлена. Ожидайте проверки администратором.',
+        verificationId: result.verificationId
+      });
+
+    } catch (err) {
+      console.error('[VERIFICATION] Ошибка отправки заявки:', err);
+
       const msg = String(err?.message || '');
 
       // уже верифицирован → 409
