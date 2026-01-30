@@ -400,6 +400,59 @@ function getSubscriptionCancelledMessage(userName, planName, expiresDate, pricin
 
 
 /**
+ * Сообщение об одобрении верификации
+ * @param {string} personalId - Компьютерный номер
+ * @param {string} profileUrl - URL профиля
+ * @returns {Object} Объект сообщения для Telegram Bot API
+ */
+function getVerificationApprovedMessage(personalId, profileUrl = 'https://interactive.marketingfohow.ru/') {
+  const text = `✅ Поздравляем! Ваша заявка на верификацию одобрена!
+
+⭐ Компьютерный номер ${personalId} успешно верифицирован.
+
+Теперь ваш профиль отмечен значком верификации.`;
+
+  return {
+    text,
+    parse_mode: 'Markdown',
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: '👤 В профиль',
+            url: profileUrl
+          }
+        ]
+      ]
+    }
+  };
+}
+
+/**
+ * Сообщение об отмене верификации
+ * @param {string} profileUrl - URL профиля
+ * @returns {Object} Объект сообщения для Telegram Bot API
+ */
+function getVerificationRevokedMessage(profileUrl = 'https://interactive.marketingfohow.ru/') {
+  const text = `⚠️ Ваш статус верификации был снят из-за изменения компьютерного номера или представительства.`;
+
+  return {
+    text,
+    parse_mode: 'Markdown',
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: '👤 В профиль',
+            url: profileUrl
+          }
+        ]
+      ]
+    }
+  };
+}
+
+/**
  * Уведомление об отключении Telegram-уведомлений
  *
  * @param {string} userName - Имя пользователя
@@ -454,5 +507,7 @@ export {
   getPromoCodeAppliedMessage,
   getSubscriptionRenewedMessage,
   getSubscriptionCancelledMessage,
-  getTelegramDisconnectedMessage
+  getTelegramDisconnectedMessage,
+  getVerificationApprovedMessage,
+  getVerificationRevokedMessage
 };

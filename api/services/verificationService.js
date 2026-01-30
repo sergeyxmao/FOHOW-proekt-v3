@@ -5,6 +5,9 @@
 
 import { pool } from '../db.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
+import { sendEmail } from '../utils/emailService.js';
+import { getVerificationApprovedMessage } from '../templates/telegramTemplates.js';
+import { getVerificationApprovedTemplate } from '../templates/emailTemplates.js';
 
 const VERIFICATION_COOLDOWN_HOURS = 24; // 1 раз в сутки
 
@@ -208,9 +211,9 @@ async function approveVerification(verificationId, adminId) {
   try {
     await client.query('BEGIN');
 
-    // Получить информацию о заявке И telegram_chat_id пользователя
+    // Получить информацию о заявке И данные пользователя для уведомлений
     const verificationResult = await client.query(
-      `SELECT v.user_id, v.status, u.telegram_chat_id, u.personal_id
+      `SELECT v.user_id, v.status, u.telegram_chat_id, u.personal_id, u.email, u.full_name
        FROM user_verifications v
        JOIN users u ON v.user_id = u.id
        WHERE v.id = $1`,
@@ -245,14 +248,34 @@ async function approveVerification(verificationId, adminId) {
 
     console.log(`[VERIFICATION] Заявка одобрена: verification_id=${verificationId}, user_id=${verification.user_id}, admin_id=${adminId}`);
 
-    // Отправить Telegram-уведомление об одобрении
+    const profileUrl = 'https://interactive.marketingfohow.ru/';
+
+    // Отправить Telegram-уведомление с кнопкой
     if (verification.telegram_chat_id) {
-      const message = `✅ Поздравляем! Ваша заявка на верификацию одобрена!\n\n⭐ Компьютерный номер ${verification.personal_id} успешно верифицирован.\n\nТеперь ваш профиль отмечен значком верификации.`;
       try {
-        await sendTelegramMessage(verification.telegram_chat_id, message);
+        const tgMessage = getVerificationApprovedMessage(verification.personal_id, profileUrl);
+        await sendTelegramMessage(verification.telegram_chat_id, tgMessage.text, {
+          parse_mode: tgMessage.parse_mode,
+          reply_markup: tgMessage.reply_markup
+        });
         console.log(`[VERIFICATION] Telegram-уведомление об одобрении отправлено пользователю ${verification.user_id}`);
       } catch (telegramError) {
         console.error('[VERIFICATION] Ошибка отправки Telegram-уведомления:', telegramError.message);
+      }
+    }
+
+    // Отправить Email-уведомление
+    if (verification.email) {
+      try {
+        const emailHtml = getVerificationApprovedTemplate({
+          userName: verification.full_name || 'Пользователь',
+          personalId: verification.personal_id,
+          profileUrl
+        });
+        await sendEmail(verification.email, '✅ Верификация одобрена — FOHOW Interactive', emailHtml);
+        console.log(`[VERIFICATION] Email-уведомление об одобрении отправлено на ${verification.email}`);
+      } catch (emailError) {
+        console.error('[VERIFICATION] Ошибка отправки Email-уведомления:', emailError.message);
       }
     }
 
