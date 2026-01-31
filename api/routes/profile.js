@@ -235,7 +235,7 @@ export function registerProfileRoutes(app) {
       // Если пользователь верифицирован и изменяются критические поля - снимаем верификацию
       if (user.is_verified && (personalIdChanged || officeChanged)) {
         await pool.query(
-          'UPDATE users SET is_verified = FALSE, verified_at = NULL WHERE id = $1',
+          'UPDATE users SET is_verified = FALSE, verified_at = NULL, last_verification_attempt = NOW() WHERE id = $1',
           [userId]
         );
         verificationRevoked = true;
