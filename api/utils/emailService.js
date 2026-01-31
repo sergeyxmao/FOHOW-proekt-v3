@@ -13,7 +13,7 @@ const createTransporter = () => {
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
       port: parseInt(process.env.EMAIL_PORT) || 587,
-      secure: process.env.EMAIL_SECURE === 'true', // true для 465, false для других портов
+      secure: process.env.EMAIL_PORT === '465', // Автоматически true для порта 465
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD,
