@@ -57,8 +57,9 @@ useUserVerification({
   cooldownTimeRemaining,   // Ref<number> - оставшееся время cooldown (мс)
 
   // Computed
-  canSubmitVerification,   // Computed<boolean> - можно ли отправить заявку
-  cooldownMessage,         // Computed<string> - сообщение о cooldown
+  canSubmitVerification,    // Computed<boolean> - можно ли отправить заявку
+  cooldownMessage,          // Computed<string> - сообщение о cooldown
+  verificationBlockReason,  // Computed<string|null> - причина блокировки кнопки
 
   // Методы
   loadVerificationStatus,  // () => Promise<void> - загрузить статус
@@ -118,6 +119,7 @@ http://www.fohow.plus/clientRegProm?id=2891936
 2. canSubmitVerification проверяет:
    - Есть personal_id
    - Нет активной заявки
+   - Нет несохранённых изменений номера
    - Прошёл cooldown
         │
         ▼
@@ -138,6 +140,44 @@ http://www.fohow.plus/clientRegProm?id=2891936
    - rejected → можно отправить повторно
 ```
 
+## Проверка несохранённых изменений
+
+Кнопка "Верифицировать" блокируется, если номер в форме отличается от сохранённого в БД. Это предотвращает отправку заявки со старым номером.
+
+```javascript
+// В canSubmitVerification
+const savedPersonalId = user.value?.personal_id || ''
+const formPersonalId = personalForm.personal_id?.trim() || ''
+if (formPersonalId !== savedPersonalId) return false
+```
+
+## verificationBlockReason
+
+Computed-свойство, которое возвращает причину блокировки кнопки для отображения пользователю:
+
+```javascript
+const verificationBlockReason = computed(() => {
+  if (verificationStatus.hasPendingRequest) return null  // Свой UI
+
+  if (!personalForm.personal_id?.trim()) {
+    return 'Введите компьютерный номер'
+  }
+
+  const savedPersonalId = user.value?.personal_id || ''
+  const formPersonalId = personalForm.personal_id?.trim() || ''
+  if (formPersonalId !== savedPersonalId) {
+    return 'Сначала сохраните изменения'
+  }
+
+  if (verificationStatus.cooldownUntil) {
+    // Кулдаун показывается через cooldownMessage
+    return null
+  }
+
+  return null
+})
+```
+
 ## Cooldown механизм
 
 ```javascript
@@ -145,6 +185,18 @@ http://www.fohow.plus/clientRegProm?id=2891936
 const canSubmitVerification = computed(() => {
   // Если есть активная заявка - нельзя
   if (verificationStatus.value?.hasPendingRequest) {
+    return false
+  }
+
+  // Если нет personal_id - нельзя
+  if (!personalForm.personal_id?.trim()) {
+    return false
+  }
+
+  // Если есть несохранённые изменения - нельзя
+  const savedPersonalId = user.value?.personal_id || ''
+  const formPersonalId = personalForm.personal_id?.trim() || ''
+  if (formPersonalId !== savedPersonalId) {
     return false
   }
 
@@ -253,6 +305,7 @@ const {
   verificationStatus,
   canSubmitVerification,
   cooldownMessage,
+  verificationBlockReason,
   submitVerification,
   cancelVerification,
   startVerificationCheck,

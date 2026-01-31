@@ -230,8 +230,12 @@
                     <span class="btn-icon">✓</span>
                     Верифицировать
                   </button>
+                  <!-- Подсказка почему кнопка неактивна -->
+                  <p v-if="verificationBlockReason && !verificationStatus.hasPendingRequest" class="hint-text hint-text--info">
+                    {{ verificationBlockReason }}
+                  </p>
 
-                  <div v-else class="verification-pending-wrapper">
+                  <div v-else-if="verificationStatus.hasPendingRequest" class="verification-pending-wrapper">
                     <div class="verification-pending">
                       <span class="pending-icon">⏳</span>
                       Заявка на модерации
@@ -1485,6 +1489,7 @@ const {
   cooldownTimeRemaining,
   canSubmitVerification,
   cooldownMessage,
+  verificationBlockReason,
   loadVerificationStatus,
   loadVerificationHistory,
   openHistory,
