@@ -44,6 +44,7 @@ useUserPersonalInfo({
   savingPersonal,       // Ref<boolean> - процесс сохранения
   officeError,          // Ref<string> - ошибка валидации office
   personalIdEditable,   // Ref<boolean> - можно ли редактировать personal_id
+  supportLinks,         // Ref<Object|null> - ссылки на поддержку (для ошибки VERIFIED_BY_OTHER)
 
   // Методы
   validateOffice,       // () => void - валидация представительства
@@ -277,6 +278,39 @@ onMounted(() => {
   :disabled="!personalIdEditable"
   @input="updatePersonalId($event.target.value)"
 />
+```
+
+## Обработка ошибки VERIFIED_BY_OTHER
+
+При попытке сохранить номер, уже верифицированный другим пользователем, сервер возвращает ошибку с дополнительной информацией.
+
+Переменная `supportLinks` содержит ссылки на поддержку:
+
+```javascript
+// После ошибки VERIFIED_BY_OTHER
+supportLinks.value = {
+  telegram: 'https://t.me/FOHOWadmin',
+  email: 'marketingfohow@yandex.com'
+}
+
+// При успешном сохранении или других ошибках
+supportLinks.value = null
+```
+
+### Отображение в шаблоне
+
+```html
+<div v-if="personalError" class="error-message">
+  {{ personalError }}
+  <div v-if="supportLinks" class="support-links">
+    <a v-if="supportLinks.telegram" :href="supportLinks.telegram" target="_blank">
+      📞 Telegram
+    </a>
+    <a v-if="supportLinks.email" :href="'mailto:' + supportLinks.email">
+      ✉️ {{ supportLinks.email }}
+    </a>
+  </div>
+</div>
 ```
 
 ## Связанные файлы

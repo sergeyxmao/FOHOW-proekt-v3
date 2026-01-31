@@ -272,7 +272,18 @@
                 </div>
               </div>
 
-              <div v-if="personalError" class="error-message">{{ personalError }}</div>
+              <div v-if="personalError" class="error-message">
+                {{ personalError }}
+                <!-- Кнопки поддержки для ошибки VERIFIED_BY_OTHER -->
+                <div v-if="supportLinks" class="support-links">
+                  <a v-if="supportLinks.telegram" :href="supportLinks.telegram" target="_blank" class="support-btn telegram">
+                    📞 Telegram
+                  </a>
+                  <a v-if="supportLinks.email" :href="'mailto:' + supportLinks.email" class="support-btn email">
+                    ✉️ {{ supportLinks.email }}
+                  </a>
+                </div>
+              </div>
               <div v-if="personalSuccess" class="success-message">{{ personalSuccess }}</div>
 
               <button type="submit" class="btn-save" :disabled="savingPersonal">
@@ -1432,6 +1443,7 @@ const {
   personalError,
   personalSuccess,
   savingPersonal,
+  supportLinks,
   showPersonalIdWarning,
   pendingPersonalId,
   pendingOffice,
@@ -2789,6 +2801,44 @@ watch(activeTab, (newTab) => {
   background: var(--profile-error-bg);
   border-radius: 12px;
   font-weight: 500;
+}
+
+.support-links {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.support-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.support-btn.telegram {
+  background: #0088cc;
+  color: white;
+}
+
+.support-btn.telegram:hover {
+  background: #006699;
+}
+
+.support-btn.email {
+  background: var(--profile-bg-tertiary);
+  color: var(--profile-text-primary);
+  border: 1px solid var(--profile-border);
+}
+
+.support-btn.email:hover {
+  background: var(--profile-bg-secondary);
 }
 
 .success-message {

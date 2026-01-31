@@ -6,8 +6,8 @@
 import { pool } from '../db.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 import { sendEmail } from '../utils/emailService.js';
-import { getVerificationApprovedMessage } from '../templates/telegramTemplates.js';
-import { getVerificationApprovedTemplate } from '../templates/emailTemplates.js';
+import { getVerificationApprovedMessage, getVerificationAutoRejectedMessage } from '../templates/telegramTemplates.js';
+import { getVerificationApprovedTemplate, getVerificationAutoRejectedTemplate } from '../templates/emailTemplates.js';
 
 const VERIFICATION_COOLDOWN_HOURS = 24; // 1 раз в сутки
 
@@ -96,14 +96,23 @@ async function submitVerification(userId, fullName, referralLink) {
   try {
     await client.query('BEGIN');
 
-    // Создание записи в таблице user_verifications
+    // Получить текущий personal_id пользователя
+    const userPersonalIdResult = await client.query(
+      'SELECT personal_id FROM users WHERE id = $1',
+      [userId]
+    );
+    const currentPersonalId = userPersonalIdResult.rows[0]?.personal_id || null;
+
+    // Создание записи в таблице user_verifications с pending_personal_id
     const insertResult = await client.query(
       `INSERT INTO user_verifications
-        (user_id, full_name, referral_link, status)
-       VALUES ($1, $2, $3, 'pending')
-       RETURNING id`,
-      [userId, fullName, referralLink]
+        (user_id, full_name, referral_link, pending_personal_id, status)
+       VALUES ($1, $2, $3, $4, 'pending')
+       RETURNING id, pending_personal_id`,
+      [userId, fullName, referralLink, currentPersonalId]
     );
+
+    const pendingPersonalId = insertResult.rows[0].pending_personal_id;
 
     // Обновление времени последней попытки
     await client.query(
@@ -113,7 +122,7 @@ async function submitVerification(userId, fullName, referralLink) {
 
     await client.query('COMMIT');
 
-    console.log(`[VERIFICATION] Заявка создана: user_id=${userId}, verification_id=${insertResult.rows[0].id}`);
+    console.log(`[VERIFICATION] Заявка создана: user_id=${userId}, verification_id=${insertResult.rows[0].id}, pending_personal_id=${pendingPersonalId}`);
 
     // ========================================
     // Уведомить всех админов о новой заявке
@@ -129,15 +138,16 @@ async function submitVerification(userId, fullName, referralLink) {
       if (adminsResult.rows.length > 0) {
         // Получить информацию о пользователе, подавшем заявку
         const userResult = await pool.query(
-          `SELECT personal_id, email, username FROM users WHERE id = $1`,
+          `SELECT email, username FROM users WHERE id = $1`,
           [userId]
         );
 
         const user = userResult.rows[0];
 
+        // Используем pendingPersonalId - номер, который был у пользователя на момент подачи заявки
         const message = `🔔 Новая заявка на верификацию!\n\n` +
           `👤 ФИО: ${fullName}\n` +
-          `🔢 Номер: ${user.personal_id || 'не указан'}\n` +
+          `🔢 Номер: ${pendingPersonalId || 'не указан'}\n` +
           `📧 Email: ${user.email}\n` +
           `👥 Username: ${user.username || 'не указан'}\n` +
           `🔗 Реферальная ссылка: ${referralLink}\n\n` +
@@ -213,7 +223,7 @@ async function approveVerification(verificationId, adminId) {
 
     // Получить информацию о заявке И данные пользователя для уведомлений
     const verificationResult = await client.query(
-      `SELECT v.user_id, v.status, u.telegram_chat_id, u.personal_id, u.email, u.full_name
+      `SELECT v.user_id, v.status, v.pending_personal_id, u.telegram_chat_id, u.personal_id, u.email, u.full_name
        FROM user_verifications v
        JOIN users u ON v.user_id = u.id
        WHERE v.id = $1`,
@@ -278,6 +288,79 @@ async function approveVerification(verificationId, adminId) {
         console.error('[VERIFICATION] Ошибка отправки Email-уведомления:', emailError.message);
       }
     }
+
+    // ========================================
+    // Автоотклонение дублей заявок на этот же номер
+    // ========================================
+    const approvedPersonalId = verification.pending_personal_id || verification.personal_id;
+
+    if (approvedPersonalId) {
+      try {
+        // Найти все другие pending заявки на этот же номер
+        const duplicatesResult = await pool.query(
+          `SELECT v.id, v.user_id, u.email, u.telegram_chat_id, u.full_name
+           FROM user_verifications v
+           JOIN users u ON v.user_id = u.id
+           WHERE v.pending_personal_id = $1
+             AND v.status = 'pending'
+             AND v.user_id != $2`,
+          [approvedPersonalId, verification.user_id]
+        );
+
+        if (duplicatesResult.rows.length > 0) {
+          const rejectionReason = 'Номер уже верифицирован другим пользователем';
+
+          // Отклонить все дубликаты
+          await pool.query(
+            `UPDATE user_verifications
+             SET status = 'rejected',
+                 rejection_reason = $1,
+                 processed_at = NOW(),
+                 processed_by = $2
+             WHERE pending_personal_id = $3
+               AND status = 'pending'
+               AND user_id != $4`,
+            [rejectionReason, adminId, approvedPersonalId, verification.user_id]
+          );
+
+          // Уведомить каждого пользователя с отклонённой заявкой
+          for (const dup of duplicatesResult.rows) {
+            // Telegram
+            if (dup.telegram_chat_id) {
+              try {
+                const tgMessage = getVerificationAutoRejectedMessage(approvedPersonalId, profileUrl);
+                await sendTelegramMessage(dup.telegram_chat_id, tgMessage.text, {
+                  parse_mode: tgMessage.parse_mode,
+                  reply_markup: tgMessage.reply_markup
+                });
+              } catch (e) {
+                console.error(`[VERIFICATION] Ошибка отправки TG автоотклонения: ${e.message}`);
+              }
+            }
+
+            // Email
+            if (dup.email) {
+              try {
+                const emailHtml = getVerificationAutoRejectedTemplate({
+                  userName: dup.full_name || 'Пользователь',
+                  personalId: approvedPersonalId,
+                  profileUrl
+                });
+                await sendEmail(dup.email, '❌ Заявка на верификацию отклонена — FOHOW Interactive', emailHtml);
+              } catch (e) {
+                console.error(`[VERIFICATION] Ошибка отправки email автоотклонения: ${e.message}`);
+              }
+            }
+          }
+
+          console.log(`[VERIFICATION] Автоотклонено ${duplicatesResult.rows.length} заявок на номер ${approvedPersonalId}`);
+        }
+      } catch (autoRejectError) {
+        // Не прерываем основной процесс, только логируем
+        console.error('[VERIFICATION] Ошибка автоотклонения дублей:', autoRejectError.message);
+      }
+    }
+    // ========================================
 
     return { success: true };
 

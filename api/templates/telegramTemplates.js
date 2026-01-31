@@ -453,6 +453,31 @@ function getVerificationRevokedMessage(profileUrl = 'https://interactive.marketi
 }
 
 /**
+ * Сообщение об автоматическом отклонении заявки (номер верифицирован другим)
+ * @param {string} personalId - Компьютерный номер
+ * @param {string} profileUrl - URL профиля
+ * @returns {Object} Объект сообщения для Telegram Bot API
+ */
+function getVerificationAutoRejectedMessage(personalId, profileUrl = 'https://interactive.marketingfohow.ru/') {
+  const text = `❌ Ваша заявка на верификацию отклонена
+
+Номер ${personalId || 'не указан'} уже верифицирован другим пользователем.
+
+Если вы считаете, что это ваш номер, обратитесь в поддержку.`;
+
+  return {
+    text,
+    parse_mode: 'Markdown',
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '📞 Написать в поддержку', url: 'https://t.me/FOHOWadmin' }],
+        [{ text: '👤 В профиль', url: profileUrl }]
+      ]
+    }
+  };
+}
+
+/**
  * Уведомление об отключении Telegram-уведомлений
  *
  * @param {string} userName - Имя пользователя
@@ -509,5 +534,6 @@ export {
   getSubscriptionCancelledMessage,
   getTelegramDisconnectedMessage,
   getVerificationApprovedMessage,
-  getVerificationRevokedMessage
+  getVerificationRevokedMessage,
+  getVerificationAutoRejectedMessage
 };
