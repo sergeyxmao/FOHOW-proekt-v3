@@ -163,9 +163,13 @@ if (normalizedOffice && normalizedOffice !== currentOffice) {
 }
 
 if (verificationRevoked && user.is_verified) {
-  // Установить is_verified = FALSE и verified_at = NULL
+  // Установить is_verified = FALSE, verified_at = NULL
+  // + last_verification_attempt = NOW() (кулдаун 24ч на новую заявку)
 }
 ```
+
+**Кулдаун после отзыва верификации:**
+При снятии верификации устанавливается `last_verification_attempt = NOW()`, что блокирует подачу новой заявки на 24 часа. Это предотвращает злоупотребление сменой номера.
 
 **Примечание:** Обновление UI preferences, социальных сетей и других некритических полей НЕ влияет на верификацию.
 
