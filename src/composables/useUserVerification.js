@@ -48,10 +48,16 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
     // Нельзя подать заявку, если не указан компьютерный номер
     if (!personalForm.personal_id || !personalForm.personal_id.trim()) return false
 
+    // Нельзя подать заявку, если номер невалиден (должен быть офис + 9 цифр)
+    const personalId = personalForm.personal_id.trim()
+    const officeMatch = personalId.match(/^[A-Z]{3}\d{2,3}/)
+    if (!officeMatch) return false
+    const suffix = personalId.slice(officeMatch[0].length)
+    if (!/^\d{9}$/.test(suffix)) return false
+
     // Нельзя подать заявку, если есть несохранённые изменения номера
     const savedPersonalId = user.value?.personal_id || ''
-    const formPersonalId = personalForm.personal_id?.trim() || ''
-    if (formPersonalId !== savedPersonalId) return false
+    if (personalId !== savedPersonalId) return false
 
     // Нельзя подать заявку, если действует кулдаун
     if (verificationStatus.cooldownUntil) {
@@ -99,10 +105,21 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
       return 'Введите компьютерный номер'
     }
 
+    // Проверка валидности формата номера
+    const personalId = personalForm.personal_id.trim()
+    const officeMatch = personalId.match(/^[A-Z]{3}\d{2,3}/)
+    if (!officeMatch) {
+      return 'Некорректный формат номера'
+    }
+    const suffix = personalId.slice(officeMatch[0].length)
+    if (!/^\d{9}$/.test(suffix)) {
+      const digitCount = suffix.replace(/\D/g, '').length
+      return `Введите 9 цифр после префикса (сейчас ${digitCount}/9)`
+    }
+
     // Есть несохранённые изменения номера
     const savedPersonalId = user.value?.personal_id || ''
-    const formPersonalId = personalForm.personal_id?.trim() || ''
-    if (formPersonalId !== savedPersonalId) {
+    if (personalId !== savedPersonalId) {
       return 'Сначала сохраните изменения'
     }
 

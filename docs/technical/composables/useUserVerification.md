@@ -118,6 +118,7 @@ http://www.fohow.plus/clientRegProm?id=2891936
         ▼
 2. canSubmitVerification проверяет:
    - Есть personal_id
+   - Номер валиден (офис + 9 цифр)
    - Нет активной заявки
    - Нет несохранённых изменений номера
    - Прошёл cooldown
@@ -163,9 +164,19 @@ const verificationBlockReason = computed(() => {
     return 'Введите компьютерный номер'
   }
 
+  // Проверка валидности формата номера
+  const personalId = personalForm.personal_id.trim()
+  const officeMatch = personalId.match(/^[A-Z]{3}\d{2,3}/)
+  if (!officeMatch) {
+    return 'Некорректный формат номера'
+  }
+  const suffix = personalId.slice(officeMatch[0].length)
+  if (!/^\d{9}$/.test(suffix)) {
+    return `Введите 9 цифр после префикса (сейчас ${digitCount}/9)`
+  }
+
   const savedPersonalId = user.value?.personal_id || ''
-  const formPersonalId = personalForm.personal_id?.trim() || ''
-  if (formPersonalId !== savedPersonalId) {
+  if (personalId !== savedPersonalId) {
     return 'Сначала сохраните изменения'
   }
 
@@ -193,10 +204,16 @@ const canSubmitVerification = computed(() => {
     return false
   }
 
+  // Если номер невалиден (должен быть офис + 9 цифр) - нельзя
+  const personalId = personalForm.personal_id.trim()
+  const officeMatch = personalId.match(/^[A-Z]{3}\d{2,3}/)
+  if (!officeMatch) return false
+  const suffix = personalId.slice(officeMatch[0].length)
+  if (!/^\d{9}$/.test(suffix)) return false
+
   // Если есть несохранённые изменения - нельзя
   const savedPersonalId = user.value?.personal_id || ''
-  const formPersonalId = personalForm.personal_id?.trim() || ''
-  if (formPersonalId !== savedPersonalId) {
+  if (personalId !== savedPersonalId) {
     return false
   }
 
