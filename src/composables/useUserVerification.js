@@ -48,6 +48,11 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
     // Нельзя подать заявку, если не указан компьютерный номер
     if (!personalForm.personal_id || !personalForm.personal_id.trim()) return false
 
+    // Нельзя подать заявку, если есть несохранённые изменения номера
+    const savedPersonalId = user.value?.personal_id || ''
+    const formPersonalId = personalForm.personal_id?.trim() || ''
+    if (formPersonalId !== savedPersonalId) return false
+
     // Нельзя подать заявку, если действует кулдаун
     if (verificationStatus.cooldownUntil) {
       const now = new Date()
@@ -83,6 +88,32 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
     } else {
       return 'Повторная заявка скоро будет доступна'
     }
+  })
+
+  const verificationBlockReason = computed(() => {
+    // Уже есть свой UI для pending
+    if (verificationStatus.hasPendingRequest) return null
+
+    // Не указан компьютерный номер
+    if (!personalForm.personal_id || !personalForm.personal_id.trim()) {
+      return 'Введите компьютерный номер'
+    }
+
+    // Есть несохранённые изменения номера
+    const savedPersonalId = user.value?.personal_id || ''
+    const formPersonalId = personalForm.personal_id?.trim() || ''
+    if (formPersonalId !== savedPersonalId) {
+      return 'Сначала сохраните изменения'
+    }
+
+    // Уже есть cooldownMessage для кулдауна
+    if (verificationStatus.cooldownUntil) {
+      const now = new Date()
+      const cooldownEnd = new Date(verificationStatus.cooldownUntil)
+      if (now < cooldownEnd) return null
+    }
+
+    return null
   })
 
   // === Методы ===
@@ -421,6 +452,7 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
     // Computed
     canSubmitVerification,
     cooldownMessage,
+    verificationBlockReason,
 
     // Methods
     loadVerificationStatus,
