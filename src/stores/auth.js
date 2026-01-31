@@ -358,7 +358,12 @@ export const useAuthStore = defineStore('auth', {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || 'Ошибка обновления профиля')
+        const error = new Error(data.error || 'Ошибка обновления профиля')
+        // Добавляем дополнительные данные для обработки на клиенте
+        error.errorType = data.errorType || null
+        error.supportTelegram = data.supportTelegram || null
+        error.supportEmail = data.supportEmail || null
+        throw error
       }
 
       const data = await response.json()

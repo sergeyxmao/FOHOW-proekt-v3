@@ -31,6 +31,9 @@ export function useUserPersonalInfo({ user, authStore, verificationStatus, cance
   const personalSuccess = ref('')
   const savingPersonal = ref(false)
 
+  // Ссылки на поддержку (для ошибки VERIFIED_BY_OTHER)
+  const supportLinks = ref(null)
+
   // Предупреждение об изменении компьютерного номера
   const showPersonalIdWarning = ref(false)
   const pendingPersonalId = ref('')
@@ -224,12 +227,23 @@ export function useUserPersonalInfo({ user, authStore, verificationStatus, cance
       })
 
       personalSuccess.value = 'Личная информация успешно обновлена!'
+      supportLinks.value = null
 
       setTimeout(() => {
         personalSuccess.value = ''
       }, 3000)
     } catch (err) {
       personalError.value = err.message || 'Произошла ошибка при сохранении'
+
+      // Обработка ошибки VERIFIED_BY_OTHER
+      if (err.errorType === 'VERIFIED_BY_OTHER') {
+        supportLinks.value = {
+          telegram: err.supportTelegram,
+          email: err.supportEmail
+        }
+      } else {
+        supportLinks.value = null
+      }
     } finally {
       savingPersonal.value = false
     }
@@ -410,6 +424,7 @@ export function useUserPersonalInfo({ user, authStore, verificationStatus, cance
     personalError,
     personalSuccess,
     savingPersonal,
+    supportLinks,
     showPersonalIdWarning,
     pendingPersonalId,
     pendingOffice,

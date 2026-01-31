@@ -271,7 +271,23 @@ export function registerProfileRoutes(app) {
       }
 
       if (personalIdChanged) {
-        // Проверяем уникальность
+        // Проверка: номер уже верифицирован у другого пользователя?
+        const verifiedCheck = await pool.query(
+          `SELECT id, email FROM users
+           WHERE personal_id = $1 AND id != $2 AND is_verified = TRUE`,
+          [normalizedPersonalId, userId]
+        );
+
+        if (verifiedCheck.rows.length > 0) {
+          return reply.code(409).send({
+            error: 'Этот номер уже верифицирован другим пользователем. Если вы считаете, что это ваш номер, обратитесь в поддержку.',
+            errorType: 'VERIFIED_BY_OTHER',
+            supportTelegram: 'https://t.me/FOHOWadmin',
+            supportEmail: 'marketingfohow@yandex.com'
+          });
+        }
+
+        // Проверяем уникальность (невериф. пользователи)
         const personalIdCheck = await pool.query(
           'SELECT id FROM users WHERE personal_id = $1 AND id != $2',
           [normalizedPersonalId, userId]
