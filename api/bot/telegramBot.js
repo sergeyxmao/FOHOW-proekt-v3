@@ -70,9 +70,9 @@ async function handleLinkCode(chatId, username, firstName, code) {
   try {
     console.log(`🔗 Попытка привязки аккаунта: chatId=${chatId}, код=${code}`);
 
-    // Ищем код в базе данных
+    // Ищем код в базе данных, проверяя срок действия в SQL для корректной работы с timezone
     const codeResult = await pool.query(
-      `SELECT user_id, expires_at, used
+      `SELECT user_id, expires_at, used, expires_at < NOW() as is_expired
        FROM telegram_link_codes
        WHERE code = $1`,
       [code]
@@ -104,10 +104,8 @@ async function handleLinkCode(chatId, username, firstName, code) {
       return;
     }
 
-    // Проверяем, не истек ли код
-    const now = new Date();
-    const expiresAt = new Date(linkCode.expires_at);
-    if (now > expiresAt) {
+    // Проверяем, не истек ли код (результат вычислен в SQL)
+    if (linkCode.is_expired) {
       await bot.sendMessage(
         chatId,
         `⏰ <b>Код истек</b>\n\n` +

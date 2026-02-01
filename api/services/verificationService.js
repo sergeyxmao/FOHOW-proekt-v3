@@ -17,9 +17,22 @@ const VERIFICATION_COOLDOWN_HOURS = 24; // 1 раз в сутки
  * @returns {Promise<{canSubmit: boolean, reason?: string}>} Результат проверки
  */
 async function canSubmitVerification(userId) {
-  // Получить время последней попытки
+  // Получить время последней попытки и вычислить кулдаун в SQL для корректной работы с timezone
   const result = await pool.query(
-    'SELECT last_verification_attempt, is_verified FROM users WHERE id = $1',
+    `SELECT
+       is_verified,
+       last_verification_attempt,
+       CASE
+         WHEN last_verification_attempt IS NOT NULL THEN
+           EXTRACT(EPOCH FROM (NOW() - last_verification_attempt)) / 3600
+         ELSE NULL
+       END as hours_since_attempt,
+       CASE
+         WHEN last_verification_attempt IS NOT NULL THEN
+           last_verification_attempt + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours'
+         ELSE NULL
+       END as cooldown_end_time
+     FROM users WHERE id = $1`,
     [userId]
   );
 
@@ -51,21 +64,18 @@ async function canSubmitVerification(userId) {
   }
 
   // Проверить, прошли ли сутки с последней попытки
-  if (user.last_verification_attempt) {
-    const lastAttempt = new Date(user.last_verification_attempt);
-    const now = new Date();
-    const hoursSinceLastAttempt = (now - lastAttempt) / (1000 * 60 * 60);
+  if (user.hours_since_attempt !== null) {
+    const hoursSinceLastAttempt = parseFloat(user.hours_since_attempt);
 
     if (hoursSinceLastAttempt < VERIFICATION_COOLDOWN_HOURS) {
-      // Рассчитать время окончания кулдауна
-      const cooldownEndTime = new Date(lastAttempt.getTime() + (VERIFICATION_COOLDOWN_HOURS * 60 * 60 * 1000));
       const hoursRemaining = Math.ceil(VERIFICATION_COOLDOWN_HOURS - hoursSinceLastAttempt);
+      const cooldownEndTime = user.cooldown_end_time;
 
       return {
         canSubmit: false,
         reason: `Вы сможете подать новую заявку через ${hoursRemaining} ч.`,
-        cooldownEndTime: cooldownEndTime.toISOString(),
-        lastAttempt: lastAttempt.toISOString()
+        cooldownEndTime: cooldownEndTime ? new Date(cooldownEndTime).toISOString() : null,
+        lastAttempt: user.last_verification_attempt ? new Date(user.last_verification_attempt).toISOString() : null
       };
     }
   }
@@ -444,6 +454,7 @@ async function rejectVerification(verificationId, adminId, rejectionReason) {
  * @returns {Promise<Object>} Статус верификации
  */
 async function getUserVerificationStatus(userId) {
+  // Используем SQL для расчета кулдауна, чтобы избежать проблем с timezone
   const result = await pool.query(
     `SELECT
       u.is_verified,
@@ -452,7 +463,17 @@ async function getUserVerificationStatus(userId) {
       v.id as pending_verification_id,
       v.status as pending_status,
       v.rejection_reason,
-      v.submitted_at as pending_submitted_at
+      v.submitted_at as pending_submitted_at,
+      CASE
+        WHEN u.last_verification_attempt IS NOT NULL AND NOT u.is_verified THEN
+          u.last_verification_attempt + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours'
+        ELSE NULL
+      END as cooldown_end_time,
+      CASE
+        WHEN u.last_verification_attempt IS NOT NULL AND NOT u.is_verified THEN
+          (u.last_verification_attempt + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours') > NOW()
+        ELSE FALSE
+      END as cooldown_active
      FROM users u
      LEFT JOIN user_verifications v ON u.id = v.user_id AND v.status = 'pending'
      WHERE u.id = $1`,
@@ -477,18 +498,10 @@ async function getUserVerificationStatus(userId) {
 
   const lastRejection = rejectedResult.rows[0] || null;
 
-  // Рассчитать время окончания кулдауна
-  let cooldownUntil = null;
-  if (data.last_verification_attempt && !data.is_verified) {
-    const lastAttempt = new Date(data.last_verification_attempt);
-    const cooldownEndTime = new Date(lastAttempt.getTime() + (VERIFICATION_COOLDOWN_HOURS * 60 * 60 * 1000));
-    const now = new Date();
-
-    // Если кулдаун ещё действует
-    if (now < cooldownEndTime) {
-      cooldownUntil = cooldownEndTime.toISOString();
-    }
-  }
+  // Время окончания кулдауна рассчитано в SQL
+  const cooldownUntil = data.cooldown_active && data.cooldown_end_time
+    ? new Date(data.cooldown_end_time).toISOString()
+    : null;
 
   return {
     isVerified: data.is_verified,

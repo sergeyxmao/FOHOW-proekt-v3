@@ -319,6 +319,68 @@ import {
 
 ---
 
+## Работа с датами и timezone
+
+### Проблема timezone
+
+Node.js работает в UTC, PostgreSQL может быть настроен на Europe/Moscow. При сравнении дат в JavaScript возникает разница в 3 часа, что приводит к некорректным кулдаунам.
+
+### Решение: SQL-сравнения
+
+**ВАЖНО:** Все сравнения дат и расчёты времени должны выполняться в SQL, а не в JavaScript.
+
+#### ❌ Неправильно (проблема с timezone):
+```javascript
+const lastSent = new Date(lastCode.rows[0].created_at);
+const now = new Date();
+const secondsSinceLastSent = (now - lastSent) / 1000;
+
+if (secondsSinceLastSent < 30) {
+  // Может показывать "Подождите 10681 секунд" вместо "30 секунд"
+}
+```
+
+#### ✅ Правильно (timezone-безопасно):
+```javascript
+const lastCode = await pool.query(
+  `SELECT
+     EXTRACT(EPOCH FROM (NOW() - created_at)) as seconds_since_last
+   FROM email_verification_codes
+   WHERE email = $1
+   ORDER BY created_at DESC
+   LIMIT 1`,
+  [email]
+);
+
+if (lastCode.rows.length > 0) {
+  const secondsSinceLastSent = parseFloat(lastCode.rows[0].seconds_since_last);
+
+  if (secondsSinceLastSent < 30) {
+    const waitTime = Math.ceil(30 - secondsSinceLastSent);
+    // Корректное значение кулдауна
+  }
+}
+```
+
+### Паттерны для исправления
+
+| Паттерн | Проблемный код | Решение |
+|---------|----------------|---------|
+| Разница в секундах | `(new Date() - new Date(row.created_at)) / 1000` | `EXTRACT(EPOCH FROM (NOW() - created_at))` |
+| Проверка истечения | `new Date() > new Date(row.expires_at)` | `expires_at < NOW() as is_expired` |
+| Расчёт кулдауна | `new Date(lastAttempt.getTime() + hours * 3600000)` | `last_attempt + INTERVAL 'X hours'` |
+
+### Затронутые файлы (исправлено)
+
+- `api/routes/auth.js` — `/api/resend-verification-code`, `/api/reset-password`
+- `api/services/verificationService.js` — `canSubmitVerification()`, `getUserVerificationStatus()`
+- `api/middleware/checkFeature.js` — проверка подписки
+- `api/middleware/checkUsageLimit.js` — проверка подписки
+- `api/bot/telegramBot.js` — проверка кода привязки
+- `api/routes/promo.js` — проверка срока промокода
+
+---
+
 ## Как добавить новый роут
 
 1. Создать файл `api/routes/myroute.js`

@@ -14,12 +14,23 @@
             return; // Пропускаем проверку функций для админов
           }
 
+          // Используем SQL для проверки истечения подписки и grace-периода, чтобы избежать проблем с timezone
           const planResult = await pool.query(
             `SELECT
                sp.features,
                sp.name as plan_name,
                u.subscription_expires_at,
-               u.grace_period_until
+               u.grace_period_until,
+               CASE
+                 WHEN u.subscription_expires_at IS NOT NULL THEN
+                   u.subscription_expires_at < NOW()
+                 ELSE FALSE
+               END as subscription_expired,
+               CASE
+                 WHEN u.grace_period_until IS NOT NULL THEN
+                   u.grace_period_until < NOW()
+                 ELSE TRUE
+               END as grace_period_expired
              FROM users u
              JOIN subscription_plans sp ON u.plan_id = sp.id
              WHERE u.id = $1`,
@@ -34,13 +45,10 @@
           const features = plan.features;
           const featureValue = features[featureName];
 
-          // Проверка подписки с учётом grace-периода
-          if (plan.subscription_expires_at && new Date(plan.subscription_expires_at) < new Date()) {
+          // Проверка подписки с учётом grace-периода (результат вычислен в SQL)
+          if (plan.subscription_expired) {
             // Подписка истекла — проверяем grace-период
-            const now = new Date();
-            const gracePeriodUntil = plan.grace_period_until ? new Date(plan.grace_period_until) : null;
-
-            if (!gracePeriodUntil || now > gracePeriodUntil) {
+            if (plan.grace_period_expired) {
               // Grace-период отсутствует или тоже истёк
               return reply.code(403).send({
                 error: 'Срок вашей подписки истек.',
@@ -51,7 +59,8 @@
 
             // Grace-период активен — разрешаем доступ, но добавляем метку
             req.user.inGracePeriod = true;
-            console.log(`[GRACE] Пользователь ${userId} в grace-периоде до ${gracePeriodUntil.toISOString()}`);
+            const gracePeriodUntil = plan.grace_period_until ? new Date(plan.grace_period_until) : null;
+            console.log(`[GRACE] Пользователь ${userId} в grace-периоде до ${gracePeriodUntil?.toISOString()}`);
           }
 
           if (featureValue !== requiredValue) {
