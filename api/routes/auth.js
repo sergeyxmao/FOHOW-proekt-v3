@@ -440,9 +440,11 @@ export function registerAuthRoutes(app) {
         return reply.code(400).send({ error: 'Email обязателен' });
       }
 
-      // Проверить кулдаун (30 секунд)
+      // Проверить кулдаун (30 секунд) - используем SQL для корректного сравнения времени
       const lastCode = await pool.query(
-        `SELECT created_at FROM email_verification_codes
+        `SELECT
+           EXTRACT(EPOCH FROM (NOW() - created_at)) as seconds_since_last
+         FROM email_verification_codes
          WHERE email = $1
          ORDER BY created_at DESC
          LIMIT 1`,
@@ -450,9 +452,7 @@ export function registerAuthRoutes(app) {
       );
 
       if (lastCode.rows.length > 0) {
-        const lastSent = new Date(lastCode.rows[0].created_at);
-        const now = new Date();
-        const secondsSinceLastSent = (now - lastSent) / 1000;
+        const secondsSinceLastSent = parseFloat(lastCode.rows[0].seconds_since_last);
 
         if (secondsSinceLastSent < 30) {
           const waitTime = Math.ceil(30 - secondsSinceLastSent);
@@ -738,8 +738,10 @@ export function registerAuthRoutes(app) {
         return reply.code(400).send({ error: 'Недействительный или истекший токен' });
       }
 
+      // Проверяем токен и его срок действия в SQL для корректной работы с timezone
       const resetResult = await pool.query(
-        'SELECT user_id, expires_at FROM password_resets WHERE token = $1',
+        `SELECT user_id, expires_at, expires_at < NOW() as is_expired
+         FROM password_resets WHERE token = $1`,
         [token]
       );
 
@@ -747,9 +749,9 @@ export function registerAuthRoutes(app) {
         return reply.code(400).send({ error: 'Токен не найден' });
       }
 
-      const { user_id, expires_at } = resetResult.rows[0];
+      const { user_id, is_expired } = resetResult.rows[0];
 
-      if (new Date() > new Date(expires_at)) {
+      if (is_expired) {
         await pool.query('DELETE FROM password_resets WHERE token = $1', [token]);
         return reply.code(400).send({ error: 'Токен истек' });
       }

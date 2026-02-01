@@ -42,9 +42,13 @@ export function registerPromoRoutes(app) {
       try {
         // ============================================
         // 1. Поиск промокода с блокировкой строки
+        // Проверяем срок действия в SQL для корректной работы с timezone
         // ============================================
         const promoResult = await client.query(
-          `SELECT * FROM promo_codes
+          `SELECT *,
+             NOW() < start_date as not_started,
+             NOW() > end_date as already_ended
+           FROM promo_codes
            WHERE code = $1
            FOR UPDATE`,
           [promoCode]
@@ -72,12 +76,8 @@ export function registerPromoRoutes(app) {
           });
         }
 
-        // Проверка 3: Промокод в пределах срока действия
-        const now = new Date();
-        const startDate = new Date(promo.start_date);
-        const endDate = new Date(promo.end_date);
-
-        if (now < startDate || now > endDate) {
+        // Проверка 3: Промокод в пределах срока действия (результат вычислен в SQL)
+        if (promo.not_started || promo.already_ended) {
           await client.query('ROLLBACK');
           return reply.code(400).send({
             error: 'Срок действия промокода истек'

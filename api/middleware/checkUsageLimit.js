@@ -27,11 +27,22 @@
           }
 
           // 1. Получаем лимит, дату истечения подписки и grace_period_until
+          // Используем SQL для проверки истечения, чтобы избежать проблем с timezone
           const planResult = await pool.query(
-            `SELECT sp.features->'${limitFeatureName}' as limit, 
+            `SELECT sp.features->'${limitFeatureName}' as limit,
                     sp.name as plan_name,
                     u.subscription_expires_at,
-                    u.grace_period_until
+                    u.grace_period_until,
+                    CASE
+                      WHEN u.subscription_expires_at IS NOT NULL THEN
+                        u.subscription_expires_at < NOW()
+                      ELSE FALSE
+                    END as subscription_expired,
+                    CASE
+                      WHEN u.grace_period_until IS NOT NULL THEN
+                        u.grace_period_until < NOW()
+                      ELSE TRUE
+                    END as grace_period_expired
              FROM users u
              JOIN subscription_plans sp ON u.plan_id = sp.id
              WHERE u.id = $1`,
@@ -47,16 +58,14 @@
 
           const limit = parseInt(planResult.rows[0].limit, 10);
           const planName = planResult.rows[0].plan_name;
-          const subscriptionExpiresAt = planResult.rows[0].subscription_expires_at;
+          const subscriptionExpired = planResult.rows[0].subscription_expired;
+          const gracePeriodExpired = planResult.rows[0].grace_period_expired;
           const gracePeriodUntil = planResult.rows[0].grace_period_until;
 
-          // 2. Проверка подписки с учётом grace-периода
-          if (subscriptionExpiresAt && new Date(subscriptionExpiresAt) < new Date()) {
+          // 2. Проверка подписки с учётом grace-периода (результат вычислен в SQL)
+          if (subscriptionExpired) {
             // Подписка истекла — проверяем grace-период
-            const now = new Date();
-            const graceDate = gracePeriodUntil ? new Date(gracePeriodUntil) : null;
-
-            if (!graceDate || now > graceDate) {
+            if (gracePeriodExpired) {
               // Grace-период отсутствует или истёк
               return reply.code(403).send({
                 error: 'Срок вашей подписки истек.',
@@ -67,7 +76,8 @@
 
             // Grace-период активен — разрешаем доступ, но добавляем метку
             req.user.inGracePeriod = true;
-            console.log(`[GRACE] Пользователь ${userId} в grace-периоде до ${graceDate.toISOString()}`);
+            const graceDate = gracePeriodUntil ? new Date(gracePeriodUntil) : null;
+            console.log(`[GRACE] Пользователь ${userId} в grace-периоде до ${graceDate?.toISOString()}`);
           }
 
           // 3. Проверка лимитов (если подписка активна или grace-период действует)
