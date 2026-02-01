@@ -21,8 +21,8 @@
       <div v-if="error" class="auth-card__message auth-card__message--error">{{ error }}</div>
       <div v-if="success" class="auth-card__message auth-card__message--success">{{ success }}</div>
       
-      <button class="auth-card__submit" type="submit" :disabled="loading">
-        {{ loading ? 'Отправка...' : 'Отправить ссылку' }}
+      <button class="auth-card__submit" type="submit" :disabled="loading || isOnCooldown">
+        {{ buttonText }}
       </button>
       
       <p class="auth-card__switch">
@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 
 const emit = defineEmits(['back-to-login'])
 const props = defineProps({
@@ -50,24 +50,65 @@ const error = ref('')
 const success = ref('')
 const loading = ref(false)
 
+// Countdown timer для cooldown
+const cooldownSeconds = ref(0)
+let cooldownInterval = null
+
+const isOnCooldown = computed(() => cooldownSeconds.value > 0)
+
+const buttonText = computed(() => {
+  if (loading.value) return 'Отправка...'
+  if (isOnCooldown.value) return `Подождите ${cooldownSeconds.value} сек`
+  return 'Отправить ссылку'
+})
+
+function startCooldown(seconds) {
+  cooldownSeconds.value = seconds
+
+  if (cooldownInterval) clearInterval(cooldownInterval)
+
+  cooldownInterval = setInterval(() => {
+    cooldownSeconds.value--
+    if (cooldownSeconds.value <= 0) {
+      clearInterval(cooldownInterval)
+      cooldownInterval = null
+      error.value = '' // Очистить сообщение об ошибке
+    }
+  }, 1000)
+}
+
+// Очистка интервала при уничтожении компонента
+onUnmounted(() => {
+  if (cooldownInterval) {
+    clearInterval(cooldownInterval)
+    cooldownInterval = null
+  }
+})
+
 async function handleSubmit() {
   error.value = ''
   success.value = ''
   loading.value = true
-  
+
   try {
     const response = await fetch(`${API_URL}/forgot-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value })
     })
-    
+
     const data = await response.json()
-    
+
     if (!response.ok) {
+      // Если 429 с waitTime — запустить countdown
+      if (response.status === 429 && data.waitTime) {
+        startCooldown(data.waitTime)
+        error.value = `Пожалуйста, подождите ${data.waitTime} секунд`
+        return
+      }
       throw new Error(data.error || 'Ошибка отправки')
     }
-    
+
     success.value = 'Инструкции отправлены на ваш email'
     email.value = ''
   } catch (err) {
