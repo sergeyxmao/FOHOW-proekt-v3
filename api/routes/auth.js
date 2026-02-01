@@ -700,6 +700,29 @@ export function registerAuthRoutes(app) {
       }
 
       const userId = result.rows[0].id;
+
+      // Проверить cooldown (60 секунд между запросами) - используем SQL для корректной работы с timezone
+      const cooldownCheck = await pool.query(
+        `SELECT
+           EXTRACT(EPOCH FROM (NOW() - created_at)) as seconds_since_last
+         FROM password_resets
+         WHERE user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [userId]
+      );
+
+      if (cooldownCheck.rows.length > 0) {
+        const secondsSinceLast = parseFloat(cooldownCheck.rows[0].seconds_since_last);
+        if (secondsSinceLast < 60) {
+          const waitTime = Math.ceil(60 - secondsSinceLast);
+          return reply.code(429).send({
+            error: `Пожалуйста, подождите ${waitTime} секунд перед повторным запросом`,
+            waitTime
+          });
+        }
+      }
+
       const token = jwt.sign({ userId, type: 'reset' }, process.env.JWT_SECRET, { expiresIn: '1h' });
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 

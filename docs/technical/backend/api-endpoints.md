@@ -902,3 +902,300 @@ SELECT COUNT(*) FROM user_comments WHERE user_id = u.id
 
 - **2026-01-09**: Исправлена логика для тарифа "Гостевой" - теперь устанавливается `subscription_expires_at = NULL` (бесрочная подписка)
 - **2024-12**: Создан endpoint для изменения тарифного плана администратором
+
+---
+
+## POST /api/forgot-password
+
+**Описание:** Запрос на сброс пароля
+
+**Авторизация:** Не требуется
+
+**Метод:** POST
+
+**URL:** `/api/forgot-password`
+
+### Request Body
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Поля:**
+- `email` (string, required) - Email пользователя
+
+### Response Schema
+
+#### Успешный запрос
+
+**Код ответа:** `200 OK`
+
+```json
+{
+  "success": true,
+  "message": "Инструкции отправлены на email"
+}
+```
+
+**Примечание:** Даже если email не существует в системе, возвращается успешный ответ для предотвращения перечисления пользователей.
+
+### Коды ошибок
+
+#### 400 Bad Request - Отсутствует email
+
+```json
+{
+  "error": "Email обязателен"
+}
+```
+
+#### 429 Too Many Requests - Cooldown
+
+```json
+{
+  "error": "Пожалуйста, подождите 45 секунд перед повторным запросом",
+  "waitTime": 45
+}
+```
+
+**Примечание:** Cooldown составляет 60 секунд между запросами для одного пользователя. Проверка времени выполняется через SQL `EXTRACT(EPOCH FROM ...)` для корректной работы с timezone.
+
+#### 500 Internal Server Error
+
+```json
+{
+  "error": "Ошибка сервера"
+}
+```
+
+### Поведение
+
+1. **Поиск пользователя:**
+   - Если пользователь не найден → возвращается успешный ответ (защита от перечисления)
+
+2. **Проверка cooldown (60 секунд):**
+   - Запрос к `password_resets` с `EXTRACT(EPOCH FROM (NOW() - created_at))`
+   - Если последний запрос менее 60 секунд назад → ошибка 429
+
+3. **Создание токена сброса:**
+   - JWT токен с `userId` и `type: 'reset'`
+   - Срок действия: 1 час
+   - Сохранение в таблице `password_resets`
+
+4. **Отправка email:**
+   - Вызов `sendPasswordResetEmail(email, token)`
+
+### Связанные файлы
+
+- `api/routes/auth.js:688` - реализация endpoint
+- `src/components/ForgotPasswordForm.vue` - frontend компонент
+
+### История изменений
+
+- **2026-02-01**: Добавлен cooldown 60 секунд с проверкой через SQL EXTRACT(EPOCH FROM ...) для корректной работы с timezone
+- **2024-12**: Создан endpoint для восстановления пароля
+
+---
+
+## POST /api/reset-password
+
+**Описание:** Сброс пароля по токену
+
+**Авторизация:** Не требуется
+
+**Метод:** POST
+
+**URL:** `/api/reset-password`
+
+### Request Body
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "newPassword": "newPassword123"
+}
+```
+
+**Поля:**
+- `token` (string, required) - JWT токен из ссылки сброса пароля
+- `newPassword` (string, required) - Новый пароль (минимум 6 символов)
+
+### Response Schema
+
+#### Успешный сброс
+
+**Код ответа:** `200 OK`
+
+```json
+{
+  "success": true,
+  "message": "Пароль успешно изменен"
+}
+```
+
+### Коды ошибок
+
+#### 400 Bad Request - Отсутствуют обязательные поля
+
+```json
+{
+  "error": "Токен и новый пароль обязательны"
+}
+```
+
+#### 400 Bad Request - Пароль слишком короткий
+
+```json
+{
+  "error": "Пароль должен быть минимум 6 символов"
+}
+```
+
+#### 400 Bad Request - Недействительный токен
+
+```json
+{
+  "error": "Недействительный или истекший токен"
+}
+```
+
+#### 400 Bad Request - Токен не найден
+
+```json
+{
+  "error": "Токен не найден"
+}
+```
+
+#### 400 Bad Request - Токен истек
+
+```json
+{
+  "error": "Токен истек"
+}
+```
+
+#### 500 Internal Server Error
+
+```json
+{
+  "error": "Ошибка сервера"
+}
+```
+
+### Поведение
+
+1. **Верификация JWT токена:**
+   - Проверка подписи через `jwt.verify()`
+   - Если невалидный → ошибка 400
+
+2. **Проверка токена в БД:**
+   - SQL запрос с `expires_at < NOW() as is_expired` для корректной работы с timezone
+   - Если токен не найден → ошибка 400
+   - Если токен истек → удаление токена и ошибка 400
+
+3. **Обновление пароля:**
+   - Хэширование через bcrypt
+   - Обновление записи в таблице `users`
+   - Удаление использованного токена из `password_resets`
+
+### Связанные файлы
+
+- `api/routes/auth.js:740` - реализация endpoint
+- `src/components/ResetPasswordForm.vue` - frontend компонент
+
+### История изменений
+
+- **2026-01-31**: Исправлена проверка срока действия токена - используется SQL `expires_at < NOW()` вместо сравнения timestamp в JavaScript для корректной работы с timezone
+- **2024-12**: Создан endpoint для сброса пароля
+
+---
+
+## POST /api/resend-verification-code
+
+**Описание:** Повторная отправка кода подтверждения email
+
+**Авторизация:** Не требуется
+
+**Метод:** POST
+
+**URL:** `/api/resend-verification-code`
+
+### Request Body
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Поля:**
+- `email` (string, required) - Email пользователя
+
+### Response Schema
+
+#### Успешная отправка
+
+**Код ответа:** `200 OK`
+
+```json
+{
+  "success": true,
+  "message": "Новый код подтверждения отправлен на ваш email"
+}
+```
+
+### Коды ошибок
+
+#### 400 Bad Request - Отсутствует email
+
+```json
+{
+  "error": "Email обязателен"
+}
+```
+
+#### 429 Too Many Requests - Cooldown
+
+```json
+{
+  "error": "Пожалуйста, подождите 20 секунд перед повторной отправкой кода",
+  "waitTime": 20
+}
+```
+
+**Примечание:** Cooldown составляет 30 секунд между отправками. Проверка времени выполняется через SQL `EXTRACT(EPOCH FROM ...)` для корректной работы с timezone.
+
+#### 500 Internal Server Error
+
+```json
+{
+  "error": "Ошибка сервера"
+}
+```
+
+### Поведение
+
+1. **Проверка cooldown (30 секунд):**
+   - Запрос к `email_verification_codes` с `EXTRACT(EPOCH FROM (NOW() - created_at))`
+   - Если последняя отправка менее 30 секунд назад → ошибка 429
+
+2. **Генерация нового кода:**
+   - 6-значный случайный код
+   - Срок действия: 10 минут
+   - Сохранение в таблице `email_verification_codes`
+
+3. **Отправка email:**
+   - Вызов `sendVerificationEmail(email, code)`
+
+### Связанные файлы
+
+- `api/routes/auth.js:435` - реализация endpoint
+- `src/components/VerifyEmailForm.vue` - frontend компонент
+
+### История изменений
+
+- **2026-01-31**: Исправлен cooldown - используется SQL EXTRACT(EPOCH FROM ...) вместо сравнения timestamp в JavaScript для корректной работы с timezone
+- **2024-12**: Создан endpoint для повторной отправки кода
