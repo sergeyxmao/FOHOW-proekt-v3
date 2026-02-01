@@ -100,10 +100,9 @@ async function handleSubmit() {
     const data = await response.json()
 
     if (!response.ok) {
-      // Если 429 с waitTime — запустить countdown
+      // Если 429 с waitTime — запустить countdown (без сообщения об ошибке)
       if (response.status === 429 && data.waitTime) {
         startCooldown(data.waitTime)
-        error.value = `Пожалуйста, подождите ${data.waitTime} секунд`
         return
       }
       throw new Error(data.error || 'Ошибка отправки')
