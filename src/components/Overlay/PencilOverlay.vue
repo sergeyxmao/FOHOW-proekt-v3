@@ -53,6 +53,13 @@ const previousToolBeforeImages = ref('brush');
 let previousHtmlOverflow = '';
 let previousBodyOverflow = '';
 
+// === Текстовый инструмент ===
+const textInputRef = ref(null);
+const textColor = ref('#000000');
+const textSize = ref(24);
+const isTypingText = ref(false);
+const textInputPosition = ref(null);
+
 // === Инициализация Composables ===
 
 // Zoom composable
@@ -207,6 +214,9 @@ const boardClasses = computed(() => {
     case 'selection':
       classes.push('pencil-overlay__board--selection');
       break;
+    case 'text':
+      classes.push('pencil-overlay__board--text');
+      break;
     default:
       classes.push('pencil-overlay__board--brush');
   }
@@ -256,6 +266,17 @@ const eraserPreviewStyle = computed(() => {
     height: `${eraserSize.value}px`,
     top: `${pointerPosition.value.y / displayScale}px`,
     left: `${pointerPosition.value.x / displayScale}px`
+  };
+});
+
+const textInputStyle = computed(() => {
+  if (!textInputPosition.value) return null;
+  const displayScale = canvasScale.value || 1;
+  return {
+    left: `${textInputPosition.value.x / displayScale}px`,
+    top: `${textInputPosition.value.y / displayScale}px`,
+    fontSize: `${textSize.value}px`,
+    color: textColor.value
   };
 });
 
@@ -362,6 +383,32 @@ const openImagesPanel = () => {
   sidePanelsStore.openImages();
 };
 
+// === Текстовый инструмент ===
+const startTextInput = (point) => {
+  textInputPosition.value = point;
+  isTypingText.value = true;
+  nextTick(() => textInputRef.value?.focus());
+};
+
+const commitText = () => {
+  const text = textInputRef.value?.value?.trim();
+  if (text && canvasContext.value && textInputPosition.value) {
+    scheduleHistorySave();
+    const ctx = canvasContext.value;
+    const displayScale = canvasScale.value || 1;
+    ctx.font = `${textSize.value * displayScale}px sans-serif`;
+    ctx.fillStyle = textColor.value;
+    ctx.textBaseline = 'top';
+    ctx.fillText(text, textInputPosition.value.x, textInputPosition.value.y);
+  }
+  cancelText();
+};
+
+const cancelText = () => {
+  isTypingText.value = false;
+  textInputPosition.value = null;
+};
+
 const placePendingImageOnCanvas = async (point) => {
   const pendingImage = stickersStore.pendingImageData;
   if (!pendingImage) return false;
@@ -466,6 +513,12 @@ const handleCanvasPointerDown = async (event) => {
       cancelSelection();
       beginSelectionCreation(point, event.pointerId);
     }
+    return;
+  }
+
+  // Текстовый инструмент
+  if (currentTool.value === 'text' && !isTypingText.value) {
+    startTextInput(point);
     return;
   }
 
@@ -718,6 +771,11 @@ const handleKeydown = (event) => {
   }
 
   if (event.key === 'Escape') {
+    if (isTypingText.value) {
+      event.preventDefault();
+      cancelText();
+      return;
+    }
     if (activePlacedImage.value) {
       event.preventDefault();
       cancelActiveImagePlacement();
@@ -1061,6 +1119,16 @@ onBeforeUnmount(() => {
         class="pencil-overlay__selection"
         :style="selectionStyle"
       ></div>
+      <input
+        v-if="isTypingText && textInputPosition"
+        ref="textInputRef"
+        type="text"
+        class="pencil-overlay__text-input"
+        :style="textInputStyle"
+        @keydown.enter="commitText"
+        @keydown.escape.stop="cancelText"
+        @blur="commitText"
+      />
     </div>
 
     <!-- Кнопка закрытия в правом верхнем углу -->
@@ -1242,6 +1310,49 @@ onBeforeUnmount(() => {
             <p class="pencil-overlay__helper-text">
               Выделите область, затем перемещайте содержимое левой кнопкой мыши. Для отмены выделения нажмите Esc или кликните по свободной области.
             </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Текст -->
+      <div class="pencil-overlay__tool-item">
+        <button
+          type="button"
+          :class="[
+            'pencil-overlay__tool-btn',
+            { 'pencil-overlay__tool-btn--active': currentTool === 'text' },
+            { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
+          ]"
+          title="Текст"
+          @click="toggleDropdown('text')"
+        >
+          Aa
+        </button>
+        <div
+          v-if="openDropdown === 'text'"
+          class="pencil-overlay__dropdown"
+        >
+          <div class="pencil-overlay__dropdown-content">
+            <button
+              type="button"
+              class="pencil-overlay__dropdown-select-btn"
+              @click="selectTool('text')"
+            >
+              Выбрать текст
+            </button>
+            <label class="pencil-overlay__control">
+              <span>Цвет</span>
+              <input v-model="textColor" type="color" />
+            </label>
+            <label class="pencil-overlay__control">
+              <span>Размер: {{ textSize }}px</span>
+              <input
+                v-model.number="textSize"
+                type="range"
+                min="16"
+                max="72"
+              />
+            </label>
           </div>
         </div>
       </div>
@@ -1763,5 +1874,21 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.25);
   pointer-events: none;
   transform: translate(-50%, -50%);
+}
+
+/* Текстовый инструмент */
+.pencil-overlay__board--text {
+  cursor: text;
+}
+
+.pencil-overlay__text-input {
+  position: absolute;
+  background: transparent;
+  border: 1px dashed rgba(15, 98, 254, 0.7);
+  outline: none;
+  min-width: 100px;
+  padding: 2px 4px;
+  font-family: sans-serif;
+  z-index: 10;
 }
 </style>
