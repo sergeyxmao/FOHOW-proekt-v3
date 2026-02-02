@@ -102,8 +102,7 @@ export function registerDiscussionRoutes(app) {
               `SELECT COUNT(*) as count, COALESCE(array_agg(DISTINCT personal_id), '{}') AS personal_ids
                FROM users
                WHERE personal_id = ANY($1)
-                 AND is_verified = true
-                 AND plan_id IN (6, 7)`,
+                 AND is_verified = true`,
               [uniquePersonalIds]
             )
 
