@@ -80,6 +80,27 @@ const isResizingText = ref(false); // Флаг масштабирования
 - Undo/Redo работает корректно для текстовых надписей
 - При отмене (Undo) текст полностью удаляется с canvas
 
+### Поддержка touch-устройств
+
+Текстовый инструмент полностью поддерживает мобильные устройства (touch):
+
+- **Pointer Events** — используются `pointerdown/pointermove/pointerup` вместо mouse events
+- **Pointer Capture** — применяется `setPointerCapture()/releasePointerCapture()` для корректного отслеживания перетаскивания при выходе пальца за пределы элемента
+- **touch-action: none** — отключает браузерный scroll/zoom для контейнера текста и маркеров resize
+- **Увеличенные touch targets** — маркеры resize имеют размер 24x24px для удобного касания (рекомендуемый минимум 44px можно достичь через padding)
+
+```css
+.pencil-overlay__text-container {
+  touch-action: none;
+}
+
+.pencil-overlay__resize-handle {
+  width: 24px;
+  height: 24px;
+  touch-action: none;
+}
+```
+
 ## Настройки
 
 | Параметр | Диапазон | По умолчанию |
@@ -102,6 +123,13 @@ textScale.value = Math.max(0.5, Math.min(3, resizeStartScale + delta / 100));
 ```
 
 ## История изменений
+
+### 2026-02-02: Исправлена работа на мобильных устройствах (touch)
+
+- Добавлен Pointer Capture для корректного перетаскивания и изменения размера
+- Добавлен `touch-action: none` для контейнера текста и маркеров resize
+- Увеличен размер маркеров resize до 24x24px для удобного касания
+- Теперь перемещение и масштабирование работает на touch-устройствах так же, как на десктопе
 
 ### 2026-02-02: Добавлен режим превью
 
