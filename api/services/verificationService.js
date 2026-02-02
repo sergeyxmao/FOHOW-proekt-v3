@@ -30,7 +30,7 @@ async function canSubmitVerification(userId) {
        END as hours_since_attempt,
        CASE
          WHEN last_verification_attempt IS NOT NULL THEN
-           TO_CHAR((last_verification_attempt AT TIME ZONE 'UTC') + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+           TO_CHAR((last_verification_attempt AT TIME ZONE 'UTC') + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours', 'YYYY-MM-DD"T"HH24:MI:SS')
          ELSE NULL
        END as cooldown_end_time_iso
      FROM users WHERE id = $1`,
@@ -492,12 +492,12 @@ async function getUserVerificationStatus(userId) {
       v.submitted_at as pending_submitted_at,
       CASE
         WHEN u.last_verification_attempt IS NOT NULL AND NOT u.is_verified THEN
-          TO_CHAR((u.last_verification_attempt AT TIME ZONE 'UTC') + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+          TO_CHAR(u.last_verification_attempt + INTERVAL '2 hours' + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours', 'YYYY-MM-DD"T"HH24:MI:SS')
         ELSE NULL
       END as cooldown_end_time_iso,
       CASE
         WHEN u.last_verification_attempt IS NOT NULL AND NOT u.is_verified THEN
-          (u.last_verification_attempt + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours') > NOW()
+          (u.last_verification_attempt + INTERVAL '2 hours' + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours') > NOW()
         ELSE FALSE
       END as cooldown_active
      FROM users u
