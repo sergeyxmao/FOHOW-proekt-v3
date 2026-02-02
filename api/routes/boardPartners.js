@@ -234,7 +234,6 @@ export function registerBoardPartnerRoutes(app) {
           FROM users u
           WHERE u.personal_id = ANY($1)
             AND u.is_verified = true
-            AND u.plan_id IN (6, 7)
             AND (
               (u.search_settings->>'username' = 'true' AND LOWER(u.username) LIKE LOWER($2)) OR
               (u.search_settings->>'full_name' = 'true' AND LOWER(u.full_name) LIKE LOWER($2)) OR
@@ -272,7 +271,6 @@ export function registerBoardPartnerRoutes(app) {
           FROM users u
           WHERE u.personal_id = ANY($1)
             AND u.is_verified = true
-            AND u.plan_id IN (6, 7)
           ORDER BY u.username ASC
         `;
         params = [uniquePersonalIds];
