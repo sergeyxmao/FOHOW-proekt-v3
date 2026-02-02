@@ -55,18 +55,20 @@ let previousBodyOverflow = '';
 
 // === Текстовый инструмент ===
 const textInputRef = ref(null);
+const textContainerRef = ref(null);
 const textColor = ref('#000000');
 const textSize = ref(24);
-const textMode = ref('idle'); // 'idle' | 'typing' | 'preview'
-const textValue = ref('');
+const textMode = ref('idle'); // 'idle' | 'editing'
 const textPosition = ref({ x: 0, y: 0 });
 const textScale = ref(1);
 const isDraggingText = ref(false);
 const isResizingText = ref(false);
+let resizeCorner = null;
 let dragStartPoint = null;
 let dragStartPosition = null;
 let resizeStartPoint = null;
 let resizeStartScale = null;
+let resizeStartPosition = null;
 
 // === Инициализация Composables ===
 
@@ -277,19 +279,8 @@ const eraserPreviewStyle = computed(() => {
   };
 });
 
-const textInputStyle = computed(() => {
-  if (textMode.value !== 'typing') return null;
-  const displayScale = canvasScale.value || 1;
-  return {
-    left: `${textPosition.value.x / displayScale}px`,
-    top: `${textPosition.value.y / displayScale}px`,
-    fontSize: `${textSize.value}px`,
-    color: textColor.value
-  };
-});
-
-const textPreviewStyle = computed(() => {
-  if (textMode.value !== 'preview' || !textValue.value) return null;
+const textContainerStyle = computed(() => {
+  if (textMode.value !== 'editing') return null;
   const displayScale = canvasScale.value || 1;
   const scaledFontSize = textSize.value * textScale.value;
   return {
@@ -405,33 +396,23 @@ const openImagesPanel = () => {
 
 // === Текстовый инструмент ===
 
-// Начать ввод текста (idle → typing)
+// Начать редактирование текста (idle → editing)
 const startTextInput = (point) => {
   textPosition.value = { x: point.x, y: point.y };
-  textValue.value = '';
   textScale.value = 1;
-  textMode.value = 'typing';
+  textMode.value = 'editing';
   nextTick(() => {
     if (textInputRef.value) {
+      textInputRef.value.value = '';
       textInputRef.value.focus();
     }
   });
 };
 
-// Перейти в режим превью (typing → preview)
-const enterTextPreview = () => {
-  const text = textInputRef.value?.value?.trim();
-  if (text) {
-    textValue.value = text;
-    textMode.value = 'preview';
-  } else {
-    cancelText();
-  }
-};
-
-// Отрисовать текст на canvas (preview → idle)
+// Отрисовать текст на canvas (editing → idle)
 const commitText = () => {
-  if (!textValue.value || !canvasContext.value) {
+  const text = textInputRef.value?.value?.trim();
+  if (!text || !canvasContext.value) {
     cancelText();
     return;
   }
@@ -444,7 +425,7 @@ const commitText = () => {
   ctx.font = `${finalSize}px sans-serif`;
   ctx.fillStyle = textColor.value;
   ctx.textBaseline = 'top';
-  ctx.fillText(textValue.value, textPosition.value.x, textPosition.value.y);
+  ctx.fillText(text, textPosition.value.x, textPosition.value.y);
 
   cancelText();
 };
@@ -452,19 +433,22 @@ const commitText = () => {
 // Отменить ввод текста (любой режим → idle)
 const cancelText = () => {
   textMode.value = 'idle';
-  textValue.value = '';
   textScale.value = 1;
   isDraggingText.value = false;
   isResizingText.value = false;
+  resizeCorner = null;
   dragStartPoint = null;
   dragStartPosition = null;
   resizeStartPoint = null;
   resizeStartScale = null;
+  resizeStartPosition = null;
 };
 
 // Начать перетаскивание текста
 const startDragText = (event) => {
   if (isResizingText.value) return;
+  // Не перетаскиваем если клик на input
+  if (event.target === textInputRef.value) return;
   event.preventDefault();
   isDraggingText.value = true;
   dragStartPoint = { x: event.clientX, y: event.clientY };
@@ -502,35 +486,70 @@ const startResizeText = (corner, event) => {
   event.preventDefault();
   event.stopPropagation();
   isResizingText.value = true;
+  resizeCorner = corner;
   resizeStartPoint = { x: event.clientX, y: event.clientY };
   resizeStartScale = textScale.value;
+  resizeStartPosition = { ...textPosition.value };
 
   window.addEventListener('pointermove', onResizeTextMove);
   window.addEventListener('pointerup', onResizeTextEnd);
 };
 
 const onResizeTextMove = (event) => {
-  if (!isResizingText.value || !resizeStartPoint) return;
+  if (!isResizingText.value || !resizeStartPoint || !resizeCorner) return;
+
+  const displayScale = canvasScale.value || 1;
+  const scale = zoomScale.value || 1;
 
   const deltaX = event.clientX - resizeStartPoint.x;
   const deltaY = event.clientY - resizeStartPoint.y;
-  // Пропорциональный масштаб по диагонали
-  const delta = (deltaX + deltaY) / 2;
-  textScale.value = Math.max(0.5, Math.min(3, resizeStartScale + delta / 100));
+
+  // Для правых углов (ne, se) - тянем вправо = увеличиваем
+  // Для левых углов (nw, sw) - тянем влево = увеличиваем (инвертируем deltaX)
+  let effectiveDeltaX = deltaX;
+  let effectiveDeltaY = deltaY;
+
+  if (resizeCorner === 'nw' || resizeCorner === 'sw') {
+    effectiveDeltaX = -deltaX;
+  }
+  if (resizeCorner === 'nw' || resizeCorner === 'ne') {
+    effectiveDeltaY = -deltaY;
+  }
+
+  const delta = (effectiveDeltaX + effectiveDeltaY) / 2;
+  const newScale = Math.max(0.5, Math.min(3, resizeStartScale + delta / 100));
+  textScale.value = newScale;
+
+  // Для левых углов позиция следует за мышкой (левый край остаётся у курсора)
+  if (resizeCorner === 'nw' || resizeCorner === 'sw') {
+    textPosition.value = {
+      ...textPosition.value,
+      x: resizeStartPosition.x + (deltaX * displayScale / scale)
+    };
+  }
+  // Для верхних углов позиция следует вертикально
+  if (resizeCorner === 'nw' || resizeCorner === 'ne') {
+    textPosition.value = {
+      ...textPosition.value,
+      y: resizeStartPosition.y + (deltaY * displayScale / scale)
+    };
+  }
 };
 
 const onResizeTextEnd = () => {
   isResizingText.value = false;
+  resizeCorner = null;
   resizeStartPoint = null;
   resizeStartScale = null;
+  resizeStartPosition = null;
   window.removeEventListener('pointermove', onResizeTextMove);
   window.removeEventListener('pointerup', onResizeTextEnd);
 };
 
-// Обработка клика вне превью (для подтверждения текста)
-const handleTextPreviewClickOutside = (event) => {
-  const previewEl = event.target.closest('.pencil-overlay__text-preview');
-  if (!previewEl && textMode.value === 'preview') {
+// Обработка клика вне контейнера текста (для подтверждения)
+const handleTextClickOutside = (event) => {
+  const containerEl = event.target.closest('.pencil-overlay__text-container');
+  if (!containerEl && textMode.value === 'editing') {
     commitText();
   }
 };
@@ -648,9 +667,9 @@ const handleCanvasPointerDown = async (event) => {
       startTextInput(point);
       return;
     }
-    if (textMode.value === 'preview') {
-      // Клик вне превью — подтверждаем текст
-      handleTextPreviewClickOutside(event);
+    if (textMode.value === 'editing') {
+      // Клик вне контейнера — подтверждаем текст
+      handleTextClickOutside(event);
       return;
     }
   }
@@ -1252,24 +1271,21 @@ onBeforeUnmount(() => {
         class="pencil-overlay__selection"
         :style="selectionStyle"
       ></div>
-      <!-- Текстовый инструмент: режим ввода -->
-      <input
-        v-if="textMode === 'typing'"
-        ref="textInputRef"
-        type="text"
-        class="pencil-overlay__text-input"
-        :style="textInputStyle"
-        @keydown.enter.prevent="enterTextPreview"
-        @keydown.escape.stop="cancelText"
-      />
-      <!-- Текстовый инструмент: режим превью -->
+      <!-- Текстовый инструмент: контейнер с полем ввода и маркерами растяжки -->
       <div
-        v-if="textMode === 'preview' && textValue"
-        class="pencil-overlay__text-preview"
-        :style="textPreviewStyle"
+        v-if="textMode === 'editing'"
+        ref="textContainerRef"
+        class="pencil-overlay__text-container"
+        :style="textContainerStyle"
         @pointerdown="startDragText"
       >
-        <span class="pencil-overlay__text-preview-content">{{ textValue }}</span>
+        <input
+          ref="textInputRef"
+          type="text"
+          class="pencil-overlay__text-input"
+          @keydown.enter.prevent="commitText"
+          @keydown.escape.stop="cancelText"
+        />
         <div class="pencil-overlay__resize-handle pencil-overlay__resize-handle--nw" @pointerdown.stop="startResizeText('nw', $event)"></div>
         <div class="pencil-overlay__resize-handle pencil-overlay__resize-handle--ne" @pointerdown.stop="startResizeText('ne', $event)"></div>
         <div class="pencil-overlay__resize-handle pencil-overlay__resize-handle--sw" @pointerdown.stop="startResizeText('sw', $event)"></div>
@@ -2027,40 +2043,25 @@ onBeforeUnmount(() => {
   cursor: text;
 }
 
-.pencil-overlay__text-input {
+.pencil-overlay__text-container {
   position: absolute;
-  background: rgba(255, 255, 255, 0.95);
   border: 2px solid #0f62fe;
   border-radius: 4px;
-  outline: none;
-  min-width: 150px;
-  padding: 8px 12px;
-  font-family: sans-serif;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 10;
-}
-
-.pencil-overlay__text-input:focus {
-  border-color: #0353e9;
-  box-shadow: 0 0 0 3px rgba(15, 98, 254, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-/* Текстовый инструмент: превью */
-.pencil-overlay__text-preview {
-  position: absolute;
-  background: rgba(255, 255, 255, 0.9);
-  border: 2px solid #0f62fe;
-  border-radius: 4px;
-  padding: 8px 12px;
   cursor: move;
   user-select: none;
-  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.3);
   z-index: 10;
+  background: transparent;
 }
 
-.pencil-overlay__text-preview-content {
-  white-space: nowrap;
+.pencil-overlay__text-container .pencil-overlay__text-input {
+  width: 100%;
+  min-width: 150px;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 8px 12px;
   font-family: sans-serif;
+  cursor: text;
 }
 
 .pencil-overlay__resize-handle {
