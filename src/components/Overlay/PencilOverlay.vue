@@ -74,6 +74,14 @@ let resizeStartPosition = null;
 let resizePointerId = null;
 let resizeTargetElement = null;
 
+// === Long Press для перемещения текста ===
+const LONG_PRESS_DELAY = 350; // мс до активации перемещения
+const MOVE_THRESHOLD = 5; // пикселей — если сдвинулись больше, отменяем long press
+let longPressTimer = null;
+const isLongPressActive = ref(false);
+let longPressStartPoint = null;
+let longPressPointerId = null;
+
 // === Инициализация Composables ===
 
 // Zoom composable
@@ -434,8 +442,22 @@ const commitText = () => {
   cancelText();
 };
 
+// Очистить таймер long press
+const clearLongPressTimer = () => {
+  if (longPressTimer) {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+  }
+};
+
 // Отменить ввод текста (любой режим → idle)
 const cancelText = () => {
+  // Очищаем таймер long press
+  clearLongPressTimer();
+  isLongPressActive.value = false;
+  longPressStartPoint = null;
+  longPressPointerId = null;
+
   textMode.value = 'idle';
   textScale.value = 1;
   isDraggingText.value = false;
@@ -452,19 +474,8 @@ const cancelText = () => {
   resizeTargetElement = null;
 };
 
-// Начать перетаскивание текста
-const startDragText = (event) => {
-  if (isResizingText.value) return;
-
-  const clickedOnInput = event.target === textInputRef.value;
-  const inputIsFocused = document.activeElement === textInputRef.value;
-
-  // Если input в фокусе и кликнули на него — разрешаем редактирование текста
-  // Иначе — начинаем перетаскивание (даже при клике на input)
-  if (inputIsFocused && clickedOnInput) return;
-
-  event.preventDefault();
-
+// Активировать перетаскивание текста (вызывается после long press)
+const activateDragText = (event) => {
   // Снимаем фокус с input при начале перетаскивания
   if (textInputRef.value && document.activeElement === textInputRef.value) {
     textInputRef.value.blur();
@@ -473,51 +484,96 @@ const startDragText = (event) => {
   // Pointer Capture для корректной работы на touch-устройствах
   const target = textContainerRef.value;
   if (target) {
-    target.setPointerCapture(event.pointerId);
-    dragPointerId = event.pointerId;
+    target.setPointerCapture(longPressPointerId);
+    dragPointerId = longPressPointerId;
     dragTargetElement = target;
   }
 
   isDraggingText.value = true;
-  dragStartPoint = { x: event.clientX, y: event.clientY };
+  isLongPressActive.value = true;
+  dragStartPoint = { ...longPressStartPoint };
   dragStartPosition = { ...textPosition.value };
-
-  window.addEventListener('pointermove', onDragTextMove);
-  window.addEventListener('pointerup', onDragTextEnd);
 };
 
-const onDragTextMove = (event) => {
-  if (!isDraggingText.value || !dragStartPoint || !dragStartPosition) return;
+// Обработчик pointerdown на контейнере текста
+const handleTextPointerDown = (event) => {
+  // Игнорируем, если это маркер resize (у них свой обработчик)
+  if (event.target.classList.contains('pencil-overlay__resize-handle')) {
+    return;
+  }
 
-  const displayScale = canvasScale.value || 1;
-  const scale = zoomScale.value || 1;
+  if (isResizingText.value) return;
 
-  const deltaX = (event.clientX - dragStartPoint.x) / scale * displayScale;
-  const deltaY = (event.clientY - dragStartPoint.y) / scale * displayScale;
+  // Сохраняем начальную точку и pointerId
+  longPressStartPoint = { x: event.clientX, y: event.clientY };
+  longPressPointerId = event.pointerId;
 
-  textPosition.value = {
-    x: dragStartPosition.x + deltaX,
-    y: dragStartPosition.y + deltaY
-  };
+  // Запускаем таймер long press
+  clearLongPressTimer();
+  longPressTimer = setTimeout(() => {
+    longPressTimer = null;
+    // Активируем перетаскивание
+    activateDragText(event);
+  }, LONG_PRESS_DELAY);
 };
 
-const onDragTextEnd = (event) => {
-  // Освобождаем Pointer Capture
-  if (dragTargetElement && dragPointerId !== null) {
-    try {
-      dragTargetElement.releasePointerCapture(dragPointerId);
-    } catch (e) {
-      // ignore - pointer может быть уже освобождён
+// Обработчик pointermove на контейнере текста
+const handleTextPointerMove = (event) => {
+  // Если long press ещё не активирован — проверяем, не сдвинулся ли палец/курсор
+  if (longPressTimer && !isLongPressActive.value && longPressStartPoint) {
+    const dx = Math.abs(event.clientX - longPressStartPoint.x);
+    const dy = Math.abs(event.clientY - longPressStartPoint.y);
+
+    if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
+      // Сдвинулись — отменяем long press (позволяем выделять текст и т.п.)
+      clearLongPressTimer();
+      longPressStartPoint = null;
+      longPressPointerId = null;
+      return;
     }
   }
 
-  isDraggingText.value = false;
-  dragStartPoint = null;
-  dragStartPosition = null;
-  dragPointerId = null;
-  dragTargetElement = null;
-  window.removeEventListener('pointermove', onDragTextMove);
-  window.removeEventListener('pointerup', onDragTextEnd);
+  // Если перемещение активно — двигаем
+  if (isDraggingText.value && dragStartPoint && dragStartPosition) {
+    const displayScale = canvasScale.value || 1;
+    const scale = zoomScale.value || 1;
+
+    const deltaX = (event.clientX - dragStartPoint.x) / scale * displayScale;
+    const deltaY = (event.clientY - dragStartPoint.y) / scale * displayScale;
+
+    textPosition.value = {
+      x: dragStartPosition.x + deltaX,
+      y: dragStartPosition.y + deltaY
+    };
+  }
+};
+
+// Обработчик pointerup на контейнере текста
+const handleTextPointerUp = (event) => {
+  // Отменяем таймер, если ещё не сработал
+  clearLongPressTimer();
+
+  // Если перемещение было активно — завершаем
+  if (isDraggingText.value) {
+    // Освобождаем Pointer Capture
+    if (dragTargetElement && dragPointerId !== null) {
+      try {
+        dragTargetElement.releasePointerCapture(dragPointerId);
+      } catch (e) {
+        // ignore - pointer может быть уже освобождён
+      }
+    }
+
+    isDraggingText.value = false;
+    dragStartPoint = null;
+    dragStartPosition = null;
+    dragPointerId = null;
+    dragTargetElement = null;
+  }
+
+  isLongPressActive.value = false;
+  longPressStartPoint = null;
+  longPressPointerId = null;
 };
 
 // Начать масштабирование текста
@@ -1334,9 +1390,16 @@ onBeforeUnmount(() => {
       <div
         v-if="textMode === 'editing'"
         ref="textContainerRef"
-        class="pencil-overlay__text-container"
+        :class="[
+          'pencil-overlay__text-container',
+          { 'pencil-overlay__text-container--dragging': isDraggingText }
+        ]"
         :style="textContainerStyle"
-        @pointerdown="startDragText"
+        @pointerdown="handleTextPointerDown"
+        @pointermove="handleTextPointerMove"
+        @pointerup="handleTextPointerUp"
+        @pointercancel="handleTextPointerUp"
+        @pointerleave="handleTextPointerUp"
       >
         <input
           ref="textInputRef"
@@ -2106,11 +2169,19 @@ onBeforeUnmount(() => {
   position: absolute;
   border: 2px solid #0f62fe;
   border-radius: 4px;
-  cursor: move;
+  cursor: text; /* По умолчанию — текстовый курсор для редактирования */
   user-select: none;
   z-index: 10;
   background: transparent;
   touch-action: none;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* Состояние перетаскивания (после long press) */
+.pencil-overlay__text-container--dragging {
+  cursor: grabbing;
+  border-color: #0353e9;
+  box-shadow: 0 8px 24px rgba(15, 98, 254, 0.35);
 }
 
 .pencil-overlay__text-container .pencil-overlay__text-input {
@@ -2127,9 +2198,9 @@ onBeforeUnmount(() => {
   touch-action: manipulation; /* Убирает 300ms delay на мобильных */
 }
 
-/* Когда input не в фокусе — показываем курсор перемещения */
-.pencil-overlay__text-container .pencil-overlay__text-input:not(:focus) {
-  cursor: move;
+/* При перетаскивании (после long press) меняем курсор на input */
+.pencil-overlay__text-container--dragging .pencil-overlay__text-input {
+  cursor: grabbing;
 }
 
 .pencil-overlay__resize-handle {
