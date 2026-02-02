@@ -531,6 +531,86 @@ function getVerificationAutoRejectedTemplate({ userName, personalId, profileUrl 
 }
 
 /**
+ * Шаблон письма об отклонении заявки на верификацию (администратором)
+ * @param {Object} params - Параметры шаблона
+ * @param {string} params.userName - Имя пользователя
+ * @param {string} params.rejectionReason - Причина отклонения
+ * @param {string} params.profileUrl - URL профиля
+ * @returns {string} HTML-шаблон письма
+ */
+function getVerificationRejectedTemplate({ userName, rejectionReason, profileUrl = 'https://interactive.marketingfohow.ru/' }) {
+  return `
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Заявка отклонена</title>
+    </head>
+    <body style="margin: 0; padding: 20px; background-color: #f7fafc;">
+      <div style="${baseStyles.container}">
+        <!-- Header -->
+        <div style="${baseStyles.header}">
+          <h1 style="${baseStyles.headerTitle}">❌ FOHOW</h1>
+        </div>
+
+        <!-- Content -->
+        <div style="${baseStyles.content}">
+          <h2 style="${baseStyles.title}">Заявка на верификацию отклонена</h2>
+
+          <p style="${baseStyles.text}">
+            Здравствуйте, <strong>${userName}</strong>!
+          </p>
+
+          <p style="${baseStyles.text}">
+            К сожалению, ваша заявка на верификацию компьютерного номера была отклонена.
+          </p>
+
+          <!-- Highlight Box -->
+          <div style="${baseStyles.highlight} border-left-color: #ff9800; background-color: #fff3e0;">
+            <p style="${baseStyles.highlightText}">
+              <strong>Причина отклонения:</strong>
+            </p>
+            <p style="${baseStyles.highlightText} margin-top: 10px;">
+              ${rejectionReason}
+            </p>
+          </div>
+
+          <p style="${baseStyles.text}">
+            Вы можете подать новую заявку через 24 часа.
+          </p>
+
+          <!-- Button -->
+          <div style="${baseStyles.buttonContainer}">
+            <a href="${profileUrl}" style="${baseStyles.button}">
+              👤 Перейти в профиль
+            </a>
+          </div>
+
+          <p style="${baseStyles.text} font-size: 14px; color: #718096; margin-top: 20px;">
+            Если у вас есть вопросы, обратитесь в поддержку:<br>
+            📞 Telegram: <a href="https://t.me/FOHOWadmin" style="color: #667eea;">@FOHOWadmin</a><br>
+            ✉️ Email: <a href="mailto:marketingfohow@yandex.com" style="color: #667eea;">marketingfohow@yandex.com</a>
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="${baseStyles.footer}">
+          <p style="${baseStyles.footerText}">
+            С уважением,<br>
+            <strong>Команда FOHOW</strong>
+          </p>
+          <p style="${baseStyles.footerText} font-size: 12px;">
+            Это автоматическое уведомление. Пожалуйста, не отвечайте на него.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
  * Вспомогательная функция для склонения слова "день"
  * @param {number} days - Количество дней
  * @returns {string} Правильное склонение
@@ -560,5 +640,6 @@ export {
   getWelcomeTemplate,
   getVerificationApprovedTemplate,
   getVerificationRevokedTemplate,
-  getVerificationAutoRejectedTemplate
+  getVerificationAutoRejectedTemplate,
+  getVerificationRejectedTemplate
 };

@@ -7,7 +7,7 @@ import { pool } from '../db.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 import { sendEmail } from '../utils/emailService.js';
 import { getVerificationApprovedMessage, getVerificationAutoRejectedMessage } from '../templates/telegramTemplates.js';
-import { getVerificationApprovedTemplate, getVerificationAutoRejectedTemplate } from '../templates/emailTemplates.js';
+import { getVerificationApprovedTemplate, getVerificationAutoRejectedTemplate, getVerificationRejectedTemplate } from '../templates/emailTemplates.js';
 
 const VERIFICATION_COOLDOWN_HOURS = 24; // 1 раз в сутки
 
@@ -396,9 +396,9 @@ async function rejectVerification(verificationId, adminId, rejectionReason) {
   try {
     await client.query('BEGIN');
 
-    // Получить информацию о заявке
+    // Получить информацию о заявке И данные пользователя для уведомлений
     const verificationResult = await client.query(
-      `SELECT v.user_id, v.status, u.telegram_chat_id
+      `SELECT v.user_id, v.status, u.telegram_chat_id, u.email, u.full_name
        FROM user_verifications v
        JOIN users u ON v.user_id = u.id
        WHERE v.id = $1`,
@@ -432,8 +432,24 @@ async function rejectVerification(verificationId, adminId, rejectionReason) {
       const message = `❌ Ваша заявка на верификацию отклонена\n\nПричина: ${rejectionReason}\n\nВы можете подать новую заявку через 24 часа.`;
       try {
         await sendTelegramMessage(verification.telegram_chat_id, message);
+        console.log(`[VERIFICATION] Telegram-уведомление об отклонении отправлено пользователю ${verification.user_id}`);
       } catch (telegramError) {
         console.error('[VERIFICATION] Ошибка отправки Telegram-уведомления:', telegramError.message);
+      }
+    }
+
+    // Отправить Email-уведомление
+    if (verification.email) {
+      try {
+        const emailHtml = getVerificationRejectedTemplate({
+          userName: verification.full_name || 'Пользователь',
+          rejectionReason: rejectionReason,
+          profileUrl: 'https://interactive.marketingfohow.ru/'
+        });
+        await sendEmail(verification.email, '❌ Заявка на верификацию отклонена — FOHOW Interactive', emailHtml);
+        console.log(`[VERIFICATION] Email-уведомление об отклонении отправлено на ${verification.email}`);
+      } catch (emailError) {
+        console.error('[VERIFICATION] Ошибка отправки Email-уведомления:', emailError.message);
       }
     }
 
