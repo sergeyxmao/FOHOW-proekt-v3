@@ -18,6 +18,7 @@ const VERIFICATION_COOLDOWN_HOURS = 24; // 1 раз в сутки
  */
 async function canSubmitVerification(userId) {
   // Получить время последней попытки и вычислить кулдаун в SQL для корректной работы с timezone
+  // Используем AT TIME ZONE 'UTC' и TO_CHAR для явного форматирования в ISO 8601 UTC
   const result = await pool.query(
     `SELECT
        is_verified,
@@ -29,9 +30,9 @@ async function canSubmitVerification(userId) {
        END as hours_since_attempt,
        CASE
          WHEN last_verification_attempt IS NOT NULL THEN
-           last_verification_attempt + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours'
+           TO_CHAR((last_verification_attempt AT TIME ZONE 'UTC') + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
          ELSE NULL
-       END as cooldown_end_time
+       END as cooldown_end_time_iso
      FROM users WHERE id = $1`,
     [userId]
   );
@@ -69,12 +70,13 @@ async function canSubmitVerification(userId) {
 
     if (hoursSinceLastAttempt < VERIFICATION_COOLDOWN_HOURS) {
       const hoursRemaining = Math.ceil(VERIFICATION_COOLDOWN_HOURS - hoursSinceLastAttempt);
-      const cooldownEndTime = user.cooldown_end_time;
+      // cooldown_end_time_iso уже в ISO формате из SQL (UTC)
+      const cooldownEndTime = user.cooldown_end_time_iso;
 
       return {
         canSubmit: false,
         reason: `Вы сможете подать новую заявку через ${hoursRemaining} ч.`,
-        cooldownEndTime: cooldownEndTime ? new Date(cooldownEndTime).toISOString() : null,
+        cooldownEndTime: cooldownEndTime || null,
         lastAttempt: user.last_verification_attempt ? new Date(user.last_verification_attempt).toISOString() : null
       };
     }
@@ -471,6 +473,7 @@ async function rejectVerification(verificationId, adminId, rejectionReason) {
  */
 async function getUserVerificationStatus(userId) {
   // Используем SQL для расчета кулдауна, чтобы избежать проблем с timezone
+  // AT TIME ZONE 'UTC' и TO_CHAR гарантируют корректный ISO 8601 UTC формат
   const result = await pool.query(
     `SELECT
       u.is_verified,
@@ -482,9 +485,9 @@ async function getUserVerificationStatus(userId) {
       v.submitted_at as pending_submitted_at,
       CASE
         WHEN u.last_verification_attempt IS NOT NULL AND NOT u.is_verified THEN
-          u.last_verification_attempt + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours'
+          TO_CHAR((u.last_verification_attempt AT TIME ZONE 'UTC') + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
         ELSE NULL
-      END as cooldown_end_time,
+      END as cooldown_end_time_iso,
       CASE
         WHEN u.last_verification_attempt IS NOT NULL AND NOT u.is_verified THEN
           (u.last_verification_attempt + INTERVAL '${VERIFICATION_COOLDOWN_HOURS} hours') > NOW()
@@ -514,10 +517,19 @@ async function getUserVerificationStatus(userId) {
 
   const lastRejection = rejectedResult.rows[0] || null;
 
-  // Время окончания кулдауна рассчитано в SQL
-  const cooldownUntil = data.cooldown_active && data.cooldown_end_time
-    ? new Date(data.cooldown_end_time).toISOString()
+  // Время окончания кулдауна уже в ISO UTC формате из SQL
+  const cooldownUntil = data.cooldown_active && data.cooldown_end_time_iso
+    ? data.cooldown_end_time_iso
     : null;
+
+  // Отладочное логирование для диагностики timezone
+  console.log('[VERIFICATION] Cooldown debug:', {
+    userId,
+    last_verification_attempt: data.last_verification_attempt,
+    cooldown_end_time_iso: data.cooldown_end_time_iso,
+    cooldown_active: data.cooldown_active,
+    server_now: new Date().toISOString()
+  });
 
   return {
     isVerified: data.is_verified,
