@@ -59,6 +59,7 @@ const textColor = ref('#000000');
 const textSize = ref(24);
 const isTypingText = ref(false);
 const textInputPosition = ref(null);
+const textInputReady = ref(false); // Флаг для предотвращения преждевременного blur
 
 // === Инициализация Composables ===
 
@@ -385,13 +386,36 @@ const openImagesPanel = () => {
 
 // === Текстовый инструмент ===
 const startTextInput = (point) => {
+  console.log('[TextTool] startTextInput called with point:', point);
   textInputPosition.value = point;
   isTypingText.value = true;
-  nextTick(() => textInputRef.value?.focus());
+  textInputReady.value = false; // Сбрасываем флаг готовности
+  console.log('[TextTool] isTypingText set to true, textInputPosition:', textInputPosition.value);
+  nextTick(() => {
+    console.log('[TextTool] nextTick: textInputRef.value =', textInputRef.value);
+    if (textInputRef.value) {
+      textInputRef.value.focus();
+      console.log('[TextTool] focus() called');
+      // Устанавливаем флаг готовности с небольшой задержкой для предотвращения преждевременного blur
+      setTimeout(() => {
+        textInputReady.value = true;
+        console.log('[TextTool] textInputReady set to true');
+      }, 100);
+    } else {
+      console.warn('[TextTool] textInputRef is null in nextTick!');
+    }
+  });
 };
 
 const commitText = () => {
+  console.log('[TextTool] commitText called, textInputReady =', textInputReady.value);
+  // Игнорируем преждевременный blur
+  if (!textInputReady.value) {
+    console.log('[TextTool] Ignoring premature blur');
+    return;
+  }
   const text = textInputRef.value?.value?.trim();
+  console.log('[TextTool] text value:', text);
   if (text && canvasContext.value && textInputPosition.value) {
     scheduleHistorySave();
     const ctx = canvasContext.value;
@@ -400,13 +424,16 @@ const commitText = () => {
     ctx.fillStyle = textColor.value;
     ctx.textBaseline = 'top';
     ctx.fillText(text, textInputPosition.value.x, textInputPosition.value.y);
+    console.log('[TextTool] text drawn on canvas');
   }
   cancelText();
 };
 
 const cancelText = () => {
+  console.log('[TextTool] cancelText called');
   isTypingText.value = false;
   textInputPosition.value = null;
+  textInputReady.value = false;
 };
 
 const placePendingImageOnCanvas = async (point) => {
@@ -517,7 +544,9 @@ const handleCanvasPointerDown = async (event) => {
   }
 
   // Текстовый инструмент
+  console.log('[TextTool] handleCanvasPointerDown: currentTool =', currentTool.value, ', isTypingText =', isTypingText.value);
   if (currentTool.value === 'text' && !isTypingText.value) {
+    console.log('[TextTool] Condition matched, calling startTextInput');
     startTextInput(point);
     return;
   }
