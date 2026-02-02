@@ -455,9 +455,20 @@ const cancelText = () => {
 // Начать перетаскивание текста
 const startDragText = (event) => {
   if (isResizingText.value) return;
-  // Не перетаскиваем если клик на input
-  if (event.target === textInputRef.value) return;
+
+  const clickedOnInput = event.target === textInputRef.value;
+  const inputIsFocused = document.activeElement === textInputRef.value;
+
+  // Если input в фокусе и кликнули на него — разрешаем редактирование текста
+  // Иначе — начинаем перетаскивание (даже при клике на input)
+  if (inputIsFocused && clickedOnInput) return;
+
   event.preventDefault();
+
+  // Снимаем фокус с input при начале перетаскивания
+  if (textInputRef.value && document.activeElement === textInputRef.value) {
+    textInputRef.value.blur();
+  }
 
   // Pointer Capture для корректной работы на touch-устройствах
   const target = textContainerRef.value;
@@ -2113,6 +2124,12 @@ onBeforeUnmount(() => {
   font-size: inherit;
   color: inherit;
   cursor: text;
+  touch-action: manipulation; /* Убирает 300ms delay на мобильных */
+}
+
+/* Когда input не в фокусе — показываем курсор перемещения */
+.pencil-overlay__text-container .pencil-overlay__text-input:not(:focus) {
+  cursor: move;
 }
 
 .pencil-overlay__resize-handle {
