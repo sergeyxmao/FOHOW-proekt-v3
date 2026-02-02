@@ -57,9 +57,16 @@ let previousBodyOverflow = '';
 const textInputRef = ref(null);
 const textColor = ref('#000000');
 const textSize = ref(24);
-const isTypingText = ref(false);
-const textInputPosition = ref(null);
-const textInputReady = ref(false); // Флаг для предотвращения преждевременного blur
+const textMode = ref('idle'); // 'idle' | 'typing' | 'preview'
+const textValue = ref('');
+const textPosition = ref({ x: 0, y: 0 });
+const textScale = ref(1);
+const isDraggingText = ref(false);
+const isResizingText = ref(false);
+let dragStartPoint = null;
+let dragStartPosition = null;
+let resizeStartPoint = null;
+let resizeStartScale = null;
 
 // === Инициализация Composables ===
 
@@ -271,12 +278,24 @@ const eraserPreviewStyle = computed(() => {
 });
 
 const textInputStyle = computed(() => {
-  if (!textInputPosition.value) return null;
+  if (textMode.value !== 'typing') return null;
   const displayScale = canvasScale.value || 1;
   return {
-    left: `${textInputPosition.value.x / displayScale}px`,
-    top: `${textInputPosition.value.y / displayScale}px`,
+    left: `${textPosition.value.x / displayScale}px`,
+    top: `${textPosition.value.y / displayScale}px`,
     fontSize: `${textSize.value}px`,
+    color: textColor.value
+  };
+});
+
+const textPreviewStyle = computed(() => {
+  if (textMode.value !== 'preview' || !textValue.value) return null;
+  const displayScale = canvasScale.value || 1;
+  const scaledFontSize = textSize.value * textScale.value;
+  return {
+    left: `${textPosition.value.x / displayScale}px`,
+    top: `${textPosition.value.y / displayScale}px`,
+    fontSize: `${scaledFontSize}px`,
     color: textColor.value
   };
 });
@@ -385,55 +404,135 @@ const openImagesPanel = () => {
 };
 
 // === Текстовый инструмент ===
+
+// Начать ввод текста (idle → typing)
 const startTextInput = (point) => {
-  console.log('[TextTool] startTextInput called with point:', point);
-  textInputPosition.value = point;
-  isTypingText.value = true;
-  textInputReady.value = false; // Сбрасываем флаг готовности
-  console.log('[TextTool] isTypingText set to true, textInputPosition:', textInputPosition.value);
+  textPosition.value = { x: point.x, y: point.y };
+  textValue.value = '';
+  textScale.value = 1;
+  textMode.value = 'typing';
   nextTick(() => {
-    console.log('[TextTool] nextTick: textInputRef.value =', textInputRef.value);
     if (textInputRef.value) {
       textInputRef.value.focus();
-      console.log('[TextTool] focus() called');
-      // Устанавливаем флаг готовности с небольшой задержкой для предотвращения преждевременного blur
-      setTimeout(() => {
-        textInputReady.value = true;
-        console.log('[TextTool] textInputReady set to true');
-      }, 100);
-    } else {
-      console.warn('[TextTool] textInputRef is null in nextTick!');
     }
   });
 };
 
+// Перейти в режим превью (typing → preview)
+const enterTextPreview = () => {
+  const text = textInputRef.value?.value?.trim();
+  if (text) {
+    textValue.value = text;
+    textMode.value = 'preview';
+  } else {
+    cancelText();
+  }
+};
+
+// Отрисовать текст на canvas (preview → idle)
 const commitText = () => {
-  console.log('[TextTool] commitText called, textInputReady =', textInputReady.value);
-  // Игнорируем преждевременный blur
-  if (!textInputReady.value) {
-    console.log('[TextTool] Ignoring premature blur');
+  if (!textValue.value || !canvasContext.value) {
+    cancelText();
     return;
   }
-  const text = textInputRef.value?.value?.trim();
-  console.log('[TextTool] text value:', text);
-  if (text && canvasContext.value && textInputPosition.value) {
-    scheduleHistorySave();
-    const ctx = canvasContext.value;
-    const displayScale = canvasScale.value || 1;
-    ctx.font = `${textSize.value * displayScale}px sans-serif`;
-    ctx.fillStyle = textColor.value;
-    ctx.textBaseline = 'top';
-    ctx.fillText(text, textInputPosition.value.x, textInputPosition.value.y);
-    console.log('[TextTool] text drawn on canvas');
-  }
+
+  scheduleHistorySave();
+  const ctx = canvasContext.value;
+  const displayScale = canvasScale.value || 1;
+  const finalSize = textSize.value * textScale.value * displayScale;
+
+  ctx.font = `${finalSize}px sans-serif`;
+  ctx.fillStyle = textColor.value;
+  ctx.textBaseline = 'top';
+  ctx.fillText(textValue.value, textPosition.value.x, textPosition.value.y);
+
   cancelText();
 };
 
+// Отменить ввод текста (любой режим → idle)
 const cancelText = () => {
-  console.log('[TextTool] cancelText called');
-  isTypingText.value = false;
-  textInputPosition.value = null;
-  textInputReady.value = false;
+  textMode.value = 'idle';
+  textValue.value = '';
+  textScale.value = 1;
+  isDraggingText.value = false;
+  isResizingText.value = false;
+  dragStartPoint = null;
+  dragStartPosition = null;
+  resizeStartPoint = null;
+  resizeStartScale = null;
+};
+
+// Начать перетаскивание текста
+const startDragText = (event) => {
+  if (isResizingText.value) return;
+  event.preventDefault();
+  isDraggingText.value = true;
+  dragStartPoint = { x: event.clientX, y: event.clientY };
+  dragStartPosition = { ...textPosition.value };
+
+  window.addEventListener('pointermove', onDragTextMove);
+  window.addEventListener('pointerup', onDragTextEnd);
+};
+
+const onDragTextMove = (event) => {
+  if (!isDraggingText.value || !dragStartPoint || !dragStartPosition) return;
+
+  const displayScale = canvasScale.value || 1;
+  const scale = zoomScale.value || 1;
+
+  const deltaX = (event.clientX - dragStartPoint.x) / scale * displayScale;
+  const deltaY = (event.clientY - dragStartPoint.y) / scale * displayScale;
+
+  textPosition.value = {
+    x: dragStartPosition.x + deltaX,
+    y: dragStartPosition.y + deltaY
+  };
+};
+
+const onDragTextEnd = () => {
+  isDraggingText.value = false;
+  dragStartPoint = null;
+  dragStartPosition = null;
+  window.removeEventListener('pointermove', onDragTextMove);
+  window.removeEventListener('pointerup', onDragTextEnd);
+};
+
+// Начать масштабирование текста
+const startResizeText = (corner, event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  isResizingText.value = true;
+  resizeStartPoint = { x: event.clientX, y: event.clientY };
+  resizeStartScale = textScale.value;
+
+  window.addEventListener('pointermove', onResizeTextMove);
+  window.addEventListener('pointerup', onResizeTextEnd);
+};
+
+const onResizeTextMove = (event) => {
+  if (!isResizingText.value || !resizeStartPoint) return;
+
+  const deltaX = event.clientX - resizeStartPoint.x;
+  const deltaY = event.clientY - resizeStartPoint.y;
+  // Пропорциональный масштаб по диагонали
+  const delta = (deltaX + deltaY) / 2;
+  textScale.value = Math.max(0.5, Math.min(3, resizeStartScale + delta / 100));
+};
+
+const onResizeTextEnd = () => {
+  isResizingText.value = false;
+  resizeStartPoint = null;
+  resizeStartScale = null;
+  window.removeEventListener('pointermove', onResizeTextMove);
+  window.removeEventListener('pointerup', onResizeTextEnd);
+};
+
+// Обработка клика вне превью (для подтверждения текста)
+const handleTextPreviewClickOutside = (event) => {
+  const previewEl = event.target.closest('.pencil-overlay__text-preview');
+  if (!previewEl && textMode.value === 'preview') {
+    commitText();
+  }
 };
 
 const placePendingImageOnCanvas = async (point) => {
@@ -544,11 +643,16 @@ const handleCanvasPointerDown = async (event) => {
   }
 
   // Текстовый инструмент
-  console.log('[TextTool] handleCanvasPointerDown: currentTool =', currentTool.value, ', isTypingText =', isTypingText.value);
-  if (currentTool.value === 'text' && !isTypingText.value) {
-    console.log('[TextTool] Condition matched, calling startTextInput');
-    startTextInput(point);
-    return;
+  if (currentTool.value === 'text') {
+    if (textMode.value === 'idle') {
+      startTextInput(point);
+      return;
+    }
+    if (textMode.value === 'preview') {
+      // Клик вне превью — подтверждаем текст
+      handleTextPreviewClickOutside(event);
+      return;
+    }
   }
 
   if (!isDrawingToolActive.value) return;
@@ -800,7 +904,7 @@ const handleKeydown = (event) => {
   }
 
   if (event.key === 'Escape') {
-    if (isTypingText.value) {
+    if (textMode.value !== 'idle') {
       event.preventDefault();
       cancelText();
       return;
@@ -1148,16 +1252,29 @@ onBeforeUnmount(() => {
         class="pencil-overlay__selection"
         :style="selectionStyle"
       ></div>
+      <!-- Текстовый инструмент: режим ввода -->
       <input
-        v-if="isTypingText && textInputPosition"
+        v-if="textMode === 'typing'"
         ref="textInputRef"
         type="text"
         class="pencil-overlay__text-input"
         :style="textInputStyle"
-        @keydown.enter="commitText"
+        @keydown.enter.prevent="enterTextPreview"
         @keydown.escape.stop="cancelText"
-        @blur="commitText"
       />
+      <!-- Текстовый инструмент: режим превью -->
+      <div
+        v-if="textMode === 'preview' && textValue"
+        class="pencil-overlay__text-preview"
+        :style="textPreviewStyle"
+        @pointerdown="startDragText"
+      >
+        <span class="pencil-overlay__text-preview-content">{{ textValue }}</span>
+        <div class="pencil-overlay__resize-handle pencil-overlay__resize-handle--nw" @pointerdown.stop="startResizeText('nw', $event)"></div>
+        <div class="pencil-overlay__resize-handle pencil-overlay__resize-handle--ne" @pointerdown.stop="startResizeText('ne', $event)"></div>
+        <div class="pencil-overlay__resize-handle pencil-overlay__resize-handle--sw" @pointerdown.stop="startResizeText('sw', $event)"></div>
+        <div class="pencil-overlay__resize-handle pencil-overlay__resize-handle--se" @pointerdown.stop="startResizeText('se', $event)"></div>
+      </div>
     </div>
 
     <!-- Кнопка закрытия в правом верхнем углу -->
@@ -1912,12 +2029,70 @@ onBeforeUnmount(() => {
 
 .pencil-overlay__text-input {
   position: absolute;
-  background: transparent;
-  border: 1px dashed rgba(15, 98, 254, 0.7);
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #0f62fe;
+  border-radius: 4px;
   outline: none;
-  min-width: 100px;
-  padding: 2px 4px;
+  min-width: 150px;
+  padding: 8px 12px;
   font-family: sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 10;
+}
+
+.pencil-overlay__text-input:focus {
+  border-color: #0353e9;
+  box-shadow: 0 0 0 3px rgba(15, 98, 254, 0.2), 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Текстовый инструмент: превью */
+.pencil-overlay__text-preview {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #0f62fe;
+  border-radius: 4px;
+  padding: 8px 12px;
+  cursor: move;
+  user-select: none;
+  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.3);
+  z-index: 10;
+}
+
+.pencil-overlay__text-preview-content {
+  white-space: nowrap;
+  font-family: sans-serif;
+}
+
+.pencil-overlay__resize-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border: 2px solid #0f62fe;
+  border-radius: 2px;
+}
+
+.pencil-overlay__resize-handle--nw {
+  top: -6px;
+  left: -6px;
+  cursor: nwse-resize;
+}
+
+.pencil-overlay__resize-handle--ne {
+  top: -6px;
+  right: -6px;
+  cursor: nesw-resize;
+}
+
+.pencil-overlay__resize-handle--sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: nesw-resize;
+}
+
+.pencil-overlay__resize-handle--se {
+  bottom: -6px;
+  right: -6px;
+  cursor: nwse-resize;
 }
 </style>
