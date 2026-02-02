@@ -352,7 +352,7 @@ watch(
 
             <div class="mobile-user-menu__section mobile-user-menu__section--account">
               <div class="mobile-user-menu__account-number">
-                RUY68241101111
+                {{ user?.personal_id || 'Не указан' }}
               </div>
             </div>
             <div class="mobile-user-menu__divider" />
