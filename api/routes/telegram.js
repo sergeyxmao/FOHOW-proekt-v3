@@ -27,21 +27,20 @@ export function registerTelegramRoutes(app) {
       // Генерируем уникальный код (6 символов, буквы и цифры)
       const code = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-      // Код действителен 15 минут
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-
       // Удаляем старые неиспользованные коды этого пользователя
       await pool.query(
         'DELETE FROM telegram_link_codes WHERE user_id = $1 AND used = false',
         [userId]
       );
 
-      // Создаем новый код
-      await pool.query(
+      // Создаем новый код (expires_at вычисляется в SQL для корректной работы с timezone)
+      const result = await pool.query(
         `INSERT INTO telegram_link_codes (user_id, code, expires_at)
-         VALUES ($1, $2, $3)`,
-        [userId, code, expiresAt]
+         VALUES ($1, $2, NOW() + INTERVAL '15 minutes')
+         RETURNING expires_at`,
+        [userId, code]
       );
+      const expiresAt = result.rows[0].expires_at;
 
       console.log(`✅ Код для привязки Telegram сгенерирован: пользователь ID=${userId}, код=${code}`);
 
