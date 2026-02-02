@@ -66,9 +66,13 @@ const isResizingText = ref(false);
 let resizeCorner = null;
 let dragStartPoint = null;
 let dragStartPosition = null;
+let dragPointerId = null;
+let dragTargetElement = null;
 let resizeStartPoint = null;
 let resizeStartScale = null;
 let resizeStartPosition = null;
+let resizePointerId = null;
+let resizeTargetElement = null;
 
 // === Инициализация Composables ===
 
@@ -439,9 +443,13 @@ const cancelText = () => {
   resizeCorner = null;
   dragStartPoint = null;
   dragStartPosition = null;
+  dragPointerId = null;
+  dragTargetElement = null;
   resizeStartPoint = null;
   resizeStartScale = null;
   resizeStartPosition = null;
+  resizePointerId = null;
+  resizeTargetElement = null;
 };
 
 // Начать перетаскивание текста
@@ -450,6 +458,15 @@ const startDragText = (event) => {
   // Не перетаскиваем если клик на input
   if (event.target === textInputRef.value) return;
   event.preventDefault();
+
+  // Pointer Capture для корректной работы на touch-устройствах
+  const target = textContainerRef.value;
+  if (target) {
+    target.setPointerCapture(event.pointerId);
+    dragPointerId = event.pointerId;
+    dragTargetElement = target;
+  }
+
   isDraggingText.value = true;
   dragStartPoint = { x: event.clientX, y: event.clientY };
   dragStartPosition = { ...textPosition.value };
@@ -473,10 +490,21 @@ const onDragTextMove = (event) => {
   };
 };
 
-const onDragTextEnd = () => {
+const onDragTextEnd = (event) => {
+  // Освобождаем Pointer Capture
+  if (dragTargetElement && dragPointerId !== null) {
+    try {
+      dragTargetElement.releasePointerCapture(dragPointerId);
+    } catch (e) {
+      // ignore - pointer может быть уже освобождён
+    }
+  }
+
   isDraggingText.value = false;
   dragStartPoint = null;
   dragStartPosition = null;
+  dragPointerId = null;
+  dragTargetElement = null;
   window.removeEventListener('pointermove', onDragTextMove);
   window.removeEventListener('pointerup', onDragTextEnd);
 };
@@ -485,6 +513,15 @@ const onDragTextEnd = () => {
 const startResizeText = (corner, event) => {
   event.preventDefault();
   event.stopPropagation();
+
+  // Pointer Capture для корректной работы на touch-устройствах
+  const target = event.target;
+  if (target) {
+    target.setPointerCapture(event.pointerId);
+    resizePointerId = event.pointerId;
+    resizeTargetElement = target;
+  }
+
   isResizingText.value = true;
   resizeCorner = corner;
   resizeStartPoint = { x: event.clientX, y: event.clientY };
@@ -536,12 +573,23 @@ const onResizeTextMove = (event) => {
   }
 };
 
-const onResizeTextEnd = () => {
+const onResizeTextEnd = (event) => {
+  // Освобождаем Pointer Capture
+  if (resizeTargetElement && resizePointerId !== null) {
+    try {
+      resizeTargetElement.releasePointerCapture(resizePointerId);
+    } catch (e) {
+      // ignore - pointer может быть уже освобождён
+    }
+  }
+
   isResizingText.value = false;
   resizeCorner = null;
   resizeStartPoint = null;
   resizeStartScale = null;
   resizeStartPosition = null;
+  resizePointerId = null;
+  resizeTargetElement = null;
   window.removeEventListener('pointermove', onResizeTextMove);
   window.removeEventListener('pointerup', onResizeTextEnd);
 };
@@ -2051,6 +2099,7 @@ onBeforeUnmount(() => {
   user-select: none;
   z-index: 10;
   background: transparent;
+  touch-action: none;
 }
 
 .pencil-overlay__text-container .pencil-overlay__text-input {
@@ -2068,34 +2117,35 @@ onBeforeUnmount(() => {
 
 .pencil-overlay__resize-handle {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 24px;
+  height: 24px;
   background: #fff;
   border: 2px solid #0f62fe;
-  border-radius: 2px;
+  border-radius: 4px;
+  touch-action: none;
 }
 
 .pencil-overlay__resize-handle--nw {
-  top: -6px;
-  left: -6px;
+  top: -12px;
+  left: -12px;
   cursor: nwse-resize;
 }
 
 .pencil-overlay__resize-handle--ne {
-  top: -6px;
-  right: -6px;
+  top: -12px;
+  right: -12px;
   cursor: nesw-resize;
 }
 
 .pencil-overlay__resize-handle--sw {
-  bottom: -6px;
-  left: -6px;
+  bottom: -12px;
+  left: -12px;
   cursor: nesw-resize;
 }
 
 .pencil-overlay__resize-handle--se {
-  bottom: -6px;
-  right: -6px;
+  bottom: -12px;
+  right: -12px;
   cursor: nwse-resize;
 }
 </style>
