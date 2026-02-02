@@ -50,9 +50,10 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
 
     // Нельзя подать заявку, если номер невалиден (должен быть офис + 9 цифр)
     const personalId = personalForm.personal_id.trim()
-    const officeMatch = personalId.match(/^[A-Z]{3}\d{2,3}/)
-    if (!officeMatch) return false
-    const suffix = personalId.slice(officeMatch[0].length)
+    const office = personalForm.office?.trim().toUpperCase() || ''
+    if (!/^[A-Z]{3}\d{2,3}$/.test(office)) return false
+    if (!personalId.startsWith(office)) return false
+    const suffix = personalId.slice(office.length)
     if (!/^\d{9}$/.test(suffix)) return false
 
     // Нельзя подать заявку, если есть несохранённые изменения номера
@@ -107,11 +108,14 @@ export function useUserVerification({ user, authStore, API_URL, personalForm }) 
 
     // Проверка валидности формата номера
     const personalId = personalForm.personal_id.trim()
-    const officeMatch = personalId.match(/^[A-Z]{3}\d{2,3}/)
-    if (!officeMatch) {
-      return 'Некорректный формат номера'
+    const office = personalForm.office?.trim().toUpperCase() || ''
+    if (!/^[A-Z]{3}\d{2,3}$/.test(office)) {
+      return 'Некорректный формат представительства'
     }
-    const suffix = personalId.slice(officeMatch[0].length)
+    if (!personalId.startsWith(office)) {
+      return 'Номер должен начинаться с представительства'
+    }
+    const suffix = personalId.slice(office.length)
     if (!/^\d{9}$/.test(suffix)) {
       const digitCount = suffix.replace(/\D/g, '').length
       return `Введите 9 цифр после префикса (сейчас ${digitCount}/9)`

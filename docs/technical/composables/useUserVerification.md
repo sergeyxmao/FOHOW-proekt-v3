@@ -166,12 +166,16 @@ const verificationBlockReason = computed(() => {
 
   // Проверка валидности формата номера
   const personalId = personalForm.personal_id.trim()
-  const officeMatch = personalId.match(/^[A-Z]{3}\d{2,3}/)
-  if (!officeMatch) {
-    return 'Некорректный формат номера'
+  const office = personalForm.office?.trim().toUpperCase() || ''
+  if (!/^[A-Z]{3}\d{2,3}$/.test(office)) {
+    return 'Некорректный формат представительства'
   }
-  const suffix = personalId.slice(officeMatch[0].length)
+  if (!personalId.startsWith(office)) {
+    return 'Номер должен начинаться с представительства'
+  }
+  const suffix = personalId.slice(office.length)
   if (!/^\d{9}$/.test(suffix)) {
+    const digitCount = suffix.replace(/\D/g, '').length
     return `Введите 9 цифр после префикса (сейчас ${digitCount}/9)`
   }
 
@@ -206,9 +210,10 @@ const canSubmitVerification = computed(() => {
 
   // Если номер невалиден (должен быть офис + 9 цифр) - нельзя
   const personalId = personalForm.personal_id.trim()
-  const officeMatch = personalId.match(/^[A-Z]{3}\d{2,3}/)
-  if (!officeMatch) return false
-  const suffix = personalId.slice(officeMatch[0].length)
+  const office = personalForm.office?.trim().toUpperCase() || ''
+  if (!/^[A-Z]{3}\d{2,3}$/.test(office)) return false
+  if (!personalId.startsWith(office)) return false
+  const suffix = personalId.slice(office.length)
   if (!/^\d{9}$/.test(suffix)) return false
 
   // Если есть несохранённые изменения - нельзя
@@ -350,3 +355,10 @@ onBeforeUnmount(() => {
   - `POST /verification/submit`
   - `POST /verification/cancel`
   - `GET /verification/history`
+
+## История изменений
+
+| Дата | Изменение |
+|------|-----------|
+| 2025-02-02 | Исправлен баг жадного regex при подсчёте цифр: заменено извлечение офиса через `match(/^[A-Z]{3}\d{2,3}/)` на использование `personalForm.office` |
+| Декабрь 2025 | Создание composable (рефакторинг UserProfile.vue) |
