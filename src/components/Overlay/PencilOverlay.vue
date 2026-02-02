@@ -2061,6 +2061,8 @@ onBeforeUnmount(() => {
   outline: none;
   padding: 8px 12px;
   font-family: sans-serif;
+  font-size: inherit;
+  color: inherit;
   cursor: text;
 }
 
