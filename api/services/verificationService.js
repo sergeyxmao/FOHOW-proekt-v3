@@ -425,6 +425,13 @@ async function rejectVerification(verificationId, adminId, rejectionReason) {
       [rejectionReason, adminId, verificationId]
     );
 
+    // Обновить время последней попытки для корректного cooldown
+    // Cooldown начинается с момента отклонения заявки
+    await client.query(
+      'UPDATE users SET last_verification_attempt = NOW() WHERE id = $1',
+      [verification.user_id]
+    );
+
     await client.query('COMMIT');
 
     console.log(`[VERIFICATION] Заявка отклонена: verification_id=${verificationId}, user_id=${verification.user_id}, admin_id=${adminId}`);
