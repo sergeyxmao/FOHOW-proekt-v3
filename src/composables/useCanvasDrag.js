@@ -187,9 +187,9 @@ export function useCanvasDrag(options) {
       })
     }
 
-    if (updateStageSize) {
-      updateStageSize()
-    }
+    // Примечание: updateStageSize НЕ вызывается здесь для оптимизации производительности
+    // При 95+ карточках это устраняет Forced Reflow (~60 раз/сек)
+    // updateStageSize вызывается один раз в endDrag после завершения перетаскивания
 
     if (dx !== 0 || dy !== 0) {
       dragState.value.hasMoved = true
@@ -272,6 +272,12 @@ export function useCanvasDrag(options) {
       setTimeout(() => {
         suppressNextCardClick.value = false
       }, 0)
+    }
+
+    // Обновляем размер холста один раз после завершения drag
+    // Это устраняет Forced Reflow во время перетаскивания (~60 вызовов/сек → 1 вызов)
+    if (updateStageSize) {
+      updateStageSize()
     }
 
     dragState.value = null
