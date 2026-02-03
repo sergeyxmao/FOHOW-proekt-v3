@@ -104,6 +104,23 @@ const enableAnimations = computed(() => lodLevel.value !== 'low' && lodLevel.val
 <div v-if="showNoteButton" class="card-controls">
 ```
 
+## Размеры шрифтов по уровням LOD
+
+### Маленькие карточки
+
+| Уровень | PV Row | Card Row | Padding |
+|---------|--------|----------|---------|
+| `medium` | 1.4em (600) | 1.3em / value: 1.1em (700) | 8px 10px 25px |
+| `low` | 1.6em (700) | 1.4em / value: 1.2em (800) | 6px 8px 20px |
+| `minimal` | 1.8em (800) | 1.5em / value: 1.3em (900) | 4px 6px 15px |
+
+### Большие/золотые карточки
+
+| Уровень | PV Row | Card Row Value |
+|---------|--------|----------------|
+| `medium` | 1.3em | 1.2em (600) |
+| `low`/`minimal` | 1.5em (700) | 1.4em (700) |
+
 ## Ожидаемый эффект
 
 | Оптимизация | Ожидаемое снижение |
@@ -115,8 +132,13 @@ const enableAnimations = computed(() => lodLevel.value !== 'low' && lodLevel.val
 
 ## История изменений
 
+- **2026-02-03**: Увеличены размеры шрифтов в LOD режиме
+  - medium: PV 1.4em, card-row 1.3em
+  - low: PV 1.6em, card-row 1.4em
+  - minimal: PV 1.8em, card-row 1.5em
+  - Уменьшены padding для компенсации
 - **2026-02-03**: Добавлена LOD система для карточек
-  - Реализованы 4 уровня LOD: full, medium, low, minimal
+  - Реализованы 4 уровни LOD: full, medium, low, minimal
   - Добавлен provide/inject для zoomScale
   - Добавлены v-if условия для элементов
   - Добавлены CSS стили для адаптивного отображения
