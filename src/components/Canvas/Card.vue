@@ -2002,62 +2002,61 @@ watch(
   animation: none !important;
 }
 
-/* LOD Medium (≤50%): Увеличить и центрировать для маленьких карточек */
+/* LOD Medium (≤50%): Маленькие карточки */
 .card--lod-medium:not(.card--large):not(.card--gold) .card-body {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 10px 25px;
-  gap: 4px;
-}
-.card--lod-medium:not(.card--large):not(.card--gold) .pv-row {
-  font-size: 1.4em;
-  font-weight: 600;
-}
-.card--lod-medium:not(.card--large):not(.card--gold) .balance-row,
-.card--lod-medium:not(.card--large):not(.card--gold) .card-row {
-  font-size: 1.3em;
-}
-.card--lod-medium:not(.card--large):not(.card--gold) .card-row .label {
-  font-size: 0.9em;
-}
-.card--lod-medium:not(.card--large):not(.card--gold) .card-row .value {
-  font-size: 1.1em;
-  font-weight: 700;
-}
-
-/* LOD Low (≤30%): Ещё больше упрощение */
-.card--lod-low:not(.card--large):not(.card--gold) .card-body {
-  padding: 6px 8px 20px;
+  padding: 4px 6px 20px;
   gap: 2px;
 }
-.card--lod-low:not(.card--large):not(.card--gold) .pv-row {
-  font-size: 1.6em;
+.card--lod-medium:not(.card--large):not(.card--gold) .pv-row {
+  font-size: 2.0em;
   font-weight: 700;
 }
-.card--lod-low:not(.card--large):not(.card--gold) .card-row {
-  font-size: 1.4em;
+.card--lod-medium:not(.card--large):not(.card--gold) .card-row {
+  font-size: 1.6em;
 }
-.card--lod-low:not(.card--large):not(.card--gold) .card-row .value {
-  font-size: 1.2em;
+.card--lod-medium:not(.card--large):not(.card--gold) .card-row .label {
+  font-size: 0.85em;
+}
+.card--lod-medium:not(.card--large):not(.card--gold) .card-row .value {
+  font-size: 1.3em;
   font-weight: 800;
 }
 
-/* LOD Minimal (≤15%): Максимальное упрощение */
-.card--lod-minimal:not(.card--large):not(.card--gold) .card-body {
-  padding: 4px 6px 15px;
+/* LOD Low (≤30%): Маленькие карточки */
+.card--lod-low:not(.card--large):not(.card--gold) .card-body {
+  padding: 2px 4px 15px;
   gap: 1px;
 }
-.card--lod-minimal:not(.card--large):not(.card--gold) .pv-row {
-  font-size: 1.8em;
+.card--lod-low:not(.card--large):not(.card--gold) .pv-row {
+  font-size: 2.4em;
   font-weight: 800;
 }
+.card--lod-low:not(.card--large):not(.card--gold) .card-row {
+  font-size: 1.8em;
+}
+.card--lod-low:not(.card--large):not(.card--gold) .card-row .value {
+  font-size: 1.4em;
+  font-weight: 900;
+}
+
+/* LOD Minimal (≤15%): Маленькие карточки */
+.card--lod-minimal:not(.card--large):not(.card--gold) .card-body {
+  padding: 2px 4px 12px;
+  gap: 0;
+}
+.card--lod-minimal:not(.card--large):not(.card--gold) .pv-row {
+  font-size: 2.8em;
+  font-weight: 900;
+}
 .card--lod-minimal:not(.card--large):not(.card--gold) .card-row {
-  font-size: 1.5em;
+  font-size: 2.0em;
 }
 .card--lod-minimal:not(.card--large):not(.card--gold) .card-row .value {
-  font-size: 1.3em;
+  font-size: 1.5em;
   font-weight: 900;
 }
 
@@ -2075,33 +2074,34 @@ watch(
 .card--lod-minimal.card--gold .card-body {
   justify-content: center;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 
 .card--lod-medium.card--large .pv-row,
 .card--lod-medium.card--gold .pv-row {
-  font-size: 1.3em;
+  font-size: 1.8em;
+  font-weight: 700;
 }
 
 .card--lod-medium.card--large .card-row .value,
 .card--lod-medium.card--gold .card-row .value {
-  font-size: 1.2em;
-  font-weight: 600;
+  font-size: 1.5em;
+  font-weight: 700;
 }
 
 .card--lod-low.card--large .pv-row,
 .card--lod-low.card--gold .pv-row,
 .card--lod-minimal.card--large .pv-row,
 .card--lod-minimal.card--gold .pv-row {
-  font-size: 1.5em;
-  font-weight: 700;
+  font-size: 2.2em;
+  font-weight: 800;
 }
 
 .card--lod-low.card--large .card-row .value,
 .card--lod-low.card--gold .card-row .value,
 .card--lod-minimal.card--large .card-row .value,
 .card--lod-minimal.card--gold .card-row .value {
-  font-size: 1.4em;
-  font-weight: 700;
+  font-size: 1.8em;
+  font-weight: 800;
 }
 </style>
