@@ -10,6 +10,9 @@ import { buildCardCssVariables } from '../../utils/constants';
 // Inject isReadOnly from parent (CanvasBoard)
 const isReadOnly = inject('isReadOnly', ref(false));
 
+// Inject zoomScale from parent (CanvasBoard) for LOD system
+const zoomScale = inject('zoomScale', ref(1));
+
 const props = defineProps({
   card: {
     type: Object,
@@ -59,6 +62,22 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 const isLargeCard = computed(() => {
   return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 543.4;
 });
+
+// LOD (Level of Detail) на основе масштаба
+const lodLevel = computed(() => {
+  const scale = zoomScale.value;
+  if (scale <= 0.15) return 'minimal';   // ≤15%
+  if (scale <= 0.30) return 'low';       // ≤30%
+  if (scale <= 0.50) return 'medium';    // ≤50%
+  return 'full';                          // >50%
+});
+
+// Computed для видимости элементов на основе LOD
+const showNoteButton = computed(() => lodLevel.value === 'full');
+const showPvButtons = computed(() => lodLevel.value === 'full' && !isLargeCard.value);
+const showCycleStage = computed(() => lodLevel.value === 'full');
+const showAvatar = computed(() => lodLevel.value !== 'minimal');
+const enableAnimations = computed(() => lodLevel.value !== 'low' && lodLevel.value !== 'minimal');
 
 // Проверка наличия заметок из store
 const hasNotes = computed(() => {
@@ -892,7 +911,11 @@ watch(
       'card--large': isLargeCard,
       'card--gold': card.type === 'gold',
       'note-active': isNoteVisible,
-      'highlighted': card.highlighted
+      'highlighted': card.highlighted,
+      'card--lod-medium': lodLevel === 'medium',
+      'card--lod-low': lodLevel === 'low',
+      'card--lod-minimal': lodLevel === 'minimal',
+      'card--no-animations': !enableAnimations
     }"
     :style="cardStyle"
     @click="handleCardClick"
@@ -932,8 +955,8 @@ watch(
     
     <!-- Содержимое карточки -->
     <div class="card-body">
-      <!-- Аватар пользователя (только для больших и Gold карточек) -->
-      <div v-if="isLargeCard" class="card-avatar-container">
+      <!-- Аватар пользователя (только для больших и Gold карточек, скрывается при LOD minimal) -->
+      <div v-if="isLargeCard && showAvatar" class="card-avatar-container">
         <div
           v-if="avatarData.avatar_url"
           class="card-avatar"
@@ -1056,7 +1079,8 @@ watch(
         </span>
       </div>
 
-      <div class="card-active-controls" data-role="active-pv-buttons">
+      <!-- LOD: Скрыть кнопки PV при масштабе ≤50% для маленьких карточек -->
+      <div v-if="showPvButtons" class="card-active-controls" data-role="active-pv-buttons">
         <div class="active-pv-controls__group">
           <button type="button" class="active-pv-btn" data-dir="left" data-step="1">+1</button>
           <button type="button" class="active-pv-btn" data-dir="left" data-step="10">+10</button>
@@ -1080,7 +1104,8 @@ watch(
         </div>
       </div>
 
-      <div class="card-row">
+      <!-- LOD: Скрыть цикл/этап при масштабе ≤50% -->
+      <div v-if="showCycleStage" class="card-row">
         <span class="label">Цикл/этап:</span>
         <span class="value">{{ cyclesDisplay }} / {{ stageDisplay }}</span>
       </div>
@@ -1092,7 +1117,8 @@ watch(
       ></div>
     </div>
 
-    <div class="card-controls">
+    <!-- LOD: Скрыть кнопку заметки при масштабе ≤50% -->
+    <div v-if="showNoteButton" class="card-controls">
       <button
         :class="noteButtonClasses"
         type="button"
@@ -1105,7 +1131,7 @@ watch(
           class="card-note-btn__indicator"
           :style="{ backgroundColor: noteIndicatorColor }"
           aria-hidden="true"
-        ></span>        
+        ></span>
       </button>
     </div>    
     <!-- Значки -->
@@ -1962,5 +1988,86 @@ watch(
     transform: none !important;
     filter: none !important;
   }
+}
+
+/* ========================================
+   LOD (Level of Detail) Стили
+   Адаптивный рендеринг при разных масштабах
+   ======================================== */
+
+/* LOD: Отключение анимаций при малом масштабе (≤30%) */
+.card--no-animations,
+.card--no-animations * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* LOD Medium (≤50%): Увеличить и центрировать оставшиеся элементы для маленьких карточек */
+.card--lod-medium:not(.card--large):not(.card--gold) .card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.card--lod-medium:not(.card--large):not(.card--gold) .pv-row {
+  font-size: 1.1em;
+}
+
+.card--lod-medium:not(.card--large):not(.card--gold) .balance-row,
+.card--lod-medium:not(.card--large):not(.card--gold) .card-row .value {
+  font-size: 1.1em;
+}
+
+/* LOD Low (≤30%): Дополнительное упрощение */
+.card--lod-low:not(.card--large):not(.card--gold) .card-body {
+  padding: 15px 15px 35px;
+  gap: 6px;
+}
+
+.card--lod-low:not(.card--large):not(.card--gold) .pv-row {
+  font-size: 1.15em;
+}
+
+.card--lod-low:not(.card--large):not(.card--gold) .card-row .value {
+  font-size: 1.15em;
+  font-weight: 700;
+}
+
+/* LOD Minimal (≤15%): Максимальное упрощение */
+.card--lod-minimal:not(.card--large):not(.card--gold) .card-body {
+  padding: 12px 12px 30px;
+  gap: 4px;
+}
+
+.card--lod-minimal:not(.card--large):not(.card--gold) .pv-row {
+  font-size: 1.2em;
+}
+
+.card--lod-minimal:not(.card--large):not(.card--gold) .card-row .value {
+  font-size: 1.2em;
+  font-weight: 800;
+}
+
+/* LOD Minimal: Скрыть аватар на больших карточках через CSS как fallback */
+.card--lod-minimal .card-avatar-container {
+  display: none !important;
+}
+
+/* LOD для больших карточек: центрирование контента */
+.card--lod-medium.card--large .card-body,
+.card--lod-medium.card--gold .card-body,
+.card--lod-low.card--large .card-body,
+.card--lod-low.card--gold .card-body {
+  justify-content: center;
+  align-items: center;
+}
+
+/* LOD Low/Minimal для больших карточек: увеличение шрифтов */
+.card--lod-low.card--large .card-row .value,
+.card--lod-low.card--gold .card-row .value,
+.card--lod-minimal.card--large .card-row .value,
+.card--lod-minimal.card--gold .card-row .value {
+  font-size: 1.3em;
 }
 </style>
