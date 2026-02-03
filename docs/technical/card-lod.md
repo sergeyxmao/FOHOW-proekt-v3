@@ -110,16 +110,16 @@ const enableAnimations = computed(() => lodLevel.value !== 'low' && lodLevel.val
 
 | Уровень | PV Row | Card Row | Padding |
 |---------|--------|----------|---------|
-| `medium` | 1.4em (600) | 1.3em / value: 1.1em (700) | 8px 10px 25px |
-| `low` | 1.6em (700) | 1.4em / value: 1.2em (800) | 6px 8px 20px |
-| `minimal` | 1.8em (800) | 1.5em / value: 1.3em (900) | 4px 6px 15px |
+| `medium` | **2.0em** (700) | 1.6em / value: 1.3em (800) | 4px 6px 20px |
+| `low` | **2.4em** (800) | 1.8em / value: 1.4em (900) | 2px 4px 15px |
+| `minimal` | **2.8em** (900) | 2.0em / value: 1.5em (900) | 2px 4px 12px |
 
 ### Большие/золотые карточки
 
 | Уровень | PV Row | Card Row Value |
 |---------|--------|----------------|
-| `medium` | 1.3em | 1.2em (600) |
-| `low`/`minimal` | 1.5em (700) | 1.4em (700) |
+| `medium` | **1.8em** (700) | 1.5em (700) |
+| `low`/`minimal` | **2.2em** (800) | 1.8em (800) |
 
 ## Ожидаемый эффект
 
@@ -132,11 +132,11 @@ const enableAnimations = computed(() => lodLevel.value !== 'low' && lodLevel.val
 
 ## История изменений
 
-- **2026-02-03**: Увеличены размеры шрифтов в LOD режиме
-  - medium: PV 1.4em, card-row 1.3em
-  - low: PV 1.6em, card-row 1.4em
-  - minimal: PV 1.8em, card-row 1.5em
-  - Уменьшены padding для компенсации
+- **2026-02-03**: Максимальное увеличение шрифтов в LOD режиме
+  - medium: PV 2.0em, card-row 1.6em
+  - low: PV 2.4em, card-row 1.8em
+  - minimal: PV 2.8em, card-row 2.0em
+  - Минимальные padding для максимального заполнения
 - **2026-02-03**: Добавлена LOD система для карточек
   - Реализованы 4 уровни LOD: full, medium, low, minimal
   - Добавлен provide/inject для zoomScale
