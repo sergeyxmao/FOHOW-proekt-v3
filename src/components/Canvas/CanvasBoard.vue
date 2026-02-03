@@ -161,6 +161,9 @@ watch(zoomScale, (value) => {
   viewportStore.setZoomScale(value);
 }, { immediate: true });
 
+// Provide zoomScale для дочерних компонентов (LOD карточек)
+provide('zoomScale', zoomScale);
+
 // Конвертация координат экрана в координаты canvas
 const screenToCanvas = (clientX, clientY) => {
   if (!canvasContainerRef.value) return { x: clientX, y: clientY };
