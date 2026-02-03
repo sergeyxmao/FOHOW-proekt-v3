@@ -102,11 +102,6 @@ const {
   isGridBackgroundVisible
 } = storeToRefs(canvasStore);
 const { isMobileMode, isSelectionMode } = storeToRefs(mobileStore);
-  watch(() => cardsStore.cards, (newCards, oldCards) => {
-  console.log('=== Cards array updated ===');
-  console.log('Previous cards count:', oldCards.length);
-  console.log('New cards count:', newCards.length);
-}, { deep: true });
 
 useKeyboardShortcuts({
   enabled: true,
