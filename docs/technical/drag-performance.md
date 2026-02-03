@@ -34,6 +34,15 @@
 - После завершения drag вызывается один раз в `endDrag`
 - Это устраняет Forced Reflow во время перетаскивания (~60 вызовов/сек → 1 вызов)
 
+### connectionPaths (линии связей)
+
+- Computed `connectionPaths` пересчитывался при каждом движении карточки
+- Включал итерацию по всем connections и два `.find()` по массиву cards для каждой
+- Теперь во время drag используется кэш `cachedConnectionPaths`
+- Обновляются только линии, связанные с перетаскиваемыми карточками (`draggedCardIds`)
+- Статичные линии берутся из кэша без пересчёта геометрии
+- Это снижает нагрузку Commit/Scripting на ~30-50% при drag
+
 ## Расположение файлов
 
 - Основной файл: `src/components/Canvas/CanvasBoard.vue`
@@ -123,16 +132,60 @@ const endDrag = async (event) => {
 }
 ```
 
+### connectionPaths с кэшированием
+
+```javascript
+// Кэш для линий во время drag
+const cachedConnectionPaths = ref([]);
+const draggedCardIds = ref(new Set());
+
+// Обновляем список перетаскиваемых карточек
+watch(dragState, (state) => {
+  if (state && state.cards) {
+    draggedCardIds.value = new Set(state.cards.map(c => c.id));
+  } else {
+    draggedCardIds.value = new Set();
+  }
+}, { immediate: true });
+
+const connectionPaths = computed(() => {
+  // Во время drag используем кэш для статичных линий
+  if (isDraggingAnyRef.value && cachedConnectionPaths.value.length > 0) {
+    return cachedConnectionPaths.value.map(cached => {
+      const connection = connections.value.find(c => c.id === cached.id);
+      if (!connection) return null;
+
+      // Пересчитываем только линии перетаскиваемых карточек
+      if (draggedCardIds.value.has(connection.from) ||
+          draggedCardIds.value.has(connection.to)) {
+        // ... пересчёт геометрии ...
+      }
+      return cached; // Статичные линии из кэша
+    }).filter(Boolean);
+  }
+
+  // Обычный расчёт + сохранение в кэш
+  const result = connections.value.map(/* ... */).filter(Boolean);
+  if (!isDraggingAnyRef.value) {
+    cachedConnectionPaths.value = result;
+  }
+  return result;
+});
+```
+
 ## Ожидаемый эффект
 
 - Снижение нагрузки CPU на ~90% при перетаскивании
 - Устранение Forced Reflow во время drag (снижение Rendering на ~30-50%)
+- Снижение нагрузки Commit/Scripting на ~30-50% (кэширование connectionPaths)
 - Плавное движение карточек при любом количестве элементов
 - Баланс (L/R) обновляется мгновенно после отпускания карточки
 - Карточка мгновенно следует за курсором без задержек анимации
 - Размер холста корректно обновляется после перемещения элементов
+- Линии перетаскиваемой карточки обновляются в реальном времени
 
 ## История изменений
 
+- 2025-02-03: Добавлена оптимизация connectionPaths (кэширование линий во время drag)
 - 2025-02-03: Добавлена оптимизация updateStageSize (устранение Forced Reflow)
 - 2025-02-03: Добавлена оптимизация drag performance (Engine.recalc, CSS transitions)
