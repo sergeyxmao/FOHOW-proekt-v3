@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { parseActivePV } from '../../utils/activePv';
 import { calcStagesAndCycles } from '../../utils/calculationEngine';
 
@@ -141,23 +141,85 @@ const pvLeftValue = computed(() => {
 const cyclesDisplay = computed(() => finalCalculation.value.cycles);
 const stageDisplay = computed(() => finalCalculation.value.stage);
 
-// === Modal positioning ===
+// === Modal positioning (viewport-aware + drag) ===
 
 const MIN_MODAL_WIDTH = 380;
+const VIEWPORT_PADDING = 4;
+
+// Смещение при перетаскивании
+const dragOffset = ref({ x: 0, y: 0 });
 
 const modalStyle = computed(() => {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
   const cardW = props.cardRect.width;
-  const modalW = Math.max(cardW, MIN_MODAL_WIDTH);
-  // Центрируем модал относительно карточки, если он шире
+  const modalW = Math.min(Math.max(cardW, MIN_MODAL_WIDTH), vw - VIEWPORT_PADDING * 2);
   const offsetX = (modalW - cardW) / 2;
-  const left = Math.max(0, props.cardRect.left - offsetX);
+
+  let left = props.cardRect.left - offsetX + dragOffset.value.x;
+  let top = props.cardRect.top + dragOffset.value.y;
+
+  // Ограничиваем viewport
+  left = Math.max(VIEWPORT_PADDING, Math.min(left, vw - modalW - VIEWPORT_PADDING));
+  top = Math.max(VIEWPORT_PADDING, Math.min(top, vh - 60));
+
   return {
     position: 'fixed',
-    top: `${props.cardRect.top}px`,
+    top: `${top}px`,
     left: `${left}px`,
     width: `${modalW}px`
   };
 });
+
+// === Touch/pointer drag ===
+
+let isDragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragStartOffsetX = 0;
+let dragStartOffsetY = 0;
+
+const handleDragStart = (event) => {
+  // Не перетаскиваем, если касание на input/button
+  const tag = event.target.tagName?.toLowerCase();
+  if (tag === 'input' || tag === 'button') return;
+
+  isDragging = true;
+  const point = event.touches ? event.touches[0] : event;
+  dragStartX = point.clientX;
+  dragStartY = point.clientY;
+  dragStartOffsetX = dragOffset.value.x;
+  dragStartOffsetY = dragOffset.value.y;
+
+  document.addEventListener('pointermove', handleDragMove);
+  document.addEventListener('pointerup', handleDragEnd);
+  document.addEventListener('touchmove', handleTouchDragMove, { passive: false });
+  document.addEventListener('touchend', handleDragEnd);
+};
+
+const handleDragMove = (event) => {
+  if (!isDragging) return;
+  const dx = event.clientX - dragStartX;
+  const dy = event.clientY - dragStartY;
+  dragOffset.value = { x: dragStartOffsetX + dx, y: dragStartOffsetY + dy };
+};
+
+const handleTouchDragMove = (event) => {
+  if (!isDragging) return;
+  event.preventDefault();
+  const touch = event.touches[0];
+  const dx = touch.clientX - dragStartX;
+  const dy = touch.clientY - dragStartY;
+  dragOffset.value = { x: dragStartOffsetX + dx, y: dragStartOffsetY + dy };
+};
+
+const handleDragEnd = () => {
+  isDragging = false;
+  document.removeEventListener('pointermove', handleDragMove);
+  document.removeEventListener('pointerup', handleDragEnd);
+  document.removeEventListener('touchmove', handleTouchDragMove);
+  document.removeEventListener('touchend', handleDragEnd);
+};
 
 // === PV ===
 
@@ -214,13 +276,22 @@ const handleEscape = (event) => {
 };
 
 onMounted(() => document.addEventListener('keydown', handleEscape));
-onBeforeUnmount(() => document.removeEventListener('keydown', handleEscape));
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleEscape);
+  handleDragEnd();
+});
 </script>
 
 <template>
   <Teleport to="body">
     <div v-if="visible" class="card-editor-overlay" @click="handleBackdropClick">
-      <div class="card-editor" :style="modalStyle" @click.stop>
+      <div
+        class="card-editor"
+        :style="modalStyle"
+        @click.stop
+        @pointerdown="handleDragStart"
+        @touchstart="handleDragStart"
+      >
         <!-- Header -->
         <div class="editor-header">
           <span class="editor-title">{{ card.text }}</span>
@@ -320,6 +391,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleEscape));
   display: flex;
   flex-direction: column;
   min-width: 240px;
+  touch-action: none;
 }
 
 .editor-header {
