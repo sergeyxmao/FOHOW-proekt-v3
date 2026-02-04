@@ -2002,7 +2002,7 @@ watch(
 /* Увеличение шрифта и центрирование строк для больших и Gold карточек */
 .card--large .card-row,
 .card--gold .card-row {
-  font-size: 24px;
+  font-size: 31px;
   font-weight: 700;
   line-height: 1.6;
   justify-content: center;
@@ -2025,7 +2025,7 @@ watch(
 .card--gold .card-row .label,
 .card--large .card-row .value,
 .card--gold .card-row .value {
-  font-size: 24px;
+  font-size: 31px;
   font-weight: 700;
 }
 
