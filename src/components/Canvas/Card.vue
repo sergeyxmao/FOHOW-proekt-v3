@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick, computed, watch, inject } from 'vue';
+import { ref, nextTick, computed, watch, inject, onBeforeUnmount } from 'vue';
 import { useCardsStore } from '../../stores/cards';
 import { useViewSettingsStore } from '../../stores/viewSettings';
 import { useNotesStore } from '../../stores/notes';
@@ -405,6 +405,27 @@ const handleKeyDown = (event) => {
 const handleBlur = () => {
   finishEditing();
 };
+
+// Закрытие редактирования заголовка при клике вне карточки
+const handleOutsideMouseDown = (event) => {
+  if (!isEditing.value) return;
+  const cardEl = event.target.closest(`[data-card-id="${props.card.id}"]`);
+  if (!cardEl) {
+    finishEditing();
+  }
+};
+
+watch(isEditing, (editing) => {
+  if (editing) {
+    document.addEventListener('mousedown', handleOutsideMouseDown, true);
+  } else {
+    document.removeEventListener('mousedown', handleOutsideMouseDown, true);
+  }
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleOutsideMouseDown, true);
+});
 
 // Обработчик для удаления карточки
 const handleDelete = async (event) => {
