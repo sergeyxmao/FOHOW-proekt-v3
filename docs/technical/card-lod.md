@@ -129,7 +129,7 @@ const showCardBody = computed(() => lodLevel.value !== 'ultra-minimal');
 | `medium` | **2.2em** (700) | 1.8em | 1.4em (800) | 2px 4px 15px |
 | `low` | **2.6em** (800) | 2.0em | 1.5em (900) | 2px 4px 10px |
 | `minimal` | **2.8em** (900) | 2.0em | 1.5em (900) | 2px 4px 12px |
-| `ultra-minimal` | — | — | — | card-body скрыт |
+| `ultra-minimal` | — | — | — | card-body скрыт, заголовок авто-подгонка |
 
 ### Большие/золотые карточки
 
@@ -139,7 +139,7 @@ const showCardBody = computed(() => lodLevel.value !== 'ultra-minimal');
 | `medium` | **скрыт** | 1.6em | 1.3em (700) | padding-left: 180px (аватар виден) |
 | `low` | **скрыт** | 1.8em | 1.4em (800) | padding-left: 180px (аватар виден) |
 | `minimal` | **скрыт** | 2.0em | 1.5em (900) | padding-left: 20px (аватар скрыт) |
-| `ultra-minimal` | — | — | — | card-body скрыт, заголовок 3.2em |
+| `ultra-minimal` | — | — | — | card-body скрыт, заголовок авто-подгонка |
 
 ## Ultra-Minimal режим (≤10%)
 
@@ -148,7 +148,7 @@ const showCardBody = computed(() => lodLevel.value !== 'ultra-minimal');
 - **Заголовок** растягивается на всю высоту карточки
 - **Заголовок сокращается** — партнёрские номера обрезаются (`shortTitle` computed)
 - **Каждое слово на новой строке** — `word-spacing: 100vw` для максимального заполнения
-- **Шрифт максимальный** — 4.0em (маленькие), 3.2em (большие/золотые), базовый 3.5em
+- **Шрифт авто-подгонка** — `titleAutoFitStyle` computed рассчитывает fontSize в px на основе card.width, card.height и количества/длины слов. Каждое слово = отдельная строка (word-spacing: 100vw), fontSize = min(availWidth / longestWord / 0.6, availHeight / numLines). Зазор 24px от краёв
 - **Кнопка закрытия** скрыта
 - **Аватар** скрыт (для больших/золотых)
 - Карточка визуально становится сплошным блоком цвета заголовка
@@ -177,6 +177,12 @@ const showCardBody = computed(() => lodLevel.value !== 'ultra-minimal');
 
 ## История изменений
 
+- **2026-02-04**: Авто-подгонка шрифта в ultra-minimal
+  - Добавлен `titleAutoFitStyle` computed — динамический расчёт fontSize в px
+  - Алгоритм: fontSize = min(availWidth / longestWord / 0.6, availHeight / numLines)
+  - Убраны фиксированные font-size (3.5em, 4.0em, 3.2em) из CSS
+  - Зазор 24px от краёв карточки (12px с каждой стороны)
+  - Текст автоматически заполняет прямоугольник карточки пропорционально
 - **2026-02-04**: Дополнительные улучшения LOD
   - Ultra-minimal: word-spacing 100vw (каждое слово на новой строке), шрифт 2.2-2.5em
   - PV-строка скрыта на больших/золотых при ЛЮБОМ масштабе (не только ≤50%)

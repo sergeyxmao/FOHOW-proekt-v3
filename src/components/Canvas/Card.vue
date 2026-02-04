@@ -98,6 +98,39 @@ const shortTitle = computed(() => {
   return shortened.trim();
 });
 
+// Авто-подгонка размера шрифта заголовка под размер карточки (ultra-minimal)
+// word-spacing: 100vw в CSS делает каждое слово отдельной строкой
+const titleAutoFitStyle = computed(() => {
+  if (lodLevel.value !== 'ultra-minimal') return {};
+
+  const text = shortTitle.value;
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  if (!words.length) return {};
+
+  const numLines = words.length;
+  const longestWord = Math.max(...words.map(w => w.length));
+
+  const cardWidth = props.card.width || 200;
+  const cardHeight = props.card.height || Math.round(cardWidth * 0.65);
+
+  // Зазор от краёв (не в притык)
+  const padding = 24;
+  const availWidth = cardWidth - padding;
+  const availHeight = cardHeight - padding;
+
+  // Ширина символа ≈ 0.6 от fontSize (среднее для sans-serif кириллица/латиница)
+  const charWidthFactor = 0.6;
+  // line-height в CSS = 0.95, используем 1.0 для запаса
+  const lineHeightFactor = 1.0;
+
+  const fontByWidth = availWidth / (longestWord * charWidthFactor);
+  const fontByHeight = availHeight / (numLines * lineHeightFactor);
+
+  const fontSize = Math.max(12, Math.floor(Math.min(fontByWidth, fontByHeight)));
+
+  return { fontSize: fontSize + 'px' };
+});
+
 // Проверка наличия заметок из store
 const hasNotes = computed(() => {
   const cardNotes = notesStore.getNotesForCard(props.card.id);
@@ -959,6 +992,7 @@ watch(
       <div
         v-else
         class="card-title"
+        :style="titleAutoFitStyle"
         :title="isSelected ? 'Двойной клик для редактирования' : ''"
         @dblclick.stop="handleTitleDblClick"      >
         {{ shortTitle }}
@@ -2200,23 +2234,12 @@ watch(
 
 .card--lod-ultra-minimal .card-title {
   text-align: center;
-  font-size: 3.5em;
+  /* font-size задаётся динамически через titleAutoFitStyle (inline) */
   font-weight: 900;
   line-height: 0.95;
   word-spacing: 100vw; /* Каждое слово на новой строке */
   color: white;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-/* Маленькие карточки в ultra-minimal — ещё крупнее шрифт */
-.card--lod-ultra-minimal:not(.card--large):not(.card--gold) .card-title {
-  font-size: 4.0em;
-}
-
-/* Большие/золотые карточки в ultra-minimal */
-.card--lod-ultra-minimal.card--large .card-title,
-.card--lod-ultra-minimal.card--gold .card-title {
-  font-size: 3.2em;
 }
 
 .card--lod-ultra-minimal .card-close-btn {
