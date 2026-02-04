@@ -10,6 +10,7 @@ import { useViewSettingsStore } from '../../stores/viewSettings';
 import { useImagesStore } from '../../stores/images';
 import { useAnchorsStore } from '../../stores/anchors';  
 import Card from './Card.vue';
+import CardEditorModal from './CardEditorModal.vue';
 import UserCard from './UserCard.vue';
 import UserCardContextMenu from './UserCardContextMenu.vue';
 import UserCardNumberInputModal from '../Modals/UserCardNumberInputModal.vue';
@@ -43,6 +44,7 @@ import { useBoardStore } from '../../stores/board.js';
 import { useSidePanelsStore } from '../../stores/sidePanels.js';  
 import { Engine } from '../../utils/calculationEngine';
 import {
+  parseActivePV,
   propagateActivePvUp,
   applyActivePvDelta,
   applyActivePvClear
@@ -454,6 +456,149 @@ const {
   getConnectionElement,
   canvasContainerRef
 });
+
+// Card Editor Modal state
+const editorModalCardId = ref(null);
+const editorModalCard = computed(() =>
+  editorModalCardId.value ? cardsStore.cards.find(c => c.id === editorModalCardId.value) : null
+);
+
+const handleOpenCardEditor = (cardId) => {
+  editorModalCardId.value = cardId;
+};
+
+const handleCloseCardEditor = () => {
+  editorModalCardId.value = null;
+};
+
+const handleEditorUpdatePv = ({ cardId, pv }) => {
+  cardsStore.updateCard(cardId, { pv });
+  // Trigger PV changed animation
+  handlePvChanged(cardId);
+};
+
+const handleEditorUpdateBalance = ({ cardId, rawText }) => {
+  const hasDigits = /\d/.test(rawText);
+  const card = cardsStore.cards.find(c => c.id === cardId);
+  if (!card) return;
+
+  if (!hasDigits) {
+    if (card.balanceManualOverride) {
+      cardsStore.updateCard(cardId, { balanceManualOverride: null }, {
+        saveToHistory: true,
+        description: `Сброшен ручной баланс для "${card.text}"`
+      });
+    }
+    return;
+  }
+
+  const parsed = parseActivePV(rawText);
+  const source = card.activePvAggregated;
+  const base = card.calculated || {};
+  const unitsLeft = Number.isFinite(source?.left) ? Number(source.left) : 0;
+  const unitsRight = Number.isFinite(source?.right) ? Number(source.right) : 0;
+  const autoL = (Number.isFinite(base.L) ? base.L : 0) + unitsLeft;
+  const autoR = (Number.isFinite(base.R) ? base.R : 0) + unitsRight;
+
+  const nextValue = {
+    left: Math.max(parsed.left, autoL),
+    right: Math.max(parsed.right, autoR)
+  };
+
+  const current = card.balanceManualOverride || {};
+  if (current.left !== nextValue.left || current.right !== nextValue.right) {
+    cardsStore.updateCard(cardId, { balanceManualOverride: nextValue }, {
+      saveToHistory: true,
+      description: `Установлен ручной баланс для "${card.text}"`
+    });
+    const manualAdditions = {
+      left: Math.max(0, nextValue.left - autoL),
+      right: Math.max(0, nextValue.right - autoR)
+    };
+    cardsStore.updateCard(cardId, { manualAdjustments: manualAdditions }, { saveToHistory: false });
+  }
+};
+
+const handleEditorUpdateActivePv = ({ cardId, direction, step }) => {
+  const card = cardsStore.cards.find(c => c.id === cardId);
+  if (!card) return;
+
+  const meta = cardsStore.calculationMeta || {};
+  let shouldAnimate = false;
+  let adjustedStep = step;
+
+  if (step < 0) {
+    // Validate remainder for negative steps
+    const cardElement = getCardElement(cardId);
+    if (cardElement) {
+      const hiddenElement = cardElement.querySelector('.active-pv-hidden');
+      const remainderKey = direction === 'right' ? 'remainderr' : 'remainderl';
+      const parsedRemainder = Number(hiddenElement?.dataset?.[remainderKey]);
+      const remainder = Number.isFinite(parsedRemainder) ? parsedRemainder : 0;
+      if (-adjustedStep > remainder) {
+        adjustedStep = -remainder;
+      }
+      if (adjustedStep === 0) return;
+    }
+    shouldAnimate = false;
+  } else {
+    shouldAnimate = true;
+  }
+
+  const result = applyActivePvDelta({
+    cards: cardsStore.cards,
+    meta,
+    cardId,
+    side: direction,
+    delta: adjustedStep
+  });
+
+  const updates = result?.updates || {};
+  const changedIds = result?.changedIds || [];
+  const updateEntries = Object.entries(updates);
+
+  if (updateEntries.length === 0) return;
+
+  updateEntries.forEach(([id, payload]) => {
+    cardsStore.updateCard(id, payload, { saveToHistory: false });
+  });
+
+  const description = card?.text
+    ? `Active-PV обновлены для "${card.text}"`
+    : 'Изменены бонусы Active-PV';
+
+  if (shouldAnimate && changedIds.length > 0) {
+    cancelAllActiveAnimations();
+    changedIds.forEach(id => {
+      animateBalancePropagation(id);
+    });
+  }
+
+  applyActivePvPropagation(cardId, { saveHistory: true, historyDescription: description, triggerAnimation: false });
+};
+
+const handleEditorClearActivePv = ({ cardId }) => {
+  const card = cardsStore.cards.find(c => c.id === cardId);
+  if (!card) return;
+
+  const meta = cardsStore.calculationMeta || {};
+  const result = applyActivePvClear({ cards: cardsStore.cards, meta, cardId });
+
+  const updates = result?.updates || {};
+  const updateEntries = Object.entries(updates);
+
+  if (updateEntries.length === 0) return;
+
+  updateEntries.forEach(([id, payload]) => {
+    cardsStore.updateCard(id, payload, { saveToHistory: false });
+  });
+
+  const description = card?.text
+    ? `Active-PV очищены для "${card.text}"`
+    : 'Очищены бонусы Active-PV';
+
+  applyActivePvPropagation(cardId, { saveHistory: true, historyDescription: description, triggerAnimation: false });
+};
 
 // Note Windows
 const {
@@ -2728,6 +2873,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           @start-drag="startDrag"
           @add-note="handleAddNoteClick"
           @pv-changed="handlePvChanged"
+          @open-editor="handleOpenCardEditor"
           style="pointer-events: auto;"
           />
           <UserCard
@@ -2825,7 +2971,19 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       v-if="cardsStore.incompatibilityWarning.visible"
       :type="cardsStore.incompatibilityWarning.type"
       @close="cardsStore.hideIncompatibilityWarning()"
-    />  
+    />
+
+    <!-- Модальное окно редактирования карточки -->
+    <CardEditorModal
+      v-if="editorModalCard"
+      :card="editorModalCard"
+      :visible="!!editorModalCard"
+      @close="handleCloseCardEditor"
+      @update-pv="handleEditorUpdatePv"
+      @update-balance="handleEditorUpdateBalance"
+      @update-active-pv="handleEditorUpdateActivePv"
+      @clear-active-pv="handleEditorClearActivePv"
+    />
   </div>
 </template>
 
