@@ -8,21 +8,21 @@
           
           <div class="boards-container">
             <div class="boards-header">
-              <h2>📋 Мои структуры</h2>
+              <h2>📋 {{ t('board.myStructures') }}</h2>
               <button class="btn-create" @click="createNewBoard">
-                ➕ Создать структуру
+                ➕ {{ t('board.createStructure') }}
               </button>
             </div>
   
             <UsageLimitBar
               v-if="subscriptionStore.currentPlan"
               resourceType="boards"
-              label="Доски"
+              :label="t('board.boards')"
             />
 
             <div v-if="loading" class="loading">
               <div class="spinner"></div>
-              <p>Загрузка структур...</p>
+              <p>{{ t('board.loadingStructures') }}</p>
             </div>
 
             <div v-if="error" class="error-message">
@@ -31,10 +31,10 @@
 
             <div v-else-if="boards.length === 0" class="empty-state">
               <div class="empty-icon">🎨</div>
-              <h3>У вас пока нет структур</h3>
-              <p>Создайте первую структуру, чтобы начать работу</p>
+              <h3>{{ t('board.noStructures') }}</h3>
+              <p>{{ t('board.createFirstHint') }}</p>
               <button class="btn-create-big" @click="createNewBoard">
-                ➕ Создать первую структуру
+                ➕ {{ t('board.createFirstStructure') }}
               </button>
             </div>
 
@@ -53,8 +53,8 @@
                 <div v-if="board.lock_status === 'soft_lock'" class="lock-overlay soft-lock-overlay">
                   <div class="lock-overlay-content">
                     <span class="lock-timer-icon">⏱️</span>
-                    <span class="lock-timer-text">Блокировка через {{ board.daysUntilBlock }} дн.</span>
-                    <button class="lock-info-btn" @click.stop="showLockInfoModal(board)" title="Подробнее">?</button>
+                    <span class="lock-timer-text">{{ t('board.softLockTimer', { n: board.daysUntilBlock }) }}</span>
+                    <button class="lock-info-btn" @click.stop="showLockInfoModal(board)" :title="t('board.moreDetails')">?</button>
                   </div>
                 </div>
 
@@ -62,8 +62,8 @@
                 <div v-if="board.lock_status === 'hard_lock'" class="lock-overlay hard-lock-overlay">
                   <div class="lock-overlay-content">
                     <span class="lock-icon">🔒</span>
-                    <span class="lock-timer-text">Удаление через {{ board.daysUntilDelete }} дн.</span>
-                    <button class="lock-info-btn" @click.stop="showLockInfoModal(board)" title="Подробнее">?</button>
+                    <span class="lock-timer-text">{{ t('board.hardLockTimer', { n: board.daysUntilDelete }) }}</span>
+                    <button class="lock-info-btn" @click.stop="showLockInfoModal(board)" :title="t('board.moreDetails')">?</button>
                   </div>
                 </div>
 
@@ -82,7 +82,7 @@
                   <h3>{{ board.name }}</h3>
                   <p class="board-meta">📅 {{ formatDate(board.updated_at) }}</p>
                   <div class="board-stats">
-                    <span class="stat">📦 {{ board.object_count }} объектов</span>
+                    <span class="stat">📦 {{ t('board.objectCount', { n: board.object_count }) }}</span>
                   </div>
                 </div>
 
@@ -90,12 +90,12 @@
                   <button class="btn-menu" @click="toggleMenu(board.id)">⋯</button>
                   <transition name="dropdown">
                     <div v-if="activeMenu === board.id" class="dropdown-menu">
-                      <button @click="openBoard(board)">📂 Открыть</button>
-                      <button @click="renameBoard(board)">✏️ Переименовать</button>
+                      <button @click="openBoard(board)">📂 {{ t('board.open') }}</button>
+                      <button @click="renameBoard(board)">✏️ {{ t('board.rename') }}</button>
                       <FeatureGate feature="can_duplicate_boards" displayMode="hide" :showUpgrade="false">
-                        <button @click="duplicateBoard(board.id)">📋 Дублировать</button>
+                        <button @click="duplicateBoard(board.id)">📋 {{ t('board.duplicate') }}</button>
                       </FeatureGate>
-                      <button @click="deleteBoard(board.id)" class="danger">🗑️ Удалить</button>
+                      <button @click="deleteBoard(board.id)" class="danger">🗑️ {{ t('board.delete') }}</button>
                     </div>
                   </transition>
                 </div>
@@ -113,15 +113,15 @@
           <button class="locked-modal-close" @click="showLockedModal = false">✕</button>
 
           <div class="locked-modal-icon">🔒</div>
-          <h2>Доска заблокирована</h2>
+          <h2>{{ t('board.boardLocked') }}</h2>
           <p class="locked-modal-message">{{ lockedMessage }}</p>
 
           <div class="locked-modal-actions">
             <button class="btn-upgrade" @click="goToPayment">
-              Продлить тариф
+              {{ t('board.extendPlan') }}
             </button>
             <button class="btn-cancel" @click="showLockedModal = false">
-              Закрыть
+              {{ t('common.close') }}
             </button>
           </div>
         </div>
@@ -135,38 +135,37 @@
           <button class="locked-modal-close" @click="showLockInfoModalVisible = false">✕</button>
 
           <div class="locked-modal-icon">{{ selectedBoardForInfo?.lock_status === 'soft_lock' ? '⏱️' : '🔒' }}</div>
-          <h2>Лимит тарифного плана</h2>
+          <h2>{{ t('board.planLimit') }}</h2>
 
           <div class="lock-info-details">
             <p v-if="selectedBoardForInfo?.lock_status === 'soft_lock'" class="locked-modal-message">
-              Ваша подписка истекла. Эта доска превышает лимит бесплатного тарифа.
+              {{ t('board.softLockDescription') }}
               <br><br>
-              <strong>Сейчас она доступна только для чтения (Soft Lock).</strong>
+              <strong>{{ t('board.softLockReadonly') }}</strong>
               <br><br>
-              Через <strong>{{ selectedBoardForInfo?.daysUntilBlock }} дней</strong> она будет заблокирована полностью,
-              а затем удалена.
+              {{ t('board.softLockCountdown', { n: selectedBoardForInfo?.daysUntilBlock }) }}
             </p>
             <p v-else class="locked-modal-message">
-              Эта доска полностью заблокирована (Hard Lock) и недоступна для просмотра.
+              {{ t('board.hardLockDescription') }}
               <br><br>
-              Через <strong>{{ selectedBoardForInfo?.daysUntilDelete }} дней</strong> она будет автоматически удалена.
+              {{ t('board.hardLockCountdown', { n: selectedBoardForInfo?.daysUntilDelete }) }}
             </p>
 
             <div class="lock-info-tip">
-              <strong>Чтобы сохранить доску:</strong>
+              <strong>{{ t('board.toKeepBoard') }}</strong>
               <ul>
-                <li>Продлите подписку</li>
-                <li>Или удалите другие доски, чтобы освободить место</li>
+                <li>{{ t('board.extendSubscription') }}</li>
+                <li>{{ t('board.deleteOtherBoards') }}</li>
               </ul>
             </div>
           </div>
 
           <div class="locked-modal-actions">
             <button class="btn-upgrade" @click="goToPayment">
-              Продлить подписку
+              {{ t('board.extendSubscription') }}
             </button>
             <button class="btn-cancel" @click="showLockInfoModalVisible = false">
-              Закрыть
+              {{ t('common.close') }}
             </button>
           </div>
         </div>
@@ -177,12 +176,15 @@
 
 <script setup>
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../../stores/auth'
 import { useUserStore } from '@/stores/user'
 import { useSubscriptionStore } from '@/stores/subscription'
 import { useNotificationsStore } from '@/stores/notifications'
 import FeatureGate from '@/components/FeatureGate.vue'
 import UsageLimitBar from '@/components/UsageLimitBar.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   isOpen: {
@@ -246,8 +248,8 @@ function handleBoardsRefresh() {
 function handleUpgradeClick() {
   notificationsStore.addNotification({
     type: 'info',
-    message: 'Достигнут лимит на вашем тарифе.',
-    actionText: 'Улучшить тариф',
+    message: t('board.planLimitReached'),
+    actionText: t('board.upgradePlan'),
     onAction: () => {
       window.location.href = '/pricing'
     }
@@ -277,7 +279,7 @@ async function loadBoards() {
     })
     
     if (!response.ok) {
-      throw new Error('Ошибка загрузки структур')
+      throw new Error(t('board.loadError'))
     }
     
     const data = await response.json()
@@ -299,7 +301,7 @@ async function createNewBoard() {
         'Authorization': `Bearer ${authStore.token}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ name: 'Новая структура' })
+      body: JSON.stringify({ name: t('board.newStructure') })
     })
 
     // Если ответ сервера НЕ успешный (статус 4xx или 5xx)
@@ -323,8 +325,8 @@ async function createNewBoard() {
     if (err.code === 'USAGE_LIMIT_REACHED') {
       notificationsStore.addNotification({
         type: 'error',
-        message: err.error || 'Достигнут лимит на вашем тарифе.',
-        actionText: 'Улучшить тариф',
+        message: err.error || t('board.planLimitReached'),
+        actionText: t('board.upgradePlan'),
         onAction: () => {
           // Переход на страницу тарифов
           window.location.href = '/pricing'
@@ -332,7 +334,7 @@ async function createNewBoard() {
       })
     } else {
       // Для всех остальных ошибок показываем красную плашку
-      error.value = err.error || 'Произошла неизвестная ошибка при создании структуры.'
+      error.value = err.error || t('board.unknownCreateError')
     }
   }
 }
@@ -354,7 +356,7 @@ function openBoard(board) {
 
   // Hard Lock - доска полностью недоступна
   if (lockStatus === 'hard_lock') {
-    lockedMessage.value = `Эта доска полностью заблокирована. Через ${boardData.daysUntilDelete || 0} дней она будет автоматически удалена. Продлите подписку для восстановления доступа.`
+    lockedMessage.value = t('board.boardLockedMessage', { n: boardData.daysUntilDelete || 0 })
     showLockedModal.value = true
     return
   }
@@ -394,7 +396,7 @@ function toggleMenu(id) {
 }
 
 async function renameBoard(board) {
-  const newName = prompt('Введите новое название:', board.name)
+  const newName = prompt(t('board.enterNewName'), board.name)
   if (!newName || newName === board.name) return
 
   try {
@@ -413,8 +415,8 @@ async function renameBoard(board) {
         console.log('🚫 Rename limit reached, showing notification...')
         notificationsStore.addNotification({
           type: 'error',
-          message: errorData.error || 'Достигнут лимит на вашем тарифе.',
-          actionText: 'Улучшить тариф',
+          message: errorData.error || t('board.planLimitReached'),
+          actionText: t('board.upgradePlan'),
           onAction: () => {
             window.location.href = '/pricing'
           }
@@ -422,7 +424,7 @@ async function renameBoard(board) {
         activeMenu.value = null
         return
       }
-      throw new Error('Ошибка переименования')
+      throw new Error(t('board.renameError'))
     }
 
     await loadBoards()
@@ -433,7 +435,7 @@ async function renameBoard(board) {
 }
 
 async function duplicateBoard(id) {
-  if (!confirm('Создать копию структуры?')) return
+  if (!confirm(t('board.duplicateConfirm'))) return
 
   // Проверяем лимит досок ПЕРЕД запросом через subscription store
   const limitInfo = subscriptionStore.checkLimit('boards')
@@ -442,8 +444,8 @@ async function duplicateBoard(id) {
     console.log('⚠️ Cannot duplicate: limit reached! Showing notification...')
     notificationsStore.addNotification({
       type: 'error',
-      message: 'Достигнут лимит создания досок на вашем тарифе.',
-      actionText: 'Улучшить тариф',
+      message: t('board.duplicateLimit'),
+      actionText: t('board.upgradePlan'),
       onAction: () => {
         window.location.href = '/pricing'
       }
@@ -465,8 +467,8 @@ async function duplicateBoard(id) {
         console.log('🚫 Duplicate limit reached, showing notification...')
         notificationsStore.addNotification({
           type: 'error',
-          message: errorData.error || 'Достигнут лимит на вашем тарифе.',
-          actionText: 'Улучшить тариф',
+          message: errorData.error || t('board.planLimitReached'),
+          actionText: t('board.upgradePlan'),
           onAction: () => {
             window.location.href = '/pricing'
           }
@@ -474,7 +476,7 @@ async function duplicateBoard(id) {
         activeMenu.value = null
         return
       }
-      throw new Error('Ошибка дублирования')
+      throw new Error(t('board.duplicateError'))
     }
 
     const data = await response.json()
@@ -488,7 +490,7 @@ async function duplicateBoard(id) {
 }
 
 async function deleteBoard(id) {
-  if (!confirm('Удалить структуру? Это действие нельзя отменить.')) return
+  if (!confirm(t('board.deleteConfirm'))) return
 
   try {
     const response = await fetch(`${API_URL}/boards/${id}`, {
@@ -498,7 +500,7 @@ async function deleteBoard(id) {
       }
     })
 
-    if (!response.ok) throw new Error('Ошибка удаления')
+    if (!response.ok) throw new Error(t('board.deleteError'))
 
     // Обновляем статистику использования
     await subscriptionStore.refreshUsage()
@@ -518,12 +520,12 @@ function formatDate(dateString) {
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
   
-  if (minutes < 1) return 'только что'
-  if (minutes < 60) return `${minutes} мин. назад`
-  if (hours < 24) return `${hours} ч. назад`
-  if (days === 1) return 'вчера'
-  if (days < 7) return `${days} дн. назад`
-  
+  if (minutes < 1) return t('board.justNow')
+  if (minutes < 60) return t('board.minutesAgo', { n: minutes })
+  if (hours < 24) return t('board.hoursAgo', { n: hours })
+  if (days === 1) return t('board.yesterday')
+  if (days < 7) return t('board.daysAgo', { n: days })
+
   return date.toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'long',
