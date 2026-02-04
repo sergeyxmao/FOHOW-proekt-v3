@@ -1,8 +1,8 @@
 # Card Editor Modal
 
 ## Описание
-Модальное окно для редактирования параметров карточки-лицензии.
-Заменяет кнопки управления (+1, +10, -10, -1, очистка), ранее размещённые на каждой карточке.
+Компактное модальное окно для редактирования параметров карточки-лицензии.
+Появляется поверх карточки (того же размера), заменяет кнопки управления, ранее размещённые на каждой карточке.
 
 ## Расположение файлов
 - Компонент: `src/components/Canvas/CardEditorModal.vue`
@@ -20,11 +20,16 @@
 - Во время редактирования заголовка или PV
 
 ## Функционал
-- Редактирование PV (левое значение, 30–330)
-- Управление балансом L/R через кнопки -10, -1, +1, +10
-- Управление актив-заказами L/R через кнопки -10, -1, +1, +10
-- Очистка всех значений актив-заказов
+- Редактирование PV (числовой input, 30–330)
+- Редактирование баланса L/R (числовые input) + кнопка сброса
+- Редактирование актив-заказов L/R (числовые input) + кнопка сброса
 - Отображение цикла/этапа (только чтение)
+
+## Дизайн
+- Компактный — тот же размер и позиция, что у карточки
+- Позиционирование: `position: fixed` по координатам `getBoundingClientRect()` карточки
+- Заголовок с именем карточки, тело с input-полями
+- Ввод через `<input type="number">` (как PV), без кнопок +1/-1/+10/-10
 
 ## Технические детали
 
@@ -33,41 +38,46 @@
 |------|------|------|------|
 | `card` | Object | да | Объект карточки из cardsStore |
 | `visible` | Boolean | нет (default: false) | Видимость модала |
+| `cardRect` | Object | нет | `{ top, left, width, height }` — координаты карточки на экране |
 
 ### Emits
 | Событие | Payload | Описание |
 |---------|---------|----------|
 | `close` | — | Закрытие модала |
 | `update-pv` | `{ cardId, pv }` | Обновление PV карточки |
-| `update-balance` | `{ cardId, rawText }` | Обновление ручного баланса |
-| `update-active-pv` | `{ cardId, direction, step }` | Изменение Active PV (+1, -10 и т.д.) |
+| `update-balance` | `{ cardId, left, right }` | Установка ручного баланса (абсолютные значения) |
+| `clear-balance` | `{ cardId }` | Сброс ручного баланса |
+| `update-active-pv` | `{ cardId, direction, step }` | Изменение Active PV (дельта от текущего) |
 | `clear-active-pv` | `{ cardId }` | Очистка Active PV |
 
 ### Закрытие
-- Клик на backdrop (за пределами модала)
+- Клик на overlay (за пределами модала)
 - Клавиша `Escape`
-- Кнопка `×` в заголовке
+- Кнопка `x` в заголовке
 
 ### Применение изменений
-Все изменения применяются **мгновенно** — без кнопки "Сохранить".
+Все изменения применяются **мгновенно** при `@change` на input (blur или Enter).
 Анимации (valueIncrease, cardBalanceFlash, line propagation) срабатывают как раньше.
 
 ### Позиционирование
-- `position: fixed` по центру экрана через flexbox
+- `position: fixed` по координатам карточки (`cardRect`)
 - `z-index: 10000` — поверх всех элементов canvas
-- Используется `<Teleport to="body">` для корректного z-index
+- `<Teleport to="body">` для корректного z-index
+- `min-width: 240px` — минимальная ширина для компактных карточек
 
 ## Архитектура обработки событий
 
 ```
 CardEditorModal (emit)
-  ↓
+  |
 CanvasBoard (handler)
-  ├─ handleEditorUpdatePv → cardsStore.updateCard + handlePvChanged (анимация)
-  ├─ handleEditorUpdateBalance → cardsStore.updateCard (ручной баланс)
-  ├─ handleEditorUpdateActivePv → applyActivePvDelta + applyActivePvPropagation
-  └─ handleEditorClearActivePv → applyActivePvClear + applyActivePvPropagation
+  |- handleEditorUpdatePv -> cardsStore.updateCard + handlePvChanged (анимация)
+  |- handleEditorUpdateBalance -> cardsStore.updateCard (balanceManualOverride)
+  |- handleEditorClearBalance -> сброс balanceManualOverride и manualAdjustments
+  |- handleEditorUpdateActivePv -> applyActivePvDelta + applyActivePvPropagation
+  +- handleEditorClearActivePv -> applyActivePvClear + applyActivePvPropagation
 ```
 
 ## История изменений
-- 2025-02-04: Создан компонент для оптимизации производительности (снижение количества DOM-элементов на карточке)
+- 2025-02-04: v2 — компактный дизайн, позиционирование поверх карточки, числовые input вместо кнопок +/-, раздельные кнопки сброса для баланса и актива
+- 2025-02-04: v1 — создан компонент для оптимизации производительности

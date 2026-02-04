@@ -11,6 +11,10 @@ const props = defineProps({
   visible: {
     type: Boolean,
     default: false
+  },
+  cardRect: {
+    type: Object,
+    default: () => ({ top: 100, left: 100, width: 300, height: 300 })
   }
 });
 
@@ -18,15 +22,18 @@ const emit = defineEmits([
   'close',
   'update-pv',
   'update-balance',
+  'clear-balance',
   'update-active-pv',
   'clear-active-pv'
 ]);
 
-// === Computed values from card data ===
+// === Constants ===
 
 const PV_RIGHT_VALUE = 330;
 const MIN_LEFT_PV = 30;
 const MAX_LEFT_PV = 330;
+
+// === Computed values from card data ===
 
 const calculations = computed(() => {
   const source = props.card?.calculated || {};
@@ -54,18 +61,10 @@ const activePvState = computed(() => {
 
   const unitsLeft = Number.isFinite(source?.left) ? Number(source.left) : 0;
   const unitsRight = Number.isFinite(source?.right) ? Number(source.right) : 0;
-  const remainderLeft = Number.isFinite(source?.remainderLeft)
-    ? Number(source.remainderLeft)
-    : manual.left;
-  const remainderRight = Number.isFinite(source?.remainderRight)
-    ? Number(source.remainderRight)
-    : manual.right;
-  const localBalanceLeft = Number.isFinite(localBalanceSource?.left)
-    ? Number(localBalanceSource.left)
-    : 0;
-  const localBalanceRight = Number.isFinite(localBalanceSource?.right)
-    ? Number(localBalanceSource.right)
-    : 0;
+  const remainderLeft = Number.isFinite(source?.remainderLeft) ? Number(source.remainderLeft) : manual.left;
+  const remainderRight = Number.isFinite(source?.remainderRight) ? Number(source.remainderRight) : manual.right;
+  const localBalanceLeft = Number.isFinite(localBalanceSource?.left) ? Number(localBalanceSource.left) : 0;
+  const localBalanceRight = Number.isFinite(localBalanceSource?.right) ? Number(localBalanceSource.right) : 0;
 
   return {
     manual,
@@ -107,22 +106,6 @@ const finalCalculation = computed(() => {
   };
 });
 
-const displayedPvValue = computed(() => {
-  const fallback = `${PV_RIGHT_VALUE}/${PV_RIGHT_VALUE}pv`;
-  const base = typeof props.card.pv === 'string' ? props.card.pv : '';
-  const match = base.match(/^(\s*)(\d{1,3})/);
-  if (!match) return fallback;
-  let left = Number.parseInt(match[2], 10);
-  if (!Number.isFinite(left)) return fallback;
-  left = Math.min(Math.max(left, MIN_LEFT_PV), MAX_LEFT_PV);
-  return `${left}/${PV_RIGHT_VALUE}pv`;
-});
-
-const pvLeftValue = computed(() => {
-  const match = displayedPvValue.value.match(/^(\d+)\//);
-  return match ? match[1] : String(PV_RIGHT_VALUE);
-});
-
 const calculatedBalanceDisplay = computed(() => `${finalCalculation.value.L} / ${finalCalculation.value.R}`);
 
 const manualBalanceOverrideValue = computed(() => {
@@ -134,57 +117,83 @@ const manualBalanceOverrideValue = computed(() => {
   return parsed;
 });
 
-const manualBalanceOverride = computed(() => manualBalanceOverrideValue.value?.formatted ?? null);
-const balanceDisplay = computed(() => manualBalanceOverride.value ?? calculatedBalanceDisplay.value);
+const balanceDisplay = computed(() => manualBalanceOverrideValue.value?.formatted ?? calculatedBalanceDisplay.value);
 
-const activeOrdersDisplay = computed(
-  () => `${activePvState.value.remainder.left} / ${activePvState.value.remainder.right}`
-);
+const balanceL = computed(() => {
+  const parts = balanceDisplay.value.split(' / ');
+  return parseInt(parts[0], 10) || 0;
+});
+
+const balanceR = computed(() => {
+  const parts = balanceDisplay.value.split(' / ');
+  return parseInt(parts[1], 10) || 0;
+});
+
+const pvLeftValue = computed(() => {
+  const base = typeof props.card.pv === 'string' ? props.card.pv : '';
+  const match = base.match(/^(\s*)(\d{1,3})/);
+  if (!match) return PV_RIGHT_VALUE;
+  let left = Number.parseInt(match[2], 10);
+  if (!Number.isFinite(left)) return PV_RIGHT_VALUE;
+  return Math.min(Math.max(left, MIN_LEFT_PV), MAX_LEFT_PV);
+});
+
 const cyclesDisplay = computed(() => finalCalculation.value.cycles);
 const stageDisplay = computed(() => finalCalculation.value.stage);
 
-// === PV editing ===
+// === Modal positioning ===
 
-const handlePvInput = (event) => {
-  const rawValue = event.target.value.trim();
-  let leftNum = Number.parseInt(rawValue, 10);
-  if (!Number.isFinite(leftNum) || leftNum < MIN_LEFT_PV) {
-    leftNum = MIN_LEFT_PV;
-  }
-  if (leftNum > MAX_LEFT_PV) {
-    leftNum = MAX_LEFT_PV;
-  }
-  const newPvValue = `${leftNum}/${PV_RIGHT_VALUE}pv`;
-  if (newPvValue !== props.card.pv) {
-    emit('update-pv', { cardId: props.card.id, pv: newPvValue });
+const modalStyle = computed(() => ({
+  position: 'fixed',
+  top: `${props.cardRect.top}px`,
+  left: `${props.cardRect.left}px`,
+  width: `${props.cardRect.width}px`
+}));
+
+// === PV ===
+
+const handlePvChange = (event) => {
+  let val = parseInt(event.target.value, 10);
+  if (!Number.isFinite(val) || val < MIN_LEFT_PV) val = MIN_LEFT_PV;
+  if (val > MAX_LEFT_PV) val = MAX_LEFT_PV;
+  event.target.value = val;
+  const newPv = `${val}/${PV_RIGHT_VALUE}pv`;
+  if (newPv !== props.card.pv) {
+    emit('update-pv', { cardId: props.card.id, pv: newPv });
   }
 };
 
-// === Active PV button handlers ===
+// === Balance ===
 
-const handleActivePvButton = (direction, step) => {
-  emit('update-active-pv', {
+const handleBalanceChange = (side, event) => {
+  const val = parseInt(event.target.value, 10) || 0;
+  emit('update-balance', {
     cardId: props.card.id,
-    direction,
-    step
+    left: side === 'left' ? val : balanceL.value,
+    right: side === 'right' ? val : balanceR.value
   });
 };
 
-const handleClearAll = () => {
+const handleClearBalance = () => {
+  emit('clear-balance', { cardId: props.card.id });
+};
+
+// === Active PV ===
+
+const handleActiveChange = (direction, event) => {
+  const newVal = parseInt(event.target.value, 10) || 0;
+  const current = direction === 'left' ? activePvManual.value.left : activePvManual.value.right;
+  const delta = newVal - current;
+  if (delta !== 0) {
+    emit('update-active-pv', { cardId: props.card.id, direction, step: delta });
+  }
+};
+
+const handleClearActive = () => {
   emit('clear-active-pv', { cardId: props.card.id });
 };
 
-// === Balance editing ===
-
-const handleBalanceBlur = (event) => {
-  const rawText = event.target.textContent || '';
-  emit('update-balance', {
-    cardId: props.card.id,
-    rawText
-  });
-};
-
-// === Modal close ===
+// === Close ===
 
 const handleBackdropClick = (event) => {
   if (event.target === event.currentTarget) {
@@ -193,119 +202,85 @@ const handleBackdropClick = (event) => {
 };
 
 const handleEscape = (event) => {
-  if (event.key === 'Escape') {
-    emit('close');
-  }
+  if (event.key === 'Escape') emit('close');
 };
 
-onMounted(() => {
-  document.addEventListener('keydown', handleEscape);
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener('keydown', handleEscape);
-});
+onMounted(() => document.addEventListener('keydown', handleEscape));
+onBeforeUnmount(() => document.removeEventListener('keydown', handleEscape));
 </script>
 
 <template>
   <Teleport to="body">
-    <div
-      v-if="visible"
-      class="card-editor-backdrop"
-      @click="handleBackdropClick"
-    >
-      <div class="card-editor-modal" @click.stop>
-        <div class="card-editor-header">
-          <span class="card-editor-title">{{ card.text }}</span>
-          <button class="card-editor-close" @click="emit('close')" title="Закрыть">&times;</button>
+    <div v-if="visible" class="card-editor-overlay" @click="handleBackdropClick">
+      <div class="card-editor" :style="modalStyle" @click.stop>
+        <!-- Header -->
+        <div class="editor-header">
+          <span class="editor-title">{{ card.text }}</span>
+          <button class="editor-close" @click="emit('close')" title="Закрыть">&times;</button>
         </div>
 
-        <div class="card-editor-body">
+        <!-- Body -->
+        <div class="editor-body">
           <!-- PV -->
           <div class="editor-row">
             <span class="editor-label">PV:</span>
-            <div class="editor-pv-group">
-              <input
-                type="number"
-                class="editor-pv-input"
-                :value="pvLeftValue"
-                :min="MIN_LEFT_PV"
-                :max="MAX_LEFT_PV"
-                @change="handlePvInput"
-              />
-              <span class="editor-pv-separator">/ {{ PV_RIGHT_VALUE }}pv</span>
-            </div>
+            <input
+              type="number"
+              class="editor-input"
+              :value="pvLeftValue"
+              :min="MIN_LEFT_PV"
+              :max="MAX_LEFT_PV"
+              @change="handlePvChange"
+            />
+            <span class="editor-hint">/ {{ PV_RIGHT_VALUE }}pv</span>
           </div>
 
           <!-- Balance -->
-          <div class="editor-section">
+          <div class="editor-row">
             <span class="editor-label">Баланс:</span>
-            <div class="editor-control-row">
-              <span class="editor-side-label">L:</span>
-              <div class="editor-btn-group">
-                <button class="editor-btn editor-btn--minus" @click="handleActivePvButton('left', -10)">-10</button>
-                <button class="editor-btn editor-btn--minus" @click="handleActivePvButton('left', -1)">-1</button>
-                <span
-                  class="editor-value"
-                  contenteditable="true"
-                  @blur="handleBalanceBlur"
-                >{{ balanceDisplay.split(' / ')[0] }}</span>
-                <button class="editor-btn editor-btn--plus" @click="handleActivePvButton('left', 1)">+1</button>
-                <button class="editor-btn editor-btn--plus" @click="handleActivePvButton('left', 10)">+10</button>
-              </div>
-            </div>
-            <div class="editor-control-row">
-              <span class="editor-side-label">R:</span>
-              <div class="editor-btn-group">
-                <button class="editor-btn editor-btn--minus" @click="handleActivePvButton('right', -10)">-10</button>
-                <button class="editor-btn editor-btn--minus" @click="handleActivePvButton('right', -1)">-1</button>
-                <span
-                  class="editor-value"
-                  contenteditable="true"
-                  @blur="handleBalanceBlur"
-                >{{ balanceDisplay.split(' / ')[1] }}</span>
-                <button class="editor-btn editor-btn--plus" @click="handleActivePvButton('right', 1)">+1</button>
-                <button class="editor-btn editor-btn--plus" @click="handleActivePvButton('right', 10)">+10</button>
-              </div>
-            </div>
+            <input
+              type="number"
+              class="editor-input"
+              :value="balanceL"
+              :min="automaticBalance.L"
+              @change="handleBalanceChange('left', $event)"
+            />
+            <span class="editor-sep">/</span>
+            <input
+              type="number"
+              class="editor-input"
+              :value="balanceR"
+              :min="automaticBalance.R"
+              @change="handleBalanceChange('right', $event)"
+            />
+            <button class="editor-trash" @click="handleClearBalance" title="Сбросить баланс">🗑️</button>
           </div>
 
           <!-- Active orders -->
-          <div class="editor-section">
-            <span class="editor-label">Актив-заказы:</span>
-            <div class="editor-control-row">
-              <span class="editor-side-label">L:</span>
-              <div class="editor-btn-group">
-                <button class="editor-btn editor-btn--minus" @click="handleActivePvButton('left', -10)">-10</button>
-                <button class="editor-btn editor-btn--minus" @click="handleActivePvButton('left', -1)">-1</button>
-                <span class="editor-value editor-value--readonly">{{ activeOrdersDisplay.split(' / ')[0] }}</span>
-                <button class="editor-btn editor-btn--plus" @click="handleActivePvButton('left', 1)">+1</button>
-                <button class="editor-btn editor-btn--plus" @click="handleActivePvButton('left', 10)">+10</button>
-              </div>
-            </div>
-            <div class="editor-control-row">
-              <span class="editor-side-label">R:</span>
-              <div class="editor-btn-group">
-                <button class="editor-btn editor-btn--minus" @click="handleActivePvButton('right', -10)">-10</button>
-                <button class="editor-btn editor-btn--minus" @click="handleActivePvButton('right', -1)">-1</button>
-                <span class="editor-value editor-value--readonly">{{ activeOrdersDisplay.split(' / ')[1] }}</span>
-                <button class="editor-btn editor-btn--plus" @click="handleActivePvButton('right', 1)">+1</button>
-                <button class="editor-btn editor-btn--plus" @click="handleActivePvButton('right', 10)">+10</button>
-              </div>
-            </div>
+          <div class="editor-row">
+            <span class="editor-label">Актив:</span>
+            <input
+              type="number"
+              class="editor-input"
+              :value="activePvManual.left"
+              :min="0"
+              @change="handleActiveChange('left', $event)"
+            />
+            <span class="editor-sep">/</span>
+            <input
+              type="number"
+              class="editor-input"
+              :value="activePvManual.right"
+              :min="0"
+              @change="handleActiveChange('right', $event)"
+            />
+            <button class="editor-trash" @click="handleClearActive" title="Очистить актив">🗑️</button>
           </div>
 
-          <!-- Clear button -->
-          <div class="editor-clear-row">
-            <button class="editor-btn-clear" @click="handleClearAll">
-              🗑️ Очистить всё
-            </button>
-          </div>
-
-          <!-- Cycle/stage (display only) -->
+          <!-- Cycle/stage -->
           <div class="editor-row">
             <span class="editor-label">Цикл/этап:</span>
-            <span class="editor-value editor-value--readonly">{{ cyclesDisplay }} / {{ stageDisplay }}</span>
+            <span class="editor-readonly">{{ cyclesDisplay }} / {{ stageDisplay }}</span>
           </div>
         </div>
       </div>
@@ -314,245 +289,145 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.card-editor-backdrop {
+.card-editor-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.45);
   z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: rgba(0, 0, 0, 0.12);
 }
 
-.card-editor-modal {
+.card-editor {
+  border-radius: 14px;
   background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
-  width: 480px;
-  max-width: 95vw;
-  max-height: 90vh;
-  overflow-y: auto;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35), 0 20px 40px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-width: 240px;
 }
 
-.card-editor-header {
+.editor-header {
+  padding: 10px 36px 8px 14px;
+  background: linear-gradient(180deg, #58b1ff 0%, #2f7dfd 100%);
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  background: linear-gradient(180deg, #58b1ff 0%, #2f7dfd 100%);
-  border-radius: 16px 16px 0 0;
-  min-height: 48px;
 }
 
-.card-editor-title {
+.editor-title {
   color: #fff;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.3px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.2;
 }
 
-.card-editor-close {
-  width: 30px;
-  height: 30px;
+.editor-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
   border: none;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.25);
   color: #fff;
-  font-size: 20px;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.15s ease;
-  flex-shrink: 0;
 }
 
-.card-editor-close:hover {
+.editor-close:hover {
   background: rgba(0, 0, 0, 0.4);
 }
 
-.card-editor-body {
-  padding: 20px;
+.editor-body {
+  padding: 10px 12px 12px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 7px;
 }
 
 .editor-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.editor-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.editor-label {
-  font-weight: 600;
-  color: #6b7280;
-  font-size: 14px;
-  min-width: 100px;
-  flex-shrink: 0;
-}
-
-.editor-side-label {
-  font-weight: 600;
-  color: #374151;
-  font-size: 14px;
-  min-width: 20px;
-  text-align: right;
-}
-
-.editor-pv-group {
-  display: flex;
-  align-items: center;
   gap: 6px;
 }
 
-.editor-pv-input {
-  width: 72px;
-  padding: 6px 8px;
-  border: 2px solid #3b82f6;
-  border-radius: 6px;
-  background: #fff;
-  color: #111827;
-  font-size: 16px;
+.editor-label {
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 13px;
+  min-width: 65px;
+  flex-shrink: 0;
+}
+
+.editor-input {
+  width: 56px;
+  padding: 3px 4px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: 14px;
   font-weight: 600;
   text-align: center;
+  color: #111827;
   outline: none;
-  transition: box-shadow 0.15s ease;
+  -moz-appearance: textfield;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.editor-pv-input:focus {
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+.editor-input::-webkit-outer-spin-button,
+.editor-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
-.editor-pv-separator {
-  font-size: 16px;
+.editor-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.editor-sep {
+  font-weight: 600;
+  color: #374151;
+  font-size: 13px;
+}
+
+.editor-hint {
   font-weight: 600;
   color: #111827;
+  font-size: 13px;
 }
 
-.editor-control-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-left: 10px;
-}
-
-.editor-btn-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.editor-btn {
-  border: 1px solid rgba(15, 98, 254, 0.25);
-  background: #fff;
-  color: #0f62fe;
-  border-radius: 6px;
-  padding: 4px 8px;
-  min-width: 36px;
-  font-size: 12px;
+.editor-readonly {
   font-weight: 600;
+  color: #111827;
+  font-size: 14px;
+}
+
+.editor-trash {
+  border: none;
+  background: none;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
-  user-select: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 13px;
+  padding: 2px;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+  flex-shrink: 0;
   line-height: 1;
 }
 
-.editor-btn:hover {
-  background: rgba(15, 98, 254, 0.12);
-}
-
-.editor-btn:active {
-  transform: translateY(1px);
-}
-
-.editor-btn--minus {
-  border-color: rgba(220, 53, 69, 0.25);
-  color: #c81e1e;
-}
-
-.editor-btn--minus:hover {
-  background: rgba(220, 53, 69, 0.08);
-}
-
-.editor-btn--plus {
-  border-color: rgba(16, 185, 129, 0.3);
-  color: #047857;
-}
-
-.editor-btn--plus:hover {
-  background: rgba(16, 185, 129, 0.08);
-}
-
-.editor-value {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 48px;
-  padding: 4px 8px;
-  font-weight: 600;
-  font-size: 15px;
-  color: #111827;
-  text-align: center;
-  border-radius: 6px;
-  outline: none;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
-}
-
-.editor-value:not(.editor-value--readonly):focus {
-  background: #fff8dc;
-  box-shadow: 0 0 6px 2px rgba(255, 193, 7, 0.35);
-}
-
-.editor-value--readonly {
-  cursor: default;
-  background: rgba(243, 244, 246, 0.6);
-  border-radius: 6px;
-}
-
-.editor-clear-row {
-  display: flex;
-  justify-content: center;
-  padding: 4px 0;
-}
-
-.editor-btn-clear {
-  background: rgba(220, 53, 69, 0.08);
-  color: #c81e1e;
-  border: 1px solid rgba(220, 53, 69, 0.24);
-  border-radius: 8px;
-  padding: 8px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
-  user-select: none;
-}
-
-.editor-btn-clear:hover {
-  background: rgba(220, 53, 69, 0.14);
-}
-
-.editor-btn-clear:active {
-  transform: translateY(1px);
+.editor-trash:hover {
+  opacity: 1;
 }
 </style>
