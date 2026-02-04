@@ -172,6 +172,8 @@ const startEditing = () => {
 
   isEditing.value = true;
   editText.value = props.card.text;
+  // Слушаем pointerdown (а не mousedown — mousedown может быть подавлен preventDefault на pointerdown)
+  document.addEventListener('pointerdown', handleOutsidePointerDown, true);
   nextTick(() => {
     if (textInput.value) {
       textInput.value.focus();
@@ -190,7 +192,7 @@ const handleTitleDblClick = (event) => {
   }
 };
 
-  
+
 const finishEditing = () => {
   if (isEditing.value) {
     if (editText.value !== props.card.text) {
@@ -198,11 +200,13 @@ const finishEditing = () => {
     }
     isEditing.value = false;
   }
+  document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
 };
 
 const cancelEditing = () => {
   isEditing.value = false;
   editText.value = props.card.text;
+  document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
 };
 
 // ИСПРАВЛЕННАЯ ЛОГИКА РАСЧЁТА БАЛАНСА
@@ -407,7 +411,9 @@ const handleBlur = () => {
 };
 
 // Закрытие редактирования заголовка при клике вне карточки
-const handleOutsideMouseDown = (event) => {
+// Используем pointerdown в capture-фазе на document — он срабатывает раньше всех
+// и не подавляется preventDefault() от дочерних обработчиков
+const handleOutsidePointerDown = (event) => {
   if (!isEditing.value) return;
   const cardEl = event.target.closest(`[data-card-id="${props.card.id}"]`);
   if (!cardEl) {
@@ -415,16 +421,8 @@ const handleOutsideMouseDown = (event) => {
   }
 };
 
-watch(isEditing, (editing) => {
-  if (editing) {
-    document.addEventListener('mousedown', handleOutsideMouseDown, true);
-  } else {
-    document.removeEventListener('mousedown', handleOutsideMouseDown, true);
-  }
-});
-
 onBeforeUnmount(() => {
-  document.removeEventListener('mousedown', handleOutsideMouseDown, true);
+  document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
 });
 
 // Обработчик для удаления карточки
