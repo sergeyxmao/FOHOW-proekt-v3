@@ -2094,49 +2094,85 @@ watch(
 }
 
 /* LOD для больших и золотых карточек */
-.card--lod-medium.card--large .card-body,
-.card--lod-medium.card--gold .card-body,
-.card--lod-low.card--large .card-body,
-.card--lod-low.card--gold .card-body,
-.card--lod-minimal.card--large .card-body,
-.card--lod-minimal.card--gold .card-body {
-  justify-content: center;
-  align-items: center;
-  gap: 2px;
-}
 
+/* Скрыть PV строку на больших/золотых при LOD medium и ниже */
 .card--lod-medium.card--large .pv-row,
-.card--lod-medium.card--gold .pv-row {
-  font-size: 1.8em;
-  font-weight: 700;
-}
-
-.card--lod-medium.card--large .card-row .value,
-.card--lod-medium.card--gold .card-row .value {
-  font-size: 1.5em;
-  font-weight: 700;
-}
-
+.card--lod-medium.card--gold .pv-row,
 .card--lod-low.card--large .pv-row,
 .card--lod-low.card--gold .pv-row,
 .card--lod-minimal.card--large .pv-row,
 .card--lod-minimal.card--gold .pv-row {
-  font-size: 2.2em;
-  font-weight: 800;
+  display: none !important;
+}
+
+/* Medium (≤50%): большие/золотые — центрирование и увеличение текста */
+.card--lod-medium.card--large .card-body,
+.card--lod-medium.card--gold .card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 20px;
+  gap: 2px;
+}
+
+.card--lod-medium.card--large .card-row,
+.card--lod-medium.card--gold .card-row {
+  font-size: 1.6em;
+  text-align: center;
+}
+
+.card--lod-medium.card--large .card-row .value,
+.card--lod-medium.card--gold .card-row .value {
+  font-size: 1.3em;
+  font-weight: 700;
+}
+
+/* Low (≤30%): большие/золотые — ещё больше текст */
+.card--lod-low.card--large .card-body,
+.card--lod-low.card--gold .card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 15px;
+  gap: 2px;
+}
+
+.card--lod-low.card--large .card-row,
+.card--lod-low.card--gold .card-row {
+  font-size: 1.8em;
+  text-align: center;
 }
 
 .card--lod-low.card--large .card-row .value,
-.card--lod-low.card--gold .card-row .value,
-.card--lod-minimal.card--large .card-row .value,
-.card--lod-minimal.card--gold .card-row .value {
-  font-size: 1.8em;
+.card--lod-low.card--gold .card-row .value {
+  font-size: 1.4em;
   font-weight: 800;
 }
 
-/* Сброс padding-left для больших карточек при скрытом аватаре (minimal) */
+/* Minimal (≤15%): большие/золотые — максимум */
 .card--lod-minimal.card--large .card-body,
 .card--lod-minimal.card--gold .card-body {
-  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  padding-left: 20px; /* сброс padding-left — аватар скрыт */
+  gap: 2px;
+}
+
+.card--lod-minimal.card--large .card-row,
+.card--lod-minimal.card--gold .card-row {
+  font-size: 2.0em;
+  text-align: center;
+}
+
+.card--lod-minimal.card--large .card-row .value,
+.card--lod-minimal.card--gold .card-row .value {
+  font-size: 1.5em;
+  font-weight: 900;
 }
 
 /* =========================
