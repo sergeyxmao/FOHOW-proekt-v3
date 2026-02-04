@@ -10,6 +10,9 @@ import { buildCardCssVariables } from '../../utils/constants';
 // Inject isReadOnly from parent (CanvasBoard)
 const isReadOnly = inject('isReadOnly', ref(false));
 
+// Inject zoomScale from parent (CanvasBoard) for LOD system
+const zoomScale = inject('zoomScale', ref(1));
+
 const props = defineProps({
   card: {
     type: Object,
@@ -58,6 +61,81 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 // Вычисляемое свойство для проверки, является ли карточка большой
 const isLargeCard = computed(() => {
   return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 543.4;
+});
+
+// LOD (Level of Detail) на основе масштаба
+const lodLevel = computed(() => {
+  const scale = zoomScale.value;
+  if (scale <= 0.10) return 'ultra-minimal'; // ≤10% - только заголовок
+  if (scale <= 0.15) return 'minimal';   // ≤15%
+  if (scale <= 0.30) return 'low';       // ≤30%
+  if (scale <= 0.50) return 'medium';    // ≤50%
+  return 'full';                          // >50%
+});
+
+// Computed для видимости элементов на основе LOD
+const showNoteButton = computed(() => lodLevel.value === 'full');
+const showPvButtons = computed(() => lodLevel.value === 'full' && !isLargeCard.value);
+const showCycleStage = computed(() => lodLevel.value === 'full');
+const showAvatar = computed(() => lodLevel.value !== 'minimal' && lodLevel.value !== 'ultra-minimal');
+const enableAnimations = computed(() => lodLevel.value !== 'low' && lodLevel.value !== 'minimal' && lodLevel.value !== 'ultra-minimal');
+const showLabels = computed(() => lodLevel.value === 'full' || lodLevel.value === 'medium');
+const showCardBody = computed(() => lodLevel.value !== 'ultra-minimal');
+
+// Сокращённый заголовок для ultra-minimal режима
+// RUY68240926666 → RUY68, Дортман Елена RUY68240926666 → Дортман Елена RUY68
+const shortTitle = computed(() => {
+  const text = props.card?.text || '';
+  if (lodLevel.value !== 'ultra-minimal') return text;
+
+  // Регулярка: 2-4 заглавные латинские буквы + 11-14 цифр подряд
+  const partnerIdRegex = /([A-Z]{2,4})(\d{11,14})/g;
+  let shortened = text.replace(partnerIdRegex, (_match, letters, digits) => {
+    const shortDigits = digits.substring(0, digits.length <= 12 ? 2 : 3);
+    return letters + shortDigits;
+  });
+
+  return shortened.trim();
+});
+
+// Авто-подгонка размера шрифта заголовка под размер карточки (ultra-minimal)
+// word-spacing: 100vw в CSS делает каждое слово отдельной строкой
+const titleAutoFitStyle = computed(() => {
+  if (lodLevel.value !== 'ultra-minimal') return {};
+
+  const text = shortTitle.value || '';
+  if (!text) return {};
+
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  if (words.length === 0) return {};
+
+  // Размеры карточки
+  const cardWidth = isLargeCard.value ? 380 : 180;
+  const cardHeight = isLargeCard.value ? 180 : 100;
+
+  // Увеличенный зазор для больших карточек
+  const padding = isLargeCard.value ? 32 : 24;
+
+  // Самое длинное слово
+  const maxWordLength = Math.max(...words.map(w => w.length));
+
+  // Коэффициент ширины символа (увеличен для кириллицы и широких символов)
+  const charWidthRatio = 0.7;
+
+  // Расчёт размера по ширине и высоте
+  const availableWidth = cardWidth - padding;
+  const availableHeight = cardHeight - padding;
+
+  const fontByWidth = availableWidth / (maxWordLength * charWidthRatio);
+  const fontByHeight = availableHeight / words.length;
+
+  // Берём меньшее значение с запасом 90%
+  const fontSize = Math.min(fontByWidth, fontByHeight) * 0.9;
+
+  // Минимум и максимум
+  const finalSize = Math.max(16, Math.min(fontSize, 120));
+
+  return { fontSize: `${finalSize}px` };
 });
 
 // Проверка наличия заметок из store
@@ -892,7 +970,13 @@ watch(
       'card--large': isLargeCard,
       'card--gold': card.type === 'gold',
       'note-active': isNoteVisible,
-      'highlighted': card.highlighted
+      'highlighted': card.highlighted,
+      'card--lod-medium': lodLevel === 'medium',
+      'card--lod-low': lodLevel === 'low',
+      'card--lod-minimal': lodLevel === 'minimal',
+      'card--lod-ultra-minimal': lodLevel === 'ultra-minimal',
+      'card--hide-labels': !showLabels,
+      'card--no-animations': !enableAnimations
     }"
     :style="cardStyle"
     @click="handleCardClick"
@@ -915,9 +999,10 @@ watch(
       <div
         v-else
         class="card-title"
+        :style="titleAutoFitStyle"
         :title="isSelected ? 'Двойной клик для редактирования' : ''"
         @dblclick.stop="handleTitleDblClick"      >
-        {{ card.text }}
+        {{ shortTitle }}
       </div>
       
       <!-- Кнопка закрытия -->
@@ -931,9 +1016,9 @@ watch(
     </div>
     
     <!-- Содержимое карточки -->
-    <div class="card-body">
-      <!-- Аватар пользователя (только для больших и Gold карточек) -->
-      <div v-if="isLargeCard" class="card-avatar-container">
+    <div v-if="showCardBody" class="card-body">
+      <!-- Аватар пользователя (только для больших и Gold карточек, скрывается при LOD minimal) -->
+      <div v-if="isLargeCard && showAvatar" class="card-avatar-container">
         <div
           v-if="avatarData.avatar_url"
           class="card-avatar"
@@ -1005,7 +1090,7 @@ watch(
       </div>
       
       <div class="card-row">
-        <span class="label">Баланс:</span>
+        <span v-if="showLabels" class="label">Баланс:</span>
         <span
           class="value value-container"
 
@@ -1037,7 +1122,7 @@ watch(
 
       <div class="card-row">
 
-        <span class="label">Актив-заказы:</span>
+        <span v-if="showLabels" class="label">Актив-заказы:</span>
 
         <span class="value value-container">
 
@@ -1056,7 +1141,8 @@ watch(
         </span>
       </div>
 
-      <div class="card-active-controls" data-role="active-pv-buttons">
+      <!-- LOD: Скрыть кнопки PV при масштабе ≤50% для маленьких карточек -->
+      <div v-if="showPvButtons" class="card-active-controls" data-role="active-pv-buttons">
         <div class="active-pv-controls__group">
           <button type="button" class="active-pv-btn" data-dir="left" data-step="1">+1</button>
           <button type="button" class="active-pv-btn" data-dir="left" data-step="10">+10</button>
@@ -1080,7 +1166,8 @@ watch(
         </div>
       </div>
 
-      <div class="card-row">
+      <!-- LOD: Скрыть цикл/этап при масштабе ≤50% -->
+      <div v-if="showCycleStage" class="card-row">
         <span class="label">Цикл/этап:</span>
         <span class="value">{{ cyclesDisplay }} / {{ stageDisplay }}</span>
       </div>
@@ -1092,7 +1179,8 @@ watch(
       ></div>
     </div>
 
-    <div class="card-controls">
+    <!-- LOD: Скрыть кнопку заметки при масштабе ≤50% -->
+    <div v-if="showNoteButton" class="card-controls">
       <button
         :class="noteButtonClasses"
         type="button"
@@ -1105,7 +1193,7 @@ watch(
           class="card-note-btn__indicator"
           :style="{ backgroundColor: noteIndicatorColor }"
           aria-hidden="true"
-        ></span>        
+        ></span>
       </button>
     </div>    
     <!-- Значки -->
@@ -1905,22 +1993,31 @@ watch(
   display: none !important;
 }
 
+/* Скрыть PV строку на больших/золотых при ЛЮБОМ масштабе */
+.card--large .pv-row,
+.card--gold .pv-row {
+  display: none !important;
+}
+
 /* Увеличение шрифта и центрирование строк для больших и Gold карточек */
 .card--large .card-row,
 .card--gold .card-row {
-  font-size: 18px; /* Увеличиваем размер шрифта с базового значения */
-  line-height: 1.6; /* Увеличиваем межстрочный интервал для лучшей читаемости */
-  justify-content: center; /* Центрируем содержимое по горизонтали */
-  text-align: center; /* Центрируем текст */
+  font-size: 31px;
+  font-weight: 700;
+  line-height: 1.6;
+  justify-content: center;
+  text-align: center;
 }
 
 /* Центрирование содержимого карточки по вертикали */
+/* Контент центрируется между правым краем аватарки и правым краем карточки */
 .card--large .card-body,
 .card--gold .card-body {
   display: flex;
   flex-direction: column;
   justify-content: center; /* Центрируем по вертикали */
   height: 100%; /* Занимаем всю доступную высоту */
+  padding-left: 180px; /* Смещаем контент правее аватарки */
 }
 
 /* Увеличиваем размер шрифта для лейблов и значений */
@@ -1928,7 +2025,8 @@ watch(
 .card--gold .card-row .label,
 .card--large .card-row .value,
 .card--gold .card-row .value {
-  font-size: 18px; /* Применяем увеличенный размер к обеим частям строки */
+  font-size: 31px;
+  font-weight: 700;
 }
 
 /* Print Styles - Скрываем кнопки управления при печати */
@@ -1962,5 +2060,208 @@ watch(
     transform: none !important;
     filter: none !important;
   }
+}
+
+/* ========================================
+   LOD (Level of Detail) Стили
+   Адаптивный рендеринг при разных масштабах
+   ======================================== */
+
+/* LOD: Отключение анимаций при малом масштабе (≤30%) */
+.card--no-animations,
+.card--no-animations * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* LOD Medium (≤50%): Маленькие карточки — увеличенный текст */
+.card--lod-medium:not(.card--large):not(.card--gold) .card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px 15px;
+  gap: 1px;
+}
+.card--lod-medium:not(.card--large):not(.card--gold) .pv-row {
+  font-size: 2.2em;
+  font-weight: 700;
+}
+.card--lod-medium:not(.card--large):not(.card--gold) .card-row {
+  font-size: 1.8em;
+}
+.card--lod-medium:not(.card--large):not(.card--gold) .card-row .label {
+  font-size: 0.85em;
+}
+.card--lod-medium:not(.card--large):not(.card--gold) .card-row .value {
+  font-size: 1.4em;
+  font-weight: 800;
+}
+
+/* LOD Low (≤30%): Маленькие карточки — только цифры, центрирование */
+.card--lod-low:not(.card--large):not(.card--gold) .card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px 10px;
+  gap: 0;
+}
+.card--lod-low:not(.card--large):not(.card--gold) .pv-row {
+  font-size: 2.6em;
+  font-weight: 800;
+}
+.card--lod-low:not(.card--large):not(.card--gold) .card-row {
+  font-size: 2.0em;
+  text-align: center;
+}
+.card--lod-low:not(.card--large):not(.card--gold) .card-row .value {
+  font-size: 1.5em;
+  font-weight: 900;
+}
+
+/* LOD Minimal (≤15%): Маленькие карточки */
+.card--lod-minimal:not(.card--large):not(.card--gold) .card-body {
+  padding: 2px 4px 12px;
+  gap: 0;
+}
+.card--lod-minimal:not(.card--large):not(.card--gold) .pv-row {
+  font-size: 2.8em;
+  font-weight: 900;
+}
+.card--lod-minimal:not(.card--large):not(.card--gold) .card-row {
+  font-size: 2.0em;
+}
+.card--lod-minimal:not(.card--large):not(.card--gold) .card-row .value {
+  font-size: 1.5em;
+  font-weight: 900;
+}
+
+/* LOD Minimal: Скрыть аватар на больших карточках */
+.card--lod-minimal .card-avatar-container {
+  display: none !important;
+}
+
+/* LOD для больших и золотых карточек */
+
+/* Medium (≤50%): большие/золотые — центрирование и увеличение текста */
+/* padding-left: 180px сохраняется — аватарка видна, контент справа от неё */
+.card--lod-medium.card--large .card-body,
+.card--lod-medium.card--gold .card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 20px 15px 180px;
+  gap: 2px;
+}
+
+.card--lod-medium.card--large .card-row,
+.card--lod-medium.card--gold .card-row {
+  font-size: 1.6em;
+  text-align: center;
+}
+
+.card--lod-medium.card--large .card-row .value,
+.card--lod-medium.card--gold .card-row .value {
+  font-size: 1.3em;
+  font-weight: 700;
+}
+
+/* Low (≤30%): большие/золотые — ещё больше текст */
+/* padding-left: 180px сохраняется — аватарка видна */
+.card--lod-low.card--large .card-body,
+.card--lod-low.card--gold .card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 15px 10px 180px;
+  gap: 2px;
+}
+
+.card--lod-low.card--large .card-row,
+.card--lod-low.card--gold .card-row {
+  font-size: 1.8em;
+  text-align: center;
+}
+
+.card--lod-low.card--large .card-row .value,
+.card--lod-low.card--gold .card-row .value {
+  font-size: 1.4em;
+  font-weight: 800;
+}
+
+/* Minimal (≤15%): большие/золотые — максимум */
+.card--lod-minimal.card--large .card-body,
+.card--lod-minimal.card--gold .card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  padding-left: 20px; /* сброс padding-left — аватар скрыт */
+  gap: 2px;
+}
+
+.card--lod-minimal.card--large .card-row,
+.card--lod-minimal.card--gold .card-row {
+  font-size: 2.0em;
+  text-align: center;
+}
+
+.card--lod-minimal.card--large .card-row .value,
+.card--lod-minimal.card--gold .card-row .value {
+  font-size: 1.5em;
+  font-weight: 900;
+}
+
+/* =========================
+   Скрыть labels при LOD low и ниже
+   ========================= */
+.card--hide-labels .card-row .label {
+  display: none !important;
+}
+
+/* =========================
+   LOD Ultra-Minimal (≤10%) — только заголовок
+   ========================= */
+.card--lod-ultra-minimal {
+  overflow: hidden;
+}
+
+.card--lod-ultra-minimal .card-header {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  min-height: unset;
+  flex: 1 1 auto;
+  padding: 8px;
+}
+
+.card--lod-ultra-minimal .card-title {
+  text-align: center;
+  /* font-size задаётся динамически через titleAutoFitStyle (inline) */
+  font-weight: 900;
+  line-height: 0.95;
+  word-spacing: 100vw; /* Каждое слово на новой строке */
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.card--lod-ultra-minimal .card-close-btn {
+  display: none !important;
+}
+
+.card--lod-ultra-minimal .card-controls {
+  display: none !important;
+}
+
+/* Большие/золотые карточки в ultra-minimal — скрыть аватар */
+.card--lod-ultra-minimal.card--large .card-avatar-container,
+.card--lod-ultra-minimal.card--gold .card-avatar-container {
+  display: none !important;
 }
 </style>
