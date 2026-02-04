@@ -66,6 +66,7 @@ const isLargeCard = computed(() => {
 // LOD (Level of Detail) на основе масштаба
 const lodLevel = computed(() => {
   const scale = zoomScale.value;
+  if (scale <= 0.10) return 'ultra-minimal'; // ≤10% - только заголовок
   if (scale <= 0.15) return 'minimal';   // ≤15%
   if (scale <= 0.30) return 'low';       // ≤30%
   if (scale <= 0.50) return 'medium';    // ≤50%
@@ -76,8 +77,10 @@ const lodLevel = computed(() => {
 const showNoteButton = computed(() => lodLevel.value === 'full');
 const showPvButtons = computed(() => lodLevel.value === 'full' && !isLargeCard.value);
 const showCycleStage = computed(() => lodLevel.value === 'full');
-const showAvatar = computed(() => lodLevel.value !== 'minimal');
-const enableAnimations = computed(() => lodLevel.value !== 'low' && lodLevel.value !== 'minimal');
+const showAvatar = computed(() => lodLevel.value !== 'minimal' && lodLevel.value !== 'ultra-minimal');
+const enableAnimations = computed(() => lodLevel.value !== 'low' && lodLevel.value !== 'minimal' && lodLevel.value !== 'ultra-minimal');
+const showLabels = computed(() => lodLevel.value === 'full' || lodLevel.value === 'medium');
+const showCardBody = computed(() => lodLevel.value !== 'ultra-minimal');
 
 // Проверка наличия заметок из store
 const hasNotes = computed(() => {
@@ -915,6 +918,8 @@ watch(
       'card--lod-medium': lodLevel === 'medium',
       'card--lod-low': lodLevel === 'low',
       'card--lod-minimal': lodLevel === 'minimal',
+      'card--lod-ultra-minimal': lodLevel === 'ultra-minimal',
+      'card--hide-labels': !showLabels,
       'card--no-animations': !enableAnimations
     }"
     :style="cardStyle"
@@ -954,7 +959,7 @@ watch(
     </div>
     
     <!-- Содержимое карточки -->
-    <div class="card-body">
+    <div v-if="showCardBody" class="card-body">
       <!-- Аватар пользователя (только для больших и Gold карточек, скрывается при LOD minimal) -->
       <div v-if="isLargeCard && showAvatar" class="card-avatar-container">
         <div
@@ -1028,7 +1033,7 @@ watch(
       </div>
       
       <div class="card-row">
-        <span class="label">Баланс:</span>
+        <span v-if="showLabels" class="label">Баланс:</span>
         <span
           class="value value-container"
 
@@ -1060,7 +1065,7 @@ watch(
 
       <div class="card-row">
 
-        <span class="label">Актив-заказы:</span>
+        <span v-if="showLabels" class="label">Актив-заказы:</span>
 
         <span class="value value-container">
 
@@ -1941,12 +1946,14 @@ watch(
 }
 
 /* Центрирование содержимого карточки по вертикали */
+/* Контент центрируется между правым краем аватарки и правым краем карточки */
 .card--large .card-body,
 .card--gold .card-body {
   display: flex;
   flex-direction: column;
   justify-content: center; /* Центрируем по вертикали */
   height: 100%; /* Занимаем всю доступную высоту */
+  padding-left: 180px; /* Смещаем контент правее аватарки */
 }
 
 /* Увеличиваем размер шрифта для лейблов и значений */
@@ -2002,44 +2009,49 @@ watch(
   animation: none !important;
 }
 
-/* LOD Medium (≤50%): Маленькие карточки */
+/* LOD Medium (≤50%): Маленькие карточки — увеличенный текст */
 .card--lod-medium:not(.card--large):not(.card--gold) .card-body {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4px 6px 20px;
-  gap: 2px;
+  padding: 2px 4px 15px;
+  gap: 1px;
 }
 .card--lod-medium:not(.card--large):not(.card--gold) .pv-row {
-  font-size: 2.0em;
+  font-size: 2.2em;
   font-weight: 700;
 }
 .card--lod-medium:not(.card--large):not(.card--gold) .card-row {
-  font-size: 1.6em;
+  font-size: 1.8em;
 }
 .card--lod-medium:not(.card--large):not(.card--gold) .card-row .label {
   font-size: 0.85em;
 }
 .card--lod-medium:not(.card--large):not(.card--gold) .card-row .value {
-  font-size: 1.3em;
+  font-size: 1.4em;
   font-weight: 800;
 }
 
-/* LOD Low (≤30%): Маленькие карточки */
+/* LOD Low (≤30%): Маленькие карточки — только цифры, центрирование */
 .card--lod-low:not(.card--large):not(.card--gold) .card-body {
-  padding: 2px 4px 15px;
-  gap: 1px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px 10px;
+  gap: 0;
 }
 .card--lod-low:not(.card--large):not(.card--gold) .pv-row {
-  font-size: 2.4em;
+  font-size: 2.6em;
   font-weight: 800;
 }
 .card--lod-low:not(.card--large):not(.card--gold) .card-row {
-  font-size: 1.8em;
+  font-size: 2.0em;
+  text-align: center;
 }
 .card--lod-low:not(.card--large):not(.card--gold) .card-row .value {
-  font-size: 1.4em;
+  font-size: 1.5em;
   font-weight: 900;
 }
 
@@ -2103,5 +2115,55 @@ watch(
 .card--lod-minimal.card--gold .card-row .value {
   font-size: 1.8em;
   font-weight: 800;
+}
+
+/* Сброс padding-left для больших карточек при скрытом аватаре (minimal) */
+.card--lod-minimal.card--large .card-body,
+.card--lod-minimal.card--gold .card-body {
+  padding-left: 20px;
+}
+
+/* =========================
+   Скрыть labels при LOD low и ниже
+   ========================= */
+.card--hide-labels .card-row .label {
+  display: none !important;
+}
+
+/* =========================
+   LOD Ultra-Minimal (≤10%) — только заголовок
+   ========================= */
+.card--lod-ultra-minimal {
+  overflow: hidden;
+}
+
+.card--lod-ultra-minimal .card-header {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  min-height: unset;
+  flex: 1 1 auto;
+}
+
+.card--lod-ultra-minimal .card-title {
+  text-align: center;
+  font-size: 1.2em;
+  font-weight: 700;
+}
+
+.card--lod-ultra-minimal .card-close-btn {
+  display: none !important;
+}
+
+.card--lod-ultra-minimal .card-controls {
+  display: none !important;
+}
+
+/* Большие/золотые карточки в ultra-minimal — скрыть аватар */
+.card--lod-ultra-minimal.card--large .card-avatar-container,
+.card--lod-ultra-minimal.card--gold .card-avatar-container {
+  display: none !important;
 }
 </style>
