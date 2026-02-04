@@ -831,6 +831,42 @@ const handleBodyDblClick = (event) => {
   emit('open-editor', props.card.id);
 };
 
+// === Double-tap для мобильных (touch не генерирует dblclick) ===
+const DOUBLE_TAP_MS = 300;
+
+let lastTitleTapTime = 0;
+const handleTitleTouchEnd = (event) => {
+  const now = Date.now();
+  if (now - lastTitleTapTime < DOUBLE_TAP_MS) {
+    event.preventDefault();
+    event.stopPropagation();
+    lastTitleTapTime = 0;
+    if (isReadOnly.value) return;
+    if (!isEditing.value) {
+      startEditing();
+    }
+  } else {
+    lastTitleTapTime = now;
+  }
+};
+
+let lastBodyTapTime = 0;
+const handleBodyTouchEnd = (event) => {
+  if (event.target.closest('.coin-icon') || event.target.closest('.card-note-btn') || event.target.closest('.card-close-btn') || event.target.closest('.card-header')) return;
+  if (isEditing.value || isEditingPv.value) return;
+  if (isReadOnly.value) return;
+
+  const now = Date.now();
+  if (now - lastBodyTapTime < DOUBLE_TAP_MS) {
+    event.preventDefault();
+    event.stopPropagation();
+    lastBodyTapTime = 0;
+    emit('open-editor', props.card.id);
+  } else {
+    lastBodyTapTime = now;
+  }
+};
+
 // Функции для работы с аватаром
 import { useAuthStore } from '../../stores/auth';
 
@@ -949,7 +985,9 @@ watch(
         v-else
         class="card-title"
         :title="isSelected ? 'Двойной клик для редактирования' : ''"
-        @dblclick.stop="handleTitleDblClick"      >
+        @dblclick.stop="handleTitleDblClick"
+        @touchend.stop="handleTitleTouchEnd"
+      >
         {{ card.text }}
       </div>
       
@@ -964,7 +1002,7 @@ watch(
     </div>
     
     <!-- Содержимое карточки -->
-    <div class="card-body" @dblclick="handleBodyDblClick">
+    <div class="card-body" @dblclick="handleBodyDblClick" @touchend="handleBodyTouchEnd">
       <!-- Аватар пользователя (только для больших и Gold карточек) -->
       <div v-if="isLargeCard" class="card-avatar-container">
         <div
