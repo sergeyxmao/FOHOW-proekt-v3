@@ -82,6 +82,22 @@ const enableAnimations = computed(() => lodLevel.value !== 'low' && lodLevel.val
 const showLabels = computed(() => lodLevel.value === 'full' || lodLevel.value === 'medium');
 const showCardBody = computed(() => lodLevel.value !== 'ultra-minimal');
 
+// Сокращённый заголовок для ultra-minimal режима
+// RUY68240926666 → RUY68, Дортман Елена RUY68240926666 → Дортман Елена RUY68
+const shortTitle = computed(() => {
+  const text = props.card?.text || '';
+  if (lodLevel.value !== 'ultra-minimal') return text;
+
+  // Регулярка: 2-4 заглавные латинские буквы + 11-14 цифр подряд
+  const partnerIdRegex = /([A-Z]{2,4})(\d{11,14})/g;
+  let shortened = text.replace(partnerIdRegex, (_match, letters, digits) => {
+    const shortDigits = digits.substring(0, digits.length <= 12 ? 2 : 3);
+    return letters + shortDigits;
+  });
+
+  return shortened.trim();
+});
+
 // Проверка наличия заметок из store
 const hasNotes = computed(() => {
   const cardNotes = notesStore.getNotesForCard(props.card.id);
@@ -945,7 +961,7 @@ watch(
         class="card-title"
         :title="isSelected ? 'Двойной клик для редактирования' : ''"
         @dblclick.stop="handleTitleDblClick"      >
-        {{ card.text }}
+        {{ shortTitle }}
       </div>
       
       <!-- Кнопка закрытия -->
@@ -2145,12 +2161,30 @@ watch(
   border-radius: 8px;
   min-height: unset;
   flex: 1 1 auto;
+  padding: 4px;
 }
 
 .card--lod-ultra-minimal .card-title {
   text-align: center;
-  font-size: 1.2em;
-  font-weight: 700;
+  font-size: 1.4em;
+  font-weight: 800;
+  line-height: 1.1;
+  word-break: break-word;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Маленькие карточки в ultra-minimal — ещё крупнее шрифт */
+.card--lod-ultra-minimal:not(.card--large):not(.card--gold) .card-title {
+  font-size: 1.6em;
+}
+
+/* Большие/золотые карточки в ultra-minimal */
+.card--lod-ultra-minimal.card--large .card-title,
+.card--lod-ultra-minimal.card--gold .card-title {
+  font-size: 1.3em;
 }
 
 .card--lod-ultra-minimal .card-close-btn {
