@@ -2002,10 +2002,11 @@ watch(
 /* Увеличение шрифта и центрирование строк для больших и Gold карточек */
 .card--large .card-row,
 .card--gold .card-row {
-  font-size: 18px; /* Увеличиваем размер шрифта с базового значения */
-  line-height: 1.6; /* Увеличиваем межстрочный интервал для лучшей читаемости */
-  justify-content: center; /* Центрируем содержимое по горизонтали */
-  text-align: center; /* Центрируем текст */
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.6;
+  justify-content: center;
+  text-align: center;
 }
 
 /* Центрирование содержимого карточки по вертикали */
@@ -2024,7 +2025,8 @@ watch(
 .card--gold .card-row .label,
 .card--large .card-row .value,
 .card--gold .card-row .value {
-  font-size: 18px; /* Применяем увеличенный размер к обеим частям строки */
+  font-size: 24px;
+  font-weight: 700;
 }
 
 /* Print Styles - Скрываем кнопки управления при печати */
