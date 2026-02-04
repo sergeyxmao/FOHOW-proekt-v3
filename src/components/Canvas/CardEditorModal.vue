@@ -178,15 +178,14 @@ const handleClearBalance = () => {
   emit('clear-balance', { cardId: props.card.id });
 };
 
-// === Active PV ===
+// === Active PV (фиксированные шаги, идентично main) ===
 
-const handleActiveChange = (direction, event) => {
-  const newVal = parseInt(event.target.value, 10) || 0;
-  const current = direction === 'left' ? activePvManual.value.left : activePvManual.value.right;
-  const delta = newVal - current;
-  if (delta !== 0) {
-    emit('update-active-pv', { cardId: props.card.id, direction, step: delta });
-  }
+const activeOrdersDisplay = computed(
+  () => `${activePvState.value.remainder.left} / ${activePvState.value.remainder.right}`
+);
+
+const handleActiveStep = (direction, step) => {
+  emit('update-active-pv', { cardId: props.card.id, direction, step });
 };
 
 const handleClearActive = () => {
@@ -256,25 +255,30 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleEscape));
             <button class="editor-trash" @click="handleClearBalance" title="Сбросить баланс">🗑️</button>
           </div>
 
-          <!-- Active orders -->
+          <!-- Active orders (кнопки +1/+10/-1/-10, идентично main) -->
           <div class="editor-row">
             <span class="editor-label">Актив:</span>
-            <input
-              type="number"
-              class="editor-input"
-              :value="activePvManual.left"
-              :min="0"
-              @change="handleActiveChange('left', $event)"
-            />
-            <span class="editor-sep">/</span>
-            <input
-              type="number"
-              class="editor-input"
-              :value="activePvManual.right"
-              :min="0"
-              @change="handleActiveChange('right', $event)"
-            />
-            <button class="editor-trash" @click="handleClearActive" title="Очистить актив">🗑️</button>
+            <span class="editor-readonly">{{ activeOrdersDisplay }}</span>
+          </div>
+          <div class="editor-active-controls">
+            <div class="active-pv-controls__group">
+              <button type="button" class="active-pv-btn" @click="handleActiveStep('left', 1)">+1</button>
+              <button type="button" class="active-pv-btn" @click="handleActiveStep('left', 10)">+10</button>
+              <button type="button" class="active-pv-btn" @click="handleActiveStep('left', -10)">-10</button>
+              <button type="button" class="active-pv-btn" @click="handleActiveStep('left', -1)">-1</button>
+            </div>
+            <button
+              type="button"
+              class="active-pv-btn active-pv-btn--clear"
+              @click="handleClearActive"
+              title="Очистить обе ветки"
+            >🗑️</button>
+            <div class="active-pv-controls__group">
+              <button type="button" class="active-pv-btn" @click="handleActiveStep('right', -1)">-1</button>
+              <button type="button" class="active-pv-btn" @click="handleActiveStep('right', -10)">-10</button>
+              <button type="button" class="active-pv-btn" @click="handleActiveStep('right', 10)">+10</button>
+              <button type="button" class="active-pv-btn" @click="handleActiveStep('right', 1)">+1</button>
+            </div>
           </div>
 
           <!-- Cycle/stage -->
@@ -429,5 +433,60 @@ onBeforeUnmount(() => document.removeEventListener('keydown', handleEscape));
 
 .editor-trash:hover {
   opacity: 1;
+}
+
+/* Active PV controls (идентично стилям из Card.vue main) */
+.editor-active-controls {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  padding: 2px 0 4px;
+}
+
+.active-pv-controls__group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.active-pv-btn {
+  border: 1px solid rgba(15, 98, 254, 0.25);
+  background: #fff;
+  color: #0f62fe;
+  border-radius: 6px;
+  padding: 3px 6px;
+  min-width: 32px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.active-pv-btn:hover {
+  background: rgba(15, 98, 254, 0.12);
+}
+
+.active-pv-btn:active {
+  transform: translateY(1px);
+}
+
+.active-pv-btn--clear {
+  background: rgba(220, 53, 69, 0.08);
+  color: #c81e1e;
+  border-color: rgba(220, 53, 69, 0.24);
+  min-width: 32px;
+}
+
+.active-pv-btn--clear:hover {
+  background: rgba(220, 53, 69, 0.14);
 }
 </style>
