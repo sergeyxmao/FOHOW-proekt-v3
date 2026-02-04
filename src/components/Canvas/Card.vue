@@ -10,6 +10,9 @@ import { buildCardCssVariables } from '../../utils/constants';
 // Inject isReadOnly from parent (CanvasBoard)
 const isReadOnly = inject('isReadOnly', ref(false));
 
+// Inject zoomScale для LOD системы
+const zoomScale = inject('zoomScale', ref(1));
+
 const props = defineProps({
   card: {
     type: Object,
@@ -58,6 +61,59 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 // Вычисляемое свойство для проверки, является ли карточка большой
 const isLargeCard = computed(() => {
   return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 543.4;
+});
+
+// LOD режим: при ≤20% показываем только заголовок
+const isMinimalMode = computed(() => zoomScale.value <= 0.20);
+
+// Сокращённый заголовок для minimal режима
+// RUY68240926666 → RUY68
+const shortTitle = computed(() => {
+  const text = props.card?.text || '';
+  if (!isMinimalMode.value) return text;
+
+  // Регулярка: 2-4 заглавные латинские буквы + 11-14 цифр
+  const partnerIdRegex = /([A-Z]{2,4})(\d{11,14})/g;
+  return text.replace(partnerIdRegex, (_match, letters, digits) => {
+    const shortDigits = digits.substring(0, digits.length <= 12 ? 2 : 3);
+    return letters + shortDigits;
+  }).trim();
+});
+
+// Автоподгонка размера шрифта под размер карточки
+const titleAutoFitStyle = computed(() => {
+  if (!isMinimalMode.value) return {};
+
+  const text = shortTitle.value || '';
+  if (!text) return {};
+
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  if (words.length === 0) return {};
+
+  // Размеры карточки
+  const cardWidth = isLargeCard.value || props.card?.type === 'gold' ? 380 : 180;
+  const cardHeight = isLargeCard.value || props.card?.type === 'gold' ? 180 : 100;
+
+  // Зазор от краёв
+  const padding = 24;
+
+  // Самое длинное слово определяет ширину
+  const maxWordLength = Math.max(...words.map(w => w.length));
+
+  // Коэффициент ширины символа
+  const charWidthRatio = 0.65;
+
+  const availableWidth = cardWidth - padding;
+  const availableHeight = cardHeight - padding;
+
+  const fontByWidth = availableWidth / (maxWordLength * charWidthRatio);
+  const fontByHeight = availableHeight / words.length;
+
+  // Берём меньшее значение
+  const fontSize = Math.min(fontByWidth, fontByHeight) * 0.85;
+  const finalSize = Math.max(14, Math.min(fontSize, 100));
+
+  return { fontSize: `${finalSize}px` };
 });
 
 // Проверка наличия заметок из store
@@ -892,7 +948,8 @@ watch(
       'card--large': isLargeCard,
       'card--gold': card.type === 'gold',
       'note-active': isNoteVisible,
-      'highlighted': card.highlighted
+      'highlighted': card.highlighted,
+      'card--minimal': isMinimalMode
     }"
     :style="cardStyle"
     @click="handleCardClick"
@@ -915,13 +972,16 @@ watch(
       <div
         v-else
         class="card-title"
+        :style="titleAutoFitStyle"
         :title="isSelected ? 'Двойной клик для редактирования' : ''"
-        @dblclick.stop="handleTitleDblClick"      >
-        {{ card.text }}
+        @dblclick.stop="handleTitleDblClick"
+      >
+        {{ shortTitle }}
       </div>
       
       <!-- Кнопка закрытия -->
       <button
+        v-if="!isReadOnly && !isMinimalMode"
         class="card-close-btn"
         title="Удалить карточку"
         @click="handleDelete"
@@ -931,7 +991,7 @@ watch(
     </div>
     
     <!-- Содержимое карточки -->
-    <div class="card-body">
+    <div v-if="!isMinimalMode" class="card-body">
       <!-- Аватар пользователя (только для больших и Gold карточек) -->
       <div v-if="isLargeCard" class="card-avatar-container">
         <div
@@ -1092,7 +1152,7 @@ watch(
       ></div>
     </div>
 
-    <div class="card-controls">
+    <div v-if="!isMinimalMode" class="card-controls">
       <button
         :class="noteButtonClasses"
         type="button"
@@ -1962,5 +2022,50 @@ watch(
     transform: none !important;
     filter: none !important;
   }
+}
+
+/* ========================================
+   LOD Minimal Mode (≤20%)
+   Только заголовок на цветном фоне
+   ======================================== */
+
+.card--minimal {
+  overflow: hidden;
+}
+
+/* Заголовок занимает всю карточку */
+.card--minimal .card-header {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  min-height: unset;
+  padding: 8px;
+}
+
+/* Стиль текста заголовка */
+.card--minimal .card-title {
+  text-align: center;
+  font-weight: 900;
+  line-height: 0.95;
+  word-spacing: 100vw; /* Каждое слово на новой строке */
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Скрыть кнопку закрытия */
+.card--minimal .card-close-btn {
+  display: none !important;
+}
+
+/* Скрыть аватар */
+.card--minimal .card-avatar-container {
+  display: none !important;
+}
+
+/* Скрыть точки соединения в minimal режиме */
+.card--minimal .connection-point {
+  display: none !important;
 }
 </style>
