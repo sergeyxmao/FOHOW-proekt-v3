@@ -29,7 +29,8 @@ const emit = defineEmits([
   'card-click',
   'start-drag',
   'add-note',
-  'pv-changed'
+  'pv-changed',
+  'open-editor'
   ]);
 
 const cardsStore = useCardsStore();
@@ -798,6 +799,19 @@ watch(
   }
 );
 
+// Обработчик двойного клика на теле карточки — открывает модал редактирования
+const handleBodyDblClick = (event) => {
+  // Не открывать модал при клике на монетку, заметку или кнопку удаления
+  if (event.target.closest('.coin-icon') || event.target.closest('.card-note-btn') || event.target.closest('.card-close-btn')) return;
+  // Не открывать модал при редактировании заголовка или PV
+  if (isEditing.value || isEditingPv.value) return;
+  // Запрещаем в readonly режиме
+  if (isReadOnly.value) return;
+
+  event.stopPropagation();
+  emit('open-editor', props.card.id);
+};
+
 // Функции для работы с аватаром
 import { useAuthStore } from '../../stores/auth';
 
@@ -931,7 +945,7 @@ watch(
     </div>
     
     <!-- Содержимое карточки -->
-    <div class="card-body">
+    <div class="card-body" @dblclick="handleBodyDblClick">
       <!-- Аватар пользователя (только для больших и Gold карточек) -->
       <div v-if="isLargeCard" class="card-avatar-container">
         <div
@@ -994,8 +1008,6 @@ watch(
           <span
             v-else
             class="value pv-value-left"
-            @dblclick="startEditingPv"
-            :title="'Двойной клик для редактирования'"
           >
             {{ pvLeftValue }}
           </span>
@@ -1009,11 +1021,7 @@ watch(
         <span
           class="value value-container"
 
-          contenteditable="true"
-
           :title="`Автоматический баланс: ${automaticBalance.L} / ${automaticBalance.R}`"
-
-          @blur="updateValue($event, 'manual-balance')"
 
         >
 
@@ -1056,29 +1064,6 @@ watch(
         </span>
       </div>
 
-      <div class="card-active-controls" data-role="active-pv-buttons">
-        <div class="active-pv-controls__group">
-          <button type="button" class="active-pv-btn" data-dir="left" data-step="1">+1</button>
-          <button type="button" class="active-pv-btn" data-dir="left" data-step="10">+10</button>
-          <button type="button" class="active-pv-btn" data-dir="left" data-step="-10">-10</button>
-          <button type="button" class="active-pv-btn" data-dir="left" data-step="-1">-1</button>
-        </div>
-        <button
-          type="button"
-          class="active-pv-btn active-pv-btn--clear"
-          data-action="clear-all"
-          aria-label="Очистить обе ветки"
-          title="Очистить обе ветки"
-        >
-          🗑️
-        </button>
-        <div class="active-pv-controls__group">
-          <button type="button" class="active-pv-btn" data-dir="right" data-step="-1">-1</button>
-          <button type="button" class="active-pv-btn" data-dir="right" data-step="-10">-10</button>
-          <button type="button" class="active-pv-btn" data-dir="right" data-step="10">+10</button>
-          <button type="button" class="active-pv-btn" data-dir="right" data-step="1">+1</button>
-        </div>
-      </div>
 
       <div class="card-row">
         <span class="label">Цикл/этап:</span>
@@ -1511,15 +1496,10 @@ watch(
 }
 
 .pv-value-left {
-  cursor: pointer;
+  cursor: default;
   padding: 2px 4px;
   border-radius: 4px;
-  transition: background 0.15s ease;
   user-select: none;
-}
-
-.pv-value-left:hover {
-  background: rgba(59, 130, 246, 0.08);
 }
 
 .pv-separator {
@@ -1693,71 +1673,6 @@ watch(
   display: none;
 }
 
-.card-active-controls {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: nowrap;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: none;
-  border: none;
-  box-shadow: none;
-}
-.active-pv-controls__group {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: nowrap;
-}
-
-@media (min-width: 560px) {
-  .card-active-controls {
-    justify-content: center;
-
-  }
-}
-
-.active-pv-btn {
-  border: 1px solid rgba(15, 98, 254, 0.25);
-  background: #fff;
-  color: #0f62fe;
-  border-radius: 6px;
-  padding: 4px 8px;
-  min-width: 36px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
-  pointer-events: auto;
-  user-select: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  line-height: 1;  
-}
-
-.active-pv-btn:hover {
-  background: rgba(15, 98, 254, 0.12);
-}
-
-.active-pv-btn:active {
-  transform: translateY(1px);
-}
-
-.active-pv-btn--clear {
-  background: rgba(220, 53, 69, 0.08);
-  color: #c81e1e;
-  border-color: rgba(220, 53, 69, 0.24);
-  min-width: 40px;  
-}
-
-.active-pv-btn--clear:hover {
-  background: rgba(220, 53, 69, 0.14);
-}
 
 .card.card--balance-highlight {
   animation: cardBalanceFlash 0.6s ease;
@@ -1899,12 +1814,6 @@ watch(
   }
 }
 
-/* Скрываем кнопки управления активными заказами для больших и Gold карточек */
-.card--large .card-active-controls,
-.card--gold .card-active-controls {
-  display: none !important;
-}
-
 /* Увеличение шрифта и центрирование строк для больших и Gold карточек */
 .card--large .card-row,
 .card--gold .card-row {
@@ -1937,8 +1846,6 @@ watch(
   .card-close-btn,
   .card-note-btn,
   .card-controls,
-  .card-active-controls,
-  .active-pv-btn,
   .connection-point {
     display: none !important;
   }
