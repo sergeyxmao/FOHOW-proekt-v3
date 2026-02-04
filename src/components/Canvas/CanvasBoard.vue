@@ -93,6 +93,7 @@ provide('isReadOnly', isReadOnly);
 // Используется для оптимизации производительности - пропускаем Engine.recalc во время drag
 const isDraggingAnyRef = ref(false);
 provide('isDraggingAny', isDraggingAnyRef);
+provide('zoomScale', zoomScale);
   
 const {
   backgroundColor,
