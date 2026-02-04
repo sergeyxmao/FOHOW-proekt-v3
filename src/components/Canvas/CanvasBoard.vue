@@ -526,6 +526,35 @@ const handleEditorClearBalance = ({ cardId }) => {
   }
 };
 
+const handleEditorUpdateCyclesStage = ({ cardId, cycles, stage }) => {
+  const card = cardsStore.cards.find(c => c.id === cardId);
+  if (!card) return;
+
+  const nextValue = {
+    cycles: Number.isFinite(cycles) ? Math.max(0, cycles) : 0,
+    stage: Number.isFinite(stage) ? Math.max(0, stage) : 0
+  };
+
+  const current = card.cyclesManualOverride || {};
+  if (current.cycles !== nextValue.cycles || current.stage !== nextValue.stage) {
+    cardsStore.updateCard(cardId, { cyclesManualOverride: nextValue }, {
+      saveToHistory: true,
+      description: `Установлен ручной цикл/этап для "${card.text}"`
+    });
+  }
+};
+
+const handleEditorClearCyclesStage = ({ cardId }) => {
+  const card = cardsStore.cards.find(c => c.id === cardId);
+  if (!card) return;
+  if (card.cyclesManualOverride) {
+    cardsStore.updateCard(cardId, { cyclesManualOverride: null }, {
+      saveToHistory: true,
+      description: `Сброшен ручной цикл/этап для "${card.text}"`
+    });
+  }
+};
+
 const handleEditorUpdateActivePv = ({ cardId, direction, step }) => {
   const card = cardsStore.cards.find(c => c.id === cardId);
   if (!card) return;
@@ -2992,6 +3021,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       @clear-balance="handleEditorClearBalance"
       @update-active-pv="handleEditorUpdateActivePv"
       @clear-active-pv="handleEditorClearActivePv"
+      @update-cycles-stage="handleEditorUpdateCyclesStage"
+      @clear-cycles-stage="handleEditorClearCyclesStage"
     />
   </div>
 </template>
