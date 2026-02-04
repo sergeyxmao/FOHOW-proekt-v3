@@ -1952,6 +1952,12 @@ watch(
   display: none !important;
 }
 
+/* Скрыть PV строку на больших/золотых при ЛЮБОМ масштабе */
+.card--large .pv-row,
+.card--gold .pv-row {
+  display: none !important;
+}
+
 /* Увеличение шрифта и центрирование строк для больших и Gold карточек */
 .card--large .card-row,
 .card--gold .card-row {
@@ -2095,24 +2101,15 @@ watch(
 
 /* LOD для больших и золотых карточек */
 
-/* Скрыть PV строку на больших/золотых при LOD medium и ниже */
-.card--lod-medium.card--large .pv-row,
-.card--lod-medium.card--gold .pv-row,
-.card--lod-low.card--large .pv-row,
-.card--lod-low.card--gold .pv-row,
-.card--lod-minimal.card--large .pv-row,
-.card--lod-minimal.card--gold .pv-row {
-  display: none !important;
-}
-
 /* Medium (≤50%): большие/золотые — центрирование и увеличение текста */
+/* padding-left: 180px сохраняется — аватарка видна, контент справа от неё */
 .card--lod-medium.card--large .card-body,
 .card--lod-medium.card--gold .card-body {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 15px 20px;
+  padding: 15px 20px 15px 180px;
   gap: 2px;
 }
 
@@ -2129,13 +2126,14 @@ watch(
 }
 
 /* Low (≤30%): большие/золотые — ещё больше текст */
+/* padding-left: 180px сохраняется — аватарка видна */
 .card--lod-low.card--large .card-body,
 .card--lod-low.card--gold .card-body {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 10px 15px;
+  padding: 10px 15px 10px 180px;
   gap: 2px;
 }
 
@@ -2202,25 +2200,26 @@ watch(
 
 .card--lod-ultra-minimal .card-title {
   text-align: center;
-  font-size: 1.4em;
-  font-weight: 800;
-  line-height: 1.1;
+  font-size: 2.2em;
+  font-weight: 900;
+  line-height: 1.0;
+  word-spacing: 100vw; /* Каждое слово на новой строке */
   word-break: break-word;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
 
 /* Маленькие карточки в ultra-minimal — ещё крупнее шрифт */
 .card--lod-ultra-minimal:not(.card--large):not(.card--gold) .card-title {
-  font-size: 1.6em;
+  font-size: 2.5em;
 }
 
 /* Большие/золотые карточки в ultra-minimal */
 .card--lod-ultra-minimal.card--large .card-title,
 .card--lod-ultra-minimal.card--gold .card-title {
-  font-size: 1.3em;
+  font-size: 2.0em;
 }
 
 .card--lod-ultra-minimal .card-close-btn {
