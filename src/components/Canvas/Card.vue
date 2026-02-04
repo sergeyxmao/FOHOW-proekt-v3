@@ -2195,31 +2195,28 @@ watch(
   border-radius: 8px;
   min-height: unset;
   flex: 1 1 auto;
-  padding: 4px;
+  padding: 8px;
 }
 
 .card--lod-ultra-minimal .card-title {
   text-align: center;
-  font-size: 2.2em;
+  font-size: 3.5em;
   font-weight: 900;
-  line-height: 1.0;
+  line-height: 0.95;
   word-spacing: 100vw; /* Каждое слово на новой строке */
-  word-break: break-word;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* Маленькие карточки в ultra-minimal — ещё крупнее шрифт */
 .card--lod-ultra-minimal:not(.card--large):not(.card--gold) .card-title {
-  font-size: 2.5em;
+  font-size: 4.0em;
 }
 
 /* Большие/золотые карточки в ultra-minimal */
 .card--lod-ultra-minimal.card--large .card-title,
 .card--lod-ultra-minimal.card--gold .card-title {
-  font-size: 2.0em;
+  font-size: 3.2em;
 }
 
 .card--lod-ultra-minimal .card-close-btn {
