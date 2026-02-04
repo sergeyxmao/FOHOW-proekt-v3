@@ -143,12 +143,21 @@ const stageDisplay = computed(() => finalCalculation.value.stage);
 
 // === Modal positioning ===
 
-const modalStyle = computed(() => ({
-  position: 'fixed',
-  top: `${props.cardRect.top}px`,
-  left: `${props.cardRect.left}px`,
-  width: `${props.cardRect.width}px`
-}));
+const MIN_MODAL_WIDTH = 380;
+
+const modalStyle = computed(() => {
+  const cardW = props.cardRect.width;
+  const modalW = Math.max(cardW, MIN_MODAL_WIDTH);
+  // Центрируем модал относительно карточки, если он шире
+  const offsetX = (modalW - cardW) / 2;
+  const left = Math.max(0, props.cardRect.left - offsetX);
+  return {
+    position: 'fixed',
+    top: `${props.cardRect.top}px`,
+    left: `${left}px`,
+    width: `${modalW}px`
+  };
+});
 
 // === PV ===
 
