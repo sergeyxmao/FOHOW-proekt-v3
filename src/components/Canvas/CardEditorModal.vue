@@ -24,7 +24,9 @@ const emit = defineEmits([
   'update-balance',
   'clear-balance',
   'update-active-pv',
-  'clear-active-pv'
+  'clear-active-pv',
+  'update-cycles-stage',
+  'clear-cycles-stage'
 ]);
 
 // === Constants ===
@@ -138,8 +140,24 @@ const pvLeftValue = computed(() => {
   return Math.min(Math.max(left, MIN_LEFT_PV), MAX_LEFT_PV);
 });
 
-const cyclesDisplay = computed(() => finalCalculation.value.cycles);
-const stageDisplay = computed(() => finalCalculation.value.stage);
+const cyclesManualOverrideValue = computed(() => {
+  const source = props.card?.cyclesManualOverride;
+  if (!source) return null;
+  if (Number.isFinite(source.cycles) || Number.isFinite(source.stage)) return source;
+  return null;
+});
+
+const cyclesDisplay = computed(() => {
+  const override = cyclesManualOverrideValue.value;
+  if (override && Number.isFinite(override.cycles)) return override.cycles;
+  return finalCalculation.value.cycles;
+});
+
+const stageDisplay = computed(() => {
+  const override = cyclesManualOverrideValue.value;
+  if (override && Number.isFinite(override.stage)) return override.stage;
+  return finalCalculation.value.stage;
+});
 
 // === Modal positioning (viewport-aware + drag) ===
 
@@ -247,6 +265,21 @@ const handleBalanceChange = (side, event) => {
 
 const handleClearBalance = () => {
   emit('clear-balance', { cardId: props.card.id });
+};
+
+// === Cycles/Stage ===
+
+const handleCyclesStageChange = (field, event) => {
+  const val = parseInt(event.target.value, 10) || 0;
+  emit('update-cycles-stage', {
+    cardId: props.card.id,
+    cycles: field === 'cycles' ? val : cyclesDisplay.value,
+    stage: field === 'stage' ? val : stageDisplay.value
+  });
+};
+
+const handleClearCyclesStage = () => {
+  emit('clear-cycles-stage', { cardId: props.card.id });
 };
 
 // === Active PV (фиксированные шаги, идентично main) ===
@@ -364,7 +397,22 @@ onBeforeUnmount(() => {
           <!-- Cycle/stage -->
           <div class="editor-row">
             <span class="editor-label">Цикл/этап:</span>
-            <span class="editor-readonly">{{ cyclesDisplay }} / {{ stageDisplay }}</span>
+            <input
+              type="number"
+              class="editor-input"
+              :value="cyclesDisplay"
+              min="0"
+              @change="handleCyclesStageChange('cycles', $event)"
+            />
+            <span class="editor-sep">/</span>
+            <input
+              type="number"
+              class="editor-input"
+              :value="stageDisplay"
+              min="0"
+              @change="handleCyclesStageChange('stage', $event)"
+            />
+            <button class="editor-trash" @click="handleClearCyclesStage" title="Сбросить цикл/этап">🗑️</button>
           </div>
         </div>
       </div>

@@ -344,8 +344,16 @@ const manualBalanceOffset = ref(null);
 const activeOrdersDisplay = computed(
   () => `${activePvState.value.remainder.left} / ${activePvState.value.remainder.right}`
 );
-const cyclesDisplay = computed(() => finalCalculation.value.cycles);
-const stageDisplay = computed(() => finalCalculation.value.stage);
+const cyclesDisplay = computed(() => {
+  const override = props.card?.cyclesManualOverride;
+  if (override && Number.isFinite(override.cycles)) return override.cycles;
+  return finalCalculation.value.cycles;
+});
+const stageDisplay = computed(() => {
+  const override = props.card?.cyclesManualOverride;
+  if (override && Number.isFinite(override.stage)) return override.stage;
+  return finalCalculation.value.stage;
+});
 const PV_RIGHT_VALUE = 330;
 const MIN_LEFT_PV = 30;
 const MAX_LEFT_PV = 330;
