@@ -103,32 +103,39 @@ const shortTitle = computed(() => {
 const titleAutoFitStyle = computed(() => {
   if (lodLevel.value !== 'ultra-minimal') return {};
 
-  const text = shortTitle.value;
+  const text = shortTitle.value || '';
+  if (!text) return {};
+
   const words = text.split(/\s+/).filter(w => w.length > 0);
-  if (!words.length) return {};
+  if (words.length === 0) return {};
 
-  const numLines = words.length;
-  const longestWord = Math.max(...words.map(w => w.length));
+  // Размеры карточки
+  const cardWidth = isLargeCard.value ? 380 : 180;
+  const cardHeight = isLargeCard.value ? 180 : 100;
 
-  const cardWidth = props.card.width || 200;
-  const cardHeight = props.card.height || Math.round(cardWidth * 0.65);
+  // Увеличенный зазор для больших карточек
+  const padding = isLargeCard.value ? 32 : 24;
 
-  // Зазор от краёв (не в притык)
-  const padding = 24;
-  const availWidth = cardWidth - padding;
-  const availHeight = cardHeight - padding;
+  // Самое длинное слово
+  const maxWordLength = Math.max(...words.map(w => w.length));
 
-  // Ширина символа ≈ 0.6 от fontSize (среднее для sans-serif кириллица/латиница)
-  const charWidthFactor = 0.6;
-  // line-height в CSS = 0.95, используем 1.0 для запаса
-  const lineHeightFactor = 1.0;
+  // Коэффициент ширины символа (увеличен для кириллицы и широких символов)
+  const charWidthRatio = 0.7;
 
-  const fontByWidth = availWidth / (longestWord * charWidthFactor);
-  const fontByHeight = availHeight / (numLines * lineHeightFactor);
+  // Расчёт размера по ширине и высоте
+  const availableWidth = cardWidth - padding;
+  const availableHeight = cardHeight - padding;
 
-  const fontSize = Math.max(12, Math.floor(Math.min(fontByWidth, fontByHeight)));
+  const fontByWidth = availableWidth / (maxWordLength * charWidthRatio);
+  const fontByHeight = availableHeight / words.length;
 
-  return { fontSize: fontSize + 'px' };
+  // Берём меньшее значение с запасом 90%
+  const fontSize = Math.min(fontByWidth, fontByHeight) * 0.9;
+
+  // Минимум и максимум
+  const finalSize = Math.max(16, Math.min(fontSize, 120));
+
+  return { fontSize: `${finalSize}px` };
 });
 
 // Проверка наличия заметок из store
