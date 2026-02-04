@@ -459,12 +459,18 @@ const {
 
 // Card Editor Modal state
 const editorModalCardId = ref(null);
+const editorModalCardRect = ref({ top: 100, left: 100, width: 300, height: 300 });
 const editorModalCard = computed(() =>
   editorModalCardId.value ? cardsStore.cards.find(c => c.id === editorModalCardId.value) : null
 );
 
 const handleOpenCardEditor = (cardId) => {
   editorModalCardId.value = cardId;
+  const el = getCardElement(cardId);
+  if (el) {
+    const rect = el.getBoundingClientRect();
+    editorModalCardRect.value = { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+  }
 };
 
 const handleCloseCardEditor = () => {
@@ -473,26 +479,13 @@ const handleCloseCardEditor = () => {
 
 const handleEditorUpdatePv = ({ cardId, pv }) => {
   cardsStore.updateCard(cardId, { pv });
-  // Trigger PV changed animation
   handlePvChanged(cardId);
 };
 
-const handleEditorUpdateBalance = ({ cardId, rawText }) => {
-  const hasDigits = /\d/.test(rawText);
+const handleEditorUpdateBalance = ({ cardId, left, right }) => {
   const card = cardsStore.cards.find(c => c.id === cardId);
   if (!card) return;
 
-  if (!hasDigits) {
-    if (card.balanceManualOverride) {
-      cardsStore.updateCard(cardId, { balanceManualOverride: null }, {
-        saveToHistory: true,
-        description: `Сброшен ручной баланс для "${card.text}"`
-      });
-    }
-    return;
-  }
-
-  const parsed = parseActivePV(rawText);
   const source = card.activePvAggregated;
   const base = card.calculated || {};
   const unitsLeft = Number.isFinite(source?.left) ? Number(source.left) : 0;
@@ -501,8 +494,8 @@ const handleEditorUpdateBalance = ({ cardId, rawText }) => {
   const autoR = (Number.isFinite(base.R) ? base.R : 0) + unitsRight;
 
   const nextValue = {
-    left: Math.max(parsed.left, autoL),
-    right: Math.max(parsed.right, autoR)
+    left: Math.max(Number.isFinite(left) ? left : autoL, autoL),
+    right: Math.max(Number.isFinite(right) ? right : autoR, autoR)
   };
 
   const current = card.balanceManualOverride || {};
@@ -516,6 +509,20 @@ const handleEditorUpdateBalance = ({ cardId, rawText }) => {
       right: Math.max(0, nextValue.right - autoR)
     };
     cardsStore.updateCard(cardId, { manualAdjustments: manualAdditions }, { saveToHistory: false });
+  }
+};
+
+const handleEditorClearBalance = ({ cardId }) => {
+  const card = cardsStore.cards.find(c => c.id === cardId);
+  if (!card) return;
+  if (card.balanceManualOverride) {
+    cardsStore.updateCard(cardId, {
+      balanceManualOverride: null,
+      manualAdjustments: { left: 0, right: 0 }
+    }, {
+      saveToHistory: true,
+      description: `Сброшен ручной баланс для "${card.text}"`
+    });
   }
 };
 
@@ -2978,9 +2985,11 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       v-if="editorModalCard"
       :card="editorModalCard"
       :visible="!!editorModalCard"
+      :card-rect="editorModalCardRect"
       @close="handleCloseCardEditor"
       @update-pv="handleEditorUpdatePv"
       @update-balance="handleEditorUpdateBalance"
+      @clear-balance="handleEditorClearBalance"
       @update-active-pv="handleEditorUpdateActivePv"
       @clear-active-pv="handleEditorClearActivePv"
     />
