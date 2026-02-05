@@ -1,7 +1,10 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
 
 export function setupWebSocket(server) {
   const io = new Server(server, {
@@ -21,7 +24,7 @@ export function setupWebSocket(server) {
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      socket.userId = decoded.id;
+      socket.userId = decoded.userId;
       next();
     } catch (err) {
       next(new Error('Authentication error'));

@@ -26,6 +26,12 @@
             }
           }
 
+          // Whitelist-валидация limitFeatureName для защиты от SQL-инъекций
+          const ALLOWED_FEATURES = ['max_boards', 'max_stickers', 'max_notes', 'max_comments', 'max_licenses'];
+          if (!ALLOWED_FEATURES.includes(limitFeatureName)) {
+            return reply.code(400).send({ error: 'Invalid feature name' });
+          }
+
           // 1. Получаем лимит, дату истечения подписки и grace_period_until
           // Используем SQL для проверки истечения, чтобы избежать проблем с timezone
           const planResult = await pool.query(
