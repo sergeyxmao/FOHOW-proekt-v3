@@ -1780,6 +1780,9 @@ const handleMobileTouchStart = (event) => {
   clearObjectSelections({ preserveCardSelection: false });
 };
 
+// Флаг защиты от двойного создания anchor (mousedown + pointerdown)
+let _anchorCreating = false;
+
 const handleStageClick = async (event) => {
   // Игнорируем среднюю кнопку мыши (используется для панорамирования)
   if (event.button === 1) {
@@ -1799,10 +1802,16 @@ const handleStageClick = async (event) => {
     return;
   }
   if (placementMode.value === 'anchor') {
+    // Защита от двойного срабатывания при создании anchor
+    if (_anchorCreating) {
+      return;
+    }
+    _anchorCreating = true;
     event.stopPropagation();
     const { x, y } = screenToCanvas(event.clientX, event.clientY);
     if (!boardStore.currentBoardId) {
       console.warn('Не удалось создать точку: доска не выбрана');
+      _anchorCreating = false;
       return;
     }
 
@@ -1822,6 +1831,8 @@ const handleStageClick = async (event) => {
       boardStore.requestAnchorEdit(newAnchor.id);
     } catch (error) {
       console.error('Ошибка создания точки:', error);
+    } finally {
+      _anchorCreating = false;
     }
     return;
   }
@@ -2672,7 +2683,6 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   ref="canvasContainerRef"
   :class="['canvas-container', canvasContainerClasses, { 'canvas-container--modern': props.isModernTheme }]"
   :style="{ backgroundColor: backgroundColor }"
-  @mousedown="handleStageClick"
   @pointerdown="handleStageClick"
   @touchstart.capture="handleMobileTouchStart"
   @dragover.prevent="handleImageDragOver"
@@ -2725,9 +2735,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         :width="stageConfig.width"
         :height="stageConfig.height"
         style="position: absolute; top: 0; left: 0; z-index: 5; overflow: visible; pointer-events: none;"
-        @mousedown="handleStageClick"
-  @pointerdown="handleStageClick"
-  @touchstart.capture="handleMobileTouchStart"
+        @pointerdown="handleStageClick"
+        @touchstart.capture="handleMobileTouchStart"
       >
         <defs>
           <marker
