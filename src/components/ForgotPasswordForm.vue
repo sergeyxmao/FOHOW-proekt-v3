@@ -1,13 +1,14 @@
 <template>
   <div class="auth-card">
-    <h2 class="auth-card__title">{{ t('auth.forgotPasswordTitle') }}</h2>
+    <h2 class="auth-card__title">Восстановление пароля</h2>
     <p class="auth-card__description">
-      {{ t('auth.forgotPasswordDesc') }}
+      Введите email, который вы использовали при регистрации. 
+      Мы отправим вам ссылку для сброса пароля.
     </p>
     
     <form class="auth-card__form" @submit.prevent="handleSubmit">
       <div class="auth-card__group">
-        <label for="email">{{ t('auth.email') }}</label>
+        <label for="email">Email:</label>
         <input
           id="email"
           v-model="email"
@@ -25,7 +26,7 @@
       </button>
       
       <p class="auth-card__switch">
-        <a class="auth-card__link" @click="$emit('back-to-login')">{{ t('auth.backToLogin') }}</a>
+        <a class="auth-card__link" @click="$emit('back-to-login')">← Вернуться к входу</a>
       </p>
     </form>
   </div>
@@ -33,9 +34,6 @@
 
 <script setup>
 import { ref, computed, onUnmounted } from 'vue'
-import { useI18n } from 'vue-i18n'
-
-const { t } = useI18n()
 
 const emit = defineEmits(['back-to-login'])
 const props = defineProps({
@@ -59,9 +57,9 @@ let cooldownInterval = null
 const isOnCooldown = computed(() => cooldownSeconds.value > 0)
 
 const buttonText = computed(() => {
-  if (loading.value) return t('auth.sending')
-  if (isOnCooldown.value) return t('auth.waitSeconds', { seconds: cooldownSeconds.value })
-  return t('auth.sendLink')
+  if (loading.value) return 'Отправка...'
+  if (isOnCooldown.value) return `Подождите ${cooldownSeconds.value} сек`
+  return 'Отправить ссылку'
 })
 
 function startCooldown(seconds) {
@@ -110,7 +108,7 @@ async function handleSubmit() {
       throw new Error(data.error || 'Ошибка отправки')
     }
 
-    success.value = t('auth.instructionsSent')
+    success.value = 'Инструкции отправлены на ваш email'
     email.value = ''
   } catch (err) {
     error.value = err.message

@@ -1,9 +1,9 @@
 <template>
   <div :class="['auth-card', props.isModernTheme ? 'auth-card--modern' : 'auth-card--classic']">
-    <h2 class="auth-card__title">{{ t('auth.loginTitle') }}</h2>
+    <h2 class="auth-card__title">Вход</h2>
     <form class="auth-card__form" @submit.prevent="handleLogin">
       <div class="auth-card__group">
-        <label for="email">{{ t('auth.email') }}</label>
+        <label for="email">Email:</label>
         <input
           id="email"
           v-model="email"
@@ -14,7 +14,7 @@
       </div>
 
       <div class="auth-card__group">
-        <label for="password">{{ t('auth.password') }}</label>
+        <label for="password">Пароль:</label>
         <input
           id="password"
           v-model="password"
@@ -24,7 +24,7 @@
         />
       </div>
       <div class="auth-card__group">
-        <label for="verification">{{ t('auth.verificationCode') }}</label>
+        <label for="verification">Проверочный код:</label>
         <input
           id="verification"
           v-model="verificationInput"
@@ -32,7 +32,7 @@
           inputmode="numeric"
           maxlength="4"
           required
-          :placeholder="t('auth.enterCode')"
+          placeholder="Введите код"
         />
         <div class="auth-card__verification-code" @click="regenerateVerificationCode">
           {{ verificationLoading ? '••••' : verificationCode }}
@@ -43,21 +43,21 @@
           @click="regenerateVerificationCode"
           :disabled="verificationLoading"
         >
-          {{ t('auth.refreshCode') }}
+          Обновить код
         </button>
       </div>
       <div v-if="error" class="auth-card__message auth-card__message--error">{{ error }}</div>
 
       <button class="auth-card__submit" type="submit" :disabled="loading">
-        {{ loading ? t('auth.loggingIn') : t('auth.login') }}
+        {{ loading ? 'Вход...' : 'Войти' }}
       </button>
 
 <p class="forgot-password-link">
-  <a @click="$emit('switch-to-forgot')">{{ t('auth.forgotPassword') }}</a>
+  <a @click="$emit('switch-to-forgot')">Забыли пароль?</a>
 </p>
 
 <p class="switch-form">
-  {{ t('auth.noAccount') }} <a @click="$emit('switch-to-register')">{{ t('auth.registerLink') }}</a>
+  Нет аккаунта? <a @click="$emit('switch-to-register')">Зарегистрироваться</a>
 </p>
     </form>
   </div>
@@ -66,10 +66,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-
-const { t } = useI18n()
 
 const emit = defineEmits(['login-success', 'switch-to-register', 'switch-to-forgot'])
 const props = defineProps({

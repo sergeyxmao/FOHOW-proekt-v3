@@ -1,10 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useUserCommentsStore } from '../../stores/userComments.js'
-
-const { t } = useI18n()
 
 const commentsStore = useUserCommentsStore()
 const { comments, hasComments, loading } = storeToRefs(commentsStore)
@@ -67,7 +64,7 @@ const handleSubmit = async () => {
     newCommentContent.value = ''
     newCommentColor.value = '#FFEB3B'
   } catch (err) {
-    alert(t('comments.createError') + ': ' + err.message)
+    alert('Ошибка создания комментария: ' + err.message)
   }
 }
 
@@ -87,7 +84,7 @@ const handleEditSave = async () => {
     })
     resetEditingState()
   } catch (err) {
-    alert(t('comments.updateError') + ': ' + err.message)
+    alert('Ошибка обновления комментария: ' + err.message)
   }
 }
 
@@ -110,18 +107,18 @@ const handleDelete = async (id) => {
   // Валидация ID перед показом диалога подтверждения
   if (!id || id === 'undefined' || id === 'null') {
     console.error('❌ Некорректный ID комментария:', id)
-    alert(t('comments.invalidId'))
+    alert('Ошибка: некорректный ID комментария. Попробуйте обновить страницу.')
     return
   }
 
   const idNum = Number(id)
   if (!Number.isInteger(idNum) || idNum <= 0) {
     console.error('❌ ID комментария не является положительным числом:', id)
-    alert(t('comments.invalidId'))
+    alert('Ошибка: некорректный ID комментария. Попробуйте обновить страницу.')
     return
   }
 
-  if (!confirm(t('comments.deleteConfirm'))) return
+  if (!confirm('Вы уверены, что хотите удалить этот комментарий?')) return
 
   try {
     await commentsStore.deleteComment(id)
@@ -130,7 +127,7 @@ const handleDelete = async (id) => {
     }
   } catch (err) {
     console.error('❌ Полная ошибка удаления комментария:', err)
-    alert(t('comments.deleteError') + ': ' + err.message)
+    alert('Ошибка удаления комментария: ' + err.message)
   }
 }
 
@@ -170,7 +167,7 @@ const formatDate = (isoString) => {
         v-model="searchQuery"
         class="user-comments__search-input"
         type="search"
-        :placeholder="t('comments.searchPlaceholder')"
+        placeholder="Поиск по комментариям..."
       />
     </div>
 
@@ -178,7 +175,7 @@ const formatDate = (isoString) => {
       <textarea
         v-model="newCommentContent"
         class="user-comments__textarea"
-        :placeholder="t('comments.placeholder')"
+        placeholder="Добавьте личный комментарий..."
         rows="3"
       ></textarea>
 
@@ -187,13 +184,13 @@ const formatDate = (isoString) => {
         type="submit"
         :disabled="submitDisabled || loading"
       >
-        {{ t('comments.add') }}
+        Добавить
       </button>
     </form>
 
     <!-- Список комментариев -->
     <div v-if="loading && !hasComments" class="user-comments__loading">
-      {{ t('common.loading') }}
+      Загрузка...
     </div>
 
     <div v-else-if="hasComments" class="user-comments__list" role="list">
@@ -210,7 +207,7 @@ const formatDate = (isoString) => {
             <button
               class="user-comments__action"
               type="button"
-              :title="t('common.edit')"
+              title="Редактировать"
               @click="handleEditStart(comment)"
             >
               ✏️
@@ -218,7 +215,7 @@ const formatDate = (isoString) => {
             <button
               class="user-comments__action user-comments__action--danger"
               type="button"
-              :title="t('common.delete')"
+              title="Удалить"
               @click="handleDelete(comment.id)"
             >
               🗑️
@@ -241,7 +238,7 @@ const formatDate = (isoString) => {
               :disabled="loading"
               @click="handleEditSave"
             >
-              {{ t('common.save') }}
+              Сохранить
             </button>
             <button
               class="user-comments__cancel"
@@ -249,7 +246,7 @@ const formatDate = (isoString) => {
               :disabled="loading"
               @click="handleEditCancel"
             >
-              {{ t('common.cancel') }}
+              Отменить
             </button>
           </div>
         </div>
@@ -259,8 +256,8 @@ const formatDate = (isoString) => {
       </div>
     </div>
 
-    <p v-else-if="!searchQuery.trim()" class="user-comments__empty">{{ t('comments.noComments') }}</p>
-    <p v-else class="user-comments__empty">{{ t('comments.nothingFound') }}</p>  </div>
+    <p v-else-if="!searchQuery.trim()" class="user-comments__empty">Комментарии ещё не добавлены.</p>
+    <p v-else class="user-comments__empty">Ничего не найдено</p>  </div>
 </template>
 
 <style scoped>

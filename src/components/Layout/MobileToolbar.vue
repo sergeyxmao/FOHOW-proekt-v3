@@ -1,7 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { storeToRefs } from 'pinia'
+import { storeToRefs } from 'pinia'  
 import { useAuthStore } from '@/stores/auth'
 import { useBoardStore } from '@/stores/board'
 import { useMobileStore } from '@/stores/mobile'
@@ -16,7 +15,6 @@ const props = defineProps({
 
 const emit = defineEmits(['save', 'toggle-theme', 'fit-to-content', 'open-profile', 'request-auth'])
 
-const { t } = useI18n()
 const authStore = useAuthStore()
 const boardStore = useBoardStore()
 const mobileStore = useMobileStore()
@@ -35,8 +33,8 @@ const isSaveAvailable = computed(() => {
 
 const saveTooltip = computed(() =>
   isSaveAvailable.value
-    ? t('common.save')
-    : t('board.savePrompt')
+    ? 'Сохранить'
+    : 'Задайте название проекта, чтобы сохранить'
 )
 
 const handleSave = () => {
@@ -91,7 +89,7 @@ const handleProfileClick = () => {
           type="button"
           @click="openMarketingLink"
           title="@marketingFohow"
-          :aria-label="t('mobile.openTelegram')"
+          aria-label="Открыть Telegram @marketingFohow"
         >
           <svg class="marketing-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path
@@ -109,8 +107,8 @@ const handleProfileClick = () => {
           class="mobile-toolbar-button theme-button"
           type="button"
           @click="handleToggleTheme"
-          :title="isModernTheme ? t('mobile.lightTheme') : t('mobile.darkTheme')"
-          :aria-label="t('mobile.toggleTheme')"
+          :title="isModernTheme ? 'Светлая тема' : 'Темная тема'"
+          aria-label="Переключить тему"
         >
           <span class="theme-icon"></span>
         </button>
@@ -120,8 +118,8 @@ const handleProfileClick = () => {
           class="mobile-toolbar-button zoom-button"
           type="button"
           @click="handleFitToContent"
-          :title="t('mobile.currentZoom', { zoom: zoomDisplay })"
-          :aria-label="t('mobile.autoFitZoom')"
+          :title="`Текущий масштаб: ${zoomDisplay}%`"
+          aria-label="Автоподгонка масштаба"
         >
           <span class="button-icon zoom-button__value">{{ zoomDisplay }}</span>
         </button>
@@ -131,8 +129,8 @@ const handleProfileClick = () => {
           class="mobile-toolbar-button version-button"
           type="button"
           @click="handleToggleVersion"
-          :title="isMobileMode ? t('mobile.desktopVersion') : t('mobile.mobileVersion')"
-          :aria-label="t('mobile.switchVersion')"
+          :title="isMobileMode ? 'Версия для ПК' : 'Мобильная версия'"
+          aria-label="Переключить версию"
         >
           <span class="button-icon">{{ isMobileMode ? '💻' : '📱' }}</span>
         </button>
@@ -144,8 +142,8 @@ const handleProfileClick = () => {
           class="mobile-toolbar-button auth-button"
           type="button"
           @click="handleProfileClick"
-          :title="t('auth.login')"
-          :aria-label="t('mobile.openAuth')"
+          title="Войти"
+          aria-label="Открыть окно авторизации"
         >
           <span class="button-icon">👤</span>
         </button>

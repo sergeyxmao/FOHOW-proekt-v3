@@ -1,9 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useStickersStore } from '../../stores/stickers.js'
-
-const { t, locale } = useI18n()
 
 const props = defineProps({
   isModernTheme: {
@@ -54,7 +51,7 @@ const handleEdit = (sticker, event) => {
 
 const handleSaveEdit = async (stickerId) => {
   if (editingContent.value.trim() === '') {
-    alert(t('stickers.contentEmpty'))
+    alert('Содержимое стикера не может быть пустым')
     return
   }
 
@@ -66,7 +63,7 @@ const handleSaveEdit = async (stickerId) => {
     editingContent.value = ''
   } catch (error) {
     console.error('Ошибка обновления стикера:', error)
-    alert(t('stickers.updateError'))
+    alert('Не удалось обновить стикер')
   }
 }
 
@@ -78,7 +75,7 @@ const handleCancelEdit = () => {
 const handleDelete = async (sticker, event) => {
   event.stopPropagation()
 
-  if (!confirm(t('stickers.deleteConfirm'))) {
+  if (!confirm(`Вы уверены, что хотите удалить стикер?`)) {
     return
   }
 
@@ -86,8 +83,8 @@ const handleDelete = async (sticker, event) => {
     await stickersStore.deleteSticker(sticker.id)
   } catch (error) {
     console.error('Ошибка удаления стикера:', error)
-    const errorMessage = error.message || t('stickers.deleteError')
-    alert(t('stickers.deleteError') + ': ' + errorMessage)
+    const errorMessage = error.message || 'Не удалось удалить стикер'
+    alert(`Не удалось удалить стикер: ${errorMessage}`)
   }
 }
 
@@ -97,7 +94,7 @@ const formatDate = (dateString) => {
   const date = new Date(dateString)
   if (isNaN(date.getTime())) return ''
 
-  return date.toLocaleDateString(locale.value, {
+  return date.toLocaleDateString('ru-RU', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -124,7 +121,7 @@ onMounted(() => {
   <div class="sticker-messages" :class="{ 'sticker-messages--modern': props.isModernTheme }">
     <div class="sticker-messages__header">
       <h3 class="sticker-messages__title">
-        {{ t('stickers.messages') }}
+        Сообщения
         <span v-if="hasMessages" class="sticker-messages__count">({{ messagesStickers.length }})</span>
       </h3>
     </div>
@@ -133,17 +130,17 @@ onMounted(() => {
         v-model="searchQuery"
         class="sticker-messages__search-input"
         type="search"
-        :placeholder="t('stickers.searchPlaceholder')"
+        placeholder="Поиск по сообщениям..."
       />
     </div>
 
     <div v-if="!hasMessages" class="sticker-messages__empty">
       <div class="sticker-messages__empty-icon">📌</div>
       <p class="sticker-messages__empty-text">
-        {{ t('stickers.emptyTitle') }}
+        Нет сообщений в стикерах
       </p>
       <p class="sticker-messages__empty-hint">
-        {{ t('stickers.emptyText') }}
+        Добавьте текст в стикеры, чтобы увидеть их здесь
       </p>
     </div>
 
@@ -161,13 +158,13 @@ onMounted(() => {
       >
         <div class="sticker-message-item__header">
           <span class="sticker-message-item__author">
-            {{ sticker.author_username || t('stickers.unknownUser') }}
+            {{ sticker.author_username || 'Неизвестный пользователь' }}
           </span>
           <div class="sticker-message-item__actions">
             <button
               type="button"
               class="sticker-message-item__action sticker-message-item__action--edit"
-              :title="t('common.edit')"
+              title="Редактировать"
               @click="handleEdit(sticker, $event)"
             >
               ✏️
@@ -175,7 +172,7 @@ onMounted(() => {
             <button
               type="button"
               class="sticker-message-item__action sticker-message-item__action--delete"
-              :title="t('common.delete')"
+              title="Удалить"
               @click="handleDelete(sticker, $event)"
             >
               🗑️
@@ -189,7 +186,7 @@ onMounted(() => {
           <textarea
             v-model="editingContent"
             class="sticker-message-item__textarea"
-            :placeholder="t('stickers.placeholder')"
+            placeholder="Введите текст стикера..."
             @click.stop
           ></textarea>
           <div class="sticker-message-item__edit-actions">
@@ -198,14 +195,14 @@ onMounted(() => {
               class="sticker-message-item__edit-btn sticker-message-item__edit-btn--save"
               @click.stop="handleSaveEdit(sticker.id)"
             >
-              {{ t('common.save') }}
+              Сохранить
             </button>
             <button
               type="button"
               class="sticker-message-item__edit-btn sticker-message-item__edit-btn--cancel"
               @click.stop="handleCancelEdit"
             >
-              {{ t('common.cancel') }}
+              Отмена
             </button>
           </div>
         </div>
@@ -214,7 +211,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <p v-if="!filteredMessages.length" class="sticker-messages__empty-text">{{ t('stickers.nothingFound') }}</p>
+      <p v-if="!filteredMessages.length" class="sticker-messages__empty-text">Ничего не найдено</p>      
     </div>
   </div>
 </template>

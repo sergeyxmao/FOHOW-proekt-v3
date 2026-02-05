@@ -23,7 +23,7 @@
     <button
       class="toast-notification__close"
       @click="handleClose"
-      :aria-label="t('notifications.close')"
+      aria-label="Закрыть уведомление"
     >
       ✕
     </button>
@@ -31,10 +31,7 @@
 </template>
 
 <script setup>
-import { useI18n } from 'vue-i18n'
 import { useNotificationsStore } from '@/stores/notifications'
-
-const { t } = useI18n()
 
 const props = defineProps({
   id: {

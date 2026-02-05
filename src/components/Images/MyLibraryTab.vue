@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useStickersStore } from '../../stores/stickers'
 import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
@@ -9,7 +8,6 @@ import { getMyFolders, getMyImages, uploadImage, deleteImage, requestShareImage,
 import { convertToWebP, isImageFile } from '../../utils/imageUtils'
 import ImageCard from './ImageCard.vue'
 
-const { t } = useI18n()
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
 const notificationsStore = useNotificationsStore()
@@ -86,10 +84,10 @@ const filteredImages = computed(() => {
 
 // Опции для выпадающего списка папок
 const folderOptions = computed(() => [
-  { value: '', label: t('imageLibrary.allFolders') },
+  { value: '', label: 'Все папки' },
   ...folders.value.map(folderName => ({
     value: folderName,
-    label: folderName || t('imageLibrary.untitled')
+    label: folderName || 'Без названия'
   }))
 ])
 
@@ -110,7 +108,7 @@ async function loadFolders() {
       // Не показываем уведомление, ошибка отобразится в UI
     } else {
       notificationsStore.addNotification({
-        message: t('imageLibrary.foldersLoadError', { error: err.message }),
+        message: `Ошибка загрузки папок: ${err.message}`,
         type: 'error',
         duration: 6000
       })
@@ -157,7 +155,7 @@ async function loadInitialImages() {
       // Не показываем уведомление, ошибка отобразится в UI
     } else {
       notificationsStore.addNotification({
-        message: t('imageLibrary.imagesLoadError', { error: err.message }),
+        message: `Ошибка загрузки изображений: ${err.message}`,
         type: 'error',
         duration: 6000
       })
@@ -200,7 +198,7 @@ async function loadMoreImages() {
     pagination.value.page = previousPage
 
     notificationsStore.addNotification({
-      message: t('imageLibrary.imagesLoadError', { error: err.message }),
+      message: `Ошибка загрузки изображений: ${err.message}`,
       type: 'error',
       duration: 6000
     })
@@ -239,13 +237,13 @@ async function confirmCreateFolder() {
   const trimmedName = newFolderName.value.trim()
 
   if (!trimmedName) {
-    createFolderError.value = t('imageLibrary.enterFolderName')
+    createFolderError.value = 'Введите название папки'
     return
   }
 
   const duplicate = folders.value.find(folder => folder.toLowerCase() === trimmedName.toLowerCase())
   if (duplicate) {
-    createFolderError.value = t('imageLibrary.folderExists')
+    createFolderError.value = 'Такая папка уже существует'
     selectedFolder.value = duplicate
     handleFolderChange()
     return
@@ -264,15 +262,15 @@ async function confirmCreateFolder() {
     isCreateFolderModalOpen.value = false
 
     notificationsStore.addNotification({
-      message: t('imageLibrary.folderCreated', { name: createdName }),
+      message: `Папка "${createdName}" создана`,
       type: 'success',
       duration: 4000
     })
   } catch (error) {
-    createFolderError.value = error.message || t('imageLibrary.folderCreateFailed')
+    createFolderError.value = error.message || 'Не удалось создать папку'
 
     notificationsStore.addNotification({
-      message: t('imageLibrary.folderCreateError', { error: error.message }),
+      message: `Ошибка создания папки: ${error.message}`,
       type: 'error',
       duration: 6000
     })
@@ -313,7 +311,7 @@ async function uploadSingleImage(file) {
   // Проверка типа файла
   if (!isImageFile(file)) {
     notificationsStore.addNotification({
-      message: t('imageLibrary.notImage', { name: file.name }),
+      message: `Файл "${file.name}" не является изображением`,
       type: 'error',
       duration: 5000
     })
@@ -351,7 +349,7 @@ async function uploadSingleImage(file) {
     }
 
     notificationsStore.addNotification({
-      message: t('imageLibrary.uploadSuccess', { name: originalName }),
+      message: `Изображение "${originalName}" успешно загружено`,
       type: 'success',
       duration: 4000
     })
@@ -360,7 +358,7 @@ async function uploadSingleImage(file) {
   } catch (error) {
     console.error('Ошибка загрузки изображения:', error)
 
-    let errorMessage = t('imageLibrary.uploadError', { name: file.name }) + ': ' + error.message
+    let errorMessage = `Ошибка загрузки изображения "${file.name}": ${error.message}`
 
     // Обработка специфических ошибок лимитов
     if (error.code === 'FILE_SIZE_LIMIT_EXCEEDED' ||
@@ -368,7 +366,7 @@ async function uploadSingleImage(file) {
         error.code === 'STORAGE_LIMIT_EXCEEDED' ||
         error.code === 'FILE_TOO_LARGE' ||
         error.code === 'RATE_LIMIT_EXCEEDED') {
-      errorMessage = error.message + '\n\n' + t('imageLibrary.upgradePlan')
+      errorMessage = error.message + '\n\nОбновите тариф для увеличения лимитов.'
     }
 
     notificationsStore.addNotification({
@@ -394,7 +392,7 @@ async function handleImageClick(image) {
       boardStore: boardStore.currentBoardId
     })
     notificationsStore.addNotification({
-      message: t('imageLibrary.openBoard'),
+      message: 'Сначала откройте доску',
       type: 'info',
       duration: 4000
     })
@@ -429,7 +427,7 @@ async function handleImageClick(image) {
  * Удалить изображение
  */
 async function handleImageDelete(image) {
-  if (!confirm(t('imageLibrary.deleteConfirm', { name: image.original_name }))) {
+  if (!confirm(`Вы уверены, что хотите удалить изображение "${image.original_name}"?`)) {
     return
   }
 
@@ -444,7 +442,7 @@ async function handleImageDelete(image) {
     }
 
     notificationsStore.addNotification({
-      message: t('imageLibrary.deleteSuccess', { name: image.original_name }),
+      message: `Изображение "${image.original_name}" успешно удалено`,
       type: 'success',
       duration: 4000
     })
@@ -453,10 +451,10 @@ async function handleImageDelete(image) {
   } catch (error) {
     console.error('Ошибка удаления изображения:', error)
 
-    let errorMessage = t('imageLibrary.deleteError') + ': ' + error.message
+    let errorMessage = `Ошибка удаления изображения: ${error.message}`
 
     if (error.code === 'IMAGE_IN_USE') {
-      errorMessage = t('imageLibrary.imageInUse')
+      errorMessage = 'Нельзя удалить: картинка используется на досках. Удалите её с досок и попробуйте снова.'
     }
 
     notificationsStore.addNotification({
@@ -468,7 +466,7 @@ async function handleImageDelete(image) {
  * Отправить запрос на добавление в общую библиотеку
  */
 async function handleShareRequest(image) {
-  if (!confirm(t('imageLibrary.shareConfirm', { name: image.original_name }))) {
+  if (!confirm(`Отправить изображение "${image.original_name}" на модерацию для добавления в общую библиотеку?`)) {
     return
   }
 
@@ -484,21 +482,21 @@ async function handleShareRequest(image) {
       }
     }
 
-    alert(t('imageLibrary.shareSuccess'))
+    alert('Изображение успешно отправлено на модерацию!')
 
     console.log('✅ Запрос на модерацию отправлен:', image.id)
   } catch (error) {
     console.error('Ошибка отправки запроса:', error)
 
-    let errorMessage = t('imageLibrary.shareRequestError', { error: error.message })
+    let errorMessage = `Ошибка отправки запроса: ${error.message}`
 
     if (error.code === 'ALREADY_REQUESTED') {
-      errorMessage = t('imageLibrary.alreadyRequested')
+      errorMessage = 'Вы уже отправили это изображение на модерацию. Ожидайте решения администратора.'
     } else if (error.code === 'ALREADY_SHARED') {
-      errorMessage = t('imageLibrary.alreadyShared')
+      errorMessage = 'Это изображение уже находится в общей библиотеке.'
     }
 
-    alert(t('common.error') + ': ' + errorMessage)
+    alert('Ошибка: ' + errorMessage)
   }
 }
 /**
@@ -506,7 +504,7 @@ async function handleShareRequest(image) {
  */
 async function handleRename(image) {
   const currentName = image.original_name.replace(/\.[^/.]+$/, '') // Убираем расширение
-  const newName = prompt(t('imageLibrary.enterNewName'), currentName)
+  const newName = prompt(`Введите новое имя для изображения:`, currentName)
 
   if (!newName || newName.trim() === '') {
     return
@@ -514,7 +512,7 @@ async function handleRename(image) {
 
   if (newName.trim() === currentName) {
     notificationsStore.addNotification({
-      message: t('imageLibrary.nameUnchanged'),
+      message: 'Имя не изменилось',
       type: 'info',
       duration: 3000
     })
@@ -535,7 +533,7 @@ async function handleRename(image) {
     }
 
     notificationsStore.addNotification({
-      message: t('imageLibrary.renameSuccess', { name: newName }),
+      message: `Изображение успешно переименовано в "${newName}"`,
       type: 'success',
       duration: 4000
     })
@@ -545,7 +543,7 @@ async function handleRename(image) {
     console.error('Ошибка переименования изображения:', error)
 
     notificationsStore.addNotification({
-      message: t('imageLibrary.renameError', { error: error.message }),
+      message: `Ошибка переименования: ${error.message}`,
       type: 'error',
       duration: 6000
     })
@@ -691,7 +689,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
             stroke-linejoin="round"
           />
         </svg>
-        <span>{{ t('imageLibrary.folder') }}</span>
+        <span>Папка</span>
       </button>
 
       <!-- Кнопка загрузки -->
@@ -704,8 +702,8 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
         <svg v-if="!isUploading" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M9 16V10H5L12 3L19 10H15V16H9ZM5 20V18H19V20H5Z" fill="currentColor"/>
         </svg>
-        <span v-if="isUploading">{{ t('imageLibrary.uploading') }}</span>
-        <span v-else>{{ t('imageLibrary.upload') }}</span>
+        <span v-if="isUploading">Загрузка...</span>
+        <span v-else>Загрузить</span>
       </button>
 
       <!-- Скрытый input для выбора файлов -->
@@ -725,14 +723,14 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
     >
       <div class="my-library-tab__modal">
         <header class="my-library-tab__modal-header">
-          <h3>{{ t('imageLibrary.createNewFolder') }}</h3>
-          <button class="my-library-tab__modal-close" @click="closeCreateFolderModal" :aria-label="t('common.closeDialog')">
+          <h3>Создать новую папку</h3>
+          <button class="my-library-tab__modal-close" @click="closeCreateFolderModal" aria-label="Закрыть диалог">
             ×
           </button>
         </header>
 
         <div class="my-library-tab__modal-body">
-          <label class="my-library-tab__modal-label" for="my-library-folder-name">{{ t('imageLibrary.folderName') }}</label>
+          <label class="my-library-tab__modal-label" for="my-library-folder-name">Название папки</label>
           <input
             id="my-library-folder-name"
             ref="folderNameInputRef"
@@ -740,7 +738,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
             type="text"
             maxlength="255"
             class="my-library-tab__modal-input"
-            :placeholder="t('imageLibrary.enterName')"
+            placeholder="Введите название"
             @keyup.enter="confirmCreateFolder"
           />
           <p v-if="createFolderError" class="my-library-tab__modal-error">{{ createFolderError }}</p>
@@ -748,7 +746,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
 
         <footer class="my-library-tab__modal-footer">
           <button type="button" class="my-library-tab__modal-btn my-library-tab__modal-btn--secondary" @click="closeCreateFolderModal">
-            {{ t('common.cancel') }}
+            Отмена
           </button>
           <button
             type="button"
@@ -756,7 +754,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
             :disabled="isCreatingFolder || !newFolderName.trim()"
             @click="confirmCreateFolder"
           >
-            {{ isCreatingFolder ? t('imageLibrary.creating') : t('common.create') }}
+            {{ isCreatingFolder ? 'Создание...' : 'Создать' }}
           </button>
         </footer>
       </div>
@@ -767,14 +765,14 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
         v-model="searchQuery"
         type="text"
         class="my-library-tab__search-input"
-        :placeholder="t('imageLibrary.searchByName')"
+        placeholder="Поиск по имени..."
       />
     </div>
 
     <!-- Индикатор загрузки -->
     <div v-if="isInitialLoading" class="my-library-tab__loading">
       <div class="my-library-tab__spinner"></div>
-      <span>{{ t('imageLibrary.loadingImages') }}</span>
+      <span>Загрузка изображений...</span>
     </div>
 
     <!-- Ошибка доступа -->
@@ -783,13 +781,13 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
         🔒
       </div>
       <p class="my-library-tab__access-denied-title">
-        {{ t('imageLibrary.accessDeniedTitle') }}
+        Библиотека изображений недоступна на текущем тарифе
       </p>
       <p class="my-library-tab__access-denied-text">
         {{ error.message }}
       </p>
       <p class="my-library-tab__access-denied-hint">
-        {{ t('imageLibrary.upgradePlan') }}
+        Обновите тариф для получения доступа к библиотеке изображений.
       </p>
     </div>
 
@@ -816,19 +814,19 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
     <div v-if="filteredImages.length > 0" class="my-library-tab__footer">
       <div v-if="isLoadingMore" class="my-library-tab__loading-more">
         <div class="my-library-tab__spinner my-library-tab__spinner--small"></div>
-        <span>{{ t('imageLibrary.loadingMore') }}</span>
+        <span>Загружаем ещё...</span>
       </div>
       <div v-else-if="!hasMore" class="my-library-tab__no-more">
-        {{ t('imageLibrary.noMoreImages') }}
+        Больше изображений нет
       </div>
     </div>
     <!-- Пустое состояние -->
     <div v-else-if="!error" class="my-library-tab__empty">
       <p class="my-library-tab__empty-text">
-        {{ searchQuery ? t('imageLibrary.notFound') : t('imageLibrary.noImages') }}
+        {{ searchQuery ? 'Изображения не найдены' : 'Нет изображений' }}
       </p>
       <p v-if="!searchQuery" class="my-library-tab__empty-hint">
-        {{ t('imageLibrary.uploadHint') }}
+        Нажмите "Загрузить", чтобы добавить изображения
       </p>
     </div>
 

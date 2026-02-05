@@ -1,8 +1,8 @@
 <template>
   <div class="verification-page">
     <div class="verification-card">
-      <h2>{{ t('verification.title') }}</h2>
-      <p>{{ t('verification.codeSent', { email: email }) }}</p>
+      <h2>📧 Подтверждение email</h2>
+      <p>На ваш email <strong>{{ email }}</strong> отправлен код подтверждения</p>
 
       <form @submit.prevent="verifyCode">
         <div class="code-input">
@@ -20,12 +20,12 @@
         </div>
 
         <button type="submit" :disabled="loading || code.length !== 6">
-          {{ t('verification.confirm') }}
+          ✅ Подтвердить
         </button>
       </form>
 
       <div class="resend-section">
-        <p>{{ t('verification.didntReceive') }}</p>
+        <p>Не получили код?</p>
         <button
           @click="resendCode"
           :disabled="resendDisabled || loading"
@@ -40,10 +40,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useI18n } from 'vue-i18n';
 
 const router = useRouter();
-const { t } = useI18n();
 
 const email = ref(localStorage.getItem('verificationEmail') || '');
 const code = ref('');
@@ -54,9 +52,9 @@ const resendCountdown = ref(0);
 
 const resendButtonText = computed(() => {
   if (resendCountdown.value > 0) {
-    return t('verification.resendIn', { seconds: resendCountdown.value });
+    return `Повторить через ${resendCountdown.value}с`;
   }
-  return t('verification.resend');
+  return '🔄 Отправить код повторно';
 });
 
 function formatCode(event) {
@@ -92,11 +90,11 @@ async function verifyCode() {
     localStorage.removeItem('verificationEmail');
 
     // Перенаправить в личный кабинет
-    alert(t('verification.success'));
+    alert('✅ Email подтверждён! Добро пожаловать!');
     router.push('/');
 
   } catch (err) {
-    error.value = t('verification.serverError');
+    error.value = 'Ошибка сервера';
   } finally {
     loading.value = false;
   }
@@ -120,7 +118,7 @@ async function resendCode() {
       return;
     }
 
-    alert(t('verification.newCodeSent'));
+    alert('✅ Новый код отправлен на ваш email');
 
     // Запустить обратный отсчёт
     const interval = setInterval(() => {
@@ -132,7 +130,7 @@ async function resendCode() {
     }, 1000);
 
   } catch (err) {
-    alert(t('verification.sendError'));
+    alert('Ошибка отправки кода');
     resendDisabled.value = false;
   }
 }

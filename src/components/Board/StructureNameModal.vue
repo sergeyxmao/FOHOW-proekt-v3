@@ -6,9 +6,9 @@
           <button class="modal-close" @click="handleCancel">✕</button>
 
           <div class="modal-body">
-            <h2 class="modal-title">{{ t('structureModal.title') }}</h2>
+            <h2 class="modal-title">📝 Дайте название структуре</h2>
             <p class="modal-description">
-              {{ t('structureModal.description') }}
+              Перед тем как продолжить, пожалуйста, укажите название для вашей структуры
             </p>
 
             <input
@@ -16,7 +16,7 @@
               v-model="structureName"
               type="text"
               class="modal-input"
-              :placeholder="t('structureModal.placeholder')"
+              placeholder="Название структуры"
               maxlength="100"
               @keyup.enter="handleConfirm"
               @keyup.escape="handleCancel"
@@ -28,7 +28,7 @@
                 class="modal-btn modal-btn--cancel"
                 @click="handleCancel"
               >
-                {{ t('common.cancel') }}
+                Отмена
               </button>
               <button
                 type="button"
@@ -36,7 +36,7 @@
                 :disabled="!structureName.trim()"
                 @click="handleConfirm"
               >
-                {{ t('common.create') }}
+                Создать
               </button>
             </div>
           </div>
@@ -48,9 +48,6 @@
 
 <script setup>
 import { ref, watch, nextTick } from 'vue'
-import { useI18n } from 'vue-i18n'
-
-const { t } = useI18n()
 
 const props = defineProps({
   isOpen: {

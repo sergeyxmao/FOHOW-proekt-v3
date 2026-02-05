@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useStickersStore } from '../../stores/stickers'
 import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
@@ -8,7 +7,6 @@ import { useSidePanelsStore } from '../../stores/sidePanels'
 import { getSharedLibrary } from '../../services/imageService'
 import ImageCard from './ImageCard.vue'
 
-const { t } = useI18n()
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
 const notificationsStore = useNotificationsStore()
@@ -108,13 +106,13 @@ const folderOptions = computed(() => {
     const folderName = img.folder_name ?? img.folderName ?? img.folder?.name
 
     if (folderId !== undefined && folderId !== null && !optionsMap.has(folderId)) {
-      optionsMap.set(folderId, folderName || t('imageLibrary.untitled'))
+      optionsMap.set(folderId, folderName || 'Без названия')
     }
   })
-
+  
   return [
-    { value: null, label: t('imageLibrary.allFolders') },
-    ...Array.from(optionsMap.entries()).map(([value, label]) => ({ value, label: label || t('imageLibrary.untitled') }))
+    { value: null, label: 'Все папки' },
+    ...Array.from(optionsMap.entries()).map(([value, label]) => ({ value, label: label || 'Без названия' }))
 
   ]
 })
@@ -187,7 +185,7 @@ async function loadSharedLibrary() {
       // Ошибка доступа будет показана в UI
     } else {
       notificationsStore.addNotification({
-        message: t('imageLibrary.sharedLoadError') + ': ' + err.message,
+        message: `Ошибка загрузки общей библиотеки: ${err.message}`,
         type: 'error',
         duration: 6000
       })
@@ -229,7 +227,7 @@ async function loadMoreSharedImages() {
     pagination.value.page = previousPage
 
     notificationsStore.addNotification({
-      message: t('imageLibrary.sharedLoadError') + ': ' + err.message,
+      message: `Ошибка загрузки общей библиотеки: ${err.message}`,
       type: 'error',
       duration: 6000
     })
@@ -258,7 +256,7 @@ async function handleImageClick(image) {
       boardStore: boardStore.currentBoardId
     })
     notificationsStore.addNotification({
-      message: t('imageLibrary.openBoard'),
+      message: 'Сначала откройте доску',
       type: 'info',
       duration: 4000
     })
@@ -407,14 +405,14 @@ onBeforeUnmount(() => {
         v-model="searchQuery"
         type="text"
         class="shared-library-tab__search-input"
-        :placeholder="t('imageLibrary.searchByNameAuthor')"
+        placeholder="Поиск по имени файла, автору..."
       />
     </div>
 
     <!-- Индикатор загрузки -->
     <div v-if="isInitialLoading" class="shared-library-tab__loading">
       <div class="shared-library-tab__spinner"></div>
-      <span>{{ t('imageLibrary.loadingShared') }}</span>
+      <span>Загрузка общей библиотеки...</span>
     </div>
 
     <!-- Ошибка доступа -->
@@ -423,13 +421,13 @@ onBeforeUnmount(() => {
         🔒
       </div>
       <p class="shared-library-tab__access-denied-title">
-        {{ t('imageLibrary.accessRestricted') }}
+        Доступ ограничен
       </p>
       <p class="shared-library-tab__access-denied-text">
         {{ error.message }}
       </p>
       <p class="shared-library-tab__access-denied-hint">
-        {{ t('imageLibrary.upgradeSharedPlan') }}
+        Обновите тариф для получения доступа к общей библиотеке изображений.
       </p>
     </div>
 
