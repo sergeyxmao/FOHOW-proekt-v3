@@ -11,7 +11,7 @@
 
 import crypto from 'crypto';
 import { pool } from '../db.js';
-import { sendSubscriptionEmail } from '../utils/email.js';
+import { sendSubscriptionEmail } from '../utils/emailService.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 import boardLockService from '../services/boardLockService.js';
 import {

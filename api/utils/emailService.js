@@ -187,9 +187,105 @@ export async function sendTestEmail(to) {
   return await sendEmail(to, subject, html, text);
 }
 
+// =====================================================
+// Обёртки для конкретных типов email-уведомлений
+// =====================================================
+
+import {
+  getVerificationCodeTemplate,
+  getPasswordResetTemplate,
+  getWelcomeTemplate,
+  getSubscriptionEventTemplate,
+  getPasswordChangedTemplate
+} from '../templates/emailTemplates.js';
+
+/**
+ * Отправка кода подтверждения email
+ * @param {string} email - адрес получателя
+ * @param {string} code - 6-значный код
+ */
+export async function sendVerificationEmail(email, code) {
+  const { subject, html } = getVerificationCodeTemplate({ code });
+  return await sendEmail(email, subject, html);
+}
+
+/**
+ * Отправка письма для сброса пароля
+ * @param {string} email - адрес получателя
+ * @param {string} token - JWT-токен сброса
+ */
+export async function sendPasswordResetEmail(email, token) {
+  const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+  const { subject, html } = getPasswordResetTemplate({ resetUrl });
+  return await sendEmail(email, subject, html);
+}
+
+/**
+ * Отправка приветственного письма
+ * @param {string} email - адрес получателя
+ * @param {string} userName - имя пользователя
+ */
+export async function sendWelcomeEmail(email, userName = '') {
+  const dashboardUrl = `${process.env.FRONTEND_URL}/boards`;
+  const { subject, html } = getWelcomeTemplate({
+    userName: userName || email.split('@')[0],
+    demoDays: 7,
+    dashboardUrl
+  });
+  return await sendEmail(email, subject, html);
+}
+
+/**
+ * Отправка email-уведомлений о событиях подписки
+ * @param {string} email - Email получателя
+ * @param {string} eventType - Тип события: 'new', 'renewed', 'cancelled', 'promo'
+ * @param {Object} data - Данные подписки
+ * @param {string} data.userName - Имя пользователя
+ * @param {string} data.planName - Название тарифа
+ * @param {number} data.amount - Сумма оплаты
+ * @param {string} data.currency - Валюта
+ * @param {string} data.startDate - Дата начала (ISO)
+ * @param {string} data.expiresDate - Дата окончания (ISO)
+ * @param {string} [data.promoCode] - Промокод (для eventType='promo')
+ */
+export async function sendSubscriptionEmail(email, eventType, data) {
+  const { subject, html } = getSubscriptionEventTemplate({ eventType, ...data });
+  return await sendEmail(email, subject, html);
+}
+
+/**
+ * Отправка уведомления о смене пароля
+ * @param {string} email - Email получателя
+ * @param {Object} data - Данные события
+ * @param {Date} [data.changedAt] - Время смены пароля
+ * @param {string} [data.locationString] - Местоположение
+ */
+export async function sendPasswordChangedEmail(email, data = {}) {
+  const changedAt = data.changedAt || new Date();
+  const formattedDate = changedAt.toLocaleString('ru-RU', {
+    timeZone: 'Europe/Moscow',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const { subject, html } = getPasswordChangedTemplate({
+    formattedDate,
+    locationString: data.locationString
+  });
+  return await sendEmail(email, subject, html);
+}
+
 // Экспорт по умолчанию
 export default {
   sendEmail,
   checkEmailConfig,
   sendTestEmail,
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendWelcomeEmail,
+  sendSubscriptionEmail,
+  sendPasswordChangedEmail,
 };

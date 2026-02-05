@@ -279,7 +279,7 @@ export function registerAuthRoutes(app) {
         );
 
         // Отправить код на email
-        const { sendVerificationEmail } = await import('../utils/email.js');
+        const { sendVerificationEmail } = await import('../utils/emailService.js');
         await sendVerificationEmail(email, code);
 
         console.log(`📧 Код подтверждения отправлен на ${email}: ${code}`);
@@ -472,7 +472,7 @@ export function registerAuthRoutes(app) {
         [email, code, req.ip]
       );
 
-      const { sendVerificationEmail } = await import('../utils/email.js');
+      const { sendVerificationEmail } = await import('../utils/emailService.js');
       await sendVerificationEmail(email, code);
 
       console.log(`📧 Повторная отправка кода на ${email}: ${code}`);
@@ -731,7 +731,7 @@ export function registerAuthRoutes(app) {
         [userId, token]
       );
 
-      const { sendPasswordResetEmail } = await import('../utils/email.js');
+      const { sendPasswordResetEmail } = await import('../utils/emailService.js');
       await sendPasswordResetEmail(email, token);
 
       return reply.send({ success: true, message: 'Инструкции отправлены на email' });
