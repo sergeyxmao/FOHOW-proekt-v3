@@ -81,7 +81,7 @@ export default {
   discussionMenu: {
     title: 'Discussion',
     notesList: 'Notes List',
-    boardComments: 'Board Comments',
+    boardComments: 'Comments',
     stickerMessages: 'Stickers',
     allStickers: 'All stickers',
     addSticker: 'Add Sticker',

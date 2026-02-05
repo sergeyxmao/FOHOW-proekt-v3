@@ -76,7 +76,7 @@ export default {
   discussionMenu: {
     title: '讨论',
     notesList: '笔记列表',
-    boardComments: '看板评论',
+    boardComments: '评论',
     stickerMessages: '贴纸',
     allStickers: '所有贴纸',
     addSticker: '添加贴纸',

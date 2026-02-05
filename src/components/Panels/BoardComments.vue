@@ -1,7 +1,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useBoardCommentsStore } from './boardComments.js'
+
+const { t } = useI18n()
 
 const commentsStore = useBoardCommentsStore()
 const { orderedComments, hasComments } = storeToRefs(commentsStore)
@@ -70,7 +73,7 @@ const formatDate = (isoString) => {
 <template>
   <div class="board-comments">
     <div class="board-comments__header">
-      <h3 class="board-comments__title">Комментарии к доске</h3>
+      <h3 class="board-comments__title">{{ t('discussionMenu.boardComments') }}</h3>
     </div>
     <form class="board-comments__form" @submit.prevent="handleSubmit">
       <textarea

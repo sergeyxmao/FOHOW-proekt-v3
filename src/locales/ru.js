@@ -81,7 +81,7 @@ export default {
   discussionMenu: {
     title: 'Обсуждение',
     notesList: 'Список заметок',
-    boardComments: 'Коментарии к доске',
+    boardComments: 'Комментарии',
     stickerMessages: 'Стикеры',
     allStickers: 'Все стикеры',
     addSticker: 'Добавить стикер',
