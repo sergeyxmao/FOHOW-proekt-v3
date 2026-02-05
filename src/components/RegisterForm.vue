@@ -1,9 +1,9 @@
 <template>
   <div :class="['auth-card', props.isModernTheme ? 'auth-card--modern' : 'auth-card--classic']">
-    <h2 class="auth-card__title">Регистрация</h2>
+    <h2 class="auth-card__title">{{ t('auth.registerTitle') }}</h2>
     <form class="auth-card__form" @submit.prevent="handleRegister">
       <div class="auth-card__group">
-        <label for="email">Email:</label>
+        <label for="email">{{ t('auth.email') }}</label>
         <input
           id="email"
           v-model="email"
@@ -14,29 +14,29 @@
       </div>
 
       <div class="auth-card__group">
-        <label for="password">Пароль:</label>
+        <label for="password">{{ t('auth.password') }}</label>
         <input
           id="password"
           v-model="password"
           type="password"
           required
-          placeholder="Минимум 6 символов"
+          :placeholder="t('auth.minChars')"
           minlength="6"
         />
       </div>
 
       <div class="auth-card__group">
-        <label for="confirmPassword">Подтвердите пароль:</label>
+        <label for="confirmPassword">{{ t('auth.repeatPassword') }}</label>
         <input
           id="confirmPassword"
           v-model="confirmPassword"
           type="password"
           required
-          placeholder="Повторите пароль"
+          :placeholder="t('auth.repeatPassword')"
         />
       </div>
       <div class="auth-card__group">
-        <label for="registerVerification">Проверочный код:</label>
+        <label for="registerVerification">{{ t('auth.verificationCode') }}</label>
         <div class="auth-card__verification-row">
           <input
             id="registerVerification"
@@ -45,7 +45,7 @@
             inputmode="numeric"
             maxlength="4"
             required
-            placeholder="Введите код"
+            :placeholder="t('auth.enterCode')"
           />
           <div class="auth-card__verification-code" @click="regenerateVerificationCode">
             {{ verificationLoading ? '••••' : verificationCode }}
@@ -57,7 +57,7 @@
           @click="regenerateVerificationCode"
           :disabled="verificationLoading"
         >
-          Обновить код
+          {{ t('auth.refreshCode') }}
         </button>
       </div>
 
@@ -65,12 +65,12 @@
       <div v-if="success" class="auth-card__message auth-card__message--success">{{ success }}</div>
 
       <button class="auth-card__submit" type="submit" :disabled="loading">
-        {{ loading ? 'Регистрация...' : 'Зарегистрироваться' }}
+        {{ loading ? t('auth.registering') : t('auth.register') }}
       </button>
 
       <p class="auth-card__switch">
-        Уже есть аккаунт?
-        <a class="auth-card__link" @click="$emit('switch-to-login')">Войти</a>
+        {{ t('auth.hasAccount') }}
+        <a class="auth-card__link" @click="$emit('switch-to-login')">{{ t('auth.loginLink') }}</a>
       </p>
     </form>
   </div>
@@ -78,7 +78,10 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+
+const { t } = useI18n()
 
 const emit = defineEmits(['switch-to-login'])
 const props = defineProps({

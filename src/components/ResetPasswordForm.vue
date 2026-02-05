@@ -1,49 +1,52 @@
 <template>
   <div class="reset-password-form">
-    <h2>Установка нового пароля</h2>
+    <h2>{{ t('auth.resetPasswordTitle') }}</h2>
     
     <form v-if="!success" @submit.prevent="handleSubmit">
       <div class="form-group">
-        <label for="password">Новый пароль:</label>
+        <label for="password">{{ t('auth.newPassword') }}</label>
         <input
           id="password"
           v-model="password"
           type="password"
           required
-          placeholder="Минимум 6 символов"
+          :placeholder="t('auth.minChars')"
           minlength="6"
         />
       </div>
       
       <div class="form-group">
-        <label for="confirmPassword">Подтвердите пароль:</label>
+        <label for="confirmPassword">{{ t('auth.repeatPassword') }}</label>
         <input
           id="confirmPassword"
           v-model="confirmPassword"
           type="password"
           required
-          placeholder="Повторите пароль"
+          :placeholder="t('auth.repeatPassword')"
         />
       </div>
       
       <div v-if="error" class="error">{{ error }}</div>
       
       <button type="submit" :disabled="loading">
-        {{ loading ? 'Сохранение...' : 'Сохранить новый пароль' }}
+        {{ loading ? t('auth.savingPassword') : t('auth.saveNewPassword') }}
       </button>
     </form>
     
     <div v-else class="success-message">
       <div class="success-icon">✓</div>
-      <h3>Пароль успешно изменен!</h3>
-      <p>Теперь вы можете войти с новым паролем.</p>
-      <button @click="$emit('success')">Готово</button>
+      <h3>{{ t('auth.passwordChanged') }}</h3>
+      <p>{{ t('auth.canLoginNow') }}</p>
+      <button @click="$emit('success')">{{ t('auth.done') }}</button>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   token: {
@@ -66,7 +69,7 @@ async function handleSubmit() {
   error.value = ''
   
   if (password.value !== confirmPassword.value) {
-    error.value = 'Пароли не совпадают'
+    error.value = t('auth.passwordsDoNotMatch')
     return
   }
   

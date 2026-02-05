@@ -6,14 +6,14 @@
     ]"
   >
     <div class="profile-header">
-      <h2>Мой профиль</h2>
+      <h2>{{ t('userProfile.myProfile') }}</h2>
       <button
         class="tariff-btn"
         :style="getPlanBadgeStyle()"
         @click="selectTab('tariffs')"
-        title="Перейти в раздел тарифы"
+        :title="t('userProfile.goToTariffs')"
       >
-        {{ subscriptionStore.currentPlan?.name || 'Не определен' }}
+        {{ subscriptionStore.currentPlan?.name || t('userProfile.notDefined') }}
       </button>
       <button class="close-btn" @click="$emit('close')">×</button>
     </div>
@@ -32,13 +32,13 @@
           <div
             :class="['avatar-wrapper', 'avatar-wrapper--clickable', { 'avatar-wrapper--verified': user.is_verified }]"
             @click="openAvatarEdit"
-            title="Нажмите для редактирования аватара"
+            :title="t('userProfile.clickToEditAvatar')"
           >
             <img
               v-if="user.avatar_url"
               :key="avatarKey"
               :src="getAvatarUrl(user.avatar_url)"
-              alt="Аватар"
+              :alt="t('userProfile.avatar')"
               class="profile-avatar"
             >
             <div v-else class="profile-avatar-placeholder">
@@ -75,13 +75,12 @@
             <div v-if="isInGracePeriod()" class="grace-warning">
               <div class="grace-warning-icon">⚠️</div>
               <div class="grace-warning-content">
-                <p class="grace-warning-title">Льготный период доступа</p>
+                <p class="grace-warning-title">{{ t('userProfile.gracePeriodTitle') }}</p>
                 <p class="grace-warning-text">
-                  Срок вашей подписки истек, но доступ сохранен до <strong>{{ getGracePeriodDate() }}</strong>.
-                  Продлите подписку, чтобы не потерять доступ к платным функциям.
+                  {{ t('userProfile.gracePeriodText', { date: getGracePeriodDate() }) }}
                 </p>
                 <button @click="activeTab = 'tariffs'" class="grace-warning-button">
-                  Продлить подписку
+                  {{ t('userProfile.renewSubscription') }}
                 </button>
               </div>
             </div>
@@ -93,29 +92,29 @@
               </div>
 
               <div class="info-item">
-                <label>Имя пользователя:</label>
-                <span>{{ user.username || 'Не указано' }}</span>
+                <label>{{ t('userProfile.username') }}</label>
+                <span>{{ user.username || t('userProfile.notSpecified') }}</span>
               </div>
 
               <div class="info-item">
-                <label>Дата регистрации:</label>
+                <label>{{ t('userProfile.registrationDate') }}</label>
                 <span>{{ formatDate(user.created_at) }}</span>
               </div>
 
               <div class="info-item">
-                <label>Текущий тариф:</label>
+                <label>{{ t('userProfile.currentPlan') }}</label>
                 <span class="plan-badge" :style="getPlanBadgeStyle()">
-                  {{ subscriptionStore.currentPlan?.name || 'Не определен' }}
+                  {{ subscriptionStore.currentPlan?.name || t('userProfile.notDefined') }}
                 </span>
               </div>
 
               <div class="info-item">
-                <label>Начало подписки:</label>
+                <label>{{ t('userProfile.subscriptionStart') }}</label>
                 <span>{{ getStartDate() }}</span>
               </div>
 
               <div class="info-item">
-                <label>Окончание подписки:</label>
+                <label>{{ t('userProfile.subscriptionEnd') }}</label>
                 <span :class="getExpiryClass()">
                   {{ getExpiryDate() }}
                 </span>
@@ -127,59 +126,59 @@
           <div v-if="activeTab === 'personal' && !isAvatarEditMode" class="tab-panel">
             <form @submit.prevent="savePersonalInfo" class="info-form">
               <div class="form-group">
-                <label for="username">Имя пользователя:</label>
+                <label for="username">{{ t('userProfile.username') }}</label>
                 <input
                   id="username"
                   v-model="personalForm.username"
                   type="text"
-                  placeholder="Введите имя пользователя"
+                  :placeholder="t('userProfile.usernamePlaceholder')"
                   maxlength="50"
                 />
-                <span class="form-hint">Будет отображаться в системе</span>
+                <span class="form-hint">{{ t('userProfile.usernameHint') }}</span>
               </div>
 
               <div class="form-group">
-                <label for="full-name">Полное имя:</label>
+                <label for="full-name">{{ t('userProfile.fullName') }}</label>
                 <input
                   id="full-name"
                   v-model="personalForm.full_name"
                   type="text"
-                  placeholder="Введите полное имя"
+                  :placeholder="t('userProfile.fullNamePlaceholder')"
                 />
               </div>
 
               <div class="form-group">
-                <label for="phone">Телефон:</label>
+                <label for="phone">{{ t('userProfile.phone') }}</label>
                 <input
                   id="phone"
                   v-model="personalForm.phone"
                   type="tel"
-                  placeholder="+7 (XXX) XXX-XX-XX"
+                  :placeholder="t('userProfile.phonePlaceholder')"
                 />
               </div>
 
               <div class="form-group">
-                <label for="city">Город:</label>
+                <label for="city">{{ t('userProfile.city') }}</label>
                 <input
                   id="city"
                   v-model="personalForm.city"
                   type="text"
-                  placeholder="Введите город"
+                  :placeholder="t('userProfile.cityPlaceholder')"
                 />
               </div>
 
               <div class="form-group">
-                <label for="country">Страна:</label>
+                <label for="country">{{ t('userProfile.country') }}</label>
                 <input
                   id="country"
                   v-model="personalForm.country"
                   type="text"
-                  placeholder="Введите страну"
+                  :placeholder="t('userProfile.countryPlaceholder')"
                 />
               </div>
 
               <div class="form-group">
-                <label for="office">Представительство:</label>
+                <label for="office">{{ t('userProfile.office') }}</label>
                 <input
                   id="office"
                   v-model="personalForm.office"
@@ -196,8 +195,8 @@
                   for="personal-id-input"
                   :class="{ 'verified-label': user.is_verified }"
                 >
-                  Компьютерный номер:
-                  <span v-if="user.is_verified" class="verified-icon" title="Верифицирован">⭐</span>
+                  {{ t('userProfile.personalId') }}
+                  <span v-if="user.is_verified" class="verified-icon" :title="t('userProfile.verified')">⭐</span>
                 </label>
                 <div
                   :class="[
@@ -210,14 +209,14 @@
                     id="personal-id-input"
                     v-model="personalIdSuffix"
                     type="text"
-                    placeholder="9 цифр"
+                    :placeholder="t('userProfile.personalIdPlaceholder')"
                     maxlength="9"
                     @input="updatePersonalId"
                   />
                 </div>
                 <div v-if="personalIdError" class="error-text">{{ personalIdError }}</div>
-                <p class="hint-text">Введите 9 цифр после автоматического префикса</p>
-                <p v-if="user.is_verified" class="hint-text hint-text--warning">Изменение номера или представительства приведет к потере статуса верификации.</p>
+                <p class="hint-text">{{ t('userProfile.personalIdHint') }}</p>
+                <p v-if="user.is_verified" class="hint-text hint-text--warning">{{ t('userProfile.verificationLossWarning') }}</p>
                 <!-- Кнопка верификации и сообщение об отклонении -->
                 <div v-if="!user.is_verified" class="verification-section">
                   <button
@@ -228,7 +227,7 @@
                     :disabled="!canSubmitVerification"
                   >
                     <span class="btn-icon">✓</span>
-                    Верифицировать
+                    {{ t('userProfile.verify') }}
                   </button>
                   <!-- Подсказка почему кнопка неактивна -->
                   <p v-if="verificationBlockReason && !verificationStatus.hasPendingRequest" class="hint-text hint-text--info">
@@ -238,7 +237,7 @@
                   <div v-else-if="verificationStatus.hasPendingRequest" class="verification-pending-wrapper">
                     <div class="verification-pending">
                       <span class="pending-icon">⏳</span>
-                      Заявка на модерации
+                      {{ t('userProfile.requestOnModeration') }}
                     </div>
                     <button
                       type="button"
@@ -246,7 +245,7 @@
                       @click="openCancelConfirm"
                       :disabled="cancellingVerification"
                     >
-                      {{ cancellingVerification ? 'Отмена...' : 'Отменить запрос' }}
+                      {{ cancellingVerification ? t('userProfile.cancelling') : t('userProfile.cancelRequest') }}
                     </button>
                   </div>
 
@@ -254,7 +253,7 @@
                   <div v-if="verificationStatus.lastRejection" class="rejection-message">
                     <div class="rejection-header">
                       <span class="rejection-icon">❌</span>
-                      <strong>Заявка отклонена</strong>
+                      <strong>{{ t('userProfile.requestRejected') }}</strong>
                     </div>
                     <p class="rejection-reason">{{ verificationStatus.lastRejection.rejection_reason }}</p>
                     <p class="rejection-date">
@@ -271,7 +270,7 @@
                 <!-- Кнопка истории верификации -->
                 <div v-if="verificationHistory.length > 0 || user.is_verified" class="verification-history-link">
                   <button type="button" class="btn-history" @click="openHistory">
-                    📋 История верификации
+                    {{ t('userProfile.verificationHistory') }}
                   </button>
                 </div>
               </div>
@@ -291,7 +290,7 @@
               <div v-if="personalSuccess" class="success-message">{{ personalSuccess }}</div>
 
               <button type="submit" class="btn-save" :disabled="savingPersonal">
-                {{ savingPersonal ? 'Сохранение...' : '💾 Сохранить изменения' }}
+                {{ savingPersonal ? t('userProfile.saving') : t('userProfile.saveChanges') }}
               </button>
             </form>
           </div>
@@ -300,7 +299,7 @@
           <div v-if="activeTab === 'social' && !isAvatarEditMode" class="tab-panel">
             <form @submit.prevent="saveSocialInfo" class="info-form">
               <div class="form-group">
-                <label for="telegram">Telegram (@username):</label>
+                <label for="telegram">{{ t('userProfile.telegram') }}</label>
                 <input
                   id="telegram"
                   v-model="socialForm.telegram_user"
@@ -310,7 +309,7 @@
               </div>
 
               <div class="form-group">
-                <label for="vk">VK (ссылка):</label>
+                <label for="vk">{{ t('userProfile.vk') }}</label>
                 <input
                   id="vk"
                   v-model="socialForm.vk_profile"
@@ -320,7 +319,7 @@
               </div>
 
               <div class="form-group">
-                <label for="instagram">Instagram (@username):</label>
+                <label for="instagram">{{ t('userProfile.instagram') }}</label>
                 <input
                   id="instagram"
                   v-model="socialForm.instagram_profile"
@@ -330,7 +329,7 @@
               </div>
 
               <div class="form-group">
-                <label for="website">Сайт (URL):</label>
+                <label for="website">{{ t('userProfile.website') }}</label>
                 <input
                   id="website"
                   v-model="socialForm.website"
@@ -343,7 +342,7 @@
               <div v-if="socialSuccess" class="success-message">{{ socialSuccess }}</div>
 
               <button type="submit" class="btn-save" :disabled="savingSocial">
-                {{ savingSocial ? 'Сохранение...' : '💾 Сохранить изменения' }}
+                {{ savingSocial ? t('userProfile.saving') : t('userProfile.saveChanges') }}
               </button>
             </form>
           </div>
@@ -351,21 +350,20 @@
           <!-- ===== TAB 4: Настройки конфиденциальности ===== -->
           <div v-if="activeTab === 'privacy' && !isAvatarEditMode" class="tab-panel">
             <div class="privacy-settings-main">
-              <h3 class="privacy-settings-title">Управление видимостью данных</h3>
+              <h3 class="privacy-settings-title">{{ t('userProfile.privacyManageTitle') }}</h3>
               <p class="privacy-settings-hint">
-                Настройте, какие данные будут доступны для поиска другим пользователям.
-                Разрешенные поля (🔓) будут видны в результатах поиска, запрещенные (🔒) - скрыты.
+                {{ t('userProfile.privacyManageHint') }}
               </p>
 
               <div class="privacy-fields-grid">
                 <!-- Личная информация -->
                 <div class="privacy-section">
-                  <h4 class="privacy-section-title">📋 Личная информация</h4>
+                  <h4 class="privacy-section-title">{{ t('userProfile.privacyPersonalSection') }}</h4>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
-                      <span class="privacy-field-label">Имя пользователя</span>
-                      <span class="privacy-field-value">{{ personalForm.username || 'Не указано' }}</span>
+                      <span class="privacy-field-label">{{ t('userProfile.privacyUsername') }}</span>
+                      <span class="privacy-field-value">{{ personalForm.username || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -383,14 +381,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.username ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.username ? t('userProfile.searchAllowed') : t('userProfile.searchDenied') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
-                      <span class="privacy-field-label">Полное имя</span>
-                      <span class="privacy-field-value">{{ personalForm.full_name || 'Не указано' }}</span>
+                      <span class="privacy-field-label">{{ t('userProfile.privacyFullName') }}</span>
+                      <span class="privacy-field-value">{{ personalForm.full_name || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -408,14 +406,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.full_name ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.full_name ? t('userProfile.searchAllowed') : t('userProfile.searchDenied') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
-                      <span class="privacy-field-label">Телефон</span>
-                      <span class="privacy-field-value">{{ personalForm.phone || 'Не указано' }}</span>
+                      <span class="privacy-field-label">{{ t('userProfile.privacyPhone') }}</span>
+                      <span class="privacy-field-value">{{ personalForm.phone || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -433,14 +431,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.phone ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.phone ? t('userProfile.searchAllowed') : t('userProfile.searchDenied') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
                       <span class="privacy-field-label">Город</span>
-                      <span class="privacy-field-value">{{ personalForm.city || 'Не указано' }}</span>
+                      <span class="privacy-field-value">{{ personalForm.city || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -458,14 +456,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.city ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.city ? t('userProfile.searchAllowed') : t('userProfile.searchDenied') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
                       <span class="privacy-field-label">Страна</span>
-                      <span class="privacy-field-value">{{ personalForm.country || 'Не указано' }}</span>
+                      <span class="privacy-field-value">{{ personalForm.country || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -483,14 +481,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.country ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.country ? t('userProfile.searchAllowed') : t('userProfile.searchDenied') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
                       <span class="privacy-field-label">Офис</span>
-                      <span class="privacy-field-value">{{ personalForm.office || 'Не указано' }}</span>
+                      <span class="privacy-field-value">{{ personalForm.office || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -508,14 +506,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.office ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.office ? t('userProfile.searchAllowed') : t('userProfile.searchDenied') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
                       <span class="privacy-field-label">Личный ID</span>
-                      <span class="privacy-field-value">{{ personalForm.personal_id || 'Не указано' }}</span>
+                      <span class="privacy-field-value">{{ personalForm.personal_id || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -533,7 +531,7 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.personal_id ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.personal_id ? t('userProfile.searchAllowed') : t('userProfile.searchDenied') }}</span>
                     </button>
                   </div>
                 </div>
@@ -545,7 +543,7 @@
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
                       <span class="privacy-field-label">Telegram</span>
-                      <span class="privacy-field-value">{{ socialForm.telegram_user || 'Не указано' }}</span>
+                      <span class="privacy-field-value">{{ socialForm.telegram_user || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -563,14 +561,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.telegram_user ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.telegram_user ? t('userProfile.searchAllowed') : t('userProfile.searchDenied') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
                       <span class="privacy-field-label">Instagram</span>
-                      <span class="privacy-field-value">{{ socialForm.instagram_profile || 'Не указано' }}</span>
+                      <span class="privacy-field-value">{{ socialForm.instagram_profile || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -588,7 +586,7 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.instagram_profile ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.instagram_profile ? t('userProfile.searchAllowed') : t('userProfile.searchDenied') }}</span>
                     </button>
                   </div>
 
@@ -596,7 +594,7 @@
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
                       <span class="privacy-field-label">VK</span>
-                      <span class="privacy-field-value">{{ socialForm.vk_profile || 'Не указано' }}</span>
+                      <span class="privacy-field-value">{{ socialForm.vk_profile || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -614,7 +612,7 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.vk_profile ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.vk_profile ? t('userProfile.searchAllowed') : t('userProfile.searchDenied') }}</span>
                     </button>
                   </div>
 
@@ -622,7 +620,7 @@
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
                       <span class="privacy-field-label">Сайт</span>
-                      <span class="privacy-field-value">{{ socialForm.website || 'Не указано' }}</span>
+                      <span class="privacy-field-value">{{ socialForm.website || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -640,7 +638,7 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.website ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.website ? t('userProfile.searchAllowed') : t('userProfile.searchDenied') }}</span>
                     </button>
                   </div>
                 </div>
@@ -1350,12 +1348,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import 'cropperjs/dist/cropper.css'
 import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscription'
 import TelegramLinkWidget from '@/components/TelegramLinkWidget.vue'
+import { useI18n } from 'vue-i18n'
 
 // Composables
 import { useUserAvatar } from '@/composables/useUserAvatar'
@@ -1377,6 +1376,8 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'openVerificationModal'])
 
+const { t } = useI18n()
+
 const authStore = useAuthStore()
 const subscriptionStore = useSubscriptionStore()
 const { user } = storeToRefs(authStore)
@@ -1385,17 +1386,17 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 
 // Табы
 const activeTab = ref('basic')
-const tabs = [
-  { id: 'basic', label: 'Основная информация', icon: 'ℹ️' },
-  { id: 'personal', label: 'Личная информация', icon: '👤' },
-  { id: 'social', label: 'Соц. сети', icon: '🌐' },
-  { id: 'privacy', label: 'Настройки конфиденциальности', icon: '🔒' },
-  { id: 'security', label: 'Безопасность', icon: '🛡️' },
-  { id: 'limits', label: 'Лимиты', icon: '📊' },
-  { id: 'notifications', label: 'Уведомления', icon: '🔔' },
-  { id: 'promo', label: 'Промокод', icon: '🎟️' },
-  { id: 'tariffs', label: 'Тарифы', icon: '💳' }
-]
+const tabs = computed(() => [
+  { id: 'basic', label: t('userProfile.basicInfo'), icon: 'ℹ️' },
+  { id: 'personal', label: t('userProfile.personalInfo'), icon: '👤' },
+  { id: 'social', label: t('userProfile.socialLinks'), icon: '🌐' },
+  { id: 'privacy', label: t('userProfile.privacySettings'), icon: '🔒' },
+  { id: 'security', label: t('userProfile.security'), icon: '🛡️' },
+  { id: 'limits', label: t('userProfile.limits'), icon: '📊' },
+  { id: 'notifications', label: t('userProfile.notificationsTab'), icon: '🔔' },
+  { id: 'promo', label: t('userProfile.promoCode'), icon: '🎟️' },
+  { id: 'tariffs', label: t('userProfile.tariffs'), icon: '💳' }
+])
 
 // === Инициализация Composables ===
 
@@ -1570,7 +1571,7 @@ const {
 
 // Форматирование даты
 function formatDate(dateString) {
-  if (!dateString) return 'Не указано'
+  if (!dateString) return t('userProfile.notSpecified')
   const date = new Date(dateString)
   return date.toLocaleDateString('ru-RU', {
     year: 'numeric',
@@ -1614,7 +1615,7 @@ function getStartDate() {
 // Дата окончания подписки
 function getExpiryDate() {
   const expiresAt = user.value?.subscription_expires_at || subscriptionStore.currentPlan?.expiresAt
-  if (!expiresAt) return 'Бессрочно'
+  if (!expiresAt) return t('userProfile.unlimited')
   return formatDate(expiresAt)
 }
 
