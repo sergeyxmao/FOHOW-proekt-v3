@@ -2129,6 +2129,7 @@ onMounted(() => {
 watch(() => boardStore.currentBoardId, (newBoardId, oldBoardId) => {
   if (!newBoardId) {
     anchorsStore.reset();
+    stickersStore.clearStickers();
     return;
   }
 
@@ -2137,6 +2138,9 @@ watch(() => boardStore.currentBoardId, (newBoardId, oldBoardId) => {
   }
 
   loadAnchorsForBoard(newBoardId);
+  stickersStore.fetchStickers(newBoardId).catch(err => {
+    console.error('Ошибка загрузки стикеров при смене доски:', err);
+  });
 }, { immediate: true });
 
 onBeforeUnmount(() => {
