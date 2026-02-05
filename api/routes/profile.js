@@ -22,7 +22,7 @@ import { authenticateToken } from '../middleware/auth.js';
 import { validateOffice, validatePersonalId } from './auth.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 import { sendEmail } from '../utils/emailService.js';
-import { sendPasswordChangedEmail } from '../utils/email.js';
+import { sendPasswordChangedEmail } from '../utils/emailService.js';
 import { getGeoLocation, formatGeoLocation } from '../utils/geoLocation.js';
 import { getVerificationRevokedMessage } from '../templates/telegramTemplates.js';
 import { getVerificationRevokedTemplate } from '../templates/emailTemplates.js';

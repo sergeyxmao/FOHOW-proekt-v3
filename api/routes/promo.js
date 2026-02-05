@@ -1,7 +1,7 @@
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import boardLockService from '../services/boardLockService.js';
-import { sendSubscriptionEmail } from '../utils/email.js';
+import { sendSubscriptionEmail } from '../utils/emailService.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 import { getPromoCodeAppliedMessage } from '../templates/telegramTemplates.js';
 
