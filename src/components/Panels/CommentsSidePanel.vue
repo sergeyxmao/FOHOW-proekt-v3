@@ -1,7 +1,10 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import UserComments from './UserComments.vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
+
+const { t } = useI18n()
 
 const props = defineProps({
   isModernTheme: {
@@ -27,7 +30,7 @@ const handleClose = () => {
     }"
   >
     <div class="comments-side-panel__header">
-      <h2 class="comments-side-panel__title">Коментарии к доске</h2>
+      <h2 class="comments-side-panel__title">{{ t('discussionMenu.boardComments') }}</h2>
       <button
         type="button"
         class="comments-side-panel__close"
