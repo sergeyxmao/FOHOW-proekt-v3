@@ -12,9 +12,9 @@ const props = defineProps({
 const stickersStore = useStickersStore()
 const searchQuery = ref('')
   
-// Вычисляемое свойство для получения стикеров с непустым содержимым
+// Вычисляемое свойство для получения всех стикеров (включая пустые)
 const messagesStickers = computed(() => {
-  return stickersStore.stickers.filter(sticker => sticker.content && sticker.content.trim())
+  return [...stickersStore.stickers]
 })
 const filteredMessages = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
@@ -50,11 +50,6 @@ const handleEdit = (sticker, event) => {
 }
 
 const handleSaveEdit = async (stickerId) => {
-  if (editingContent.value.trim() === '') {
-    alert('Содержимое стикера не может быть пустым')
-    return
-  }
-
   try {
     await stickersStore.updateSticker(stickerId, {
       content: editingContent.value
@@ -105,7 +100,7 @@ const formatDate = (dateString) => {
 
 // Получаем превью текста (первые 100 символов)
 const getPreview = (content) => {
-  if (!content) return ''
+  if (!content || !content.trim()) return 'Пустой стикер'
   const text = content.trim()
   if (text.length <= 100) return text
   return text.substring(0, 100) + '...'
@@ -179,7 +174,11 @@ onMounted(() => {
             </button>
           </div>
         </div>
-        <div v-if="editingStickerId !== sticker.id" class="sticker-message-item__content">
+        <div
+          v-if="editingStickerId !== sticker.id"
+          class="sticker-message-item__content"
+          :class="{ 'sticker-message-item__content--empty': !sticker.content || !sticker.content.trim() }"
+        >
           {{ getPreview(sticker.content) }}
         </div>
         <div v-else class="sticker-message-item__edit">
@@ -374,6 +373,11 @@ onMounted(() => {
   margin-bottom: 4px;
 }
 
+.sticker-message-item__content--empty {
+  color: #9ca3af;
+  font-style: italic;
+}
+
 .sticker-message-item--editing {
   background: rgba(59, 130, 246, 0.08);
 }
@@ -477,6 +481,10 @@ onMounted(() => {
 
 .sticker-messages--modern .sticker-message-item__content {
   color: #cbd5e1;
+}
+
+.sticker-messages--modern .sticker-message-item__content--empty {
+  color: #64748b;
 }
 
 .sticker-messages--modern .sticker-message-item__action {
