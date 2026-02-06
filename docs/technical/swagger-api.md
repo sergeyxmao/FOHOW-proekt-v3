@@ -18,27 +18,35 @@
 | Staging | `https://1508.marketingfohow.ru/api/docs?token=YOUR_JWT_TOKEN` |
 | Local | `http://localhost:4000/api/docs?token=YOUR_JWT_TOKEN` |
 
-### Авторизация
+### Авторизация (cookie-based)
 
-Swagger UI доступен **только администраторам**. Передайте JWT-токен одним из способов:
+Swagger UI доступен **только администраторам**. Используется механизм cookie для корректной работы:
 
-1. **Query-параметр** (рекомендуется для браузера):
+1. **Первый вход** — откройте URL с токеном в query:
    ```
    /api/docs?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
    ```
+   Сервер проверит токен, установит HttpOnly-cookie `swagger_token` и перенаправит на чистый `/api/docs/`.
 
-2. **Заголовок Authorization** (для программного доступа):
+2. **Повторные визиты** — cookie действует 24 часа, повторно вводить токен не нужно.
+
+3. **Заголовок Authorization** (для программного доступа, curl):
    ```
    Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
    ```
 
+**Почему cookie, а не query-параметр?**
+`@fastify/swagger-ui` внутренне вызывает `resolveUrl('./json')` на основе текущего URL браузера. Если в URL есть `?token=...`, относительный путь к JSON-спецификации вычисляется некорректно и Swagger UI не загружается. Cookie позволяет убрать токен из URL.
+
 ### OpenAPI JSON-спецификация
 
 ```
-GET /api/docs/json?token=YOUR_JWT_TOKEN
+GET /api/docs/json
 ```
 
-Возвращает полную OpenAPI 3.0 спецификацию в формате JSON. Можно использовать для:
+Спецификация доступна без токена (защищается только корневая страница `/api/docs`). Это безопасно — она содержит только описание эндпоинтов, но не данные.
+
+Можно использовать для:
 - Импорта в Postman
 - Генерации клиентских SDK
 - Интеграции с FoChat или внешними сервисами
@@ -193,14 +201,8 @@ app.post('/api/example', {
 Для экспорта спецификации (например, для FoChat):
 
 ```bash
-# Через curl с авторизацией
-curl -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
-  https://interactive.marketingfohow.ru/api/docs/json \
-  -o openapi.json
-
-# Или через query-параметр
-curl "https://interactive.marketingfohow.ru/api/docs/json?token=YOUR_ADMIN_TOKEN" \
-  -o openapi.json
+# JSON-спецификация доступна без авторизации
+curl https://interactive.marketingfohow.ru/api/docs/json -o openapi.json
 ```
 
 Полученный `openapi.json` можно:
@@ -214,7 +216,7 @@ curl "https://interactive.marketingfohow.ru/api/docs/json?token=YOUR_ADMIN_TOKEN
 
 **Проблема:** `@fastify/helmet` по умолчанию запрещает inline-скрипты и стили, которые использует Swagger UI.
 
-**Решение:** Helmet настроен с кастомной CSP, разрешающей `'unsafe-inline'` для `scriptSrc` и `styleSrc`. Это необходимо для работы Swagger UI. Настройка находится в `api/server.js` при регистрации helmet.
+**Решение:** Helmet настроен с кастомной CSP, разрешающей `'unsafe-inline'` для `scriptSrc` и `styleSrc`. Настройка в `api/server.js`:
 
 ```javascript
 await app.register(helmet, {
@@ -230,27 +232,24 @@ await app.register(helmet, {
 });
 ```
 
+### resolveUrl('./json') ломается при ?token= в URL
+
+**Проблема:** `@fastify/swagger-ui` в `swagger-initializer.js` всегда вызывает `resolveUrl('./json')`, который берёт текущий URL браузера и приклеивает `./json`. Если URL содержит `?token=JWT`, относительный путь вычисляется некорректно и спецификация не загружается. Параметр `url` в `uiConfig` перезаписывается плагином.
+
+**Решение:** Cookie-аутентификация. При первом заходе с `?token=JWT` сервер:
+1. Проверяет токен
+2. Ставит HttpOnly cookie `swagger_token`
+3. Делает redirect на чистый `/api/docs/`
+
+Без `?token=` в URL `resolveUrl('./json')` корректно разрешается в `/api/docs/json`.
+
 ### Защита /api/docs блокирует подресурсы
 
-**Проблема:** Хук `onRequest` для проверки admin-токена может блокировать внутренние ресурсы Swagger UI (json, static, css, js), из-за чего UI не загружается.
+**Проблема:** Хук `onRequest` может блокировать внутренние ресурсы Swagger UI (json, static, css, js).
 
-**Решение:** Хук защищает **только** корневой путь `/api/docs` (без подпутей). Все подресурсы (`/api/docs/json`, `/api/docs/static/*`, и т.д.) пропускаются без проверки токена:
+**Решение:** Хук защищает **только** корневой путь `/api/docs` (без подпутей):
 
 ```javascript
 const cleanUrl = request.url.split('?')[0].replace(/\/+$/, '');
-if (cleanUrl !== '/api/docs') return; // пропускаем все подресурсы
-```
-
-Спецификация `/api/docs/json` доступна без токена. Это безопасно, т.к. она содержит только структуру API (описание эндпоинтов), но не данные.
-
-### Swagger UI не находит спецификацию
-
-**Проблема:** Если в URL есть `?token=...`, Swagger UI может неправильно вычислить относительный путь к JSON-спецификации.
-
-**Решение:** В конфигурации `swaggerUi` указан абсолютный URL спецификации:
-
-```javascript
-uiConfig: {
-  url: '/api/docs/json'
-}
+if (cleanUrl !== '/api/docs') return;
 ```
