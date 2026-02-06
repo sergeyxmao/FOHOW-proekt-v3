@@ -89,6 +89,42 @@ Phase 5 addressed frontend quality issues: missing 404 handling, no lazy loading
 
 ---
 
+## 5.5: Исправление двойного хеша в именах lazy-loaded чанков Vite
+
+**Файл:** `vite.config.js`
+
+**Проблема:** На production (interactive.marketingfohow.ru) не загружались lazy-loaded страницы (NotFound, AdminPanel, BoardsList, PricingPage, EmailVerification). Vite при сборке генерировал файлы с двойным хешем в имени (например `NotFound-Di_yQy91-B5_9iTXN.js`), но в основном бандле (`index-*.js`) записывал ссылку с одинарным хешем (`NotFound-Di_yQy91.js`). Браузер запрашивал несуществующий файл, Nginx возвращал `index.html` вместо JS-модуля, что приводило к ошибке:
+
+```
+Failed to load module script: Expected a JavaScript-or-Wasm module script
+but the server responded with a MIME type of "text/html".
+```
+
+**Причина:** Без явного указания формата `chunkFileNames` Vite/Rollup использовал шаблон по умолчанию, который в определённых версиях мог генерировать двойной хеш для динамически импортируемых чанков.
+
+**Решение:** Добавлена секция `build` в `vite.config.js` с явным форматом имён чанков:
+
+```js
+build: {
+  rollupOptions: {
+    output: {
+      chunkFileNames: 'assets/[name]-[hash].js'
+    }
+  }
+}
+```
+
+**Проверка:**
+
+```bash
+rm -rf dist node_modules/.vite && pnpm run build
+grep -oE "(AdminPanel|BoardsList|PricingPage|EmailVerification|NotFound)[^\"']*\.js" dist/assets/index-*.js | sort
+ls dist/assets/{AdminPanel,BoardsList,PricingPage,EmailVerification,NotFound}*.js
+# Оба списка ДОЛЖНЫ совпадать — каждый чанк имеет одинарный хеш
+```
+
+---
+
 ## Files Changed
 
 | File | Changes |
@@ -107,3 +143,4 @@ Phase 5 addressed frontend quality issues: missing 404 handling, no lazy loading
 | `src/composables/useCanvasConnections.js` | 5 console.log removed |
 | `src/composables/useMobileUIScaleGesture.js` | 4 console.log removed |
 | `src/stores/drawing.usage.example.js` | Deleted |
+| `vite.config.js` | Added `build.rollupOptions.output.chunkFileNames` to fix double-hash in lazy-loaded chunks |
