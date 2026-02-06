@@ -139,7 +139,7 @@ export function registerProfileRoutes(app) {
       const normalizedPersonalId = typeof personal_id === 'string' ? personal_id.trim().toUpperCase() : null;
 
       const userResult = await pool.query(
-        `SELECT id, email, username, avatar_url, country, city, office, personal_id,
+        `SELECT id, email, username, password, avatar_url, country, city, office, personal_id,
                 phone, full_name, telegram_user, telegram_channel, vk_profile, ok_profile,
                 instagram_profile, whatsapp_contact, visibility_settings, search_settings,
                 subscription_expires_at, subscription_started_at, is_trial_used, payment_method,
@@ -319,7 +319,7 @@ export function registerProfileRoutes(app) {
       }
 
       const queryText = `UPDATE users SET
-           username = COALESCE($1, username), email = COALESCE($2, email), password = $3,
+           username = COALESCE($1, username), email = COALESCE($2, email), password = COALESCE($3, password),
            country = COALESCE($4, country), city = COALESCE($5, city), office = COALESCE($6, office),
            personal_id = COALESCE($7, personal_id), phone = COALESCE($8, phone), full_name = COALESCE($9, full_name),
            telegram_user = COALESCE($10, telegram_user), telegram_channel = COALESCE($11, telegram_channel),
