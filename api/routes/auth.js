@@ -109,6 +109,28 @@ export function registerAuthRoutes(app) {
 
   // === ГЕНЕРАЦИЯ ПРОВЕРОЧНОГО КОДА (АНТИБОТ) ===
   app.post('/api/verification-code', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Генерация проверочного кода (антибот)',
+      description: 'Создаёт сессию верификации с токеном и кодом для защиты от ботов при регистрации.',
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            token: { type: 'string', description: 'Токен сессии верификации' },
+            code: { type: 'string', description: 'Проверочный код' }
+          }
+        },
+        429: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { message: { type: 'string' } }
+        }
+      }
+    },
     config: {
       rateLimit: {
         max: 3,
@@ -128,6 +150,45 @@ export function registerAuthRoutes(app) {
 
   // === РЕГИСТРАЦИЯ ===
   app.post('/api/register', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Регистрация нового пользователя',
+      description: 'Создаёт аккаунт по email и паролю. Если email не верифицирован — обновляет пароль. Требуется последующая верификация email.',
+      body: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          email: { type: 'string', format: 'email', description: 'Email пользователя' },
+          password: { type: 'string', minLength: 6, description: 'Пароль (минимум 6 символов)' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            requiresLogin: { type: 'boolean' }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            field: { type: 'string' },
+            accountExists: { type: 'boolean' }
+          }
+        },
+        429: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     config: {
       rateLimit: {
         max: 3,
@@ -242,6 +303,57 @@ export function registerAuthRoutes(app) {
 
   // === АВТОРИЗАЦИЯ ===
   app.post('/api/login', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Авторизация пользователя',
+      description: 'Вход по email и паролю. Возвращает JWT-токен и данные пользователя. Если email не верифицирован — отправляет код подтверждения.',
+      body: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          email: { type: 'string', format: 'email', description: 'Email пользователя' },
+          password: { type: 'string', minLength: 6, description: 'Пароль' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            token: { type: 'string', description: 'JWT-токен (7 дней)' },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                email: { type: 'string' },
+                username: { type: 'string' },
+                role: { type: 'string' },
+                plan_id: { type: 'integer', nullable: true }
+              }
+            },
+            requiresVerification: { type: 'boolean', description: 'Email не подтверждён — нужна верификация' },
+            email: { type: 'string' },
+            message: { type: 'string' }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        429: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     config: {
       rateLimit: {
         max: 5,
@@ -419,6 +531,26 @@ export function registerAuthRoutes(app) {
 
   // === ВЫХОД (LOGOUT) ===
   app.post('/api/logout', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Выход из системы',
+      description: 'Удаляет текущую сессию пользователя из active_sessions.',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: { success: { type: 'boolean' } }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
@@ -453,6 +585,42 @@ export function registerAuthRoutes(app) {
 
   // === ПОВТОРНАЯ ОТПРАВКА КОДА ПОДТВЕРЖДЕНИЯ ===
   app.post('/api/resend-verification-code', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Повторная отправка кода подтверждения',
+      description: 'Генерирует новый 6-значный код и отправляет на email. Кулдаун 30 секунд между отправками.',
+      body: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email: { type: 'string', format: 'email', description: 'Email пользователя' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        429: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            waitTime: { type: 'integer', description: 'Секунд до повторной отправки' }
+          }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     config: {
       rateLimit: {
         max: 3,
@@ -518,6 +686,57 @@ export function registerAuthRoutes(app) {
 
   // === ПРОВЕРКА КОДА И АКТИВАЦИЯ АККАУНТА ===
   app.post('/api/verify-email', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Подтверждение email',
+      description: 'Проверяет 6-значный код, активирует аккаунт, назначает Демо-тариф (7 дней) и генерирует personal_id.',
+      body: {
+        type: 'object',
+        required: ['email', 'code'],
+        properties: {
+          email: { type: 'string', format: 'email', description: 'Email пользователя' },
+          code: { type: 'string', description: '6-значный код подтверждения' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            token: { type: 'string', description: 'JWT-токен' },
+            message: { type: 'string' },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                email: { type: 'string' },
+                role: { type: 'string' },
+                personal_id: { type: 'string' }
+              }
+            }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            field: { type: 'string' }
+          }
+        },
+        404: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        429: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     config: {
       rateLimit: {
         max: 5,
@@ -722,6 +941,42 @@ export function registerAuthRoutes(app) {
 
   // === ЗАБЫЛИ ПАРОЛЬ ===
   app.post('/api/forgot-password', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Запрос на восстановление пароля',
+      description: 'Отправляет ссылку для сброса пароля на email. Кулдаун 60 секунд. Токен действует 1 час.',
+      body: {
+        type: 'object',
+        required: ['email'],
+        properties: {
+          email: { type: 'string', format: 'email', description: 'Email пользователя' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        429: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            waitTime: { type: 'integer', description: 'Секунд до повторного запроса' }
+          }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     config: {
       rateLimit: {
         max: 3,
@@ -786,7 +1041,38 @@ export function registerAuthRoutes(app) {
   });
 
   // === СБРОС ПАРОЛЯ ===
-  app.post('/api/reset-password', async (req, reply) => {
+  app.post('/api/reset-password', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Сброс пароля',
+      description: 'Устанавливает новый пароль по токену из email. Токен одноразовый.',
+      body: {
+        type: 'object',
+        required: ['token', 'newPassword'],
+        properties: {
+          token: { type: 'string', description: 'Токен сброса пароля из email' },
+          newPassword: { type: 'string', minLength: 6, description: 'Новый пароль (минимум 6 символов)' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    }
+  }, async (req, reply) => {
     const { token, newPassword } = req.body;
 
     if (!token || !newPassword) {

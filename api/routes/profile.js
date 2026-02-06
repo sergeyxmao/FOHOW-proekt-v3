@@ -45,6 +45,72 @@ export function registerProfileRoutes(app) {
 
 // === ПОЛУЧИТЬ ПРОФИЛЬ ===
   app.get('/api/profile', {
+    schema: {
+      tags: ['Profile'],
+      summary: 'Получить профиль текущего пользователя',
+      description: 'Возвращает полные данные профиля авторизованного пользователя, включая подписку, настройки приватности и UI-предпочтения.',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                email: { type: 'string' },
+                username: { type: 'string', nullable: true },
+                avatar_url: { type: 'string', nullable: true },
+                created_at: { type: 'string', format: 'date-time' },
+                updated_at: { type: 'string', format: 'date-time', nullable: true },
+                country: { type: 'string', nullable: true },
+                city: { type: 'string', nullable: true },
+                office: { type: 'string', nullable: true },
+                personal_id: { type: 'string', nullable: true },
+                phone: { type: 'string', nullable: true },
+                full_name: { type: 'string', nullable: true },
+                telegram_user: { type: 'string', nullable: true },
+                telegram_channel: { type: 'string', nullable: true },
+                vk_profile: { type: 'string', nullable: true },
+                ok_profile: { type: 'string', nullable: true },
+                instagram_profile: { type: 'string', nullable: true },
+                whatsapp_contact: { type: 'string', nullable: true },
+                website: { type: 'string', nullable: true },
+                visibility_settings: { type: 'object', nullable: true },
+                search_settings: { type: 'object', nullable: true },
+                ui_preferences: { type: 'object', nullable: true },
+                subscription_started_at: { type: 'string', format: 'date-time', nullable: true },
+                subscription_expires_at: { type: 'string', format: 'date-time', nullable: true },
+                grace_period_until: { type: 'string', format: 'date-time', nullable: true },
+                is_verified: { type: 'boolean' },
+                verified_at: { type: 'string', format: 'date-time', nullable: true },
+                plan: {
+                  type: 'object',
+                  nullable: true,
+                  properties: {
+                    id: { type: 'integer' },
+                    name: { type: 'string' },
+                    features: { type: 'object' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        404: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
@@ -122,6 +188,83 @@ export function registerProfileRoutes(app) {
 
   // === ОБНОВЛЕНИЕ ПРОФИЛЯ ===
   app.put('/api/profile', {
+    schema: {
+      tags: ['Profile'],
+      summary: 'Обновить профиль',
+      description: 'Обновляет данные профиля: имя, контакты, соцсети, офис, UI-предпочтения. Смена пароля требует текущий пароль. Изменение personal_id/office снимает верификацию.',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        properties: {
+          username: { type: 'string', nullable: true },
+          email: { type: 'string', format: 'email', nullable: true },
+          currentPassword: { type: 'string', nullable: true, description: 'Текущий пароль (для смены пароля)' },
+          newPassword: { type: 'string', minLength: 6, nullable: true, description: 'Новый пароль' },
+          country: { type: 'string', nullable: true },
+          city: { type: 'string', nullable: true },
+          office: { type: 'string', nullable: true, description: 'Код представительства (формат: ABC12)' },
+          personal_id: { type: 'string', nullable: true, description: 'Компьютерный номер (формат: RUY68000000000)' },
+          phone: { type: 'string', nullable: true },
+          full_name: { type: 'string', nullable: true },
+          telegram_user: { type: 'string', nullable: true },
+          telegram_channel: { type: 'string', nullable: true },
+          vk_profile: { type: 'string', nullable: true },
+          ok_profile: { type: 'string', nullable: true },
+          instagram_profile: { type: 'string', nullable: true },
+          whatsapp_contact: { type: 'string', nullable: true },
+          website: { type: 'string', nullable: true },
+          ui_preferences: {
+            type: 'object',
+            nullable: true,
+            properties: {
+              animationColor: { type: 'string' },
+              isAnimationEnabled: { type: 'boolean' },
+              lineColor: { type: 'string' },
+              lineThickness: { type: 'integer', minimum: 1, maximum: 20 },
+              backgroundGradient: { type: 'string' }
+            }
+          }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            user: { type: 'object' },
+            verificationRevoked: { type: 'boolean', description: 'Верификация была снята из-за изменения критических полей' }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            field: { type: 'string' }
+          }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        404: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        409: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            errorType: { type: 'string' },
+            supportTelegram: { type: 'string' },
+            supportEmail: { type: 'string' }
+          }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
@@ -396,6 +539,63 @@ export function registerProfileRoutes(app) {
 
   // === ОБНОВЛЕНИЕ НАСТРОЕК КОНФИДЕНЦИАЛЬНОСТИ ===
   app.put('/api/profile/privacy', {
+    schema: {
+      tags: ['Profile'],
+      summary: 'Обновить настройки конфиденциальности',
+      description: 'Устанавливает видимость полей профиля в поиске. Каждое поле принимает boolean (true — виден, false — скрыт).',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['search_settings'],
+        properties: {
+          search_settings: {
+            type: 'object',
+            description: 'Настройки видимости полей в поиске',
+            properties: {
+              username: { type: 'boolean' },
+              full_name: { type: 'boolean' },
+              phone: { type: 'boolean' },
+              city: { type: 'boolean' },
+              country: { type: 'boolean' },
+              office: { type: 'boolean' },
+              personal_id: { type: 'boolean' },
+              telegram_user: { type: 'boolean' },
+              instagram_profile: { type: 'boolean' },
+              vk_profile: { type: 'boolean' },
+              website: { type: 'boolean' }
+            }
+          }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            search_settings: { type: 'object' }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            field: { type: 'string' }
+          }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        404: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
@@ -454,6 +654,44 @@ export function registerProfileRoutes(app) {
 
   // === УДАЛЕНИЕ АККАУНТА ===
   app.delete('/api/profile', {
+    schema: {
+      tags: ['Profile'],
+      summary: 'Удалить аккаунт',
+      description: 'Полностью удаляет аккаунт пользователя. Требуется подтверждение паролем.',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['password'],
+        properties: {
+          password: { type: 'string', description: 'Текущий пароль для подтверждения' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        404: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
@@ -488,6 +726,38 @@ export function registerProfileRoutes(app) {
 
   // === ЗАГРУЗКА АВАТАРА ===
   app.post('/api/profile/avatar', {
+    schema: {
+      tags: ['Profile'],
+      summary: 'Загрузить аватар',
+      description: 'Загружает изображение аватара на Яндекс.Диск. Допустимые форматы: JPEG, PNG, GIF, WEBP. Максимум 5MB. Требуется personal_id в профиле.',
+      security: [{ bearerAuth: [] }],
+      consumes: ['multipart/form-data'],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            avatar_url: { type: 'string', description: 'Относительный URL аватара' }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        404: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
@@ -569,6 +839,30 @@ export function registerProfileRoutes(app) {
 
   // === УДАЛЕНИЕ АВАТАРА ===
   app.delete('/api/profile/avatar', {
+    schema: {
+      tags: ['Profile'],
+      summary: 'Удалить аватар',
+      description: 'Удаляет аватар пользователя с Яндекс.Диска и обнуляет запись в БД.',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: { success: { type: 'boolean' } }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        404: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
@@ -620,7 +914,36 @@ export function registerProfileRoutes(app) {
   });
 
 // === ПОЛУЧИТЬ АВАТАР (PROXY) ===
-app.get('/api/avatar/:userId', async (req, reply) => {
+app.get('/api/avatar/:userId', {
+  schema: {
+    tags: ['Profile'],
+    summary: 'Получить аватар пользователя',
+    description: 'Проксирует изображение аватара с Яндекс.Диска. Параметр ?v=timestamp используется для cache busting.',
+    params: {
+      type: 'object',
+      required: ['userId'],
+      properties: {
+        userId: { type: 'string', description: 'ID пользователя' }
+      }
+    },
+    querystring: {
+      type: 'object',
+      properties: {
+        v: { type: 'string', description: 'Версия для cache busting' }
+      }
+    },
+    response: {
+      404: {
+        type: 'object',
+        properties: { error: { type: 'string' } }
+      },
+      500: {
+        type: 'object',
+        properties: { error: { type: 'string' } }
+      }
+    }
+  }
+}, async (req, reply) => {
   try {
     const { userId } = req.params;
     // Параметр ?v=timestamp игнорируется - он используется только для cache busting на клиенте
@@ -697,6 +1020,45 @@ app.get('/api/avatar/:userId', async (req, reply) => {
 
   // === ПОИСК ПОЛЬЗОВАТЕЛЯ ПО КОМПЬЮТЕРНОМУ НОМЕРУ ===
   app.get('/api/users/search-by-personal-id/:personalId', {
+    schema: {
+      tags: ['Profile'],
+      summary: 'Поиск пользователя по компьютерному номеру',
+      description: 'Ищет верифицированного пользователя с включённым поиском по personal_id. Возвращает базовую информацию (id, аватар, имя).',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['personalId'],
+        properties: {
+          personalId: { type: 'string', description: 'Компьютерный номер (например: RUY68000000001)' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            found: { type: 'boolean' },
+            user: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'integer' },
+                avatar_url: { type: 'string', nullable: true },
+                username: { type: 'string', nullable: true },
+                full_name: { type: 'string', nullable: true }
+              }
+            }
+          }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
@@ -754,6 +1116,45 @@ app.get('/api/avatar/:userId', async (req, reply) => {
 
   // === ПРОВЕРКА КОМПЬЮТЕРНОГО НОМЕРА ДЛЯ АВАТАРА ===
   app.get('/api/users/by-personal-id/:personalId', {
+    schema: {
+      tags: ['Profile'],
+      summary: 'Проверка пользователя по компьютерному номеру',
+      description: 'Проверяет существование пользователя, его верификацию и настройки приватности. Возвращает id, username и avatarUrl.',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['personalId'],
+        properties: {
+          personalId: { type: 'string', description: 'Компьютерный номер' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            error: { type: 'string', description: 'NOT_FOUND | NOT_VERIFIED | SEARCH_DISABLED' },
+            user: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'integer' },
+                username: { type: 'string', nullable: true },
+                avatarUrl: { type: 'string', nullable: true }
+              }
+            }
+          }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { success: { type: 'boolean' }, error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {

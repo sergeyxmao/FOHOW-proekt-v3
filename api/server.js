@@ -3,6 +3,8 @@ import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import multipart from '@fastify/multipart';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
@@ -93,6 +95,66 @@ await app.register(fastifyStatic, {
 });
 
 // ============================================
+// SWAGGER / OPENAPI ДОКУМЕНТАЦИЯ
+// ============================================
+await app.register(swagger, {
+  openapi: {
+    info: {
+      title: 'FOHOW Interactive Board API',
+      description: 'API для интерактивной доски FOHOW — управление структурами, партнёрами, подписками',
+      version: '1.0.0'
+    },
+    servers: [
+      { url: 'https://interactive.marketingfohow.ru', description: 'Production' },
+      { url: 'https://1508.marketingfohow.ru', description: 'Staging' }
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT'
+        }
+      }
+    },
+    tags: [
+      { name: 'Auth', description: 'Регистрация, авторизация, сброс пароля' },
+      { name: 'Profile', description: 'Профиль пользователя, аватар, приватность' },
+      { name: 'Users', description: 'Управление пользователями, блокировка, настройки' },
+      { name: 'Boards', description: 'Структуры (доски)' },
+      { name: 'Board Folders', description: 'Папки для структур' },
+      { name: 'Board Partners', description: 'Партнёры на досках' },
+      { name: 'Stickers', description: 'Стикеры на досках' },
+      { name: 'Notes', description: 'Заметки к карточкам' },
+      { name: 'Comments', description: 'Комментарии пользователей' },
+      { name: 'Anchors', description: 'Якоря на досках' },
+      { name: 'Images', description: 'Библиотека изображений' },
+      { name: 'Partners', description: 'Поиск и просмотр партнёров' },
+      { name: 'Relationships', description: 'Связи между пользователями' },
+      { name: 'Favorites', description: 'Избранные пользователи' },
+      { name: 'Chats', description: 'Чат (FoGrup)' },
+      { name: 'Notifications', description: 'Уведомления' },
+      { name: 'Telegram', description: 'Привязка Telegram' },
+      { name: 'Plans', description: 'Тарифные планы' },
+      { name: 'Promo', description: 'Промокоды' },
+      { name: 'Verification', description: 'Верификация пользователей' },
+      { name: 'Tribute', description: 'Платежи Tribute' },
+      { name: 'Admin', description: 'Админ-панель' },
+      { name: 'System', description: 'Здоровье системы' }
+    ]
+  }
+});
+
+await app.register(swaggerUi, {
+  routePrefix: '/api/docs',
+  uiConfig: {
+    docExpansion: 'list',
+    deepLinking: true,
+    defaultModelsExpandDepth: 3
+  }
+});
+
+// ============================================
 // ГЛОБАЛЬНЫЙ ОБРАБОТЧИК ОШИБОК
 // ============================================
 app.setErrorHandler((error, request, reply) => {
@@ -115,6 +177,48 @@ app.setErrorHandler((error, request, reply) => {
 // ХУКИ ДЛЯ ОТЛАДКИ (ЛОГИРОВАНИЕ ВСЕХ ЗАПРОСОВ К /api/login)
 // ============================================
 app.addHook('onRequest', async (request, reply) => {
+  // Защита Swagger UI — доступ только для администраторов
+  if (request.url.startsWith('/api/docs')) {
+    // Пропускаем статику swagger-ui (css, js, иконки)
+    if (request.url.includes('/static/') || request.url.includes('/index.css') || request.url.includes('/swagger-ui') || request.url.includes('/favicon')) {
+      return;
+    }
+
+    // Извлекаем токен из заголовка или query-параметра
+    let token = null;
+    const authHeader = request.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.replace('Bearer ', '');
+    }
+
+    if (!token) {
+      try {
+        const url = new URL(request.url, `http://${request.headers.host}`);
+        token = url.searchParams.get('token');
+      } catch {}
+    }
+
+    if (!token) {
+      return reply.code(401).type('text/html').send(`
+        <html><body style="font-family:sans-serif;max-width:400px;margin:100px auto;text-align:center">
+          <h2>Swagger API Docs</h2>
+          <p>Доступ только для администраторов</p>
+          <p>Добавьте токен в URL: <code>?token=YOUR_JWT_TOKEN</code></p>
+        </body></html>
+      `);
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const result = await pool.query('SELECT role FROM users WHERE id = $1', [decoded.userId || decoded.id]);
+      if (result.rows.length === 0 || result.rows[0].role !== 'admin') {
+        return reply.code(403).send({ error: 'Доступ запрещён' });
+      }
+    } catch (err) {
+      return reply.code(401).send({ error: 'Недействительный токен' });
+    }
+  }
+
   if (request.url.includes('/api/login')) {
     console.log('[HOOK onRequest /api/login]', {
       method: request.method,
@@ -161,7 +265,20 @@ registerTributeRoutes(app);
 
 
 // Проверка живости API
-app.get('/api/health', async () => ({ ok: true }));
+app.get('/api/health', {
+  schema: {
+    tags: ['System'],
+    summary: 'Проверка работоспособности сервера',
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean' }
+        }
+      }
+    }
+  }
+}, async () => ({ ok: true }));
 
 // ============================================
 // ПРОМОКОДЫ (PROMO CODES)
