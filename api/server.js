@@ -160,8 +160,7 @@ await app.register(swaggerUi, {
   uiConfig: {
     docExpansion: 'list',
     deepLinking: true,
-    defaultModelsExpandDepth: 3,
-    url: '/api/docs/json'
+    defaultModelsExpandDepth: 3
   }
 });
 
@@ -188,45 +187,73 @@ app.setErrorHandler((error, request, reply) => {
 // ХУКИ ДЛЯ ОТЛАДКИ (ЛОГИРОВАНИЕ ВСЕХ ЗАПРОСОВ К /api/login)
 // ============================================
 app.addHook('onRequest', async (request, reply) => {
-  // Защита Swagger UI — доступ только для администраторов
+  // Защита Swagger UI — доступ только для администраторов (cookie-based)
   if (request.url.startsWith('/api/docs')) {
-    // Защищаем только корневую страницу /api/docs, все подресурсы (json, static, css, js) пропускаем
+    // Защищаем только корневую страницу, подресурсы пропускаем
     const cleanUrl = request.url.split('?')[0].replace(/\/+$/, '');
     if (cleanUrl !== '/api/docs') return;
 
-    // Извлекаем токен из заголовка или query-параметра
-    let token = null;
-    const authHeader = request.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.replace('Bearer ', '');
-    }
+    // 1. Проверяем token из query — если есть, валидируем, ставим cookie, редиректим на чистый URL
+    let queryToken = null;
+    try {
+      const url = new URL(request.url, `http://${request.headers.host}`);
+      queryToken = url.searchParams.get('token');
+    } catch {}
 
-    if (!token) {
+    if (queryToken) {
       try {
-        const url = new URL(request.url, `http://${request.headers.host}`);
-        token = url.searchParams.get('token');
+        const decoded = jwt.verify(queryToken, process.env.JWT_SECRET);
+        const result = await pool.query('SELECT role FROM users WHERE id = $1', [decoded.userId || decoded.id]);
+        if (result.rows.length > 0 && result.rows[0].role === 'admin') {
+          // Токен валиден — ставим cookie и редиректим на чистый URL
+          const isProduction = process.env.NODE_ENV === 'production';
+          const cookieFlags = `Path=/api/docs; HttpOnly; SameSite=Strict; Max-Age=86400${isProduction ? '; Secure' : ''}`;
+          reply.header('Set-Cookie', `swagger_token=${queryToken}; ${cookieFlags}`);
+          return reply.redirect('/api/docs/');
+        }
       } catch {}
-    }
-
-    if (!token) {
-      return reply.code(401).type('text/html').send(`
+      return reply.code(403).type('text/html').send(`
         <html><body style="font-family:sans-serif;max-width:400px;margin:100px auto;text-align:center">
           <h2>Swagger API Docs</h2>
-          <p>Доступ только для администраторов</p>
-          <p>Добавьте токен в URL: <code>?token=YOUR_JWT_TOKEN</code></p>
+          <p>Недействительный токен или недостаточно прав</p>
         </body></html>
       `);
     }
 
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const result = await pool.query('SELECT role FROM users WHERE id = $1', [decoded.userId || decoded.id]);
-      if (result.rows.length === 0 || result.rows[0].role !== 'admin') {
-        return reply.code(403).send({ error: 'Доступ запрещён' });
-      }
-    } catch (err) {
-      return reply.code(401).send({ error: 'Недействительный токен' });
+    // 2. Проверяем cookie
+    const cookies = request.headers.cookie || '';
+    const match = cookies.match(/swagger_token=([^;]+)/);
+    if (match) {
+      try {
+        const decoded = jwt.verify(match[1], process.env.JWT_SECRET);
+        const result = await pool.query('SELECT role FROM users WHERE id = $1', [decoded.userId || decoded.id]);
+        if (result.rows.length > 0 && result.rows[0].role === 'admin') {
+          return; // OK — пропускаем
+        }
+      } catch {}
     }
+
+    // 3. Проверяем Authorization header (для API-клиентов)
+    const authHeader = request.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const result = await pool.query('SELECT role FROM users WHERE id = $1', [decoded.userId || decoded.id]);
+        if (result.rows.length > 0 && result.rows[0].role === 'admin') {
+          return; // OK
+        }
+      } catch {}
+    }
+
+    // 4. Не авторизован
+    return reply.code(401).type('text/html').send(`
+      <html><body style="font-family:sans-serif;max-width:400px;margin:100px auto;text-align:center">
+        <h2>Swagger API Docs</h2>
+        <p>Доступ только для администраторов</p>
+        <p>Добавьте токен в URL: <code>?token=YOUR_JWT_TOKEN</code></p>
+      </body></html>
+    `);
   }
 
   if (request.url.includes('/api/login')) {
