@@ -207,3 +207,50 @@ curl "https://interactive.marketingfohow.ru/api/docs/json?token=YOUR_ADMIN_TOKEN
 - Импортировать в **Postman** (Import → File → openapi.json)
 - Использовать для генерации SDK через [OpenAPI Generator](https://openapi-generator.tech/)
 - Подключить к внешним API-шлюзам
+
+## Известные проблемы и решения
+
+### CSP (Content Security Policy) блокирует Swagger UI
+
+**Проблема:** `@fastify/helmet` по умолчанию запрещает inline-скрипты и стили, которые использует Swagger UI.
+
+**Решение:** Helmet настроен с кастомной CSP, разрешающей `'unsafe-inline'` для `scriptSrc` и `styleSrc`. Это необходимо для работы Swagger UI. Настройка находится в `api/server.js` при регистрации helmet.
+
+```javascript
+await app.register(helmet, {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      fontSrc: ["'self'", "https:", "data:"]
+    }
+  }
+});
+```
+
+### Защита /api/docs блокирует подресурсы
+
+**Проблема:** Хук `onRequest` для проверки admin-токена может блокировать внутренние ресурсы Swagger UI (json, static, css, js), из-за чего UI не загружается.
+
+**Решение:** Хук защищает **только** корневой путь `/api/docs` (без подпутей). Все подресурсы (`/api/docs/json`, `/api/docs/static/*`, и т.д.) пропускаются без проверки токена:
+
+```javascript
+const cleanUrl = request.url.split('?')[0].replace(/\/+$/, '');
+if (cleanUrl !== '/api/docs') return; // пропускаем все подресурсы
+```
+
+Спецификация `/api/docs/json` доступна без токена. Это безопасно, т.к. она содержит только структуру API (описание эндпоинтов), но не данные.
+
+### Swagger UI не находит спецификацию
+
+**Проблема:** Если в URL есть `?token=...`, Swagger UI может неправильно вычислить относительный путь к JSON-спецификации.
+
+**Решение:** В конфигурации `swaggerUi` указан абсолютный URL спецификации:
+
+```javascript
+uiConfig: {
+  url: '/api/docs/json'
+}
+```

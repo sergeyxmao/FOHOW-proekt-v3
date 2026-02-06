@@ -74,7 +74,17 @@ if (!process.env.JWT_SECRET) {
 
 
 // Плагины безопасности
-await app.register(helmet);
+await app.register(helmet, {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      fontSrc: ["'self'", "https:", "data:"]
+    }
+  }
+});
 await app.register(cors, {
   origin: [
     'https://interactive.marketingfohow.ru',
@@ -150,7 +160,8 @@ await app.register(swaggerUi, {
   uiConfig: {
     docExpansion: 'list',
     deepLinking: true,
-    defaultModelsExpandDepth: 3
+    defaultModelsExpandDepth: 3,
+    url: '/api/docs/json'
   }
 });
 
@@ -179,10 +190,9 @@ app.setErrorHandler((error, request, reply) => {
 app.addHook('onRequest', async (request, reply) => {
   // Защита Swagger UI — доступ только для администраторов
   if (request.url.startsWith('/api/docs')) {
-    // Пропускаем статику swagger-ui (css, js, иконки)
-    if (request.url.includes('/static/') || request.url.includes('/index.css') || request.url.includes('/swagger-ui') || request.url.includes('/favicon')) {
-      return;
-    }
+    // Защищаем только корневую страницу /api/docs, все подресурсы (json, static, css, js) пропускаем
+    const cleanUrl = request.url.split('?')[0].replace(/\/+$/, '');
+    if (cleanUrl !== '/api/docs') return;
 
     // Извлекаем токен из заголовка или query-параметра
     let token = null;
