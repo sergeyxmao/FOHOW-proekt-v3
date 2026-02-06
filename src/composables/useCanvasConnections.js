@@ -191,7 +191,6 @@ export function useCanvasConnections(options) {
     if (emit) {
       emit('update-connection-status', 'Рисование линии: кликните на соединительную точку другой карточки')
     }
-    console.log('Начало рисования линии:', connectionStart.value)
   }
 
   /**
@@ -210,7 +209,6 @@ export function useCanvasConnections(options) {
       toSide: side
     })
 
-    console.log('Создано соединение:', connectionStart.value.cardId, '->', cardId)
     cancelDrawing()
   }
 
@@ -260,8 +258,6 @@ export function useCanvasConnections(options) {
    */
   const deleteSelectedConnections = () => {
     if (selectedConnectionIds.value.length === 0) return
-
-    console.log('Deleting connections:', selectedConnectionIds.value)
 
     selectedConnectionIds.value.forEach(connectionId => {
       connectionsStore.removeConnection(connectionId)
@@ -340,15 +336,12 @@ export function useCanvasConnections(options) {
       // Определяем ближайшую сторону целевой карточки
       const targetSide = getClosestSide(targetCard, pointX, pointY)
 
-      console.log('🧲 Магнитное соединение:', sourceCardId, '->', targetCard.id, 'сторона:', targetSide)
-
       // Создаём соединение
       endDrawingLine(targetCard.id, targetSide)
       return true
     }
 
     // Карточка не найдена — отменяем рисование
-    console.log('🚫 Магнитное соединение: карточка не найдена, отмена')
     cancelDrawing()
     return false
   }

@@ -466,7 +466,6 @@ export const useImagesStore = defineStore('images', {
         if (imageId && !dataUrl) {
           try {
             dataUrl = await getImageUrl(imageId)
-            console.log(`✅ Получен blob URL для изображения ${imageId}`)
           } catch (error) {
             console.error(`❌ Ошибка загрузки изображения ${imageId}:`, error)
           }

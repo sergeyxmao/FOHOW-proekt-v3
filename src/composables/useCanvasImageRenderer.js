@@ -83,7 +83,6 @@ export function useCanvasImageRenderer(options) {
    */
   const invalidateImageCache = (imageId) => {
     offscreenCache.delete(imageId)
-    console.log('🔄 Кэш изображения инвалидирован:', imageId)
   }
 
   /**
@@ -159,7 +158,6 @@ export function useCanvasImageRenderer(options) {
 
       img.onload = () => {
         imageCache.set(dataUrl, { img, loading: null, error: false })
-        console.log('✅ Изображение загружено:', dataUrl.substring(0, 50) + '...')
         resolve(img)
       }
 
@@ -240,7 +238,6 @@ export function useCanvasImageRenderer(options) {
         if (offscreenCanvas) {
           offscreenCache.set(imageObj.id, offscreenCanvas)
           imageVersions.set(imageObj.id, currentVersion)
-          console.log('✨ Создан offscreen кэш для изображения:', imageObj.id)
         }
       } else {
         // Версия не изменилась - используем кэш
@@ -740,9 +737,7 @@ export function useCanvasImageRenderer(options) {
    */
   const handlePngExportRenderAllImages = async (event) => {
     const exportBounds = event.detail
-    console.log('Получено событие png-export-render-all-images, начинаем рендеринг изображений...', exportBounds)
     await renderAllImagesForExport(exportBounds)
-    console.log('Рендеринг изображений завершён, отправляем событие png-export-images-rendered')
     // Отправляем событие о завершении рендеринга
     window.dispatchEvent(new CustomEvent('png-export-images-rendered'))
   }
