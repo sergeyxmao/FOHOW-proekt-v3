@@ -9,7 +9,37 @@ import { checkUsageLimit } from '../middleware/checkUsageLimit.js';
 export function registerCommentRoutes(app) {
   // Получить все личные комментарии пользователя
   app.get('/api/comments', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Comments'],
+      summary: 'Получить комментарии (с фильтрами)',
+      description: 'Возвращает список комментариев пользователя с возможностью фильтрации',
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          board_id: { type: 'integer', description: 'ID доски (опционально)' },
+          sticker_id: { type: 'integer', description: 'ID стикера (опционально)' },
+          type: { type: 'string', description: 'Тип комментария (опционально)' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            comments: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {}
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       // Получаем все комментарии пользователя, отсортированные по дате создания (новые вверху)
@@ -30,7 +60,35 @@ export function registerCommentRoutes(app) {
 
   // Создать новый личный комментарий
   app.post('/api/comments', {
-    preHandler: [authenticateToken, checkUsageLimit('comments', 'max_comments')]
+    preHandler: [authenticateToken, checkUsageLimit('comments', 'max_comments')],
+    schema: {
+      tags: ['Comments'],
+      summary: 'Создать комментарий',
+      description: 'Создаёт новый личный комментарий',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        properties: {
+          board_id: { type: 'integer', description: 'ID доски' },
+          sticker_id: { type: 'integer', nullable: true, description: 'ID стикера (опционально)' },
+          content: { type: 'string', description: 'Содержимое комментария' },
+          type: { type: 'string', nullable: true, description: 'Тип комментария (опционально)' }
+        },
+        required: ['content']
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            comment: { type: 'object', properties: {} }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { content, color } = req.body;
@@ -62,7 +120,40 @@ export function registerCommentRoutes(app) {
 
   // Обновить личный комментарий
   app.put('/api/comments/:commentId', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Comments'],
+      summary: 'Обновить комментарий',
+      description: 'Обновляет существующий комментарий по его ID',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          commentId: { type: 'integer', description: 'ID комментария' }
+        },
+        required: ['commentId']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          content: { type: 'string', description: 'Содержимое комментария' }
+        },
+        required: ['content']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            comment: { type: 'object', properties: {} }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { commentId } = req.params;
@@ -136,7 +227,32 @@ export function registerCommentRoutes(app) {
 
   // Удалить личный комментарий
   app.delete('/api/comments/:commentId', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Comments'],
+      summary: 'Удалить комментарий',
+      description: 'Удаляет комментарий по его ID',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          commentId: { type: 'integer', description: 'ID комментария' }
+        },
+        required: ['commentId']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { commentId } = req.params;

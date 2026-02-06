@@ -28,7 +28,33 @@ export function registerMyLibraryRoutes(app) {
   app.get(
     '/api/images/my/folders',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Images'],
+        summary: 'Получить папки изображений пользователя',
+        description: 'Возвращает список папок в личной библиотеке изображений текущего пользователя',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              folders: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    path: { type: 'string' },
+                    itemCount: { type: 'integer' }
+                  }
+                }
+              }
+            }
+          },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -196,7 +222,41 @@ export function registerMyLibraryRoutes(app) {
    */
   app.post(
     '/api/images/my/folders',
-    { preHandler: [authenticateToken] },
+    {
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Images'],
+        summary: 'Создать папку изображений',
+        description: 'Создаёт новую папку в личной библиотеке изображений пользователя',
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: { type: 'string' }
+          }
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              folder: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  path: { type: 'string' }
+                }
+              }
+            }
+          },
+          400: { type: 'object', properties: { error: { type: 'string' } } },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
+    },
     async (req, reply) => {
       try {
         const userId = req.user.id;
@@ -248,7 +308,27 @@ export function registerMyLibraryRoutes(app) {
   app.get(
     '/api/images/my/stats',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Images'],
+        summary: 'Получить статистику изображений пользователя',
+        description: 'Возвращает статистику использования библиотеки изображений текущего пользователя',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              totalImages: { type: 'integer' },
+              totalSize: { type: 'integer' },
+              usedSpace: { type: 'string' },
+              maxSpace: { type: 'string' },
+              folders: { type: 'integer' }
+            }
+          },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -378,7 +458,34 @@ export function registerMyLibraryRoutes(app) {
   app.get(
     '/api/images/my',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Images'],
+        summary: 'Получить изображения пользователя',
+        description: 'Возвращает список изображений текущего пользователя с поддержкой пагинации и фильтрации по папке',
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            folder: { type: 'string' },
+            page: { type: 'integer' },
+            limit: { type: 'integer' }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              images: { type: 'array', items: { type: 'object' } },
+              total: { type: 'integer' },
+              page: { type: 'integer' },
+              limit: { type: 'integer' }
+            }
+          },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -561,7 +668,44 @@ export function registerMyLibraryRoutes(app) {
   app.post(
     '/api/images/upload',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Images'],
+        summary: 'Загрузить изображение',
+        description: 'Загружает изображение в личную библиотеку пользователя на Яндекс.Диск',
+        security: [{ bearerAuth: [] }],
+        consumes: ['multipart/form-data'],
+        body: {
+          type: 'object',
+          properties: {
+            file: { type: 'string', format: 'binary' },
+            folder: { type: 'string' }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              image: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  url: { type: 'string' },
+                  name: { type: 'string' },
+                  size: { type: 'integer' },
+                  folder: { type: 'string', nullable: true },
+                  created_at: { type: 'string', format: 'date-time' }
+                }
+              }
+            }
+          },
+          400: { type: 'object', properties: { error: { type: 'string' } } },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -869,7 +1013,31 @@ export function registerMyLibraryRoutes(app) {
   app.delete(
     '/api/images/:id',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Images'],
+        summary: 'Удалить изображение',
+        description: 'Удаляет изображение из личной библиотеки пользователя и с Яндекс.Диска',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' }
+            }
+          },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -1049,7 +1217,40 @@ export function registerMyLibraryRoutes(app) {
   app.patch(
     '/api/images/:id/rename',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Images'],
+        summary: 'Переименовать изображение',
+        description: 'Переименовывает изображение в личной библиотеке пользователя',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' }
+          }
+        },
+        body: {
+          type: 'object',
+          required: ['name'],
+          properties: {
+            name: { type: 'string' }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              image: { type: 'object' }
+            }
+          },
+          400: { type: 'object', properties: { error: { type: 'string' } } },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {

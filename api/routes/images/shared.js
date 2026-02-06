@@ -23,7 +23,32 @@ export function registerSharedRoutes(app) {
   app.post(
     '/api/images/:id/share-request',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Images'],
+        summary: 'Запросить публикацию изображения',
+        description: 'Отправляет изображение из личной библиотеки на модерацию для публикации в общей библиотеке',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              message: { type: 'string' }
+            }
+          },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -202,7 +227,34 @@ export function registerSharedRoutes(app) {
   app.get(
     '/api/images/shared',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Images'],
+        summary: 'Получить публичные изображения',
+        description: 'Возвращает структуру общей библиотеки изображений с папками и изображениями',
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: 'object',
+          properties: {
+            page: { type: 'integer' },
+            limit: { type: 'integer' },
+            category: { type: 'string' }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              images: { type: 'array', items: { type: 'object' } },
+              total: { type: 'integer' },
+              page: { type: 'integer' },
+              limit: { type: 'integer' }
+            }
+          },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {

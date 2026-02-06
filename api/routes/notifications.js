@@ -7,7 +7,48 @@ export async function registerNotificationRoutes(app) {
   // GET /api/notifications - Получить непрочитанные уведомления
   // (УБРАЛИ /fogrup ИЗ ПУТИ)
   app.get('/api/notifications', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Notifications'],
+      summary: 'Получить уведомления пользователя',
+      description: 'Возвращает список непрочитанных уведомлений текущего пользователя',
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer' },
+          limit: { type: 'integer' },
+          unread_only: { type: 'boolean' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            notifications: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  type: { type: 'string' },
+                  text: { type: 'string' },
+                  read: { type: 'boolean' },
+                  timestamp: { type: 'integer' },
+                  fromUserId: { type: 'string', nullable: true },
+                  relationshipId: { type: 'string', nullable: true }
+                }
+              }
+            },
+            total: { type: 'integer' },
+            unread_count: { type: 'integer' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const result = await pool.query(`
@@ -41,7 +82,31 @@ export async function registerNotificationRoutes(app) {
   // PUT /api/notifications/:id/read - Отметить как прочитанное
   // (УБРАЛИ /fogrup ИЗ ПУТИ)
   app.put('/api/notifications/:id/read', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Notifications'],
+      summary: 'Отметить уведомление как прочитанное',
+      description: 'Отмечает указанное уведомление как прочитанное для текущего пользователя',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        },
+        required: ['id']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     const { id } = req.params;
     try {

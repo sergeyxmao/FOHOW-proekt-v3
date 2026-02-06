@@ -17,7 +17,43 @@ export function registerPromoRoutes(app) {
    * Вся логика выполняется в транзакции PostgreSQL для обеспечения целостности данных.
    */
   app.post('/api/promo/apply', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Promo'],
+      summary: 'Применить промокод',
+      description: 'Активирует промокод и обновляет подписку пользователя',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['code'],
+        properties: {
+          code: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            subscription: {
+              type: 'object',
+              properties: {
+                planId: { type: 'integer' },
+                planName: { type: 'string' },
+                features: { type: 'object' },
+                expiresAt: { type: 'string', format: 'date-time' },
+                durationDays: { type: 'integer' }
+              }
+            }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     const client = await pool.connect();
 
