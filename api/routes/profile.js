@@ -138,7 +138,15 @@ export function registerProfileRoutes(app) {
       const normalizedOffice = typeof office === 'string' ? office.trim().toUpperCase() : null;
       const normalizedPersonalId = typeof personal_id === 'string' ? personal_id.trim().toUpperCase() : null;
 
-      const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+      const userResult = await pool.query(
+        `SELECT id, email, username, avatar_url, country, city, office, personal_id,
+                phone, full_name, telegram_user, telegram_channel, vk_profile, ok_profile,
+                instagram_profile, whatsapp_contact, visibility_settings, search_settings,
+                subscription_expires_at, subscription_started_at, is_trial_used, payment_method,
+                auto_renew, plan_id, telegram_chat_id, role, boards_locked, boards_locked_at,
+                email_verified, is_verified, verified_at, ui_preferences, rank, fohow_role,
+                blocked_users, bio, website, grace_period_until, created_at, updated_at
+         FROM users WHERE id = $1`, [userId]);
       if (userResult.rows.length === 0) {
         return reply.code(404).send({ error: 'Пользователь не найден' });
       }
