@@ -37,5 +37,14 @@ export default defineConfig({
         changeOrigin: true, // Необходимо для корректной работы прокси
       }
     }
+  },
+
+  // Явный формат имён чанков — исправляет двойной хеш в lazy-loaded модулях
+  build: {
+    rollupOptions: {
+      output: {
+        chunkFileNames: 'assets/[name]-[hash].js'
+      }
+    }
   }
 })
