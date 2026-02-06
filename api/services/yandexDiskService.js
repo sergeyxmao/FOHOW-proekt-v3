@@ -436,12 +436,12 @@ async function renameUserRootFolder(userId, oldPersonalId, newPersonalId) {
  */
 async function checkPathExists(path) {
   try {
-    const response = await makeYandexDiskRequest(
+    const data = await makeYandexDiskRequest(
       `/resources?path=${encodeURIComponent(path)}`,
       { method: 'GET' },
       'checkPathExists'
     );
-    return response.ok;
+    return data !== null;
   } catch (error) {
     if (error.status === 404) {
       return false;
@@ -455,18 +455,12 @@ async function checkPathExists(path) {
  */
 async function listFolderContents(path) {
   try {
-    const response = await makeYandexDiskRequest(
+    const data = await makeYandexDiskRequest(
       `/resources?path=${encodeURIComponent(path)}&limit=1000`,
       { method: 'GET' },
       'listFolderContents'
     );
-
-    if (!response.ok) {
-      throw new Error(`Failed to list folder contents: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data._embedded?.items || [];
+    return data?._embedded?.items || [];
   } catch (error) {
     console.error(`❌ Ошибка получения содержимого папки ${path}:`, error);
     throw error;
@@ -478,19 +472,18 @@ async function listFolderContents(path) {
  */
 async function deleteFolder(path) {
   try {
-    const response = await makeYandexDiskRequest(
+    await makeYandexDiskRequest(
       `/resources?path=${encodeURIComponent(path)}&permanently=true`,
       { method: 'DELETE' },
       'deleteFolder'
     );
-
-    if (!response.ok && response.status !== 404) {
-      throw new Error(`Failed to delete folder: ${response.statusText}`);
-    }
-
     console.log(`✅ Папка удалена: ${path}`);
     return true;
   } catch (error) {
+    if (error.status === 404) {
+      console.log(`⚠️ Папка не найдена (уже удалена?): ${path}`);
+      return true;
+    }
     console.error(`❌ Ошибка удаления папки ${path}:`, error);
     throw error;
   }
@@ -498,7 +491,6 @@ async function deleteFolder(path) {
 
 export {
   // Константы
-  YANDEX_DISK_TOKEN,
   YANDEX_DISK_BASE_DIR,
   // Функции построения путей
   getUserRootPath,

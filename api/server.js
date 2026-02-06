@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import multipart from '@fastify/multipart';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -72,7 +73,15 @@ if (!process.env.JWT_SECRET) {
 
 // Плагины безопасности
 await app.register(helmet);
-await app.register(cors, { origin: true, credentials: true });
+await app.register(cors, {
+  origin: [
+    'https://interactive.marketingfohow.ru',
+    'https://1508.marketingfohow.ru',
+    process.env.NODE_ENV === 'development' ? 'http://localhost:5173' : null
+  ].filter(Boolean),
+  credentials: true
+});
+await app.register(rateLimit, { global: false });
 await app.register(multipart, {
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB максимум

@@ -116,7 +116,7 @@ function getSubscriptionExpiredMessage(userName, pricingUrl = 'https://interacti
  * @param {string} dashboardUrl - URL личного кабинета (опционально)
  * @returns {Object} Объект сообщения для Telegram Bot API
  */
-function getWelcomeMessage(userName, demoDays = 3, dashboardUrl = 'https://fohow.ru/dashboard') {
+function getWelcomeMessage(userName, demoDays = 3, dashboardUrl = 'https://interactive.marketingfohow.ru/boards') {
   const text = `🎉 *Добро пожаловать в FOHOW!*
 
 Здравствуйте, *${userName}*!
@@ -158,12 +158,8 @@ function getWelcomeMessage(userName, demoDays = 3, dashboardUrl = 'https://fohow
         ],
         [
           {
-            text: '📚 Обучающие материалы',
-            url: 'https://fohow.ru/tutorials'
-          },
-          {
             text: '💬 Поддержка',
-            url: 'https://t.me/fohow_support'
+            url: 'https://t.me/FOHOWadmin'
           }
         ]
       ]

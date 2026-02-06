@@ -554,7 +554,7 @@ async function switchDemoToGuest() {
         await client.query(
           `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
              VALUES ($1, $2, NOW(), NOW() + INTERVAL '100 years', 'auto_subscription_expired', 0.00, 'RUB')`,
-          [user.id, guestPlanId]
+          [user.id, guestPlan.id]
         );
 
         console.log(`  ✅ Пользователь ${user.email} переведен на гостевой тариф`);
@@ -762,13 +762,13 @@ export function initializeCronTasks() {
   });
   console.log('✅ Задача 1: Уведомления о истечении подписок (ежедневно 09:00 МСК)');
 
-  // 2. Обработка истекших подписок - каждый день в 09:00
-  cron.schedule('0 9 * * *', () => {
+  // 2. Обработка истекших подписок - каждый день в 01:00
+  cron.schedule('0 1 * * *', () => {
     handleSubscriptionExpiry();
   }, {
     timezone: 'Europe/Moscow'
   });
-  console.log('✅ Задача 2: Обработка истекших подписок (ежедневно 09:00 МСК)');
+  console.log('✅ Задача 2: Обработка истекших подписок (ежедневно 01:00 МСК)');
 
   // 2.1. Окончание grace-периода - каждый день в 01:30
   cron.schedule('30 1 * * *', () => {
