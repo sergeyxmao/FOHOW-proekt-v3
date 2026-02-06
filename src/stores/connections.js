@@ -33,7 +33,6 @@ export const useConnectionsStore = defineStore('connections', {
         )
 
         if (existingConnection) {
-          console.log('⚠️ Соединение уже существует:', existingConnection.id)
           return null
         }
       }

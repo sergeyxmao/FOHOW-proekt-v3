@@ -98,7 +98,6 @@ const addPngDpiMetadata = async (blob, dpi) => {
 
       // Проверяем, есть ли уже pHYs чанк
       if (chunkType === 'pHYs') {
-        console.log('pHYs чанк уже существует, заменяем его')
         // Создаем новый массив без старого pHYs чанка
         const beforePhys = bytes.slice(0, position)
         const afterPhys = bytes.slice(position + 4 + 4 + chunkLength + 4)
@@ -250,7 +249,6 @@ const imageToDataUri = async (src, imgElement = null) => {
 
 const inlineImages = async (root) => {
   const images = Array.from(root.querySelectorAll('img'))
-  console.log(`Обрабатываем ${images.length} изображений для экспорта...`)
 
   // Сначала ждём загрузки ВСЕХ изображений
   await Promise.all(
@@ -290,15 +288,12 @@ const inlineImages = async (root) => {
         const dataUri = await imageToDataUri(src, img)
         if (dataUri && dataUri !== src) {
           img.setAttribute('src', dataUri)
-          console.log(`✓ Конвертировано изображение: ${src.substring(0, 50)}...`)
         }
       } catch (error) {
         console.warn(`✗ Не удалось конвертировать изображение: ${src}`, error)
       }
     })
   )
-
-  console.log('Все изображения обработаны для экспорта')
 }
 
 const parseTransform = (transform) => {
@@ -590,7 +585,7 @@ export function useProjectActions() {
       openTelegramShare(shareMessage)
     } catch (error) {
       if (error.name === 'AbortError') {
-        console.log('Пользователь отменил шеринг')
+        // User cancelled sharing
       } else {
         console.error('Ошибка при шеринге:', error)
         alert('Не удалось поделиться проектом. Попробуйте скачать файл вручную.')
@@ -863,14 +858,12 @@ ${connectionPathsSvg}
       canvasContainer.classList.add('canvas-container--capturing')
 
       // 2.5. КРИТИЧНО: Конвертируем все изображения в data URI ДО печати
-      console.log('Print: Начинаем конвертацию изображений в data URI...')
       const originalImageSources = new Map()
       const allImages = canvasContainer.querySelectorAll('img')
       allImages.forEach((img) => {
         originalImageSources.set(img, img.getAttribute('src'))
       })
       await inlineImages(canvasContainer)
-      console.log('Print: Конвертация изображений завершена')
 
       // 3. ИСПРАВЛЕНИЕ: Подготавливаем SVG-слой для корректного рендеринга при печати
       const svgLayer = canvasContent.querySelector('.svg-layer')
@@ -953,7 +946,6 @@ ${connectionPathsSvg}
 
       // 6.5. Восстанавливаем оригинальные src изображений
       if (originalImageSources && originalImageSources.size > 0) {
-        console.log('Print: Восстанавливаем оригинальные src изображений...')
         originalImageSources.forEach((originalSrc, img) => {
           if (originalSrc && img.getAttribute('src') !== originalSrc) {
             img.setAttribute('src', originalSrc)
@@ -1107,13 +1099,11 @@ const restoreAndDownload = async (finalCanvas, exportSettings, tempStyles, canva
 
   // ВАЖНО: Восстанавливаем оригинальные src изображений после экспорта
   if (originalImageSources && originalImageSources.size > 0) {
-    console.log('PNG Export: Восстанавливаем оригинальные src изображений...')
     originalImageSources.forEach((originalSrc, img) => {
       if (originalSrc && img.getAttribute('src') !== originalSrc) {
         img.setAttribute('src', originalSrc)
       }
     })
-    console.log(`PNG Export: Восстановлено ${originalImageSources.size} изображений`)
   }
 
   // Конвертируем в blob и скачиваем
@@ -1180,7 +1170,6 @@ const handleExportPNG = async (exportSettings = null) => {
     // Это необходимо, т.к. html2canvas не может загрузить изображения
     // с внешних URL из-за CORS ограничений
     // =====================================================
-    console.log('PNG Export: Начинаем конвертацию изображений в data URI...')
 
     // Сохраняем оригинальные src для восстановления после экспорта
     const originalImageSources = new Map()
@@ -1188,16 +1177,13 @@ const handleExportPNG = async (exportSettings = null) => {
     allImages.forEach((img, index) => {
       originalImageSources.set(img, img.getAttribute('src'))
     })
-    console.log(`PNG Export: Найдено ${allImages.length} изображений для конвертации`)
 
     // Конвертируем все изображения в data URI
     await inlineImages(canvasContainer)
-    console.log('PNG Export: Конвертация изображений завершена')
 
     // ИСПРАВЛЕНИЕ: Дополнительная обработка изображений в avatar-circle
     // Эти изображения могут иметь проблемы с CORS или object-fit
     const avatarCircleImages = canvasContainer.querySelectorAll('.avatar-circle img')
-    console.log(`PNG Export: Найдено ${avatarCircleImages.length} изображений в avatar-circle`)
     for (const img of avatarCircleImages) {
       const src = img.getAttribute('src')
       if (src && !src.startsWith('data:')) {
@@ -1207,7 +1193,6 @@ const handleExportPNG = async (exportSettings = null) => {
           const dataUri = await imageToDataUri(src, img)
           if (dataUri && dataUri.startsWith('data:')) {
             img.setAttribute('src', dataUri)
-            console.log(`PNG Export: Успешно сконвертировано изображение аватара`)
           }
         } catch (e) {
           console.error(`PNG Export: Ошибка конвертации изображения аватара:`, e)
@@ -1693,8 +1678,6 @@ const handleExportPNG = async (exportSettings = null) => {
       contentWidth = maxX - minX
       contentHeight = maxY - minY
 
-      console.log(`Экспорт полной схемы: размеры ${contentWidth}x${contentHeight}, границы [${minX},${minY}] -> [${maxX},${maxY}]`)
-
       // Сохраняем оригинальные значения позиции и transform
       const originalLeft = canvasContent.style.left
       const originalTop = canvasContent.style.top
@@ -1771,8 +1754,6 @@ const handleExportPNG = async (exportSettings = null) => {
       })
       window.dispatchEvent(exportEvent)
 
-      console.log('Отправлено событие png-export-render-all-images, ожидаем рендеринга...')
-
       // Ждём завершения рендеринга ИЛИ таймаута
       await renderPromise
 
@@ -1782,8 +1763,6 @@ const handleExportPNG = async (exportSettings = null) => {
       // ИСПРАВЛЕНИЕ: Ждём двух кадров для завершения перерисовки DOM
       // (аналогично режиму экспорта видимой области)
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-
-      console.log('Рендеринг завершён, начинаем захват...')
 
       // Определяем параметры экспорта
       let finalWidth, finalHeight, scale
@@ -1805,8 +1784,6 @@ const handleExportPNG = async (exportSettings = null) => {
         scale = 2
       }
 
-      console.log(`Захват с параметрами: ${finalWidth}x${finalHeight}, scale=${scale}`)
-
       // Захват с улучшенным onclone
       contentCanvas = await html2canvas(canvasContainer, {
         backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
@@ -1824,8 +1801,6 @@ const handleExportPNG = async (exportSettings = null) => {
         scrollY: 0,
         foreignObjectRendering: true,
         onclone: (clonedDoc, clonedElement) => {
-          console.log('Обработка клона DOM для экспорта...')
-
           const clonedSvg = clonedElement.querySelector('.svg-layer')
           if (clonedSvg) {
             clonedSvg.setAttribute('width', contentWidth)
@@ -1834,7 +1809,6 @@ const handleExportPNG = async (exportSettings = null) => {
             clonedSvg.style.width = `${contentWidth}px`
             clonedSvg.style.height = `${contentHeight}px`
             clonedSvg.style.overflow = 'visible'
-            console.log(`SVG-слой в клоне: ${contentWidth}x${contentHeight}`)
           }
 
           const cards = clonedElement.querySelectorAll('.card')
@@ -1848,7 +1822,6 @@ const handleExportPNG = async (exportSettings = null) => {
               card.style.backgroundColor = '#ffffff'
             }
           })
-          console.log(`Обработано карточек: ${cards.length}`)
 
           // ИСПРАВЛЕНИЕ: Обработка всех изображений (включая аватары)
           const images = clonedElement.querySelectorAll('img')
@@ -1868,7 +1841,6 @@ const handleExportPNG = async (exportSettings = null) => {
               console.warn('Изображение не полностью загружено:', img.src?.substring(0, 100))
             }
           })
-          console.log(`Изображений загружено: ${loadedCount}, не загружено: ${notLoadedCount}`)
 
           // ИСПРАВЛЕНИЕ: Убедимся, что аватары видимы
           const avatars = clonedElement.querySelectorAll('.avatar-object, .avatar-circle, .avatar-shape')
@@ -1876,7 +1848,6 @@ const handleExportPNG = async (exportSettings = null) => {
             avatar.style.visibility = 'visible'
             avatar.style.opacity = '1'
           })
-          console.log(`Обработано аватаров: ${avatars.length}`)
 
           // ИСПРАВЛЕНИЕ: Специальная обработка изображений внутри avatar-circle
           // html2canvas не всегда корректно обрабатывает object-fit: cover с border-radius
@@ -1895,7 +1866,6 @@ const handleExportPNG = async (exportSettings = null) => {
             img.style.top = '0'
             img.style.left = '0'
           })
-          console.log(`Обработано изображений в avatar-circle: ${avatarCircleImages.length}`)
 
           // html2canvas НЕ поддерживает object-fit: cover на img элементах
           // Решение: заменяем img на background-image на родительском контейнере
@@ -1913,7 +1883,6 @@ const handleExportPNG = async (exportSettings = null) => {
               img.style.opacity = '0'
             }
           })
-          console.log(`Обработано avatar-circle: ${avatarCircles.length}`)
 
           // ИСПРАВЛЕНИЕ: Специальная обработка аватаров в карточках (Card.vue)
           // Аватары в Card.vue используют background-image, нужно убедиться что они видимы
@@ -1922,7 +1891,6 @@ const handleExportPNG = async (exportSettings = null) => {
             container.style.visibility = 'visible'
             container.style.opacity = '1'
           })
-          console.log(`Обработано контейнеров аватаров карточек: ${cardAvatarContainers.length}`)
 
           const cardAvatars = clonedElement.querySelectorAll('.card-avatar')
           cardAvatars.forEach(avatar => {
@@ -1936,7 +1904,6 @@ const handleExportPNG = async (exportSettings = null) => {
               avatar.style.backgroundRepeat = 'no-repeat'
             }
           })
-          console.log(`Обработано аватаров карточек: ${cardAvatars.length}`)
 
           // ИСПРАВЛЕНИЕ: Убедимся, что изображения на канвасе видимы
           const canvasImages = clonedElement.querySelectorAll('.canvas-image')
@@ -1944,19 +1911,15 @@ const handleExportPNG = async (exportSettings = null) => {
             img.style.visibility = 'visible'
             img.style.opacity = '1'
           })
-          console.log(`Обработано изображений на канвасе: ${canvasImages.length}`)
 
           // Убедимся, что canvas изображений видим
           const clonedImagesCanvas = clonedElement.querySelector('.images-canvas-layer')
           if (clonedImagesCanvas) {
             clonedImagesCanvas.style.visibility = 'visible'
             clonedImagesCanvas.style.opacity = '1'
-            console.log(`Canvas изображений: ${clonedImagesCanvas.width}x${clonedImagesCanvas.height}`)
           }
         }
       })
-
-      console.log('Захват завершён')
 
       // ИСПРАВЛЕНИЕ: Диспатчим событие завершения экспорта
       const completeEvent = new CustomEvent('png-export-render-complete')
@@ -1986,8 +1949,6 @@ const handleExportPNG = async (exportSettings = null) => {
       canvasContent.style.transformOrigin = originalTransformOrigin
       canvasContent.style.left = originalLeft
       canvasContent.style.top = originalTop
-
-      console.log('Стили восстановлены')
 
       // Финализируем canvas
       let finalCanvas

@@ -313,8 +313,6 @@ export const useStickersStore = defineStore('stickers', () => {
       // Удаляем стикер из массива в сторе
       stickers.value = stickers.value.filter(s => s.id !== stickerIdNum);
 
-      console.log('✅ Стикер успешно удален:', stickerIdNum);
-
     } catch (error) {
       console.error('❌ Ошибка удаления стикера:', error);
       throw error; // Пробрасываем ошибку дальше, чтобы компонент мог ее поймать и показать alert
@@ -351,7 +349,6 @@ export const useStickersStore = defineStore('stickers', () => {
       }
     });
 
-    console.log('✅ Загружено стикеров из сохраненных данных:', stickers.value.length);
   }
 
   /**

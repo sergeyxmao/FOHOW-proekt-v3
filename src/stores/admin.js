@@ -1017,8 +1017,6 @@ export const useAdminStore = defineStore('admin', {
 
         const data = await response.json()
 
-        console.log(`[ADMIN] Изображение переименовано: image_id=${imageId}, boards_updated=${data.boards_updated}`)
-
         return data
 
       } catch (err) {

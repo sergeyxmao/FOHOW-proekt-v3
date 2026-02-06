@@ -268,16 +268,12 @@ export function useUserCardConnections(options) {
    * @returns {Array<{type: 'user_card'|'connection', id: string}>} Последовательность для анимации
    */
   const buildUserCardAnimationSequence = (startCardId) => {
-    console.log('🔍 buildUserCardAnimationSequence вызвана для:', startCardId)
-
     const sequence = []
     const visited = new Set()
 
     // Получаем метаданные parentOf из cardsStore (как в animateBalancePropagation)
     const meta = cardsStore?.calculationMeta || {}
     const parentOf = meta.parentOf || {}
-
-    console.log('📊 Метаданные parentOf:', Object.keys(parentOf).length, 'записей')
 
     let currentId = startCardId
 
@@ -286,27 +282,22 @@ export function useUserCardConnections(options) {
       visited.add(currentId)
 
       const currentCard = cards.value.find(c => c.id === currentId)
-      console.log('  ↗️ Обработка карточки:', currentId, 'тип:', currentCard?.type)
 
       if (!currentCard) {
-        console.log('    ❌ Карточка не найдена в массиве!')
         break
       }
 
       // Добавляем карточку в последовательность
       sequence.push({ type: 'user_card', id: currentId })
-      console.log('    ✅ Добавлена карточка в последовательность')
 
       // Ищем родительскую связь через calculationMeta.parentOf
       const relation = parentOf[currentId]
 
       if (!relation || !relation.parentId) {
-        console.log('    🏁 Достигнута вершина (нет родителя в parentOf)')
         break
       }
 
       const parentId = relation.parentId
-      console.log(`    🔗 Найдена связь: ${currentId} -> ${parentId} (сторона: ${relation.side})`)
 
       // Находим соединение между текущей карточкой и родителем через connectionsStore
       const connection = connectionsStore?.connections?.find(conn =>
@@ -316,7 +307,6 @@ export function useUserCardConnections(options) {
 
       if (connection) {
         sequence.push({ type: 'connection', id: connection.id })
-        console.log('    ✅ Добавлено соединение:', connection.id)
       } else {
         console.warn(`    ⚠️ Соединение НЕ найдено между ${currentId} и ${parentId}`)
       }
@@ -325,8 +315,6 @@ export function useUserCardConnections(options) {
       currentId = parentId
     }
 
-    console.log('📊 Финальная последовательность:', sequence)
-    console.log('📊 Длина последовательности:', sequence.length)
     return sequence
   }
 
@@ -353,11 +341,8 @@ const getCardElement = (cardId) => {
  * @param {string} userCardId - ID аватара
  */
 const startUserCardSelectionAnimation = (userCardId) => {
-  console.log('🟢 startUserCardSelectionAnimation (Direct DOM Mode) для:', userCardId);
-
   // Проверяем настройки анимации (PV changed)
   if (viewSettingsStore && !viewSettingsStore.isAnimationEnabled) {
-    console.log('🛑 Анимация отключена пользователем (нажатие на монетку)');
     return;
   }
 
@@ -365,17 +350,11 @@ const startUserCardSelectionAnimation = (userCardId) => {
   const userCard = cards.value.find(card => card.id === userCardId)
 
   if (!userCard) {
-    console.log('❌ Карточка НЕ найдена! Остановка анимации.');
-    console.log('🔍 Доступные карточки:', cards.value.map(c => ({ id: c.id, type: c.type })));
     return
   }
 
-  console.log('✅ Карточка найдена:', userCard.type);
-
   // 1. Строим последовательность анимации
   const sequence = buildUserCardAnimationSequence(userCardId)
-  console.log('📊 Построенная последовательность анимации:', sequence);
-  console.log('📊 Длина последовательности:', sequence.length);
 
   if (!sequence || sequence.length === 0) {
     console.warn('⚠️ Пустая последовательность анимации');
@@ -387,8 +366,6 @@ const startUserCardSelectionAnimation = (userCardId) => {
     if (item.type === 'user_card') {
       const el = getCardElement(item.id);
       if (el) {
-        console.log(`✨ Анимация карточки ${item.id} (DOM) - добавляем классы`);
-
         // Устанавливаем цвет анимации (PV changed)
         const animationColor = viewSettingsStore?.animationColor || '#ef4444';
         const rgb = toRgbString(animationColor);
@@ -406,7 +383,6 @@ const startUserCardSelectionAnimation = (userCardId) => {
         setTimeout(() => {
           el.classList.remove('card--balance-propagation');
           el.classList.remove('is-animated');
-          console.log(`🧹 Классы удалены для карточки ${item.id}`);
         }, 2000);
       } else {
         console.warn(`❌ Элемент карточки ${item.id} не найден в DOM`);
@@ -415,8 +391,6 @@ const startUserCardSelectionAnimation = (userCardId) => {
     else if (item.type === 'connection') {
       const lineEl = document.getElementById(item.id);
       if (lineEl) {
-        console.log(`✨ Анимация линии ${item.id} (DOM)`);
-
         // Устанавливаем цвет анимации для линии (PV changed)
         const animationColor = viewSettingsStore?.animationColor || '#ef4444';
         const rgb = toRgbString(animationColor);
@@ -433,15 +407,12 @@ const startUserCardSelectionAnimation = (userCardId) => {
         // Автоматическое удаление класса через 2 секунды
         setTimeout(() => {
           lineEl.classList.remove('line--balance-propagation');
-          console.log(`🧹 Класс удалён для линии ${item.id}`);
         }, 2000);
       } else {
         console.warn(`❌ Элемент линии ${item.id} не найден в DOM`);
       }
     }
   });
-
-  console.log('✅ Анимация запущена успешно через прямую DOM-манипуляцию!');
 }
 
 
@@ -734,14 +705,11 @@ const startUserCardSelectionAnimation = (userCardId) => {
   const deleteSelectedUserCardConnections = () => {
     if (selectedUserCardConnectionIds.value.length === 0) return
 
-    console.log('Deleting user-card connections:', selectedUserCardConnectionIds.value)
-
     selectedUserCardConnectionIds.value.forEach(connectionId => {
       connectionsStore.removeUserCardConnection(connectionId)
     })
 
     selectedUserCardConnectionIds.value = []
-    console.log('User-card connections deleted')
   }
 
   /**

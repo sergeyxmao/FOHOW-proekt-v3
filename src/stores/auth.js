@@ -88,7 +88,6 @@ export const useAuthStore = defineStore('auth', {
         this.token = token
         this.isAuthenticated = true
 
-        console.log('[AUTH] User loaded from token:', { email: this.user.email, role: this.user.role })
       } catch (error) {
         console.error('[AUTH] Error decoding token:', error)
         this.logout()
@@ -132,7 +131,6 @@ export const useAuthStore = defineStore('auth', {
             };
             localStorage.setItem('user', JSON.stringify(this.user)); // Обновляем кэш
             this.isAuthenticated = true; // Токен валиден, пользователь авторизован
-            console.log('[AUTH] Init: профиль загружен, is_verified:', this.user.is_verified);
           } else {
             // Токен невалидный - вызываем logout для полного сброса
             await this.logout();
@@ -240,7 +238,6 @@ export const useAuthStore = defineStore('auth', {
             is_verified: Boolean(profileData.user?.is_verified),
             verified_at: profileData.user?.verified_at || null
           }
-          console.log('[AUTH] FinalizeAuth: профиль загружен, is_verified:', this.user.is_verified)
         } else {
           // Если данные профиля не удалось получить, используем fallbackUser
           this.user = mergeUserData(this.user, fallbackUser)
@@ -330,8 +327,6 @@ export const useAuthStore = defineStore('auth', {
 
         // Сохранить в localStorage
         localStorage.setItem('user', JSON.stringify(this.user))
-
-        console.log('[AUTH] Профиль обновлён, is_verified:', this.user.is_verified)
 
         return data.user
       } catch (err) {

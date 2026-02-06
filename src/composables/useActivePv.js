@@ -63,8 +63,6 @@ export function useActivePv(options) {
    * Функция отмены всех активных анимаций
    */
   const cancelAllActiveAnimations = () => {
-    console.log('🛑 Отмена всех активных анимаций, количество:', activeAnimationTimers.size)
-
     activeAnimationTimers.forEach((timers, cardId) => {
       // Отменяем таймер карточки
       if (timers.cardTimer) {
@@ -95,13 +93,10 @@ export function useActivePv(options) {
 
     const animatingValues = root.querySelectorAll('.value--animating')
 
-    console.log('🔢 Отмена анимации чисел, найдено элементов:', animatingValues.length)
-
     animatingValues.forEach(element => {
       element.classList.remove('value--animating')
     })
 
-    console.log('✅ Все анимации отменены (линии и числа)')
   }
 
   /**
@@ -142,14 +137,11 @@ export function useActivePv(options) {
 
     // Проверяем настройки анимации (PV changed)
     if (viewSettingsStore && !viewSettingsStore.isAnimationEnabled) {
-      console.log('🛑 Анимация отключена пользователем (+10)');
       return;
     }
 
     // Получаем длительность анимации из настроек
     const animationDuration = viewSettingsStore.animationDurationMs || 2000
-
-    console.log('🎨 Запуск анимации баланса для карточки:', changedCardId, 'длительность:', animationDuration)
 
     // Инициализируем хранилище таймеров для этой карточки
     const timers = {
@@ -160,8 +152,6 @@ export function useActivePv(options) {
     // Показываем желтый индикатор на измененной карточке через CSS-класс
     const cardElement = getCardElement(changedCardId)
     if (cardElement) {
-      console.log('✅ Карточка найдена, добавляем класс card--balance-propagation')
-
       // Устанавливаем цвет анимации (PV changed)
       const animationColor = viewSettingsStore?.animationColor || '#ef4444';
       const rgb = toRgbString(animationColor);
@@ -183,8 +173,6 @@ export function useActivePv(options) {
     const meta = cardsStore.calculationMeta || {}
     const parentOf = meta.parentOf || {}
 
-    console.log('📊 Метаданные parentOf:', parentOf)
-
     const pathUp = []
     let currentId = changedCardId
 
@@ -194,7 +182,6 @@ export function useActivePv(options) {
       const parentId = relation.parentId
       const side = relation.side
 
-      console.log(`🔗 Связь найдена: ${currentId} -> ${parentId} (сторона: ${side})`)
       if (!parentId) break
 
       // Находим линию между текущей карточкой и родителем
@@ -204,7 +191,6 @@ export function useActivePv(options) {
       )
 
       if (connection) {
-        console.log(`✅ Соединение найдено: ${connection.id}`)
         pathUp.push({ connectionId: connection.id, side })
       } else {
         console.warn(`❌ Соединение НЕ найдено между ${currentId} и ${parentId}`)
@@ -212,13 +198,9 @@ export function useActivePv(options) {
       currentId = parentId
     }
 
-    console.log('📍 Путь вверх построен, найдено линий:', pathUp.length)
-
     // Применяем анимацию к линиям вверх по структуре
     pathUp.forEach(({ connectionId }, index) => {
       const lineElement = getConnectionElement(connectionId)
-      console.log(`Линия ${index + 1}/${pathUp.length}:`, connectionId, '→ элемент найден:', !!lineElement)
-
       if (!lineElement) return
 
       // Устанавливаем цвет анимации для линии (PV changed)
@@ -233,7 +215,6 @@ export function useActivePv(options) {
       }
 
       lineElement.classList.add('line--balance-propagation')
-      console.log('✅ Класс line--balance-propagation добавлен к линии:', connectionId)
       const lineTimer = window.setTimeout(() => {
         lineElement.classList.remove('line--balance-propagation')
       }, animationDuration)
@@ -330,20 +311,11 @@ export function useActivePv(options) {
         || card.activePvBalance.right !== balanceRight) {
         updates.activePvBalance = { left: balanceLeft, right: balanceRight }
 
-        console.log(`💰 Изменение баланса для карточки ${cardId}:`, {
-          oldLeft: card.activePvBalance?.left ?? 0,
-          newLeft: balanceLeft,
-          oldRight: card.activePvBalance?.right ?? 0,
-          newRight: balanceRight,
-          triggerAnimation: propagationOptions.triggerAnimation
-        })
-
         // Запоминаем карточки с изменениями баланса для анимации
         if (propagationOptions.triggerAnimation) {
           const changedSide = balanceLeft !== (card.activePvBalance?.left ?? 0) ? 'left' :
                              balanceRight !== (card.activePvBalance?.right ?? 0) ? 'right' : null
 
-          console.log(`  ➡️ Добавляем в массив анимации: cardId=${cardId}, side=${changedSide}`)
           cardsWithBalanceChanges.push({ cardId, side: changedSide })
         }
       }
@@ -378,14 +350,8 @@ export function useActivePv(options) {
       highlightActivePvChange(highlightCardId)
     }
 
-    console.log('🔍 Проверка запуска анимации:')
-    console.log('  - propagationOptions.triggerAnimation:', propagationOptions.triggerAnimation)
-    console.log('  - cardsWithBalanceChanges.length:', cardsWithBalanceChanges.length)
-    console.log('  - cardsWithBalanceChanges:', cardsWithBalanceChanges)
-
     // Запускаем анимацию для карточек с изменениями баланса при автоматических расчетах
     if (propagationOptions.triggerAnimation && cardsWithBalanceChanges.length > 0) {
-      console.log('✅ Запускаем анимацию для', cardsWithBalanceChanges.length, 'карточек')
       cardsWithBalanceChanges.forEach(({ cardId, side }) => {
         animateBalancePropagation(cardId, side)
       })
@@ -468,13 +434,6 @@ export function useActivePv(options) {
 
     const updateEntries = Object.entries(updates)
 
-    console.log('📦 Результат applyActivePvDelta:', {
-      updatesCount: updateEntries.length,
-      changedIds,
-      cardId,
-      shouldAnimate
-    })
-
     if (updateEntries.length === 0) {
       return
     }
@@ -489,15 +448,12 @@ export function useActivePv(options) {
 
     // Запускаем анимацию ТОЛЬКО если значения увеличились (shouldAnimate === true)
     if (shouldAnimate && changedIds.length > 0) {
-      console.log('🎯 Запуск анимации для changedIds:', changedIds)
       // Отменяем все предыдущие анимации перед запуском новых
       cancelAllActiveAnimations()
 
       changedIds.forEach(id => {
         animateBalancePropagation(id)
       })
-    } else {
-      console.log('❌ Анимация НЕ запускается (уменьшение или очистка)')
     }
 
     applyActivePvPropagation(cardId, { saveHistory: true, historyDescription: description, triggerAnimation: false })
