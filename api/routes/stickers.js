@@ -130,7 +130,7 @@ export function registerStickerRoutes(app) {
         type: 'object',
         properties: {
           type: { type: 'string', description: 'Тип стикера' },
-          content: { description: 'Содержимое стикера' },
+          content: { type: 'string', description: 'Содержимое стикера' },
           position_x: { type: 'number', description: 'Позиция X' },
           position_y: { type: 'number', description: 'Позиция Y' },
           width: { type: 'number', description: 'Ширина' },
@@ -231,7 +231,7 @@ export function registerStickerRoutes(app) {
         type: 'object',
         properties: {
           type: { type: 'string', nullable: true },
-          content: { nullable: true },
+          content: { type: 'string', nullable: true },
           position_x: { type: 'number', nullable: true },
           position_y: { type: 'number', nullable: true },
           width: { type: 'number', nullable: true },
