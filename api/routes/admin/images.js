@@ -47,7 +47,37 @@ export function registerAdminImagesRoutes(app) {
    * GET /api/admin/shared-folders
    */
   app.get('/api/admin/shared-folders', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Получить список папок общей библиотеки',
+      description: 'Возвращает список всех папок общей библиотеки с количеством изображений в каждой. Требуется роль администратора.',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            folders: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  name: { type: 'string' },
+                  created_by: { type: 'integer' },
+                  created_at: { type: 'string', format: 'date-time' },
+                  images_count: { type: 'integer' }
+                }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       console.log('[ADMIN] Запрос списка папок общей библиотеки, admin_id=' + req.user.id);
@@ -86,7 +116,36 @@ export function registerAdminImagesRoutes(app) {
    * POST /api/admin/shared-folders
    */
   app.post('/api/admin/shared-folders', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Создать папку в общей библиотеке',
+      description: 'Создаёт новую папку в общей библиотеке изображений. Требуется роль администратора.',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name: { type: 'string', description: 'Название папки' }
+        }
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            images_count: { type: 'integer' },
+            created_at: { type: 'string', format: 'date-time' },
+            created_by: { type: 'integer' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const adminId = req.user.id;
@@ -153,7 +212,43 @@ export function registerAdminImagesRoutes(app) {
    * PATCH /api/admin/shared-folders/:id
    */
   app.patch('/api/admin/shared-folders/:id', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Переименовать папку общей библиотеки',
+      description: 'Переименовывает папку в общей библиотеке. Все файлы внутри папки перемещаются на Яндекс.Диске. Требуется роль администратора.',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', description: 'ID папки' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name: { type: 'string', description: 'Новое название папки' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            name: { type: 'string' },
+            images_count: { type: 'integer' },
+            created_at: { type: 'string', format: 'date-time' },
+            created_by: { type: 'integer' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     const client = await pool.connect();
 
@@ -367,7 +462,27 @@ export function registerAdminImagesRoutes(app) {
    * DELETE /api/admin/shared-folders/:id
    */
   app.delete('/api/admin/shared-folders/:id', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Удалить папку с содержимым',
+      description: 'Удаляет папку общей библиотеки вместе со всеми изображениями внутри неё. Файлы удаляются и с Яндекс.Диска. Требуется роль администратора.',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', description: 'ID папки' }
+        }
+      },
+      response: {
+        204: { type: 'null', description: 'Папка удалена' },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     const client = await pool.connect();
 
@@ -475,7 +590,46 @@ export function registerAdminImagesRoutes(app) {
    * GET /api/admin/images/pending
    */
   app.get('/api/admin/images/pending', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Изображения на модерации',
+      description: 'Возвращает список изображений, ожидающих модерации (pending). Требуется роль администратора.',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  original_name: { type: 'string' },
+                  public_url: { type: 'string' },
+                  preview_url: { type: 'string' },
+                  yandex_path: { type: 'string' },
+                  pending_yandex_path: { type: 'string', nullable: true },
+                  user_id: { type: 'integer' },
+                  user_full_name: { type: 'string' },
+                  user_personal_id: { type: 'string' },
+                  share_requested_at: { type: 'string', format: 'date-time' },
+                  file_size: { type: 'integer' },
+                  width: { type: 'integer', nullable: true },
+                  height: { type: 'integer', nullable: true }
+                }
+              }
+            },
+            total: { type: 'integer' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       console.log('[ADMIN] Запрос списка изображений на модерацию, admin_id=' + req.user.id);
@@ -524,7 +678,45 @@ export function registerAdminImagesRoutes(app) {
    * POST /api/admin/images/:id/approve
    */
   app.post('/api/admin/images/:id/approve', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Одобрить изображение',
+      description: 'Одобряет изображение на модерации и копирует его в указанную папку общей библиотеки. Автоматически обновляет ссылки на досках. Требуется роль администратора.',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', description: 'ID изображения' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['folder_name'],
+        properties: {
+          folder_name: { type: 'string', description: 'Название папки для размещения' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            user_id: { type: 'integer' },
+            original_name: { type: 'string' },
+            public_url: { type: 'string' },
+            preview_url: { type: 'string' },
+            shared_folder_id: { type: 'integer' },
+            is_shared: { type: 'boolean' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const adminId = req.user.id;
@@ -855,7 +1047,33 @@ await pool.query(
    * POST /api/admin/images/:id/reject
    */
   app.post('/api/admin/images/:id/reject', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Отклонить изображение',
+      description: 'Отклоняет изображение на модерации и удаляет файл из папки pending на Яндекс.Диске. Требуется роль администратора.',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', description: 'ID изображения' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            moderation_status: { type: 'string' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const adminId = req.user.id;
@@ -962,7 +1180,42 @@ await pool.query(
    * POST /api/admin/images/upload-shared
    */
   app.post('/api/admin/images/upload-shared', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Загрузить изображение в общую библиотеку',
+      description: 'Загружает изображение напрямую в указанную папку общей библиотеки. Поддерживаемые форматы: webp, jpeg, png, gif. Требуется роль администратора.',
+      consumes: ['multipart/form-data'],
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['file', 'shared_folder_id'],
+        properties: {
+          file: { type: 'string', format: 'binary', description: 'Файл изображения' },
+          shared_folder_id: { type: 'integer', description: 'ID папки общей библиотеки' },
+          width: { type: 'integer', description: 'Ширина изображения (опционально)' },
+          height: { type: 'integer', description: 'Высота изображения (опционально)' }
+        }
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            original_name: { type: 'string' },
+            public_url: { type: 'string' },
+            preview_placeholder: { type: 'string', nullable: true },
+            blurhash: { type: 'string', nullable: true },
+            shared_folder_id: { type: 'integer' },
+            is_shared: { type: 'boolean' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const adminId = req.user.id;
@@ -1142,7 +1395,42 @@ await pool.query(
    * POST /api/admin/images/:id/move-to-folder
    */
   app.post('/api/admin/images/:id/move-to-folder', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Переместить изображение в папку',
+      description: 'Перемещает общее изображение в другую папку общей библиотеки. Файл перемещается на Яндекс.Диске и обновляются публичные ссылки. Требуется роль администратора.',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', description: 'ID изображения' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['shared_folder_id'],
+        properties: {
+          shared_folder_id: { type: 'integer', description: 'ID целевой папки' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            shared_folder_id: { type: 'integer' },
+            yandex_path: { type: 'string' },
+            public_url: { type: 'string' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const adminId = req.user.id;
@@ -1302,7 +1590,40 @@ await pool.query(
    * PATCH /api/admin/images/:id/rename
    */
   app.patch('/api/admin/images/:id/rename', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Переименовать изображение',
+      description: 'Переименовывает изображение в общей библиотеке. Файл переименовывается на Яндекс.Диске и автоматически обновляются ссылки на досках. Требуется роль администратора.',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', description: 'ID изображения' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['new_name'],
+        properties: {
+          new_name: { type: 'string', description: 'Новое имя изображения' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            image: { type: 'object' },
+            boards_updated: { type: 'integer' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const adminId = req.user.id;
@@ -1529,7 +1850,27 @@ await pool.query(
    * DELETE /api/admin/images/:id
    */
   app.delete('/api/admin/images/:id', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Удалить изображение',
+      description: 'Удаляет общее изображение из библиотеки и с Яндекс.Диска. Требуется роль администратора.',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', description: 'ID изображения' }
+        }
+      },
+      response: {
+        204: { type: 'null', description: 'Изображение удалено' },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const adminId = req.user.id;

@@ -80,6 +80,12 @@ GET /api/docs/json
 | `api/routes/promo.js` | Schema для 1 эндпоинта промокодов |
 | `api/routes/verification.js` | Schema для 5 эндпоинтов верификации |
 | `api/routes/tribute.js` | Schema для 2 эндпоинтов Tribute |
+| `api/routes/admin/users.js` | Schema для 7 эндпоинтов управления пользователями (admin) |
+| `api/routes/admin/stats.js` | Schema для 3 эндпоинтов статистики (admin) |
+| `api/routes/admin/images.js` | Schema для 11 эндпоинтов модерации изображений (admin) |
+| `api/routes/admin/verifications.js` | Schema для 4 эндпоинтов верификации (admin) |
+| `api/routes/admin/exports.js` | Schema для 3 эндпоинтов экспорта (admin) |
+| `api/routes/admin/transactions.js` | Schema для 1 эндпоинта транзакций (admin) |
 
 ## Как добавить документацию к новому эндпоинту
 
@@ -212,13 +218,16 @@ app.post('/api/example', {
 - `api/routes/tribute.js` — 2 эндпоинта
 - **Итого: ~72 эндпоинта задокументированы**
 
-### Фаза 3 (планируется) — Admin
+### Фаза 3 (завершена) — Admin
 - `api/routes/admin/users.js` — 7 эндпоинтов
 - `api/routes/admin/stats.js` — 3 эндпоинта
-- `api/routes/admin/images.js` — 9 эндпоинтов
+- `api/routes/admin/images.js` — 11 эндпоинтов
 - `api/routes/admin/verifications.js` — 4 эндпоинта
 - `api/routes/admin/exports.js` — 3 эндпоинта
 - `api/routes/admin/transactions.js` — 1 эндпоинт
+- **Итого: 29 эндпоинтов задокументированы**
+
+### Общий итог: ~125 эндпоинтов задокументированы (100% API)
 
 ## Экспорт OpenAPI JSON для внешней интеграции
 
