@@ -15,7 +15,54 @@ export function registerPlanRoutes(app) {
 
   // === ПОЛУЧИТЬ ИНФОРМАЦИЮ О ТАРИФНОМ ПЛАНЕ ПОЛЬЗОВАТЕЛЯ ===
   app.get('/api/user/plan', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Plans'],
+      summary: 'Получить информацию о тарифном плане пользователя',
+      description: 'Возвращает информацию о текущем тарифном плане пользователя, включая лимиты и текущее использование',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                username: { type: 'string' },
+                email: { type: 'string' },
+                subscriptionStartedAt: { type: 'string', format: 'date-time', nullable: true },
+                subscriptionExpiresAt: { type: 'string', format: 'date-time', nullable: true },
+                gracePeriodUntil: { type: 'string', format: 'date-time', nullable: true }
+              }
+            },
+            plan: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                code_name: { type: 'string' },
+                priceMonthly: { type: 'number' }
+              }
+            },
+            features: { type: 'object' },
+            usage: {
+              type: 'object',
+              properties: {
+                boards: { type: 'object', properties: { current: { type: 'integer' }, limit: { type: 'integer' } } },
+                notes: { type: 'object', properties: { current: { type: 'integer' }, limit: { type: 'integer' } } },
+                stickers: { type: 'object', properties: { current: { type: 'integer' }, limit: { type: 'integer' } } },
+                userComments: { type: 'object', properties: { current: { type: 'integer' }, limit: { type: 'integer' } } },
+                cards: { type: 'object', properties: { current: { type: 'integer' }, limit: { type: 'integer' } } }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
@@ -117,7 +164,40 @@ export function registerPlanRoutes(app) {
   });
 
   // === ПОЛУЧИТЬ СПИСОК ПУБЛИЧНЫХ ТАРИФНЫХ ПЛАНОВ ===
-  app.get('/api/plans', async (req, reply) => {
+  app.get('/api/plans', {
+    schema: {
+      tags: ['Plans'],
+      summary: 'Получить список публичных тарифных планов',
+      description: 'Возвращает список всех публичных тарифных планов, доступных для подписки',
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            plans: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  name: { type: 'string' },
+                  code_name: { type: 'string' },
+                  description: { type: 'string', nullable: true },
+                  price_monthly: { type: 'number', nullable: true },
+                  price_yearly: { type: 'number', nullable: true },
+                  features: { type: 'object' },
+                  display_order: { type: 'integer' },
+                  is_public: { type: 'boolean' },
+                  created_at: { type: 'string', format: 'date-time' },
+                  updated_at: { type: 'string', format: 'date-time' }
+                }
+              }
+            }
+          }
+        },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
+  }, async (req, reply) => {
     try {
       const result = await pool.query(
         `SELECT id, name, code_name, description, price_monthly, price_yearly,

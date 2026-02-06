@@ -9,7 +9,37 @@ import { checkUsageLimit } from '../middleware/checkUsageLimit.js';
 export function registerNoteRoutes(app) {
   // Получить все заметки для доски
   app.get('/api/boards/:boardId/notes', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Notes'],
+      summary: 'Получить заметки доски',
+      description: 'Возвращает все заметки для указанной доски',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          boardId: { type: 'integer', description: 'ID доски' }
+        },
+        required: ['boardId']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            notes: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {}
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { boardId } = req.params;
@@ -46,7 +76,35 @@ export function registerNoteRoutes(app) {
 
   // Создать/обновить/удалить заметку (UPSERT + DELETE)
   app.post('/api/notes', {
-    preHandler: [authenticateToken, checkUsageLimit('notes', 'max_notes')]
+    preHandler: [authenticateToken, checkUsageLimit('notes', 'max_notes')],
+    schema: {
+      tags: ['Notes'],
+      summary: 'Создать/обновить/удалить заметку (UPSERT)',
+      description: 'Создаёт или обновляет заметку. Если content равен null или пустой — удаляет заметку',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        properties: {
+          board_id: { type: 'integer', description: 'ID доски' },
+          content: { type: 'string', nullable: true, description: 'Содержимое заметки (null — удаление)' },
+          type: { type: 'string', nullable: true, description: 'Тип заметки' }
+        },
+        required: ['board_id']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            note: { type: 'object', properties: {} },
+            deleted: { type: 'boolean' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { boardId, cardUid, noteDate, content, color } = req.body;

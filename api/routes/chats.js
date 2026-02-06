@@ -7,7 +7,47 @@ export async function registerChatRoutes(app) {
 
   // GET /api/chats - Список моих чатов
   app.get('/api/chats', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Chats'],
+      summary: 'Получить список чатов пользователя',
+      description: 'Возвращает список чатов текущего пользователя с информацией об участниках, последнем сообщении и количестве непрочитанных',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            chats: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  participantIds: { type: 'array', items: { type: 'string' } },
+                  participants: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        userId: { type: 'string' },
+                        fullName: { type: 'string' },
+                        avatarUrl: { type: 'string', nullable: true }
+                      }
+                    }
+                  },
+                  lastMessageTime: { type: 'integer' },
+                  lastMessagePreview: { type: 'string', nullable: true },
+                  unreadCount: { type: 'integer' }
+                }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       // Получаем чаты, сортируем по последнему сообщению
@@ -60,7 +100,32 @@ export async function registerChatRoutes(app) {
 
   // POST /api/chats - Создать или получить существующий чат
   app.post('/api/chats', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Chats'],
+      summary: 'Создать новый чат',
+      description: 'Создаёт новый приватный чат с указанным пользователем или возвращает существующий',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['targetId'],
+        properties: {
+          targetId: { type: 'integer' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            chatId: { type: 'string' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     const { targetId } = req.body;
     if (!targetId) return reply.code(400).send({ error: 'targetId обязателен' });
@@ -83,7 +148,53 @@ export async function registerChatRoutes(app) {
 
   // GET /api/chats/:id/messages - История сообщений
   app.get('/api/chats/:id/messages', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Chats'],
+      summary: 'Получить сообщения чата',
+      description: 'Возвращает историю сообщений указанного чата',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        },
+        required: ['id']
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer' },
+          limit: { type: 'integer' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            messages: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string' },
+                  senderId: { type: 'string' },
+                  text: { type: 'string' },
+                  timestamp: { type: 'integer' },
+                  isSystem: { type: 'boolean' }
+                }
+              }
+            },
+            total: { type: 'integer' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     const { id } = req.params;
     
@@ -122,7 +233,49 @@ export async function registerChatRoutes(app) {
 
   // POST /api/chats/:id/messages - Отправить сообщение
   app.post('/api/chats/:id/messages', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Chats'],
+      summary: 'Отправить сообщение в чат',
+      description: 'Отправляет новое текстовое сообщение в указанный чат',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        },
+        required: ['id']
+      },
+      body: {
+        type: 'object',
+        required: ['text'],
+        properties: {
+          text: { type: 'string' }
+        }
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                senderId: { type: 'string' },
+                text: { type: 'string' },
+                timestamp: { type: 'integer' }
+              }
+            }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     const { id } = req.params;
     const { text } = req.body;
@@ -188,7 +341,33 @@ export async function registerChatRoutes(app) {
 
   // POST /api/chats/:id/read - Отметить все входящие сообщения прочитанными
   app.post('/api/chats/:id/read', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Chats'],
+      summary: 'Отметить сообщения как прочитанные',
+      description: 'Отмечает все непрочитанные входящие сообщения в чате как прочитанные',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        },
+        required: ['id']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            updatedCount: { type: 'integer' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     const { id } = req.params;
 
@@ -221,7 +400,36 @@ export async function registerChatRoutes(app) {
   });
 // POST /api/chats/broadcast - Групповая рассылка
 app.post('/api/chats/broadcast', {
-  preHandler: [authenticateToken]
+  preHandler: [authenticateToken],
+  schema: {
+    tags: ['Chats'],
+    summary: 'Отправить рассылку (admin only)',
+    description: 'Отправляет сообщение нескольким пользователям в их приватные чаты. Доступно только администраторам',
+    security: [{ bearerAuth: [] }],
+    body: {
+      type: 'object',
+      required: ['text'],
+      properties: {
+        text: { type: 'string' },
+        recipientIds: { type: 'array', items: { type: 'integer' } }
+      }
+    },
+    response: {
+      200: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean' },
+          sent: { type: 'integer' },
+          failed: { type: 'integer' },
+          failedUsers: { type: 'array', items: { type: 'integer' } }
+        }
+      },
+      400: { type: 'object', properties: { error: { type: 'string' } } },
+      401: { type: 'object', properties: { error: { type: 'string' } } },
+      403: { type: 'object', properties: { error: { type: 'string' } } },
+      500: { type: 'object', properties: { error: { type: 'string' } } }
+    }
+  }
 }, async (req, reply) => {
   const { recipientIds, text } = req.body;
 

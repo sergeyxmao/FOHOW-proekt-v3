@@ -10,7 +10,30 @@ export function registerBoardFolderRoutes(app) {
   app.get(
     '/api/board-folders',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Board Folders'],
+        summary: 'Получить все папки пользователя',
+        description: 'Возвращает список всех папок досок текущего авторизованного пользователя с количеством досок в каждой',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                created_at: { type: 'string', format: 'date-time' },
+                updated_at: { type: 'string', format: 'date-time' },
+                board_count: { type: 'integer' }
+              }
+            }
+          },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -43,7 +66,36 @@ export function registerBoardFolderRoutes(app) {
   app.post(
     '/api/board-folders',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Board Folders'],
+        summary: 'Создать новую папку',
+        description: 'Создаёт новую папку для досок. Проверяет лимит папок по тарифу пользователя',
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' }
+          },
+          required: ['name']
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              id: { type: 'integer' },
+              name: { type: 'string' },
+              created_at: { type: 'string', format: 'date-time' },
+              updated_at: { type: 'string', format: 'date-time' }
+            }
+          },
+          400: { type: 'object', properties: { error: { type: 'string' } } },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          409: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -111,7 +163,43 @@ export function registerBoardFolderRoutes(app) {
   app.put(
     '/api/board-folders/:folderId',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Board Folders'],
+        summary: 'Переименовать папку',
+        description: 'Переименовывает папку досок. Проверяет владельца и уникальность имени',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            folderId: { type: 'integer' }
+          }
+        },
+        body: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' }
+          },
+          required: ['name']
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              id: { type: 'integer' },
+              name: { type: 'string' },
+              created_at: { type: 'string', format: 'date-time' },
+              updated_at: { type: 'string', format: 'date-time' }
+            }
+          },
+          400: { type: 'object', properties: { error: { type: 'string' } } },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          409: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -174,7 +262,39 @@ export function registerBoardFolderRoutes(app) {
   app.delete(
     '/api/board-folders/:folderId',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Board Folders'],
+        summary: 'Удалить папку со всеми досками',
+        description: 'Удаляет папку и все доски внутри неё. Требуется параметр confirm=true для подтверждения',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            folderId: { type: 'integer' }
+          }
+        },
+        querystring: {
+          type: 'object',
+          properties: {
+            confirm: { type: 'string', description: 'Подтверждение удаления: "true" или "1"' }
+          },
+          required: ['confirm']
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              deleted_boards_count: { type: 'integer' }
+            }
+          },
+          400: { type: 'object', properties: { error: { type: 'string' } } },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       let client;
@@ -268,7 +388,43 @@ export function registerBoardFolderRoutes(app) {
   app.get(
     '/api/board-folders/:folderId/boards',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Board Folders'],
+        summary: 'Получить доски в папке',
+        description: 'Возвращает список всех досок, находящихся в указанной папке',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            folderId: { type: 'integer' }
+          }
+        },
+        response: {
+          200: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                description: { type: 'string', nullable: true },
+                thumbnail_url: { type: 'string', nullable: true },
+                created_at: { type: 'string', format: 'date-time' },
+                updated_at: { type: 'string', format: 'date-time' },
+                object_count: { type: 'integer' },
+                is_locked: { type: 'boolean' },
+                is_public: { type: 'boolean' }
+              }
+            }
+          },
+          400: { type: 'object', properties: { error: { type: 'string' } } },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -326,7 +482,41 @@ export function registerBoardFolderRoutes(app) {
   app.post(
     '/api/board-folders/:folderId/boards',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Board Folders'],
+        summary: 'Добавить доску в папку',
+        description: 'Добавляет существующую доску в указанную папку. Проверяет владельца папки и доски',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            folderId: { type: 'integer' }
+          }
+        },
+        body: {
+          type: 'object',
+          properties: {
+            boardId: { type: 'integer' }
+          },
+          required: ['boardId']
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              folderId: { type: 'integer' },
+              boardId: { type: 'integer' }
+            }
+          },
+          400: { type: 'object', properties: { error: { type: 'string' } } },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          409: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -401,7 +591,33 @@ export function registerBoardFolderRoutes(app) {
   app.delete(
     '/api/board-folders/:folderId/boards/:boardId',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Board Folders'],
+        summary: 'Убрать доску из папки',
+        description: 'Удаляет связь между доской и папкой. Сама доска не удаляется',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            folderId: { type: 'integer' },
+            boardId: { type: 'integer' }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              removed: { type: 'boolean' }
+            }
+          },
+          400: { type: 'object', properties: { error: { type: 'string' } } },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -470,7 +686,34 @@ export function registerBoardFolderRoutes(app) {
   app.get(
     '/api/boards/uncategorized',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Board Folders'],
+        summary: 'Получить доски вне папок',
+        description: 'Возвращает список досок пользователя, которые не добавлены ни в одну папку',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                description: { type: 'string', nullable: true },
+                thumbnail_url: { type: 'string', nullable: true },
+                created_at: { type: 'string', format: 'date-time' },
+                updated_at: { type: 'string', format: 'date-time' },
+                object_count: { type: 'integer' },
+                is_locked: { type: 'boolean' },
+                is_public: { type: 'boolean' }
+              }
+            }
+          },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {

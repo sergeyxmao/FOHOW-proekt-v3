@@ -59,6 +59,27 @@ GET /api/docs/json
 | `api/routes/auth.js` | Schema для 8 эндпоинтов авторизации |
 | `api/routes/profile.js` | Schema для 9 эндпоинтов профиля |
 | `api/routes/users.js` | Schema для 6 эндпоинтов управления пользователями |
+| `api/routes/boards.js` | Schema для 8 эндпоинтов досок |
+| `api/routes/boardFolders.js` | Schema для 8 эндпоинтов папок досок |
+| `api/routes/boardPartners.js` | Schema для 2 эндпоинтов партнёров на досках |
+| `api/routes/stickers.js` | Schema для 4 эндпоинтов стикеров |
+| `api/routes/notes.js` | Schema для 2 эндпоинтов заметок |
+| `api/routes/comments.js` | Schema для 4 эндпоинтов комментариев |
+| `api/routes/anchors.js` | Schema для 4 эндпоинтов якорей |
+| `api/routes/discussion.js` | Schema для 1 эндпоинта счётчиков обсуждений |
+| `api/routes/images/myLibrary.js` | Schema для 7 эндпоинтов библиотеки изображений |
+| `api/routes/images/shared.js` | Schema для 2 эндпоинтов публичных изображений |
+| `api/routes/images/proxy.js` | Schema для 1 эндпоинта прокси изображений |
+| `api/routes/partners.js` | Schema для 2 эндпоинтов партнёров |
+| `api/routes/relationships.js` | Schema для 4 эндпоинтов связей |
+| `api/routes/favorites.js` | Schema для 3 эндпоинтов избранного |
+| `api/routes/chats.js` | Schema для 6 эндпоинтов чатов |
+| `api/routes/notifications.js` | Schema для 2 эндпоинтов уведомлений |
+| `api/routes/telegram.js` | Schema для 4 эндпоинтов Telegram |
+| `api/routes/plans.js` | Schema для 2 эндпоинтов тарифных планов |
+| `api/routes/promo.js` | Schema для 1 эндпоинта промокодов |
+| `api/routes/verification.js` | Schema для 5 эндпоинтов верификации |
+| `api/routes/tribute.js` | Schema для 2 эндпоинтов Tribute |
 
 ## Как добавить документацию к новому эндпоинту
 
@@ -160,14 +181,14 @@ app.post('/api/example', {
 
 ## Фазы внедрения
 
-### Фаза 1 (текущая) — Auth + Profile + Users
+### Фаза 1 (завершена) — Auth + Profile + Users
 - `api/routes/auth.js` — 8 эндпоинтов
 - `api/routes/profile.js` — 9 эндпоинтов
 - `api/routes/users.js` — 6 эндпоинтов
 - `api/server.js` — health эндпоинт
 - **Итого: 24 эндпоинта задокументированы**
 
-### Фаза 2 (планируется) — Boards, Images, Promo и остальные
+### Фаза 2 (завершена) — Boards, Images, Promo и остальные
 - `api/routes/boards.js` — 8 эндпоинтов
 - `api/routes/boardFolders.js` — 8 эндпоинтов
 - `api/routes/boardPartners.js` — 2 эндпоинта
@@ -175,7 +196,10 @@ app.post('/api/example', {
 - `api/routes/notes.js` — 2 эндпоинта
 - `api/routes/comments.js` — 4 эндпоинта
 - `api/routes/anchors.js` — 4 эндпоинта
-- `api/routes/images/` — 10 эндпоинтов
+- `api/routes/discussion.js` — 1 эндпоинт
+- `api/routes/images/myLibrary.js` — 7 эндпоинтов
+- `api/routes/images/shared.js` — 2 эндпоинта
+- `api/routes/images/proxy.js` — 1 эндпоинт
 - `api/routes/partners.js` — 2 эндпоинта
 - `api/routes/relationships.js` — 4 эндпоинта
 - `api/routes/favorites.js` — 3 эндпоинта
@@ -186,7 +210,7 @@ app.post('/api/example', {
 - `api/routes/promo.js` — 1 эндпоинт
 - `api/routes/verification.js` — 5 эндпоинтов
 - `api/routes/tribute.js` — 2 эндпоинта
-- `api/routes/discussion.js` — 1 эндпоинт
+- **Итого: ~72 эндпоинта задокументированы**
 
 ### Фаза 3 (планируется) — Admin
 - `api/routes/admin/users.js` — 7 эндпоинтов

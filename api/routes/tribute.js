@@ -23,7 +23,32 @@ export function registerTributeRoutes(app) {
    * Webhook от Tribute
    * Принимает уведомления о новых подписках, продлениях, отменах
    */
-  app.post('/api/webhook/tribute', async (req, reply) => {
+  app.post('/api/webhook/tribute', {
+    schema: {
+      tags: ['Tribute'],
+      summary: 'Webhook от Tribute (payment system)',
+      description: 'Принимает уведомления от Tribute о новых подписках, продлениях и отменах',
+      body: {
+        type: 'object',
+        properties: {
+          event: { type: 'string' },
+          data: { type: 'object' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            received: { type: 'string' },
+            result: { type: 'object' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
+  }, async (req, reply) => {
     try {
       const signature = req.headers['x-tribute-signature'];
       const payload = req.body;
@@ -92,7 +117,23 @@ export function registerTributeRoutes(app) {
   /**
    * Health check endpoint для проверки доступности webhook
    */
-  app.get('/api/webhook/tribute/health', async (req, reply) => {
+  app.get('/api/webhook/tribute/health', {
+    schema: {
+      tags: ['Tribute'],
+      summary: 'Health check для Tribute webhook',
+      description: 'Проверка доступности webhook эндпоинта для Tribute',
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            status: { type: 'string' },
+            service: { type: 'string' },
+            timestamp: { type: 'string', format: 'date-time' }
+          }
+        }
+      }
+    }
+  }, async (req, reply) => {
     return reply.send({
       status: 'ok',
       service: 'tribute-webhook',

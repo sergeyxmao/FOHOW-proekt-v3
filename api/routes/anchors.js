@@ -10,7 +10,44 @@ export function registerAnchorRoutes(app) {
   app.get(
     '/api/boards/:boardId/anchors',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Anchors'],
+        summary: 'Получить якоря доски',
+        description: 'Возвращает все якоря (точки) для указанной доски',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            boardId: { type: 'integer', description: 'ID доски' }
+          },
+          required: ['boardId']
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              anchors: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'integer' },
+                    board_id: { type: 'integer' },
+                    label: { type: 'string' },
+                    target_x: { type: 'number' },
+                    target_y: { type: 'number' },
+                    created_at: { type: 'string', format: 'date-time' }
+                  }
+                }
+              }
+            }
+          },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -48,7 +85,41 @@ export function registerAnchorRoutes(app) {
   app.post(
     '/api/boards/:boardId/anchors',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Anchors'],
+        summary: 'Создать якорь',
+        description: 'Создаёт новый якорь (точку) на указанной доске',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            boardId: { type: 'integer', description: 'ID доски' }
+          },
+          required: ['boardId']
+        },
+        body: {
+          type: 'object',
+          properties: {
+            label: { type: 'string', description: 'Название якоря' },
+            target_x: { type: 'number', description: 'Координата X' },
+            target_y: { type: 'number', description: 'Координата Y' }
+          },
+          required: ['target_x', 'target_y']
+        },
+        response: {
+          201: {
+            type: 'object',
+            properties: {
+              anchor: { type: 'object', properties: {} }
+            }
+          },
+          400: { type: 'object', properties: { error: { type: 'string' } } },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -92,7 +163,40 @@ export function registerAnchorRoutes(app) {
   app.put(
     '/api/anchors/:anchorId',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Anchors'],
+        summary: 'Обновить якорь',
+        description: 'Обновляет существующий якорь по его ID',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            anchorId: { type: 'integer', description: 'ID якоря' }
+          },
+          required: ['anchorId']
+        },
+        body: {
+          type: 'object',
+          properties: {
+            label: { type: 'string', nullable: true, description: 'Название якоря' },
+            target_x: { type: 'number', nullable: true, description: 'Координата X' },
+            target_y: { type: 'number', nullable: true, description: 'Координата Y' }
+          }
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              anchor: { type: 'object', properties: {} }
+            }
+          },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {
@@ -126,7 +230,27 @@ export function registerAnchorRoutes(app) {
   app.delete(
     '/api/anchors/:anchorId',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Anchors'],
+        summary: 'Удалить якорь',
+        description: 'Удаляет якорь по его ID',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            anchorId: { type: 'integer', description: 'ID якоря' }
+          },
+          required: ['anchorId']
+        },
+        response: {
+          204: { type: 'null', description: 'Успешно удалено' },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {

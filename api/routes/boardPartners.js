@@ -9,7 +9,49 @@ import { getAvatarUrl } from '../utils/avatarUtils.js';
 export function registerBoardPartnerRoutes(app) {
   // Партнёры с досок с Аватарами
   app.get('/api/boards/:boardId/avatar-partners', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Board Partners'],
+      summary: 'Получить аватар-партнёров доски',
+      description: 'Возвращает список аватар-партнёров для указанной доски',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          boardId: { type: 'integer', description: 'ID доски' }
+        },
+        required: ['boardId']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            partners: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  owner_id: { type: 'integer' },
+                  full_name: { type: 'string', nullable: true },
+                  avatar_url: { type: 'string', nullable: true },
+                  city: { type: 'string', nullable: true },
+                  country: { type: 'string', nullable: true },
+                  phone: { type: 'string', nullable: true },
+                  rank: { type: 'string', nullable: true },
+                  show_phone: { type: 'boolean' },
+                  show_city: { type: 'boolean' },
+                  show_country: { type: 'boolean' }
+                }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { boardId } = req.params;
@@ -167,7 +209,37 @@ export function registerBoardPartnerRoutes(app) {
 
   // Получить список партнёров для доски
   app.get('/api/boards/:boardId/partners', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Board Partners'],
+      summary: 'Получить партнёров доски',
+      description: 'Возвращает список партнёров для указанной доски',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          boardId: { type: 'integer', description: 'ID доски' }
+        },
+        required: ['boardId']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            partners: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {}
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { boardId } = req.params;
