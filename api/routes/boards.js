@@ -56,7 +56,52 @@ export function registerBoardRoutes(app) {
 
   // === ПОЛУЧИТЬ ВСЕ ДОСКИ ПОЛЬЗОВАТЕЛЯ ===
   app.get('/api/boards', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Boards'],
+      summary: 'Получить все доски пользователя',
+      description: 'Возвращает список всех досок текущего авторизованного пользователя с информацией о папках и блокировках',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            boards: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  name: { type: 'string' },
+                  description: { type: 'string', nullable: true },
+                  thumbnail_url: { type: 'string', nullable: true },
+                  is_public: { type: 'boolean' },
+                  created_at: { type: 'string', format: 'date-time' },
+                  updated_at: { type: 'string', format: 'date-time' },
+                  object_count: { type: 'integer' },
+                  lock_status: { type: 'string' },
+                  lock_timer_started_at: { type: 'string', format: 'date-time', nullable: true },
+                  daysUntilBlock: { type: 'integer', nullable: true },
+                  daysUntilDelete: { type: 'integer', nullable: true },
+                  folders: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        id: { type: 'integer' },
+                        name: { type: 'string' }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const result = await pool.query(
@@ -107,7 +152,61 @@ export function registerBoardRoutes(app) {
 
   // === ПОЛУЧИТЬ ОДНУ ДОСКУ ===
   app.get('/api/boards/:id', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Boards'],
+      summary: 'Получить одну доску',
+      description: 'Возвращает данные конкретной доски по её ID, включая содержимое и информацию о блокировке',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            board: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                owner_id: { type: 'integer' },
+                name: { type: 'string' },
+                description: { type: 'string', nullable: true },
+                content: { type: 'object', nullable: true },
+                thumbnail_url: { type: 'string', nullable: true },
+                is_public: { type: 'boolean' },
+                created_at: { type: 'string', format: 'date-time' },
+                updated_at: { type: 'string', format: 'date-time' },
+                object_count: { type: 'integer' },
+                is_locked: { type: 'boolean' },
+                archived: { type: 'boolean' },
+                lock_status: { type: 'string' },
+                lock_timer_started_at: { type: 'string', format: 'date-time', nullable: true },
+                daysUntilBlock: { type: 'integer', nullable: true },
+                daysUntilDelete: { type: 'integer', nullable: true },
+                readOnly: { type: 'boolean' }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            message: { type: 'string' },
+            daysUntilDelete: { type: 'integer', nullable: true },
+            lockStatus: { type: 'string' },
+            locked: { type: 'boolean' }
+          }
+        },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { id } = req.params;
@@ -163,7 +262,32 @@ export function registerBoardRoutes(app) {
 
   // === СОЗДАТЬ НОВУЮ ДОСКУ ===
   app.post('/api/boards', {
-    preHandler: [authenticateToken, checkUsageLimit('boards', 'max_boards')]
+    preHandler: [authenticateToken, checkUsageLimit('boards', 'max_boards')],
+    schema: {
+      tags: ['Boards'],
+      summary: 'Создать новую доску',
+      description: 'Создаёт новую доску для текущего пользователя. Проверяет лимит по тарифу',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          description: { type: 'string' },
+          content: { type: 'object' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            board: { type: 'object' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { name, description, content } = req.body;
@@ -197,7 +321,49 @@ export function registerBoardRoutes(app) {
 
   // === ОБНОВИТЬ ДОСКУ (АВТОСОХРАНЕНИЕ) ===
   app.put('/api/boards/:id', {
-    preHandler: [authenticateToken, checkUsageLimit('cards', 'max_licenses')]
+    preHandler: [authenticateToken, checkUsageLimit('cards', 'max_licenses')],
+    schema: {
+      tags: ['Boards'],
+      summary: 'Обновить доску (автосохранение)',
+      description: 'Обновляет данные доски. Проверяет блокировку — для soft_lock и hard_lock редактирование запрещено',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        }
+      },
+      body: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          description: { type: 'string' },
+          content: { type: 'object' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            board: { type: 'object' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            message: { type: 'string' },
+            lockStatus: { type: 'string' },
+            daysUntilBlock: { type: 'integer', nullable: true },
+            daysUntilDelete: { type: 'integer', nullable: true },
+            locked: { type: 'boolean' }
+          }
+        },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
@@ -290,7 +456,30 @@ export function registerBoardRoutes(app) {
   // ВАЖНО: Удаление разрешено даже для заблокированных досок,
   // чтобы пользователь мог освободить место и разблокировать другие доски
   app.delete('/api/boards/:id', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Boards'],
+      summary: 'Удалить доску',
+      description: 'Удаляет доску по ID. Удаление разрешено даже для заблокированных досок, чтобы пользователь мог освободить место',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { id } = req.params;
@@ -367,7 +556,41 @@ export function registerBoardRoutes(app) {
 
   // === ДУБЛИРОВАТЬ ДОСКУ ===
   app.post('/api/boards/:id/duplicate', {
-    preHandler: [authenticateToken, checkFeature('can_duplicate_boards', true)]
+    preHandler: [authenticateToken, checkFeature('can_duplicate_boards', true)],
+    schema: {
+      tags: ['Boards'],
+      summary: 'Дублировать доску',
+      description: 'Создаёт копию доски. Требуется фича can_duplicate_boards. Запрещено для заблокированных досок',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            board: { type: 'object' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            message: { type: 'string' },
+            lockStatus: { type: 'string' },
+            daysUntilBlock: { type: 'integer', nullable: true },
+            daysUntilDelete: { type: 'integer', nullable: true },
+            locked: { type: 'boolean' }
+          }
+        },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { id } = req.params;
@@ -433,7 +656,47 @@ export function registerBoardRoutes(app) {
 
   // === ЗАГРУЗИТЬ МИНИАТЮРУ ДОСКИ ===
   app.post('/api/boards/:id/thumbnail', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Boards'],
+      summary: 'Загрузить миниатюру доски',
+      description: 'Загружает изображение превью доски в формате base64 на Яндекс.Диск',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        }
+      },
+      body: {
+        type: 'object',
+        properties: {
+          image: { type: 'string', description: 'Изображение в формате base64' }
+        },
+        required: ['image']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            thumbnail_url: { type: 'string' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            message: { type: 'string' },
+            lockStatus: { type: 'string' },
+            locked: { type: 'boolean' }
+          }
+        },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { id: boardId } = req.params;
@@ -554,7 +817,28 @@ export function registerBoardRoutes(app) {
   });
 
   // === ПОЛУЧИТЬ ПРЕВЬЮ ДОСКИ (PROXY) ===
-  app.get('/api/boards/:boardId/preview', async (req, reply) => {
+  app.get('/api/boards/:boardId/preview', {
+    schema: {
+      tags: ['Boards'],
+      summary: 'Получить превью доски',
+      description: 'Возвращает изображение превью доски. Публичный эндпоинт, авторизация не требуется',
+      params: {
+        type: 'object',
+        properties: {
+          boardId: { type: 'integer' }
+        }
+      },
+      response: {
+        200: {
+          type: 'string',
+          format: 'binary',
+          description: 'Изображение превью доски'
+        },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
+  }, async (req, reply) => {
     try {
       const { boardId } = req.params;
       // Параметр ?v=timestamp игнорируется - он используется только для cache busting на клиенте

@@ -9,7 +9,41 @@ export function registerDiscussionRoutes(app) {
   app.get(
     '/api/boards/:boardId/discussion-counters',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Comments'],
+        summary: 'Получить счётчики обсуждений доски',
+        description: 'Возвращает счётчики различных типов обсуждений для указанной доски',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            boardId: { type: 'integer', description: 'ID доски' }
+          },
+          required: ['boardId']
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              counters: {
+                type: 'object',
+                properties: {
+                  notes: { type: 'integer' },
+                  images: { type: 'integer' },
+                  comments: { type: 'integer' },
+                  geolocation: { type: 'integer' },
+                  stickers: { type: 'integer' },
+                  partners: { type: 'integer' }
+                }
+              }
+            }
+          },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       const { boardId } = req.params

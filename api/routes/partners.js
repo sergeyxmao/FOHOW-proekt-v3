@@ -6,7 +6,37 @@ import { getAvatarUrl } from '../utils/avatarUtils.js';
 export function registerPartnerRoutes(app) {
   // GET /api/partners - Список верифицированных партнёров
   app.get('/api/partners', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Partners'],
+      summary: 'Получить список партнёров',
+      description: 'Возвращает список верифицированных партнёров с поддержкой фильтрации и пагинации',
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          city: { type: 'string' },
+          country: { type: 'string' },
+          rank: { type: 'string' },
+          search: { type: 'string' },
+          page: { type: 'integer', default: 1 },
+          limit: { type: 'integer', default: 20 }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            partners: { type: 'array', items: { type: 'object' } },
+            total: { type: 'integer' },
+            page: { type: 'integer' },
+            limit: { type: 'integer' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { city, country, rank, search, page = 1, limit = 20 } = req.query;
@@ -64,7 +94,45 @@ export function registerPartnerRoutes(app) {
 
   // GET /api/partners/:id - Профиль партнёра
   app.get('/api/partners/:id', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Partners'],
+      summary: 'Получить профиль партнёра',
+      description: 'Возвращает подробный профиль верифицированного партнёра по ID',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            partner: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                full_name: { type: 'string' },
+                avatar_url: { type: 'string', nullable: true },
+                city: { type: 'string', nullable: true },
+                country: { type: 'string', nullable: true },
+                rank: { type: 'string', nullable: true },
+                phone: { type: 'string', nullable: true },
+                show_phone: { type: 'boolean' },
+                show_city: { type: 'boolean' },
+                show_country: { type: 'boolean' },
+                bio: { type: 'string', nullable: true }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const result = await pool.query(

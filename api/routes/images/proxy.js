@@ -17,7 +17,25 @@ export function registerProxyRoutes(app) {
   app.get(
     '/api/images/proxy/:id',
     {
-      preHandler: [authenticateToken]
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Images'],
+        summary: 'Проксировать изображение с Яндекс.Диска',
+        description: 'Получает свежую временную ссылку на изображение с Яндекс.Диска и возвращает бинарные данные изображения',
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' }
+          }
+        },
+        response: {
+          200: { type: 'string', format: 'binary', description: 'Бинарные данные изображения' },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          404: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
     },
     async (req, reply) => {
       try {

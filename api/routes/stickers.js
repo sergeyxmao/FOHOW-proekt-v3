@@ -19,7 +19,50 @@ export function registerStickerRoutes(app) {
 
   // === ПОЛУЧИТЬ ВСЕ СТИКЕРЫ ДЛЯ ДОСКИ ===
   app.get('/api/boards/:boardId/stickers', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Stickers'],
+      summary: 'Получить стикеры доски',
+      description: 'Возвращает все стикеры для указанной доски',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          boardId: { type: 'integer', description: 'ID доски' }
+        },
+        required: ['boardId']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            stickers: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  board_id: { type: 'integer' },
+                  type: { type: 'string' },
+                  content: {},
+                  position_x: { type: 'number' },
+                  position_y: { type: 'number' },
+                  width: { type: 'number' },
+                  height: { type: 'number' },
+                  rotation: { type: 'number' },
+                  z_index: { type: 'integer' },
+                  created_at: { type: 'string', format: 'date-time' },
+                  updated_at: { type: 'string', format: 'date-time' }
+                }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { boardId } = req.params;
@@ -70,7 +113,47 @@ export function registerStickerRoutes(app) {
 
   // === СОЗДАТЬ НОВЫЙ СТИКЕР ===
   app.post('/api/boards/:boardId/stickers', {
-    preHandler: [authenticateToken, checkUsageLimit('stickers', 'max_stickers')]
+    preHandler: [authenticateToken, checkUsageLimit('stickers', 'max_stickers')],
+    schema: {
+      tags: ['Stickers'],
+      summary: 'Создать стикер',
+      description: 'Создаёт новый стикер на указанной доске',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          boardId: { type: 'integer', description: 'ID доски' }
+        },
+        required: ['boardId']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', description: 'Тип стикера' },
+          content: { type: 'string', description: 'Содержимое стикера' },
+          position_x: { type: 'number', description: 'Позиция X' },
+          position_y: { type: 'number', description: 'Позиция Y' },
+          width: { type: 'number', description: 'Ширина' },
+          height: { type: 'number', description: 'Высота' },
+          rotation: { type: 'number', description: 'Угол поворота', nullable: true },
+          z_index: { type: 'integer', description: 'Z-индекс', nullable: true }
+        },
+        required: ['position_x', 'position_y']
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            sticker: { type: 'object', properties: {} }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { boardId } = req.params;
@@ -131,7 +214,45 @@ export function registerStickerRoutes(app) {
 
   // === ОБНОВИТЬ СТИКЕР ===
   app.put('/api/stickers/:stickerId', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Stickers'],
+      summary: 'Обновить стикер',
+      description: 'Обновляет существующий стикер по его ID',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          stickerId: { type: 'integer', description: 'ID стикера' }
+        },
+        required: ['stickerId']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', nullable: true },
+          content: { type: 'string', nullable: true },
+          position_x: { type: 'number', nullable: true },
+          position_y: { type: 'number', nullable: true },
+          width: { type: 'number', nullable: true },
+          height: { type: 'number', nullable: true },
+          rotation: { type: 'number', nullable: true },
+          z_index: { type: 'integer', nullable: true }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            sticker: { type: 'object', properties: {} }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { stickerId } = req.params;
@@ -220,7 +341,27 @@ export function registerStickerRoutes(app) {
 
   // === УДАЛИТЬ СТИКЕР ===
   app.delete('/api/stickers/:stickerId', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Stickers'],
+      summary: 'Удалить стикер',
+      description: 'Удаляет стикер по его ID',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          stickerId: { type: 'integer', description: 'ID стикера' }
+        },
+        required: ['stickerId']
+      },
+      response: {
+        204: { type: 'null', description: 'Успешно удалено' },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { stickerId } = req.params;

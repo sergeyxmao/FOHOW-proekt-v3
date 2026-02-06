@@ -19,7 +19,26 @@ export function registerTelegramRoutes(app) {
 
   // === ГЕНЕРАЦИЯ КОДА ДЛЯ ПРИВЯЗКИ TELEGRAM ===
   app.post('/api/user/telegram/generate-code', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Telegram'],
+      summary: 'Генерация кода для привязки Telegram',
+      description: 'Генерирует уникальный код для привязки Telegram аккаунта к профилю пользователя',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            code: { type: 'string' },
+            expiresAt: { type: 'string', format: 'date-time' },
+            botUsername: { type: 'string' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
@@ -58,7 +77,33 @@ export function registerTelegramRoutes(app) {
 
   // === ПРОВЕРКА СТАТУСА ПРИВЯЗКИ TELEGRAM (POLLING) ===
   app.get('/api/user/telegram/check-link-status', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Telegram'],
+      summary: 'Проверка статуса привязки Telegram',
+      description: 'Проверяет, привязан ли Telegram аккаунт к профилю текущего пользователя',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            linked: { type: 'boolean' },
+            telegram: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                chat_id: { type: 'string' },
+                username: { type: 'string', nullable: true }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
@@ -92,7 +137,42 @@ export function registerTelegramRoutes(app) {
 
   // === ПРИВЯЗКА TELEGRAM К АККАУНТУ (используется ботом) ===
   app.post('/api/user/connect-telegram', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Telegram'],
+      summary: 'Привязка Telegram к аккаунту',
+      description: 'Привязывает Telegram аккаунт к профилю пользователя по chat_id',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['telegram_chat_id'],
+        properties: {
+          telegram_chat_id: { type: ['string', 'integer'] },
+          telegram_username: { type: 'string', nullable: true }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            telegram: {
+              type: 'object',
+              properties: {
+                chat_id: { type: 'string' },
+                username: { type: 'string', nullable: true }
+              }
+            }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        409: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
@@ -170,7 +250,25 @@ export function registerTelegramRoutes(app) {
 
   // === ОТКЛЮЧЕНИЕ TELEGRAM ОТ АККАУНТА ===
   app.post('/api/user/telegram/unlink', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Telegram'],
+      summary: 'Отключение Telegram от аккаунта',
+      description: 'Отвязывает Telegram аккаунт от профиля текущего пользователя',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const userId = req.user.id;

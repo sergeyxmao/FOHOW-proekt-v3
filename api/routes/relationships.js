@@ -6,7 +6,33 @@ export async function registerRelationshipRoutes(app) {
   
   // 1. POST - Создать запрос на связь
   app.post('/api/relationships', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Relationships'],
+      summary: 'Создать связь (наставник/ученик)',
+      description: 'Создаёт запрос на связь между текущим пользователем и целевым пользователем',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['target_user_id', 'type'],
+        properties: {
+          target_user_id: { type: 'integer' },
+          type: { type: 'string', enum: ['mentor', 'student'] }
+        }
+      },
+      response: {
+        201: {
+          type: 'object',
+          properties: {
+            relationship: { type: 'object' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        409: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     const { targetId, type } = req.body;
     // Маппинг targetId -> target_id
@@ -64,7 +90,39 @@ export async function registerRelationshipRoutes(app) {
 
   // 2. PUT - Ответить на запрос
   app.put('/api/relationships/:id', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Relationships'],
+      summary: 'Обновить связь',
+      description: 'Обновляет статус связи (принять или отклонить запрос)',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        }
+      },
+      body: {
+        type: 'object',
+        required: ['status'],
+        properties: {
+          status: { type: 'string', enum: ['accepted', 'rejected'] }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            relationship: { type: 'object' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     const { id } = req.params;
     const { status } = req.body;
@@ -113,7 +171,30 @@ export async function registerRelationshipRoutes(app) {
 
   // 3. DELETE - Удалить связь (ВОТ ЭТОТ БЛОК БЫЛ ВСТАВЛЕН НЕ ТУДА)
   app.delete('/api/relationships/:targetId', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Relationships'],
+      summary: 'Удалить связь',
+      description: 'Удаляет связь между текущим пользователем и целевым пользователем',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          targetId: { type: 'integer' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     const { targetId } = req.params;
     const userId = req.user.id;
@@ -141,7 +222,26 @@ export async function registerRelationshipRoutes(app) {
 
   // 4. GET - Получить все связи
   app.get('/api/relationships/my', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Relationships'],
+      summary: 'Получить связи текущего пользователя',
+      description: 'Возвращает все связи (наставник/ученик) текущего авторизованного пользователя',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            relationships: {
+              type: 'array',
+              items: { type: 'object' }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const result = await pool.query(`

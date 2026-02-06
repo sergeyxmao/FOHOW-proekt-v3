@@ -10,7 +10,24 @@ export default async function verificationRoutes(app) {
 
   // Проверка возможности подачи заявки
   app.get('/api/verification/can-submit', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Verification'],
+      summary: 'Проверка возможности подачи заявки',
+      description: 'Проверяет, может ли текущий пользователь подать заявку на верификацию',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            canSubmit: { type: 'boolean' },
+            reason: { type: 'string', nullable: true }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
@@ -24,7 +41,24 @@ export default async function verificationRoutes(app) {
 
   // Получение статуса верификации
   app.get('/api/verification/status', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Verification'],
+      summary: 'Получение статуса верификации',
+      description: 'Возвращает текущий статус верификации пользователя',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            status: { type: 'string' },
+            verification: { type: 'object', nullable: true }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
@@ -38,7 +72,36 @@ export default async function verificationRoutes(app) {
 
   // Отправка заявки на верификацию
   app.post('/api/verification/submit', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Verification'],
+      summary: 'Отправка заявки на верификацию',
+      description: 'Отправляет заявку на верификацию пользователя с указанием ФИО и реферальной ссылки',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['full_name', 'referral_link'],
+        properties: {
+          full_name: { type: 'string' },
+          referral_link: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            verificationId: { type: 'integer' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        409: { type: 'object', properties: { error: { type: 'string' } } },
+        415: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
@@ -124,7 +187,38 @@ export default async function verificationRoutes(app) {
 
   // Получить историю верификации пользователя
   app.get('/api/verification/history', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Verification'],
+      summary: 'Получить историю верификации',
+      description: 'Возвращает историю всех заявок на верификацию текущего пользователя',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            history: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  full_name: { type: 'string' },
+                  status: { type: 'string' },
+                  rejection_reason: { type: 'string', nullable: true },
+                  submitted_at: { type: 'string', format: 'date-time' },
+                  processed_at: { type: 'string', format: 'date-time', nullable: true },
+                  processed_by_username: { type: 'string', nullable: true }
+                }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
@@ -158,7 +252,25 @@ export default async function verificationRoutes(app) {
 
   // Отмена заявки на верификацию пользователем
   app.delete('/api/verification/cancel', {
-    preHandler: [authenticateToken]
+    preHandler: [authenticateToken],
+    schema: {
+      tags: ['Verification'],
+      summary: 'Отмена заявки на верификацию',
+      description: 'Отменяет активную заявку на верификацию текущего пользователя',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const userId = req.user.id;
