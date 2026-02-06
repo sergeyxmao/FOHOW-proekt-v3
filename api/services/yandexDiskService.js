@@ -491,7 +491,6 @@ async function deleteFolder(path) {
 
 export {
   // Константы
-  YANDEX_DISK_TOKEN,
   YANDEX_DISK_BASE_DIR,
   // Функции построения путей
   getUserRootPath,

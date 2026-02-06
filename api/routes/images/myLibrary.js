@@ -579,9 +579,10 @@ export function registerMyLibraryRoutes(app) {
 
         // Валидация MIME-типа
         const mimeType = data.mimetype;
-        if (mimeType !== 'image/webp') {
+        const ALLOWED_IMAGE_TYPES = ['image/webp', 'image/jpeg', 'image/png', 'image/gif'];
+        if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
           return reply.code(400).send({
-            error: 'Недопустимый формат файла. Разрешен только image/webp.'
+            error: 'Недопустимый формат файла. Разрешены: webp, jpeg, png, gif.'
           });
         }
 

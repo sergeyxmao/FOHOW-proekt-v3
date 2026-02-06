@@ -107,14 +107,16 @@ async function generateUniquePersonalId(client) {
  */
 export function registerAuthRoutes(app) {
 
-  // === ТЕСТОВЫЙ РОУТ (ДЛЯ ОТЛАДКИ) ===
-  app.get('/api/test-auth', async (req, reply) => {
-    console.log('[TEST] Test auth route called');
-    return reply.send({ ok: true, message: 'Auth routes работают!' });
-  });
-
   // === ГЕНЕРАЦИЯ ПРОВЕРОЧНОГО КОДА (АНТИБОТ) ===
-  app.post('/api/verification-code', async (req, reply) => {
+  app.post('/api/verification-code', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '5 minutes',
+        errorResponseBuilder: () => ({ error: 'Слишком много попыток. Попробуйте позже.' })
+      }
+    }
+  }, async (req, reply) => {
     try {
       const { token, code } = await createVerificationSession();
       return reply.send({ token, code });
@@ -125,7 +127,15 @@ export function registerAuthRoutes(app) {
   });
 
   // === РЕГИСТРАЦИЯ ===
-  app.post('/api/register', async (req, reply) => {
+  app.post('/api/register', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '15 minutes',
+        errorResponseBuilder: () => ({ error: 'Слишком много попыток. Попробуйте позже.' })
+      }
+    }
+  }, async (req, reply) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -231,7 +241,15 @@ export function registerAuthRoutes(app) {
   });
 
   // === АВТОРИЗАЦИЯ ===
-  app.post('/api/login', async (req, reply) => {
+  app.post('/api/login', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes',
+        errorResponseBuilder: () => ({ error: 'Слишком много попыток. Попробуйте позже.' })
+      }
+    }
+  }, async (req, reply) => {
     console.log('[DEBUG /api/login ENTRY] === Вход в обработчик ===');
     console.log('[DEBUG /api/login] req.body:', req.body);
     console.log('[DEBUG /api/login] req.body type:', typeof req.body);
@@ -432,7 +450,15 @@ export function registerAuthRoutes(app) {
   });
 
   // === ПОВТОРНАЯ ОТПРАВКА КОДА ПОДТВЕРЖДЕНИЯ ===
-  app.post('/api/resend-verification-code', async (req, reply) => {
+  app.post('/api/resend-verification-code', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '5 minutes',
+        errorResponseBuilder: () => ({ error: 'Слишком много попыток. Попробуйте позже.' })
+      }
+    }
+  }, async (req, reply) => {
     const { email } = req.body;
 
     try {
@@ -489,7 +515,15 @@ export function registerAuthRoutes(app) {
   });
 
   // === ПРОВЕРКА КОДА И АКТИВАЦИЯ АККАУНТА ===
-  app.post('/api/verify-email', async (req, reply) => {
+  app.post('/api/verify-email', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '5 minutes',
+        errorResponseBuilder: () => ({ error: 'Слишком много попыток. Попробуйте позже.' })
+      }
+    }
+  }, async (req, reply) => {
     const { email, code } = req.body;
 
     const client = await pool.connect();
@@ -685,7 +719,15 @@ export function registerAuthRoutes(app) {
   });
 
   // === ЗАБЫЛИ ПАРОЛЬ ===
-  app.post('/api/forgot-password', async (req, reply) => {
+  app.post('/api/forgot-password', {
+    config: {
+      rateLimit: {
+        max: 3,
+        timeWindow: '15 minutes',
+        errorResponseBuilder: () => ({ error: 'Слишком много попыток. Попробуйте позже.' })
+      }
+    }
+  }, async (req, reply) => {
     const { email } = req.body;
 
     if (!email) {
