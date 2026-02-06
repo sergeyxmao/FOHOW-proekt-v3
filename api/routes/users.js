@@ -7,6 +7,33 @@ export async function registerUserRoutes(app) {
 
   // GET /api/users/me - ЭТОГО НЕ ХВАТАЛО ДЛЯ СИНХРОНИЗАЦИИ
   app.get('/api/users/me', {
+    schema: {
+      tags: ['Users'],
+      summary: 'Получить данные текущего пользователя',
+      description: 'Возвращает полные данные авторизованного пользователя для синхронизации состояния на клиенте.',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            user: { type: 'object' }
+          }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        404: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
@@ -30,6 +57,40 @@ export async function registerUserRoutes(app) {
 
   // POST /api/users/block - Заблокировать пользователя
   app.post('/api/users/block', {
+    schema: {
+      tags: ['Users'],
+      summary: 'Заблокировать пользователя',
+      description: 'Добавляет пользователя в список заблокированных (JSONB массив blocked_users).',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['user_id'],
+        properties: {
+          user_id: { type: 'integer', description: 'ID пользователя для блокировки' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            blocked_users: { type: 'array', items: { type: 'integer' } }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     const { user_id } = req.body;
@@ -55,6 +116,33 @@ export async function registerUserRoutes(app) {
 
   // DELETE /api/users/block/:id - Разблокировать пользователя
   app.delete('/api/users/block/:id', {
+    schema: {
+      tags: ['Users'],
+      summary: 'Разблокировать пользователя',
+      description: 'Удаляет пользователя из списка заблокированных.',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string', description: 'ID пользователя для разблокировки' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: { success: { type: 'boolean' } }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     const { id } = req.params;
@@ -78,6 +166,49 @@ export async function registerUserRoutes(app) {
 
   // PUT /api/users/visibility - Обновление настроек видимости
   app.put('/api/users/visibility', {
+    schema: {
+      tags: ['Users'],
+      summary: 'Обновить настройки видимости',
+      description: 'Обновляет JSONB visibility_settings. Допустимые поля: showPhone, showEmail, showTelegram, showVK, showInstagram, showWhatsApp, allowCrossLineMessages.',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        properties: {
+          showPhone: { type: 'boolean' },
+          showEmail: { type: 'boolean' },
+          showTelegram: { type: 'boolean' },
+          showVK: { type: 'boolean' },
+          showInstagram: { type: 'boolean' },
+          showWhatsApp: { type: 'boolean' },
+          allowCrossLineMessages: { type: 'boolean' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            visibility_settings: { type: 'object' }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        404: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
@@ -121,6 +252,47 @@ export async function registerUserRoutes(app) {
 
   // PUT /api/users/search - Обновление настроек поиска
   app.put('/api/users/search', {
+    schema: {
+      tags: ['Users'],
+      summary: 'Обновить настройки поиска',
+      description: 'Обновляет JSONB search_settings. Допустимые поля: searchByName, searchByCity, searchByCountry, searchByPersonalId, searchByOffice.',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        properties: {
+          searchByName: { type: 'boolean' },
+          searchByCity: { type: 'boolean' },
+          searchByCountry: { type: 'boolean' },
+          searchByPersonalId: { type: 'boolean' },
+          searchByOffice: { type: 'boolean' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            search_settings: { type: 'object' }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        404: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
@@ -164,6 +336,55 @@ export async function registerUserRoutes(app) {
 
   // PUT /api/users/profile - Обновление данных профиля
   app.put('/api/users/profile', {
+    schema: {
+      tags: ['Users'],
+      summary: 'Обновить данные профиля (FoGrup)',
+      description: 'Обновляет контактные и личные данные пользователя. Обновляются только переданные поля.',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        properties: {
+          full_name: { type: 'string', nullable: true },
+          city: { type: 'string', nullable: true },
+          country: { type: 'string', nullable: true },
+          phone: { type: 'string', nullable: true },
+          office: { type: 'string', nullable: true },
+          bio: { type: 'string', nullable: true },
+          telegram_user: { type: 'string', nullable: true },
+          whatsapp_contact: { type: 'string', nullable: true },
+          vk_profile: { type: 'string', nullable: true },
+          instagram_profile: { type: 'string', nullable: true },
+          ok_profile: { type: 'string', nullable: true },
+          telegram_channel: { type: 'string', nullable: true },
+          website: { type: 'string', nullable: true }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            user: { type: 'object' }
+          }
+        },
+        400: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        401: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        404: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        },
+        500: {
+          type: 'object',
+          properties: { error: { type: 'string' } }
+        }
+      }
+    },
     preHandler: [authenticateToken]
   }, async (req, reply) => {
     try {
