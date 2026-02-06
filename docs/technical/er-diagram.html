@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FOHOW Interactive Board — ER-диаграмма БД</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; overflow: hidden; }
+  #controls { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(15,23,42,0.95); backdrop-filter: blur(8px); padding: 12px 20px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid #334155; }
+  #controls h1 { font-size: 16px; font-weight: 600; color: #38bdf8; white-space: nowrap; }
+  #controls .info { font-size: 12px; color: #94a3b8; }
+  #controls input[type="text"] { padding: 6px 12px; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #e2e8f0; font-size: 13px; width: 200px; outline: none; }
+  #controls input:focus { border-color: #0ea5e9; }
+  #controls input::placeholder { color: #64748b; }
+  #controls button { padding: 6px 14px; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #e2e8f0; cursor: pointer; font-size: 12px; white-space: nowrap; }
+  #controls button:hover { background: #334155; }
+  #controls button.active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+  .legend { position: fixed; bottom: 16px; left: 16px; z-index: 100; background: rgba(15,23,42,0.95); backdrop-filter: blur(8px); padding: 12px 16px; border-radius: 8px; border: 1px solid #334155; font-size: 11px; line-height: 1.8; }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-color { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .help { position: fixed; bottom: 16px; right: 16px; z-index: 100; background: rgba(15,23,42,0.95); backdrop-filter: blur(8px); padding: 12px 16px; border-radius: 8px; border: 1px solid #334155; font-size: 11px; line-height: 1.8; color: #94a3b8; }
+  #canvas { width: 100vw; height: 100vh; cursor: grab; }
+  #canvas.dragging { cursor: grabbing; }
+  .table-group { cursor: move; }
+  .table-group:hover .table-bg { filter: brightness(1.15); }
+  .table-bg { rx: 8; ry: 8; stroke-width: 1.5; }
+  .table-header { rx: 8; ry: 8; }
+  .table-title { font-size: 13px; font-weight: 700; fill: #fff; font-family: 'Segoe UI', system-ui, sans-serif; }
+  .table-count { font-size: 10px; fill: rgba(255,255,255,0.7); font-family: 'Segoe UI', system-ui, sans-serif; }
+  .col-name { font-size: 10.5px; fill: #cbd5e1; font-family: 'Courier New', monospace; }
+  .col-type { font-size: 9.5px; fill: #64748b; font-family: 'Courier New', monospace; }
+  .col-pk { fill: #fbbf24; font-weight: 700; }
+  .col-fk { fill: #38bdf8; }
+  .fk-line { fill: none; stroke-width: 1.2; opacity: 0.35; }
+  .fk-line:hover { opacity: 1; stroke-width: 2.5; }
+  .fk-line.highlighted { opacity: 0.85; stroke-width: 2; }
+  .table-group.dimmed { opacity: 0.12; }
+  .table-group.highlighted .table-bg { filter: brightness(1.25); stroke-width: 2.5; }
+  .tooltip { position: fixed; background: #1e293b; border: 1px solid #475569; border-radius: 6px; padding: 8px 12px; font-size: 12px; pointer-events: none; z-index: 200; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+  .tooltip b { color: #38bdf8; }
+</style>
+</head>
+<body>
+<div id="controls">
+  <h1>📊 FOHOW ER-диаграмма</h1>
+  <span class="info">33 таблицы · 47 связей</span>
+  <input type="text" id="search" placeholder="🔍 Поиск таблицы...">
+  <button id="btnAll" class="active">Все</button>
+  <button id="btnCore">Ядро</button>
+  <button id="btnBoards">Доски</button>
+  <button id="btnSubs">Подписки</button>
+  <button id="btnChat">Чат</button>
+  <button id="btnImages">Изображения</button>
+  <button id="btnSystem">Системные</button>
+  <button id="btnReset">↺ Сброс</button>
+</div>
+<div class="legend">
+  <div class="legend-item"><div class="legend-color" style="background:#0ea5e9"></div> Ядро (users, plans)</div>
+  <div class="legend-item"><div class="legend-color" style="background:#22c55e"></div> Доски и контент</div>
+  <div class="legend-item"><div class="legend-color" style="background:#a855f7"></div> Подписки и платежи</div>
+  <div class="legend-item"><div class="legend-color" style="background:#f97316"></div> Чат (FoGrup)</div>
+  <div class="legend-item"><div class="legend-color" style="background:#ec4899"></div> Изображения</div>
+  <div class="legend-item"><div class="legend-color" style="background:#64748b"></div> Системные</div>
+  <div style="margin-top:6px; color:#fbbf24">🔑 PK · <span style="color:#38bdf8">🔗 FK</span> · <span style="color:#ef4444">✱ NOT NULL</span></div>
+</div>
+<div class="help">
+  <div><b>Управление:</b></div>
+  <div>🖱 Колесо — масштаб</div>
+  <div>🖱 Тянуть фон — перемещение</div>
+  <div>🖱 Тянуть таблицу — двигать</div>
+  <div>👆 Наведение — подсветка связей</div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+<svg id="canvas"></svg>
+<script>
+const T={users:{c:[{n:"id",t:"int",p:1},{n:"email",t:"text",r:1},{n:"password",t:"text",r:1},{n:"username",t:"varchar"},{n:"full_name",t:"text"},{n:"avatar_url",t:"varchar"},{n:"country",t:"text"},{n:"city",t:"text"},{n:"office",t:"text"},{n:"personal_id",t:"varchar"},{n:"phone",t:"varchar"},{n:"telegram_user",t:"text"},{n:"telegram_channel",t:"text"},{n:"telegram_chat_id",t:"bigint"},{n:"vk_profile",t:"text"},{n:"ok_profile",t:"text"},{n:"instagram_profile",t:"text"},{n:"whatsapp_contact",t:"text"},{n:"plan_id",t:"int",f:"subscription_plans"},{n:"role",t:"varchar"},{n:"rank",t:"varchar"},{n:"fohow_role",t:"varchar"},{n:"subscription_expires_at",t:"ts"},{n:"subscription_started_at",t:"ts"},{n:"is_trial_used",t:"bool"},{n:"payment_method",t:"varchar"},{n:"auto_renew",t:"bool"},{n:"email_verified",t:"bool"},{n:"is_verified",t:"bool"},{n:"verified_at",t:"ts"},{n:"last_verification_attempt",t:"ts"},{n:"visibility_settings",t:"jsonb"},{n:"search_settings",t:"jsonb"},{n:"ui_preferences",t:"jsonb"},{n:"blocked_users",t:"jsonb"},{n:"bio",t:"text"},{n:"website",t:"varchar"},{n:"boards_locked",t:"bool"},{n:"boards_locked_at",t:"ts"},{n:"grace_period_until",t:"ts"},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"core",x:700,y:100},
+subscription_plans:{c:[{n:"id",t:"int",p:1},{n:"name",t:"varchar",r:1},{n:"code_name",t:"varchar",r:1},{n:"description",t:"text"},{n:"price_monthly",t:"numeric",r:1},{n:"price_yearly",t:"numeric"},{n:"currency",t:"varchar"},{n:"session_limit",t:"int",r:1},{n:"features",t:"jsonb"},{n:"is_public",t:"bool"},{n:"is_featured",t:"bool"},{n:"display_order",t:"int"},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"subs",x:250,y:50},
+boards:{c:[{n:"id",t:"int",p:1},{n:"owner_id",t:"int",r:1,f:"users"},{n:"name",t:"varchar",r:1},{n:"description",t:"text"},{n:"content",t:"jsonb"},{n:"thumbnail_url",t:"varchar"},{n:"is_public",t:"bool"},{n:"object_count",t:"int"},{n:"is_locked",t:"bool"},{n:"archived",t:"bool"},{n:"lock_status",t:"enum"},{n:"lock_timer_started_at",t:"ts"},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"boards",x:1250,y:50},
+board_folders:{c:[{n:"id",t:"int",p:1},{n:"owner_id",t:"int",r:1,f:"users"},{n:"name",t:"varchar",r:1},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"boards",x:1250,y:430},
+board_folder_items:{c:[{n:"id",t:"int",p:1},{n:"folder_id",t:"int",r:1,f:"board_folders"},{n:"board_id",t:"int",r:1,f:"boards"},{n:"added_at",t:"ts"}],g:"boards",x:1550,y:350},
+board_anchors:{c:[{n:"id",t:"int",p:1},{n:"board_id",t:"int",r:1,f:"boards"},{n:"user_id",t:"int",r:1,f:"users"},{n:"pos_x",t:"int",r:1},{n:"pos_y",t:"int",r:1},{n:"description",t:"text"},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"boards",x:1600,y:50},
+stickers:{c:[{n:"id",t:"int",p:1},{n:"board_id",t:"int",r:1,f:"boards"},{n:"user_id",t:"int",f:"users"},{n:"content",t:"text"},{n:"color",t:"varchar"},{n:"pos_x",t:"int",r:1},{n:"pos_y",t:"int",r:1},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"boards",x:1600,y:260},
+notes:{c:[{n:"id",t:"int",p:1},{n:"board_id",t:"int",r:1,f:"boards"},{n:"card_uid",t:"varchar",r:1},{n:"note_date",t:"date",r:1},{n:"content",t:"text"},{n:"color",t:"varchar"},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"boards",x:1250,y:600},
+user_comments:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:"content",t:"text",r:1},{n:"color",t:"varchar"},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"boards",x:1050,y:600},
+favorites:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:"favorite_user_id",t:"int",r:1,f:"users"},{n:"created_at",t:"ts"}],g:"core",x:480,y:430},
+relationships:{c:[{n:"id",t:"int",p:1},{n:"initiator_id",t:"int",r:1,f:"users"},{n:"target_id",t:"int",r:1,f:"users"},{n:"type",t:"varchar",r:1},{n:"status",t:"varchar",r:1},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"core",x:480,y:570},
+active_sessions:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:"token_signature",t:"varchar",r:1},{n:"ip_address",t:"varchar"},{n:"user_agent",t:"text"},{n:"device_id",t:"varchar"},{n:"device_name",t:"varchar"},{n:"created_at",t:"ts"},{n:"last_seen",t:"ts"},{n:"expires_at",t:"ts",r:1}],g:"system",x:100,y:830},
+tribute_subscriptions:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",f:"users"},{n:"telegram_user_id",t:"bigint",r:1},{n:"tribute_subscription_id",t:"varchar",r:1},{n:"plan_id",t:"int",f:"subscription_plans"},{n:"status",t:"varchar",r:1},{n:"started_at",t:"ts",r:1},{n:"expires_at",t:"ts"},{n:"last_payment_at",t:"ts"},{n:"tribute_product_id",t:"varchar"},{n:"amount_paid",t:"numeric"},{n:"currency",t:"varchar"},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"subs",x:20,y:180},
+subscription_history:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",f:"users"},{n:"plan_id",t:"int",r:1,f:"subscription_plans"},{n:"start_date",t:"ts",r:1},{n:"end_date",t:"ts"},{n:"source",t:"varchar",r:1},{n:"promo_code_id",t:"int"},{n:"amount_paid",t:"numeric"},{n:"payment_method",t:"varchar"},{n:"currency",t:"varchar"},{n:"transaction_id",t:"varchar"},{n:"created_at",t:"ts"}],g:"subs",x:20,y:500},
+demo_trials:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:"started_at",t:"ts"},{n:"ended_at",t:"ts"},{n:"converted_to_paid",t:"bool"},{n:"converted_at",t:"ts"},{n:"first_paid_plan_id",t:"int",f:"subscription_plans"},{n:"days_to_conversion",t:"int"},{n:"created_at",t:"ts"}],g:"subs",x:20,y:770},
+promo_codes:{c:[{n:"id",t:"int",p:1},{n:"code",t:"varchar",r:1},{n:"description",t:"text"},{n:"discount_percent",t:"int"},{n:"duration_days",t:"int",r:1},{n:"target_plan_id",t:"int",f:"subscription_plans"},{n:"max_uses",t:"int"},{n:"uses_per_user",t:"int"},{n:"current_uses",t:"int"},{n:"start_date",t:"ts",r:1},{n:"end_date",t:"ts",r:1},{n:"is_active",t:"bool"},{n:"is_single_use",t:"bool"},{n:"created_by",t:"int",f:"users"},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"subs",x:250,y:920},
+promo_code_usages:{c:[{n:"id",t:"int",p:1},{n:"promo_code_id",t:"int",r:1,f:"promo_codes"},{n:"user_id",t:"int",f:"users"},{n:"used_at",t:"ts"},{n:"ip_address",t:"varchar"},{n:"user_agent",t:"text"}],g:"subs",x:550,y:1000},
+pending_tribute_webhooks:{c:[{n:"id",t:"int",p:1},{n:"telegram_user_id",t:"bigint",r:1},{n:"tribute_subscription_id",t:"varchar",r:1},{n:"payload",t:"jsonb",r:1},{n:"processed",t:"bool"},{n:"created_at",t:"ts",r:1},{n:"processed_at",t:"ts"}],g:"subs",x:20,y:1040},
+fogrup_chats:{c:[{n:"id",t:"int",p:1},{n:"chat_type",t:"varchar"},{n:"name",t:"varchar"},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"},{n:"last_message_at",t:"ts"}],g:"chat",x:900,y:950},
+fogrup_chat_participants:{c:[{n:"id",t:"int",p:1},{n:"chat_id",t:"int",r:1,f:"fogrup_chats"},{n:"user_id",t:"int",r:1,f:"users"},{n:"role",t:"varchar"},{n:"joined_at",t:"ts"},{n:"last_read_at",t:"ts"}],g:"chat",x:1180,y:920},
+fogrup_messages:{c:[{n:"id",t:"int",p:1},{n:"chat_id",t:"int",r:1,f:"fogrup_chats"},{n:"sender_id",t:"int",r:1,f:"users"},{n:"text",t:"text",r:1},{n:"is_system",t:"bool"},{n:"status",t:"varchar"},{n:"created_at",t:"ts"},{n:"edited_at",t:"ts"},{n:"is_deleted",t:"bool"}],g:"chat",x:900,y:1150},
+fogrup_notifications:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:"type",t:"varchar",r:1},{n:"from_user_id",t:"int",f:"users"},{n:"relationship_id",t:"int",f:"relationships"},{n:"chat_id",t:"int",f:"fogrup_chats"},{n:"text",t:"text",r:1},{n:"metadata",t:"jsonb"},{n:"is_read",t:"bool"},{n:"created_at",t:"ts"}],g:"chat",x:1200,y:1150},
+image_library:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:"filename",t:"varchar",r:1},{n:"original_name",t:"varchar",r:1},{n:"folder_name",t:"varchar"},{n:"yandex_path",t:"text",r:1},{n:"public_url",t:"text"},{n:"width",t:"int"},{n:"height",t:"int"},{n:"file_size",t:"int"},{n:"moderation_status",t:"varchar",r:1},{n:"moderation_score",t:"numeric"},{n:"is_shared",t:"bool",r:1},{n:"shared_folder_id",t:"int",f:"shared_folders"},{n:"share_requested_at",t:"ts"},{n:"share_approved_at",t:"ts"},{n:"share_approved_by",t:"int",f:"users"},{n:"preview_url",t:"text"},{n:"pending_yandex_path",t:"text"},{n:"preview_placeholder",t:"text"},{n:"blurhash",t:"text"},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"images",x:1550,y:520},
+shared_folders:{c:[{n:"id",t:"int",p:1},{n:"name",t:"varchar",r:1},{n:"created_by",t:"int",f:"users"},{n:"created_at",t:"ts"}],g:"images",x:1870,y:550},
+image_rename_audit:{c:[{n:"id",t:"bigint",p:1},{n:"image_id",t:"int",r:1,f:"image_library"},{n:"user_id",t:"int",r:1,f:"users"},{n:"old_name",t:"text",r:1},{n:"new_name",t:"text",r:1},{n:"folder_name",t:"text"},{n:"created_at",t:"ts"}],g:"images",x:1870,y:720},
+feature_usage:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:"feature_name",t:"varchar",r:1},{n:"usage_count",t:"int"},{n:"last_used_at",t:"ts"},{n:"metadata",t:"jsonb"},{n:"created_at",t:"ts"}],g:"system",x:400,y:1180},
+email_verification_codes:{c:[{n:"id",t:"int",p:1},{n:"email",t:"varchar",r:1},{n:"code",t:"varchar",r:1},{n:"expires_at",t:"ts",r:1},{n:"created_at",t:"ts"},{n:"used",t:"bool"},{n:"used_at",t:"ts"},{n:"ip_address",t:"varchar"}],g:"system",x:650,y:1350},
+verified_emails:{c:[{n:"id",t:"int",p:1},{n:"email",t:"varchar",r:1},{n:"first_verified_at",t:"ts",r:1},{n:"user_id",t:"int",f:"users"},{n:"notes",t:"text"},{n:"created_at",t:"ts"}],g:"system",x:100,y:1100},
+password_resets:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:"token",t:"varchar",r:1},{n:"expires_at",t:"ts",r:1},{n:"created_at",t:"ts"}],g:"system",x:100,y:1300},
+telegram_link_codes:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:"code",t:"varchar",r:1},{n:"expires_at",t:"ts",r:1},{n:"used",t:"bool"},{n:"created_at",t:"ts"}],g:"system",x:400,y:1380},
+system_logs:{c:[{n:"id",t:"int",p:1},{n:"level",t:"varchar",r:1},{n:"action",t:"varchar",r:1},{n:"user_id",t:"int",f:"users"},{n:"details",t:"jsonb"},{n:"ip_address",t:"varchar"},{n:"created_at",t:"ts"}],g:"system",x:680,y:1170},
+user_verifications:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:"full_name",t:"varchar",r:1},{n:"status",t:"varchar",r:1},{n:"rejection_reason",t:"text"},{n:"submitted_at",t:"ts"},{n:"processed_at",t:"ts"},{n:"processed_by",t:"int",f:"users"},{n:"referral_link",t:"varchar",r:1},{n:"pending_personal_id",t:"varchar"}],g:"core",x:1050,y:430},
+personal_id_counter:{c:[{n:"id",t:"int",p:1},{n:"last_issued_number",t:"int",r:1},{n:"updated_at",t:"ts"}],g:"system",x:950,y:1380}};
+
+const GC={core:{bg:"#0c4a6e",h:"#0ea5e9",b:"#0ea5e9",l:"#0ea5e9"},boards:{bg:"#14532d",h:"#22c55e",b:"#22c55e",l:"#22c55e"},subs:{bg:"#3b0764",h:"#a855f7",b:"#a855f7",l:"#a855f7"},chat:{bg:"#7c2d12",h:"#f97316",b:"#f97316",l:"#f97316"},images:{bg:"#831843",h:"#ec4899",b:"#ec4899",l:"#ec4899"},system:{bg:"#1e293b",h:"#64748b",b:"#475569",l:"#64748b"}};
+const CH=17,HH=34,P=6,W=270;
+const svg=document.getElementById("canvas"),tip=document.getElementById("tooltip");
+let vb={x:-100,y:-50,w:2200,h:1600},drag=false,ds={x:0,y:0},dt=null,doff={x:0,y:0};
+
+function uv(){svg.setAttribute("viewBox",`${vb.x} ${vb.y} ${vb.w} ${vb.h}`)}
+function th(n){return HH+T[n].c.length*CH+P*2}
+function ga(n,col,s){const t=T[n],ci=t.c.findIndex(c=>c.n===col),y=t.y+HH+P+ci*CH+CH/2;return{x:s==="r"?t.x+W:t.x,y}}
+
+function render(){
+  svg.innerHTML="";
+  // Lines
+  const lg=document.createElementNS("http://www.w3.org/2000/svg","g");
+  for(const[n,t]of Object.entries(T)){for(const col of t.c){if(!col.f||!T[col.f])continue;
+    const c=GC[t.g].l,fc=T[col.f].x+W/2,tc=t.x+W/2;
+    let fs=tc>fc?"l":"r",ts=tc>fc?"r":"l";
+    const fr=ga(n,col.n,fs),to=ga(col.f,"id",ts);
+    const dx=Math.max(Math.abs(fr.x-to.x)*0.35,40);
+    const d=`M${fr.x},${fr.y} C${fr.x+(fs==="l"?-dx:dx)},${fr.y} ${to.x+(ts==="l"?-dx:dx)},${to.y} ${to.x},${to.y}`;
+    const p=document.createElementNS("http://www.w3.org/2000/svg","path");
+    p.classList.add("fk-line");p.setAttribute("d",d);p.setAttribute("stroke",c);
+    p.dataset.from=n;p.dataset.to=col.f;p.dataset.col=col.n;
+    p.addEventListener("mouseenter",e=>{tip.style.display="block";tip.style.left=e.clientX+14+"px";tip.style.top=e.clientY-10+"px";tip.innerHTML=`<b>${n}</b>.${col.n} → <b>${col.f}</b>.id`});
+    p.addEventListener("mousemove",e=>{tip.style.left=e.clientX+14+"px";tip.style.top=e.clientY-10+"px"});
+    p.addEventListener("mouseleave",()=>{tip.style.display="none"});
+    lg.appendChild(p)}}
+  svg.appendChild(lg);
+  // Tables
+  const tg=document.createElementNS("http://www.w3.org/2000/svg","g");
+  for(const[name,t]of Object.entries(T)){
+    const gc=GC[t.g],h=th(name);
+    const g=document.createElementNS("http://www.w3.org/2000/svg","g");
+    g.classList.add("table-group");g.dataset.name=name;g.dataset.group=t.g;
+    // bg
+    const bg=document.createElementNS("http://www.w3.org/2000/svg","rect");
+    bg.classList.add("table-bg");bg.setAttribute("x",t.x);bg.setAttribute("y",t.y);bg.setAttribute("width",W);bg.setAttribute("height",h);bg.setAttribute("fill",gc.bg);bg.setAttribute("stroke",gc.b);g.appendChild(bg);
+    // header
+    const hr=document.createElementNS("http://www.w3.org/2000/svg","rect");hr.classList.add("table-header");hr.setAttribute("x",t.x);hr.setAttribute("y",t.y);hr.setAttribute("width",W);hr.setAttribute("height",HH);hr.setAttribute("fill",gc.h);g.appendChild(hr);
+    const cl=document.createElementNS("http://www.w3.org/2000/svg","rect");cl.setAttribute("x",t.x);cl.setAttribute("y",t.y+HH-8);cl.setAttribute("width",W);cl.setAttribute("height",8);cl.setAttribute("fill",gc.h);g.appendChild(cl);
+    // title
+    const ti=document.createElementNS("http://www.w3.org/2000/svg","text");ti.classList.add("table-title");ti.setAttribute("x",t.x+10);ti.setAttribute("y",t.y+HH/2);ti.setAttribute("dominant-baseline","middle");ti.textContent=name;g.appendChild(ti);
+    const cn=document.createElementNS("http://www.w3.org/2000/svg","text");cn.classList.add("table-count");cn.setAttribute("x",t.x+W-10);cn.setAttribute("y",t.y+HH/2);cn.setAttribute("dominant-baseline","middle");cn.setAttribute("text-anchor","end");cn.textContent=`${t.c.length} cols`;g.appendChild(cn);
+    // cols
+    for(let i=0;i<t.c.length;i++){const col=t.c[i],cy=t.y+HH+P+i*CH+CH/2;
+      const ct=document.createElementNS("http://www.w3.org/2000/svg","text");ct.classList.add("col-name");
+      if(col.p)ct.classList.add("col-pk");if(col.f)ct.classList.add("col-fk");
+      ct.setAttribute("x",t.x+10);ct.setAttribute("y",cy);ct.setAttribute("dominant-baseline","middle");
+      ct.textContent=(col.p?"🔑 ":col.f?"🔗 ":"    ")+col.n;g.appendChild(ct);
+      const tt=document.createElementNS("http://www.w3.org/2000/svg","text");tt.classList.add("col-type");
+      tt.setAttribute("x",t.x+W-10);tt.setAttribute("y",cy);tt.setAttribute("dominant-baseline","middle");tt.setAttribute("text-anchor","end");
+      tt.textContent=col.t+(col.r?" ✱":"");g.appendChild(tt)}
+    g.addEventListener("mousedown",e=>{if(e.button!==0)return;e.stopPropagation();dt=name;const pt=sp(e);doff={x:pt.x-t.x,y:pt.y-t.y}});
+    g.addEventListener("mouseenter",()=>hl(name));g.addEventListener("mouseleave",cl2);
+    tg.appendChild(g)}
+  svg.appendChild(tg);uv()}
+
+function sp(e){const r=svg.getBoundingClientRect();return{x:vb.x+(e.clientX-r.left)/r.width*vb.w,y:vb.y+(e.clientY-r.top)/r.height*vb.h}}
+function hl(name){const con=new Set([name]);document.querySelectorAll(".fk-line").forEach(l=>{if(l.dataset.from===name||l.dataset.to===name){con.add(l.dataset.from);con.add(l.dataset.to);l.classList.add("highlighted")}else l.classList.remove("highlighted")});document.querySelectorAll(".table-group").forEach(g=>{g.classList.toggle("dimmed",!con.has(g.dataset.name));g.classList.toggle("highlighted",g.dataset.name===name)})}
+function cl2(){document.querySelectorAll(".table-group").forEach(g=>g.classList.remove("dimmed","highlighted"));document.querySelectorAll(".fk-line").forEach(l=>l.classList.remove("highlighted"))}
+function fg(group){document.querySelectorAll("#controls button").forEach(b=>b.classList.remove("active"));const m={all:"btnAll",core:"btnCore",boards:"btnBoards",subs:"btnSubs",chat:"btnChat",images:"btnImages",system:"btnSystem"};document.getElementById(m[group]).classList.add("active");if(group==="all"){document.querySelectorAll(".table-group").forEach(g=>g.style.display="");document.querySelectorAll(".fk-line").forEach(l=>l.style.display="");return}const vis=new Set;document.querySelectorAll(".table-group").forEach(g=>{const s=g.dataset.group===group||g.dataset.name==="users"||g.dataset.name==="subscription_plans";g.style.display=s?"":"none";if(s)vis.add(g.dataset.name)});document.querySelectorAll(".fk-line").forEach(l=>{l.style.display=(vis.has(l.dataset.from)&&vis.has(l.dataset.to))?"":"none"})}
+
+svg.addEventListener("mousedown",e=>{if(dt)return;drag=true;svg.classList.add("dragging");ds={x:e.clientX,y:e.clientY}});
+window.addEventListener("mousemove",e=>{if(dt){const pt=sp(e);T[dt].x=pt.x-doff.x;T[dt].y=pt.y-doff.y;render();return}if(!drag)return;const r=svg.getBoundingClientRect();vb.x-=(e.clientX-ds.x)/r.width*vb.w;vb.y-=(e.clientY-ds.y)/r.height*vb.h;ds={x:e.clientX,y:e.clientY};uv()});
+window.addEventListener("mouseup",()=>{drag=false;dt=null;svg.classList.remove("dragging")});
+svg.addEventListener("wheel",e=>{e.preventDefault();const s=e.deltaY>0?1.1:0.9,r=svg.getBoundingClientRect(),mx=vb.x+(e.clientX-r.left)/r.width*vb.w,my=vb.y+(e.clientY-r.top)/r.height*vb.h;vb.w*=s;vb.h*=s;vb.x=mx-(e.clientX-r.left)/r.width*vb.w;vb.y=my-(e.clientY-r.top)/r.height*vb.h;uv()});
+document.getElementById("search").addEventListener("input",e=>{const q=e.target.value.toLowerCase();if(!q){cl2();return}document.querySelectorAll(".table-group").forEach(g=>{const m=g.dataset.name.includes(q);g.classList.toggle("dimmed",!m);g.classList.toggle("highlighted",m)})});
+document.getElementById("btnAll").onclick=()=>fg("all");document.getElementById("btnCore").onclick=()=>fg("core");document.getElementById("btnBoards").onclick=()=>fg("boards");document.getElementById("btnSubs").onclick=()=>fg("subs");document.getElementById("btnChat").onclick=()=>fg("chat");document.getElementById("btnImages").onclick=()=>fg("images");document.getElementById("btnSystem").onclick=()=>fg("system");
+document.getElementById("btnReset").onclick=()=>{fg("all");cl2();document.getElementById("search").value="";vb={x:-100,y:-50,w:2200,h:1600};render()};
+render();
+</script>
+</body>
+</html>
