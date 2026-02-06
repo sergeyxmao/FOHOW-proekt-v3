@@ -15,7 +15,44 @@ export function registerAdminUsersRoutes(app) {
    * GET /api/admin/users?page=1&limit=50&search=email
    */
   app.get('/api/admin/users', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Список пользователей с пагинацией',
+      description: 'Получить список всех пользователей с поиском, сортировкой и пагинацией',
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', default: 1 },
+          limit: { type: 'integer', default: 50 },
+          search: { type: 'string' },
+          sortBy: { type: 'string', enum: ['id', 'email', 'username', 'created_at', 'role', 'plan_name'] },
+          sortOrder: { type: 'string', enum: ['ASC', 'DESC'] }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'integer' },
+                limit: { type: 'integer' },
+                total: { type: 'integer' },
+                totalPages: { type: 'integer' }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { page = 1, limit = 50, search = '', sortBy = 'created_at', sortOrder = 'DESC' } = req.query;
@@ -87,7 +124,35 @@ export function registerAdminUsersRoutes(app) {
    * GET /api/admin/users/:userId
    */
   app.get('/api/admin/users/:userId', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Детали пользователя',
+      description: 'Получить подробную информацию о конкретном пользователе, включая историю подписок и активные сессии',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          userId: { type: 'integer' }
+        },
+        required: ['userId']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            user: { type: 'object', additionalProperties: true },
+            subscriptionHistory: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            activeSessions: { type: 'array', items: { type: 'object', additionalProperties: true } }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { userId } = req.params;
@@ -159,7 +224,50 @@ export function registerAdminUsersRoutes(app) {
    * PATCH /api/admin/users/:userId/role
    */
   app.patch('/api/admin/users/:userId/role', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Изменить роль пользователя',
+      description: 'Изменить роль пользователя (user/admin). Нельзя изменить собственную роль',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          userId: { type: 'integer' }
+        },
+        required: ['userId']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          role: { type: 'string', enum: ['user', 'admin'] }
+        },
+        required: ['role']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            user: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                email: { type: 'string' },
+                username: { type: 'string' },
+                role: { type: 'string' }
+              }
+            }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { userId } = req.params;
@@ -209,7 +317,68 @@ export function registerAdminUsersRoutes(app) {
    * PATCH /api/admin/users/:userId/plan
    */
   app.patch('/api/admin/users/:userId/plan', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Изменить тарифный план пользователя',
+      description: 'Изменить тарифный план пользователя с указанием длительности. Автоматически пересчитывает блокировки досок',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          userId: { type: 'integer' }
+        },
+        required: ['userId']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          planId: { type: 'integer' },
+          duration: { type: 'integer', default: 30 },
+          source: { type: 'string', default: 'admin_manual' }
+        },
+        required: ['planId']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            user: { type: 'object', additionalProperties: true },
+            plan: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                code_name: { type: 'string' }
+              }
+            },
+            subscription: {
+              type: 'object',
+              properties: {
+                startDate: { type: 'string', format: 'date-time' },
+                endDate: { type: 'string', format: 'date-time', nullable: true },
+                duration: {},
+                isPermanent: { type: 'boolean' }
+              }
+            },
+            boardsStatus: {
+              type: 'object',
+              properties: {
+                unlocked: { type: 'integer' },
+                softLocked: { type: 'integer' }
+              }
+            }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { userId } = req.params;
@@ -329,7 +498,49 @@ export function registerAdminUsersRoutes(app) {
    * DELETE /api/admin/users/:userId
    */
   app.delete('/api/admin/users/:userId', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Удалить пользователя',
+      description: 'Удалить пользователя с подтверждением. Нельзя удалить собственный аккаунт. Каскадное удаление всех связанных данных',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          userId: { type: 'integer' }
+        },
+        required: ['userId']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          confirm: { type: 'boolean' }
+        },
+        required: ['confirm']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' },
+            deletedUser: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer' },
+                email: { type: 'string' },
+                username: { type: 'string' }
+              }
+            }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { userId } = req.params;
@@ -382,7 +593,33 @@ export function registerAdminUsersRoutes(app) {
    * DELETE /api/admin/sessions/:sessionId
    */
   app.delete('/api/admin/sessions/:sessionId', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Завершить сессию',
+      description: 'Завершить конкретную активную сессию пользователя по ID сессии',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          sessionId: { type: 'integer' }
+        },
+        required: ['sessionId']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { sessionId } = req.params;
@@ -413,7 +650,32 @@ export function registerAdminUsersRoutes(app) {
    * DELETE /api/admin/users/:userId/sessions
    */
   app.delete('/api/admin/users/:userId/sessions', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Завершить все сессии пользователя',
+      description: 'Завершить все активные сессии указанного пользователя',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          userId: { type: 'integer' }
+        },
+        required: ['userId']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { userId } = req.params;

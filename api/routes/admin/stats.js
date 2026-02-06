@@ -13,7 +13,63 @@ export function registerAdminStatsRoutes(app) {
    * GET /api/admin/stats
    */
   app.get('/api/admin/stats', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Общая статистика платформы',
+      description: 'Получить общую статистику системы: пользователи, контент, активность, тарифные планы и регистрации',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            stats: {
+              type: 'object',
+              properties: {
+                total_users: { type: 'integer' },
+                admin_users: { type: 'integer' },
+                new_users_week: { type: 'integer' },
+                new_users_month: { type: 'integer' },
+                verified_users: { type: 'integer' },
+                total_boards: { type: 'integer' },
+                total_notes: { type: 'integer' },
+                total_stickers: { type: 'integer' },
+                total_comments: { type: 'integer' },
+                active_sessions_count: { type: 'integer' },
+                active_users_hour: { type: 'integer' },
+                active_users_day: { type: 'integer' }
+              }
+            },
+            planStats: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  name: { type: 'string' },
+                  code_name: { type: 'string' },
+                  users_count: { type: 'integer' }
+                }
+              }
+            },
+            registrationStats: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  date: { type: 'string', format: 'date' },
+                  count: { type: 'integer' }
+                }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       // Общая статистика
@@ -72,7 +128,54 @@ export function registerAdminStatsRoutes(app) {
    * GET /api/admin/logs?page=1&limit=100&level=error
    */
   app.get('/api/admin/logs', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Системные логи',
+      description: 'Получить системные логи с пагинацией и фильтрацией по уровню',
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', default: 1 },
+          limit: { type: 'integer', default: 100 },
+          level: { type: 'string' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            logs: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  level: { type: 'string' },
+                  message: { type: 'string' },
+                  context: { type: 'object', additionalProperties: true },
+                  created_at: { type: 'string', format: 'date-time' }
+                }
+              }
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'integer' },
+                limit: { type: 'integer' },
+                total: { type: 'integer' },
+                totalPages: { type: 'integer' }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { page = 1, limit = 100, level = null } = req.query;
@@ -130,7 +233,35 @@ export function registerAdminStatsRoutes(app) {
    * GET /api/admin/subscription-plans
    */
   app.get('/api/admin/subscription-plans', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Список тарифных планов',
+      description: 'Получить список всех тарифных планов с количеством пользователей для фильтра',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            plans: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer', nullable: true },
+                  name: { type: 'string' },
+                  user_count: { type: 'integer' }
+                }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const result = await pool.query(

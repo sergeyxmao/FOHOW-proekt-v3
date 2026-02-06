@@ -79,7 +79,19 @@ export function registerAdminExportsRoutes(app) {
    * GET /api/admin/export/verified-users
    */
   app.get('/api/admin/export/verified-users', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Экспорт верифицированных пользователей в CSV',
+      description: 'Скачать CSV файл со списком верифицированных пользователей',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: { type: 'string', description: 'CSV файл с данными пользователей' },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       console.log('[ADMIN] Экспорт верифицированных пользователей, admin_id=' + req.user.id);
@@ -124,7 +136,19 @@ export function registerAdminExportsRoutes(app) {
    * GET /api/admin/export/non-verified-users
    */
   app.get('/api/admin/export/non-verified-users', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Экспорт неверифицированных пользователей в CSV',
+      description: 'Скачать CSV файл со списком неверифицированных пользователей',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: { type: 'string', description: 'CSV файл с данными пользователей' },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       console.log('[ADMIN] Экспорт НЕ верифицированных пользователей, admin_id=' + req.user.id);
@@ -169,7 +193,27 @@ export function registerAdminExportsRoutes(app) {
    * Параметры: planId - ID плана или "null" для пользователей без плана
    */
   app.get('/api/admin/export/users-by-plan/:planId', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Экспорт пользователей по тарифу в CSV',
+      description: 'Скачать CSV файл со списком пользователей определённого тарифного плана. planId может быть числовым ID плана или "null" для пользователей без плана.',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          planId: { type: 'string', description: 'ID тарифного плана или "null" для пользователей без плана' }
+        },
+        required: ['planId']
+      },
+      response: {
+        200: { type: 'string', description: 'CSV файл с данными пользователей' },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { planId } = req.params;

@@ -14,7 +14,47 @@ export function registerAdminTransactionsRoutes(app) {
    * GET /api/admin/transactions?page=1&limit=20&search=email&dateFrom=2024-01-01&dateTo=2024-12-31
    */
   app.get('/api/admin/transactions', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'История транзакций',
+      description: 'Получить историю всех транзакций с пагинацией и фильтрами',
+      security: [{ bearerAuth: [] }],
+      querystring: {
+        type: 'object',
+        properties: {
+          page: { type: 'integer', default: 1 },
+          limit: { type: 'integer', default: 20 },
+          search: { type: 'string', description: 'Поиск по email пользователя' },
+          dateFrom: { type: 'string', format: 'date', description: 'Фильтр по дате (от)' },
+          dateTo: { type: 'string', format: 'date', description: 'Фильтр по дате (до)' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            data: {
+              type: 'array',
+              items: { type: 'object', additionalProperties: true }
+            },
+            pagination: {
+              type: 'object',
+              properties: {
+                page: { type: 'integer' },
+                limit: { type: 'integer' },
+                total: { type: 'integer' },
+                totalPages: { type: 'integer' }
+              }
+            }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const { page = 1, limit = 20, search = '', dateFrom = null, dateTo = null } = req.query;

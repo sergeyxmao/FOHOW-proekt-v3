@@ -16,7 +16,29 @@ export function registerAdminVerificationsRoutes(app) {
    * GET /api/admin/verifications/pending
    */
   app.get('/api/admin/verifications/pending', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Заявки на верификацию',
+      description: 'Получить список заявок на верификацию со статусом pending',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            items: {
+              type: 'array',
+              items: { type: 'object', additionalProperties: true }
+            },
+            total: { type: 'integer' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       console.log('[ADMIN] Запрос списка заявок на верификацию, admin_id=' + req.user.id);
@@ -37,7 +59,33 @@ export function registerAdminVerificationsRoutes(app) {
    * POST /api/admin/verifications/:id/approve
    */
   app.post('/api/admin/verifications/:id/approve', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Одобрить верификацию',
+      description: 'Одобрить заявку на верификацию по ID',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        },
+        required: ['id']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const adminId = req.user.id;
@@ -66,7 +114,40 @@ export function registerAdminVerificationsRoutes(app) {
    * POST /api/admin/verifications/:id/reject
    */
   app.post('/api/admin/verifications/:id/reject', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Отклонить верификацию',
+      description: 'Отклонить заявку на верификацию по ID с указанием причины',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' }
+        },
+        required: ['id']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          rejection_reason: { type: 'string' }
+        },
+        required: ['rejection_reason']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       const adminId = req.user.id;
@@ -100,7 +181,45 @@ export function registerAdminVerificationsRoutes(app) {
    * GET /api/admin/verifications/archive
    */
   app.get('/api/admin/verifications/archive', {
-    preHandler: [authenticateToken, requireAdmin]
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Архив верификаций',
+      description: 'Получить архив одобренных и отклонённых верификаций',
+      security: [{ bearerAuth: [] }],
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            items: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  id: { type: 'integer' },
+                  user_id: { type: 'integer' },
+                  full_name: { type: 'string' },
+                  referral_link: { type: 'string' },
+                  status: { type: 'string' },
+                  rejection_reason: { type: 'string', nullable: true },
+                  submitted_at: { type: 'string' },
+                  processed_at: { type: 'string' },
+                  personal_id: { type: 'string' },
+                  email: { type: 'string' },
+                  username: { type: 'string' },
+                  processed_by_username: { type: 'string' }
+                }
+              }
+            },
+            total: { type: 'integer' }
+          }
+        },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
   }, async (req, reply) => {
     try {
       console.log('[ADMIN] Запрос архива верификации, admin_id=' + req.user.id);
