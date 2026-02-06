@@ -45,7 +45,7 @@
 <div id="controls">
   <h1>📊 FOHOW ER-диаграмма</h1>
   <span class="info">33 таблицы · 47 связей</span>
-  <input type="text" id="search" placeholder="🔍 Поиск таблицы...">
+  <input type="text" id="search" placeholder="🔍 Таблица или колонка...">
   <button id="btnAll" class="active">Все</button>
   <button id="btnCore">Ядро</button>
   <button id="btnBoards">Доски</button>
@@ -165,17 +165,19 @@ function render(){
   svg.appendChild(tg);uv()}
 
 function sp(e){const r=svg.getBoundingClientRect();return{x:vb.x+(e.clientX-r.left)/r.width*vb.w,y:vb.y+(e.clientY-r.top)/r.height*vb.h}}
-function hl(name){const con=new Set([name]);document.querySelectorAll(".fk-line").forEach(l=>{if(l.dataset.from===name||l.dataset.to===name){con.add(l.dataset.from);con.add(l.dataset.to);l.classList.add("highlighted")}else l.classList.remove("highlighted")});document.querySelectorAll(".table-group").forEach(g=>{g.classList.toggle("dimmed",!con.has(g.dataset.name));g.classList.toggle("highlighted",g.dataset.name===name)})}
-function cl2(){document.querySelectorAll(".table-group").forEach(g=>g.classList.remove("dimmed","highlighted"));document.querySelectorAll(".fk-line").forEach(l=>l.classList.remove("highlighted"))}
+let searchActive=false;
+function hl(name){if(searchActive)return;const con=new Set([name]);document.querySelectorAll(".fk-line").forEach(l=>{if(l.dataset.from===name||l.dataset.to===name){con.add(l.dataset.from);con.add(l.dataset.to);l.classList.add("highlighted")}else l.classList.remove("highlighted")});document.querySelectorAll(".table-group").forEach(g=>{g.classList.toggle("dimmed",!con.has(g.dataset.name));g.classList.toggle("highlighted",g.dataset.name===name)})}
+function cl2(){if(searchActive)return;document.querySelectorAll(".table-group").forEach(g=>g.classList.remove("dimmed","highlighted"));document.querySelectorAll(".fk-line").forEach(l=>l.classList.remove("highlighted"))}
+function clForce(){document.querySelectorAll(".table-group").forEach(g=>g.classList.remove("dimmed","highlighted"));document.querySelectorAll(".fk-line").forEach(l=>l.classList.remove("highlighted"))}
 function fg(group){document.querySelectorAll("#controls button").forEach(b=>b.classList.remove("active"));const m={all:"btnAll",core:"btnCore",boards:"btnBoards",subs:"btnSubs",chat:"btnChat",images:"btnImages",system:"btnSystem"};document.getElementById(m[group]).classList.add("active");if(group==="all"){document.querySelectorAll(".table-group").forEach(g=>g.style.display="");document.querySelectorAll(".fk-line").forEach(l=>l.style.display="");return}const vis=new Set;document.querySelectorAll(".table-group").forEach(g=>{const s=g.dataset.group===group||g.dataset.name==="users"||g.dataset.name==="subscription_plans";g.style.display=s?"":"none";if(s)vis.add(g.dataset.name)});document.querySelectorAll(".fk-line").forEach(l=>{l.style.display=(vis.has(l.dataset.from)&&vis.has(l.dataset.to))?"":"none"})}
 
 svg.addEventListener("mousedown",e=>{if(dt)return;drag=true;svg.classList.add("dragging");ds={x:e.clientX,y:e.clientY}});
 window.addEventListener("mousemove",e=>{if(dt){const pt=sp(e);T[dt].x=pt.x-doff.x;T[dt].y=pt.y-doff.y;render();return}if(!drag)return;const r=svg.getBoundingClientRect();vb.x-=(e.clientX-ds.x)/r.width*vb.w;vb.y-=(e.clientY-ds.y)/r.height*vb.h;ds={x:e.clientX,y:e.clientY};uv()});
 window.addEventListener("mouseup",()=>{drag=false;dt=null;svg.classList.remove("dragging")});
 svg.addEventListener("wheel",e=>{e.preventDefault();const s=e.deltaY>0?1.1:0.9,r=svg.getBoundingClientRect(),mx=vb.x+(e.clientX-r.left)/r.width*vb.w,my=vb.y+(e.clientY-r.top)/r.height*vb.h;vb.w*=s;vb.h*=s;vb.x=mx-(e.clientX-r.left)/r.width*vb.w;vb.y=my-(e.clientY-r.top)/r.height*vb.h;uv()});
-document.getElementById("search").addEventListener("input",e=>{const q=e.target.value.toLowerCase();if(!q){cl2();return}document.querySelectorAll(".table-group").forEach(g=>{const m=g.dataset.name.includes(q);g.classList.toggle("dimmed",!m);g.classList.toggle("highlighted",m)})});
-document.getElementById("btnAll").onclick=()=>fg("all");document.getElementById("btnCore").onclick=()=>fg("core");document.getElementById("btnBoards").onclick=()=>fg("boards");document.getElementById("btnSubs").onclick=()=>fg("subs");document.getElementById("btnChat").onclick=()=>fg("chat");document.getElementById("btnImages").onclick=()=>fg("images");document.getElementById("btnSystem").onclick=()=>fg("system");
-document.getElementById("btnReset").onclick=()=>{fg("all");cl2();document.getElementById("search").value="";vb={x:-100,y:-50,w:2200,h:1600};render()};
+document.getElementById("search").addEventListener("input",e=>{const q=e.target.value.toLowerCase();if(!q){searchActive=false;clForce();return}searchActive=true;const found=[];document.querySelectorAll(".table-group").forEach(g=>{const nm=g.dataset.name;const matchName=nm.includes(q);let matchCol=false;if(T[nm])T[nm].c.forEach(c=>{if(c.n.includes(q))matchCol=true});const m=matchName||matchCol;g.classList.toggle("dimmed",!m);g.classList.toggle("highlighted",m);if(m&&T[nm])found.push(nm)});document.querySelectorAll(".fk-line").forEach(l=>{const fm=found.includes(l.dataset.from),tm=found.includes(l.dataset.to);l.classList.toggle("highlighted",fm||tm)});if(found.length>0&&found.length<=5){let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;found.forEach(n=>{const t=T[n];minX=Math.min(minX,t.x);minY=Math.min(minY,t.y);maxX=Math.max(maxX,t.x+W);maxY=Math.max(maxY,t.y+th(n))});const pad=200;vb.x=minX-pad;vb.y=minY-pad;vb.w=Math.max(maxX-minX+pad*2,600);vb.h=Math.max(maxY-minY+pad*2,400);uv()}});
+document.getElementById("btnAll").onclick=()=>{searchActive=false;fg("all")};document.getElementById("btnCore").onclick=()=>{searchActive=false;fg("core")};document.getElementById("btnBoards").onclick=()=>{searchActive=false;fg("boards")};document.getElementById("btnSubs").onclick=()=>{searchActive=false;fg("subs")};document.getElementById("btnChat").onclick=()=>{searchActive=false;fg("chat")};document.getElementById("btnImages").onclick=()=>{searchActive=false;fg("images")};document.getElementById("btnSystem").onclick=()=>{searchActive=false;fg("system")};
+document.getElementById("btnReset").onclick=()=>{fg("all");searchActive=false;clForce();document.getElementById("search").value="";vb={x:-100,y:-50,w:2200,h:1600};render()};
 render();
 </script>
 </body>
