@@ -65,6 +65,11 @@
         <div v-if="activeTab === 'library'" class="tab-content">
           <AdminSharedLibrary />
         </div>
+
+        <!-- Вкладка: ER-диаграмма -->
+        <div v-if="activeTab === 'er-diagram'" class="tab-content er-diagram-tab">
+          <iframe src="/er-diagram.html" class="er-diagram-iframe"></iframe>
+        </div>
       </div>
     </main>
 
@@ -101,7 +106,8 @@ const tabs = [
   { id: 'verification', label: 'Верификация' },
   { id: 'moderation', label: 'Модерация изображений' },
   { id: 'library', label: 'Общая библиотека' },
-  { id: 'logs', label: 'Логи' }
+  { id: 'logs', label: 'Логи' },
+  { id: 'er-diagram', label: 'ER-диаграмма' }
 ]
 const tabIds = tabs.map((tab) => tab.id)
 const activeTab = ref(tabs[0].id)
@@ -321,6 +327,18 @@ watch(
 
 .error-notification button:hover {
   background: rgba(255, 255, 255, 0.3);
+}
+
+.er-diagram-tab {
+  padding: 0 !important;
+  margin: -20px;
+}
+
+.er-diagram-iframe {
+  width: 100%;
+  height: calc(100vh - 160px);
+  border: none;
+  border-radius: 0 0 8px 8px;
 }
 
 /* Адаптивность */
