@@ -40,11 +40,12 @@ jobs:
         run: |
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > private_key
           chmod 600 private_key
+          # Деплоим assets/ с --delete чтобы удалить устаревшие файлы предыдущих сборок
+          rsync -avz --delete -e "ssh -i private_key -o StrictHostKeyChecking=no" \
+            dist/assets/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.PROJECT_PATH }}/assets/
+          # Деплоим index.html и остальные файлы из dist/
           rsync -avz -e "ssh -i private_key -o StrictHostKeyChecking=no" \
-            --exclude='.git' \
-            --exclude='node_modules' \
-            --exclude='api' \
-            --exclude='.env' \
+            --exclude='assets' \
             dist/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.PROJECT_PATH }}/
           rm private_key
 

@@ -39,11 +39,13 @@ export default defineConfig({
     }
   },
 
-  // Явный формат имён чанков — исправляет двойной хеш в lazy-loaded модулях
+  // Явный формат имён — исправляет двойной хеш в lazy-loaded модулях (JS + CSS)
   build: {
     rollupOptions: {
       output: {
-        chunkFileNames: 'assets/[name]-[hash].js'
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        entryFileNames: 'assets/[name]-[hash].js'
       }
     }
   }
