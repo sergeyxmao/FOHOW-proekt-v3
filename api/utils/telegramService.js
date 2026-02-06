@@ -10,6 +10,29 @@ dotenv.config();
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 
 /**
+ * Обёртка с повторными попытками при временных ошибках
+ * @param {Function} fn - Асинхронная функция для выполнения
+ * @param {number} maxRetries - Максимальное количество повторов (по умолчанию 3)
+ * @param {number} baseDelay - Базовая задержка в мс (по умолчанию 1000)
+ * @returns {Promise<*>} Результат выполнения функции
+ */
+async function withRetry(fn, maxRetries = 3, baseDelay = 1000) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+      // Повторять только при сетевых/серверных ошибках
+      const isRetryable = !error.status || error.status >= 500 || error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT';
+      if (!isRetryable) throw error;
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.log(`[Telegram] Попытка ${attempt + 1}/${maxRetries} не удалась, повтор через ${delay}ms`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+}
+
+/**
  * Выполнение HTTP запроса к Telegram Bot API
  *
  * @param {string} method - Метод API (например, 'sendMessage', 'getMe')
@@ -103,8 +126,8 @@ export async function sendTelegramMessage(chatId, text, options = {}) {
     console.log(`📱 Отправка Telegram сообщения в чат: ${chatId}`);
     console.log(`   Текст: ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}`);
 
-    // Отправка сообщения
-    const result = await telegramApiRequest('sendMessage', messageData);
+    // Отправка сообщения с retry при временных ошибках
+    const result = await withRetry(() => telegramApiRequest('sendMessage', messageData));
 
     // Логирование успешной отправки
     console.log('✅ Telegram сообщение успешно отправлено');

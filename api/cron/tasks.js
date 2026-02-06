@@ -11,6 +11,7 @@
  * 6. Удаление заблокированных досок через 14 дней (ежедневно 03:00) [DEPRECATED - replaced by task 8]
  * 7. Очистка устаревших кодов подтверждения email (каждый час)
  * 8. Обработка Soft/Hard Lock досок (ежедневно 03:30)
+ * 9. Очистка устаревших telegram_link_codes (каждый час)
  */
 
 import cron from 'node-cron';
@@ -18,6 +19,45 @@ import { pool } from '../db.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 import { getSubscriptionExpiringMessage, getSubscriptionExpiredMessage } from '../templates/telegramTemplates.js';
 import { processDailyLocks } from '../services/boardLockService.js';
+
+// ============================================
+// Advisory locks для защиты от параллельного запуска
+// ============================================
+
+const LOCK_IDS = {
+  NOTIFY_EXPIRING: 100001,
+  HANDLE_EXPIRY: 100002,
+  HANDLE_GRACE: 100003,
+  CLEANUP_SESSIONS: 100004,
+  CLEANUP_INACTIVE: 100005,
+  CLOSE_DEMO: 100006,
+  SWITCH_DEMO_GUEST: 100007,
+  DELETE_LOCKED_BOARDS: 100008,
+  CLEANUP_VERIFICATION: 100009,
+  PROCESS_DAILY_LOCKS: 100010,
+  CLEANUP_TELEGRAM_CODES: 100011,
+};
+
+/**
+ * Обёртка для cron-задач с PostgreSQL advisory lock
+ * Предотвращает параллельный запуск одной и той же задачи
+ * @param {number} lockId - Уникальный ID блокировки
+ * @param {Function} fn - Асинхронная функция задачи
+ */
+async function withAdvisoryLock(lockId, fn) {
+  const client = await pool.connect();
+  try {
+    const { rows } = await client.query('SELECT pg_try_advisory_lock($1)', [lockId]);
+    if (!rows[0].pg_try_advisory_lock) {
+      console.log(`[CRON] Lock ${lockId} занят, пропускаем запуск`);
+      return;
+    }
+    await fn();
+  } finally {
+    await client.query('SELECT pg_advisory_unlock($1)', [lockId]);
+    client.release();
+  }
+}
 
 // ============================================
 // Вспомогательные функции для логирования
@@ -756,7 +796,9 @@ export function initializeCronTasks() {
 
   // 1. Уведомления о истечении подписок - каждый день в 09:00
   cron.schedule('0 9 * * *', () => {
-    notifyExpiringSubscriptions();
+    withAdvisoryLock(LOCK_IDS.NOTIFY_EXPIRING, async () => {
+      await notifyExpiringSubscriptions();
+    });
   }, {
     timezone: 'Europe/Moscow'
   });
@@ -764,7 +806,9 @@ export function initializeCronTasks() {
 
   // 2. Обработка истекших подписок - каждый день в 01:00
   cron.schedule('0 1 * * *', () => {
-    handleSubscriptionExpiry();
+    withAdvisoryLock(LOCK_IDS.HANDLE_EXPIRY, async () => {
+      await handleSubscriptionExpiry();
+    });
   }, {
     timezone: 'Europe/Moscow'
   });
@@ -772,7 +816,9 @@ export function initializeCronTasks() {
 
   // 2.1. Окончание grace-периода - каждый день в 01:30
   cron.schedule('30 1 * * *', () => {
-    handleGracePeriodExpiry();
+    withAdvisoryLock(LOCK_IDS.HANDLE_GRACE, async () => {
+      await handleGracePeriodExpiry();
+    });
   }, {
     timezone: 'Europe/Moscow'
   });
@@ -780,19 +826,25 @@ export function initializeCronTasks() {
 
   // 3. Очистка старых сессий - каждый час
   cron.schedule('0 * * * *', () => {
-    cleanupOldSessions();
+    withAdvisoryLock(LOCK_IDS.CLEANUP_SESSIONS, async () => {
+      await cleanupOldSessions();
+    });
   });
   console.log('✅ Задача 3: Очистка старых сессий (каждый час)');
 
   // 3.1. Автовыход неактивных сессий - каждые 5 минут
   cron.schedule('*/5 * * * *', () => {
-    cleanupInactiveSessions();
+    withAdvisoryLock(LOCK_IDS.CLEANUP_INACTIVE, async () => {
+      await cleanupInactiveSessions();
+    });
   });
   console.log('✅ Задача 3.1: Автовыход неактивных сессий (каждые 5 минут)');
 
   // 4. Закрытие демо-периодов - каждый день в 02:00
   cron.schedule('0 2 * * *', () => {
-    closeDemoPeriods();
+    withAdvisoryLock(LOCK_IDS.CLOSE_DEMO, async () => {
+      await closeDemoPeriods();
+    });
   }, {
     timezone: 'Europe/Moscow'
   });
@@ -800,7 +852,9 @@ export function initializeCronTasks() {
 
   // 5. Автоматическая смена тарифа с Демо на Гостевой - каждый день в 02:30
   cron.schedule('30 2 * * *', () => {
-    switchDemoToGuest();
+    withAdvisoryLock(LOCK_IDS.SWITCH_DEMO_GUEST, async () => {
+      await switchDemoToGuest();
+    });
   }, {
     timezone: 'Europe/Moscow'
   });
@@ -808,7 +862,9 @@ export function initializeCronTasks() {
 
   // 6. Удаление заблокированных досок через 14 дней - каждый день в 03:00
   cron.schedule('0 3 * * *', () => {
-    deleteLockedBoardsAfter14Days();
+    withAdvisoryLock(LOCK_IDS.DELETE_LOCKED_BOARDS, async () => {
+      await deleteLockedBoardsAfter14Days();
+    });
   }, {
     timezone: 'Europe/Moscow'
   });
@@ -816,29 +872,50 @@ export function initializeCronTasks() {
 
   // 7. Очистка устаревших кодов подтверждения email - каждый час
   cron.schedule('0 * * * *', () => {
-    cleanupExpiredVerificationCodes();
+    withAdvisoryLock(LOCK_IDS.CLEANUP_VERIFICATION, async () => {
+      await cleanupExpiredVerificationCodes();
+    });
   });
   console.log('✅ Задача 7: Очистка устаревших кодов подтверждения email (каждый час)');
 
   // 8. Обработка Soft/Hard Lock досок - каждый день в 03:30
   // soft_lock > 14 дней → hard_lock, hard_lock > 14 дней → удаление
-  cron.schedule('30 3 * * *', async () => {
-    console.log('\n🔒 Крон-задача: Обработка Soft/Hard Lock досок');
-    try {
-      const result = await processDailyLocks();
-      await logToSystem('info', 'process_daily_locks_completed', {
-        toHardLock: result.toHardLock,
-        deleted: result.deleted,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('❌ Ошибка обработки блокировок досок:', error);
-      await logToSystem('error', 'process_daily_locks_failed', { error: error.message });
-    }
+  cron.schedule('30 3 * * *', () => {
+    withAdvisoryLock(LOCK_IDS.PROCESS_DAILY_LOCKS, async () => {
+      console.log('\n🔒 Крон-задача: Обработка Soft/Hard Lock досок');
+      try {
+        const result = await processDailyLocks();
+        await logToSystem('info', 'process_daily_locks_completed', {
+          toHardLock: result.toHardLock,
+          deleted: result.deleted,
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error('❌ Ошибка обработки блокировок досок:', error);
+        await logToSystem('error', 'process_daily_locks_failed', { error: error.message });
+      }
+    });
   }, {
     timezone: 'Europe/Moscow'
   });
   console.log('✅ Задача 8: Обработка Soft/Hard Lock досок (ежедневно 03:30 МСК)');
+
+  // 9. Очистка устаревших telegram_link_codes - каждый час
+  cron.schedule('0 * * * *', () => {
+    withAdvisoryLock(LOCK_IDS.CLEANUP_TELEGRAM_CODES, async () => {
+      try {
+        const result = await pool.query(
+          'DELETE FROM telegram_link_codes WHERE expires_at < NOW() OR used = true'
+        );
+        if (result.rowCount > 0) {
+          console.log(`[CRON] Очищено ${result.rowCount} устаревших telegram_link_codes`);
+        }
+      } catch (error) {
+        console.error('[CRON] Ошибка очистки telegram_link_codes:', error);
+      }
+    });
+  });
+  console.log('✅ Задача 9: Очистка устаревших telegram_link_codes (каждый час)');
 
   console.log('\n✅ Все крон-задачи успешно инициализированы!\n');
 }

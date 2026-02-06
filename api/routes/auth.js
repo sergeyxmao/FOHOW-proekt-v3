@@ -269,6 +269,8 @@ export function registerAuthRoutes(app) {
     try {
       console.log('[DEBUG /api/login] Ищем пользователя в БД:', email);
       // 1. Найти пользователя
+      // SELECT * необходим — password нужен для bcrypt.compare
+      // password удаляется через delete user.password перед отправкой клиенту
       const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
 
       if (result.rows.length === 0) {

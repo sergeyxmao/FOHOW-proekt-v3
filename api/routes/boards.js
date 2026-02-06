@@ -113,9 +113,12 @@ export function registerBoardRoutes(app) {
       const { id } = req.params;
       const isAdmin = req.user.role === 'admin';
 
+      const boardFields = `id, owner_id, name, description, content, thumbnail_url, is_public,
+             created_at, updated_at, object_count, is_locked, archived,
+             lock_status, lock_timer_started_at`;
       const query = isAdmin
-        ? 'SELECT * FROM boards WHERE id = $1'
-        : 'SELECT * FROM boards WHERE id = $1 AND owner_id = $2';
+        ? `SELECT ${boardFields} FROM boards WHERE id = $1`
+        : `SELECT ${boardFields} FROM boards WHERE id = $1 AND owner_id = $2`;
       const params = isAdmin ? [id] : [id, req.user.id];
 
       const result = await pool.query(query, params);
@@ -370,9 +373,12 @@ export function registerBoardRoutes(app) {
       const { id } = req.params;
       const isAdmin = req.user.role === 'admin';
 
+      const boardFields = `id, owner_id, name, description, content, thumbnail_url, is_public,
+             created_at, updated_at, object_count, is_locked, archived,
+             lock_status, lock_timer_started_at`;
       const query = isAdmin
-        ? 'SELECT * FROM boards WHERE id = $1'
-        : 'SELECT * FROM boards WHERE id = $1 AND owner_id = $2';
+        ? `SELECT ${boardFields} FROM boards WHERE id = $1`
+        : `SELECT ${boardFields} FROM boards WHERE id = $1 AND owner_id = $2`;
       const params = isAdmin ? [id] : [id, req.user.id];
 
       const original = await pool.query(query, params);
