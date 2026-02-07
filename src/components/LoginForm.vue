@@ -35,7 +35,7 @@
           placeholder="Введите код"
         />
         <div class="auth-card__verification-code" @click="regenerateVerificationCode">
-          {{ verificationLoading ? '••••' : verificationCode }}
+          {{ verificationLoading ? '••••' : (verificationCode || '••••') }}
         </div>
         <button
           type="button"
@@ -46,7 +46,7 @@
           {{ refreshCooldown > 0 ? `Обновить код (${refreshCooldown}с)` : 'Обновить код' }}
         </button>
       </div>
-      <div v-if="error" class="auth-card__message auth-card__message--error">{{ error }}</div>
+      <div v-if="error" :class="['auth-card__message', errorType === 'info' ? 'auth-card__message--info' : 'auth-card__message--error']">{{ error }}</div>
 
       <button class="auth-card__submit" type="submit" :disabled="loading">
         {{ loading ? 'Вход...' : 'Войти' }}
@@ -85,6 +85,7 @@ const verificationCode = ref('')
 const verificationToken = ref('')
 const verificationInput = ref('')
 const error = ref('')
+const errorType = ref('error')
 const loading = ref(false)
 const verificationLoading = ref(false)
 const refreshCooldown = ref(0)
@@ -103,7 +104,8 @@ async function fetchVerificationCode(showError = true) {
     if (response.status === 429) {
       const data = await response.json().catch(() => null)
       const retryAfter = data?.retryAfter || 60
-      error.value = `Слишком много запросов. Подождите ${retryAfter} сек.`
+      errorType.value = 'info'
+      error.value = `Слишком частые запросы. Обновление кода будет доступно через ${retryAfter} сек.`
       refreshCooldown.value = retryAfter
       if (refreshCooldownTimer.value) clearInterval(refreshCooldownTimer.value)
       refreshCooldownTimer.value = setInterval(() => {
@@ -112,6 +114,8 @@ async function fetchVerificationCode(showError = true) {
           clearInterval(refreshCooldownTimer.value)
           refreshCooldownTimer.value = null
           error.value = ''
+          errorType.value = 'error'
+          fetchVerificationCode(false)
         }
       }, 1000)
       return
@@ -131,11 +135,13 @@ async function fetchVerificationCode(showError = true) {
     verificationToken.value = data.token
     verificationInput.value = ''
     error.value = ''
+    errorType.value = 'error'
   } catch (err) {
     verificationCode.value = ''
     verificationToken.value = ''
     verificationInput.value = ''
     if (showError) {
+      errorType.value = 'error'
       error.value = err.message || 'Не удалось получить проверочный код'
     }
   } finally {
@@ -150,7 +156,7 @@ function regenerateVerificationCode() {
 }
 
 function startRefreshCooldown() {
-  refreshCooldown.value = 10
+  refreshCooldown.value = 5
   if (refreshCooldownTimer.value) clearInterval(refreshCooldownTimer.value)
   refreshCooldownTimer.value = setInterval(() => {
     refreshCooldown.value--
@@ -197,6 +203,7 @@ async function handleLogin() {
     // Обычный вход - emit успешного входа
     emit('login-success')
   } catch (err) {
+    errorType.value = 'error'
     error.value = err.message
     await fetchVerificationCode(false)
   } finally {
@@ -278,6 +285,12 @@ input:focus {
   color: var(--auth-error);
   background: var(--auth-error-bg);
   border-color: var(--auth-error-border);
+}
+
+.auth-card__message--info {
+  color: #1a73e8;
+  background: #e8f0fe;
+  border-color: #d2e3fc;
 }
 
 .auth-card__submit {
