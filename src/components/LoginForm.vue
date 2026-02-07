@@ -43,7 +43,7 @@
           @click="regenerateVerificationCode"
           :disabled="verificationLoading || refreshCooldown > 0"
         >
-          {{ refreshCooldown > 0 ? `Обновить код (${refreshCooldown}с)` : 'Обновить код' }}
+          {{ refreshCooldown > 0 && errorType !== 'info' ? `Обновить код (${refreshCooldown}с)` : 'Обновить код' }}
         </button>
       </div>
       <div v-if="error" :class="['auth-card__message', errorType === 'info' ? 'auth-card__message--info' : 'auth-card__message--error']">{{ error }}</div>
@@ -105,8 +105,8 @@ async function fetchVerificationCode(showError = true) {
       const data = await response.json().catch(() => null)
       const retryAfter = data?.retryAfter || 60
       errorType.value = 'info'
-      error.value = `Слишком частые запросы. Обновление кода будет доступно через ${retryAfter} сек.`
       refreshCooldown.value = retryAfter
+      error.value = `Слишком частые запросы. Обновление кода будет доступно через ${refreshCooldown.value} сек.`
       if (refreshCooldownTimer.value) clearInterval(refreshCooldownTimer.value)
       refreshCooldownTimer.value = setInterval(() => {
         refreshCooldown.value--
@@ -116,6 +116,8 @@ async function fetchVerificationCode(showError = true) {
           error.value = ''
           errorType.value = 'error'
           fetchVerificationCode(false)
+        } else {
+          error.value = `Слишком частые запросы. Обновление кода будет доступно через ${refreshCooldown.value} сек.`
         }
       }, 1000)
       return
