@@ -26,11 +26,12 @@ export function registerDiscussionRoutes(app) {
           200: {
             type: 'object',
             properties: {
+              success: { type: 'boolean' },
               counters: {
                 type: 'object',
                 properties: {
                   notes: { type: 'integer' },
-                  images: { type: 'integer' },
+                  images: { type: 'string' },
                   comments: { type: 'integer' },
                   geolocation: { type: 'integer' },
                   stickers: { type: 'integer' },
