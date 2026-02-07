@@ -43,7 +43,7 @@
           @click="regenerateVerificationCode"
           :disabled="verificationLoading || refreshCooldown > 0"
         >
-          {{ refreshCooldown > 0 ? `Обновить код (${refreshCooldown}с)` : 'Обновить код' }}
+          Обновить код
         </button>
       </div>
       <div v-if="error" :class="['auth-card__message', errorType === 'info' ? 'auth-card__message--info' : 'auth-card__message--error']">{{ error }}</div>

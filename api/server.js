@@ -168,7 +168,8 @@ await app.register(swaggerUi, {
 // ГЛОБАЛЬНЫЙ ОБРАБОТЧИК ОШИБОК
 // ============================================
 app.setErrorHandler((error, request, reply) => {
-  console.error('[GLOBAL ERROR HANDLER]', {
+  console.error("[GLOBAL ERROR HANDLER] RAW:", JSON.stringify(error, Object.getOwnPropertyNames(error || {}), 2));
+  console.error("[GLOBAL ERROR HANDLER]", {
     url: request.url,
     method: request.method,
     statusCode: error.statusCode || 500,
@@ -176,6 +177,11 @@ app.setErrorHandler((error, request, reply) => {
     stack: error.stack || 'No stack trace',
     name: error.name || 'UnknownError'
   });
+
+  // Обработка rate-limit (объект без stack, но с retryAfter)
+  if (!error.stack && error.retryAfter !== undefined) {
+    return reply.code(429).send(error);
+  }
 
   // В режиме разработки отправляем детальную информацию
   const errorMessage = process.env.NODE_ENV === 'development'

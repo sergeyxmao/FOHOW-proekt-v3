@@ -1,0 +1,313 @@
+table_name,column_name,data_type,is_nullable
+active_sessions,id,integer,NO
+active_sessions,user_id,integer,NO
+active_sessions,token_signature,character varying,NO
+active_sessions,ip_address,character varying,YES
+active_sessions,user_agent,text,YES
+active_sessions,device_id,character varying,YES
+active_sessions,device_name,character varying,YES
+active_sessions,created_at,timestamp without time zone,YES
+active_sessions,last_seen,timestamp without time zone,YES
+active_sessions,expires_at,timestamp without time zone,NO
+board_anchors,id,integer,NO
+board_anchors,board_id,integer,NO
+board_anchors,user_id,integer,NO
+board_anchors,pos_x,integer,NO
+board_anchors,pos_y,integer,NO
+board_anchors,description,text,YES
+board_anchors,created_at,timestamp with time zone,YES
+board_anchors,updated_at,timestamp with time zone,YES
+board_folder_items,id,integer,NO
+board_folder_items,folder_id,integer,NO
+board_folder_items,board_id,integer,NO
+board_folder_items,added_at,timestamp without time zone,NO
+board_folders,id,integer,NO
+board_folders,owner_id,integer,NO
+board_folders,name,character varying,NO
+board_folders,created_at,timestamp without time zone,NO
+board_folders,updated_at,timestamp without time zone,NO
+boards,id,integer,NO
+boards,owner_id,integer,NO
+boards,name,character varying,NO
+boards,description,text,YES
+boards,content,jsonb,YES
+boards,thumbnail_url,character varying,YES
+boards,is_public,boolean,YES
+boards,created_at,timestamp without time zone,YES
+boards,updated_at,timestamp without time zone,YES
+boards,object_count,integer,YES
+boards,is_locked,boolean,YES
+boards,archived,boolean,YES
+boards,lock_status,USER-DEFINED,YES
+boards,lock_timer_started_at,timestamp without time zone,YES
+demo_trials,id,integer,NO
+demo_trials,user_id,integer,NO
+demo_trials,started_at,timestamp without time zone,YES
+demo_trials,ended_at,timestamp without time zone,YES
+demo_trials,converted_to_paid,boolean,YES
+demo_trials,converted_at,timestamp without time zone,YES
+demo_trials,first_paid_plan_id,integer,YES
+demo_trials,days_to_conversion,integer,YES
+demo_trials,created_at,timestamp without time zone,YES
+email_verification_codes,id,integer,NO
+email_verification_codes,email,character varying,NO
+email_verification_codes,code,character varying,NO
+email_verification_codes,expires_at,timestamp without time zone,NO
+email_verification_codes,created_at,timestamp without time zone,YES
+email_verification_codes,used,boolean,YES
+email_verification_codes,used_at,timestamp without time zone,YES
+email_verification_codes,ip_address,character varying,YES
+favorites,id,integer,NO
+favorites,user_id,integer,NO
+favorites,favorite_user_id,integer,NO
+favorites,created_at,timestamp without time zone,YES
+feature_usage,id,integer,NO
+feature_usage,user_id,integer,NO
+feature_usage,feature_name,character varying,NO
+feature_usage,usage_count,integer,YES
+feature_usage,last_used_at,timestamp without time zone,YES
+feature_usage,metadata,jsonb,YES
+feature_usage,created_at,timestamp without time zone,YES
+fogrup_chat_participants,id,integer,NO
+fogrup_chat_participants,chat_id,integer,NO
+fogrup_chat_participants,user_id,integer,NO
+fogrup_chat_participants,role,character varying,YES
+fogrup_chat_participants,joined_at,timestamp with time zone,YES
+fogrup_chat_participants,last_read_at,timestamp with time zone,YES
+fogrup_chats,id,integer,NO
+fogrup_chats,chat_type,character varying,YES
+fogrup_chats,name,character varying,YES
+fogrup_chats,created_at,timestamp with time zone,YES
+fogrup_chats,updated_at,timestamp with time zone,YES
+fogrup_chats,last_message_at,timestamp with time zone,YES
+fogrup_messages,id,integer,NO
+fogrup_messages,chat_id,integer,NO
+fogrup_messages,sender_id,integer,NO
+fogrup_messages,text,text,NO
+fogrup_messages,is_system,boolean,YES
+fogrup_messages,status,character varying,YES
+fogrup_messages,created_at,timestamp with time zone,YES
+fogrup_messages,edited_at,timestamp with time zone,YES
+fogrup_messages,is_deleted,boolean,YES
+fogrup_notifications,id,integer,NO
+fogrup_notifications,user_id,integer,NO
+fogrup_notifications,type,character varying,NO
+fogrup_notifications,from_user_id,integer,YES
+fogrup_notifications,relationship_id,integer,YES
+fogrup_notifications,chat_id,integer,YES
+fogrup_notifications,text,text,NO
+fogrup_notifications,metadata,jsonb,YES
+fogrup_notifications,is_read,boolean,YES
+fogrup_notifications,created_at,timestamp with time zone,YES
+image_library,id,integer,NO
+image_library,user_id,integer,NO
+image_library,filename,character varying,NO
+image_library,original_name,character varying,NO
+image_library,folder_name,character varying,YES
+image_library,yandex_path,text,NO
+image_library,public_url,text,YES
+image_library,width,integer,YES
+image_library,height,integer,YES
+image_library,file_size,integer,YES
+image_library,moderation_status,character varying,NO
+image_library,moderation_score,numeric,YES
+image_library,is_shared,boolean,NO
+image_library,shared_folder_id,integer,YES
+image_library,share_requested_at,timestamp without time zone,YES
+image_library,share_approved_at,timestamp without time zone,YES
+image_library,share_approved_by,integer,YES
+image_library,created_at,timestamp without time zone,NO
+image_library,updated_at,timestamp without time zone,NO
+image_library,preview_url,text,YES
+image_library,pending_yandex_path,text,YES
+image_library,preview_placeholder,text,YES
+image_library,blurhash,text,YES
+image_rename_audit,id,bigint,NO
+image_rename_audit,image_id,integer,NO
+image_rename_audit,user_id,integer,NO
+image_rename_audit,old_name,text,NO
+image_rename_audit,new_name,text,NO
+image_rename_audit,folder_name,text,YES
+image_rename_audit,created_at,timestamp with time zone,YES
+notes,id,integer,NO
+notes,board_id,integer,NO
+notes,card_uid,character varying,NO
+notes,note_date,date,NO
+notes,content,text,YES
+notes,color,character varying,YES
+notes,created_at,timestamp with time zone,YES
+notes,updated_at,timestamp with time zone,YES
+password_resets,id,integer,NO
+password_resets,user_id,integer,NO
+password_resets,token,character varying,NO
+password_resets,expires_at,timestamp without time zone,NO
+password_resets,created_at,timestamp without time zone,YES
+pending_tribute_webhooks,id,integer,NO
+pending_tribute_webhooks,telegram_user_id,bigint,NO
+pending_tribute_webhooks,tribute_subscription_id,character varying,NO
+pending_tribute_webhooks,payload,jsonb,NO
+pending_tribute_webhooks,processed,boolean,YES
+pending_tribute_webhooks,created_at,timestamp without time zone,NO
+pending_tribute_webhooks,processed_at,timestamp without time zone,YES
+personal_id_counter,id,integer,NO
+personal_id_counter,last_issued_number,integer,NO
+personal_id_counter,updated_at,timestamp without time zone,YES
+promo_code_usages,id,integer,NO
+promo_code_usages,promo_code_id,integer,NO
+promo_code_usages,user_id,integer,YES
+promo_code_usages,used_at,timestamp without time zone,YES
+promo_code_usages,ip_address,character varying,YES
+promo_code_usages,user_agent,text,YES
+promo_codes,id,integer,NO
+promo_codes,code,character varying,NO
+promo_codes,description,text,YES
+promo_codes,discount_percent,integer,YES
+promo_codes,duration_days,integer,NO
+promo_codes,target_plan_id,integer,YES
+promo_codes,max_uses,integer,YES
+promo_codes,uses_per_user,integer,YES
+promo_codes,current_uses,integer,YES
+promo_codes,start_date,timestamp without time zone,NO
+promo_codes,end_date,timestamp without time zone,NO
+promo_codes,is_active,boolean,YES
+promo_codes,is_single_use,boolean,YES
+promo_codes,created_by,integer,YES
+promo_codes,created_at,timestamp without time zone,YES
+promo_codes,updated_at,timestamp without time zone,YES
+relationships,id,integer,NO
+relationships,initiator_id,integer,NO
+relationships,target_id,integer,NO
+relationships,type,character varying,NO
+relationships,status,character varying,NO
+relationships,created_at,timestamp with time zone,YES
+relationships,updated_at,timestamp with time zone,YES
+shared_folders,id,integer,NO
+shared_folders,name,character varying,NO
+shared_folders,created_by,integer,YES
+shared_folders,created_at,timestamp without time zone,NO
+stickers,id,integer,NO
+stickers,board_id,integer,NO
+stickers,user_id,integer,YES
+stickers,content,text,YES
+stickers,color,character varying,YES
+stickers,pos_x,integer,NO
+stickers,pos_y,integer,NO
+stickers,created_at,timestamp with time zone,YES
+stickers,updated_at,timestamp with time zone,YES
+subscription_history,id,integer,NO
+subscription_history,user_id,integer,YES
+subscription_history,plan_id,integer,NO
+subscription_history,start_date,timestamp without time zone,NO
+subscription_history,end_date,timestamp without time zone,YES
+subscription_history,source,character varying,NO
+subscription_history,promo_code_id,integer,YES
+subscription_history,amount_paid,numeric,YES
+subscription_history,payment_method,character varying,YES
+subscription_history,currency,character varying,YES
+subscription_history,transaction_id,character varying,YES
+subscription_history,created_at,timestamp without time zone,YES
+subscription_plans,id,integer,NO
+subscription_plans,name,character varying,NO
+subscription_plans,code_name,character varying,NO
+subscription_plans,description,text,YES
+subscription_plans,price_monthly,numeric,NO
+subscription_plans,price_yearly,numeric,YES
+subscription_plans,currency,character varying,YES
+subscription_plans,session_limit,integer,NO
+subscription_plans,features,jsonb,YES
+subscription_plans,is_public,boolean,YES
+subscription_plans,is_featured,boolean,YES
+subscription_plans,display_order,integer,YES
+subscription_plans,created_at,timestamp without time zone,YES
+subscription_plans,updated_at,timestamp without time zone,YES
+system_logs,id,integer,NO
+system_logs,level,character varying,NO
+system_logs,action,character varying,NO
+system_logs,user_id,integer,YES
+system_logs,details,jsonb,YES
+system_logs,ip_address,character varying,YES
+system_logs,created_at,timestamp without time zone,YES
+telegram_link_codes,id,integer,NO
+telegram_link_codes,user_id,integer,NO
+telegram_link_codes,code,character varying,NO
+telegram_link_codes,expires_at,timestamp without time zone,NO
+telegram_link_codes,used,boolean,YES
+telegram_link_codes,created_at,timestamp without time zone,YES
+tribute_subscriptions,id,integer,NO
+tribute_subscriptions,user_id,integer,YES
+tribute_subscriptions,telegram_user_id,bigint,NO
+tribute_subscriptions,tribute_subscription_id,character varying,NO
+tribute_subscriptions,plan_id,integer,YES
+tribute_subscriptions,status,character varying,NO
+tribute_subscriptions,started_at,timestamp without time zone,NO
+tribute_subscriptions,expires_at,timestamp without time zone,YES
+tribute_subscriptions,last_payment_at,timestamp without time zone,YES
+tribute_subscriptions,tribute_product_id,character varying,YES
+tribute_subscriptions,amount_paid,numeric,YES
+tribute_subscriptions,currency,character varying,YES
+tribute_subscriptions,created_at,timestamp without time zone,NO
+tribute_subscriptions,updated_at,timestamp without time zone,NO
+user_comments,id,integer,NO
+user_comments,user_id,integer,NO
+user_comments,content,text,NO
+user_comments,color,character varying,YES
+user_comments,created_at,timestamp with time zone,YES
+user_comments,updated_at,timestamp with time zone,YES
+user_verifications,id,integer,NO
+user_verifications,user_id,integer,NO
+user_verifications,full_name,character varying,NO
+user_verifications,status,character varying,NO
+user_verifications,rejection_reason,text,YES
+user_verifications,submitted_at,timestamp without time zone,YES
+user_verifications,processed_at,timestamp without time zone,YES
+user_verifications,processed_by,integer,YES
+user_verifications,referral_link,character varying,NO
+user_verifications,pending_personal_id,character varying,YES
+users,id,integer,NO
+users,email,text,NO
+users,password,text,NO
+users,created_at,timestamp without time zone,YES
+users,avatar_url,character varying,YES
+users,updated_at,timestamp without time zone,YES
+users,username,character varying,YES
+users,country,text,YES
+users,city,text,YES
+users,office,text,YES
+users,personal_id,character varying,YES
+users,phone,character varying,YES
+users,full_name,text,YES
+users,telegram_user,text,YES
+users,telegram_channel,text,YES
+users,vk_profile,text,YES
+users,ok_profile,text,YES
+users,instagram_profile,text,YES
+users,whatsapp_contact,text,YES
+users,visibility_settings,jsonb,YES
+users,search_settings,jsonb,YES
+users,subscription_expires_at,timestamp without time zone,YES
+users,subscription_started_at,timestamp without time zone,YES
+users,is_trial_used,boolean,YES
+users,payment_method,character varying,YES
+users,auto_renew,boolean,YES
+users,plan_id,integer,YES
+users,telegram_chat_id,bigint,YES
+users,role,character varying,YES
+users,boards_locked,boolean,YES
+users,boards_locked_at,timestamp without time zone,YES
+users,email_verified,boolean,YES
+users,is_verified,boolean,YES
+users,verified_at,timestamp without time zone,YES
+users,last_verification_attempt,timestamp without time zone,YES
+users,ui_preferences,jsonb,YES
+users,rank,character varying,YES
+users,fohow_role,character varying,YES
+users,blocked_users,jsonb,YES
+users,bio,text,YES
+users,website,character varying,YES
+users,grace_period_until,timestamp without time zone,YES
+verified_emails,id,integer,NO
+verified_emails,email,character varying,NO
+verified_emails,first_verified_at,timestamp without time zone,NO
+verified_emails,user_id,integer,YES
+verified_emails,notes,text,YES
+verified_emails,created_at,timestamp without time zone,YES
