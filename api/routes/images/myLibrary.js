@@ -677,16 +677,9 @@ export function registerMyLibraryRoutes(app) {
       schema: {
         tags: ['Images'],
         summary: 'Загрузить изображение',
-        description: 'Загружает изображение в личную библиотеку пользователя на Яндекс.Диск',
+        description: 'Загружает изображение в личную библиотеку пользователя на Яндекс.Диск. Multipart form-data: file (обязательно, image/webp|jpeg|png|gif, макс. 5MB), folder (опционально, string — название папки), width (опционально, integer), height (опционально, integer)',
         security: [{ bearerAuth: [] }],
         consumes: ['multipart/form-data'],
-        body: {
-          type: 'object',
-          properties: {
-            file: { type: 'string', format: 'binary' },
-            folder: { type: 'string' }
-          }
-        },
         response: {
           200: {
             type: 'object',

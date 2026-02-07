@@ -28,7 +28,7 @@
 - GET /api/images/my/folders — Список папок личной библиотеки
 - POST /api/images/my/folders — Создание папки (body: { folder_name: string })
 - GET /api/images/my/stats — Статистика использования
-- POST /api/images/upload — Загрузка изображения
+- POST /api/images/upload — Загрузка изображения (multipart/form-data: file — обязательно, folder/width/height — опционально). Body schema НЕ используется — multipart обрабатывается через req.file() в handler
 - DELETE /api/images/:id — Удаление изображения
 - PATCH /api/images/:id/rename — Переименование изображения
 - POST /api/images/:id/share-request — Отправка на модерацию
@@ -50,7 +50,17 @@
 - image_library — изображения (личные и общие)
 - shared_folders — папки общей библиотеки
 
+## Важные технические ограничения
+
+### Multipart-эндпоинты в Fastify 5
+При использовании `@fastify/multipart` нельзя указывать `body` в schema.
+Multipart-данные обрабатываются через `req.file()` внутри handler'а,
+а не через стандартную AJV-валидацию. Описание полей формы следует
+размещать в поле `description` schema для отображения в Swagger.
+Эталон: загрузка аватара в `api/routes/profile.js`.
+
 ## История изменений
 - 2026-02-07: Исправлена schema для POST /api/images/my/folders (folder_name вместо name)
 - 2026-02-07: Исправлена response schema для GET /api/images/shared (folders вместо images)
 - 2026-02-07: Добавлено отображение изображений без привязки к папке ("Без категории")
+- 2026-02-07: Удалён body schema из POST /api/images/upload (multipart несовместим с AJV-валидацией в Fastify 5)
