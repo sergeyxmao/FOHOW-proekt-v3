@@ -231,9 +231,14 @@ export function registerMyLibraryRoutes(app) {
         security: [{ bearerAuth: [] }],
         body: {
           type: 'object',
-          required: ['name'],
+          required: ['folder_name'],
           properties: {
-            name: { type: 'string' }
+            folder_name: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 255,
+              description: 'Название папки'
+            }
           }
         },
         response: {
