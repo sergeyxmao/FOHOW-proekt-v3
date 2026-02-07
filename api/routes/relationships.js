@@ -24,7 +24,7 @@ export async function registerRelationshipRoutes(app) {
         201: {
           type: 'object',
           properties: {
-            relationship: { type: 'object' }
+            relationship: { type: 'object', additionalProperties: true }
           }
         },
         400: { type: 'object', properties: { error: { type: 'string' } } },
@@ -113,7 +113,7 @@ export async function registerRelationshipRoutes(app) {
         200: {
           type: 'object',
           properties: {
-            relationship: { type: 'object' }
+            relationship: { type: 'object', additionalProperties: true }
           }
         },
         400: { type: 'object', properties: { error: { type: 'string' } } },
@@ -234,7 +234,7 @@ export async function registerRelationshipRoutes(app) {
           properties: {
             relationships: {
               type: 'array',
-              items: { type: 'object' }
+              items: { type: 'object', additionalProperties: true }
             }
           }
         },

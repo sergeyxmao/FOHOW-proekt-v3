@@ -230,7 +230,7 @@ export function registerBoardPartnerRoutes(app) {
               type: 'array',
               items: {
                 type: 'object',
-                properties: {}
+                additionalProperties: true
               }
             }
           }

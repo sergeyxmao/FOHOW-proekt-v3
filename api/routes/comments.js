@@ -31,7 +31,7 @@ export function registerCommentRoutes(app) {
               type: 'array',
               items: {
                 type: 'object',
-                properties: {}
+                additionalProperties: true
               }
             }
           }
@@ -80,7 +80,7 @@ export function registerCommentRoutes(app) {
         201: {
           type: 'object',
           properties: {
-            comment: { type: 'object', properties: {} }
+            comment: { type: 'object', additionalProperties: true }
           }
         },
         400: { type: 'object', properties: { error: { type: 'string' } } },
@@ -144,7 +144,7 @@ export function registerCommentRoutes(app) {
         200: {
           type: 'object',
           properties: {
-            comment: { type: 'object', properties: {} }
+            comment: { type: 'object', additionalProperties: true }
           }
         },
         400: { type: 'object', properties: { error: { type: 'string' } } },

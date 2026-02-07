@@ -245,7 +245,7 @@ export function registerSharedRoutes(app) {
           200: {
             type: 'object',
             properties: {
-              images: { type: 'array', items: { type: 'object' } },
+              images: { type: 'array', items: { type: 'object', additionalProperties: true } },
               total: { type: 'integer' },
               page: { type: 'integer' },
               limit: { type: 'integer' }

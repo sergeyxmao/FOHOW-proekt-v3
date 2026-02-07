@@ -17,7 +17,7 @@ export async function registerUserRoutes(app) {
           type: 'object',
           properties: {
             success: { type: 'boolean' },
-            user: { type: 'object' }
+            user: { type: 'object', additionalProperties: true }
           }
         },
         401: {
@@ -188,7 +188,7 @@ export async function registerUserRoutes(app) {
           type: 'object',
           properties: {
             success: { type: 'boolean' },
-            visibility_settings: { type: 'object' }
+            visibility_settings: { type: 'object', additionalProperties: true }
           }
         },
         400: {
@@ -272,7 +272,7 @@ export async function registerUserRoutes(app) {
           type: 'object',
           properties: {
             success: { type: 'boolean' },
-            search_settings: { type: 'object' }
+            search_settings: { type: 'object', additionalProperties: true }
           }
         },
         400: {
@@ -364,7 +364,7 @@ export async function registerUserRoutes(app) {
           type: 'object',
           properties: {
             success: { type: 'boolean' },
-            user: { type: 'object' }
+            user: { type: 'object', additionalProperties: true }
           }
         },
         400: {

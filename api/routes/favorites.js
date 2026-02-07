@@ -66,7 +66,7 @@ export function registerFavoriteRoutes(app, pool, authenticateToken) {
           type: 'object',
           properties: {
             success: { type: 'boolean' },
-            favorite: { type: 'object' }
+            favorite: { type: 'object', additionalProperties: true }
           }
         },
         400: { type: 'object', properties: { error: { type: 'string' } } },

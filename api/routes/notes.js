@@ -30,7 +30,7 @@ export function registerNoteRoutes(app) {
               type: 'array',
               items: {
                 type: 'object',
-                properties: {}
+                additionalProperties: true
               }
             }
           }
@@ -95,7 +95,7 @@ export function registerNoteRoutes(app) {
         200: {
           type: 'object',
           properties: {
-            note: { type: 'object', properties: {} },
+            note: { type: 'object', additionalProperties: true },
             deleted: { type: 'boolean' }
           }
         },

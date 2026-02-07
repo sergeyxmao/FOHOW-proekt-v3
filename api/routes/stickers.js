@@ -144,7 +144,7 @@ export function registerStickerRoutes(app) {
         201: {
           type: 'object',
           properties: {
-            sticker: { type: 'object', properties: {} }
+            sticker: { type: 'object', additionalProperties: true }
           }
         },
         400: { type: 'object', properties: { error: { type: 'string' } } },
@@ -244,7 +244,7 @@ export function registerStickerRoutes(app) {
         200: {
           type: 'object',
           properties: {
-            sticker: { type: 'object', properties: {} }
+            sticker: { type: 'object', additionalProperties: true }
           }
         },
         401: { type: 'object', properties: { error: { type: 'string' } } },
