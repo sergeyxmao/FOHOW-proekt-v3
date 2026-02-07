@@ -171,8 +171,10 @@ app.setErrorHandler((error, request, reply) => {
   console.error('[GLOBAL ERROR HANDLER]', {
     url: request.url,
     method: request.method,
-    error: error.message,
-    stack: error.stack
+    statusCode: error.statusCode || 500,
+    error: error.message || String(error) || 'Unknown error',
+    stack: error.stack || 'No stack trace',
+    name: error.name || 'UnknownError'
   });
 
   // В режиме разработки отправляем детальную информацию

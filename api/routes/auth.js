@@ -123,7 +123,10 @@ export function registerAuthRoutes(app) {
         },
         429: {
           type: 'object',
-          properties: { error: { type: 'string' } }
+          properties: {
+            error: { type: 'string' },
+            retryAfter: { type: 'integer', description: 'Секунд до снятия ограничения' }
+          }
         },
         500: {
           type: 'object',
@@ -133,9 +136,12 @@ export function registerAuthRoutes(app) {
     },
     config: {
       rateLimit: {
-        max: 3,
+        max: 15,
         timeWindow: '5 minutes',
-        errorResponseBuilder: () => ({ error: 'Слишком много попыток. Попробуйте позже.' })
+        errorResponseBuilder: (req, context) => ({
+          error: 'Слишком много запросов. Попробуйте позже.',
+          retryAfter: Math.ceil(context.ttl / 1000)
+        })
       }
     }
   }, async (req, reply) => {
