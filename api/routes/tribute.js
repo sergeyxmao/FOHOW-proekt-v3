@@ -41,7 +41,7 @@ export function registerTributeRoutes(app) {
           properties: {
             success: { type: 'boolean' },
             received: { type: 'string' },
-            result: { type: 'object' }
+            result: { type: 'object', additionalProperties: true }
           }
         },
         400: { type: 'object', properties: { error: { type: 'string' } } },

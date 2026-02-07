@@ -476,7 +476,7 @@ export function registerMyLibraryRoutes(app) {
           200: {
             type: 'object',
             properties: {
-              images: { type: 'array', items: { type: 'object' } },
+              images: { type: 'array', items: { type: 'object', additionalProperties: true } },
               total: { type: 'integer' },
               page: { type: 'integer' },
               limit: { type: 'integer' }
@@ -1241,7 +1241,7 @@ export function registerMyLibraryRoutes(app) {
             type: 'object',
             properties: {
               success: { type: 'boolean' },
-              image: { type: 'object' }
+              image: { type: 'object', additionalProperties: true }
             }
           },
           400: { type: 'object', properties: { error: { type: 'string' } } },

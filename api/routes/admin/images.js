@@ -1613,7 +1613,7 @@ await pool.query(
         200: {
           type: 'object',
           properties: {
-            image: { type: 'object' },
+            image: { type: 'object', additionalProperties: true },
             boards_updated: { type: 'integer' }
           }
         },
