@@ -66,6 +66,11 @@
           <AdminSharedLibrary />
         </div>
 
+        <!-- Вкладка: Swagger API -->
+        <div v-if="activeTab === 'swagger'" class="tab-content swagger-tab">
+          <iframe :src="swaggerUrl" class="swagger-iframe"></iframe>
+        </div>
+
         <!-- Вкладка: ER-диаграмма -->
         <div v-if="activeTab === 'er-diagram'" class="tab-content er-diagram-tab">
           <iframe src="/er-diagram.html" class="er-diagram-iframe"></iframe>
@@ -82,7 +87,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '../stores/admin'
 import { useAuthStore } from '../stores/auth'
@@ -99,6 +104,11 @@ const route = useRoute()
 const adminStore = useAdminStore()
 const authStore = useAuthStore()
 
+const swaggerUrl = computed(() => {
+  const token = authStore.token
+  return token ? `/api/docs?token=${token}` : '/api/docs'
+})
+
 const tabs = [
   { id: 'stats', label: 'Статистика' },
   { id: 'users', label: 'Пользователи' },
@@ -107,6 +117,7 @@ const tabs = [
   { id: 'moderation', label: 'Модерация изображений' },
   { id: 'library', label: 'Общая библиотека' },
   { id: 'logs', label: 'Логи' },
+  { id: 'swagger', label: 'Swagger API' },
   { id: 'er-diagram', label: 'ER-диаграмма' }
 ]
 const tabIds = tabs.map((tab) => tab.id)
@@ -335,6 +346,18 @@ watch(
 }
 
 .er-diagram-iframe {
+  width: 100%;
+  height: calc(100vh - 160px);
+  border: none;
+  border-radius: 0 0 8px 8px;
+}
+
+.swagger-tab {
+  padding: 0 !important;
+  margin: -20px;
+}
+
+.swagger-iframe {
   width: 100%;
   height: calc(100vh - 160px);
   border: none;
