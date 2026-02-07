@@ -52,6 +52,13 @@
 
 ## Важные технические ограничения
 
+### Response schema в Fastify 5
+Response schema в Fastify 5 используется для сериализации (`fast-json-stringify`),
+а не только для документации. Это означает:
+- Все поля handler'а ОБЯЗАНЫ быть описаны в response schema — иначе удаляются
+- Типы ОБЯЗАНЫ совпадать с реальными значениями — несоответствие ломает данные
+- При добавлении нового поля в handler — обязательно обновить response schema
+
 ### Multipart-эндпоинты в Fastify 5
 При использовании `@fastify/multipart` нельзя указывать `body` в schema.
 Multipart-данные обрабатываются через `req.file()` внутри handler'а,
@@ -64,3 +71,5 @@ Multipart-данные обрабатываются через `req.file()` вн
 - 2026-02-07: Исправлена response schema для GET /api/images/shared (folders вместо images)
 - 2026-02-07: Добавлено отображение изображений без привязки к папке ("Без категории")
 - 2026-02-07: Удалён body schema из POST /api/images/upload (multipart несовместим с AJV-валидацией в Fastify 5)
+- 2026-02-07: Исправлена response schema GET /api/images/my (items+pagination вместо images+total)
+- 2026-02-07: Исправлена response schema GET /api/images/my/stats (usage+limits+planName)

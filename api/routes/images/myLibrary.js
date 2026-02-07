@@ -323,14 +323,35 @@ export function registerMyLibraryRoutes(app) {
           200: {
             type: 'object',
             properties: {
-              totalImages: { type: 'integer' },
-              totalSize: { type: 'integer' },
-              usedSpace: { type: 'string' },
-              maxSpace: { type: 'string' },
-              folders: { type: 'integer' }
+              usage: {
+                type: 'object',
+                properties: {
+                  files: { type: 'integer' },
+                  folders: { type: 'integer' },
+                  storageBytes: { type: 'integer' },
+                  storageMB: { type: 'number' }
+                }
+              },
+              limits: {
+                type: 'object',
+                properties: {
+                  files: { type: 'integer' },
+                  storageMB: { type: 'integer' },
+                  folders: { type: 'integer' }
+                }
+              },
+              planName: { type: 'string' }
             }
           },
           401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+              code: { type: 'string' },
+              upgradeRequired: { type: 'boolean' }
+            }
+          },
           500: { type: 'object', properties: { error: { type: 'string' } } }
         }
       }
@@ -481,13 +502,45 @@ export function registerMyLibraryRoutes(app) {
           200: {
             type: 'object',
             properties: {
-              images: { type: 'array', items: { type: 'object', additionalProperties: true } },
-              total: { type: 'integer' },
-              page: { type: 'integer' },
-              limit: { type: 'integer' }
+              success: { type: 'boolean' },
+              items: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'integer' },
+                    original_name: { type: 'string' },
+                    filename: { type: 'string' },
+                    folder_name: { type: 'string', nullable: true },
+                    public_url: { type: 'string', nullable: true },
+                    preview_url: { type: 'string', nullable: true },
+                    width: { type: 'integer', nullable: true },
+                    height: { type: 'integer', nullable: true },
+                    file_size: { type: 'integer', nullable: true },
+                    created_at: { type: 'string', format: 'date-time' }
+                  }
+                }
+              },
+              pagination: {
+                type: 'object',
+                properties: {
+                  page: { type: 'integer' },
+                  limit: { type: 'integer' },
+                  total: { type: 'integer' }
+                }
+              }
             }
           },
+          400: { type: 'object', properties: { error: { type: 'string' } } },
           401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+              code: { type: 'string' },
+              upgradeRequired: { type: 'boolean' }
+            }
+          },
           500: { type: 'object', properties: { error: { type: 'string' } } }
         }
       }
