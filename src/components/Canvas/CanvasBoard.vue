@@ -2141,6 +2141,8 @@ watch(() => boardStore.currentBoardId, (newBoardId, oldBoardId) => {
 
   if (oldBoardId && oldBoardId !== newBoardId) {
     anchorsStore.reset();
+    // Мгновенно очищаем стикеры старой доски, чтобы они не мелькали на новой.
+    // loadStickers() в loadBoard() затем загрузит правильные данные из content.
     stickersStore.clearStickers();
   }
 
