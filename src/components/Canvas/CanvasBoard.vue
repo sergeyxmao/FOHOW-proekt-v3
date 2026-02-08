@@ -3412,10 +3412,16 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 }
 .marketing-watermark:hover {
   transform: translateY(-1px);
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 18px 36px rgba(255, 193, 7, 0.4);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
 }
 .marketing-watermark--modern:hover {
-  box-shadow: 0 24px 44px rgba(6, 11, 21, 0.65);
+  box-shadow: 0 24px 44px rgba(255, 193, 7, 0.5);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
 }
 
 .marketing-watermark:active {
