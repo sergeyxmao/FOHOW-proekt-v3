@@ -967,13 +967,7 @@ async function handleAddLicense() {
     return
   }
 
-  const canProceed = await ensureStructureExists(() => {
-    cardsStore.addCard({
-      type: 'small',
-      headerBg: headerColor.value,
-      colorIndex: headerColorIndex.value
-    })
-  })
+  const canProceed = await ensureStructureExists()
 
   if (canProceed && currentBoardId.value !== null) {
     cardsStore.addCard({
@@ -990,13 +984,7 @@ async function handleAddLower() {
     return
   }
 
-  const canProceed = await ensureStructureExists(() => {
-    cardsStore.addCard({
-      type: 'large',
-      headerBg: headerColor.value,
-      colorIndex: headerColorIndex.value
-    })
-  })
+  const canProceed = await ensureStructureExists()
 
   if (canProceed && currentBoardId.value !== null) {
     cardsStore.addCard({
@@ -1013,11 +1001,7 @@ async function handleAddGold() {
     return
   }
 
-  const canProceed = await ensureStructureExists(() => {
-    cardsStore.addCard({
-      type: 'gold'
-    })
-  })
+  const canProceed = await ensureStructureExists()
 
   if (canProceed && currentBoardId.value !== null) {
     cardsStore.addCard({
@@ -1027,17 +1011,7 @@ async function handleAddGold() {
 }
 
 async function handleAddTemplate(templateId) {
-  const canProceed = await ensureStructureExists(async () => {
-    if (!templateId) {
-      cardsStore.addCard({
-        type: 'large',
-        headerBg: headerColor.value,
-        colorIndex: headerColorIndex.value
-      })
-    } else {
-      console.log('Template selected:', templateId)
-    }
-  })
+  const canProceed = await ensureStructureExists()
 
   if (canProceed && currentBoardId.value !== null) {
     if (!templateId) {
@@ -1057,9 +1031,7 @@ function handleMobileExportHTML() {
 }
 
 async function handleMobileLoadJSON() {
-  const canProceed = await ensureStructureExists(() => {
-    handleLoadProject()
-  })
+  const canProceed = await ensureStructureExists()
 
   if (canProceed) {
     handleLoadProject()

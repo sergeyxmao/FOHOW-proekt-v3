@@ -245,13 +245,44 @@ export function registerSharedRoutes(app) {
           200: {
             type: 'object',
             properties: {
-              images: { type: 'array', items: { type: 'object' } },
-              total: { type: 'integer' },
-              page: { type: 'integer' },
-              limit: { type: 'integer' }
+              folders: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'integer', nullable: true, description: 'ID папки (null для "Без категории")' },
+                    name: { type: 'string', description: 'Название папки' },
+                    images: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          id: { type: 'integer' },
+                          original_name: { type: 'string' },
+                          public_url: { type: 'string', nullable: true },
+                          preview_url: { type: 'string', nullable: true },
+                          width: { type: 'integer', nullable: true },
+                          height: { type: 'integer', nullable: true },
+                          file_size: { type: 'integer', nullable: true },
+                          author_full_name: { type: 'string', nullable: true },
+                          author_personal_id: { type: 'string', nullable: true }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           },
           401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+              code: { type: 'string' },
+              upgradeRequired: { type: 'boolean' }
+            }
+          },
           500: { type: 'object', properties: { error: { type: 'string' } } }
         }
       }
@@ -345,6 +376,36 @@ export function registerSharedRoutes(app) {
             id: folder.id,
             name: folder.name,
             images: imagesResult.rows
+          });
+        }
+
+        // Получаем «несортированные» изображения (без привязки к папке)
+        const unsortedImagesResult = await pool.query(
+          `
+          SELECT
+            il.id,
+            il.original_name,
+            il.public_url,
+            il.preview_url,
+            il.width,
+            il.height,
+            il.file_size,
+            u.full_name AS author_full_name,
+            u.personal_id AS author_personal_id
+          FROM image_library il
+          JOIN users u ON il.user_id = u.id
+          WHERE il.is_shared = TRUE
+            AND il.shared_folder_id IS NULL
+          ORDER BY il.created_at DESC
+          `
+        );
+
+        // Если есть несортированные изображения, добавляем их как виртуальную папку
+        if (unsortedImagesResult.rows.length > 0) {
+          folders.push({
+            id: null,
+            name: 'Без категории',
+            images: unsortedImagesResult.rows
           });
         }
 

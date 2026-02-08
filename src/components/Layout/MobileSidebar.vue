@@ -282,12 +282,12 @@ onBeforeUnmount(() => {
 .mobile-sidebar {
   position: fixed;
   right: 8px;
-  top: 50%;
+  top: calc(50% - 28px);
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   gap: 12px;
-  z-index: 900;
+  z-index: 1100;
 }
 
 .mobile-sidebar-item {

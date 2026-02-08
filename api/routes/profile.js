@@ -76,9 +76,9 @@ export function registerProfileRoutes(app) {
                 instagram_profile: { type: 'string', nullable: true },
                 whatsapp_contact: { type: 'string', nullable: true },
                 website: { type: 'string', nullable: true },
-                visibility_settings: { type: 'object', nullable: true },
-                search_settings: { type: 'object', nullable: true },
-                ui_preferences: { type: 'object', nullable: true },
+                visibility_settings: { type: 'object', nullable: true, additionalProperties: true },
+                search_settings: { type: 'object', nullable: true, additionalProperties: true },
+                ui_preferences: { type: 'object', nullable: true, additionalProperties: true },
                 subscription_started_at: { type: 'string', format: 'date-time', nullable: true },
                 subscription_expires_at: { type: 'string', format: 'date-time', nullable: true },
                 grace_period_until: { type: 'string', format: 'date-time', nullable: true },
@@ -90,7 +90,7 @@ export function registerProfileRoutes(app) {
                   properties: {
                     id: { type: 'integer' },
                     name: { type: 'string' },
-                    features: { type: 'object' }
+                    features: { type: 'object', additionalProperties: true }
                   }
                 }
               }
@@ -231,7 +231,7 @@ export function registerProfileRoutes(app) {
           type: 'object',
           properties: {
             success: { type: 'boolean' },
-            user: { type: 'object' },
+            user: { type: 'object', additionalProperties: true },
             verificationRevoked: { type: 'boolean', description: 'Верификация была снята из-за изменения критических полей' }
           }
         },
@@ -572,7 +572,7 @@ export function registerProfileRoutes(app) {
           type: 'object',
           properties: {
             success: { type: 'boolean' },
-            search_settings: { type: 'object' }
+            search_settings: { type: 'object', additionalProperties: true }
           }
         },
         400: {

@@ -181,6 +181,7 @@ const handleProfileClick = () => {
   padding-left: calc(8px + env(safe-area-inset-left, 0));
   padding-right: calc(8px + env(safe-area-inset-right, 0));
   z-index: 1000;
+  pointer-events: none;
 }
 
 .mobile-toolbar--dark {
@@ -233,7 +234,8 @@ const handleProfileClick = () => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   text-decoration: none;
   flex-shrink: 0;
-  transform: scale(var(--menu-scale, 1));  
+  transform: scale(var(--menu-scale, 1));
+  pointer-events: auto;
 }
 .mobile-toolbar--scaled .mobile-toolbar-button {
   transform: scale(var(--menu-scale, 1));

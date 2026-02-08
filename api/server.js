@@ -168,19 +168,29 @@ await app.register(swaggerUi, {
 // ГЛОБАЛЬНЫЙ ОБРАБОТЧИК ОШИБОК
 // ============================================
 app.setErrorHandler((error, request, reply) => {
+  // Rate-limit: errorResponseBuilder возвращает plain object без .stack
+  // Пробрасываем как 429 без логирования (это штатное поведение, не ошибка)
+  if (error && typeof error === 'object' && !error.stack && error.retryAfter !== undefined) {
+    return reply.code(429).send(error);
+  }
+
+  // Все остальные ошибки — логируем и отвечаем
+  const statusCode = error.statusCode || 500;
+
   console.error('[GLOBAL ERROR HANDLER]', {
     url: request.url,
     method: request.method,
-    error: error.message,
-    stack: error.stack
+    statusCode,
+    error: error.message || String(error) || 'Unknown error',
+    stack: error.stack || 'No stack trace',
+    name: error.name || 'UnknownError'
   });
 
-  // В режиме разработки отправляем детальную информацию
   const errorMessage = process.env.NODE_ENV === 'development'
     ? `Ошибка сервера: ${error.message}`
     : 'Ошибка сервера. Попробуйте позже';
 
-  reply.code(500).send({ error: errorMessage });
+  reply.code(statusCode).send({ error: errorMessage });
 });
 
 // ============================================

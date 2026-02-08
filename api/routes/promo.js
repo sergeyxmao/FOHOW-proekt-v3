@@ -41,7 +41,7 @@ export function registerPromoRoutes(app) {
               properties: {
                 planId: { type: 'integer' },
                 planName: { type: 'string' },
-                features: { type: 'object' },
+                features: { type: 'object', additionalProperties: true },
                 expiresAt: { type: 'string', format: 'date-time' },
                 durationDays: { type: 'integer' }
               }

@@ -111,7 +111,7 @@ export function registerAnchorRoutes(app) {
           201: {
             type: 'object',
             properties: {
-              anchor: { type: 'object', properties: {} }
+              anchor: { type: 'object', additionalProperties: true }
             }
           },
           400: { type: 'object', properties: { error: { type: 'string' } } },
@@ -188,7 +188,7 @@ export function registerAnchorRoutes(app) {
           200: {
             type: 'object',
             properties: {
-              anchor: { type: 'object', properties: {} }
+              anchor: { type: 'object', additionalProperties: true }
             }
           },
           401: { type: 'object', properties: { error: { type: 'string' } } },

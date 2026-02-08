@@ -141,12 +141,14 @@ app.post('/api/example', {
       }
     },
     // Schema ответов
+    // ВАЖНО: объекты без явных properties ОБЯЗАНЫ иметь additionalProperties: true
+    // иначе Fastify вырежет все поля при сериализации (см. раздел ниже)
     response: {
       200: {
         type: 'object',
         properties: {
           success: { type: 'boolean' },
-          data: { type: 'object' }
+          data: { type: 'object', additionalProperties: true }
         }
       },
       400: {
@@ -288,6 +290,48 @@ await app.register(helmet, {
 3. Делает redirect на чистый `/api/docs/`
 
 Без `?token=` в URL `resolveUrl('./json')` корректно разрешается в `/api/docs/json`.
+
+### Response schema сериализация: пустые объекты вместо данных
+
+**Проблема:** Fastify использует response schema для сериализации ответа через `fast-json-stringify`. Когда объект в response schema описан как `{ type: 'object' }` без `properties` и без `additionalProperties: true`, сериализатор удаляет все поля из объекта и возвращает `{}`.
+
+Например, PostgreSQL возвращает `{id: 5, name: "Структура", owner_id: 1}`, но API отдает `{}`.
+
+**Корневая причина:** `fast-json-stringify` при `type: 'object'` без `properties` и `additionalProperties` считает, что объект не должен содержать полей, и вырезает их при сериализации.
+
+**Решение:** Для всех объектов в response schema, у которых не перечислены явные `properties`, **ОБЯЗАТЕЛЬНО** добавлять `additionalProperties: true`.
+
+**Неправильно:**
+```javascript
+response: {
+  200: {
+    type: 'object',
+    properties: {
+      board: { type: 'object' }                    // Вернёт {}
+      note: { type: 'object', properties: {} }     // Вернёт {}
+      data: { type: 'object', nullable: true }     // Вернёт null или {}
+    }
+  }
+}
+```
+
+**Правильно:**
+```javascript
+response: {
+  200: {
+    type: 'object',
+    properties: {
+      board: { type: 'object', additionalProperties: true }                    // Вернёт все поля
+      note: { type: 'object', additionalProperties: true }                     // Вернёт все поля
+      data: { type: 'object', nullable: true, additionalProperties: true }     // Вернёт все поля или null
+    }
+  }
+}
+```
+
+**Альтернатива:** Вместо `additionalProperties: true` можно перечислить все поля объекта в `properties` — тогда сериализатор пропустит только описанные поля (строгая типизация).
+
+**Важно:** НЕ добавлять `additionalProperties: true` в `body`, `params` или `querystring` schema — там это ослабит валидацию входных данных. Исправление касается ТОЛЬКО `response` schema.
 
 ### Защита /api/docs блокирует подресурсы
 

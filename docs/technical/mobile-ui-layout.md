@@ -1,0 +1,97 @@
+# Мобильный UI — расположение и z-index фиксированных элементов
+
+## Описание
+
+Мобильный интерфейс приложения состоит из трёх фиксированных (position: fixed) компонентов, которые отображаются поверх основного холста (canvas):
+
+- **MobileHeader** — верхняя панель с названием проекта и навигацией
+- **MobileSidebar** — правая боковая панель с кнопками добавления карточек (лицензии, шаблоны)
+- **MobileToolbar** — нижняя панель инструментов (сохранение, тема, масштаб)
+
+## Расположение файлов
+
+| Компонент | Файл |
+|-----------|------|
+| MobileHeader | `src/components/Layout/MobileHeader.vue` |
+| MobileSidebar | `src/components/Layout/MobileSidebar.vue` |
+| MobileToolbar | `src/components/Layout/MobileToolbar.vue` |
+
+## Технические детали
+
+### Таблица z-index
+
+| Компонент | z-index | Назначение |
+|-----------|---------|------------|
+| MobileHeader | 1000 | Верхняя панель |
+| MobileHeader (модальные элементы) | 2500 | Выпадающие меню, диалоги хедера |
+| MobileToolbar | 1000 | Нижняя панель инструментов |
+| MobileSidebar | 1100 | Боковая панель с кнопками карточек |
+| MobileSidebar (меню шаблонов) | 1000 | Выпадающее меню выбора шаблона |
+
+### Позиционирование
+
+**MobileHeader:**
+- `position: fixed; top: 0; left: 0; right: 0`
+- Высота: 56px (52px на экранах <= 480px)
+
+**MobileSidebar:**
+- `position: fixed; right: 8px; top: calc(50% - 28px); transform: translateY(-50%)`
+- Смещение `top` на 28px вверх компенсирует высоту MobileToolbar (56px / 2), чтобы кнопки сайдбара не попадали в зону нижней панели
+- На экранах <= 480px: `right: 6px`
+
+**MobileToolbar:**
+- `position: fixed; bottom: 0; left: 0; right: 0`
+- Высота: 56px (52px на экранах <= 480px)
+- `pointer-events: none` на контейнере — прозрачная область не перехватывает touch-события
+- `pointer-events: auto` на кнопках (`.mobile-toolbar-button`) — кнопки остаются интерактивными
+- Фон: `transparent` (кнопки имеют собственный непрозрачный фон)
+
+### pointer-events
+
+MobileToolbar занимает всю ширину экрана, но имеет прозрачный фон. Чтобы прозрачная область не перехватывала touch-события от элементов с меньшим z-index:
+
+- `.mobile-toolbar` — `pointer-events: none`
+- `.mobile-toolbar-button` — `pointer-events: auto`
+
+Это позволяет нажатиям на кнопки MobileSidebar проходить сквозь прозрачную область тулбара.
+
+## Логика добавления карточек в мобильной версии
+
+### Поток данных
+
+```
+MobileSidebar (кнопка □/⧠/★/⧉)
+  → emit('add-license' | 'add-lower' | 'add-gold' | 'add-template')
+    → App.vue: handleAddLicense / handleAddLower / handleAddGold / handleAddTemplate
+      → ensureStructureExists()  // гарантирует наличие доски
+      → cardsStore.addCard(...)  // добавляет карточку ровно один раз
+```
+
+### ensureStructureExists()
+
+Функция `ensureStructureExists()` (определена в `src/App.vue`) гарантирует, что доска (board) существует перед выполнением действия:
+
+1. **Доска уже есть** (`currentBoardId !== null`) — возвращает `true` немедленно
+2. **Мобильный режим, доски нет** — автоматически создаёт доску с именем «Структура DD.MM.YYYY» через API `POST /boards`, возвращает `true`
+3. **Десктоп, доски нет** — показывает модальное окно для ввода имени, создаёт доску после подтверждения
+
+Карточка добавляется **только после** успешного возврата `ensureStructureExists()`, в основном потоке обработчика. Callback в `ensureStructureExists` **не используется** для добавления карточек — это предотвращает дублирование.
+
+### Важно
+
+- `ensureStructureExists()` вызывается **без callback** из обработчиков добавления карточек
+- Единственное место, где callback используется — `saveCurrentBoard()`, для рекурсивного вызова сохранения после создания доски
+- Десктопные компоненты (`RightPanel.vue`, `HeaderActions.vue`) вызывают `cardsStore.addCard()` напрямую без `ensureStructureExists`
+
+## Известные ограничения
+
+- **Минимальная ширина экрана:** 320px. На экранах уже 320px кнопки сайдбара могут визуально перекрываться с краем экрана
+- **Зоны перекрытия:** На экранах с малой высотой (< 500px) нижние кнопки сайдбара могут визуально пересекаться с зоной тулбара. Благодаря `pointer-events: none` на контейнере тулбара и повышенному `z-index: 1100` сайдбара, touch-события корректно обрабатываются сайдбаром
+- **Safe area insets:** MobileToolbar учитывает `env(safe-area-inset-bottom)` для устройств с «чёлкой» или скруглёнными углами
+
+## История изменений
+
+| Дата | Описание |
+|------|----------|
+| 2026-02-07 | Исправлено перекрытие touch-областей MobileSidebar и MobileToolbar: z-index сайдбара поднят с 900 до 1100; добавлен `pointer-events: none` на контейнер тулбара и `pointer-events: auto` на кнопки; сайдбар смещён вверх на 28px (`top: calc(50% - 28px)`) для уменьшения визуального перекрытия с зоной тулбара |
+| 2026-02-07 | Исправлено дублирование карточек при добавлении на пустом холсте: убран callback из `ensureStructureExists()` в обработчиках `handleAddLicense`, `handleAddLower`, `handleAddGold`, `handleAddTemplate`, `handleMobileLoadJSON` — карточка теперь добавляется ровно один раз после создания доски |

@@ -45,7 +45,7 @@ export function registerPlanRoutes(app) {
                 priceMonthly: { type: 'number' }
               }
             },
-            features: { type: 'object' },
+            features: { type: 'object', additionalProperties: true },
             usage: {
               type: 'object',
               properties: {
@@ -184,7 +184,7 @@ export function registerPlanRoutes(app) {
                   description: { type: 'string', nullable: true },
                   price_monthly: { type: 'number', nullable: true },
                   price_yearly: { type: 'number', nullable: true },
-                  features: { type: 'object' },
+                  features: { type: 'object', additionalProperties: true },
                   display_order: { type: 'integer' },
                   is_public: { type: 'boolean' },
                   created_at: { type: 'string', format: 'date-time' },

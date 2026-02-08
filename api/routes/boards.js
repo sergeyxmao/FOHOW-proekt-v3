@@ -175,7 +175,7 @@ export function registerBoardRoutes(app) {
                 owner_id: { type: 'integer' },
                 name: { type: 'string' },
                 description: { type: 'string', nullable: true },
-                content: { type: 'object', nullable: true },
+                content: { type: 'object', nullable: true, additionalProperties: true },
                 thumbnail_url: { type: 'string', nullable: true },
                 is_public: { type: 'boolean' },
                 created_at: { type: 'string', format: 'date-time' },
@@ -280,7 +280,7 @@ export function registerBoardRoutes(app) {
         200: {
           type: 'object',
           properties: {
-            board: { type: 'object' }
+            board: { type: 'object', additionalProperties: true }
           }
         },
         401: { type: 'object', properties: { error: { type: 'string' } } },
@@ -345,7 +345,7 @@ export function registerBoardRoutes(app) {
         200: {
           type: 'object',
           properties: {
-            board: { type: 'object' }
+            board: { type: 'object', additionalProperties: true }
           }
         },
         401: { type: 'object', properties: { error: { type: 'string' } } },
@@ -572,7 +572,7 @@ export function registerBoardRoutes(app) {
         200: {
           type: 'object',
           properties: {
-            board: { type: 'object' }
+            board: { type: 'object', additionalProperties: true }
           }
         },
         401: { type: 'object', properties: { error: { type: 'string' } } },

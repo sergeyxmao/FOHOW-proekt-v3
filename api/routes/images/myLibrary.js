@@ -231,9 +231,14 @@ export function registerMyLibraryRoutes(app) {
         security: [{ bearerAuth: [] }],
         body: {
           type: 'object',
-          required: ['name'],
+          required: ['folder_name'],
           properties: {
-            name: { type: 'string' }
+            folder_name: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 255,
+              description: 'Название папки'
+            }
           }
         },
         response: {
@@ -318,14 +323,35 @@ export function registerMyLibraryRoutes(app) {
           200: {
             type: 'object',
             properties: {
-              totalImages: { type: 'integer' },
-              totalSize: { type: 'integer' },
-              usedSpace: { type: 'string' },
-              maxSpace: { type: 'string' },
-              folders: { type: 'integer' }
+              usage: {
+                type: 'object',
+                properties: {
+                  files: { type: 'integer' },
+                  folders: { type: 'integer' },
+                  storageBytes: { type: 'integer' },
+                  storageMB: { type: 'number' }
+                }
+              },
+              limits: {
+                type: 'object',
+                properties: {
+                  files: { type: 'integer' },
+                  storageMB: { type: 'integer' },
+                  folders: { type: 'integer' }
+                }
+              },
+              planName: { type: 'string' }
             }
           },
           401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+              code: { type: 'string' },
+              upgradeRequired: { type: 'boolean' }
+            }
+          },
           500: { type: 'object', properties: { error: { type: 'string' } } }
         }
       }
@@ -476,13 +502,45 @@ export function registerMyLibraryRoutes(app) {
           200: {
             type: 'object',
             properties: {
-              images: { type: 'array', items: { type: 'object' } },
-              total: { type: 'integer' },
-              page: { type: 'integer' },
-              limit: { type: 'integer' }
+              success: { type: 'boolean' },
+              items: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'integer' },
+                    original_name: { type: 'string' },
+                    filename: { type: 'string' },
+                    folder_name: { type: 'string', nullable: true },
+                    public_url: { type: 'string', nullable: true },
+                    preview_url: { type: 'string', nullable: true },
+                    width: { type: 'integer', nullable: true },
+                    height: { type: 'integer', nullable: true },
+                    file_size: { type: 'integer', nullable: true },
+                    created_at: { type: 'string', format: 'date-time' }
+                  }
+                }
+              },
+              pagination: {
+                type: 'object',
+                properties: {
+                  page: { type: 'integer' },
+                  limit: { type: 'integer' },
+                  total: { type: 'integer' }
+                }
+              }
             }
           },
+          400: { type: 'object', properties: { error: { type: 'string' } } },
           401: { type: 'object', properties: { error: { type: 'string' } } },
+          403: {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+              code: { type: 'string' },
+              upgradeRequired: { type: 'boolean' }
+            }
+          },
           500: { type: 'object', properties: { error: { type: 'string' } } }
         }
       }
@@ -672,16 +730,9 @@ export function registerMyLibraryRoutes(app) {
       schema: {
         tags: ['Images'],
         summary: 'Загрузить изображение',
-        description: 'Загружает изображение в личную библиотеку пользователя на Яндекс.Диск',
+        description: 'Загружает изображение в личную библиотеку пользователя на Яндекс.Диск. Multipart form-data: file (обязательно, image/webp|jpeg|png|gif, макс. 5MB), folder (опционально, string — название папки), width (опционально, integer), height (опционально, integer)',
         security: [{ bearerAuth: [] }],
         consumes: ['multipart/form-data'],
-        body: {
-          type: 'object',
-          properties: {
-            file: { type: 'string', format: 'binary' },
-            folder: { type: 'string' }
-          }
-        },
         response: {
           200: {
             type: 'object',
@@ -1241,7 +1292,7 @@ export function registerMyLibraryRoutes(app) {
             type: 'object',
             properties: {
               success: { type: 'boolean' },
-              image: { type: 'object' }
+              image: { type: 'object', additionalProperties: true }
             }
           },
           400: { type: 'object', properties: { error: { type: 'string' } } },

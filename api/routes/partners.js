@@ -27,7 +27,7 @@ export function registerPartnerRoutes(app) {
         200: {
           type: 'object',
           properties: {
-            partners: { type: 'array', items: { type: 'object' } },
+            partners: { type: 'array', items: { type: 'object', additionalProperties: true } },
             total: { type: 'integer' },
             page: { type: 'integer' },
             limit: { type: 'integer' }

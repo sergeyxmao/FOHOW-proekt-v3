@@ -52,7 +52,7 @@ export default async function verificationRoutes(app) {
           type: 'object',
           properties: {
             status: { type: 'string' },
-            verification: { type: 'object', nullable: true }
+            verification: { type: 'object', nullable: true, additionalProperties: true }
           }
         },
         401: { type: 'object', properties: { error: { type: 'string' } } },
