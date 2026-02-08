@@ -1488,8 +1488,8 @@ export function registerMyLibraryRoutes(app) {
       try {
         const result = await pool.query(
           `SELECT
-             (SELECT COUNT(*) FROM image_library WHERE user_id = $1) AS user_images,
-             (SELECT COUNT(*) FROM image_library) AS total_images`,
+             (SELECT COUNT(*) FROM image_library WHERE user_id = $1 AND is_shared = FALSE) AS user_images,
+             (SELECT COUNT(*) FROM image_library WHERE is_shared = TRUE) AS total_images`,
           [userId]
         )
 
