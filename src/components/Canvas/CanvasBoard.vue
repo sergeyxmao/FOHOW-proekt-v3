@@ -1699,8 +1699,13 @@ const handleStageMouseDown = (event) => {
     return;
   }
 
+  // Игнорируем pointerdown в режиме размещения якоря
+  if (placementMode.value === 'anchor') {
+    return;
+  }
+
   // Если клик по интерактивному объекту (стикер, карточка и т.д.) - не перехватываем событие
-  if (event.target.closest('.sticker, .card, .user-card-object, .note-window, .anchor-point, .control-point, .line')) {
+  if (event.target.closest('.sticker, .card, .user-card-object, .note-window, .anchor-point, .control-point, .line, .resize-handle, .canvas-image')) {
     return;
   }
 
@@ -1831,6 +1836,7 @@ const handleStageClick = async (event) => {
       boardStore.requestAnchorEdit(newAnchor.id);
     } catch (error) {
       console.error('Ошибка создания точки:', error);
+      boardStore.setPlacementMode(null);
     } finally {
       _anchorCreating = false;
     }

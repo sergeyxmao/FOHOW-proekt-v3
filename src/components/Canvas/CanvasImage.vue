@@ -103,7 +103,7 @@ function handleContextMenu(event) {
     :style="imageStyle"
     :data-image-id="image.id"
     @click="handleClick"
-    @mousedown="handleMouseDown"
+    @pointerdown="handleMouseDown"
     @mouseup="handleMouseUp"
     @dragstart="handleDragStart"
     @contextmenu="handleContextMenu"
@@ -133,14 +133,14 @@ function handleContextMenu(event) {
 
     <!-- Ручки изменения размера -->
     <template v-if="isSelected && !image.isLocked">
-      <div class="resize-handle resize-handle--nw" data-handle="nw" @mousedown.stop="handleMouseDown"></div>
-      <div class="resize-handle resize-handle--n" data-handle="n" @mousedown.stop="handleMouseDown"></div>
-      <div class="resize-handle resize-handle--ne" data-handle="ne" @mousedown.stop="handleMouseDown"></div>
-      <div class="resize-handle resize-handle--e" data-handle="e" @mousedown.stop="handleMouseDown"></div>
-      <div class="resize-handle resize-handle--se" data-handle="se" @mousedown.stop="handleMouseDown"></div>
-      <div class="resize-handle resize-handle--s" data-handle="s" @mousedown.stop="handleMouseDown"></div>
-      <div class="resize-handle resize-handle--sw" data-handle="sw" @mousedown.stop="handleMouseDown"></div>
-      <div class="resize-handle resize-handle--w" data-handle="w" @mousedown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--nw" data-handle="nw" @pointerdown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--n" data-handle="n" @pointerdown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--ne" data-handle="ne" @pointerdown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--e" data-handle="e" @pointerdown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--se" data-handle="se" @pointerdown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--s" data-handle="s" @pointerdown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--sw" data-handle="sw" @pointerdown.stop="handleMouseDown"></div>
+      <div class="resize-handle resize-handle--w" data-handle="w" @pointerdown.stop="handleMouseDown"></div>
     </template>
   </div>
 </template>

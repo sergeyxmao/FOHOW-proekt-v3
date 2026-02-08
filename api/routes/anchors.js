@@ -34,10 +34,12 @@ export function registerAnchorRoutes(app) {
                   properties: {
                     id: { type: 'integer' },
                     board_id: { type: 'integer' },
-                    label: { type: 'string' },
-                    target_x: { type: 'number' },
-                    target_y: { type: 'number' },
-                    created_at: { type: 'string', format: 'date-time' }
+                    user_id: { type: 'integer' },
+                    pos_x: { type: 'number' },
+                    pos_y: { type: 'number' },
+                    description: { type: 'string', nullable: true },
+                    created_at: { type: 'string', format: 'date-time' },
+                    updated_at: { type: 'string', format: 'date-time', nullable: true }
                   }
                 }
               }
@@ -101,11 +103,11 @@ export function registerAnchorRoutes(app) {
         body: {
           type: 'object',
           properties: {
-            label: { type: 'string', description: 'Название якоря' },
-            target_x: { type: 'number', description: 'Координата X' },
-            target_y: { type: 'number', description: 'Координата Y' }
+            pos_x: { type: 'number', description: 'Координата X' },
+            pos_y: { type: 'number', description: 'Координата Y' },
+            description: { type: 'string', description: 'Описание якоря' }
           },
-          required: ['target_x', 'target_y']
+          required: ['pos_x', 'pos_y']
         },
         response: {
           201: {
@@ -179,9 +181,9 @@ export function registerAnchorRoutes(app) {
         body: {
           type: 'object',
           properties: {
-            label: { type: 'string', nullable: true, description: 'Название якоря' },
-            target_x: { type: 'number', nullable: true, description: 'Координата X' },
-            target_y: { type: 'number', nullable: true, description: 'Координата Y' }
+            description: { type: 'string', nullable: true, description: 'Описание якоря' },
+            pos_x: { type: 'number', nullable: true, description: 'Координата X' },
+            pos_y: { type: 'number', nullable: true, description: 'Координата Y' }
           }
         },
         response: {

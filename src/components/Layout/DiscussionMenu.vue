@@ -177,13 +177,15 @@ const handleStickerMessagesToggle = () => {
 const handleAnchorsToggle = () => {
   if (isUserCardBoard.value) {
     return
-  }  
+  }
+  // Сбрасываем режим стикера, если был активен
+  stickersStore.disablePlacementMode()
   const nextMode = placementMode.value === 'anchor' ? null : 'anchor'
   boardStore.setPlacementMode(nextMode)
   if (nextMode) {
     sidePanelsStore.openAnchors()
   }
-  isGeolocationMenuOpen.value = false  
+  isGeolocationMenuOpen.value = false
   emit('request-close')
 }
 
@@ -213,9 +215,11 @@ const handleAddSticker = () => {
     emit('request-close')
     return
   }
-  sidePanelsStore.openStickerMessages()  
+  // Сбрасываем режим якоря, если был активен
+  boardStore.setPlacementMode(null)
+  sidePanelsStore.openStickerMessages()
   stickersStore.enablePlacementMode()
-  isStickersMenuOpen.value = false  
+  isStickersMenuOpen.value = false
   emit('request-close')
 }
 </script>
@@ -314,7 +318,7 @@ const handleAddSticker = () => {
             type="button"
             class="discussion-menu__action"
             :disabled="isUserCardBoard"          
-            :class="{ 'discussion-menu__action--active': isAnchorsOpen || placementMode === 'anchor' }"
+            :class="{ 'discussion-menu__action--active': isGeolocationMenuOpen }"
             @click="toggleGeolocationMenu"
           >
             {{ t('discussionMenu.geolocation') }}
@@ -356,7 +360,7 @@ const handleAddSticker = () => {
           <button
             type="button"
             class="discussion-menu__action"
-            :class="{ 'discussion-menu__action--active': isStickerMessagesOpen }"
+            :class="{ 'discussion-menu__action--active': isStickersMenuOpen }"
             @click="toggleStickersMenu"
           >
             {{ t('discussionMenu.stickerMessages') }}
