@@ -486,6 +486,10 @@ async function loadBoard(boardId) {
       daysUntilBlock: data.board.daysUntilBlock
     })
 
+    // Сбрасываем историю действий — у каждой доски чистая история
+    const historyStore = useHistoryStore()
+    historyStore.clearHistory()
+
     // Показываем предупреждение для soft_lock досок
     if (data.board.lock_status === 'soft_lock') {
       notificationsStore.addNotification({
