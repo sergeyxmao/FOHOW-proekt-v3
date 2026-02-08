@@ -1801,10 +1801,10 @@ body:has(.app--mobile) {
 
 .save-floating-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 24px 42px rgba(15, 98, 254, 0.32);
-  background: #0f62fe;
-  color: #ffffff;
-  border-color: rgba(15, 98, 254, 0.8);
+  box-shadow: 0 24px 42px rgba(255, 193, 7, 0.4);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
 }
 
 .save-floating-button:disabled {
@@ -1821,10 +1821,10 @@ body:has(.app--mobile) {
 }
 
 .save-floating-button--modern:hover:not(:disabled) {
-  box-shadow: 0 28px 48px rgba(12, 84, 196, 0.4);
-  background: #0f62fe;
-  color: #ffffff;
-  border-color: rgba(15, 98, 254, 0.85);
+  box-shadow: 0 28px 48px rgba(255, 193, 7, 0.5);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
 }
 
 /* Canvas/SVG */
