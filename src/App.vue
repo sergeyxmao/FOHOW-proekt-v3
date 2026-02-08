@@ -1752,11 +1752,12 @@ body:has(.app--mobile) {
 }
 
 .zoom-floating-button:hover {
-  transform: translateX(-50%);
-  box-shadow: 0 24px 42px rgba(15, 98, 254, 0.32);
-  background: #0f62fe;
-  color: #ffffff;
-  border-color: rgba(15, 98, 254, 0.8);
+  left: 50% !important;
+  transform: translate(-50%, 0) !important;
+  box-shadow: 0 24px 42px rgba(255, 193, 7, 0.4);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
 }
 
 .zoom-floating-button__value {
@@ -1772,11 +1773,12 @@ body:has(.app--mobile) {
 }
 
 .zoom-floating-button--modern:hover {
-  transform: translateX(-50%);
-  box-shadow: 0 28px 48px rgba(12, 84, 196, 0.4);
-  background: #0f62fe;
-  color: #ffffff;
-  border-color: rgba(15, 98, 254, 0.85);
+  left: 50% !important;
+  transform: translate(-50%, 0) !important;
+  box-shadow: 0 28px 48px rgba(255, 193, 7, 0.5);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
 }
 
 .save-floating-button {
