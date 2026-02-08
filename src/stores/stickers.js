@@ -102,6 +102,7 @@ export const useStickersStore = defineStore('stickers', () => {
 
     } catch (error) {
       console.error('❌ Ошибка загрузки стикеров:', error);
+      stickers.value = [];
       throw error;
     } finally {
       isLoading.value = false;

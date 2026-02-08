@@ -2141,6 +2141,7 @@ watch(() => boardStore.currentBoardId, (newBoardId, oldBoardId) => {
 
   if (oldBoardId && oldBoardId !== newBoardId) {
     anchorsStore.reset();
+    stickersStore.clearStickers();
   }
 
   loadAnchorsForBoard(newBoardId);
