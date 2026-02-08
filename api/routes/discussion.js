@@ -75,9 +75,8 @@ export function registerDiscussionRoutes(app) {
             // Запрос 2: Изображения (личные пользователя / всего в системе)
             pool.query(
               `SELECT
-                 COUNT(*) FILTER (WHERE user_id = $1) AS user_images,
-                 COUNT(*) AS total_images
-               FROM image_library`,
+                 (SELECT COUNT(*) FROM image_library WHERE user_id = $1) AS user_images,
+                 (SELECT COUNT(*) FROM image_library) AS total_images`,
               [userId]
             ),
             // Запрос 3: Комментарии пользователя

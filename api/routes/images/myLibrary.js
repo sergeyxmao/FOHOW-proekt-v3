@@ -1449,4 +1449,60 @@ export function registerMyLibraryRoutes(app) {
       }
     }
   );
+
+  /**
+   * GET /api/images/my/counters - Счётчики изображений библиотеки
+   *
+   * Возвращает количество изображений пользователя и общее количество.
+   * Не требует boardId — работает для любого авторизованного пользователя.
+   */
+  app.get(
+    '/api/images/my/counters',
+    {
+      preHandler: [authenticateToken],
+      schema: {
+        tags: ['Images'],
+        summary: 'Получить счётчики изображений библиотеки',
+        description: 'Возвращает количество изображений пользователя (Моя библиотека) и общее количество (Общая)',
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              user_images: { type: 'integer' },
+              total_images: { type: 'integer' }
+            }
+          },
+          401: { type: 'object', properties: { error: { type: 'string' } } },
+          500: { type: 'object', properties: { error: { type: 'string' } } }
+        }
+      }
+    },
+    async (req, reply) => {
+      const userId = req.user?.id
+      if (!userId) {
+        return reply.code(401).send({ error: 'Unauthorized' })
+      }
+
+      try {
+        const result = await pool.query(
+          `SELECT
+             (SELECT COUNT(*) FROM image_library WHERE user_id = $1) AS user_images,
+             (SELECT COUNT(*) FROM image_library) AS total_images`,
+          [userId]
+        )
+
+        const row = result.rows[0]
+        return reply.send({
+          success: true,
+          user_images: Number(row?.user_images ?? 0),
+          total_images: Number(row?.total_images ?? 0)
+        })
+      } catch (error) {
+        req.log.error('Ошибка получения счётчиков изображений', error)
+        return reply.code(500).send({ error: 'Internal server error' })
+      }
+    }
+  );
 }

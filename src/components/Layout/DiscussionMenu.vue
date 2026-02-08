@@ -55,13 +55,43 @@ const countersLoading = ref(false)
 // Проверка доступа к библиотеке изображений
 const canUseImages = computed(() => subscriptionStore.checkFeature('can_use_images'))
 const hasPartners = computed(() => Number(counters.value.partners || 0) > 0)
+  // Загружает счётчик изображений отдельно (не зависит от доски).
+  // Возвращает строку "N/M" или null если не удалось загрузить.
+  const loadImageCounters = async () => {
+  if (!authStore.token) return null
+
+  try {
+    const response = await fetch(
+      `${API_URL}/images/my/counters`,
+      {
+        headers: {
+          Authorization: `Bearer ${authStore.token}`
+        }
+      }
+    )
+
+    const data = await response.json()
+    if (response.ok && data?.success) {
+      return `${data.user_images}/${data.total_images}`
+    }
+  } catch (error) {
+    // Эндпоинт может быть ещё не задеплоен — это не критичная ошибка
+  }
+  return null
+}
+
   const loadDiscussionCounters = async () => {
   countersLoading.value = true
 
   try {
+    // Счётчик изображений загружаем всегда (не зависит от доски)
+    const imageCounterValue = await loadImageCounters()
+    if (imageCounterValue) {
+      counters.value = { ...counters.value, images: imageCounterValue }
+    }
+
     if (!currentBoardId.value || !authStore.token) {
-      counters.value = createDefaultCounters()
-      countersLoading.value = false      
+      countersLoading.value = false
       return
     }
 
@@ -75,9 +105,12 @@ const hasPartners = computed(() => Number(counters.value.partners || 0) > 0)
     )
 
     const data = await response.json()
-
     if (response.ok && data?.success) {
-      counters.value = data.counters
+      counters.value = {
+        ...data.counters,
+        // Если отдельный эндпоинт сработал — используем его, иначе берём из discussion-counters
+        images: imageCounterValue || data.counters.images
+      }
     }
   } catch (error) {
     console.error('Failed to load counters:', error)
