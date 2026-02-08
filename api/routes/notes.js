@@ -30,7 +30,15 @@ export function registerNoteRoutes(app) {
               type: 'array',
               items: {
                 type: 'object',
-                additionalProperties: true
+                properties: {
+                  id: { type: 'integer' },
+                  card_uid: { type: 'string' },
+                  note_date: { type: 'string' },
+                  content: { type: 'string', nullable: true },
+                  color: { type: 'string', nullable: true },
+                  created_at: { type: 'string', format: 'date-time' },
+                  updated_at: { type: 'string', format: 'date-time', nullable: true }
+                }
               }
             }
           }
@@ -85,18 +93,22 @@ export function registerNoteRoutes(app) {
       body: {
         type: 'object',
         properties: {
-          board_id: { type: 'integer', description: 'ID доски' },
+          boardId: { type: 'integer', description: 'ID доски' },
+          cardUid: { type: 'string', description: 'UID карточки' },
+          noteDate: { type: 'string', description: 'Дата заметки (YYYY-MM-DD)' },
           content: { type: 'string', nullable: true, description: 'Содержимое заметки (null — удаление)' },
-          type: { type: 'string', nullable: true, description: 'Тип заметки' }
+          color: { type: 'string', nullable: true, description: 'Цвет заметки' }
         },
-        required: ['board_id']
+        required: ['boardId', 'cardUid', 'noteDate']
       },
       response: {
         200: {
           type: 'object',
           properties: {
+            success: { type: 'boolean' },
             note: { type: 'object', additionalProperties: true },
-            deleted: { type: 'boolean' }
+            deleted: { type: 'boolean' },
+            message: { type: 'string' }
           }
         },
         400: { type: 'object', properties: { error: { type: 'string' } } },
