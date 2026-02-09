@@ -36,6 +36,9 @@ importers:
       '@vitejs/plugin-vue':
         specifier: ^6.0.1
         version: 6.0.1(vite@7.1.12)(vue@3.5.22)
+      dotenv:
+        specifier: ^17.2.4
+        version: 17.2.4
       vite:
         specifier: ^7.1.7
         version: 7.1.12
@@ -665,6 +668,10 @@ packages:
 
   dompurify@3.3.0:
     resolution: {integrity: sha512-r+f6MYR1gGN1eJv0TVQbhA7if/U7P87cdPl3HN5rikqaBSBxLiCb/b9O+2eG0cxz0ghyU+mU1QkbsOwERMYlWQ==}
+
+  dotenv@17.2.4:
+    resolution: {integrity: sha512-mudtfb4zRB4bVvdj0xRo+e6duH1csJRM8IukBqfTRvHotn9+LBXB8ynAidP9zHqoRC/fsllXgk4kCKlR21fIhw==}
+    engines: {node: '>=12'}
 
   electron-to-chromium@1.5.244:
     resolution: {integrity: sha512-OszpBN7xZX4vWMPJwB9illkN/znA8M36GQqQxi6MNy9axWxhOfJyZZJtSLQCpEFLHP2xK33BiWx9aIuIEXVCcw==}
@@ -1603,6 +1610,8 @@ snapshots:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
     optional: true
+
+  dotenv@17.2.4: {}
 
   electron-to-chromium@1.5.244: {}
 

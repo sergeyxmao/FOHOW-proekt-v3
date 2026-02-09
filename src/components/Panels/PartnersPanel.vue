@@ -411,17 +411,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
               Профиль
             </a>
           </span>
-          <span v-else>
-            <a
-              :href="buildTelegramWebLink('@sergeyxmao')"
-              class="partner-details-link"
-              target="_blank"
-              rel="noopener"
-              @click.prevent="openTelegram('@sergeyxmao')"
-            >
-              Профиль
-            </a>
-          </span>
+          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
         </div>
 
         <!-- Instagram -->

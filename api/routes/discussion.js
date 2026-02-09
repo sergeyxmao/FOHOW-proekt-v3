@@ -72,12 +72,11 @@ export function registerDiscussionRoutes(app) {
           await Promise.all([
             // Запрос 1: Список заметок
             pool.query('SELECT COUNT(*) AS count FROM notes WHERE board_id = $1', [boardId]),
-            // Запрос 2: Изображения (личные пользователя / всего в системе)
+            // Запрос 2: Изображения (личные / общая библиотека)
             pool.query(
               `SELECT
-                 COUNT(*) FILTER (WHERE user_id = $1) AS user_images,
-                 COUNT(*) AS total_images
-               FROM image_library`,
+                 (SELECT COUNT(*) FROM image_library WHERE user_id = $1 AND is_shared = FALSE) AS user_images,
+                 (SELECT COUNT(*) FROM image_library WHERE is_shared = TRUE) AS total_images`,
               [userId]
             ),
             // Запрос 3: Комментарии пользователя

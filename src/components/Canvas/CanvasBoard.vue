@@ -1699,8 +1699,13 @@ const handleStageMouseDown = (event) => {
     return;
   }
 
+  // Игнорируем pointerdown в режиме размещения якоря
+  if (placementMode.value === 'anchor') {
+    return;
+  }
+
   // Если клик по интерактивному объекту (стикер, карточка и т.д.) - не перехватываем событие
-  if (event.target.closest('.sticker, .card, .user-card-object, .note-window, .anchor-point, .control-point, .line')) {
+  if (event.target.closest('.sticker, .card, .user-card-object, .note-window, .anchor-point, .control-point, .line, .resize-handle, .canvas-image')) {
     return;
   }
 
@@ -1831,6 +1836,7 @@ const handleStageClick = async (event) => {
       boardStore.requestAnchorEdit(newAnchor.id);
     } catch (error) {
       console.error('Ошибка создания точки:', error);
+      boardStore.setPlacementMode(null);
     } finally {
       _anchorCreating = false;
     }
@@ -2135,6 +2141,9 @@ watch(() => boardStore.currentBoardId, (newBoardId, oldBoardId) => {
 
   if (oldBoardId && oldBoardId !== newBoardId) {
     anchorsStore.reset();
+    // Мгновенно очищаем стикеры старой доски, чтобы они не мелькали на новой.
+    // loadStickers() в loadBoard() затем загрузит правильные данные из content.
+    stickersStore.clearStickers();
   }
 
   loadAnchorsForBoard(newBoardId);
@@ -3412,10 +3421,16 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 }
 .marketing-watermark:hover {
   transform: translateY(-1px);
-  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 18px 36px rgba(255, 193, 7, 0.4);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
 }
 .marketing-watermark--modern:hover {
-  box-shadow: 0 24px 44px rgba(6, 11, 21, 0.65);
+  box-shadow: 0 24px 44px rgba(255, 193, 7, 0.5);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
 }
 
 .marketing-watermark:active {

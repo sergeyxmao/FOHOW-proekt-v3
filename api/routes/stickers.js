@@ -43,16 +43,16 @@ export function registerStickerRoutes(app) {
                 properties: {
                   id: { type: 'integer' },
                   board_id: { type: 'integer' },
-                  type: { type: 'string' },
-                  content: {},
-                  position_x: { type: 'number' },
-                  position_y: { type: 'number' },
-                  width: { type: 'number' },
-                  height: { type: 'number' },
-                  rotation: { type: 'number' },
-                  z_index: { type: 'integer' },
+                  user_id: { type: 'integer' },
+                  content: { type: 'string', nullable: true },
+                  color: { type: 'string', nullable: true },
+                  pos_x: { type: 'number' },
+                  pos_y: { type: 'number' },
+                  z_index: { type: 'integer', nullable: true },
                   created_at: { type: 'string', format: 'date-time' },
-                  updated_at: { type: 'string', format: 'date-time' }
+                  updated_at: { type: 'string', format: 'date-time', nullable: true },
+                  author_username: { type: 'string', nullable: true },
+                  author_avatar: { type: 'string', nullable: true }
                 }
               }
             }
@@ -129,16 +129,13 @@ export function registerStickerRoutes(app) {
       body: {
         type: 'object',
         properties: {
-          type: { type: 'string', description: 'Тип стикера' },
+          pos_x: { type: 'number', description: 'Позиция X' },
+          pos_y: { type: 'number', description: 'Позиция Y' },
+          color: { type: 'string', description: 'Цвет стикера' },
           content: { type: 'string', description: 'Содержимое стикера' },
-          position_x: { type: 'number', description: 'Позиция X' },
-          position_y: { type: 'number', description: 'Позиция Y' },
-          width: { type: 'number', description: 'Ширина' },
-          height: { type: 'number', description: 'Высота' },
-          rotation: { type: 'number', description: 'Угол поворота', nullable: true },
           z_index: { type: 'integer', description: 'Z-индекс', nullable: true }
         },
-        required: ['position_x', 'position_y']
+        required: ['pos_x', 'pos_y']
       },
       response: {
         201: {
@@ -230,13 +227,10 @@ export function registerStickerRoutes(app) {
       body: {
         type: 'object',
         properties: {
-          type: { type: 'string', nullable: true },
           content: { type: 'string', nullable: true },
-          position_x: { type: 'number', nullable: true },
-          position_y: { type: 'number', nullable: true },
-          width: { type: 'number', nullable: true },
-          height: { type: 'number', nullable: true },
-          rotation: { type: 'number', nullable: true },
+          pos_x: { type: 'number', nullable: true },
+          pos_y: { type: 'number', nullable: true },
+          color: { type: 'string', nullable: true },
           z_index: { type: 'integer', nullable: true }
         }
       },

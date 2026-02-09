@@ -381,7 +381,8 @@ export function useCanvasImageRenderer(options) {
 
     const halfWidth = imageObj.width / 2
     const halfHeight = imageObj.height / 2
-    const handleSize = 8
+    // Увеличен размер handles для удобства: было 8, стало 16
+    const handleSize = 16
     const halfHandleSize = handleSize / 2
 
     // Позиции 8 ручек (относительно центра изображения)

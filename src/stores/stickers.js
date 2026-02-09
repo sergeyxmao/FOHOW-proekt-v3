@@ -79,12 +79,23 @@ export const useStickersStore = defineStore('stickers', () => {
         headers: getAuthHeaders()
       });
 
+      // Если доска сменилась пока ждали ответа — игнорируем устаревший результат
+      if (currentBoardId.value !== boardId) {
+        return;
+      }
+
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || 'Ошибка загрузки стикеров');
       }
 
       const data = await response.json();
+
+      // Повторная проверка после парсинга JSON
+      if (currentBoardId.value !== boardId) {
+        return;
+      }
+
       // Нормализуем данные стикеров, убеждаемся что ID всегда числа
       stickers.value = (data.stickers || []).map(sticker => {
         // Проверяем z_index и устанавливаем минимум 10000 (стикеры ВСЕГДА на переднем плане)

@@ -37,6 +37,11 @@ export function usePencilImages(options) {
   const activeImageId = ref(null)
   const imageTransformState = ref(null)
 
+  // Pinch-zoom для изображений
+  const activeImagePointers = new Map()
+  const isImagePinching = ref(false)
+  let imagePinchState = null
+
   // === Computed ===
   const activePlacedImage = computed(() =>
     placedImages.value.find((image) => image.id === activeImageId.value) || null
@@ -68,7 +73,8 @@ export function usePencilImages(options) {
         return image
       }
 
-      const updated = typeof updater === 'function' ? updater(image) : updater
+      // Если updater - функция, вызываем её; если объект - мерджим с существующим изображением
+      const updated = typeof updater === 'function' ? updater(image) : { ...image, ...updater }
       return updated || image
     })
   }
@@ -149,6 +155,83 @@ export function usePencilImages(options) {
   }
 
   /**
+   * Инициализация состояния pinch для изображения
+   * @param {string} imageId - ID изображения
+   */
+  const updateImagePinchState = (imageId) => {
+    if (activeImagePointers.size < 2) {
+      imagePinchState = null
+      isImagePinching.value = false
+      return
+    }
+
+    // Получаем актуальное изображение из placedImages
+    const imageObj = placedImages.value.find((img) => img.id === imageId)
+    if (!imageObj) {
+      imagePinchState = null
+      isImagePinching.value = false
+      return
+    }
+
+    const pointers = Array.from(activeImagePointers.values())
+    const p1 = pointers[0]
+    const p2 = pointers[1]
+
+    const dx = p1.x - p2.x
+    const dy = p1.y - p2.y
+    const distance = Math.hypot(dx, dy)
+
+    if (distance === 0) return
+
+    imagePinchState = {
+      initialDistance: distance,
+      initialWidth: imageObj.width,
+      initialHeight: imageObj.height,
+      initialX: imageObj.x,
+      initialY: imageObj.y
+    }
+    isImagePinching.value = true
+  }
+
+  /**
+   * Обработка pinch-движения для изображения
+   */
+  const handleImagePinchMove = () => {
+    if (!imagePinchState || activeImagePointers.size < 2 || !activeImageId.value) return
+
+    const pointers = Array.from(activeImagePointers.values())
+    const p1 = pointers[0]
+    const p2 = pointers[1]
+
+    const dx = p1.x - p2.x
+    const dy = p1.y - p2.y
+    const distance = Math.hypot(dx, dy)
+
+    if (distance === 0) return
+
+    // Вычисляем масштаб относительно начального расстояния
+    const scale = distance / imagePinchState.initialDistance
+    const displayScale = canvasScale.value || 1
+
+    // Масштабируем изображение (в координатах canvas)
+    const newWidth = Math.max(TEMP_IMAGE_MIN_SIZE, imagePinchState.initialWidth * scale)
+    const newHeight = Math.max(TEMP_IMAGE_MIN_SIZE, imagePinchState.initialHeight * scale)
+
+    // Центрируем масштабирование относительно центра изображения
+    const widthDiff = newWidth - imagePinchState.initialWidth
+    const heightDiff = newHeight - imagePinchState.initialHeight
+    const newX = imagePinchState.initialX - widthDiff / 2
+    const newY = imagePinchState.initialY - heightDiff / 2
+
+    updatePlacedImageRect(activeImageId.value, {
+      width: newWidth,
+      height: newHeight,
+      x: newX,
+      y: newY
+    })
+  }
+
+  /**
    * Начало трансформации изображения (перемещение или масштабирование)
    * @param {string} imageId - ID изображения
    * @param {string} type - Тип трансформации ('move' или 'resize')
@@ -156,6 +239,30 @@ export function usePencilImages(options) {
    * @param {PointerEvent} event - Событие указателя
    */
   const beginImageTransform = (imageId, type, handle, event) => {
+    // Для touch-событий регистрируем pointer для потенциального pinch
+    if (event.pointerType === 'touch') {
+      activeImagePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      })
+
+      // Если это второй палец и pinch еще не активен — включаем pinch
+      if (activeImagePointers.size === 2 && type === 'move' && !isImagePinching.value) {
+        activeImageId.value = imageId
+        // Сбрасываем обычную трансформацию при переходе в pinch-режим
+        imageTransformState.value = null
+        updateImagePinchState(imageId)
+        event.preventDefault()
+        return
+      }
+
+      // Если pinch уже активен — не начинаем новую трансформацию
+      if (isImagePinching.value) {
+        event.preventDefault()
+        return
+      }
+    }
+
     const point = getCanvasPoint(event)
     if (!point) return
 
@@ -183,6 +290,21 @@ export function usePencilImages(options) {
    * @param {PointerEvent} event - Событие указателя
    */
   const applyImageTransform = (event) => {
+    // Обновляем координаты для pinch
+    if (event.pointerType === 'touch' && activeImagePointers.has(event.pointerId)) {
+      activeImagePointers.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY
+      })
+
+      // Если pinch активен — обрабатываем масштабирование
+      if (isImagePinching.value && activeImagePointers.size === 2) {
+        handleImagePinchMove()
+        event.preventDefault()
+        return
+      }
+    }
+
     if (!imageTransformState.value || imageTransformState.value.pointerId !== event.pointerId) {
       return
     }
@@ -218,6 +340,17 @@ export function usePencilImages(options) {
    * @param {PointerEvent} event - Событие указателя
    */
   const finishImageTransform = (event) => {
+    // Удаляем pointer из pinch-трекинга
+    if (event.pointerType === 'touch' && activeImagePointers.has(event.pointerId)) {
+      activeImagePointers.delete(event.pointerId)
+
+      // Если остался один палец или меньше — сбрасываем pinch
+      if (activeImagePointers.size < 2) {
+        isImagePinching.value = false
+        imagePinchState = null
+      }
+    }
+
     if (!imageTransformState.value || imageTransformState.value.pointerId !== event.pointerId) {
       return
     }
@@ -266,6 +399,9 @@ export function usePencilImages(options) {
     placedImages.value = []
     activeImageId.value = null
     imageTransformState.value = null
+    activeImagePointers.clear()
+    isImagePinching.value = false
+    imagePinchState = null
   }
 
   // === Возвращаемые значения ===
@@ -274,6 +410,7 @@ export function usePencilImages(options) {
     placedImages,
     activeImageId,
     imageTransformState,
+    isImagePinching,
 
     // Computed
     activePlacedImage,
