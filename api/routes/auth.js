@@ -48,9 +48,11 @@ function validatePersonalId(personalId, office) {
 /**
  * Генерация уникального personal_id для нового пользователя
  * @param {Object} client - Клиент PostgreSQL (в рамках транзакции)
+ * @param {string} [office] - Код представительства пользователя (например, 'RUY000', 'RUY00')
  * @returns {Promise<string>} Уникальный personal_id
  */
-async function generateUniquePersonalId(client) {
+async function generateUniquePersonalId(client, office) {
+  const prefix = (office && validateOffice(office)) ? office : 'RUY00';
   let attempts = 0;
   const maxAttempts = 1000;
 
@@ -66,8 +68,8 @@ async function generateUniquePersonalId(client) {
 
     let nextNumber = counterResult.rows[0].last_issued_number + 1;
 
-    // 2. Сгенерировать номер в формате RUY00XXXXXXXXX
-    const personalId = `RUY00${String(nextNumber).padStart(9, '0')}`;
+    // 2. Сгенерировать номер в формате {prefix} + 9 цифр
+    const personalId = `${prefix}${String(nextNumber).padStart(9, '0')}`;
 
     // 3. Проверить, свободен ли этот номер
     const existingUser = await client.query(
@@ -841,7 +843,7 @@ export function registerAuthRoutes(app) {
       const demoPlanId = demoPlanResult.rows[0].id;
 
       // 5. Генерировать personal_id (только если отсутствует)
-      const personalId = user.personal_id ?? await generateUniquePersonalId(client);
+      const personalId = user.personal_id ?? await generateUniquePersonalId(client, user.office);
 
       // 6. Активировать аккаунт
       const activationResult = await client.query(`
