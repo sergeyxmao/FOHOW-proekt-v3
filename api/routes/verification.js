@@ -78,14 +78,8 @@ export default async function verificationRoutes(app) {
       summary: 'Отправка заявки на верификацию',
       description: 'Отправляет заявку на верификацию пользователя с указанием ФИО и реферальной ссылки',
       security: [{ bearerAuth: [] }],
-      body: {
-        type: 'object',
-        required: ['full_name', 'referral_link'],
-        properties: {
-          full_name: { type: 'string' },
-          referral_link: { type: 'string' }
-        }
-      },
+      // body schema убрана: фронтенд отправляет multipart/form-data,
+      // который не проходит JSON-валидацию AJV. Валидация полей в хэндлере.
       response: {
         200: {
           type: 'object',
