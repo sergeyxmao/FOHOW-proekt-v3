@@ -48,11 +48,11 @@ function validatePersonalId(personalId, office) {
 /**
  * Генерация уникального personal_id для нового пользователя
  * @param {Object} client - Клиент PostgreSQL (в рамках транзакции)
- * @param {string} [office] - Код представительства пользователя (например, 'RUY000', 'RUY00')
+ * @param {string} [office] - Код представительства пользователя (например, 'RUY000', 'RUY68')
  * @returns {Promise<string>} Уникальный personal_id
  */
 async function generateUniquePersonalId(client, office) {
-  const prefix = (office && validateOffice(office)) ? office : 'RUY00';
+  const prefix = (office && validateOffice(office)) ? office : 'RUY000';
   let attempts = 0;
   const maxAttempts = 1000;
 
@@ -852,7 +852,8 @@ export function registerAuthRoutes(app) {
             plan_id = COALESCE(plan_id, $1),
             subscription_started_at = COALESCE(subscription_started_at, NOW()),
             subscription_expires_at = COALESCE(subscription_expires_at, NOW() + INTERVAL '7 days'),
-            personal_id = COALESCE(personal_id, $2)
+            personal_id = COALESCE(personal_id, $2),
+            office = COALESCE(office, 'RUY000')
         WHERE id = $3
           AND email_verified = FALSE
         RETURNING personal_id
