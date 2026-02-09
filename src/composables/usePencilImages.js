@@ -73,7 +73,8 @@ export function usePencilImages(options) {
         return image
       }
 
-      const updated = typeof updater === 'function' ? updater(image) : updater
+      // Если updater - функция, вызываем её; если объект - мерджим с существующим изображением
+      const updated = typeof updater === 'function' ? updater(image) : { ...image, ...updater }
       return updated || image
     })
   }
