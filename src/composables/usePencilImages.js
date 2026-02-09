@@ -156,10 +156,18 @@ export function usePencilImages(options) {
 
   /**
    * Инициализация состояния pinch для изображения
-   * @param {Object} imageObj - Объект изображения
+   * @param {string} imageId - ID изображения
    */
-  const updateImagePinchState = (imageObj) => {
+  const updateImagePinchState = (imageId) => {
     if (activeImagePointers.size < 2) {
+      imagePinchState = null
+      isImagePinching.value = false
+      return
+    }
+
+    // Получаем актуальное изображение из placedImages
+    const imageObj = placedImages.value.find((img) => img.id === imageId)
+    if (!imageObj) {
       imagePinchState = null
       isImagePinching.value = false
       return
@@ -238,13 +246,18 @@ export function usePencilImages(options) {
         y: event.clientY
       })
 
-      // Если это второй палец — включаем pinch
-      if (activeImagePointers.size === 2 && type === 'move') {
-        const target = placedImages.value.find((image) => image.id === imageId)
-        if (!target) return
-
+      // Если это второй палец и pinch еще не активен — включаем pinch
+      if (activeImagePointers.size === 2 && type === 'move' && !isImagePinching.value) {
         activeImageId.value = imageId
-        updateImagePinchState(target)
+        // Сбрасываем обычную трансформацию при переходе в pinch-режим
+        imageTransformState.value = null
+        updateImagePinchState(imageId)
+        event.preventDefault()
+        return
+      }
+
+      // Если pinch уже активен — не начинаем новую трансформацию
+      if (isImagePinching.value) {
         event.preventDefault()
         return
       }
