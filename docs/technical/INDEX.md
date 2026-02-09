@@ -202,6 +202,11 @@ systemctl status fohow-api
 Краткое описание поведения оверлея сброса пароля и редиректа после успеха:
 [routes/reset-password.md](routes/reset-password.md)
 
+### Pencil Mode Image Controls
+
+Управление изображениями в режиме рисования — handles, pinch-to-zoom, desktop vs mobile:
+[pencil-mode-image-controls.md](pencil-mode-image-controls.md)
+
 ---
 
 ### Добавить новый composable

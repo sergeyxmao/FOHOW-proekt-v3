@@ -199,6 +199,7 @@ const {
   placedImages,
   activeImageId,
   imageTransformState,
+  isImagePinching,
   activePlacedImage,
   getPlacedImageStyle,
   finalizeActiveImagePlacement,
@@ -1329,6 +1330,7 @@ onBeforeUnmount(() => {
           @pointerdown.stop.prevent="beginImageTransform(image.id, 'move', null, $event)"
           @pointermove.stop.prevent="applyImageTransform"
           @pointerup.stop.prevent="finishImageTransform"
+          @pointerleave.stop.prevent="finishImageTransform"
           @pointercancel.stop.prevent="finishImageTransform"
         >
           <img :src="image.src" alt="Вставленное изображение" class="pencil-overlay__image" draggable="false" />
@@ -2051,62 +2053,70 @@ onBeforeUnmount(() => {
 
 .pencil-overlay__image-handle {
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 20px;
+  height: 20px;
   background: #0f62fe;
   border: 2px solid #ffffff;
   border-radius: 50%;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   pointer-events: auto;
+  touch-action: none;
+}
+
+/* Скрываем handles на мобильных устройствах */
+@media (pointer: coarse) {
+  .pencil-overlay__image-handle {
+    display: none;
+  }
 }
 
 .pencil-overlay__image-handle--top-left {
-  top: -6px;
-  left: -6px;
+  top: -10px;
+  left: -10px;
   cursor: nwse-resize;
 }
 
 .pencil-overlay__image-handle--top {
-  top: -6px;
+  top: -10px;
   left: 50%;
   transform: translateX(-50%);
   cursor: ns-resize;
 }
 
 .pencil-overlay__image-handle--top-right {
-  top: -6px;
-  right: -6px;
+  top: -10px;
+  right: -10px;
   cursor: nesw-resize;
 }
 
 .pencil-overlay__image-handle--right {
-  right: -6px;
+  right: -10px;
   top: 50%;
   transform: translateY(-50%);
   cursor: ew-resize;
 }
 
 .pencil-overlay__image-handle--bottom-right {
-  bottom: -6px;
-  right: -6px;
+  bottom: -10px;
+  right: -10px;
   cursor: nwse-resize;
 }
 
 .pencil-overlay__image-handle--bottom {
-  bottom: -6px;
+  bottom: -10px;
   left: 50%;
   transform: translateX(-50%);
   cursor: ns-resize;
 }
 
 .pencil-overlay__image-handle--bottom-left {
-  bottom: -6px;
-  left: -6px;
+  bottom: -10px;
+  left: -10px;
   cursor: nesw-resize;
 }
 
 .pencil-overlay__image-handle--left {
-  left: -6px;
+  left: -10px;
   top: 50%;
   transform: translateY(-50%);
   cursor: ew-resize;
