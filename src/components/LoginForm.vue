@@ -136,8 +136,11 @@ async function fetchVerificationCode(showError = true) {
     verificationCode.value = data.code
     verificationToken.value = data.token
     verificationInput.value = ''
-    error.value = ''
-    errorType.value = 'error'
+    // Не очищаем error.value, если showError=false (регенерация после ошибки логина)
+    if (showError) {
+      error.value = ''
+      errorType.value = 'error'
+    }
   } catch (err) {
     verificationCode.value = ''
     verificationToken.value = ''
