@@ -405,13 +405,7 @@ onBeforeUnmount(() => {
               @change="handleCyclesStageChange('cycles', $event)"
             />
             <span class="editor-sep">/</span>
-            <input
-              type="number"
-              class="editor-input"
-              :value="stageDisplay"
-              min="0"
-              @change="handleCyclesStageChange('stage', $event)"
-            />
+            <span class="editor-input editor-input--readonly">{{ stageDisplay }}</span>
             <button class="editor-trash" @click="handleClearCyclesStage" title="Сбросить цикл/этап">🗑️</button>
           </div>
         </div>
@@ -517,6 +511,15 @@ onBeforeUnmount(() => {
   outline: none;
   -moz-appearance: textfield;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.editor-input--readonly {
+  background: #f0f0f0;
+  cursor: default;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .editor-input::-webkit-outer-spin-button,
