@@ -1327,4 +1327,51 @@ onMounted(() => {
   background: #ccc;
   cursor: not-allowed;
 }
+
+@media (max-width: 768px) {
+  .shared-library {
+    padding: 10px;
+  }
+
+  .library-container {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .folders-column {
+    width: 100%;
+    padding: 14px;
+  }
+
+  .content-column {
+    padding: 14px;
+  }
+
+  .content-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+  }
+
+  .rename-input {
+    width: 100%;
+  }
+
+  .images-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+
+  .image-preview {
+    height: 140px;
+  }
+
+  .modal {
+    width: 95%;
+  }
+}
 </style>

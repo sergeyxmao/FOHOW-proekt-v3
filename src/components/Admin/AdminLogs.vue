@@ -324,4 +324,62 @@ h2 {
   color: #666;
   font-size: 14px;
 }
+
+@media (max-width: 768px) {
+  .admin-logs {
+    padding: 10px;
+  }
+
+  .logs-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  h2 {
+    font-size: 20px;
+  }
+
+  .filters {
+    width: 100%;
+  }
+
+  .level-filter {
+    flex: 1;
+  }
+
+  .refresh-btn {
+    flex: 1;
+  }
+
+  .log-entry {
+    padding: 10px;
+  }
+
+  .log-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .log-message {
+    font-size: 13px;
+  }
+
+  .log-context pre {
+    font-size: 10px;
+  }
+
+  .pagination {
+    gap: 10px;
+  }
+
+  .pagination-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .pagination-info {
+    font-size: 12px;
+  }
+}
 </style>

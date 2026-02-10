@@ -354,4 +354,49 @@ code {
 .refresh-button:hover {
   background: #5a52d5;
 }
+
+@media (max-width: 768px) {
+  .admin-stats {
+    padding: 10px;
+  }
+
+  h2 {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 14px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+  }
+
+  .stats-section {
+    padding: 14px;
+  }
+
+  .registrations-chart {
+    height: 140px;
+    padding: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+}
 </style>

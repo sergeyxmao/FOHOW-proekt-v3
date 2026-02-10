@@ -1,9 +1,13 @@
 <template>
   <div class="admin-panel">
+    <!-- Overlay при открытом sidebar на мобильных -->
+    <div v-if="sidebarOpen" class="sidebar-overlay" @click="sidebarOpen = false"></div>
+
     <!-- Боковая панель слева -->
-    <aside class="sidebar">
+    <aside :class="['sidebar', { open: sidebarOpen }]">
       <div class="sidebar-header">
         <h2>Админ панель</h2>
+        <button class="sidebar-close" @click="sidebarOpen = false">✕</button>
       </div>
 
       <nav class="sidebar-nav">
@@ -11,7 +15,7 @@
           v-for="tab in tabs"
           :key="tab.id"
           :class="['sidebar-tab', { active: activeTab === tab.id }]"
-          @click="setActiveTab(tab.id)"
+          @click="setActiveTab(tab.id); sidebarOpen = false"
         >
           {{ tab.label }}
         </button>
@@ -27,6 +31,7 @@
     <!-- Основной контент -->
     <main class="main-content">
       <div class="content-header">
+        <button class="hamburger-btn" @click="sidebarOpen = true">☰</button>
         <h1>{{ tabs.find(t => t.id === activeTab)?.label || 'Панель администратора' }}</h1>
       </div>
 
@@ -103,6 +108,8 @@ const router = useRouter()
 const route = useRoute()  
 const adminStore = useAdminStore()
 const authStore = useAuthStore()
+
+const sidebarOpen = ref(false)
 
 const swaggerUrl = computed(() => {
   const token = authStore.token
@@ -364,28 +371,110 @@ watch(
   border-radius: 0 0 8px 8px;
 }
 
+/* Hamburger — скрыта на десктопе */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #333;
+  padding: 0;
+  line-height: 1;
+}
+
+/* Крестик закрытия — скрыт на десктопе */
+.sidebar-close {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  line-height: 1;
+}
+
+/* Overlay — скрыт на десктопе */
+.sidebar-overlay {
+  display: none;
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
   .sidebar {
-    width: 220px;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    width: 280px;
+    z-index: 1000;
   }
 
-  .main-content {
-    margin-left: 220px;
-  }
-
-  .content-header,
-  .content-body {
-    padding: 20px;
+  .sidebar.open {
+    transform: translateX(0);
   }
 
   .sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 20px 16px;
+  }
+
+  .sidebar-close {
+    display: block;
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 999;
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+
+  .content-header {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .content-header h1 {
+    font-size: 20px;
+  }
+
+  .hamburger-btn {
+    display: block;
+  }
+
+  .content-body {
+    padding: 12px;
+  }
+
+  .tab-content {
+    padding: 16px;
+    min-height: auto;
+    overflow-x: hidden;
   }
 
   .sidebar-tab {
     padding: 12px 16px;
     font-size: 14px;
+  }
+
+  .error-notification {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .swagger-iframe,
+  .er-diagram-iframe {
+    height: calc(100vh - 120px);
   }
 }
 </style>

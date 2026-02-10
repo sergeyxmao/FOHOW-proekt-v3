@@ -543,4 +543,53 @@ h2 {
   color: #666;
   font-size: 14px;
 }
+
+@media (max-width: 768px) {
+  .admin-transactions {
+    padding: 10px;
+    overflow-x: hidden;
+  }
+
+  h2 {
+    font-size: 20px;
+  }
+
+  .filters-panel {
+    flex-direction: column;
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-left: -10px;
+    margin-right: -10px;
+    padding: 0 10px;
+  }
+
+  .transactions-table {
+    min-width: 600px;
+  }
+
+  .transactions-table th,
+  .transactions-table td {
+    padding: 8px 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .pagination {
+    gap: 10px;
+  }
+
+  .pagination-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
 </style>

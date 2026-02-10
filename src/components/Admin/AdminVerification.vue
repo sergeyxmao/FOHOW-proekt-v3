@@ -1175,6 +1175,19 @@ onBeforeUnmount(() => {
 
 /* Адаптивность */
 @media (max-width: 768px) {
+  .admin-verification {
+    padding: 10px;
+  }
+
+  .moderation-header h2 {
+    font-size: 20px;
+  }
+
+  .stats-block {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
   .verifications-grid {
     grid-template-columns: 1fr;
   }

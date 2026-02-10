@@ -862,8 +862,25 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-/* Адаптивность модального окна */
+/* Адаптивность */
 @media (max-width: 768px) {
+  .admin-moderation {
+    padding: 10px;
+  }
+
+  .moderation-header h2 {
+    font-size: 20px;
+  }
+
+  .stats-block {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .images-grid {
+    grid-template-columns: 1fr;
+  }
+
   .modal-content {
     max-width: 95vw;
     max-height: 95vh;
