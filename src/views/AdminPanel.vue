@@ -177,6 +177,7 @@ watch(
   display: flex;
   min-height: 100vh;
   background: #f5f5f5;
+  overflow-x: hidden;
 }
 
 /* Боковая панель */
@@ -458,7 +459,6 @@ watch(
   .tab-content {
     padding: 16px;
     min-height: auto;
-    overflow-x: hidden;
   }
 
   .sidebar-tab {

@@ -731,7 +731,6 @@ label {
 @media (max-width: 768px) {
   .admin-users {
     padding: 10px;
-    overflow-x: hidden;
   }
 
   .users-header {
@@ -750,11 +749,8 @@ label {
   }
 
   .table-container {
-    overflow-x: auto;
+    overflow-x: scroll;
     -webkit-overflow-scrolling: touch;
-    margin-left: -10px;
-    margin-right: -10px;
-    padding: 0 10px;
   }
 
   .users-table {

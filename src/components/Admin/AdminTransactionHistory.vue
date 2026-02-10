@@ -547,7 +547,6 @@ h2 {
 @media (max-width: 768px) {
   .admin-transactions {
     padding: 10px;
-    overflow-x: hidden;
   }
 
   h2 {
@@ -565,11 +564,8 @@ h2 {
   }
 
   .table-container {
-    overflow-x: auto;
+    overflow-x: scroll;
     -webkit-overflow-scrolling: touch;
-    margin-left: -10px;
-    margin-right: -10px;
-    padding: 0 10px;
   }
 
   .transactions-table {
