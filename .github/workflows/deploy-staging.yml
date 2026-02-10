@@ -1,0 +1,64 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Deploy frontend via rsync
+        run: |
+          echo "${{ secrets.STAGING_SSH_PRIVATE_KEY }}" > private_key
+          chmod 600 private_key
+          rsync -avz --delete -e "ssh -i private_key -o StrictHostKeyChecking=no" \
+            dist/assets/ ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SSH_HOST }}:${{ secrets.STAGING_PROJECT_PATH }}/dist/assets/
+          rsync -avz -e "ssh -i private_key -o StrictHostKeyChecking=no" \
+            --exclude='assets' \
+            dist/ ${{ secrets.STAGING_SSH_USER }}@${{ secrets.STAGING_SSH_HOST }}:${{ secrets.STAGING_PROJECT_PATH }}/dist/
+          rm private_key
+
+      - name: Update API and restart service
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.STAGING_PROJECT_PATH }}
+            git pull origin dev
+            cd api
+            pnpm install --prod
+            cd ..
+            systemctl restart fohow-api-staging
+            echo "✅ Staging API restarted!"
+            systemctl status fohow-api-staging --no-pager
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          script: |
+            echo "✅ Staging deployment complete!"
+            ls -lah ${{ secrets.STAGING_PROJECT_PATH }}/dist | head -n 10
+            systemctl is-active fohow-api-staging
