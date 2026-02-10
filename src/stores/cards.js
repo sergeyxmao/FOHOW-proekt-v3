@@ -660,7 +660,8 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
           type: detectedType,
           note: noteState,
           balanceManualOverride: cardData.balanceManualOverride || null,
-          manualAdjustments: cardData.manualAdjustments || null
+          manualAdjustments: cardData.manualAdjustments || null,
+          cyclesManualOverride: cardData.cyclesManualOverride || null
         };
         const calculationSource = {
           L: toFiniteNumber(cardData.calculated?.L),
