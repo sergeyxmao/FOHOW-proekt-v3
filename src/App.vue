@@ -765,7 +765,11 @@ function getCanvasState() {
       activePvLocalBalance: card.activePvLocalBalance,
       activePvBalance: card.activePvBalance,
       activePvPacks: card.activePvPacks,
-      activePvCycles: card.activePvCycles
+      activePvCycles: card.activePvCycles,
+
+      // Ручное переопределение баланса
+      balanceManualOverride: card.balanceManualOverride || null,
+      manualAdjustments: card.manualAdjustments || null
       // Заметки больше не сохраняются в составе карточки, они хранятся отдельно в таблице notes
     }
   })

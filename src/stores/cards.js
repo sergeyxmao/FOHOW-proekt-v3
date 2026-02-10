@@ -658,7 +658,9 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
           bodyHTML: cardData.bodyHTML || '',
           bodyGradient: cardData.bodyGradient || (detectedType === 'gold' ? GOLD_BODY_GRADIENT : ''),
           type: detectedType,
-          note: noteState
+          note: noteState,
+          balanceManualOverride: cardData.balanceManualOverride || null,
+          manualAdjustments: cardData.manualAdjustments || null
         };
         const calculationSource = {
           L: toFiniteNumber(cardData.calculated?.L),
