@@ -101,6 +101,13 @@
 | `activePvPacks` | number | Количество паков Active-PV |
 | `activePvCycles` | number | Количество циклов Active-PV |
 
+### Ручное переопределение баланса
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `balanceManualOverride` | object\|null | Ручное переопределение автоматически рассчитанного баланса: `{ left, right }`. Если задано — отображается вместо автоматического баланса. Логика отображения в `Card.vue`: `balanceDisplay = manualBalanceOverride ?? calculatedBalanceDisplay` |
+| `manualAdjustments` | object\|null | Разница (offset) между ручным и автоматическим балансом: `{ left, right }`. При изменении автоматического баланса watcher пересчитывает `balanceManualOverride` с сохранением этого offset |
+
 ## Поля карточки (тип user_card)
 
 | Поле | Тип | Описание |
@@ -170,3 +177,11 @@
 - Active-PV: `activePvState`, `activePvManual`, `activePvLocal`, `activePvAggregated`, `activePvLocalBalance`, `activePvBalance`, `activePvPacks`, `activePvCycles`
 
 **Затронутые файлы:** `src/App.vue` (функция `getCanvasState()`, строки 722-770)
+
+### 2025-02-10: Сохранение ручного переопределения баланса
+
+**Проблема:** Поля `balanceManualOverride` и `manualAdjustments` не включались в сериализацию `getCanvasState()` и не восстанавливались при загрузке в `normalizedCard`. Ручной баланс, введённый пользователем, сбрасывался к автоматическому (0/0) после перезагрузки.
+
+**Решение:** Добавлены 2 поля в сериализацию (`src/App.vue`) и нормализацию (`src/stores/cards.js`): `balanceManualOverride`, `manualAdjustments`.
+
+**Затронутые файлы:** `src/App.vue`, `src/stores/cards.js`
