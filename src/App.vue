@@ -769,7 +769,8 @@ function getCanvasState() {
 
       // Ручное переопределение баланса
       balanceManualOverride: card.balanceManualOverride || null,
-      manualAdjustments: card.manualAdjustments || null
+      manualAdjustments: card.manualAdjustments || null,
+      cyclesManualOverride: card.cyclesManualOverride || null
       // Заметки больше не сохраняются в составе карточки, они хранятся отдельно в таблице notes
     }
   })
