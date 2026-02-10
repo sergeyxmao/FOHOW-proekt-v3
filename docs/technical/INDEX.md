@@ -207,6 +207,11 @@ systemctl status fohow-api
 Управление изображениями в режиме рисования — handles, pinch-to-zoom, desktop vs mobile:
 [pencil-mode-image-controls.md](pencil-mode-image-controls.md)
 
+### Board Save/Load
+
+Формат данных доски, сериализация карточек, поля Active-PV:
+[board-save-load.md](board-save-load.md)
+
 ### HTML Export
 
 Экспорт схем в HTML-файлы — интерактивность, touch support, watermark, pinch-zoom:

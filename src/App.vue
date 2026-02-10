@@ -734,7 +734,38 @@ function getCanvasState() {
       type: card.type,
       bodyHTML: card.bodyHTML,
       bodyGradient: card.bodyGradient,
-      pv: card.pv
+      pv: card.pv,
+
+      // Строковые значения карточки
+      balance: card.balance,
+      activePv: card.activePv,
+      cycle: card.cycle,
+      coinFill: card.coinFill,
+      previousPvLeft: card.previousPvLeft,
+
+      // Бейджи
+      showSlfBadge: card.showSlfBadge,
+      showFendouBadge: card.showFendouBadge,
+      rankBadge: card.rankBadge,
+
+      // Расчёты структуры
+      calculated: card.calculated,
+      calculatedIsFull: card.calculatedIsFull,
+      total: card.total,
+      stage: card.stage,
+      toNext: card.toNext,
+
+      // Active-PV состояние (основное поле, из которого восстанавливаются все производные)
+      activePvState: card.activePvState,
+
+      // Active-PV производные поля
+      activePvManual: card.activePvManual,
+      activePvLocal: card.activePvLocal,
+      activePvAggregated: card.activePvAggregated,
+      activePvLocalBalance: card.activePvLocalBalance,
+      activePvBalance: card.activePvBalance,
+      activePvPacks: card.activePvPacks,
+      activePvCycles: card.activePvCycles
       // Заметки больше не сохраняются в составе карточки, они хранятся отдельно в таблице notes
     }
   })
