@@ -6,7 +6,7 @@
 import { pool } from '../db.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 import { sendEmail } from '../utils/emailService.js';
-import { getVerificationApprovedMessage, getVerificationAutoRejectedMessage } from '../templates/telegramTemplates.js';
+import { getVerificationApprovedMessage, getVerificationAutoRejectedMessage, getVerificationRejectedMessage } from '../templates/telegramTemplates.js';
 import { getVerificationApprovedTemplate, getVerificationAutoRejectedTemplate, getVerificationRejectedTemplate } from '../templates/emailTemplates.js';
 
 const VERIFICATION_COOLDOWN_HOURS = 24; // 1 раз в сутки
@@ -438,9 +438,12 @@ async function rejectVerification(verificationId, adminId, rejectionReason) {
 
     // Отправить Telegram-уведомление, если подключен
     if (verification.telegram_chat_id) {
-      const message = `❌ Ваша заявка на верификацию отклонена\n\nПричина: ${rejectionReason}\n\nВы можете подать новую заявку через 24 часа.`;
       try {
-        await sendTelegramMessage(verification.telegram_chat_id, message);
+        const tgMessage = getVerificationRejectedMessage(rejectionReason);
+        await sendTelegramMessage(verification.telegram_chat_id, tgMessage.text, {
+          parse_mode: tgMessage.parse_mode,
+          reply_markup: tgMessage.reply_markup
+        });
         console.log(`[VERIFICATION] Telegram-уведомление об отклонении отправлено пользователю ${verification.user_id}`);
       } catch (telegramError) {
         console.error('[VERIFICATION] Ошибка отправки Telegram-уведомления:', telegramError.message);

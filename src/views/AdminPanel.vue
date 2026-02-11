@@ -56,6 +56,11 @@
           <AdminVerification />
         </div>
 
+        <!-- Вкладка: Уведомления -->
+        <div v-if="activeTab === 'notifications'" class="tab-content">
+          <AdminNotifications />
+        </div>
+
         <!-- Вкладка: Логи -->
         <div v-if="activeTab === 'logs'" class="tab-content">
           <AdminLogs />
@@ -103,6 +108,7 @@ import AdminLogs from '../components/Admin/AdminLogs.vue'
 import AdminImagesModeration from '../components/Admin/AdminImagesModeration.vue'
 import AdminSharedLibrary from '../components/Admin/AdminSharedLibrary.vue'
 import AdminTransactionHistory from '../components/Admin/AdminTransactionHistory.vue'
+import AdminNotifications from '../components/Admin/AdminNotifications.vue'
 
 const router = useRouter()
 const route = useRoute()  
@@ -123,6 +129,7 @@ const tabs = [
   { id: 'verification', label: 'Верификация' },
   { id: 'moderation', label: 'Модерация изображений' },
   { id: 'library', label: 'Общая библиотека' },
+  { id: 'notifications', label: 'Уведомления' },
   { id: 'logs', label: 'Логи' },
   { id: 'swagger', label: 'Swagger API' },
   { id: 'er-diagram', label: 'ER-диаграмма' }

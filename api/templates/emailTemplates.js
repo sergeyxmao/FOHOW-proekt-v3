@@ -8,18 +8,21 @@
  */
 const baseStyles = {
   container: 'font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #ffffff;',
-  header: 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;',
-  headerTitle: 'color: #ffffff; font-size: 28px; font-weight: 700; margin: 0;',
+  header: 'background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%); padding: 40px 20px; text-align: center;',
+  headerTitle: 'color: #3a2800; font-size: 28px; font-weight: 700; margin: 0;',
   content: 'padding: 40px 30px;',
   title: 'color: #1a202c; font-size: 24px; font-weight: 600; margin: 0 0 20px 0;',
   text: 'color: #4a5568; font-size: 16px; line-height: 1.6; margin: 0 0 15px 0;',
-  highlight: 'background-color: #f7fafc; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 4px;',
+  highlight: 'background-color: #fffbeb; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 4px;',
   highlightText: 'color: #2d3748; font-size: 16px; margin: 0;',
-  button: 'display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; transition: transform 0.2s;',
+  button: 'display: inline-block; background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%); color: #3a2800; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; transition: transform 0.2s;',
   buttonContainer: 'text-align: center; margin: 30px 0;',
   footer: 'background-color: #f7fafc; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;',
   footerText: 'color: #718096; font-size: 14px; margin: 0 0 10px 0;',
-  divider: 'border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;'
+  divider: 'border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;',
+  accentColor: '#ffc107',
+  accentHover: '#e8a900',
+  buttonTextColor: '#3a2800'
 };
 
 /**
@@ -55,36 +58,24 @@ function getSubscriptionExpiringTemplate({ userName, daysLeft, expirationDate, r
           <h2 style="${baseStyles.title}">Здравствуйте, ${userName}!</h2>
 
           <p style="${baseStyles.text}">
-            Напоминаем, что ваша подписка <strong style="color: ${urgencyColor};">${urgencyText} истекает</strong>.
+            Ваша подписка скоро заканчивается!
           </p>
 
           <!-- Highlight Box -->
           <div style="${baseStyles.highlight} border-left-color: ${urgencyColor};">
             <p style="${baseStyles.highlightText}">
               <strong style="font-size: 20px; color: ${urgencyColor};">
-                Осталось: ${daysLeft} ${getDaysWord(daysLeft)}
+                🗓 Осталось: ${daysLeft} ${getDaysWord(daysLeft)}
               </strong>
             </p>
             <p style="${baseStyles.highlightText} margin-top: 10px;">
-              Дата истечения: <strong>${expirationDate}</strong>
+              📅 Дата окончания: <strong>${expirationDate}</strong>
             </p>
           </div>
 
           <p style="${baseStyles.text}">
-            Чтобы продолжить пользоваться всеми преимуществами премиум-подписки,
-            продлите её прямо сейчас.
+            Продлите подписку сейчас, чтобы не потерять доступ к премиум&#8209;функциям! 🚀
           </p>
-
-          <p style="${baseStyles.text}">
-            <strong>Что вы получаете с премиум-подпиской:</strong>
-          </p>
-
-          <ul style="color: #4a5568; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;">
-            <li>Неограниченный доступ ко всем материалам</li>
-            <li>Приоритетная поддержка</li>
-            <li>Эксклюзивный контент</li>
-            <li>Без рекламы</li>
-          </ul>
 
           <!-- Button -->
           <div style="${baseStyles.buttonContainer}">
@@ -92,18 +83,18 @@ function getSubscriptionExpiringTemplate({ userName, daysLeft, expirationDate, r
               🔄 Продлить подписку
             </a>
           </div>
-
-          <p style="${baseStyles.text} font-size: 14px; color: #718096;">
-            Если у вас возникли вопросы, мы всегда готовы помочь.
-            Просто ответьте на это письмо.
-          </p>
+          <div style="${baseStyles.buttonContainer}">
+            <a href="https://t.me/MarketingFohow" style="${baseStyles.button}">
+              📢 MarketingFohow
+            </a>
+          </div>
         </div>
 
         <!-- Footer -->
         <div style="${baseStyles.footer}">
           <p style="${baseStyles.footerText}">
             С уважением,<br>
-            <strong>Команда FOHOW</strong>
+            <strong>Команда MarketingFohow</strong>
           </p>
           <p style="${baseStyles.footerText} font-size: 12px;">
             Это автоматическое уведомление. Пожалуйста, не отвечайте на него.
@@ -135,7 +126,7 @@ function getSubscriptionExpiredTemplate({ userName, pricingUrl = '#' }) {
       <div style="${baseStyles.container}">
         <!-- Header -->
         <div style="${baseStyles.header}">
-          <h1 style="${baseStyles.headerTitle}">📋 FOHOW</h1>
+          <h1 style="${baseStyles.headerTitle}">🧾 FOHOW</h1>
         </div>
 
         <!-- Content -->
@@ -143,41 +134,34 @@ function getSubscriptionExpiredTemplate({ userName, pricingUrl = '#' }) {
           <h2 style="${baseStyles.title}">Здравствуйте, ${userName}!</h2>
 
           <p style="${baseStyles.text}">
-            К сожалению, срок действия вашей премиум-подписки истёк.
+            К сожалению, срок действия вашей премиум&#8209;подписки истёк.
           </p>
 
           <!-- Highlight Box -->
           <div style="${baseStyles.highlight}">
             <p style="${baseStyles.highlightText}">
               <strong style="font-size: 18px; color: #667eea;">
-                🔄 Переход на бесплатный план
+                🪪 Переход на гостевой тариф
               </strong>
             </p>
             <p style="${baseStyles.highlightText} margin-top: 15px; font-size: 15px;">
-              Ваш аккаунт автоматически переведён на бесплатный тариф.
-              Вы можете продолжать пользоваться базовыми функциями сервиса.
+              Ваш аккаунт автоматически переведён на гостевой тариф.
             </p>
           </div>
 
           <p style="${baseStyles.text}">
-            <strong>Что доступно на бесплатном тарифе:</strong>
+            <strong>✅ Что сейчас доступно:</strong>
           </p>
 
           <ul style="color: #4a5568; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;">
-            <li>Ограниченный доступ к материалам</li>
-            <li>Базовые функции сервиса</li>
-            <li>Стандартная поддержка</li>
+            <li>До 3&#8209;х досок</li>
+            <li>До 10 стикеров</li>
+            <li>До 10 заметок и комментариев</li>
+            <li>Экспорт в PNG (A4)</li>
           </ul>
 
-          <hr style="${baseStyles.divider}">
-
           <p style="${baseStyles.text}">
-            <strong>Хотите вернуть все возможности?</strong>
-          </p>
-
-          <p style="${baseStyles.text}">
-            Оформите новую подписку и снова получите полный доступ ко всем
-            премиум-функциям, эксклюзивному контенту и приоритетной поддержке!
+            <strong>⭐ Хотите вернуть все возможности?</strong>
           </p>
 
           <!-- Button -->
@@ -186,18 +170,18 @@ function getSubscriptionExpiredTemplate({ userName, pricingUrl = '#' }) {
               ⭐ Выбрать тариф
             </a>
           </div>
-
-          <p style="${baseStyles.text} font-size: 14px; color: #718096;">
-            Мы ценим каждого пользователя и готовы помочь с выбором подходящего тарифа.
-            Свяжитесь с нами, если у вас есть вопросы!
-          </p>
+          <div style="${baseStyles.buttonContainer}">
+            <a href="https://t.me/MarketingFohow" style="${baseStyles.button}">
+              📢 MarketingFohow
+            </a>
+          </div>
         </div>
 
         <!-- Footer -->
         <div style="${baseStyles.footer}">
           <p style="${baseStyles.footerText}">
             С уважением,<br>
-            <strong>Команда FOHOW</strong>
+            <strong>Команда MarketingFohow</strong>
           </p>
           <p style="${baseStyles.footerText} font-size: 12px;">
             Это автоматическое уведомление. Пожалуйста, не отвечайте на него.
@@ -217,7 +201,7 @@ function getSubscriptionExpiredTemplate({ userName, pricingUrl = '#' }) {
  * @param {string} params.dashboardUrl - URL личного кабинета
  * @returns {string} HTML-шаблон письма
  */
-function getWelcomeTemplate({ userName, demoDays = 3, dashboardUrl = '#' }) {
+function getWelcomeTemplate({ userName, demoDays = 7, dashboardUrl = '#' }) {
   return `
     <!DOCTYPE html>
     <html lang="ru">
@@ -230,7 +214,7 @@ function getWelcomeTemplate({ userName, demoDays = 3, dashboardUrl = '#' }) {
       <div style="${baseStyles.container}">
         <!-- Header -->
         <div style="${baseStyles.header}">
-          <h1 style="${baseStyles.headerTitle}">🎉 Добро пожаловать!</h1>
+          <h1 style="${baseStyles.headerTitle}">🚀 Рады видеть вас!</h1>
         </div>
 
         <!-- Content -->
@@ -238,48 +222,26 @@ function getWelcomeTemplate({ userName, demoDays = 3, dashboardUrl = '#' }) {
           <h2 style="${baseStyles.title}">Здравствуйте, ${userName}!</h2>
 
           <p style="${baseStyles.text}">
-            Рады приветствовать вас в <strong>FOHOW</strong>!
-            Спасибо, что присоединились к нам. 🚀
+            Мы активировали для вас <strong>${demoDays}-дневный демо-доступ</strong>
+            с полным набором премиум-функций.
           </p>
 
-          <!-- Highlight Box -->
-          <div style="${baseStyles.highlight} background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left-color: #48bb78;">
-            <p style="${baseStyles.highlightText}">
-              <strong style="font-size: 20px; color: #48bb78;">
-                🎁 Подарок от нас!
-              </strong>
-            </p>
-            <p style="${baseStyles.highlightText} margin-top: 15px;">
-              Мы активировали для вас <strong>демо-период на ${demoDays} дня</strong>
-              с полным доступом ко всем премиум-функциям. Попробуйте все возможности
-              платформы абсолютно бесплатно!
-            </p>
-          </div>
-
           <p style="${baseStyles.text}">
-            <strong>Что вас ждёт:</strong>
+            <strong>✨ Что вы получаете:</strong>
           </p>
 
           <ul style="color: #4a5568; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;">
-            <li>✨ <strong>Полный доступ</strong> ко всем материалам и функциям</li>
-            <li>🎯 <strong>Эксклюзивный контент</strong> для премиум-пользователей</li>
-            <li>💬 <strong>Приоритетная поддержка</strong> от нашей команды</li>
-            <li>📚 <strong>Обучающие материалы</strong> и гайды</li>
-            <li>🚫 <strong>Без рекламы</strong> — только полезный контент</li>
+            <li>Безлимитные доски</li>
+            <li>Безлимитное количество лицензий на одной доске</li>
+            <li>Безлимитное количество заметок на одной доске</li>
+            <li>Безлимитное количество стикеров на одной доске</li>
+            <li>Безлимитные комментарии</li>
+            <li>Библиотеку изображений с возможностью создать свою собственную библиотеку</li>
+            <li>Экспорт в PNG (A4, A3, A2, A1)</li>
+            <li>Экспорт в HTML</li>
+            <li>Дублирование досок</li>
+            <li>Режим рисования</li>
           </ul>
-
-          <hr style="${baseStyles.divider}">
-
-          <p style="${baseStyles.text}">
-            <strong>С чего начать?</strong>
-          </p>
-
-          <ol style="color: #4a5568; font-size: 16px; line-height: 1.8; margin: 0 0 20px 0;">
-            <li>Зайдите в личный кабинет</li>
-            <li>Изучите доступные материалы</li>
-            <li>Настройте профиль под себя</li>
-            <li>Наслаждайтесь всеми возможностями!</li>
-          </ol>
 
           <!-- Button -->
           <div style="${baseStyles.buttonContainer}">
@@ -287,28 +249,21 @@ function getWelcomeTemplate({ userName, demoDays = 3, dashboardUrl = '#' }) {
               🚀 Перейти в личный кабинет
             </a>
           </div>
-
-          <p style="${baseStyles.text} font-size: 14px; color: #718096; margin-top: 30px;">
-            <strong>Совет:</strong> Не забудьте изучить все разделы в течение демо-периода,
-            чтобы понять, какие возможности вам наиболее интересны!
-          </p>
-
-          <hr style="${baseStyles.divider}">
-
-          <p style="${baseStyles.text}">
-            Если у вас возникнут вопросы или нужна помощь, мы всегда на связи.
-            Просто ответьте на это письмо, и мы обязательно вам поможем! 💙
-          </p>
+          <div style="${baseStyles.buttonContainer}">
+            <a href="https://t.me/MarketingFohow" style="${baseStyles.button}">
+              📢 MarketingFohow
+            </a>
+          </div>
         </div>
 
         <!-- Footer -->
         <div style="${baseStyles.footer}">
           <p style="${baseStyles.footerText}">
-            С уважением и наилучшими пожеланиями,<br>
-            <strong>Команда FOHOW</strong>
+            С уважением,<br>
+            <strong>Команда MarketingFohow</strong>
           </p>
           <p style="${baseStyles.footerText} font-size: 12px; margin-top: 15px;">
-            Вы получили это письмо, потому что зарегистрировались на нашей платформе.
+            Это автоматическое уведомление. Пожалуйста, не отвечайте на него.
           </p>
         </div>
       </div>
@@ -368,7 +323,13 @@ function getVerificationApprovedTemplate({ userName, personalId, profileUrl = 'h
           <!-- Button -->
           <div style="${baseStyles.buttonContainer}">
             <a href="${profileUrl}" style="${baseStyles.button}">
-              👤 Перейти в профиль
+              👤 В профиль
+            </a>
+          </div>
+
+          <div style="${baseStyles.buttonContainer} margin-top: 8px;">
+            <a href="https://t.me/MarketingFohow" style="${baseStyles.button} background: transparent; color: ${baseStyles.accentColor}; border: 2px solid ${baseStyles.accentColor};">
+              📢 MarketingFohow
             </a>
           </div>
         </div>
@@ -377,7 +338,7 @@ function getVerificationApprovedTemplate({ userName, personalId, profileUrl = 'h
         <div style="${baseStyles.footer}">
           <p style="${baseStyles.footerText}">
             С уважением,<br>
-            <strong>Команда FOHOW</strong>
+            <strong>Команда MarketingFohow</strong>
           </p>
           <p style="${baseStyles.footerText} font-size: 12px;">
             Это автоматическое уведомление. Пожалуйста, не отвечайте на него.
@@ -434,7 +395,13 @@ function getVerificationRevokedTemplate({ userName, profileUrl = 'https://intera
           <!-- Button -->
           <div style="${baseStyles.buttonContainer}">
             <a href="${profileUrl}" style="${baseStyles.button}">
-              👤 Перейти в профиль
+              👤 В профиль
+            </a>
+          </div>
+
+          <div style="${baseStyles.buttonContainer} margin-top: 8px;">
+            <a href="https://t.me/MarketingFohow" style="${baseStyles.button} background: transparent; color: ${baseStyles.accentColor}; border: 2px solid ${baseStyles.accentColor};">
+              📢 MarketingFohow
             </a>
           </div>
         </div>
@@ -443,7 +410,7 @@ function getVerificationRevokedTemplate({ userName, profileUrl = 'https://intera
         <div style="${baseStyles.footer}">
           <p style="${baseStyles.footerText}">
             С уважением,<br>
-            <strong>Команда FOHOW</strong>
+            <strong>Команда MarketingFohow</strong>
           </p>
           <p style="${baseStyles.footerText} font-size: 12px;">
             Это автоматическое уведомление. Пожалуйста, не отвечайте на него.
@@ -506,10 +473,22 @@ function getVerificationAutoRejectedTemplate({ userName, personalId, profileUrl 
             ✉️ Email: <a href="mailto:marketingfohow@yandex.com" style="color: #667eea;">marketingfohow@yandex.com</a>
           </p>
 
-          <!-- Button -->
+          <!-- Buttons -->
           <div style="${baseStyles.buttonContainer}">
-            <a href="${profileUrl}" style="${baseStyles.button}">
-              👤 Перейти в профиль
+            <a href="https://t.me/FOHOWadmin" style="${baseStyles.button}">
+              📞 Поддержка
+            </a>
+          </div>
+
+          <div style="${baseStyles.buttonContainer} margin-top: 8px;">
+            <a href="${profileUrl}" style="${baseStyles.button} background: transparent; color: ${baseStyles.accentColor}; border: 2px solid ${baseStyles.accentColor};">
+              👤 В профиль
+            </a>
+          </div>
+
+          <div style="${baseStyles.buttonContainer} margin-top: 8px;">
+            <a href="https://t.me/MarketingFohow" style="${baseStyles.button} background: transparent; color: ${baseStyles.accentColor}; border: 2px solid ${baseStyles.accentColor};">
+              📢 MarketingFohow
             </a>
           </div>
         </div>
@@ -518,7 +497,7 @@ function getVerificationAutoRejectedTemplate({ userName, personalId, profileUrl 
         <div style="${baseStyles.footer}">
           <p style="${baseStyles.footerText}">
             С уважением,<br>
-            <strong>Команда FOHOW</strong>
+            <strong>Команда MarketingFohow</strong>
           </p>
           <p style="${baseStyles.footerText} font-size: 12px;">
             Это автоматическое уведомление. Пожалуйста, не отвечайте на него.
@@ -583,7 +562,13 @@ function getVerificationRejectedTemplate({ userName, rejectionReason, profileUrl
           <!-- Button -->
           <div style="${baseStyles.buttonContainer}">
             <a href="${profileUrl}" style="${baseStyles.button}">
-              👤 Перейти в профиль
+              👤 В профиль
+            </a>
+          </div>
+
+          <div style="${baseStyles.buttonContainer} margin-top: 8px;">
+            <a href="https://t.me/MarketingFohow" style="${baseStyles.button} background: transparent; color: ${baseStyles.accentColor}; border: 2px solid ${baseStyles.accentColor};">
+              📢 MarketingFohow
             </a>
           </div>
 
@@ -598,7 +583,7 @@ function getVerificationRejectedTemplate({ userName, rejectionReason, profileUrl
         <div style="${baseStyles.footer}">
           <p style="${baseStyles.footerText}">
             С уважением,<br>
-            <strong>Команда FOHOW</strong>
+            <strong>Команда MarketingFohow</strong>
           </p>
           <p style="${baseStyles.footerText} font-size: 12px;">
             Это автоматическое уведомление. Пожалуйста, не отвечайте на него.
@@ -792,11 +777,23 @@ function getSubscriptionEventTemplate({ eventType, userName, planName, amount, c
   const formattedStartDate = startDate ? formatDate(startDate) : '';
   const formattedExpiresDate = expiresDate ? formatDate(expiresDate) : '';
 
-  const planFeatures = planName === 'Premium'
-    ? 'Безлимитное количество досок, все премиум-функции'
-    : planName === 'Individual'
-      ? 'До 9 интерактивных досок, расширенные функции'
-      : 'Базовые функции';
+  let planFeaturesHtml = '';
+  switch (planName) {
+    case 'Premium':
+    case 'Премиум':
+      planFeaturesHtml = `<li>Безлимитное количество досок</li><li>Безлимитное количество стикеров</li><li>Безлимитное количество заметок и комментариев</li><li>До 30 папок</li><li>Библиотека изображений</li><li>Экспорт в PNG (A4, A3, A2, A1)</li><li>Экспорт в HTML</li><li>Дублирование досок</li><li>Режим рисования</li>`;
+      break;
+    case 'Individual':
+    case 'Индивидуальный':
+      planFeaturesHtml = `<li>До 9 интерактивных досок</li><li>До 100 стикеров</li><li>До 100 заметок и комментариев</li><li>До 3 папок</li><li>Библиотека изображений</li><li>Экспорт в PNG (A4, A3, A2, A1)</li><li>Экспорт в HTML</li><li>Дублирование досок</li><li>Режим рисования</li>`;
+      break;
+    case 'Demo':
+    case 'Демо':
+      planFeaturesHtml = `<li>До 9 интерактивных досок</li><li>До 15 стикеров</li><li>До 5 заметок</li><li>До 3 папок</li><li>Экспорт в PNG (A4)</li><li>Библиотека изображений</li>`;
+      break;
+    default:
+      planFeaturesHtml = `<li>До 3 интерактивных досок</li><li>До 10 стикеров</li><li>До 10 заметок и комментариев</li><li>Экспорт в PNG (A4)</li>`;
+  }
 
   const boardsUrl = `${process.env.FRONTEND_URL}/boards`;
   const pricingUrl = `${process.env.FRONTEND_URL}/pricing`;
@@ -856,22 +853,30 @@ function getSubscriptionEventTemplate({ eventType, userName, planName, amount, c
     color: #333;
   }
   .features {
-    background: #e8f5e9;
-    border-left: 4px solid #4CAF50;
+    background: #fffbeb;
+    border-left: 4px solid #ffc107;
     padding: 15px 20px;
     margin: 20px 0;
     text-align: left;
     border-radius: 0 8px 8px 0;
   }
+  .features ul {
+    margin: 8px 0 0 0;
+    padding-left: 18px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #4a5568;
+  }
   .button {
-    background: #4CAF50;
     display: inline-block;
-    color: #fff !important;
+    background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+    color: #3a2800 !important;
     padding: 14px 36px;
     text-decoration: none;
     border-radius: 9px;
     margin-top: 25px;
     font-size: 18px;
+    font-weight: 600;
   }
   .footer {
     margin-top: 30px;
@@ -882,33 +887,34 @@ function getSubscriptionEventTemplate({ eventType, userName, planName, amount, c
 </head>
 <body>
   <div class="email-container">
-    <h1>Подписка успешно активирована! 🎉</h1>
+    <h1>✅ Подписка активирована!</h1>
     <p>Здравствуйте, ${userName}!</p>
-    <p>Спасибо за оплату подписки на FOHOW Interactive Board!</p>
+    <p>🙏 Спасибо за оплату!</p>
 
     <div class="details-box">
-      <p><strong>Тариф:</strong> ${planName}</p>
-      <p><strong>Стоимость:</strong> ${amount} ${currency}</p>
-      <p><strong>Начало:</strong> ${formattedStartDate}</p>
-      <p><strong>Действует до:</strong> ${formattedExpiresDate}</p>
+      <p><strong>💎 Тариф:</strong> ${planName}</p>
+      <p><strong>💰 Стоимость:</strong> ${amount} ${currency}</p>
+      <p><strong>📅 Действует до:</strong> ${formattedExpiresDate}</p>
     </div>
 
     <div class="features">
-      <strong>Ваши возможности:</strong><br>
-      ${planFeatures}
+      <strong>🚀 Ваши возможности:</strong>
+      <ul>${planFeaturesHtml}</ul>
     </div>
 
-    <a href="${boardsUrl}" class="button">Начать работу</a>
+    <a href="${boardsUrl}" class="button">👤 В профиль</a>
+    <br>
+    <a href="https://t.me/MarketingFohow" class="button">📢 MarketingFohow</a>
 
     <div class="footer">
-      С уважением, команда FOHOW Interactive Board
+      С уважением, команда MarketingFohow
     </div>
   </div>
 </body>
 </html>
     `;
   } else if (eventType === 'renewed') {
-    subject = '🔄 Подписка продлена — FOHOW Interactive Board';
+    subject = '🧩 Подписка продлена — FOHOW Interactive Board';
     html = `
 <!DOCTYPE html>
 <html lang="ru">
@@ -959,103 +965,31 @@ function getSubscriptionEventTemplate({ eventType, userName, planName, amount, c
   .details-box strong {
     color: #333;
   }
-  .button {
-    background: #4CAF50;
-    display: inline-block;
-    color: #fff !important;
-    padding: 14px 36px;
-    text-decoration: none;
-    border-radius: 9px;
-    margin-top: 25px;
-    font-size: 18px;
-  }
-  .footer {
-    margin-top: 30px;
-    font-size: 13px;
-    color: #777;
-  }
-</style>
-</head>
-<body>
-  <div class="email-container">
-    <h1>Ваша подписка продлена 🔄</h1>
-    <p>Здравствуйте, ${userName}!</p>
-    <p>Оплата успешно прошла, подписка автоматически продлена.</p>
-
-    <div class="details-box">
-      <p><strong>Тариф:</strong> ${planName}</p>
-      <p><strong>Сумма:</strong> ${amount} ${currency}</p>
-      <p><strong>Действует до:</strong> ${formattedExpiresDate}</p>
-    </div>
-
-    <a href="${boardsUrl}" class="button">Перейти к доскам</a>
-
-    <div class="footer">
-      С уважением, команда FOHOW Interactive Board
-    </div>
-  </div>
-</body>
-</html>
-    `;
-  } else if (eventType === 'cancelled') {
-    subject = '⚠️ Подписка отменена — FOHOW Interactive Board';
-    html = `
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Подписка отменена</title>
-<style>
-  body {
-    margin: 0; padding: 0;
-    background: #f3f3f3;
-    font-family: Arial, sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    body { background: #0e0e0e; color: #fff; }
-    .email-container { background: #1a1a1a; }
-    .info-box { background: #252525; }
-  }
-  .email-container {
-    max-width: 600px;
-    margin: 25px auto;
-    background: #fff;
-    padding: 40px 32px;
-    border-radius: 18px;
-    text-align: center;
-  }
-  h1 {
-    color: #ff9800;
-    font-size: 26px;
-    margin-bottom: 15px;
-  }
-  p {
-    font-size: 16px;
-    line-height: 1.6;
-    margin: 10px 0;
-  }
-  .info-box {
-    background: #fff3e0;
-    border-left: 4px solid #ff9800;
-    padding: 20px;
-    margin: 25px 0;
+  .features {
+    background: #fffbeb;
+    border-left: 4px solid #ffc107;
+    padding: 15px 20px;
+    margin: 20px 0;
     text-align: left;
     border-radius: 0 8px 8px 0;
   }
-  .info-box p {
-    margin: 8px 0;
+  .features ul {
+    margin: 8px 0 0 0;
+    padding-left: 18px;
     font-size: 15px;
+    line-height: 1.7;
+    color: #4a5568;
   }
   .button {
-    background: #4CAF50;
     display: inline-block;
-    color: #fff !important;
+    background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+    color: #3a2800 !important;
     padding: 14px 36px;
     text-decoration: none;
     border-radius: 9px;
     margin-top: 25px;
     font-size: 18px;
+    font-weight: 600;
   }
   .footer {
     margin-top: 30px;
@@ -1066,21 +1000,27 @@ function getSubscriptionEventTemplate({ eventType, userName, planName, amount, c
 </head>
 <body>
   <div class="email-container">
-    <h1>Ваша подписка отменена ⚠️</h1>
+    <h1>🧩 Подписка продлена!</h1>
     <p>Здравствуйте, ${userName}!</p>
-    <p>Подписка <strong>${planName}</strong> была отменена. Вы переведены на гостевой тариф.</p>
+    <p>Оплата успешно прошла. ✅</p>
 
-    <div class="info-box">
-      <p><strong>Доступ сохраняется до:</strong> ${formattedExpiresDate}</p>
-      <p>После этой даты будут доступны только функции гостевого тарифа.</p>
+    <div class="details-box">
+      <p><strong>💎 Тариф:</strong> ${planName}</p>
+      <p><strong>💰 Сумма:</strong> ${amount} ${currency}</p>
+      <p><strong>📅 Действует до:</strong> ${formattedExpiresDate}</p>
     </div>
 
-    <p>Вы можете продлить подписку в любой момент:</p>
+    <div class="features">
+      <strong>🚀 Ваши возможности:</strong>
+      <ul>${planFeaturesHtml}</ul>
+    </div>
 
-    <a href="${pricingUrl}" class="button">Продлить подписку</a>
+    <a href="${boardsUrl}" class="button">👤 В профиль</a>
+    <br>
+    <a href="https://t.me/MarketingFohow" class="button">📢 MarketingFohow</a>
 
     <div class="footer">
-      С уважением, команда FOHOW Interactive Board
+      С уважением, команда MarketingFohow
     </div>
   </div>
 </body>
@@ -1116,7 +1056,7 @@ function getSubscriptionEventTemplate({ eventType, userName, planName, amount, c
     text-align: center;
   }
   h1 {
-    color: #4CAF50;
+    color: ${baseStyles.accentColor};
     font-size: 26px;
     margin-bottom: 15px;
   }
@@ -1141,8 +1081,8 @@ function getSubscriptionEventTemplate({ eventType, userName, planName, amount, c
   }
   .promo-code {
     display: inline-block;
-    background: #e8f5e9;
-    color: #2e7d32;
+    background: #fff8e1;
+    color: ${baseStyles.buttonTextColor};
     font-weight: bold;
     padding: 4px 12px;
     border-radius: 4px;
@@ -1150,14 +1090,30 @@ function getSubscriptionEventTemplate({ eventType, userName, planName, amount, c
     font-size: 16px;
   }
   .button {
-    background: #4CAF50;
+    background: ${baseStyles.accentColor};
     display: inline-block;
-    color: #fff !important;
+    color: ${baseStyles.buttonTextColor} !important;
     padding: 14px 36px;
     text-decoration: none;
     border-radius: 9px;
-    margin-top: 25px;
+    margin-top: 15px;
     font-size: 18px;
+    font-weight: bold;
+  }
+  .button:hover {
+    background: ${baseStyles.accentHover};
+  }
+  .button-secondary {
+    background: transparent;
+    display: inline-block;
+    color: ${baseStyles.accentColor} !important;
+    padding: 12px 36px;
+    text-decoration: none;
+    border-radius: 9px;
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    border: 2px solid ${baseStyles.accentColor};
   }
   .footer {
     margin-top: 30px;
@@ -1180,10 +1136,12 @@ function getSubscriptionEventTemplate({ eventType, userName, planName, amount, c
 
     <p>Приятной работы! 🎨</p>
 
-    <a href="${boardsUrl}" class="button">🚀 Начать работу</a>
+    <a href="${boardsUrl}" class="button">👤 В профиль</a>
+    <br>
+    <a href="https://t.me/MarketingFohow" class="button-secondary">📢 MarketingFohow</a>
 
     <div class="footer">
-      С уважением, команда FOHOW Interactive Board
+      С уважением, команда MarketingFohow
     </div>
   </div>
 </body>
@@ -1293,14 +1251,14 @@ function getPasswordChangedTemplate({ formattedDate, locationString }) {
       ⚠️ Если вы не меняли пароль, немедленно свяжитесь с поддержкой или восстановите доступ через форму "Забыли пароль?"
     </div>
 
-    <a href="https://interactive.marketingfohow.ru/" style="display: inline-block; background: #4CAF50; color: #fff !important; padding: 14px 36px; text-decoration: none; border-radius: 9px; margin-top: 25px; font-size: 18px;">Перейти на сайт</a>
-
-    <p style="margin-top: 20px; font-size: 14px;">
-      📞 Связь с админом: <a href="https://t.me/FOHOWadmin" style="color: #4CAF50;">@FOHOWadmin</a>
-    </p>
+    <a href="https://t.me/FOHOWadmin" style="display: inline-block; background: ${baseStyles.accentColor}; color: ${baseStyles.buttonTextColor} !important; padding: 14px 36px; text-decoration: none; border-radius: 9px; margin-top: 25px; font-size: 18px; font-weight: 600;">📞 Поддержка</a>
+    <br>
+    <a href="https://interactive.marketingfohow.ru/" style="display: inline-block; background: transparent; color: ${baseStyles.accentColor} !important; padding: 12px 36px; text-decoration: none; border-radius: 9px; margin-top: 10px; font-size: 16px; font-weight: 600; border: 2px solid ${baseStyles.accentColor};">👤 В профиль</a>
+    <br>
+    <a href="https://t.me/MarketingFohow" style="display: inline-block; background: transparent; color: ${baseStyles.accentColor} !important; padding: 12px 36px; text-decoration: none; border-radius: 9px; margin-top: 10px; font-size: 16px; font-weight: 600; border: 2px solid ${baseStyles.accentColor};">📢 MarketingFohow</a>
 
     <div class="footer">
-      С уважением, команда FOHOW Interactive Board
+      С уважением, команда MarketingFohow
     </div>
   </div>
 </body>

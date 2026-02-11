@@ -16,8 +16,7 @@ import { sendTelegramMessage } from '../utils/telegramService.js';
 import boardLockService from '../services/boardLockService.js';
 import {
   getSubscriptionActivatedMessage,
-  getSubscriptionRenewedMessage,
-  getSubscriptionCancelledMessage
+  getSubscriptionRenewedMessage
 } from '../templates/telegramTemplates.js';
 
 /**
@@ -464,61 +463,7 @@ export async function handleSubscriptionCancelled(data) {
       console.error('[Tribute] Ошибка при пересчете блокировок досок (cancel):', lockError);
     }
 
-    // Отправка email-уведомления
-    try {
-      const userData = await pool.query(
-        `SELECT u.email, u.name, u.telegram_chat_id, ts.tribute_product_id, u.subscription_expires_at
-         FROM users u
-         JOIN tribute_subscriptions ts ON ts.user_id = u.id AND ts.tribute_subscription_id = $1
-         WHERE u.id = $2`,
-        [subscription_id, user_id]
-      );
-
-      if (userData.rows.length > 0) {
-        const user = userData.rows[0];
-        // Определить название тарифа по product_id
-        const planName = user.tribute_product_id === 'sLe1' ? 'Premium' : 'Individual';
-
-        await sendSubscriptionEmail(user.email, 'cancelled', {
-          userName: user.name || 'Пользователь',
-          planName: planName,
-          amount: 0,
-          currency: 'RUB',
-          startDate: new Date().toISOString(),
-          expiresDate: user.subscription_expires_at || new Date().toISOString()
-        });
-
-        // Отправка Telegram-уведомления
-        if (user.telegram_chat_id) {
-          try {
-            const expiresDateFormatted = user.subscription_expires_at
-              ? new Date(user.subscription_expires_at).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })
-              : 'неизвестно';
-
-            const telegramMessage = getSubscriptionCancelledMessage(
-              user.name || 'Пользователь',
-              planName,
-              expiresDateFormatted,
-              process.env.FRONTEND_URL + '/pricing'
-            );
-
-            await sendTelegramMessage(user.telegram_chat_id, telegramMessage.text, {
-              parse_mode: telegramMessage.parse_mode,
-              reply_markup: telegramMessage.reply_markup,
-              disable_web_page_preview: telegramMessage.disable_web_page_preview
-            });
-
-            console.log(`✅ Telegram-уведомление об отмене подписки отправлено: ${user.telegram_chat_id}`);
-          } catch (telegramError) {
-            console.error('❌ Не удалось отправить Telegram-уведомление об отмене:', telegramError.message);
-          }
-        } else {
-          console.log('ℹ️ telegram_chat_id не указан, пропускаем отправку Telegram-уведомления');
-        }
-      }
-    } catch (emailError) {
-      console.error('❌ Не удалось отправить email об отмене подписки:', emailError.message);
-    }
+    // Уведомления не отправляются — дубликат cron-задачи "Подписка истекла"
 
     return { success: true, userId: user_id, guestPlanId };
 

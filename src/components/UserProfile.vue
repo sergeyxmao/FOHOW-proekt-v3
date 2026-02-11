@@ -4179,19 +4179,19 @@ watch(activeTab, (newTab) => {
 }
 
 .tariff-features--current li {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(0, 0, 0, 0.85);
 }
 
 .tariff-features--current li .feature-icon {
-  color: #90EE90;
+  color: #2e7d32;
 }
 
 .tariff-features--current li.feature-unavailable {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(0, 0, 0, 0.4);
 }
 
 .tariff-features--current li.feature-unavailable .feature-icon {
-  color: #ff6b6b;
+  color: #c62828;
 }
 
 .btn-upgrade {
