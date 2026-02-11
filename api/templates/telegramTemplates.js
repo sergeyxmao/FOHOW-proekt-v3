@@ -137,7 +137,6 @@ function getWelcomeMessage(userName, demoDays = 7, dashboardUrl = 'https://inter
 • Библиотеку изображений с возможностью создать свою собственную библиотеку
 • Экспорт в PNG (A4, A3, A2, A1)
 • Экспорт в HTML
-• Дублирование досок
 • Режим рисования`;
 
   return {
@@ -182,7 +181,7 @@ function getSubscriptionActivatedMessage(userName, planName, amount, currency, e
       features = `• Безлимитное количество досок
 • Безлимитное количество стикеров
 • Безлимитное количество заметок и комментариев
-• До 30 папок
+• До 100 папок
 • Библиотека изображений
 • Экспорт в PNG (A4, A3, A2, A1)
 • Экспорт в HTML
@@ -192,10 +191,10 @@ function getSubscriptionActivatedMessage(userName, planName, amount, currency, e
 
     case 'индивидуальный':
     case 'individual':
-      features = `• До 9 интерактивных досок
+      features = `• До 18 интерактивных досок
 • До 100 стикеров
 • До 100 заметок и комментариев
-• До 3 папок
+• До 9 папок
 • Библиотека изображений
 • Экспорт в PNG (A4, A3, A2, A1)
 • Экспорт в HTML
@@ -205,12 +204,14 @@ function getSubscriptionActivatedMessage(userName, planName, amount, currency, e
 
     case 'демо':
     case 'demo':
-      features = `• До 9 интерактивных досок
-• До 15 стикеров
-• До 5 заметок
-• До 3 папок
-• Экспорт в PNG (A4)
-• Библиотека изображений`;
+      features = `• Безлимитное количество досок
+• Безлимитное количество стикеров
+• Безлимитное количество заметок и комментариев
+• До 30 папок
+• Библиотека изображений
+• Экспорт в PNG (A4, A3, A2, A1)
+• Экспорт в HTML
+• Режим рисования`;
       break;
 
     case 'гостевой':
@@ -333,7 +334,7 @@ function getSubscriptionRenewedMessage(userName, planName, amount, currency, exp
       features = `• Безлимитное количество досок
 • Безлимитное количество стикеров
 • Безлимитное количество заметок и комментариев
-• До 30 папок
+• До 100 папок
 • Библиотека изображений
 • Экспорт в PNG (A4, A3, A2, A1)
 • Экспорт в HTML
@@ -343,10 +344,10 @@ function getSubscriptionRenewedMessage(userName, planName, amount, currency, exp
 
     case 'индивидуальный':
     case 'individual':
-      features = `• До 9 интерактивных досок
+      features = `• До 18 интерактивных досок
 • До 100 стикеров
 • До 100 заметок и комментариев
-• До 3 папок
+• До 9 папок
 • Библиотека изображений
 • Экспорт в PNG (A4, A3, A2, A1)
 • Экспорт в HTML
@@ -356,12 +357,14 @@ function getSubscriptionRenewedMessage(userName, planName, amount, currency, exp
 
     case 'демо':
     case 'demo':
-      features = `• До 9 интерактивных досок
-• До 15 стикеров
-• До 5 заметок
-• До 3 папок
-• Экспорт в PNG (A4)
-• Библиотека изображений`;
+      features = `• Безлимитное количество досок
+• Безлимитное количество стикеров
+• Безлимитное количество заметок и комментариев
+• До 30 папок
+• Библиотека изображений
+• Экспорт в PNG (A4, A3, A2, A1)
+• Экспорт в HTML
+• Режим рисования`;
       break;
 
     case 'гостевой':
