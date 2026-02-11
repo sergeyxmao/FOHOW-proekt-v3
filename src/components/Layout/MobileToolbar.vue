@@ -251,9 +251,26 @@ const handleProfileClick = () => {
   color: #e5f3ff;
 }
 
+.mobile-toolbar-button:hover:not(:disabled) {
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+.mobile-toolbar--dark .mobile-toolbar-button:hover:not(:disabled) {
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+}
+
 .mobile-toolbar-button:active:not(:disabled) {
+  background: #e8a900;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  transform: scale(calc(var(--menu-scale, 1) * 0.95));  
+  transform: scale(calc(var(--menu-scale, 1) * 0.95));
 }
 
 .mobile-toolbar-button:disabled {

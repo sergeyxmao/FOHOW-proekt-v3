@@ -52,15 +52,23 @@
 
         <!-- Вертикальное меню -->
         <nav class="sidebar-menu">
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            :class="['menu-item', { 'menu-item--active': activeTab === tab.id && !isAvatarEditMode }]"
-            @click="selectTab(tab.id)"
+          <div
+            v-for="(group, groupIndex) in tabGroups"
+            :key="group.label"
+            class="menu-group"
           >
-            <span class="menu-icon">{{ tab.icon }}</span>
-            <span class="menu-label">{{ tab.label }}</span>
-          </button>
+            <div v-if="groupIndex > 0" class="menu-group__divider"></div>
+            <div class="menu-group__label">{{ group.label }}</div>
+            <button
+              v-for="tab in group.tabs"
+              :key="tab.id"
+              :class="['menu-item', { 'menu-item--active': activeTab === tab.id && !isAvatarEditMode }]"
+              @click="selectTab(tab.id)"
+            >
+              <span class="menu-icon">{{ tab.icon }}</span>
+              <span class="menu-label">{{ tab.label }}</span>
+            </button>
+          </div>
         </nav>
       </div>
 
@@ -354,7 +362,7 @@
               <h3 class="privacy-settings-title">Управление видимостью данных</h3>
               <p class="privacy-settings-hint">
                 Настройте, какие данные будут доступны для поиска другим пользователям.
-                Разрешенные поля (🔓) будут видны в результатах поиска, запрещенные (🔒) - скрыты.
+                Разрешенные поля (<svg class="lock-icon-inline lock-icon-inline--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/><path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg>) будут видны в результатах поиска, запрещенные (<svg class="lock-icon-inline lock-icon-inline--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/><path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg>) — скрыты.
               </p>
 
               <div class="privacy-fields-grid">
@@ -1385,17 +1393,35 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 
 // Табы
 const activeTab = ref('basic')
-const tabs = [
-  { id: 'basic', label: 'Основная информация', icon: 'ℹ️' },
-  { id: 'personal', label: 'Личная информация', icon: '👤' },
-  { id: 'social', label: 'Соц. сети', icon: '🌐' },
-  { id: 'privacy', label: 'Настройки конфиденциальности', icon: '🔒' },
-  { id: 'security', label: 'Безопасность', icon: '🛡️' },
-  { id: 'limits', label: 'Лимиты', icon: '📊' },
-  { id: 'notifications', label: 'Уведомления', icon: '🔔' },
-  { id: 'promo', label: 'Промокод', icon: '🎟️' },
-  { id: 'tariffs', label: 'Тарифы', icon: '💳' }
+const tabGroups = [
+  {
+    label: 'Профиль',
+    tabs: [
+      { id: 'basic', label: 'Основная информация', icon: 'ℹ️' },
+      { id: 'personal', label: 'Личная информация', icon: '👤' },
+      { id: 'social', label: 'Соц. сети', icon: '🔗' }
+    ]
+  },
+  {
+    label: 'Подписка',
+    tabs: [
+      { id: 'tariffs', label: 'Тарифы', icon: '💳' },
+      { id: 'limits', label: 'Лимиты', icon: '📊' },
+      { id: 'promo', label: 'Промокод', icon: '🎁' }
+    ]
+  },
+  {
+    label: 'Настройки',
+    tabs: [
+      { id: 'notifications', label: 'Уведомления', icon: '🔔' },
+      { id: 'security', label: 'Безопасность', icon: '🛡️' },
+      { id: 'privacy', label: 'Настройки конфиденциальности', icon: '👁️' }
+    ]
+  }
 ]
+
+// Плоский список табов для совместимости с остальным кодом
+const tabs = tabGroups.flatMap(group => group.tabs)
 
 // === Инициализация Composables ===
 
@@ -1582,8 +1608,8 @@ function formatDate(dateString) {
 // Стиль бейджа плана
 function getPlanBadgeStyle() {
   return {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: 'white',
+    background: 'linear-gradient(135deg, #ffc107 0%, #e8a900 100%)',
+    color: '#000',
     padding: '4px 12px',
     borderRadius: '12px',
     fontWeight: '600',
@@ -1779,7 +1805,7 @@ watch(activeTab, (newTab) => {
 
 .tariff-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
 }
 
 .tariff-btn:active {
@@ -1814,7 +1840,7 @@ watch(activeTab, (newTab) => {
   align-items: center;
   gap: 20px;
   padding: 30px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.06) 0%, rgba(232, 169, 0, 0.06) 100%);
   border-radius: 20px;
   margin-bottom: 30px;
   border: 2px solid var(--profile-border);
@@ -1852,23 +1878,23 @@ watch(activeTab, (newTab) => {
   object-fit: cover;
   border: 4px solid transparent;
   background: linear-gradient(white, white) padding-box,
-              linear-gradient(135deg, #667eea 0%, #764ba2 100%) border-box;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+              linear-gradient(135deg, #ffc107 0%, #e8a900 100%) border-box;
+  box-shadow: 0 8px 24px rgba(255, 193, 7, 0.35);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .profile-avatar:hover,
 .profile-avatar-placeholder:hover {
   transform: scale(1.05);
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 12px 32px rgba(255, 193, 7, 0.4);
 }
 
 .profile-avatar-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #5a3e00;
   font-size: 48px;
   font-weight: 700;
 }
@@ -1908,14 +1934,14 @@ watch(activeTab, (newTab) => {
 }
 
 .btn-upload {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #000;
   display: inline-block;
 }
 
 .btn-upload:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4);
 }
 
 .btn-remove {
@@ -1971,7 +1997,30 @@ watch(activeTab, (newTab) => {
 .sidebar-menu {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+}
+
+.menu-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menu-group__divider {
+  height: 1px;
+  background: var(--profile-border);
+  margin: 8px 8px 4px;
+  opacity: 0.6;
+}
+
+.menu-group__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--profile-muted-text, #94a3b8);
+  padding: 4px 14px 2px;
+  user-select: none;
 }
 
 .menu-item {
@@ -1991,16 +2040,25 @@ watch(activeTab, (newTab) => {
 }
 
 .menu-item:hover {
-  border-color: #667eea;
-  background: var(--profile-control-bg-hover);
+  border-color: rgba(255, 193, 7, 0.8);
+  background: #ffc107;
+  color: #000000;
   transform: translateX(4px);
 }
 
+.menu-item:active {
+  background: #e8a900;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  transform: translateX(2px);
+  box-shadow: 0 2px 6px rgba(255, 193, 7, 0.2);
+}
+
 .menu-item--active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-color: transparent;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
 }
 
 .menu-item--active:hover {
@@ -2063,16 +2121,16 @@ watch(activeTab, (newTab) => {
 }
 
 .tab-button:hover {
-  border-color: #667eea;
+  border-color: rgba(255, 193, 7, 0.8);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
 }
 
 .tab-button.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-color: transparent;
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4);
 }
 
 .tab-icon {
@@ -2281,6 +2339,21 @@ watch(activeTab, (newTab) => {
   filter: brightness(1.1);
 }
 
+.lock-icon-inline {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  margin: 0 1px;
+}
+
+.lock-icon-inline--open {
+  filter: drop-shadow(0 1px 2px rgba(76, 175, 80, 0.3));
+}
+
+.lock-icon-inline--closed {
+  filter: drop-shadow(0 1px 2px rgba(244, 67, 54, 0.3));
+}
+
 .privacy-settings-section {
   margin-top: 32px;
   padding-top: 24px;
@@ -2302,7 +2375,7 @@ watch(activeTab, (newTab) => {
 }
 
 .btn-privacy {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
   width: 100%;
   display: flex;
   align-items: center;
@@ -2311,7 +2384,7 @@ watch(activeTab, (newTab) => {
 }
 
 .btn-privacy:hover:not(:disabled) {
-  background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+  background: linear-gradient(135deg, #e8a900 0%, #d49b00 100%);
 }
 
 .btn-icon {
@@ -2518,8 +2591,8 @@ watch(activeTab, (newTab) => {
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  border-color: #ffc107;
+  box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.15);
 }
 
 .form-group input::placeholder {
@@ -2551,10 +2624,10 @@ watch(activeTab, (newTab) => {
 
 .personal-id-prefix {
   font-weight: 700;
-  color: #667eea;
+  color: #e8a900;
   font-size: 16px;
   min-width: max-content;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.12) 0%, rgba(232, 169, 0, 0.12) 100%);
   border-radius: 6px;
   padding: 4px 8px;
 }
@@ -2601,15 +2674,15 @@ watch(activeTab, (newTab) => {
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #000;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.35);
 }
 
 .btn-save:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4);
 }
 
 .btn-save:disabled {
@@ -2646,7 +2719,7 @@ watch(activeTab, (newTab) => {
 .limit-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  border-color: #667eea;
+  border-color: #ffc107;
 }
 
 .limit-card-header {
@@ -2681,7 +2754,7 @@ watch(activeTab, (newTab) => {
 }
 
 .limit-current {
-  color: #667eea;
+  color: #e8a900;
 }
 
 .limit-separator {
@@ -2758,8 +2831,8 @@ watch(activeTab, (newTab) => {
 
 .promo-input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  border-color: #ffc107;
+  box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.15);
 }
 
 .promo-input::placeholder {
@@ -2778,16 +2851,16 @@ watch(activeTab, (newTab) => {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #000;
   transition: all 0.3s ease;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.35);
 }
 
 .btn-promo:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4);
 }
 
 .btn-promo:disabled {
@@ -3014,14 +3087,14 @@ watch(activeTab, (newTab) => {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #000;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.35);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4);
 }
 
 .btn-primary:disabled {
@@ -3300,8 +3373,8 @@ watch(activeTab, (newTab) => {
 
 .btn-history {
   padding: 8px 16px;
-  background: linear-gradient(135deg, #6c63ff 0%, #5848ff 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #000;
   border: none;
   border-radius: 6px;
   font-size: 14px;
@@ -3315,7 +3388,7 @@ watch(activeTab, (newTab) => {
 
 .btn-history:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
 }
 
 /* Модальное окно истории */
@@ -3337,7 +3410,7 @@ watch(activeTab, (newTab) => {
 
 .modal-history-header {
   padding: 24px 24px 16px;
-  border-bottom: 2px solid #6c63ff;
+  border-bottom: 2px solid #ffc107;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -3354,7 +3427,7 @@ watch(activeTab, (newTab) => {
 .modal-history-header h3 {
   margin: 0;
   font-size: 20px;
-  color: #6c63ff;
+  color: #e8a900;
   font-weight: 700;
 }
 
@@ -3375,7 +3448,7 @@ watch(activeTab, (newTab) => {
   width: 30px;
   height: 30px;
   border: 3px solid #f3f3f3;
-  border-top: 3px solid #6c63ff;
+  border-top: 3px solid #ffc107;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto 12px;
@@ -3694,8 +3767,8 @@ watch(activeTab, (newTab) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #5a3e00;
   font-size: 64px;
   font-weight: 600;
 }
@@ -3714,8 +3787,8 @@ watch(activeTab, (newTab) => {
   justify-content: center;
   gap: 8px;
   padding: 14px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #000;
   border: none;
   border-radius: 12px;
   font-size: 16px;
@@ -3726,7 +3799,7 @@ watch(activeTab, (newTab) => {
 
 .btn-upload-large:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
 }
 
 .btn-delete-large {
@@ -3841,15 +3914,15 @@ watch(activeTab, (newTab) => {
 .current-tariff-card {
   position: relative;
   padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
   border-radius: 16px;
-  color: white;
+  color: #000;
 }
 
 .tariff-badge {
   display: inline-block;
   padding: 4px 12px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.12);
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
@@ -3950,13 +4023,13 @@ watch(activeTab, (newTab) => {
 }
 
 .tariff-card:hover {
-  border-color: #667eea;
+  border-color: #ffc107;
   transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 8px 24px rgba(255, 193, 7, 0.25);
 }
 
 .tariff-card--recommended {
-  border-color: #667eea;
+  border-color: #ffc107;
 }
 
 .tariff-recommended-badge {
@@ -3964,8 +4037,8 @@ watch(activeTab, (newTab) => {
   top: -10px;
   right: 12px;
   padding: 4px 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #000;
   font-size: 11px;
   font-weight: 600;
   border-radius: 12px;
@@ -3985,7 +4058,7 @@ watch(activeTab, (newTab) => {
 .price-amount {
   font-size: 28px;
   font-weight: 700;
-  color: #667eea;
+  color: #e8a900;
 }
 
 .price-period {
@@ -4054,8 +4127,8 @@ watch(activeTab, (newTab) => {
 }
 
 .btn-expand-features:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: #ffc107;
+  color: #e8a900;
 }
 
 .tariff-features-expanded {
@@ -4081,23 +4154,23 @@ watch(activeTab, (newTab) => {
 .current-tariff-features {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .btn-show-current-features {
   width: 100%;
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   border-radius: 8px;
-  color: white;
+  color: #000;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .btn-show-current-features:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.15);
 }
 
 .current-features-list {
@@ -4124,8 +4197,8 @@ watch(activeTab, (newTab) => {
 .btn-upgrade {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #000;
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -4136,7 +4209,7 @@ watch(activeTab, (newTab) => {
 
 .btn-upgrade:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
 }
 
 /* ========================================== */
@@ -4164,6 +4237,15 @@ watch(activeTab, (newTab) => {
     flex-wrap: wrap;
     flex: 1;
     gap: 8px;
+  }
+
+  .menu-group {
+    display: contents;
+  }
+
+  .menu-group__divider,
+  .menu-group__label {
+    display: none;
   }
 
   .menu-item {
@@ -4205,6 +4287,17 @@ watch(activeTab, (newTab) => {
 
   .sidebar-menu {
     flex-direction: column;
+  }
+
+  .menu-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .menu-group__divider,
+  .menu-group__label {
+    display: block;
   }
 
   .menu-item {

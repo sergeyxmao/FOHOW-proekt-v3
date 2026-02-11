@@ -2460,42 +2460,61 @@ const captureViewportSnapshot = async () => {
       width,
       height,
       // Модифицируем клонированный DOM перед рендерингом
-      // чтобы включить SVG-контент с отрицательными координатами
-      onclone: needsOffset ? (clonedDoc, clonedElement) => {
-        const clonedSvg = clonedElement.querySelector('.svg-layer');
-        if (!clonedSvg) return;
+      onclone: (clonedDoc, clonedElement) => {
+        // Убираем inset box-shadow с заголовков карточек — html2canvas
+        // рендерит его некорректно, из-за чего градиент выглядит сдвинутым
+        clonedElement.querySelectorAll('.card-header').forEach(header => {
+          header.style.boxShadow = 'none';
+        });
 
-        // Получаем текущие размеры SVG
-        const currentWidth = parseFloat(clonedSvg.getAttribute('width')) || clonedSvg.clientWidth || 0;
-        const currentHeight = parseFloat(clonedSvg.getAttribute('height')) || clonedSvg.clientHeight || 0;
+        // Убираем transition и hover-transform с карточек
+        clonedElement.querySelectorAll('.card').forEach(card => {
+          card.style.transition = 'none';
+          card.style.transform = 'none';
+        });
 
-        // Расширяем SVG для включения контента с отрицательными координатами
-        clonedSvg.setAttribute('width', currentWidth + offsetX);
-        clonedSvg.setAttribute('height', currentHeight + offsetY);
+        // Скрываем кнопки закрытия карточек (UI-элемент)
+        clonedElement.querySelectorAll('.card-close-btn').forEach(btn => {
+          btn.style.display = 'none';
+        });
 
-        // Сдвигаем SVG влево/вверх чтобы расширенная область была на месте оригинала
-        clonedSvg.style.left = `${-offsetX}px`;
-        clonedSvg.style.top = `${-offsetY}px`;
+        // Обработка SVG-контента с отрицательными координатами
+        if (needsOffset) {
+          const clonedSvg = clonedElement.querySelector('.svg-layer');
+          if (!clonedSvg) return;
 
-        // Создаём обёртывающую группу и переносим в неё весь контент (кроме defs)
-        // с transform="translate(offsetX, offsetY)" для компенсации отрицательных координат
-        const wrapperGroup = clonedDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
-        wrapperGroup.setAttribute('transform', `translate(${offsetX}, ${offsetY})`);
+          // Получаем текущие размеры SVG
+          const currentWidth = parseFloat(clonedSvg.getAttribute('width')) || clonedSvg.clientWidth || 0;
+          const currentHeight = parseFloat(clonedSvg.getAttribute('height')) || clonedSvg.clientHeight || 0;
 
-        // Собираем все дочерние элементы кроме defs
-        const childrenToMove = [];
-        for (const child of clonedSvg.children) {
-          if (child.tagName.toLowerCase() !== 'defs') {
-            childrenToMove.push(child);
+          // Расширяем SVG для включения контента с отрицательными координатами
+          clonedSvg.setAttribute('width', currentWidth + offsetX);
+          clonedSvg.setAttribute('height', currentHeight + offsetY);
+
+          // Сдвигаем SVG влево/вверх чтобы расширенная область была на месте оригинала
+          clonedSvg.style.left = `${-offsetX}px`;
+          clonedSvg.style.top = `${-offsetY}px`;
+
+          // Создаём обёртывающую группу и переносим в неё весь контент (кроме defs)
+          // с transform="translate(offsetX, offsetY)" для компенсации отрицательных координат
+          const wrapperGroup = clonedDoc.createElementNS('http://www.w3.org/2000/svg', 'g');
+          wrapperGroup.setAttribute('transform', `translate(${offsetX}, ${offsetY})`);
+
+          // Собираем все дочерние элементы кроме defs
+          const childrenToMove = [];
+          for (const child of clonedSvg.children) {
+            if (child.tagName.toLowerCase() !== 'defs') {
+              childrenToMove.push(child);
+            }
           }
+
+          // Перемещаем элементы в обёртку
+          childrenToMove.forEach(child => wrapperGroup.appendChild(child));
+
+          // Добавляем обёртку в SVG
+          clonedSvg.appendChild(wrapperGroup);
         }
-
-        // Перемещаем элементы в обёртку
-        childrenToMove.forEach(child => wrapperGroup.appendChild(child));
-
-        // Добавляем обёртку в SVG
-        clonedSvg.appendChild(wrapperGroup);
-      } : undefined
+      }
     });
 
     // Возвращаем canvas в полном разрешении без уменьшения

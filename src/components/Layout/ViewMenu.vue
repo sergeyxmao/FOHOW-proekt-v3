@@ -389,7 +389,9 @@ function changeLocale(newLocale) {
 
 .view-menu__main:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  background: #ffc107;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 12px 24px rgba(255, 193, 7, 0.3);
 }
 
 .view-menu__icon {
@@ -414,6 +416,14 @@ function changeLocale(newLocale) {
   font-size: 14px;
   font-weight: 600;
   color: #0f172a;
+}
+
+.view-menu__main:hover .view-menu__label {
+  color: #000000;
+}
+
+.view-menu__main:hover .view-menu__caret {
+  color: #000000;
 }
 
 .view-menu__caret {
@@ -451,13 +461,17 @@ function changeLocale(newLocale) {
 }
 
 .view-menu__control--active {
-  background: linear-gradient(120deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
-  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.28);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 12px 24px rgba(255, 193, 7, 0.3);
 }
 
 .view-menu__control:hover {
-  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.2);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 10px 22px rgba(255, 193, 7, 0.3);
 }
 
 .view-menu__field {
@@ -533,13 +547,17 @@ function changeLocale(newLocale) {
 
 .view-menu__action:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 12px 24px rgba(255, 193, 7, 0.3);
 }
 
 .view-menu__action--active {
-  background: linear-gradient(120deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
-  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.32);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 12px 28px rgba(255, 193, 7, 0.3);
 }
 
 .view-menu__swatch {
@@ -580,7 +598,14 @@ function changeLocale(newLocale) {
 }
 
 .view-menu__item--open > .view-menu__main {
-  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18);
+  background: #ffc107;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 12px 24px rgba(255, 193, 7, 0.3);
+}
+
+.view-menu__item--open > .view-menu__main .view-menu__label,
+.view-menu__item--open > .view-menu__main .view-menu__caret {
+  color: #000000;
 }
 
 .view-menu--modern .view-menu__title {
@@ -594,7 +619,9 @@ function changeLocale(newLocale) {
 }
 
 .view-menu--modern .view-menu__main:hover {
-  box-shadow: 0 24px 40px rgba(6, 11, 21, 0.72);
+  background: #ffc107;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 24px 40px rgba(255, 193, 7, 0.4);
 }
 
 .view-menu--modern .view-menu__icon {
@@ -609,6 +636,11 @@ function changeLocale(newLocale) {
 
 .view-menu--modern .view-menu__label {
   color: #e5f3ff;
+}
+
+.view-menu--modern .view-menu__main:hover .view-menu__label,
+.view-menu--modern .view-menu__main:hover .view-menu__caret {
+  color: #000000;
 }
 
 .view-menu--modern .view-menu__caret {
@@ -629,13 +661,17 @@ function changeLocale(newLocale) {
 }
 
 .view-menu--modern .view-menu__control:hover {
-  box-shadow: 0 22px 38px rgba(6, 11, 21, 0.68);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 22px 38px rgba(255, 193, 7, 0.4);
 }
 
 .view-menu--modern .view-menu__control--active {
-  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
-  color: #051125;
-  box-shadow: 0 24px 44px rgba(6, 11, 21, 0.78);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 24px 44px rgba(255, 193, 7, 0.4);
 }
 
 .view-menu--modern .view-menu__field {
@@ -662,13 +698,17 @@ function changeLocale(newLocale) {
 }
 
 .view-menu--modern .view-menu__action:hover {
-  box-shadow: 0 24px 40px rgba(6, 11, 21, 0.72);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 24px 40px rgba(255, 193, 7, 0.4);
 }
 
 .view-menu--modern .view-menu__action--active {
-  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
-  color: #051125;
-  box-shadow: 0 24px 44px rgba(6, 11, 21, 0.78);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 24px 44px rgba(255, 193, 7, 0.4);
 }
 
 .view-menu--modern .view-menu__swatch {

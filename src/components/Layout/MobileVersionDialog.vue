@@ -141,15 +141,15 @@ const handleContinueMobile = () => {
 }
 
 .mobile-dialog-button--desktop {
-  background: #0f62fe;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.3);
+  background: #ffc107;
+  color: #000000;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
 }
 
 .mobile-dialog-button--desktop:hover {
-  background: #0353e9;
+  background: #e8a900;
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(15, 98, 254, 0.4);
+  box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4);
 }
 
 .mobile-dialog-button--desktop:active {

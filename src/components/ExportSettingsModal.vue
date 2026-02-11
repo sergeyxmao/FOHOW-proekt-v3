@@ -399,7 +399,7 @@ const handleClose = () => {
   overflow-y: auto;
   padding: 20px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(59, 130, 246, 0.3) rgba(15, 23, 42, 0.05);
+  scrollbar-color: rgba(255, 193, 7, 0.4) rgba(15, 23, 42, 0.05);
 }
 
 .export-settings-panel__body::-webkit-scrollbar {
@@ -412,12 +412,12 @@ const handleClose = () => {
 }
 
 .export-settings-panel__body::-webkit-scrollbar-thumb {
-  background: rgba(59, 130, 246, 0.3);
+  background: rgba(255, 193, 7, 0.4);
   border-radius: 3px;
 }
 
 .export-settings-panel__body::-webkit-scrollbar-thumb:hover {
-  background: rgba(59, 130, 246, 0.5);
+  background: rgba(255, 193, 7, 0.6);
 }
 
 .form-group {
@@ -451,14 +451,14 @@ const handleClose = () => {
 }
 
 .form-select:hover {
-  border-color: rgba(59, 130, 246, 0.4);
+  border-color: rgba(255, 193, 7, 0.6);
   background: rgba(255, 255, 255, 1);
 }
 
 .form-select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  border-color: #ffc107;
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.2);
 }
 
 .orientation-buttons {
@@ -484,17 +484,17 @@ const handleClose = () => {
 }
 
 .orientation-btn:hover {
-  border-color: rgba(59, 130, 246, 0.4);
-  background: rgba(255, 255, 255, 1);
+  border-color: rgba(255, 193, 7, 0.6);
+  background: rgba(255, 193, 7, 0.1);
   transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 6px 12px rgba(255, 193, 7, 0.2);
 }
 
 .orientation-btn.active {
-  border-color: #3b82f6;
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  border-color: #ffc107;
+  background: rgba(255, 193, 7, 0.15);
+  color: #000000;
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.3);
 }
 
 .orientation-btn:active {
@@ -509,15 +509,15 @@ const handleClose = () => {
 .info-box {
   margin-top: 16px;
   padding: 12px 14px;
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
   border-radius: 10px;
 }
 
 .info-text {
   margin: 0;
   font-size: 13px;
-  color: #1e40af;
+  color: #92400e;
   line-height: 1.5;
 }
 .info-text--muted {
@@ -569,20 +569,20 @@ const handleClose = () => {
 }
 
 .export-btn--primary {
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  background: #ffc107;
+  color: #000000;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.35);
 }
 
 .export-btn--primary:hover {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: #e8a900;
   transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 14px rgba(255, 193, 7, 0.45);
 }
 
 .export-btn--primary:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
 }
 
 .checkbox-group {
@@ -631,9 +631,9 @@ const handleClose = () => {
 
 .checkbox-label:hover {
   background: rgba(255, 255, 255, 1);
-  border-color: rgba(59, 130, 246, 0.4);
+  border-color: rgba(255, 193, 7, 0.6);
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 4px 10px rgba(255, 193, 7, 0.15);
 }
 
 .checkbox-label--disabled:hover {
@@ -643,8 +643,8 @@ const handleClose = () => {
 }
 
 .checkbox-label:has(.checkbox-input:checked) {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: #3b82f6;
+  background: rgba(255, 193, 7, 0.12);
+  border-color: #ffc107;
 }
 
 .checkbox-input {
@@ -654,12 +654,12 @@ const handleClose = () => {
   border: 2px solid rgba(15, 23, 42, 0.24);
   cursor: pointer;
   transition: all 0.2s ease;
-  accent-color: #3b82f6;
+  accent-color: #ffc107;
   flex-shrink: 0;
 }
 
 .checkbox-input:checked {
-  border-color: #3b82f6;
+  border-color: #ffc107;
 }
 
 .checkbox-text {

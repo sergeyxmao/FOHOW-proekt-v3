@@ -492,7 +492,7 @@ function handleToggleTheme() {
   --header-button-border: rgba(148, 163, 184, 0.45);
   --header-button-color: #0f172a;
   --header-button-shadow: rgba(15, 23, 42, 0.18);
-  --header-button-hover-shadow: rgba(15, 98, 254, 0.32);
+  --header-button-hover-shadow: rgba(255, 193, 7, 0.35);
 }
 .header-actions--menu {
   flex-direction: column;
@@ -508,7 +508,7 @@ function handleToggleTheme() {
   --header-button-border: rgba(104, 171, 255, 0.45);
   --header-button-color: #e5f3ff;
   --header-button-shadow: rgba(6, 11, 21, 0.5);
-  --header-button-hover-shadow: rgba(12, 84, 196, 0.45);
+  --header-button-hover-shadow: rgba(255, 193, 7, 0.4);
 }
 
 .header-actions__grid {
@@ -544,10 +544,10 @@ function handleToggleTheme() {
 .header-actions__grid-button:hover:not(:disabled),
 .header-actions__grid-button:focus-visible:not(:disabled) {
   transform: translateY(-2px);
-  background: #0f62fe;
-  color: #ffffff;
-  border-color: rgba(15, 98, 254, 0.82);
-  box-shadow: 0 22px 38px var(--header-button-hover-shadow);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 22px 38px rgba(255, 193, 7, 0.4);
 }
 
 .header-actions__grid-button:disabled {
@@ -614,10 +614,10 @@ function handleToggleTheme() {
 .header-actions__button:hover:enabled,
 .header-actions__button:focus-visible:enabled {
   transform: translateY(-2px);
-  box-shadow: 0 20px 34px var(--header-button-hover-shadow);
-  background: #0f62fe;
-  color: #ffffff;
-  border-color: rgba(15, 98, 254, 0.8);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 20px 34px rgba(255, 193, 7, 0.4);
 }
 
 .header-actions__button:disabled {
@@ -681,8 +681,8 @@ function handleToggleTheme() {
 }
 
 .header-actions__menu-item:hover {
-  background: rgba(59, 130, 246, 0.2);
-  color: #1d4ed8;
+  background: #ffc107;
+  color: #000000;
 }
 .visually-hidden {
   position: absolute;
@@ -702,8 +702,8 @@ function handleToggleTheme() {
 }
 
 .header-actions--modern .header-actions__menu-item:hover {
-  background: rgba(102, 176, 255, 0.3);
-  color: #ffffff;
+  background: #ffc107;
+  color: #000000;
 }
 
 .header-actions__theme-toggle {
@@ -747,8 +747,9 @@ function handleToggleTheme() {
 }
 .header-actions__theme-toggle:hover {
   transform: translateY(-2px);
-  box-shadow: 0 20px 34px rgba(37, 99, 235, 0.32);
-  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow: 0 20px 34px rgba(255, 193, 7, 0.4);
+  border-color: rgba(255, 193, 7, 0.8);
+  background: #ffc107;
 }
 
 .header-actions__theme-icon {
@@ -813,8 +814,8 @@ function handleToggleTheme() {
 .header-actions__grid-button--avatar:focus-visible:not(:disabled),
 .header-actions__button--avatar:hover:enabled,
 .header-actions__button--avatar:focus-visible:enabled {
-  background: #0f62fe;
-  border-color: rgba(15, 98, 254, 0.82);
+  background: #ffc107;
+  border-color: rgba(255, 193, 7, 0.8);
 }
 
 .header-actions__avatar-icon {

@@ -370,6 +370,9 @@ watch(isImagesPanelOpen, async (isOpen) => {
 });
 
 watch(currentTool, (tool, previous) => {
+  if (previous === 'text' && tool !== 'text' && textMode.value === 'editing') {
+    commitText();
+  }
   if (previous === 'selection' && tool !== 'selection') {
     cancelSelection();
   }
@@ -1211,6 +1214,11 @@ const handleBoardPointerCancel = (event) => {
 };
 
 const toggleDropdown = (toolName) => {
+  // Если переключаемся на другой инструмент и текст редактируется — коммитим его
+  if (toolName !== 'text' && textMode.value === 'editing') {
+    commitText();
+  }
+
   if (openDropdown.value === toolName) {
     openDropdown.value = null;
   } else {
@@ -1733,8 +1741,10 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__close-button:hover {
-  background: #f3f4f6;
+  background: #ffc107;
+  color: #000000;
   transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
 }
 
 .pencil-overlay__close-button--modern {
@@ -1744,8 +1754,10 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__close-button--modern:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: #ffc107;
+  color: #000000;
   transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
 }
 
 /* Панель инструментов в нижней части экрана */
@@ -1803,15 +1815,17 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__tool-btn:hover {
-  background: #f3f4f6;
-  border-color: #9ca3af;
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
 }
 
 .pencil-overlay__tool-btn--active {
-  background: #0f62fe;
-  color: white;
-  border-color: #0f62fe;
-  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.4);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.35);
 }
 
 .pencil-overlay__tool-btn--modern {
@@ -1822,15 +1836,17 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__tool-btn--modern:hover {
-  background: rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
 }
 
 .pencil-overlay__tool-btn--modern.pencil-overlay__tool-btn--active {
-  background: #0f62fe;
-  color: white;
-  border-color: #0f62fe;
-  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.4);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
 }
 
 /* Выпадающее меню */
@@ -1864,8 +1880,8 @@ onBeforeUnmount(() => {
 
 .pencil-overlay__dropdown-select-btn {
   padding: 10px 16px;
-  background: #0f62fe;
-  color: white;
+  background: #ffc107;
+  color: #000000;
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -1875,8 +1891,8 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__dropdown-select-btn:hover {
-  background: #0353e9;
-  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.4);
+  background: #e8a900;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
 }
 
 /* Кнопки отмена/повтор в центре сверху */
@@ -1911,8 +1927,10 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__undo-redo-btn:hover:not(:disabled) {
-  background: rgba(243, 244, 246, 0.95);
-  border-color: rgba(0, 0, 0, 0.12);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
 }
 
 .pencil-overlay__undo-redo-btn:disabled {
@@ -1928,8 +1946,10 @@ onBeforeUnmount(() => {
 }
 
 .pencil-overlay__undo-redo-btn--modern:hover:not(:disabled) {
-  background: rgba(38, 48, 68, 0.95);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
 }
 
 .pencil-overlay__undo-redo-btn--modern:disabled {

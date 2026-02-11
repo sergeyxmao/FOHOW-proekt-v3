@@ -480,15 +480,18 @@ const handleAddSticker = () => {
 }
 
 .discussion-menu__action:not(:disabled):hover {
-  background: rgba(59, 130, 246, 0.16);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
   transform: translateY(-1px);
-  box-shadow: 0 12px 20px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 12px 20px rgba(255, 193, 7, 0.3);
 }
 
 .discussion-menu__action--active {
-  background: linear-gradient(120deg, #3b82f6 0%, #2563eb 100%);
-  color: #fff;
-  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.32);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 16px 28px rgba(255, 193, 7, 0.35);
 }
 .discussion-menu__item-content {
   flex: 1;
@@ -532,15 +535,18 @@ const handleAddSticker = () => {
 }
 
 .discussion-menu__subaction:not(:disabled):hover {
-  background: rgba(59, 130, 246, 0.12);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
   transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 8px 16px rgba(255, 193, 7, 0.25);
 }
 
 .discussion-menu__subaction--active {
-  background: linear-gradient(120deg, #93c5fd 0%, #3b82f6 100%);
-  color: #0b1324;
-  box-shadow: 0 14px 26px rgba(37, 99, 235, 0.24);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 14px 26px rgba(255, 193, 7, 0.3);
 }
 
 .discussion-menu__badge {
@@ -583,15 +589,17 @@ const handleAddSticker = () => {
   border-color: rgba(96, 164, 255, 0.35);
 }
 .discussion-menu--modern .discussion-menu__action:not(:disabled):hover {
-  background: rgba(96, 164, 255, 0.22);
-  color: #0b1324;
-  box-shadow: 0 24px 40px rgba(6, 11, 21, 0.7);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 24px 40px rgba(255, 193, 7, 0.4);
 }
 
 .discussion-menu--modern .discussion-menu__action--active {
-  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
-  color: #051125;
-  box-shadow: 0 26px 44px rgba(6, 11, 21, 0.78);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 26px 44px rgba(255, 193, 7, 0.4);
 }
 
 .discussion-menu--modern .discussion-menu__badge {
@@ -607,14 +615,16 @@ const handleAddSticker = () => {
 }
 
 .discussion-menu--modern .discussion-menu__subaction:not(:disabled):hover {
-  background: rgba(96, 164, 255, 0.22);
-  color: #0b1324;
-  box-shadow: 0 18px 30px rgba(6, 11, 21, 0.7);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 18px 30px rgba(255, 193, 7, 0.35);
 }
 
 .discussion-menu--modern .discussion-menu__subaction--active {
-  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
-  color: #051125;
-  box-shadow: 0 22px 36px rgba(6, 11, 21, 0.78);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 22px 36px rgba(255, 193, 7, 0.35);
 }  
 </style>

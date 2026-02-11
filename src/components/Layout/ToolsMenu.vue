@@ -239,15 +239,17 @@ const cancelNewStructure = () => {
 }
 
 .tools-menu__action:hover {
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 10px 22px rgba(255, 193, 7, 0.3);
 }
 
 .tools-menu__action--active {
-  background: linear-gradient(120deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 10px 24px rgba(255, 193, 7, 0.35);
 }
 .tools-menu--modern .tools-menu__title {
   color: #e5f3ff;
@@ -266,15 +268,17 @@ const cancelNewStructure = () => {
 }
 
 .tools-menu--modern .tools-menu__action:hover {
-  background: rgba(96, 164, 255, 0.22);
-  color: #0b1324;
-  box-shadow: 0 24px 40px rgba(6, 11, 21, 0.72);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 24px 40px rgba(255, 193, 7, 0.4);
 }
 
 .tools-menu--modern .tools-menu__action--active {
-  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
-  color: #051125;
-  box-shadow: 0 20px 40px rgba(6, 11, 21, 0.75);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 20px 40px rgba(255, 193, 7, 0.4);
 }
 
 /* Диалоговые окна */
@@ -350,12 +354,12 @@ const cancelNewStructure = () => {
 }
 
 .dialog-button--confirm {
-  background: linear-gradient(120deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
+  background: #ffc107;
+  color: #000000;
 }
 
 .dialog-button--confirm:hover {
-  background: linear-gradient(120deg, #2563eb 0%, #1d4ed8 100%);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  background: #e8a900;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
 }
 </style>

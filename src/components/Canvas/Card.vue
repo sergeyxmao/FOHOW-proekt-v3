@@ -1497,8 +1497,8 @@ watch(
 }
 
 .card-avatar--placeholder {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #5a3e00;
   display: flex;
   align-items: center;
   justify-content: center;

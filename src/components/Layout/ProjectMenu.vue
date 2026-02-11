@@ -250,20 +250,23 @@ const handleItemClick = async (item) => {
 
 .project-menu__item:hover {
   transform: translateX(2px);
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.15);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 10px 24px rgba(255, 193, 7, 0.3);
 }
 
 .project-menu__item:active {
   transform: translateX(1px);
-  background: rgba(37, 99, 235, 0.16);
-  color: #1e3a8a;
+  background: #e8a900;
+  color: #000000;
 }
 
 .project-menu__item--active {
-  background: rgba(59, 130, 246, 0.12);
-  color: #1d4ed8;
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 10px 24px rgba(255, 193, 7, 0.3);
 }
 
 .project-menu--modern .project-menu__item {
@@ -274,14 +277,15 @@ const handleItemClick = async (item) => {
 }
 
 .project-menu--modern .project-menu__item:hover {
-  background: rgba(96, 164, 255, 0.28);
-  color: #0b1324;
-  box-shadow: 0 22px 40px rgba(6, 11, 21, 0.65);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 22px 40px rgba(255, 193, 7, 0.4);
 }
 
 .project-menu--modern .project-menu__item:active {
-  background: rgba(114, 182, 255, 0.35);
-  color: #051125;
+  background: #e8a900;
+  color: #000000;
 }
 
 .project-menu__icon {
@@ -342,13 +346,17 @@ const handleItemClick = async (item) => {
 
 .project-menu__submenu-item:hover {
   transform: translateX(2px);
-  background: rgba(59, 130, 246, 0.1);
-  color: #1d4ed8;
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 8px 18px rgba(255, 193, 7, 0.25);
 }
 
 .project-menu__submenu-item--active {
-  background: rgba(59, 130, 246, 0.1);
-  color: #1d4ed8;
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 8px 18px rgba(255, 193, 7, 0.25);
 }
 
 .project-menu--modern .project-menu__submenu-item {
@@ -358,8 +366,10 @@ const handleItemClick = async (item) => {
 }
 
 .project-menu--modern .project-menu__submenu-item:hover {
-  background: rgba(96, 164, 255, 0.22);
-  color: #0b1324;
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 10px 22px rgba(255, 193, 7, 0.35);
 }
 
 .submenu-slide-enter-active,
@@ -416,6 +426,7 @@ const handleItemClick = async (item) => {
   transform: none !important;
   background: rgba(255, 255, 255, 0.95) !important;
   color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
   box-shadow: none !important;
 }
 

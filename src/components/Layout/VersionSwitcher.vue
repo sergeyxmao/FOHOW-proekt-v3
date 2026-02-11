@@ -68,7 +68,10 @@ const handleToggleVersion = () => {
 
 .version-switcher:hover {
   transform: scale(1.05);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 32px rgba(255, 193, 7, 0.4);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
 }
 
 .version-switcher:active {

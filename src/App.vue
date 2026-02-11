@@ -165,13 +165,11 @@ function handlePencilClose(payload) {
 
     if (shouldSave) {
       const now = new Date()
-      const numberPart = Math.floor(now.getTime() / 1000)
-      const timePart = [
-        String(now.getHours()).padStart(2, '0'),
-        String(now.getMinutes()).padStart(2, '0'),
-        String(now.getSeconds()).padStart(2, '0')
-      ].join('-')
-      const filename = `${numberPart}-${timePart}.png`
+      const dd = String(now.getDate()).padStart(2, '0')
+      const mm = String(now.getMonth() + 1).padStart(2, '0')
+      const hh = String(now.getHours()).padStart(2, '0')
+      const min = String(now.getMinutes()).padStart(2, '0')
+      const filename = `${dd}.${mm}_${hh}.${min}.png`
 
       downloadPencilImage(payload.image, filename)
     }

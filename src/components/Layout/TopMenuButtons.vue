@@ -194,9 +194,9 @@ onBeforeUnmount(() => {
 .top-menu__theme-button:hover,
 .top-menu__theme-button:focus-visible {
   transform: translateY(-2px);
-  box-shadow: 0 20px 36px rgba(15, 23, 42, 0.24);
-  border-color: rgba(59, 130, 246, 0.45);
-  background: linear-gradient(145deg, rgba(59, 130, 246, 0.28), rgba(59, 130, 246, 0.08));
+  box-shadow: 0 20px 36px rgba(255, 193, 7, 0.35);
+  border-color: rgba(255, 193, 7, 0.8);
+  background: #ffc107;
 }
 
 .top-menu__theme-icon {
@@ -247,9 +247,10 @@ onBeforeUnmount(() => {
 
 .top-menu__action-button:hover:enabled {
   transform: translateY(-2px);
-  box-shadow: 0 20px 36px rgba(15, 23, 42, 0.24);
-  background: rgba(255, 255, 255, 1);
-  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 20px 36px rgba(255, 193, 7, 0.35);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
 }
 
 .top-menu__action-button:disabled {
@@ -266,9 +267,10 @@ onBeforeUnmount(() => {
 }
 
 .top-menu--modern .top-menu__action-button:hover:enabled {
-  background: rgba(48, 68, 102, 0.92);
-  box-shadow: 0 24px 42px rgba(6, 11, 21, 0.65);
-  border-color: rgba(114, 182, 255, 0.55);
+  background: #ffc107;
+  color: #000000;
+  box-shadow: 0 24px 42px rgba(255, 193, 7, 0.45);
+  border-color: rgba(255, 193, 7, 0.85);
 }
 
 .top-menu--modern .top-menu__theme-button {
@@ -279,9 +281,9 @@ onBeforeUnmount(() => {
 
 .top-menu--modern .top-menu__theme-button:hover,
 .top-menu--modern .top-menu__theme-button:focus-visible {
-  box-shadow: 0 24px 42px rgba(6, 11, 21, 0.65);
-  border-color: rgba(114, 182, 255, 0.55);
-  background: linear-gradient(145deg, rgba(114, 182, 255, 0.48), rgba(114, 182, 255, 0.16));
+  box-shadow: 0 24px 42px rgba(255, 193, 7, 0.45);
+  border-color: rgba(255, 193, 7, 0.85);
+  background: #ffc107;
 }
 
 .top-menu--modern .top-menu__theme-icon {
@@ -305,13 +307,17 @@ onBeforeUnmount(() => {
 
 .top-menu__button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 12px 24px rgba(255, 193, 7, 0.35);
 }
 
 .top-menu__button--active {
-  background: linear-gradient(120deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.35);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 10px 24px rgba(255, 193, 7, 0.35);
 }
 .top-menu--modern .top-menu__button {
   border-color: rgba(96, 164, 255, 0.32);
@@ -321,14 +327,17 @@ onBeforeUnmount(() => {
 }
 
 .top-menu--modern .top-menu__button:hover {
-  background: rgba(48, 68, 102, 0.92);
-  box-shadow: 0 18px 34px rgba(6, 11, 21, 0.55);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 18px 34px rgba(255, 193, 7, 0.45);
 }
 
 .top-menu--modern .top-menu__button--active {
-  background: linear-gradient(120deg, #73c8ff 0%, #2563eb 100%);
-  color: #0b1324;
-  box-shadow: 0 16px 36px rgba(16, 68, 140, 0.5);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 16px 36px rgba(255, 193, 7, 0.45);
 }
 .top-menu__dropdown {
   position: absolute;

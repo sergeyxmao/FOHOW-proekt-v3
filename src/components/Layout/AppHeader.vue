@@ -390,7 +390,7 @@ onBeforeUnmount(() => {
   --header-button-border: rgba(148, 163, 184, 0.45);
   --header-button-color: #0f172a;
   --header-button-shadow: rgba(15, 23, 42, 0.18);
-  --header-button-hover-shadow: rgba(15, 98, 254, 0.32);
+  --header-button-hover-shadow: rgba(255, 193, 7, 0.35);
 }
 
 .app-header__side-actions :deep(.header-actions__grid) {
@@ -409,7 +409,7 @@ onBeforeUnmount(() => {
   --header-button-border: rgba(104, 171, 255, 0.45);
   --header-button-color: #e5f3ff;
   --header-button-shadow: rgba(6, 11, 21, 0.55);
-  --header-button-hover-shadow: rgba(12, 84, 196, 0.45);
+  --header-button-hover-shadow: rgba(255, 193, 7, 0.4);
 }
 
 .app-header__side-actions :deep(.header-actions__grid-item) {
@@ -560,12 +560,16 @@ onBeforeUnmount(() => {
 }
 
 .user-menu__project-name-button:hover {
-  background: rgba(15, 23, 42, 0.1);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
   transform: translateY(-1px);
 }
 
 .app-header--modern .user-menu__project-name-button:hover {
-  background: rgba(229, 243, 255, 0.14);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
 }
 
 .user-menu__project-name-button:focus-visible {
@@ -627,11 +631,13 @@ onBeforeUnmount(() => {
 }
 
 .user-menu__item:hover {
-  background: rgba(15, 23, 42, 0.08);
+  background: #ffc107;
+  color: #000000;
   transform: translateY(-1px);
 }
 .app-header--modern .user-menu__item:hover {
-  background: rgba(229, 243, 255, 0.08);
+  background: #ffc107;
+  color: #000000;
 }
 .user-menu__item--static {
   cursor: default;
@@ -643,11 +649,13 @@ onBeforeUnmount(() => {
 }
 
 .user-menu__item--danger:hover {
-  background: rgba(244, 67, 54, 0.12);
+  background: #ffc107;
+  color: #000000;
 }
 
 .user-menu__item--admin:hover {
-  background: rgba(33, 150, 243, 0.12);
+  background: #ffc107;
+  color: #000000;
 }
 
 .user-menu__divider {
