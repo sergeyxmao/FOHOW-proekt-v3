@@ -3,6 +3,7 @@ import html2canvas from 'html2canvas'
 import { useCardsStore } from '../stores/cards.js'
 import { useConnectionsStore } from '../stores/connections.js'
 import { useProjectStore, formatProjectFileName } from '../stores/project.js'
+import { useBoardStore } from '../stores/board.js'
 import { useCanvasStore } from '../stores/canvas.js'
 import { useStickersStore } from '../stores/stickers.js'
 import { useImagesStore } from '../stores/images.js'
@@ -390,6 +391,7 @@ export function useProjectActions() {
   const cardsStore = useCardsStore()
   const connectionsStore = useConnectionsStore()
   const projectStore = useProjectStore()
+  const boardStore = useBoardStore()
   const canvasStore = useCanvasStore()
   const stickersStore = useStickersStore()
   const imagesStore = useImagesStore()
@@ -524,7 +526,12 @@ export function useProjectActions() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `scheme-${Date.now()}.html`
+    const now = new Date()
+    const dateStr = String(now.getDate()).padStart(2, '0') + '.' +
+      String(now.getMonth() + 1).padStart(2, '0') + '.' +
+      now.getFullYear()
+    const baseName = formatProjectFileName(boardStore.currentBoardName || normalizedProjectName.value || projectStore.projectName, 'scheme')
+    link.download = `${baseName}_${dateStr}.html`
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -567,7 +574,12 @@ export function useProjectActions() {
       const blob = await generateHTMLBlob()
       if (!blob) return
 
-      const fileName = `project-${Date.now()}.html`
+      const now = new Date()
+      const dateStr = String(now.getDate()).padStart(2, '0') + '.' +
+        String(now.getMonth() + 1).padStart(2, '0') + '.' +
+        now.getFullYear()
+      const baseName = formatProjectFileName(boardStore.currentBoardName || normalizedProjectName.value || projectStore.projectName, 'project')
+      const fileName = `${baseName}_${dateStr}.html`
       const projectFile = new File([blob], fileName, { type: 'text/html' })
 
       if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
