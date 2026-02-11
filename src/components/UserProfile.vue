@@ -803,7 +803,7 @@
 
               <div class="limit-card">
                 <div class="limit-card-header">
-                  <span class="limit-icon">🎨</span>
+                  <span class="limit-icon">📒</span>
                   <span class="limit-title">Стикеры</span>
                 </div>
                 <div class="limit-card-body">
@@ -824,7 +824,7 @@
               <div class="limit-card">
                 <div class="limit-card-header">
                   <span class="limit-icon">🎫</span>
-                  <span class="limit-title">Карточки</span>
+                  <span class="limit-title">Лицензии</span>
                 </div>
                 <div class="limit-card-body">
                   <div class="limit-stats">
@@ -864,7 +864,7 @@
               <div v-if="imageLibraryStats" class="limit-card">
                 <div class="limit-card-header">
                   <span class="limit-icon">📁</span>
-                  <span class="limit-title">Папки библиотеки</span>
+                  <span class="limit-title">Папки</span>
                 </div>
                 <div class="limit-card-body">
                   <div class="limit-stats">
