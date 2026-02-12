@@ -18,7 +18,7 @@ import cron from 'node-cron';
 import { pool } from '../db.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 import { getSubscriptionExpiringMessage, getSubscriptionExpiredMessage } from '../templates/telegramTemplates.js';
-import { processDailyLocks } from '../services/boardLockService.js';
+import { processDailyLocks, recalcUserBoardLocks } from '../services/boardLockService.js';
 
 // ============================================
 // Advisory locks для защиты от параллельного запуска
@@ -219,6 +219,7 @@ async function handleSubscriptionExpiry() {
     // Найти пользователей с истёкшими подписками
     const expiredUsersQuery = `
       SELECT u.id, u.email, u.plan_id, u.subscription_expires_at, u.telegram_chat_id,
+             u.scheduled_plan_id, u.scheduled_plan_paid_at,
              sp.code_name as current_plan_code, sp.name as current_plan_name
       FROM users u
       JOIN subscription_plans sp ON u.plan_id = sp.id
@@ -233,6 +234,74 @@ async function handleSubscriptionExpiry() {
 
     for (const user of expiredUsers.rows) {
       try {
+        // === Проверка запланированного тарифа ===
+        if (user.scheduled_plan_id) {
+          const newExpiresAt = new Date();
+          newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+
+          // Активируем запланированный тариф вместо перехода на Guest
+          await client.query(
+            `UPDATE users SET
+               plan_id = $1,
+               subscription_expires_at = $2,
+               subscription_started_at = NOW(),
+               scheduled_plan_id = NULL,
+               scheduled_plan_paid_at = NULL,
+               grace_period_until = NULL,
+               boards_locked = FALSE,
+               boards_locked_at = NULL,
+               updated_at = CURRENT_TIMESTAMP
+             WHERE id = $3`,
+            [user.scheduled_plan_id, newExpiresAt, user.id]
+          );
+
+          // Записываем в историю
+          await client.query(
+            `INSERT INTO subscription_history
+             (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
+             VALUES ($1, $2, NOW(), $3, 'scheduled_activation', 0.00, 'RUB')`,
+            [user.id, user.scheduled_plan_id, newExpiresAt]
+          );
+
+          // Пересчёт блокировок досок
+          try {
+            await recalcUserBoardLocks(user.id);
+          } catch (lockErr) {
+            console.error(`  ❌ Ошибка пересчёта блокировок для ${user.email}:`, lockErr.message);
+          }
+
+          // Уведомление о активации запланированного тарифа
+          if (user.telegram_chat_id) {
+            try {
+              const planNameResult = await client.query(
+                'SELECT name FROM subscription_plans WHERE id = $1',
+                [user.scheduled_plan_id]
+              );
+              const newPlanName = planNameResult.rows[0]?.name || 'Новый тариф';
+              const expiresFormatted = newExpiresAt.toLocaleDateString('ru-RU', {
+                year: 'numeric', month: 'long', day: 'numeric'
+              });
+              const message = `✅ Ваш тариф «${newPlanName}» активирован!\n\nПодписка действует до ${expiresFormatted}.`;
+              await sendTelegramMessage(user.telegram_chat_id, message);
+            } catch (tgErr) {
+              console.error(`  ❌ Telegram-уведомление не отправлено:`, tgErr.message);
+            }
+          }
+
+          console.log(`  ✅ ${user.email}: ${user.current_plan_name} → Запланированный тариф (plan_id=${user.scheduled_plan_id})`);
+          successCount++;
+
+          await logToSystem('info', 'scheduled_plan_activated', {
+            userId: user.id, email: user.email,
+            oldPlan: user.current_plan_code,
+            newPlanId: user.scheduled_plan_id,
+            expiresAt: newExpiresAt
+          });
+
+          continue; // Пропускаем переход на Guest
+        }
+
+        // === Стандартная логика: переход на Guest ===
         const isPaidPlan = ['individual', 'premium'].includes(user.current_plan_code);
         const gracePeriodUntil = isPaidPlan ? new Date(new Date(user.subscription_expires_at).getTime() + 7 * 24 * 60 * 60 * 1000) : null;
 

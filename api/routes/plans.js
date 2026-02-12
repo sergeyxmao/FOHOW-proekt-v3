@@ -36,6 +36,16 @@ export function registerPlanRoutes(app) {
                 gracePeriodUntil: { type: 'string', format: 'date-time', nullable: true }
               }
             },
+            scheduledPlan: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                id: { type: 'integer' },
+                name: { type: 'string' },
+                code_name: { type: 'string' },
+                paidAt: { type: 'string', format: 'date-time', nullable: true }
+              }
+            },
             plan: {
               type: 'object',
               properties: {
@@ -76,11 +86,15 @@ export function registerPlanRoutes(app) {
           u.subscription_started_at,
           u.subscription_expires_at,
           u.grace_period_until,
+          u.scheduled_plan_id,
+          u.scheduled_plan_paid_at,
           sp.id as plan_id,
           sp.name as plan_name,
           sp.code_name as plan_code_name,
           sp.price_monthly as plan_price_monthly,
           sp.features as plan_features,
+          sp_sched.name as scheduled_plan_name,
+          sp_sched.code_name as scheduled_plan_code_name,
           (SELECT COUNT(*) FROM boards WHERE owner_id = u.id) as boards_count,
           (SELECT COUNT(*) FROM notes n JOIN boards b ON n.board_id = b.id WHERE b.owner_id = u.id) as notes_count,
           (SELECT COUNT(*) FROM stickers s JOIN boards b ON s.board_id = b.id WHERE b.owner_id = u.id) as stickers_count,
@@ -98,6 +112,7 @@ export function registerPlanRoutes(app) {
           ) as cards_count
         FROM users u
         LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
+        LEFT JOIN subscription_plans sp_sched ON u.scheduled_plan_id = sp_sched.id
         WHERE u.id = $1`,
         [userId]
       );
@@ -125,6 +140,12 @@ export function registerPlanRoutes(app) {
           subscriptionExpiresAt: data.subscription_expires_at,
           gracePeriodUntil: data.grace_period_until
         },
+        scheduledPlan: data.scheduled_plan_id ? {
+          id: data.scheduled_plan_id,
+          name: data.scheduled_plan_name,
+          code_name: data.scheduled_plan_code_name,
+          paidAt: data.scheduled_plan_paid_at
+        } : null,
         plan: {
           id: data.plan_id,
           name: data.plan_name,

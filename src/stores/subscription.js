@@ -11,6 +11,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 export const useSubscriptionStore = defineStore('subscription', {
   state: () => ({
     currentPlan: null,      // Текущий тарифный план
+    scheduledPlan: null,    // Запланированный тариф (при даунгрейде)
     plans: [],              // Список всех доступных тарифных планов
     features: {},           // Возможности плана
     usage: {},              // Использование ресурсов
@@ -52,6 +53,14 @@ export const useSubscriptionStore = defineStore('subscription', {
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
       return diffDays > 0 ? diffDays : 0
+    },
+
+    /**
+     * Проверка, есть ли запланированный тариф
+     * @returns {boolean}
+     */
+    hasScheduledPlan: (state) => {
+      return state.scheduledPlan !== null;
     },
 
     /**
@@ -151,6 +160,7 @@ export const useSubscriptionStore = defineStore('subscription', {
         }
 
         this.usage = data.usage || {}
+        this.scheduledPlan = data.scheduledPlan || null
 
         // Формируем лимиты из features
         this.limits = {
@@ -437,6 +447,7 @@ export const useSubscriptionStore = defineStore('subscription', {
      */
     clear() {
       this.currentPlan = null
+      this.scheduledPlan = null
       this.plans = []
       this.features = {}
       this.usage = {}

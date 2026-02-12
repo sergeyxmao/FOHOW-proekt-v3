@@ -4,6 +4,7 @@ import boardLockService from '../services/boardLockService.js';
 import { sendSubscriptionEmail } from '../utils/emailService.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 import { getSubscriptionActivatedMessage } from '../templates/telegramTemplates.js';
+import { PLAN_ID_TO_CODE, isDowngrade, daysRemaining } from '../utils/planHierarchy.js';
 
 /**
  * Сервис интеграции с платёжной системой Продамус (Prodamus)
@@ -294,7 +295,11 @@ export async function processWebhook(data) {
 
   if (userId) {
     const result = await pool.query(
-      'SELECT id, email, full_name, telegram_chat_id, subscription_expires_at FROM users WHERE id = $1',
+      `SELECT u.id, u.email, u.full_name, u.telegram_chat_id, u.subscription_expires_at,
+              u.plan_id, u.scheduled_plan_id, sp.code_name as current_plan_code
+       FROM users u
+       LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
+       WHERE u.id = $1`,
       [userId]
     );
     if (result.rows.length > 0) user = result.rows[0];
@@ -302,7 +307,11 @@ export async function processWebhook(data) {
 
   if (!user && customer_email) {
     const result = await pool.query(
-      'SELECT id, email, full_name, telegram_chat_id, subscription_expires_at FROM users WHERE email = $1',
+      `SELECT u.id, u.email, u.full_name, u.telegram_chat_id, u.subscription_expires_at,
+              u.plan_id, u.scheduled_plan_id, sp.code_name as current_plan_code
+       FROM users u
+       LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
+       WHERE u.email = $1`,
       [customer_email]
     );
     if (result.rows.length > 0) {
@@ -339,91 +348,164 @@ export async function processWebhook(data) {
     // Активация подписки только при успешной оплате
     if (payment_status === 'success' && user && planId) {
       const now = new Date();
-      const expiresAt = new Date(now);
+      const targetPlanCode = PLAN_ID_TO_CODE[planId];
+      const currentPlanCode = user.current_plan_code || 'guest';
+      const remaining = daysRemaining(user.subscription_expires_at);
+      const hasActiveSub = remaining !== null && remaining > 0;
 
-      // Если подписка ещё активна — продлеваем от текущей даты окончания
-      if (user.subscription_expires_at && new Date(user.subscription_expires_at) > now) {
-        expiresAt.setTime(new Date(user.subscription_expires_at).getTime());
-      }
-      expiresAt.setDate(expiresAt.getDate() + 30);
+      // Определяем: отложенная активация (даунгрейд при активной подписке)
+      const shouldSchedule = hasActiveSub && isDowngrade(currentPlanCode, targetPlanCode);
 
-      // Обновляем подписку пользователя
-      await client.query(
-        `UPDATE users
-         SET plan_id = $1,
-             subscription_expires_at = $2,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = $3`,
-        [planId, expiresAt, userId]
-      );
-
-      // Записываем в историю подписок
-      await client.query(
-        `INSERT INTO subscription_history
-         (user_id, plan_id, start_date, end_date, source, amount_paid, payment_method, currency, transaction_id)
-         VALUES ($1, $2, NOW(), $3, 'prodamus', $4, $5, 'RUB', $6)`,
-        [userId, planId, expiresAt, parseFloat(sum) || 0, payment_type || 'prodamus', order_id || null]
-      );
-
-      await client.query('COMMIT');
-
-      // Пересчёт блокировок досок (вне транзакции)
-      try {
-        const boardsStatus = await boardLockService.recalcUserBoardLocks(userId);
-        console.log(`[PRODAMUS] Блокировки обновлены для user_id=${userId}: unlocked=${boardsStatus.unlocked}, softLocked=${boardsStatus.softLocked}`);
-      } catch (lockError) {
-        console.error('[PRODAMUS] Ошибка при пересчете блокировок досок:', lockError);
-      }
-
-      // Отправка уведомлений
-      try {
-        const planResult = await pool.query(
-          'SELECT name, features FROM subscription_plans WHERE id = $1',
-          [planId]
+      if (shouldSchedule) {
+        // === ОТЛОЖЕННАЯ АКТИВАЦИЯ (даунгрейд) ===
+        // Текущий тариф продолжает действовать, новый активируется после окончания
+        await client.query(
+          `UPDATE users
+           SET scheduled_plan_id = $1,
+               scheduled_plan_paid_at = CURRENT_TIMESTAMP,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $2`,
+          [planId, userId]
         );
-        const plan = planResult.rows[0];
 
-        const expiresDateFormatted = expiresAt.toLocaleDateString('ru-RU', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
+        // Записываем в историю подписок как запланированный
+        await client.query(
+          `INSERT INTO subscription_history
+           (user_id, plan_id, start_date, end_date, source, amount_paid, payment_method, currency, transaction_id)
+           VALUES ($1, $2, $3, NULL, 'prodamus_scheduled', $4, $5, 'RUB', $6)`,
+          [userId, planId, user.subscription_expires_at, parseFloat(sum) || 0, payment_type || 'prodamus', order_id || null]
+        );
 
-        // Email
-        if (user.email) {
-          await sendSubscriptionEmail(user.email, 'new', {
-            userName: user.full_name || 'Пользователь',
-            planName: plan ? plan.name : 'Подписка',
-            amount: parseFloat(sum) || 0,
-            currency: 'RUB',
-            startDate: now.toISOString(),
-            expiresDate: expiresAt.toISOString()
-          });
-          console.log(`[PRODAMUS] Email уведомление отправлено: ${user.email}`);
-        }
+        await client.query('COMMIT');
 
-        // Telegram
-        if (user.telegram_chat_id) {
-          const telegramMessage = getSubscriptionActivatedMessage(
-            user.full_name || 'Пользователь',
-            plan ? plan.name : 'Подписка',
-            parseFloat(sum) || 0,
-            'RUB',
-            expiresDateFormatted
+        // Уведомления об отложенной активации
+        try {
+          const planResult = await pool.query(
+            'SELECT name FROM subscription_plans WHERE id = $1',
+            [planId]
           );
+          const planName = planResult.rows[0]?.name || 'Подписка';
 
-          await sendTelegramMessage(user.telegram_chat_id, telegramMessage.text, {
-            parse_mode: telegramMessage.parse_mode,
-            reply_markup: telegramMessage.reply_markup,
-            disable_web_page_preview: telegramMessage.disable_web_page_preview
+          const expiresDateFormatted = new Date(user.subscription_expires_at).toLocaleDateString('ru-RU', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
           });
-          console.log(`[PRODAMUS] Telegram уведомление отправлено: chatId=${user.telegram_chat_id}`);
-        }
-      } catch (notifyError) {
-        console.error('[PRODAMUS] Ошибка системы уведомлений:', notifyError);
-      }
 
-      return { success: true, activated: true, userId, planId };
+          if (user.email) {
+            await sendSubscriptionEmail(user.email, 'new', {
+              userName: user.full_name || 'Пользователь',
+              planName: `${planName} (активация после ${expiresDateFormatted})`,
+              amount: parseFloat(sum) || 0,
+              currency: 'RUB',
+              startDate: new Date(user.subscription_expires_at).toISOString(),
+              expiresDate: null
+            });
+            console.log(`[PRODAMUS] Email: отложенная активация ${planName} для ${user.email}`);
+          }
+
+          if (user.telegram_chat_id) {
+            const message = `✅ Оплата прошла успешно!\n\nТариф «${planName}» активируется автоматически после окончания текущей подписки (${expiresDateFormatted}).`;
+            await sendTelegramMessage(user.telegram_chat_id, message);
+            console.log(`[PRODAMUS] Telegram: отложенная активация для chatId=${user.telegram_chat_id}`);
+          }
+        } catch (notifyError) {
+          console.error('[PRODAMUS] Ошибка уведомлений (отложенная активация):', notifyError);
+        }
+
+        console.log(`[PRODAMUS] Запланирован переход user_id=${userId}: ${currentPlanCode} → ${targetPlanCode} после ${user.subscription_expires_at}`);
+        return { success: true, activated: false, scheduled: true, userId, planId };
+
+      } else {
+        // === НЕМЕДЛЕННАЯ АКТИВАЦИЯ (апгрейд, продление, или нет активной подписки) ===
+        const expiresAt = new Date(now);
+
+        // Если подписка ещё активна — продлеваем от текущей даты окончания
+        if (user.subscription_expires_at && new Date(user.subscription_expires_at) > now) {
+          expiresAt.setTime(new Date(user.subscription_expires_at).getTime());
+        }
+        expiresAt.setDate(expiresAt.getDate() + 30);
+
+        // Обновляем подписку пользователя
+        await client.query(
+          `UPDATE users
+           SET plan_id = $1,
+               subscription_expires_at = $2,
+               scheduled_plan_id = NULL,
+               scheduled_plan_paid_at = NULL,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $3`,
+          [planId, expiresAt, userId]
+        );
+
+        // Записываем в историю подписок
+        await client.query(
+          `INSERT INTO subscription_history
+           (user_id, plan_id, start_date, end_date, source, amount_paid, payment_method, currency, transaction_id)
+           VALUES ($1, $2, NOW(), $3, 'prodamus', $4, $5, 'RUB', $6)`,
+          [userId, planId, expiresAt, parseFloat(sum) || 0, payment_type || 'prodamus', order_id || null]
+        );
+
+        await client.query('COMMIT');
+
+        // Пересчёт блокировок досок (вне транзакции)
+        try {
+          const boardsStatus = await boardLockService.recalcUserBoardLocks(userId);
+          console.log(`[PRODAMUS] Блокировки обновлены для user_id=${userId}: unlocked=${boardsStatus.unlocked}, softLocked=${boardsStatus.softLocked}`);
+        } catch (lockError) {
+          console.error('[PRODAMUS] Ошибка при пересчете блокировок досок:', lockError);
+        }
+
+        // Отправка уведомлений
+        try {
+          const planResult = await pool.query(
+            'SELECT name, features FROM subscription_plans WHERE id = $1',
+            [planId]
+          );
+          const plan = planResult.rows[0];
+
+          const expiresDateFormatted = expiresAt.toLocaleDateString('ru-RU', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+
+          // Email
+          if (user.email) {
+            await sendSubscriptionEmail(user.email, 'new', {
+              userName: user.full_name || 'Пользователь',
+              planName: plan ? plan.name : 'Подписка',
+              amount: parseFloat(sum) || 0,
+              currency: 'RUB',
+              startDate: now.toISOString(),
+              expiresDate: expiresAt.toISOString()
+            });
+            console.log(`[PRODAMUS] Email уведомление отправлено: ${user.email}`);
+          }
+
+          // Telegram
+          if (user.telegram_chat_id) {
+            const telegramMessage = getSubscriptionActivatedMessage(
+              user.full_name || 'Пользователь',
+              plan ? plan.name : 'Подписка',
+              parseFloat(sum) || 0,
+              'RUB',
+              expiresDateFormatted
+            );
+
+            await sendTelegramMessage(user.telegram_chat_id, telegramMessage.text, {
+              parse_mode: telegramMessage.parse_mode,
+              reply_markup: telegramMessage.reply_markup,
+              disable_web_page_preview: telegramMessage.disable_web_page_preview
+            });
+            console.log(`[PRODAMUS] Telegram уведомление отправлено: chatId=${user.telegram_chat_id}`);
+          }
+        } catch (notifyError) {
+          console.error('[PRODAMUS] Ошибка системы уведомлений:', notifyError);
+        }
+
+        return { success: true, activated: true, userId, planId };
+      }
     }
 
     await client.query('COMMIT');

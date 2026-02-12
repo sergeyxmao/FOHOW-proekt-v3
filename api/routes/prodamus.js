@@ -1,6 +1,16 @@
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { verifySignature, processWebhook } from '../services/prodamusService.js';
+import {
+  PLAN_ID_TO_CODE,
+  SUBSCRIPTION_DURATION_DAYS,
+  MAX_EXPIRY_FROM_NOW_DAYS,
+  RENEWAL_WINDOW_DAYS,
+  isDowngrade,
+  isUpgrade,
+  isSamePlan,
+  daysRemaining
+} from '../utils/planHierarchy.js';
 
 // Маппинг plan_id → готовая ссылка Продамуса
 const PRODAMUS_LINKS = {
@@ -132,7 +142,8 @@ export function registerProdamusRoutes(app) {
         400: {
           type: 'object',
           properties: {
-            error: { type: 'string' }
+            error: { type: 'string' },
+            code: { type: 'string', nullable: true }
           }
         },
         401: {
@@ -154,9 +165,13 @@ export function registerProdamusRoutes(app) {
         return reply.code(400).send({ error: 'Недопустимый тарифный план. Доступны: Индивидуальный (6) и Премиум (7).' });
       }
 
-      // Получаем email пользователя
+      // Получаем данные пользователя с текущим тарифом
       const userResult = await pool.query(
-        'SELECT email FROM users WHERE id = $1',
+        `SELECT u.email, u.plan_id, u.subscription_expires_at, u.scheduled_plan_id,
+                sp.code_name as current_plan_code
+         FROM users u
+         LEFT JOIN subscription_plans sp ON u.plan_id = sp.id
+         WHERE u.id = $1`,
         [userId]
       );
 
@@ -164,7 +179,51 @@ export function registerProdamusRoutes(app) {
         return reply.code(400).send({ error: 'Пользователь не найден' });
       }
 
-      const userEmail = userResult.rows[0].email;
+      const user = userResult.rows[0];
+      const userEmail = user.email;
+      const currentPlanCode = user.current_plan_code || 'guest';
+      const targetPlanCode = PLAN_ID_TO_CODE[planId];
+      const remaining = daysRemaining(user.subscription_expires_at);
+      const hasActiveSub = remaining !== null && remaining > 0;
+
+      // === Правила перехода между тарифами ===
+
+      // Правило: уже есть запланированный тариф
+      if (user.scheduled_plan_id) {
+        return reply.code(400).send({
+          error: 'У вас уже есть запланированный тариф. Дождитесь окончания текущей подписки.',
+          code: 'SCHEDULED_PLAN_EXISTS'
+        });
+      }
+
+      // Проверки применяются только при активной подписке
+      if (hasActiveSub) {
+        if (isSamePlan(currentPlanCode, targetPlanCode)) {
+          // Продление того же тарифа: только за 30 дней до окончания
+          if (remaining > RENEWAL_WINDOW_DAYS) {
+            return reply.code(400).send({
+              error: `Продление доступно за ${RENEWAL_WINDOW_DAYS} дней до окончания подписки. Осталось дней: ${remaining}.`,
+              code: 'RENEWAL_TOO_EARLY'
+            });
+          }
+        } else if (isDowngrade(currentPlanCode, targetPlanCode)) {
+          // Понижение: только за 30 дней до окончания (с отложенной активацией)
+          if (remaining > RENEWAL_WINDOW_DAYS) {
+            return reply.code(400).send({
+              error: `Понижение тарифа доступно за ${RENEWAL_WINDOW_DAYS} дней до окончания текущей подписки. Осталось дней: ${remaining}.`,
+              code: 'DOWNGRADE_TOO_EARLY'
+            });
+          }
+        } else if (isUpgrade(currentPlanCode, targetPlanCode)) {
+          // Повышение: проверка анти-стакинга (результат не более 60 дней)
+          if (remaining + SUBSCRIPTION_DURATION_DAYS > MAX_EXPIRY_FROM_NOW_DAYS) {
+            return reply.code(400).send({
+              error: `Переход на тариф заблокирован: итоговый срок подписки превысит ${MAX_EXPIRY_FROM_NOW_DAYS} дней. Осталось дней: ${remaining}.`,
+              code: 'STACKING_LIMIT'
+            });
+          }
+        }
+      }
 
       // Формируем ссылку: готовая ссылка Продамуса + GET-параметры
       const params = new URLSearchParams({

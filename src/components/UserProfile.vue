@@ -976,6 +976,36 @@
                   <div v-if="isInGracePeriod()" class="grace-period-message">
                     Ваша подписка истекла, но доступ сохранён до окончания льготного периода. Пожалуйста, продлите подписку.
                   </div>
+                  <!-- Запланированный тариф -->
+                  <div v-if="subscriptionStore.scheduledPlan" class="tariff-detail-item scheduled-plan-info">
+                    <span class="detail-label">Запланированный тариф:</span>
+                    <span class="detail-value scheduled-plan-name">{{ subscriptionStore.scheduledPlan.name }}</span>
+                  </div>
+                  <div v-if="subscriptionStore.scheduledPlan" class="scheduled-plan-message">
+                    Тариф «{{ subscriptionStore.scheduledPlan.name }}» активируется автоматически после окончания текущей подписки.
+                  </div>
+                </div>
+
+                <!-- Кнопка продления текущего тарифа -->
+                <div
+                  v-if="subscriptionStore.currentPlan
+                    && subscriptionStore.currentPlan.code_name !== 'guest'
+                    && subscriptionStore.currentPlan.code_name !== 'demo'
+                    && !subscriptionStore.hasScheduledPlan"
+                  class="current-tariff-renewal"
+                >
+                  <button
+                    class="btn-upgrade"
+                    :class="{
+                      'btn-upgrade--disabled': getPlanButtonState(subscriptionStore.currentPlan).disabled,
+                      'btn-upgrade--renew': getPlanButtonState(subscriptionStore.currentPlan).action === 'renew' && !getPlanButtonState(subscriptionStore.currentPlan).disabled
+                    }"
+                    :disabled="getPlanButtonState(subscriptionStore.currentPlan).disabled"
+                    :title="getPlanButtonState(subscriptionStore.currentPlan).tooltip"
+                    @click="handleUpgrade(subscriptionStore.currentPlan)"
+                  >
+                    {{ getPlanButtonState(subscriptionStore.currentPlan).label }}
+                  </button>
                 </div>
 
                 <!-- Возможности текущего тарифа -->
@@ -1072,8 +1102,20 @@
                       </ul>
                     </div>
 
-                    <button v-if="plan.code_name !== 'guest'" class="btn-upgrade" @click="handleUpgrade(plan)">
-                      Перейти на тариф
+                    <button
+                      v-if="plan.code_name !== 'guest' && plan.code_name !== 'demo' && getPlanButtonState(plan).action !== 'unavailable'"
+                      class="btn-upgrade"
+                      :class="{
+                        'btn-upgrade--disabled': getPlanButtonState(plan).disabled,
+                        'btn-upgrade--downgrade': getPlanButtonState(plan).action === 'downgrade' && !getPlanButtonState(plan).disabled,
+                        'btn-upgrade--renew': getPlanButtonState(plan).action === 'renew' && !getPlanButtonState(plan).disabled,
+                        'btn-upgrade--scheduled': getPlanButtonState(plan).action === 'scheduled'
+                      }"
+                      :disabled="getPlanButtonState(plan).disabled"
+                      :title="getPlanButtonState(plan).tooltip"
+                      @click="handleUpgrade(plan)"
+                    >
+                      {{ getPlanButtonState(plan).label }}
                     </button>
                   </div>
                 </div>
@@ -1568,6 +1610,7 @@ const {
   togglePlanExpanded,
   isPlanExpanded,
   loadAvailablePlans,
+  getPlanButtonState,
   handleUpgrade
 } = useUserTariffs({ subscriptionStore })
 
@@ -3984,6 +4027,85 @@ watch(activeTab, (newTab) => {
   line-height: 1.5;
   margin-top: 8px;
   border: 1px solid #ffeaa7;
+}
+
+/* Кнопка продления в карточке текущего тарифа */
+.current-tariff-renewal {
+  margin-top: 16px;
+}
+
+.current-tariff-renewal .btn-upgrade {
+  width: 100%;
+}
+
+.current-tariff-renewal .btn-upgrade--disabled {
+  background: rgba(0, 0, 0, 0.2) !important;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+/* Запланированный тариф */
+.scheduled-plan-info {
+  background: #fef3c7;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.scheduled-plan-name {
+  color: #92400e;
+  font-weight: 600;
+}
+
+.scheduled-plan-message {
+  font-size: 13px;
+  color: #92400e;
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  padding: 8px 12px;
+  margin-top: 8px;
+  border-radius: 4px;
+  line-height: 1.5;
+}
+
+/* Заблокированная кнопка */
+.btn-upgrade--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #9ca3af !important;
+}
+
+.btn-upgrade--disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Кнопка даунгрейда */
+.btn-upgrade--downgrade {
+  background: #f59e0b !important;
+}
+
+.btn-upgrade--downgrade:hover {
+  background: #d97706 !important;
+}
+
+/* Кнопка продления */
+.btn-upgrade--renew {
+  background: #10b981 !important;
+}
+
+.btn-upgrade--renew:hover {
+  background: #059669 !important;
+}
+
+/* Запланированный тариф (кнопка) */
+.btn-upgrade--scheduled {
+  background: #6b7280 !important;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.btn-upgrade--scheduled:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 .available-tariffs {

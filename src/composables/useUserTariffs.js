@@ -2,6 +2,14 @@ import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notifications'
 
+// Иерархия тарифов: чем выше число, тем выше тариф
+const PLAN_LEVELS = {
+  guest: 0,
+  demo: 1,
+  individual: 2,
+  premium: 3
+}
+
 /**
  * Composable для управления тарифами
  *
@@ -10,6 +18,7 @@ import { useNotificationsStore } from '@/stores/notifications'
  * - Форматирование функций тарифа
  * - Управление раскрытием карточек тарифов
  * - Переход к оплате через Продамус
+ * - Определение состояния кнопок тарифов (правила перехода)
  */
 export function useUserTariffs({ subscriptionStore }) {
   // === State ===
@@ -143,6 +152,122 @@ export function useUserTariffs({ subscriptionStore }) {
   }
 
   /**
+   * Определение состояния кнопки для карточки тарифа
+   *
+   * Правила перехода:
+   * - Апгрейд: разрешён если результат <= 60 дней
+   * - Продление: разрешено за 30 дней до окончания
+   * - Даунгрейд: разрешён за 30 дней до окончания (отложенная активация)
+   * - Запланированный тариф блокирует все покупки
+   *
+   * @param {Object} plan - тарифный план
+   * @returns {{ label: string, disabled: boolean, tooltip: string, action: string }}
+   */
+  function getPlanButtonState(plan) {
+    const currentPlan = subscriptionStore.currentPlan
+    const daysLeft = subscriptionStore.daysLeft
+    const hasScheduled = subscriptionStore.hasScheduledPlan
+
+    // Неприобретаемые тарифы
+    if (plan.code_name === 'guest' || plan.code_name === 'demo') {
+      return { label: '', disabled: true, tooltip: '', action: 'unavailable' }
+    }
+
+    // Пользователь не авторизован или нет текущего плана
+    if (!currentPlan) {
+      return { label: 'Выбрать тариф', disabled: false, tooltip: '', action: 'upgrade' }
+    }
+
+    const currentLevel = PLAN_LEVELS[currentPlan.code_name] ?? 0
+    const targetLevel = PLAN_LEVELS[plan.code_name] ?? 0
+
+    // Этот тариф уже запланирован
+    if (subscriptionStore.scheduledPlan?.code_name === plan.code_name) {
+      return {
+        label: 'Тариф запланирован',
+        disabled: true,
+        tooltip: 'Тариф активируется после окончания текущей подписки',
+        action: 'scheduled'
+      }
+    }
+
+    // Есть любой запланированный тариф — блокируем все покупки
+    if (hasScheduled) {
+      return {
+        label: 'Тариф запланирован',
+        disabled: true,
+        tooltip: 'У вас уже есть запланированный тариф',
+        action: 'unavailable'
+      }
+    }
+
+    // Тот же тариф — продление
+    if (plan.code_name === currentPlan.code_name) {
+      // Нет активной подписки (Guest без срока)
+      if (daysLeft === null || daysLeft <= 0) {
+        return { label: 'Текущий план', disabled: true, tooltip: '', action: 'current' }
+      }
+      if (daysLeft > 30) {
+        return {
+          label: 'Продлить',
+          disabled: true,
+          tooltip: `Продление доступно за 30 дней до окончания. Осталось ${daysLeft} дн.`,
+          action: 'renew'
+        }
+      }
+      return {
+        label: 'Продлить подписку',
+        disabled: false,
+        tooltip: '',
+        action: 'renew'
+      }
+    }
+
+    // Нет активной подписки или она истекла — можно купить любой
+    if (daysLeft === null || daysLeft <= 0) {
+      return { label: 'Выбрать тариф', disabled: false, tooltip: '', action: 'upgrade' }
+    }
+
+    // Апгрейд (Individual → Premium)
+    if (targetLevel > currentLevel) {
+      if (daysLeft + 30 > 60) {
+        return {
+          label: 'Повысить тариф',
+          disabled: true,
+          tooltip: `Переход будет доступен через ${daysLeft - 30} дн.`,
+          action: 'upgrade'
+        }
+      }
+      return {
+        label: 'Повысить тариф',
+        disabled: false,
+        tooltip: '',
+        action: 'upgrade'
+      }
+    }
+
+    // Даунгрейд (Premium → Individual)
+    if (targetLevel < currentLevel) {
+      if (daysLeft > 30) {
+        return {
+          label: 'У вас более высокий тариф',
+          disabled: true,
+          tooltip: `Понижение доступно за 30 дней до окончания подписки. Осталось ${daysLeft} дн.`,
+          action: 'downgrade'
+        }
+      }
+      return {
+        label: 'Перейти после окончания текущего',
+        disabled: false,
+        tooltip: 'Новый тариф активируется после окончания текущей подписки',
+        action: 'downgrade'
+      }
+    }
+
+    return { label: 'Выбрать тариф', disabled: false, tooltip: '', action: 'upgrade' }
+  }
+
+  /**
    * Переход на другой тариф через Продамус
    * Создаёт ссылку на оплату и перенаправляет пользователя
    */
@@ -150,6 +275,23 @@ export function useUserTariffs({ subscriptionStore }) {
     const authStore = useAuthStore()
     const notificationsStore = useNotificationsStore()
     const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+
+    const buttonState = getPlanButtonState(plan)
+
+    // Подтверждение при даунгрейде
+    if (buttonState.action === 'downgrade') {
+      const expiryDate = subscriptionStore.currentPlan?.expiresAt
+        ? new Date(subscriptionStore.currentPlan.expiresAt).toLocaleDateString('ru-RU')
+        : ''
+
+      const confirmed = window.confirm(
+        `Вы переходите на тариф "${plan.name}".\n\n` +
+        `Текущий тариф "${subscriptionStore.currentPlan?.name}" будет действовать до ${expiryDate}.\n` +
+        `После этого автоматически активируется тариф "${plan.name}" на 30 дней.\n\n` +
+        `Продолжить?`
+      )
+      if (!confirmed) return
+    }
 
     try {
       const response = await fetch(`${API_URL}/payments/create-link`, {
@@ -163,6 +305,17 @@ export function useUserTariffs({ subscriptionStore }) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
+
+        // Обработка специфичных кодов ошибок
+        const warningCodes = ['SCHEDULED_PLAN_EXISTS', 'RENEWAL_TOO_EARLY', 'DOWNGRADE_TOO_EARLY', 'STACKING_LIMIT']
+        if (errorData.code && warningCodes.includes(errorData.code)) {
+          notificationsStore.addNotification({
+            type: 'warning',
+            message: errorData.error
+          })
+          return
+        }
+
         throw new Error(errorData.error || 'Ошибка создания ссылки на оплату')
       }
 
@@ -196,6 +349,7 @@ export function useUserTariffs({ subscriptionStore }) {
     togglePlanExpanded,
     isPlanExpanded,
     loadAvailablePlans,
+    getPlanButtonState,
     handleUpgrade
   }
 }

@@ -105,18 +105,26 @@
 
             <!-- Кнопка -->
             <button
-              v-if="isCurrentPlan(plan)"
+              v-if="isCurrentPlan(plan) && (!getPlanButtonState(plan).action || getPlanButtonState(plan).action === 'current')"
               class="select-plan-btn btn-current"
               disabled
             >
               Текущий план
             </button>
             <button
-              v-else-if="plan.code_name !== 'guest'"
+              v-else-if="plan.code_name !== 'guest' && plan.code_name !== 'demo' && getPlanButtonState(plan).action !== 'unavailable'"
               class="select-plan-btn"
+              :class="{
+                'btn-disabled': getPlanButtonState(plan).disabled,
+                'btn-downgrade': getPlanButtonState(plan).action === 'downgrade' && !getPlanButtonState(plan).disabled,
+                'btn-renew': getPlanButtonState(plan).action === 'renew' && !getPlanButtonState(plan).disabled,
+                'btn-scheduled': getPlanButtonState(plan).action === 'scheduled'
+              }"
+              :disabled="getPlanButtonState(plan).disabled"
+              :title="getPlanButtonState(plan).tooltip"
               @click="handleUpgrade(plan)"
             >
-              Выбрать тариф
+              {{ getPlanButtonState(plan).label || 'Выбрать тариф' }}
             </button>
           </div>
         </div>
@@ -134,8 +142,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 
 const subscriptionStore = useSubscriptionStore()
 
-// Извлекаем handleUpgrade из композабла для обработки клика на кнопку оплаты
-const { handleUpgrade } = useUserTariffs({ subscriptionStore })
+// Извлекаем handleUpgrade и getPlanButtonState из композабла
+const { handleUpgrade, getPlanButtonState } = useUserTariffs({ subscriptionStore })
 
 const plans = ref([])
 const billingPeriod = ref('monthly')
@@ -633,6 +641,50 @@ html {
 
 .btn-current:hover {
   background: #9ca3af;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Заблокированная кнопка */
+.btn-disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-disabled:hover {
+  background: #9ca3af;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Кнопка даунгрейда */
+.btn-downgrade {
+  background: #f59e0b;
+}
+
+.btn-downgrade:hover {
+  background: #d97706;
+}
+
+/* Кнопка продления */
+.btn-renew {
+  background: #10b981;
+}
+
+.btn-renew:hover {
+  background: #059669;
+}
+
+/* Запланированный тариф */
+.btn-scheduled {
+  background: #6b7280;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.btn-scheduled:hover {
+  background: #6b7280;
   transform: none;
   box-shadow: none;
 }
