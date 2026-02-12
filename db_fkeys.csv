@@ -26,6 +26,8 @@ image_rename_audit,user_id,users,id
 image_rename_audit,image_id,image_library,id
 notes,board_id,boards,id
 password_resets,user_id,users,id
+prodamus_payments,user_id,users,id
+prodamus_payments,plan_id,subscription_plans,id
 promo_code_usages,promo_code_id,promo_codes,id
 promo_code_usages,user_id,users,id
 promo_codes,target_plan_id,subscription_plans,id
@@ -39,8 +41,6 @@ subscription_history,user_id,users,id
 subscription_history,plan_id,subscription_plans,id
 system_logs,user_id,users,id
 telegram_link_codes,user_id,users,id
-tribute_subscriptions,plan_id,subscription_plans,id
-tribute_subscriptions,user_id,users,id
 user_comments,user_id,users,id
 user_verifications,user_id,users,id
 user_verifications,processed_by,users,id

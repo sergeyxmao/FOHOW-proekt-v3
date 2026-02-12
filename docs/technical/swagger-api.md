@@ -91,7 +91,7 @@ GET /api/docs/json
 | `api/routes/plans.js` | Schema для 2 эндпоинтов тарифных планов |
 | `api/routes/promo.js` | Schema для 1 эндпоинта промокодов |
 | `api/routes/verification.js` | Schema для 5 эндпоинтов верификации |
-| `api/routes/tribute.js` | Schema для 2 эндпоинтов Tribute |
+| `api/routes/prodamus.js` | Schema для 2 эндпоинтов платежей Продамус |
 | `api/routes/admin/users.js` | Schema для 7 эндпоинтов управления пользователями (admin) |
 | `api/routes/admin/stats.js` | Schema для 3 эндпоинтов статистики (admin) |
 | `api/routes/admin/images.js` | Schema для 11 эндпоинтов модерации изображений (admin) |
@@ -196,7 +196,7 @@ app.post('/api/example', {
 | Plans | Тарифные планы |
 | Promo | Промокоды |
 | Verification | Верификация пользователей |
-| Tribute | Платежи Tribute |
+| Prodamus | Платежи Продамус |
 | Admin | Админ-панель |
 | System | Здоровье системы |
 
@@ -230,8 +230,8 @@ app.post('/api/example', {
 - `api/routes/plans.js` — 2 эндпоинта
 - `api/routes/promo.js` — 1 эндпоинт
 - `api/routes/verification.js` — 5 эндпоинтов
-- `api/routes/tribute.js` — 2 эндпоинта
-- **Итого: ~72 эндпоинта задокументированы**
+- `api/routes/prodamus.js` — 2 эндпоинта
+- **Итого: ~74 эндпоинта задокументированы**
 
 ### Фаза 3 (завершена) — Admin
 - `api/routes/admin/users.js` — 7 эндпоинтов
@@ -242,7 +242,7 @@ app.post('/api/example', {
 - `api/routes/admin/transactions.js` — 1 эндпоинт
 - **Итого: 29 эндпоинтов задокументированы**
 
-### Общий итог: ~125 эндпоинтов задокументированы (100% API)
+### Общий итог: ~127 эндпоинтов задокументированы (100% API)
 
 ## Экспорт OpenAPI JSON для внешней интеграции
 

@@ -40,6 +40,18 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true, layout: 'admin' }
   },
   {
+    path: '/payment-success',
+    name: 'PaymentSuccess',
+    component: () => import('../views/PaymentSuccessPage.vue'),
+    meta: { layout: 'public' }
+  },
+  {
+    path: '/payment-fail',
+    name: 'PaymentFail',
+    component: () => import('../views/PaymentFailPage.vue'),
+    meta: { layout: 'public' }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('../views/NotFound.vue'),

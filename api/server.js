@@ -43,7 +43,7 @@ import { registerStickerRoutes } from './routes/stickers.js';
 import { registerNoteRoutes } from './routes/notes.js';
 import { registerCommentRoutes } from './routes/comments.js';
 import { registerBoardPartnerRoutes } from './routes/boardPartners.js';
-import { registerTributeRoutes } from './routes/tribute.js';
+import { registerProdamusRoutes } from './routes/prodamus.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
 import { setupWebSocket, notifyNewMessage, notifyChatsUpdate } from './socket.js';
@@ -99,6 +99,19 @@ await app.register(multipart, {
     fileSize: 5 * 1024 * 1024 // 5MB максимум
   }
 });
+
+// Парсер для application/x-www-form-urlencoded (нужен для webhook Продамуса)
+app.addContentTypeParser('application/x-www-form-urlencoded',
+  { parseAs: 'string' },
+  (req, body, done) => {
+    try {
+      done(null, Object.fromEntries(new URLSearchParams(body)));
+    } catch (err) {
+      done(err);
+    }
+  }
+);
+
 await app.register(fastifyStatic, {
   root: path.join(__dirname, 'uploads'),
   prefix: '/uploads/'
@@ -148,7 +161,7 @@ await app.register(swagger, {
       { name: 'Plans', description: 'Тарифные планы' },
       { name: 'Promo', description: 'Промокоды' },
       { name: 'Verification', description: 'Верификация пользователей' },
-      { name: 'Tribute', description: 'Платежи Tribute' },
+      { name: 'Prodamus', description: 'Платежи Продамус' },
       { name: 'Admin', description: 'Админ-панель' },
       { name: 'System', description: 'Здоровье системы' }
     ]
@@ -308,7 +321,11 @@ registerStickerRoutes(app);
 registerNoteRoutes(app);
 registerCommentRoutes(app);
 registerBoardPartnerRoutes(app);
-registerTributeRoutes(app);
+
+// ============================================
+// ПЛАТЕЖИ ПРОДАМУС (PRODAMUS PAYMENTS)
+// ============================================
+registerProdamusRoutes(app);
 
 
 // Проверка живости API

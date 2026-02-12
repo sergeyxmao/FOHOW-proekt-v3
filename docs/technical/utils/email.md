@@ -59,7 +59,7 @@
 
 ### `sendSubscriptionEmail(email, eventType, data)`
 
-Отправка email-уведомлений о событиях подписки через Tribute.
+Отправка email-уведомлений о событиях подписки.
 
 **Параметры:**
 - `email` (string) — Email получателя

@@ -81,8 +81,6 @@ YANDEX_VISION_FOLDER_ID=<folder_id>
 YANDEX_DISK_TOKEN=<токен>
 YANDEX_DISK_BASE_DIR=/FOHOW-Interactive-Board
 
-# Tribute Payment
-TRIBUTE_API_KEY=<ключ>
 2.2 Установка зависимостей
 bash
 cd /var/www/FOHOW-proekt-v3/api

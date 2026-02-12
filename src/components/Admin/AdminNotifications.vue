@@ -69,7 +69,7 @@ const telegramTemplates = [
   {
     id: 'subscription-activated-premium',
     name: 'Подписка активирована (Премиум)',
-    trigger: 'Оплата через Tribute',
+    trigger: 'Оплата подписки',
     params: ['userName', 'planName', 'amount', 'currency', 'expiresDate'],
     preview: `✅ *Подписка активирована!*
 
@@ -99,7 +99,7 @@ const telegramTemplates = [
   {
     id: 'subscription-activated-individual',
     name: 'Подписка активирована (Индивидуальный)',
-    trigger: 'Оплата через Tribute',
+    trigger: 'Оплата подписки',
     params: ['userName', 'planName', 'amount', 'currency', 'expiresDate'],
     preview: `✅ *Подписка активирована!*
 
@@ -129,7 +129,7 @@ const telegramTemplates = [
   {
     id: 'subscription-renewed-premium',
     name: 'Подписка продлена (Премиум)',
-    trigger: 'Автоматическое продление через Tribute',
+    trigger: 'Автоматическое продление подписки',
     params: ['userName', 'planName', 'amount', 'currency', 'expiresDate'],
     preview: `🧩 *Подписка продлена!*
 
@@ -158,7 +158,7 @@ const telegramTemplates = [
   {
     id: 'subscription-renewed-individual',
     name: 'Подписка продлена (Индивидуальный)',
-    trigger: 'Автоматическое продление через Tribute',
+    trigger: 'Автоматическое продление подписки',
     params: ['userName', 'planName', 'amount', 'currency', 'expiresDate'],
     preview: `🧩 *Подписка продлена!*
 
@@ -357,7 +357,7 @@ const emailTemplates = [
   {
     id: 'email-sub-new-premium',
     name: 'Подписка активирована (Премиум)',
-    trigger: 'Оплата через Tribute',
+    trigger: 'Оплата подписки',
     subject: '✅ Подписка активирована',
     params: ['userName', 'planName', 'amount', 'currency', 'expiresDate'],
     headerEmoji: '✅', headerText: 'Подписка активирована!',
@@ -372,7 +372,7 @@ const emailTemplates = [
   {
     id: 'email-sub-new-individual',
     name: 'Подписка активирована (Индивидуальный)',
-    trigger: 'Оплата через Tribute',
+    trigger: 'Оплата подписки',
     subject: '✅ Подписка активирована',
     params: ['userName', 'planName', 'amount', 'currency', 'expiresDate'],
     headerEmoji: '✅', headerText: 'Подписка активирована!',

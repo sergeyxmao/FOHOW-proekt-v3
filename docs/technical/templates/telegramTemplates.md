@@ -288,24 +288,6 @@ await sendTelegramMessage(chatId, message.text, {
 
 ---
 
-## Интеграция с другими сервисами
-
-### tributeService.js
-
-Шаблоны используются в `api/services/tributeService.js` для отправки уведомлений о подписках:
-
-```javascript
-import {
-  getSubscriptionActivatedMessage,
-  getSubscriptionRenewedMessage,
-  getSubscriptionCancelledMessage
-} from '../templates/telegramTemplates.js';
-```
-
-См. подробности в `docs/technical/services/tributeService.md`.
-
----
-
 ## Обновление шаблонов
 
 При изменении шаблонов:

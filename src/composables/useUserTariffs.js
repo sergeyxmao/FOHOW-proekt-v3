@@ -1,4 +1,6 @@
 import { ref } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { useNotificationsStore } from '@/stores/notifications'
 
 /**
  * Composable для управления тарифами
@@ -7,6 +9,7 @@ import { ref } from 'vue'
  * - Загрузка доступных тарифов
  * - Форматирование функций тарифа
  * - Управление раскрытием карточек тарифов
+ * - Переход к оплате через Продамус
  */
 export function useUserTariffs({ subscriptionStore }) {
   // === State ===
@@ -140,32 +143,40 @@ export function useUserTariffs({ subscriptionStore }) {
   }
 
   /**
-   * Маппинг code_name тарифа на Tribute product_id для веб-ссылок
-   *
-   * ВАЖНО: Для веб-ссылок (web.tribute.tg/s/{id}) НЕ нужен префикс 's'
-   * В backend (tributeService.js) используется формат с префиксом 's' (sLe1, sLc8)
-   * для обработки webhook'ов от Tribute — это разные форматы!
+   * Переход на другой тариф через Продамус
+   * Создаёт ссылку на оплату и перенаправляет пользователя
    */
-  const TRIBUTE_PRODUCTS = {
-    'premium': 'Le1',      // Premium - 499₽/мес
-    'individual': 'Lc8'    // Individual - 299₽/мес
-  }
+  async function handleUpgrade(plan) {
+    const authStore = useAuthStore()
+    const notificationsStore = useNotificationsStore()
+    const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 
-  /**
-   * Переход на другой тариф через Tribute
-   * Открывает страницу оплаты Tribute в новой вкладке
-   */
-  function handleUpgrade(plan) {
-    const productId = TRIBUTE_PRODUCTS[plan.code_name]
+    try {
+      const response = await fetch(`${API_URL}/payments/create-link`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ planId: plan.id })
+      })
 
-    if (!productId) {
-      alert(`Оплата для тарифа "${plan.name}" временно недоступна. Пожалуйста, свяжитесь с поддержкой.`)
-      return
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Ошибка создания ссылки на оплату')
+      }
+
+      const data = await response.json()
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl
+      }
+    } catch (error) {
+      console.error('Ошибка при переходе к оплате:', error)
+      notificationsStore.addNotification({
+        type: 'error',
+        message: error.message || 'Не удалось перейти к оплате. Попробуйте позже.'
+      })
     }
-
-    // Открываем ссылку Tribute в новой вкладке
-    const tributeUrl = `https://web.tribute.tg/s/${productId}`
-    window.open(tributeUrl, '_blank')
   }
 
   return {

@@ -289,7 +289,7 @@ app.get('/api/example', {
 **⚠️ `nullable: true` MUST always be used together with `type` (AJV strict mode in Fastify 5)**
 
 **Existing Swagger tags (23):**
-Auth, Profile, Users, Boards, Board Folders, Board Partners, Stickers, Notes, Comments, Anchors, Images, Partners, Relationships, Favorites, Chats, Notifications, Telegram, Plans, Promo, Verification, Tribute, Admin, System
+Auth, Profile, Users, Boards, Board Folders, Board Partners, Stickers, Notes, Comments, Anchors, Images, Partners, Relationships, Favorites, Chats, Notifications, Telegram, Plans, Promo, Verification, Prodamus, Admin, System
 
 ## Database Rules
 

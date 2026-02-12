@@ -30,8 +30,8 @@
 | 1 | Приветствие | Регистрация нового пользователя | `api/templates/telegramTemplates.js:119` |
 | 2 | Подписка истекает | Cron: ежедневно 09:00 МСК | `api/templates/telegramTemplates.js:38` |
 | 3 | Подписка истекла | Cron: ежедневно 01:00 МСК | `api/templates/telegramTemplates.js:72` |
-| 4 | Подписка активирована | Оплата через Tribute | `api/templates/telegramTemplates.js:180` |
-| 5 | Подписка продлена | Автопродление через Tribute | `api/templates/telegramTemplates.js:320` |
+| 4 | Подписка активирована | Оплата подписки | `api/templates/telegramTemplates.js:180` |
+| 5 | Подписка продлена | Автопродление подписки | `api/templates/telegramTemplates.js:320` |
 | 6 | Подписка отменена | Отмена подписки | `api/templates/telegramTemplates.js:363` |
 | 7 | Промокод применён | Активация промокода | `api/templates/telegramTemplates.js:277` |
 | 8 | Верификация одобрена | Одобрение администратором | `api/templates/telegramTemplates.js:404` |
@@ -49,7 +49,7 @@
 | 4 | Пароль изменён | Смена пароля | `api/templates/emailTemplates.js:1206` |
 | 5 | Подписка истекает | Cron: ежедневно 09:00 МСК | `api/templates/emailTemplates.js:34` |
 | 6 | Подписка истекла | Cron: ежедневно 01:00 МСК | `api/templates/emailTemplates.js:125` |
-| 7 | Подписка активирована | Оплата через Tribute | `api/templates/emailTemplates.js:783` (eventType='new') |
+| 7 | Подписка активирована | Оплата подписки | `api/templates/emailTemplates.js:783` (eventType='new') |
 | 8 | Подписка продлена | Автопродление | `api/templates/emailTemplates.js:783` (eventType='renewed') |
 | 9 | Подписка отменена | Отмена подписки | `api/templates/emailTemplates.js:783` (eventType='cancelled') |
 | 10 | Промокод применён | Активация промокода | `api/templates/emailTemplates.js:783` (eventType='promo') |
@@ -72,7 +72,6 @@
 
 - `api/cron/tasks.js` — cron-задачи (уведомления о подписках)
 - `api/services/verificationService.js` — уведомления о верификации
-- `api/services/tributeService.js` — уведомления о платежах
 - `api/bot/telegramBot.js` — Telegram бот (команда /start)
 - `api/routes/telegram.js` — отвязка Telegram
 - `api/routes/auth.js` — регистрация, сброс пароля

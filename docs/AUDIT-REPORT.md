@@ -104,7 +104,6 @@ Server.js хорошо структурирован: практически вс
 | S5 | 🟡 | **CORS слишком открытый** — `origin: true` для Fastify | `api/server.js:75` | Ограничить до конкретных доменов |
 | S6 | 🟡 | **Нет rate limiting** на критических эндпоинтах `/api/login`, `/api/register`, `/api/verification-code`, `/api/forgot-password` | `api/routes/auth.js` | Добавить @fastify/rate-limit |
 | S7 | 🟡 | **WebSocket JWT field mismatch**: `auth.js` использует `decoded.userId`, а `socket.js` — `decoded.id` | `api/middleware/auth.js:21`, `api/socket.js:24` | Унифицировать поле JWT-токена |
-| S8 | 🟡 | **Публичный webhook** `/api/webhook/tribute` без аутентификации — верификация подписи должна быть обязательной | `api/routes/tribute.js:26` | Проверить наличие верификации подписи webhook |
 
 ### 2.2 Эндпоинты без аутентификации (публичные)
 
@@ -122,8 +121,6 @@ Server.js хорошо структурирован: практически вс
 | `GET /api/plans` | `plans.js:120` | Тарифы — ОК |
 | `GET /api/avatar/:userId` | `profile.js:615` | Публичный аватар — ОК |
 | `GET /api/boards/:boardId/preview` | `boards.js:551` | Превью — ОК |
-| `POST /api/webhook/tribute` | `tribute.js:26` | Webhook — нужна верификация подписи |
-| `GET /api/webhook/tribute/health` | `tribute.js:95` | Health check — ОК |
 
 ### 2.3 JWT и сессии
 
@@ -159,8 +156,6 @@ Server.js хорошо структурирован: практически вс
 | EMAIL_HOST/PORT/SECURE/USER/PASSWORD/FROM | ✅ | ✅ |
 | FRONTEND_URL | ✅ | ✅ |
 | TELEGRAM_BOT_TOKEN | ✅ | ✅ |
-| TRIBUTE_API_KEY | ✅ | ✅ |
-| TRIBUTE_WEBHOOK_SECRET | ✅ | ✅ |
 | YANDEX_DISK_TOKEN | ❌ | ✅ |
 | YANDEX_DISK_BASE_DIR | ❌ | ✅ |
 | REDIS_URL | ❌ | Возможно используется |
@@ -282,9 +277,9 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
 | `getSubscriptionExpiringMessage` | ✅ cron/tasks.js | FRONTEND_URL (динамический) ✅ |
 | `getSubscriptionExpiredMessage` | ✅ cron/tasks.js | FRONTEND_URL (динамический) ✅ |
 | `getWelcomeMessage` | ❓ Не найден import в route-файлах | 🔴 `https://fohow.ru/dashboard` — **неверный URL** |
-| `getSubscriptionActivatedMessage` | ✅ tribute routes | `interactive.marketingfohow.ru/boards` ✅ |
+| `getSubscriptionActivatedMessage` | ✅ subscription routes | `interactive.marketingfohow.ru/boards` ✅ |
 | `getPromoCodeAppliedMessage` | ✅ promo routes | `interactive.marketingfohow.ru/boards` ✅ |
-| `getSubscriptionRenewedMessage` | ✅ tribute routes | `interactive.marketingfohow.ru/boards` ✅ |
+| `getSubscriptionRenewedMessage` | ✅ subscription routes | `interactive.marketingfohow.ru/boards` ✅ |
 | `getSubscriptionCancelledMessage` | ✅ | `interactive.marketingfohow.ru` ✅ |
 | `getTelegramDisconnectedMessage` | ✅ telegram.js | Динамический profileUrl ✅ |
 | `getVerificationApprovedMessage` | ✅ verification routes | `interactive.marketingfohow.ru/` ✅ |
@@ -481,7 +476,6 @@ HTML-шаблоны имеют:
 - ✅ Архитектура (`docs/ARCHITECTURE.md`)
 - ✅ Деплой (`docs/DEPLOYMENT.md`)
 - ✅ Telegram-интеграция (2 файла)
-- ✅ Tribute webhook (`docs/TRIBUTE_WEBHOOK_SETUP.md`)
 - ✅ Composables (28 файлов в `docs/technical/composables/`)
 - ✅ Компоненты (11 файлов)
 - ✅ Stores (5 файлов)

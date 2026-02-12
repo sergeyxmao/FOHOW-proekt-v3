@@ -222,18 +222,6 @@ export function registerTelegramRoutes(app) {
 
       console.log(`✅ Telegram привязан к пользователю ID=${userId}, chat_id=${chatId}`);
 
-      // Обработать отложенные Tribute webhooks для этого telegram_chat_id
-      try {
-        const { processPendingTributeWebhooks } = await import('../services/processPendingTributeWebhooks.js');
-        const pendingResult = await processPendingTributeWebhooks(chatId);
-        if (pendingResult.processed > 0) {
-          console.log(`✅ Pending Tribute webhooks обработаны для telegram_chat_id=${chatId}: ${pendingResult.processed} шт.`);
-        }
-      } catch (pendingError) {
-        // Не прерываем выполнение, только логируем ошибку
-        console.error('⚠️ Ошибка обработки pending Tribute webhooks:', pendingError);
-      }
-
       return reply.send({
         success: true,
         message: 'Telegram успешно привязан к аккаунту',
