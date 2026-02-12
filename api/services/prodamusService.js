@@ -56,49 +56,30 @@ export function createSignature(data, secretKey) {
  */
 function phpParseStr(rawBody) {
   const result = {};
-
   for (const pair of rawBody.split('&')) {
     if (!pair) continue;
     const eqIdx = pair.indexOf('=');
     const rawKey = eqIdx === -1 ? pair : pair.slice(0, eqIdx);
     const rawVal = eqIdx === -1 ? '' : pair.slice(eqIdx + 1);
-
-    // Декодируем: '+' → пробел, %XX → символ
     const value = decodeURIComponent(rawVal.replace(/\+/g, ' '));
-
-    // Разбираем ключ: products[0][name] → ['products', '0', 'name']
-    const keyParts = [];
-    const baseMatch = rawKey.match(/^([^[]*)/);
-    if (baseMatch) {
-      keyParts.push(decodeURIComponent(baseMatch[1].replace(/\+/g, ' ')));
-    }
-    const bracketRe = /\[([^\]]*)\]/g;
-    let m;
-    while ((m = bracketRe.exec(rawKey)) !== null) {
-      keyParts.push(decodeURIComponent(m[1].replace(/\+/g, ' ')));
-    }
-
-    // Записываем значение во вложенную структуру
+    // Декодируем ключ ПЕРЕД разбором скобок (%5B -> [, %5D -> ])
+    const decodedKey = decodeURIComponent(rawKey.replace(/\+/g, ' '));
+    const keys = decodedKey.replace(/\]/g, '').split('[');
     let ref = result;
-    for (let i = 0; i < keyParts.length - 1; i++) {
-      const k = keyParts[i];
+    for (let i = 0; i < keys.length - 1; i++) {
+      const k = keys[i];
       if (!(k in ref) || typeof ref[k] !== 'object' || ref[k] === null) {
-        ref[k] = {};
+        const nextKey = keys[i + 1];
+        ref[k] = /^\d+$/.test(nextKey) ? [] : {};
       }
       ref = ref[k];
     }
-    ref[keyParts[keyParts.length - 1]] = value;
+    ref[keys[keys.length - 1]] = value;
   }
-
   return result;
 }
-
 /**
- * Рекурсивное приведение всех значений объекта к строкам.
- * Аналог поведения PHP, где все значения из parse_str — строки.
- *
- * @param {*} obj - Объект или примитив
- * @returns {*} Объект с теми же ключами, но все значения — строки
+ * Рекурсивное приведение всех значений к строкам (аналог PHP поведения)
  */
 function deepStringify(obj) {
   if (obj === null || obj === undefined) return '';
