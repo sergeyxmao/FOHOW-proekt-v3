@@ -142,13 +142,6 @@ password_resets,user_id,integer,NO
 password_resets,token,character varying,NO
 password_resets,expires_at,timestamp without time zone,NO
 password_resets,created_at,timestamp without time zone,YES
-pending_tribute_webhooks,id,integer,NO
-pending_tribute_webhooks,telegram_user_id,bigint,NO
-pending_tribute_webhooks,tribute_subscription_id,character varying,NO
-pending_tribute_webhooks,payload,jsonb,NO
-pending_tribute_webhooks,processed,boolean,YES
-pending_tribute_webhooks,created_at,timestamp without time zone,NO
-pending_tribute_webhooks,processed_at,timestamp without time zone,YES
 personal_id_counter,id,integer,NO
 personal_id_counter,last_issued_number,integer,NO
 personal_id_counter,updated_at,timestamp without time zone,YES
@@ -233,20 +226,6 @@ telegram_link_codes,code,character varying,NO
 telegram_link_codes,expires_at,timestamp without time zone,NO
 telegram_link_codes,used,boolean,YES
 telegram_link_codes,created_at,timestamp without time zone,YES
-tribute_subscriptions,id,integer,NO
-tribute_subscriptions,user_id,integer,YES
-tribute_subscriptions,telegram_user_id,bigint,NO
-tribute_subscriptions,tribute_subscription_id,character varying,NO
-tribute_subscriptions,plan_id,integer,YES
-tribute_subscriptions,status,character varying,NO
-tribute_subscriptions,started_at,timestamp without time zone,NO
-tribute_subscriptions,expires_at,timestamp without time zone,YES
-tribute_subscriptions,last_payment_at,timestamp without time zone,YES
-tribute_subscriptions,tribute_product_id,character varying,YES
-tribute_subscriptions,amount_paid,numeric,YES
-tribute_subscriptions,currency,character varying,YES
-tribute_subscriptions,created_at,timestamp without time zone,NO
-tribute_subscriptions,updated_at,timestamp without time zone,NO
 user_comments,id,integer,NO
 user_comments,user_id,integer,NO
 user_comments,content,text,NO

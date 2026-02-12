@@ -46,7 +46,7 @@ api/
 | `sendVerificationEmail(email, code)` | Отправка кода подтверждения | `routes/auth.js` |
 | `sendPasswordResetEmail(email, token)` | Отправка ссылки сброса пароля | `routes/auth.js` |
 | `sendPasswordChangedEmail(email, data)` | Уведомление о смене пароля | `routes/profile.js` |
-| `sendSubscriptionEmail(email, eventType, data)` | Уведомление о событии подписки | `services/tributeService.js`, `routes/promo.js` |
+| `sendSubscriptionEmail(email, eventType, data)` | Уведомление о событии подписки | `routes/promo.js` |
 | `sendWelcomeEmail(email, userName)` | Приветственное письмо | Не подключена |
 | `sendEmail(to, subject, html, text?, options?)` | Универсальная функция отправки | Используется обёртками и напрямую |
 | `sendTestEmail(to)` | Тестовое письмо | Утилита |

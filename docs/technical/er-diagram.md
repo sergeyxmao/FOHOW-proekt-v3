@@ -20,7 +20,7 @@
 ## Группы таблиц
 - Ядро (синий): users, subscription_plans, favorites, relationships, user_verifications
 - Доски (зелёный): boards, board_folders, board_folder_items, board_anchors, stickers, notes, user_comments
-- Подписки (фиолетовый): tribute_subscriptions, subscription_history, demo_trials, promo_codes, promo_code_usages, pending_tribute_webhooks
+- Подписки (фиолетовый): subscription_history, demo_trials, promo_codes, promo_code_usages
 - Чат (оранжевый): fogrup_chats, fogrup_chat_participants, fogrup_messages, fogrup_notifications
 - Изображения (розовый): image_library, shared_folders, image_rename_audit
 - Системные (серый): active_sessions, feature_usage, email_verification_codes, verified_emails, password_resets, telegram_link_codes, system_logs, personal_id_counter

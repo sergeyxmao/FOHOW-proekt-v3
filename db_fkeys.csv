@@ -39,8 +39,6 @@ subscription_history,user_id,users,id
 subscription_history,plan_id,subscription_plans,id
 system_logs,user_id,users,id
 telegram_link_codes,user_id,users,id
-tribute_subscriptions,plan_id,subscription_plans,id
-tribute_subscriptions,user_id,users,id
 user_comments,user_id,users,id
 user_verifications,user_id,users,id
 user_verifications,processed_by,users,id

@@ -225,53 +225,17 @@ watch(activeTab, (newTab) => {
 </div>
 ```
 
-## Интеграция с Tribute Payment
+## Поведение `handleUpgrade`
 
-Функция `handleUpgrade` открывает страницу оплаты Tribute для выбранного тарифа.
+Функция `handleUpgrade` вызывается при клике на кнопку "Выбрать тариф".
 
-### Маппинг тарифов на Tribute product_id
-
-```javascript
-const TRIBUTE_PRODUCTS = {
-  'premium': 'Le1',      // Premium - 499₽/мес
-  'individual': 'Lc8'    // Individual - 299₽/мес
-}
-```
-
-> **ВАЖНО:** Для веб-ссылок (web.tribute.tg) НЕ нужен префикс 's'.
-> В backend (`tributeService.js`) используется формат с префиксом 's' (`sLe1`, `sLc8`)
-> для обработки webhook'ов от Tribute — это разные форматы!
-
-### Формат URL
-
-```
-https://web.tribute.tg/s/{product_id}
-```
-
-Примеры:
-- Premium: `https://web.tribute.tg/s/Le1`
-- Individual: `https://web.tribute.tg/s/Lc8`
-
-### Поведение
-
-1. При клике на кнопку "Выбрать тариф" вызывается `handleUpgrade(plan)`
-2. Функция ищет `plan.code_name` в маппинге `TRIBUTE_PRODUCTS`
-3. Если найден — открывает ссылку Tribute в новой вкладке
-4. Если не найден — показывает alert с сообщением об ошибке
-
-### Обработка webhook
-
-После оплаты Tribute отправляет webhook на `/api/webhook/tribute`, который:
-- Обновляет `users.plan_id` и `subscription_expires_at`
-- Создаёт запись в `subscription_history`
-- Активирует подписку автоматически
-
-См. также: `api/services/tributeService.js`
+Текущее поведение (заглушка):
+- Показывает `alert` с сообщением: **"Оплата временно недоступна. Скоро будет подключена новая платёжная система."**
+- Новая платёжная система будет подключена позже
 
 ## Связанные файлы
 
 - `src/components/UserProfile.vue` — основной компонент профиля
 - `src/views/PricingPage.vue` — публичная страница тарифов
 - `src/stores/subscription.js` — store подписок
-- `api/services/tributeService.js` — backend обработка Tribute webhook
 - API endpoint: `GET /plans`

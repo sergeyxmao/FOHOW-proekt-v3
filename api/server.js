@@ -43,7 +43,6 @@ import { registerStickerRoutes } from './routes/stickers.js';
 import { registerNoteRoutes } from './routes/notes.js';
 import { registerCommentRoutes } from './routes/comments.js';
 import { registerBoardPartnerRoutes } from './routes/boardPartners.js';
-import { registerTributeRoutes } from './routes/tribute.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
 import { setupWebSocket, notifyNewMessage, notifyChatsUpdate } from './socket.js';
@@ -148,7 +147,6 @@ await app.register(swagger, {
       { name: 'Plans', description: 'Тарифные планы' },
       { name: 'Promo', description: 'Промокоды' },
       { name: 'Verification', description: 'Верификация пользователей' },
-      { name: 'Tribute', description: 'Платежи Tribute' },
       { name: 'Admin', description: 'Админ-панель' },
       { name: 'System', description: 'Здоровье системы' }
     ]
@@ -308,7 +306,6 @@ registerStickerRoutes(app);
 registerNoteRoutes(app);
 registerCommentRoutes(app);
 registerBoardPartnerRoutes(app);
-registerTributeRoutes(app);
 
 
 // Проверка живости API

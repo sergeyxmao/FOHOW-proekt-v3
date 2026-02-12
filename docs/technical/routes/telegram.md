@@ -83,10 +83,6 @@
 }
 ```
 
-**Интеграция с Tribute:**
-После успешной привязки автоматически обрабатываются отложенные webhook от Tribute
-(`pending_tribute_webhooks`), если пользователь оплатил подписку до привязки Telegram.
-
 ---
 
 ### POST /api/user/telegram/unlink
@@ -115,17 +111,6 @@
 - `expires_at` - срок действия
 - `used` - использован ли код
 
-## Интеграция с Tribute Payment
-
-При привязке Telegram через `/api/user/connect-telegram` автоматически
-вызывается `processPendingTributeWebhooks(chatId)` для обработки
-отложенных платёжных webhook.
-
-Это позволяет активировать подписку, если пользователь:
-1. Оплатил подписку через Tribute в Telegram
-2. Получил webhook от Tribute (сохранён в `pending_tribute_webhooks`)
-3. Затем привязал Telegram к аккаунту на сайте
-
 ## Уведомления
 
 ### Сообщение об успешной привязке
@@ -141,4 +126,3 @@
 ## Связанные файлы
 
 - `api/bot/telegramBot.js` - Telegram бот для обработки команд
-- `api/services/processPendingTributeWebhooks.js` - обработка отложенных webhook

@@ -7,7 +7,6 @@
 Модуль `plans.js` предоставляет API-эндпоинты для работы с тарифными планами:
 - Получение информации о текущем тарифе пользователя
 - Получение списка публичных тарифных планов
-- Обработка webhook от платежной системы Tribute
 
 ## Маршруты
 
@@ -132,8 +131,6 @@
 
 ## Связанные файлы
 
-- **api/routes/tribute.js** – Маршруты для webhook Tribute
-- **api/services/tributeService.js** – Бизнес-логика обработки платежей
 - **api/middleware/auth.js** – Middleware аутентификации
 
 ## База данных
@@ -162,7 +159,7 @@
 | subscription_started_at   | TIMESTAMP | Дата начала подписки              |
 | subscription_expires_at   | TIMESTAMP | Дата окончания подписки           |
 | grace_period_until        | TIMESTAMP | Льготный период после истечения   |
-| payment_method            | VARCHAR   | Способ оплаты (tribute, yookassa и др.) |
+| payment_method            | VARCHAR   | Способ оплаты (yookassa и др.) |
 | auto_renew                | BOOLEAN   | Автопродление подписки            |
 
 ---

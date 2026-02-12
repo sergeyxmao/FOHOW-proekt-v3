@@ -264,8 +264,7 @@ if (bot) {
   4. Обновляет `users.telegram_chat_id` и `users.telegram_user`
   5. Отмечает код как использованный (`used = true`)
   6. Отправляет подтверждение в Telegram
-  7. Обрабатывает отложенные Tribute webhooks
-  
+
 - **Сообщения об ошибке:**
   - ❌ Неверный код
   - ❌ Код уже использован
@@ -430,8 +429,7 @@ Content-Type: application/json
 1. Валидирует `telegram_chat_id`
 2. Проверяет не привязан ли этот Telegram к другому пользователю
 3. Обновляет в БД: `users.telegram_chat_id`, `users.telegram_user`
-4. Обрабатывает отложенные Tribute webhooks (если есть)
-5. Возвращает подтверждение
+4. Возвращает подтверждение
 
 **Ошибки:**
 - 400: Пустой chat_id

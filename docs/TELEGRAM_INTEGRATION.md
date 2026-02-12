@@ -69,7 +69,6 @@ src/
    - Обновляет `users.telegram_chat_id`, `users.telegram_user`
    - Маркирует код как `used = true`
    - Отправляет подтверждение
-   - Обрабатывает отложенные Tribute webhook
 
 ### 2. **routes/telegram.js** - API endpoints
 
