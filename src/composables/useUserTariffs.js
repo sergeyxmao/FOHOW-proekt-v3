@@ -27,14 +27,13 @@ export function useUserTariffs({ subscriptionStore }) {
 
     // Булевы функции
     'can_export_pdf': '📄 Экспорт в PDF',
-    'can_export_png': '🖼️ Экспорт в PNG',
     'can_export_png_formats': (value) => {
       if (Array.isArray(value) && value.length > 0) {
-        return `📏 Экспорт в PNG: ${value.join(', ')}`
+        return `🖼️ Скачать доску (структуру) как изображение: ${value.join(', ')}`
       }
-      return '📏 Экспорт в разных форматах'
+      return '🖼️ Скачать доску (структуру) как изображение'
     },
-    'can_export_html': '🌐 Экспорт в HTML',
+    'can_export_html': '🌐 Поделиться доской (структурой) как веб\u2011страницей',
     'can_invite_drawing': '✏️ Режим рисования',
     'can_duplicate_boards': '📋 Дублирование досок',
     'can_use_images': '🖼️ Изображения'
@@ -46,7 +45,6 @@ export function useUserTariffs({ subscriptionStore }) {
   // Дополнительные функции для расширенного списка
   const secondaryFeatures = [
     'max_comments',
-    'can_export_png',
     'can_export_png_formats',
     'can_export_html',
     'can_invite_drawing',
