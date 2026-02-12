@@ -1,4 +1,6 @@
 import { ref } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { useNotificationsStore } from '@/stores/notifications'
 
 /**
  * Composable для управления тарифами
@@ -7,6 +9,7 @@ import { ref } from 'vue'
  * - Загрузка доступных тарифов
  * - Форматирование функций тарифа
  * - Управление раскрытием карточек тарифов
+ * - Переход к оплате через Продамус
  */
 export function useUserTariffs({ subscriptionStore }) {
   // === State ===
@@ -140,11 +143,40 @@ export function useUserTariffs({ subscriptionStore }) {
   }
 
   /**
-   * Переход на другой тариф
-   * Временная заглушка — платёжная система в процессе замены
+   * Переход на другой тариф через Продамус
+   * Создаёт ссылку на оплату и перенаправляет пользователя
    */
-  function handleUpgrade(plan) {
-    alert('Оплата временно недоступна. Скоро будет подключена новая платёжная система.')
+  async function handleUpgrade(plan) {
+    const authStore = useAuthStore()
+    const notificationsStore = useNotificationsStore()
+    const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
+
+    try {
+      const response = await fetch(`${API_URL}/payments/create-link`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ planId: plan.id })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Ошибка создания ссылки на оплату')
+      }
+
+      const data = await response.json()
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl
+      }
+    } catch (error) {
+      console.error('Ошибка при переходе к оплате:', error)
+      notificationsStore.addNotification({
+        type: 'error',
+        message: error.message || 'Не удалось перейти к оплате. Попробуйте позже.'
+      })
+    }
   }
 
   return {

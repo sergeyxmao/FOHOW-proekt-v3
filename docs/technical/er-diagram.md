@@ -1,7 +1,7 @@
 # ER-диаграмма базы данных
 
 ## Описание
-Интерактивная визуализация структуры базы данных FOHOW Interactive Board (33 таблицы, 47 связей).
+Интерактивная визуализация структуры базы данных FOHOW Interactive Board (34 таблицы, 49 связей).
 
 ## Расположение файлов
 - Исходный файл: docs/er-diagram.html
@@ -20,7 +20,7 @@
 ## Группы таблиц
 - Ядро (синий): users, subscription_plans, favorites, relationships, user_verifications
 - Доски (зелёный): boards, board_folders, board_folder_items, board_anchors, stickers, notes, user_comments
-- Подписки (фиолетовый): subscription_history, demo_trials, promo_codes, promo_code_usages
+- Подписки (фиолетовый): subscription_history, demo_trials, promo_codes, promo_code_usages, prodamus_payments
 - Чат (оранжевый): fogrup_chats, fogrup_chat_participants, fogrup_messages, fogrup_notifications
 - Изображения (розовый): image_library, shared_folders, image_rename_audit
 - Системные (серый): active_sessions, feature_usage, email_verification_codes, verified_emails, password_resets, telegram_link_codes, system_logs, personal_id_counter
@@ -35,3 +35,4 @@
 
 ## История изменений
 - 2026-02-07: Создана ER-диаграмма (33 таблицы, 47 связей)
+- 2026-02-12: Добавлена таблица prodamus_payments (34 таблицы, 49 связей)

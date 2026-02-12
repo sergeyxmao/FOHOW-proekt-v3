@@ -9,7 +9,7 @@
 | **Файл** | `src/composables/useUserTariffs.js` |
 | **Размер** | ~180 строк |
 | **Создан** | Декабрь 2025 (рефакторинг UserProfile.vue) |
-| **Зависимости** | subscriptionStore |
+| **Зависимости** | subscriptionStore, authStore, notificationsStore |
 
 ## Назначение
 
@@ -51,7 +51,7 @@ useUserTariffs({
   togglePlanExpanded,   // (planId) => void - раскрыть/скрыть карточку
   isPlanExpanded,       // (planId) => boolean - проверка раскрытия
   loadAvailablePlans,   // () => Promise<void> - загрузить тарифы
-  handleUpgrade         // (plan) => void - переход на тариф
+  handleUpgrade         // (plan) => Promise<void> - переход на тариф через Продамус
 }
 ```
 
@@ -229,13 +229,26 @@ watch(activeTab, (newTab) => {
 
 Функция `handleUpgrade` вызывается при клике на кнопку "Выбрать тариф".
 
-Текущее поведение (заглушка):
-- Показывает `alert` с сообщением: **"Оплата временно недоступна. Скоро будет подключена новая платёжная система."**
-- Новая платёжная система будет подключена позже
+Логика:
+1. Отправляет POST-запрос на `/api/payments/create-link` с `{ planId: plan.id }`
+2. Получает `paymentUrl` — подписанную ссылку на платёжную страницу Продамуса
+3. Перенаправляет пользователя на страницу оплаты (`window.location.href`)
+4. При ошибке показывает уведомление через `notificationsStore`
+
+Используемые зависимости:
+- `authStore.token` — JWT-токен для Authorization header
+- `notificationsStore.addNotification()` — показ ошибок
+- `VITE_API_URL` — базовый URL API (fallback: `https://interactive.marketingfohow.ru/api`)
 
 ## Связанные файлы
 
 - `src/components/UserProfile.vue` — основной компонент профиля
 - `src/views/PricingPage.vue` — публичная страница тарифов
+- `src/views/PaymentSuccessPage.vue` — страница успешной оплаты
+- `src/views/PaymentFailPage.vue` — страница неудачной оплаты
 - `src/stores/subscription.js` — store подписок
-- API endpoint: `GET /plans`
+- `src/stores/auth.js` — store авторизации
+- `src/stores/notifications.js` — store уведомлений
+- `api/routes/prodamus.js` — бэкенд: создание ссылки на оплату
+- `api/services/prodamusService.js` — бэкенд: сервис Продамуса
+- API endpoint: `GET /plans`, `POST /api/payments/create-link`

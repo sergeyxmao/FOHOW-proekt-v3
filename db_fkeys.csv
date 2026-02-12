@@ -26,6 +26,8 @@ image_rename_audit,user_id,users,id
 image_rename_audit,image_id,image_library,id
 notes,board_id,boards,id
 password_resets,user_id,users,id
+prodamus_payments,user_id,users,id
+prodamus_payments,plan_id,subscription_plans,id
 promo_code_usages,promo_code_id,promo_codes,id
 promo_code_usages,user_id,users,id
 promo_codes,target_plan_id,subscription_plans,id

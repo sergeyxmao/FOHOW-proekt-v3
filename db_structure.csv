@@ -151,6 +151,20 @@ promo_code_usages,user_id,integer,YES
 promo_code_usages,used_at,timestamp without time zone,YES
 promo_code_usages,ip_address,character varying,YES
 promo_code_usages,user_agent,text,YES
+prodamus_payments,id,integer,NO
+prodamus_payments,user_id,integer,YES
+prodamus_payments,plan_id,integer,YES
+prodamus_payments,order_id,character varying,NO
+prodamus_payments,prodamus_order_id,character varying,YES
+prodamus_payments,amount,numeric,NO
+prodamus_payments,currency,character varying,YES
+prodamus_payments,payment_status,character varying,NO
+prodamus_payments,payment_type,character varying,YES
+prodamus_payments,payment_init,character varying,YES
+prodamus_payments,customer_email,character varying,YES
+prodamus_payments,customer_phone,character varying,YES
+prodamus_payments,prodamus_data,jsonb,YES
+prodamus_payments,created_at,timestamp without time zone,YES
 promo_codes,id,integer,NO
 promo_codes,code,character varying,NO
 promo_codes,description,text,YES
