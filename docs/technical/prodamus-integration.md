@@ -27,13 +27,54 @@
 
 ### POST /api/payments/create-link
 
-Создание подписанной ссылки на платёжную страницу.
+Возвращает готовую ссылку Продамуса с GET-параметрами пользователя.
 
 - **Аутентификация:** Bearer JWT
 - **Тело запроса:** `{ planId: 6 | 7 }`
-- **Ответ:** `{ paymentUrl: "https://foboard.payform.ru?..." }`
+- **Ответ:** `{ paymentUrl: "https://payform.ru/hqaEqyT/?_param_user_id=123&customer_email=user@example.com" }`
 
-## Алгоритм HMAC SHA-256 подписи
+## Формирование платёжной ссылки
+
+Используются **готовые ссылки Продамуса** (настроены в личном кабинете Продамуса с указанием товара, цены, success/fail URL, webhook URL). К ссылке добавляются GET-параметры для идентификации пользователя:
+
+```
+https://payform.ru/hqaEqyT/?_param_user_id=123&customer_email=user@example.com
+```
+
+### Маппинг plan_id → ссылка
+
+| plan_id | Название | Цена | Ссылка Продамуса | Переменная окружения |
+|---------|----------|------|-----------------|---------------------|
+| 6 | Индивидуальный | 299 руб/мес | `https://payform.ru/hqaEqyT/` | `PRODAMUS_LINK_INDIVIDUAL` |
+| 7 | Премиум | 499 руб/мес | `https://payform.ru/nkaEqBZ/` | `PRODAMUS_LINK_PREMIUM` |
+
+### GET-параметры ссылки
+
+| Параметр | Описание | Пример |
+|----------|----------|--------|
+| `_param_user_id` | ID пользователя (передаётся в webhook) | `123` |
+| `customer_email` | Email пользователя (предзаполнение формы) | `user@example.com` |
+
+### Реализация в коде
+
+```javascript
+// api/routes/prodamus.js
+const PRODAMUS_LINKS = {
+  6: process.env.PRODAMUS_LINK_INDIVIDUAL || 'https://payform.ru/hqaEqyT/',
+  7: process.env.PRODAMUS_LINK_PREMIUM || 'https://payform.ru/nkaEqBZ/'
+};
+
+const baseUrl = PRODAMUS_LINKS[planId];
+const params = new URLSearchParams({
+  _param_user_id: String(userId),
+  customer_email: userEmail
+});
+const paymentUrl = `${baseUrl}?${params.toString()}`;
+```
+
+## Алгоритм HMAC SHA-256 подписи (только для webhook)
+
+HMAC-подпись используется **только для верификации webhook** от Продамуса. Для формирования платёжных ссылок подпись не нужна — используются готовые ссылки.
 
 Продамус использует собственный алгоритм подписи ([документация](https://help.prodamus.ru)).
 
@@ -73,52 +114,6 @@ function createSignature(data, secretKey) {
 }
 ```
 
-### Важно: подпись считается от вложенной структуры
-
-PHP автоматически парсит GET-параметры `products[0][name]=...` во вложенный массив:
-
-```php
-['products' => ['0' => ['name' => '...']]]
-```
-
-Поэтому подпись HMAC **должна считаться от вложенного объекта**, а не от плоских ключей:
-
-```javascript
-// Правильно — вложенная структура для подписи:
-const params = {
-  do: 'link',
-  products: { '0': { name: '...', price: '299', quantity: '1', sku: 'plan_6' } },
-  customer_email: 'user@example.com',
-  order_id: 'FB-123-6-...',
-  // ...
-}
-const signature = createSignature(params, secretKey)
-
-// Для URL — сериализуем обратно в PHP-нотацию:
-const flatParams = flattenToPhpNotation(params)
-flatParams.signature = signature
-// flatParams: { 'do': 'link', 'products[0][name]': '...', ... }
-```
-
-### Вспомогательная функция flattenToPhpNotation
-
-Сериализует вложенный объект в плоский формат PHP-нотации для URL:
-
-```javascript
-function flattenToPhpNotation(obj, prefix = '') {
-  const result = {}
-  for (const [key, value] of Object.entries(obj)) {
-    const fullKey = prefix ? `${prefix}[${key}]` : key
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-      Object.assign(result, flattenToPhpNotation(value, fullKey))
-    } else {
-      result[fullKey] = String(value)
-    }
-  }
-  return result
-}
-```
-
 ### Верификация webhook
 
 Подпись приходит в HTTP-заголовке `Sign`. Сравнение через `crypto.timingSafeEqual()` для защиты от timing-атак.
@@ -147,51 +142,21 @@ function flattenToPhpNotation(obj, prefix = '') {
 }
 ```
 
-## Формат ссылки на оплату
-
-```
-https://foboard.payform.ru?
-  do=link&
-  products[0][name]=Доступ к платформе FoBoard, тариф "Индивидуальный", подписка на 30 дней&
-  products[0][price]=299&
-  products[0][quantity]=1&
-  products[0][sku]=plan_6&
-  customer_email=user@example.com&
-  order_id=FB-123-6-1707753600000&
-  urlReturn=https://1508.marketingfohow.ru/pricing&
-  urlSuccess=https://1508.marketingfohow.ru/payment-success&
-  urlNotification=https://1508.marketingfohow.ru/api/webhook/prodamus&
-  _param_user_id=123&
-  payment_method=AC&
-  available_payment_methods=AC|SBP|sbol|tpay&
-  signature=abc123...
-```
-
-## Маппинг тарифов
-
-| plan_id | Название | Цена | SKU |
-|---------|----------|------|-----|
-| 6 | Индивидуальный | 299 руб/мес | plan_6 |
-| 7 | Премиум | 499 руб/мес | plan_7 |
-
 ## Переменные окружения
 
 | Переменная | Описание | Пример |
 |-----------|----------|--------|
-| `PRODAMUS_SECRET_KEY` | Секретный ключ для HMAC подписи | `abc123...` |
-| `PRODAMUS_PAYFORM_URL` | URL платёжной формы | `https://foboard.payform.ru` |
-| `PRODAMUS_SUCCESS_URL` | URL после успешной оплаты | `https://1508.marketingfohow.ru/payment-success` |
-| `PRODAMUS_FAIL_URL` | URL после неудачной оплаты | `https://1508.marketingfohow.ru/payment-fail` |
-| `PRODAMUS_WEBHOOK_URL` | URL для webhook-уведомлений | `https://1508.marketingfohow.ru/api/webhook/prodamus` |
-| `PRODAMUS_RETURN_URL` | URL для кнопки "Вернуться" | `https://1508.marketingfohow.ru/pricing` |
+| `PRODAMUS_SECRET_KEY` | Секретный ключ для HMAC подписи webhook | `abc123...` |
+| `PRODAMUS_LINK_INDIVIDUAL` | Готовая ссылка для плана Индивидуальный | `https://payform.ru/hqaEqyT/` |
+| `PRODAMUS_LINK_PREMIUM` | Готовая ссылка для плана Премиум | `https://payform.ru/nkaEqBZ/` |
 
 ## Поток оплаты
 
 ```
 Пользователь → Кнопка "Выбрать тариф"
   → POST /api/payments/create-link { planId }
-  → Получает paymentUrl
-  → Редирект на foboard.payform.ru
+  → Получает paymentUrl (готовая ссылка + GET-параметры)
+  → Редирект на payform.ru
   → Оплата на стороне Продамуса
   → Продамус → POST /api/webhook/prodamus (Sign: HMAC)
     → Верификация подписи

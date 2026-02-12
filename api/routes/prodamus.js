@@ -1,6 +1,12 @@
 import { pool } from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { verifySignature, createPaymentLink, processWebhook } from '../services/prodamusService.js';
+import { verifySignature, processWebhook } from '../services/prodamusService.js';
+
+// Маппинг plan_id → готовая ссылка Продамуса
+const PRODAMUS_LINKS = {
+  6: process.env.PRODAMUS_LINK_INDIVIDUAL || 'https://payform.ru/hqaEqyT/',
+  7: process.env.PRODAMUS_LINK_PREMIUM || 'https://payform.ru/nkaEqBZ/'
+};
 
 /**
  * Регистрация маршрутов для платёжной системы Продамус
@@ -99,7 +105,7 @@ export function registerProdamusRoutes(app) {
     schema: {
       tags: ['Prodamus'],
       summary: 'Создание ссылки на оплату через Продамус',
-      description: 'Формирует подписанную ссылку на платёжную страницу Продамуса для оплаты выбранного тарифа.',
+      description: 'Возвращает готовую ссылку Продамуса с GET-параметрами пользователя для оплаты выбранного тарифа.',
       security: [{ bearerAuth: [] }],
       body: {
         type: 'object',
@@ -134,28 +140,11 @@ export function registerProdamusRoutes(app) {
       const userId = req.user.id;
       const { planId } = req.body;
 
-      // Проверка допустимых тарифов
-      if (![6, 7].includes(planId)) {
+      // Проверка допустимых тарифов по маппингу готовых ссылок
+      const baseUrl = PRODAMUS_LINKS[planId];
+      if (!baseUrl) {
         return reply.code(400).send({ error: 'Недопустимый тарифный план. Доступны: Индивидуальный (6) и Премиум (7).' });
       }
-
-      // Проверка конфигурации
-      if (!process.env.PRODAMUS_SECRET_KEY) {
-        console.error('[PRODAMUS] PRODAMUS_SECRET_KEY не задан');
-        return reply.code(500).send({ error: 'Платёжная система не настроена' });
-      }
-
-      // Получаем план из БД
-      const planResult = await pool.query(
-        'SELECT id, name, price_monthly FROM subscription_plans WHERE id = $1',
-        [planId]
-      );
-
-      if (planResult.rows.length === 0) {
-        return reply.code(400).send({ error: 'Тарифный план не найден' });
-      }
-
-      const plan = planResult.rows[0];
 
       // Получаем email пользователя
       const userResult = await pool.query(
@@ -169,14 +158,13 @@ export function registerProdamusRoutes(app) {
 
       const userEmail = userResult.rows[0].email;
 
-      // Формируем ссылку на оплату
-      const paymentUrl = createPaymentLink({
-        userId,
-        planId: plan.id,
-        planName: plan.name,
-        price: plan.price_monthly,
-        email: userEmail
+      // Формируем ссылку: готовая ссылка Продамуса + GET-параметры
+      const params = new URLSearchParams({
+        _param_user_id: String(userId),
+        customer_email: userEmail
       });
+
+      const paymentUrl = `${baseUrl}?${params.toString()}`;
 
       return reply.send({ paymentUrl });
 
