@@ -144,7 +144,6 @@ export function verifySignature(data, receivedSignature, secretKey) {
   // Считаем подпись: deepSortByKeys → JSON → HMAC-SHA256
   const computed = createSignature(stringified, secretKey);
 
-  // Защита от timing-атак
   try {
     const a = Buffer.from(computed, 'hex');
     const b = Buffer.from(receivedSignature, 'hex');
@@ -299,6 +298,13 @@ export async function processWebhook(data) {
     // Fallback: извлекаем из order_id формата FB-{userId}-{planId}-{timestamp}
     const parts = order_id.split('-');
     if (parts.length >= 3) planId = parseInt(parts[2], 10);
+  }
+  // Fallback: определяем plan_id по сумме платежа
+  if (!planId && sum) {
+    const amount = parseFloat(sum);
+    if (amount <= 299) planId = 6;  // Индивидуальный
+    else if (amount <= 499) planId = 7;  // Премиум
+    console.log("[PRODAMUS] planId определён по сумме:", amount, "->", planId);
   }
 
   // Находим пользователя
