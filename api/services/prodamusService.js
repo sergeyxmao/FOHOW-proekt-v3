@@ -72,6 +72,23 @@ export function verifySignature(data, receivedSignature, secretKey) {
 // ============================================
 
 /**
+ * Сериализация вложенного объекта в плоский формат PHP-нотации.
+ * { products: { '0': { name: 'X' } } } → { 'products[0][name]': 'X' }
+ */
+function flattenToPhpNotation(obj, prefix = '') {
+  const result = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const fullKey = prefix ? `${prefix}[${key}]` : key;
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      Object.assign(result, flattenToPhpNotation(value, fullKey));
+    } else {
+      result[fullKey] = String(value);
+    }
+  }
+  return result;
+}
+
+/**
  * Создание ссылки на оплату через Продамус.
  *
  * @param {object} params
@@ -91,13 +108,18 @@ export function createPaymentLink({ userId, planId, planName, price, email }) {
 
   const orderId = `FB-${userId}-${planId}-${Date.now()}`;
 
-  // Параметры платежа по документации Продамуса
+  // Параметры платежа — вложенная структура (как PHP видит данные)
+  // Подпись считается от этой вложенной структуры
   const params = {
     do: 'link',
-    'products[0][name]': `Доступ к платформе FoBoard, тариф "${planName}", подписка на 30 дней`,
-    'products[0][price]': String(price),
-    'products[0][quantity]': '1',
-    'products[0][sku]': `plan_${planId}`,
+    products: {
+      '0': {
+        name: `Доступ к платформе FoBoard, тариф "${planName}", подписка на 30 дней`,
+        price: String(price),
+        quantity: '1',
+        sku: `plan_${planId}`
+      }
+    },
     customer_email: email,
     order_id: orderId,
     urlReturn: returnUrl,
@@ -108,12 +130,14 @@ export function createPaymentLink({ userId, planId, planName, price, email }) {
     available_payment_methods: 'AC|SBP|sbol|tpay'
   };
 
-  // Подпись параметров
+  // Подпись от вложенной структуры (deepSortByKeys обрабатывает вложенные объекты)
   const signature = createSignature(params, secretKey);
-  params.signature = signature;
 
-  // Сборка URL
-  const queryString = Object.entries(params)
+  // Для URL сериализуем обратно в плоский формат PHP-нотации
+  const flatParams = flattenToPhpNotation(params);
+  flatParams.signature = signature;
+
+  const queryString = Object.entries(flatParams)
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join('&');
 
