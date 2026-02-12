@@ -69,6 +69,10 @@ export function registerProdamusRoutes(app) {
       }
 
       // Подпись в заголовке Sign (стандарт Продамуса)
+      console.log("[PRODAMUS] Content-Type:", req.headers["content-type"]);
+      console.log("[PRODAMUS] Raw body:", JSON.stringify(body));
+      if (body.__rawBody) console.log("[PRODAMUS] Raw body string:", body.__rawBody);
+      console.log("[PRODAMUS] Sign header:", req.headers["sign"]);
       const receivedSignature = req.headers['sign'];
       if (!receivedSignature) {
         console.error('[PRODAMUS] Отсутствует заголовок Sign');

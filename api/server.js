@@ -105,7 +105,9 @@ app.addContentTypeParser('application/x-www-form-urlencoded',
   { parseAs: 'string' },
   (req, body, done) => {
     try {
-      done(null, Object.fromEntries(new URLSearchParams(body)));
+      const parsed = Object.fromEntries(new URLSearchParams(body));
+      parsed.__rawBody = body;
+      done(null, parsed);
     } catch (err) {
       done(err);
     }

@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { execSync } from 'child_process';
 import { pool } from '../db.js';
 import boardLockService from '../services/boardLockService.js';
 import { sendSubscriptionEmail } from '../utils/emailService.js';
@@ -50,19 +51,21 @@ export function createSignature(data, secretKey) {
  * Подпись приходит в HTTP заголовке Sign.
  */
 export function verifySignature(data, receivedSignature, secretKey) {
-  // Удаляем поле signature из данных, если оно есть
-  const dataWithoutSign = { ...data };
-  delete dataWithoutSign.signature;
-
-  const computed = createSignature(dataWithoutSign, secretKey);
-
-  // Защита от timing-атак
   try {
-    const a = Buffer.from(computed, 'hex');
-    const b = Buffer.from(receivedSignature, 'hex');
-    if (a.length !== b.length) return false;
-    return crypto.timingSafeEqual(a, b);
-  } catch {
+    const rawBody = data.__rawBody;
+    if (!rawBody) {
+      console.error("[PRODAMUS] No __rawBody for PHP verification");
+      return false;
+    }
+    
+    const input = JSON.stringify({ rawBody, signature: receivedSignature, secretKey });
+    const escaped = input.replace(/'/g, "'\\''");
+    const result = execSync("echo '" + escaped + "' | php /var/www/FOHOW-proekt-v3/api/verify-signature.php", { encoding: "utf8", timeout: 5000 });
+    const parsed = JSON.parse(result);
+    console.log("[PRODAMUS] PHP verify result:", parsed.valid, "calculated:", parsed.calculated);
+    return parsed.valid;
+  } catch (err) {
+    console.error("[PRODAMUS] PHP verify error:", err.message);
     return false;
   }
 }
@@ -188,6 +191,13 @@ export async function processWebhook(data) {
     const parts = order_id.split('-');
     if (parts.length >= 3) planId = parseInt(parts[2], 10);
   }
+  // Fallback: определяем plan_id по сумме платежа
+  if (!planId && sum) {
+    const amount = parseFloat(sum);
+    if (amount <= 299) planId = 6;  // Индивидуальный
+    else if (amount <= 499) planId = 7;  // Премиум
+    console.log("[PRODAMUS] planId определён по сумме:", amount, "->", planId);
+  }
 
   // Находим пользователя
   let userId = _param_user_id ? parseInt(_param_user_id, 10) : null;
@@ -292,7 +302,7 @@ export async function processWebhook(data) {
 
         // Email
         if (user.email) {
-          await sendSubscriptionEmail(user.email, 'new_subscription', {
+          await sendSubscriptionEmail(user.email, 'new', {
             userName: user.full_name || 'Пользователь',
             planName: plan ? plan.name : 'Подписка',
             amount: parseFloat(sum) || 0,
