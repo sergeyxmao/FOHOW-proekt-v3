@@ -99,9 +99,11 @@ class Hmac {
 
 ### Наша реализация на Node.js
 
+#### createSignature(data, secretKey)
+
 Алгоритм:
 
-1. Все значения рекурсивно приводятся к строкам (`strval`)
+1. Все значения рекурсивно приводятся к строкам (`deepSortByKeys` → `String()`)
 2. Рекурсивная сортировка по ключам (аналог PHP `ksort()`)
 3. Сериализация в JSON (`JSON.stringify` — по умолчанию не эскейпит Unicode, как `JSON_UNESCAPED_UNICODE`)
 4. HMAC-SHA256 от JSON с секретным ключом → hex
@@ -114,16 +116,58 @@ function createSignature(data, secretKey) {
 }
 ```
 
-### Верификация webhook
+#### verifySignature(data, receivedSignature, secretKey) — верификация webhook
 
-Подпись приходит в HTTP-заголовке `Sign`. Сравнение через `crypto.timingSafeEqual()` для защиты от timing-атак.
+Подпись приходит в HTTP-заголовке `Sign`. Процесс верификации:
+
+1. **Берём сырое тело запроса** (`__rawBody`) — сохраняется в content-type parser (`server.js`)
+2. **Парсим через `phpParseStr()`** — аналог PHP `parse_str()`:
+   - Поддерживает вложенные ключи: `products[0][name]=X` → `{ products: { '0': { name: 'X' } } }`
+   - `+` декодируется как пробел (поведение PHP)
+   - HTML-сущности (`&quot;`) **НЕ** декодируются (поведение PHP `parse_str`)
+3. **Приводим все значения к строкам** через `deepStringify()`
+4. **Рекурсивно сортируем** по ключам через `deepSortByKeys()`
+5. **`JSON.stringify` → HMAC-SHA256 → hex**
+6. **Сравниваем** через `crypto.timingSafeEqual()` для защиты от timing-атак
+
+**Почему нельзя использовать `URLSearchParams`?**
+
+`URLSearchParams` создаёт плоские ключи (`products[0][name]` как один ключ), а PHP `parse_str()` создаёт вложенную структуру. Продамус подписывает данные после PHP `parse_str()`, поэтому мы должны парсить так же.
+
+**Почему `__rawBody`?**
+
+Fastify парсит тело запроса в content-type parser. Для верификации нужно сырое тело (до парсинга), чтобы парсить его через `phpParseStr()` и получить идентичную PHP структуру. `__rawBody` сохраняется в parser и удаляется перед передачей данных в `processWebhook()`.
+
+#### phpParseStr(rawBody)
+
+Нативная JS-реализация PHP `parse_str()`:
+
+```javascript
+// Вход: 'products[0][name]=Test&products[0][price]=299'
+// Выход: { products: { '0': { name: 'Test', price: '299' } } }
+function phpParseStr(rawBody) {
+  // Для каждой пары key=value:
+  // 1. Разбираем ключ: products[0][name] → ['products', '0', 'name']
+  // 2. Декодируем: '+' → пробел, %XX → символ
+  // 3. Записываем во вложенную структуру
+}
+```
+
+**Критичное отличие от `decodeURIComponent`**: PHP `parse_str()` НЕ декодирует HTML-сущности. Так, `%26quot%3B` (URL-encoded `&quot;`) декодируется как `&quot;` (строка из 6 символов), а НЕ как `"` (кавычка).
+
+#### deepStringify(obj)
+
+Рекурсивное приведение всех значений к строкам (аналог PHP `strval`).
 
 ## Формат данных webhook
 
+Продамус отправляет webhook в формате `application/x-www-form-urlencoded`. После парсинга через `phpParseStr()` данные имеют вложенную структуру:
+
 ```json
 {
-  "order_id": "FB-123-6-1707753600000",
-  "order_num": "12345",
+  "date": "2026-02-12T15:51:02+03:00",
+  "order_id": "41410995",
+  "order_num": "LL-41410995-68097",
   "sum": "299.00",
   "customer_email": "user@example.com",
   "customer_phone": "+79001234567",
@@ -132,7 +176,7 @@ function createSignature(data, secretKey) {
   "payment_init": "manual",
   "products": {
     "0": {
-      "name": "Доступ к платформе FoBoard...",
+      "name": "Подписка FoBoard — тариф &quot;Индивидуальный&quot;, 30 дней",
       "price": "299.00",
       "quantity": "1",
       "sku": "plan_6"
@@ -140,6 +184,16 @@ function createSignature(data, secretKey) {
   },
   "_param_user_id": "123"
 }
+```
+
+**Примечание:** HTML-сущности (`&quot;`) в значениях сохраняются как есть — это поведение PHP `parse_str()`.
+
+### Парсинг products в processWebhook
+
+`processWebhook` поддерживает products в нескольких форматах:
+1. **Массив** `[{ name, sku, ... }]` — из JSON
+2. **Объект с числовыми ключами** `{ '0': { name, sku, ... } }` — из `phpParseStr()`
+3. **Плоские ключи** `data['products[0][sku]']` — из `URLSearchParams` (fallback)
 ```
 
 ## Переменные окружения
