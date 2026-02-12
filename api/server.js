@@ -101,6 +101,7 @@ await app.register(multipart, {
 });
 
 // Парсер для application/x-www-form-urlencoded (нужен для webhook Продамуса)
+// Сохраняем __rawBody для верификации HMAC-подписи (verifySignature использует сырую строку)
 app.addContentTypeParser('application/x-www-form-urlencoded',
   { parseAs: 'string' },
   (req, body, done) => {

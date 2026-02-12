@@ -87,8 +87,12 @@ export function registerProdamusRoutes(app) {
 
       console.log(`[PRODAMUS] Webhook получен: order_id=${body.order_id}, status=${body.payment_status}`);
 
+      // Удаляем служебное поле __rawBody перед обработкой
+      const cleanBody = { ...body };
+      delete cleanBody.__rawBody;
+
       // Обработка webhook
-      const result = await processWebhook(body);
+      const result = await processWebhook(cleanBody);
       console.log(`[PRODAMUS] Webhook обработан: ${JSON.stringify(result)}`);
 
       // Всегда 200 при валидной подписи (требование Продамуса)

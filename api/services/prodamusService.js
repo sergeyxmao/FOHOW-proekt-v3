@@ -1,5 +1,4 @@
 import crypto from 'crypto';
-import { execSync } from 'child_process';
 import { pool } from '../db.js';
 import boardLockService from '../services/boardLockService.js';
 import { sendSubscriptionEmail } from '../utils/emailService.js';
@@ -47,25 +46,110 @@ export function createSignature(data, secretKey) {
 }
 
 /**
+ * Парсинг URL-encoded строки аналогично PHP parse_str().
+ * Поддерживает вложенные ключи: products[0][name]=X → { products: { '0': { name: 'X' } } }
+ * '+' декодируется как пробел (поведение PHP).
+ * HTML-сущности (&quot;) НЕ декодируются (поведение PHP parse_str).
+ *
+ * @param {string} rawBody - Сырая URL-encoded строка
+ * @returns {object} Объект с вложенной структурой
+ */
+function phpParseStr(rawBody) {
+  const result = {};
+
+  for (const pair of rawBody.split('&')) {
+    if (!pair) continue;
+    const eqIdx = pair.indexOf('=');
+    const rawKey = eqIdx === -1 ? pair : pair.slice(0, eqIdx);
+    const rawVal = eqIdx === -1 ? '' : pair.slice(eqIdx + 1);
+
+    // Декодируем: '+' → пробел, %XX → символ
+    const value = decodeURIComponent(rawVal.replace(/\+/g, ' '));
+
+    // Разбираем ключ: products[0][name] → ['products', '0', 'name']
+    const keyParts = [];
+    const baseMatch = rawKey.match(/^([^[]*)/);
+    if (baseMatch) {
+      keyParts.push(decodeURIComponent(baseMatch[1].replace(/\+/g, ' ')));
+    }
+    const bracketRe = /\[([^\]]*)\]/g;
+    let m;
+    while ((m = bracketRe.exec(rawKey)) !== null) {
+      keyParts.push(decodeURIComponent(m[1].replace(/\+/g, ' ')));
+    }
+
+    // Записываем значение во вложенную структуру
+    let ref = result;
+    for (let i = 0; i < keyParts.length - 1; i++) {
+      const k = keyParts[i];
+      if (!(k in ref) || typeof ref[k] !== 'object' || ref[k] === null) {
+        ref[k] = {};
+      }
+      ref = ref[k];
+    }
+    ref[keyParts[keyParts.length - 1]] = value;
+  }
+
+  return result;
+}
+
+/**
+ * Рекурсивное приведение всех значений объекта к строкам.
+ * Аналог поведения PHP, где все значения из parse_str — строки.
+ *
+ * @param {*} obj - Объект или примитив
+ * @returns {*} Объект с теми же ключами, но все значения — строки
+ */
+function deepStringify(obj) {
+  if (obj === null || obj === undefined) return '';
+  if (typeof obj !== 'object') return String(obj);
+  if (Array.isArray(obj)) return obj.map(deepStringify);
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    out[k] = deepStringify(v);
+  }
+  return out;
+}
+
+/**
  * Верификация подписи webhook от Продамуса.
  * Подпись приходит в HTTP заголовке Sign.
+ *
+ * Алгоритм (аналогичен PHP-серверу Продамуса):
+ * 1. Берём сырое тело запроса (__rawBody)
+ * 2. Парсим через phpParseStr() — аналог PHP parse_str()
+ * 3. Приводим все значения к строкам через deepStringify()
+ * 4. Рекурсивно сортируем по ключам через deepSortByKeys()
+ * 5. JSON.stringify → HMAC-SHA256 → hex
+ * 6. Сравниваем через crypto.timingSafeEqual()
+ *
+ * @param {object} data - Данные из тела запроса (должны содержать __rawBody)
+ * @param {string} receivedSignature - Подпись из заголовка Sign
+ * @param {string} secretKey - Секретный ключ Продамуса
+ * @returns {boolean} Результат верификации
  */
 export function verifySignature(data, receivedSignature, secretKey) {
+  const rawBody = data.__rawBody;
+  if (!rawBody) {
+    console.error('[PRODAMUS] verifySignature: __rawBody отсутствует в данных');
+    return false;
+  }
+
+  // Парсим сырое тело как PHP parse_str()
+  const parsed = phpParseStr(rawBody);
+
+  // Приводим все значения к строкам
+  const stringified = deepStringify(parsed);
+
+  // Считаем подпись: deepSortByKeys → JSON → HMAC-SHA256
+  const computed = createSignature(stringified, secretKey);
+
   try {
-    const rawBody = data.__rawBody;
-    if (!rawBody) {
-      console.error("[PRODAMUS] No __rawBody for PHP verification");
-      return false;
-    }
-    
-    const input = JSON.stringify({ rawBody, signature: receivedSignature, secretKey });
-    const escaped = input.replace(/'/g, "'\\''");
-    const result = execSync("echo '" + escaped + "' | php /var/www/FOHOW-proekt-v3/api/verify-signature.php", { encoding: "utf8", timeout: 5000 });
-    const parsed = JSON.parse(result);
-    console.log("[PRODAMUS] PHP verify result:", parsed.valid, "calculated:", parsed.calculated);
-    return parsed.valid;
-  } catch (err) {
-    console.error("[PRODAMUS] PHP verify error:", err.message);
+    const a = Buffer.from(computed, 'hex');
+    const b = Buffer.from(receivedSignature, 'hex');
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
     return false;
   }
 }
@@ -178,9 +262,33 @@ export async function processWebhook(data) {
 
   // Определяем plan_id из SKU продукта или order_id
   let planId = null;
-  if (products) {
-    // products может быть объектом с числовыми ключами (из form-data)
-    const product = Array.isArray(products) ? products[0] : products['0'] || Object.values(products)[0];
+
+  // products может прийти в разных форматах:
+  // 1. Массив: [{ name, sku, ... }] — из JSON
+  // 2. Объект с числовыми ключами: { '0': { name, sku, ... } } — из phpParseStr
+  // 3. Плоские ключи в data: data['products[0][sku]'] — из URLSearchParams (без phpParseStr)
+  let resolvedProducts = products;
+  if (!resolvedProducts) {
+    // Fallback: собираем products из плоских ключей (products[0][name], products[0][sku], ...)
+    const flatProducts = {};
+    for (const [key, value] of Object.entries(data)) {
+      const match = key.match(/^products\[(\d+)\]\[(\w+)\]$/);
+      if (match) {
+        const idx = match[1];
+        const field = match[2];
+        if (!flatProducts[idx]) flatProducts[idx] = {};
+        flatProducts[idx][field] = value;
+      }
+    }
+    if (Object.keys(flatProducts).length > 0) {
+      resolvedProducts = flatProducts;
+    }
+  }
+
+  if (resolvedProducts) {
+    const product = Array.isArray(resolvedProducts)
+      ? resolvedProducts[0]
+      : resolvedProducts['0'] || Object.values(resolvedProducts)[0];
     if (product && product.sku) {
       const match = product.sku.match(/plan_(\d+)/);
       if (match) planId = parseInt(match[1], 10);
