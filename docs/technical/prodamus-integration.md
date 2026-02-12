@@ -35,19 +35,87 @@
 
 ## Алгоритм HMAC SHA-256 подписи
 
-Продамус использует собственный алгоритм подписи:
+Продамус использует собственный алгоритм подписи ([документация](https://help.prodamus.ru)).
 
-1. Все значения объекта приводятся к строкам
-2. Объект рекурсивно сортируется по ключам (аналог PHP `ksort()`)
-3. Результат сериализуется в JSON (`JSON.stringify`)
-4. Вычисляется HMAC-SHA256 от JSON с секретным ключом
-5. Результат — hex-строка
+### Эталонный PHP-класс от Продамуса
+
+```php
+class Hmac {
+    static function create($data, $key, $algo = 'sha256') {
+        $data = (array) $data;
+        array_walk_recursive($data, function(&$v){ $v = strval($v); });
+        self::_sort($data);
+        $data = json_encode($data, JSON_UNESCAPED_UNICODE);
+        return hash_hmac($algo, $data, $key);
+    }
+    static private function _sort(&$data) {
+        ksort($data, SORT_REGULAR);
+        foreach ($data as &$arr)
+            is_array($arr) && self::_sort($arr);
+    }
+}
+```
+
+### Наша реализация на Node.js
+
+Алгоритм:
+
+1. Все значения рекурсивно приводятся к строкам (`strval`)
+2. Рекурсивная сортировка по ключам (аналог PHP `ksort()`)
+3. Сериализация в JSON (`JSON.stringify` — по умолчанию не эскейпит Unicode, как `JSON_UNESCAPED_UNICODE`)
+4. HMAC-SHA256 от JSON с секретным ключом → hex
 
 ```javascript
 function createSignature(data, secretKey) {
   const sorted = deepSortByKeys(data)
   const json = JSON.stringify(sorted)
   return crypto.createHmac('sha256', secretKey).update(json).digest('hex')
+}
+```
+
+### Важно: подпись считается от вложенной структуры
+
+PHP автоматически парсит GET-параметры `products[0][name]=...` во вложенный массив:
+
+```php
+['products' => ['0' => ['name' => '...']]]
+```
+
+Поэтому подпись HMAC **должна считаться от вложенного объекта**, а не от плоских ключей:
+
+```javascript
+// Правильно — вложенная структура для подписи:
+const params = {
+  do: 'link',
+  products: { '0': { name: '...', price: '299', quantity: '1', sku: 'plan_6' } },
+  customer_email: 'user@example.com',
+  order_id: 'FB-123-6-...',
+  // ...
+}
+const signature = createSignature(params, secretKey)
+
+// Для URL — сериализуем обратно в PHP-нотацию:
+const flatParams = flattenToPhpNotation(params)
+flatParams.signature = signature
+// flatParams: { 'do': 'link', 'products[0][name]': '...', ... }
+```
+
+### Вспомогательная функция flattenToPhpNotation
+
+Сериализует вложенный объект в плоский формат PHP-нотации для URL:
+
+```javascript
+function flattenToPhpNotation(obj, prefix = '') {
+  const result = {}
+  for (const [key, value] of Object.entries(obj)) {
+    const fullKey = prefix ? `${prefix}[${key}]` : key
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      Object.assign(result, flattenToPhpNotation(value, fullKey))
+    } else {
+      result[fullKey] = String(value)
+    }
+  }
+  return result
 }
 ```
 
