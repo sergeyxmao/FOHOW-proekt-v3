@@ -3204,7 +3204,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   transform-origin: 0 0;
   background: transparent; /* Прозрачный фон, чтобы не перекрывать фон canvas-container */
   will-change: transform;
-  contain: layout style paint;
+  contain: layout style;
   --grid-step: 40px;
   --grid-line-color: rgba(79, 85, 99, 0.15);
   --grid-opacity: 0;

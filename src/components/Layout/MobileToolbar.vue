@@ -121,7 +121,7 @@ const handleProfileClick = () => {
           :title="`Текущий масштаб: ${zoomDisplay}%`"
           aria-label="Автоподгонка масштаба"
         >
-          <span class="button-icon zoom-button__value">{{ zoomDisplay }}</span>
+          <span class="button-icon zoom-button__value" data-zoom-display>{{ zoomDisplay }}</span>
         </button>
         <!-- Переключатель версии -->
         <button
