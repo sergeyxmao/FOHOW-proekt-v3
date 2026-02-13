@@ -33,45 +33,54 @@ const filteredImages = computed(() => {
 const hasBoard = computed(() => !!boardStore.currentBoardId)
 
 /**
- * Загрузить превью для всех изображений на доске
+ * Загрузить превью для всех изображений на доске.
+ * Приоритет: прокси по imageId > валидный blob из dataUrl > previewDataUrl
  */
 async function loadThumbnails() {
   const images = boardImages.value
   for (const image of images) {
-    // Если уже есть валидный blob в dataUrl — используем его
-    if (image.dataUrl && image.dataUrl.startsWith('blob:')) {
-      thumbCache.value.set(image.id, image.dataUrl)
-      continue
-    }
-    // Если есть imageId из библиотеки — загружаем через proxy
-    if (image.imageId && !thumbCache.value.has(image.id)) {
+    // Пропускаем если уже загружено в кэш
+    if (thumbCache.value.has(image.id)) continue
+
+    // Приоритет 1: загрузка через прокси по imageId
+    if (image.imageId) {
       try {
         const url = await getImageUrl(image.imageId)
         if (url) {
           thumbCache.value.set(image.id, url)
-          // Триггерим реактивность
           thumbCache.value = new Map(thumbCache.value)
+          continue
         }
       } catch (e) {
-        console.error(`[BoardImagesTab] Thumbnail load error for ${image.id}:`, e)
+        console.error(`[BoardImagesTab] Proxy load error for ${image.id}:`, e)
+      }
+    }
+
+    // Приоритет 2: blob из dataUrl (фоллбэк, если нет imageId)
+    if (image.dataUrl && image.dataUrl.startsWith('blob:')) {
+      try {
+        const response = await fetch(image.dataUrl, { method: 'HEAD' })
+        if (response.ok) {
+          thumbCache.value.set(image.id, image.dataUrl)
+          thumbCache.value = new Map(thumbCache.value)
+        }
+      } catch {
+        // blob невалидный (протух после перезагрузки), игнорируем
+        console.warn(`[BoardImagesTab] Stale blob URL for ${image.id}`)
       }
     }
   }
 }
 
 /**
- * Получить URL для миниатюры
+ * Получить URL для миниатюры.
+ * Не используем blob dataUrl напрямую — они протухают после перезагрузки.
  */
 const getThumbUrl = (image) => {
-  // Сначала проверяем кэш
   if (thumbCache.value.has(image.id)) {
     return thumbCache.value.get(image.id)
   }
-  // Фоллбэк на dataUrl из store (может быть blob URL)
-  if (image.dataUrl && image.dataUrl.startsWith('blob:')) {
-    return image.dataUrl
-  }
-  // Фоллбэк на previewDataUrl
+  // Фоллбэк на previewDataUrl (base64, не протухает)
   return image.previewDataUrl || ''
 }
 

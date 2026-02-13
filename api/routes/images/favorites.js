@@ -73,12 +73,13 @@ export function registerImageFavoriteRoutes(app) {
     schema: {
       tags: ['Images'],
       summary: 'Добавить изображение в избранное',
-      description: 'Добавляет изображение в список избранных текущего пользователя',
+      description: 'Добавляет изображение в список избранных текущего пользователя. При повторном добавлении — ON CONFLICT DO NOTHING.',
       security: [{ bearerAuth: [] }],
       params: {
         type: 'object',
+        required: ['id'],
         properties: {
-          id: { type: 'integer' }
+          id: { type: 'integer', description: 'ID изображения из image_library' }
         }
       },
       response: {
@@ -88,6 +89,7 @@ export function registerImageFavoriteRoutes(app) {
             success: { type: 'boolean' }
           }
         },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
         401: { type: 'object', properties: { error: { type: 'string' } } },
         404: { type: 'object', properties: { error: { type: 'string' } } },
         500: { type: 'object', properties: { error: { type: 'string' } } }
@@ -126,8 +128,9 @@ export function registerImageFavoriteRoutes(app) {
       security: [{ bearerAuth: [] }],
       params: {
         type: 'object',
+        required: ['id'],
         properties: {
-          id: { type: 'integer' }
+          id: { type: 'integer', description: 'ID изображения из image_library' }
         }
       },
       response: {
@@ -137,7 +140,9 @@ export function registerImageFavoriteRoutes(app) {
             success: { type: 'boolean' }
           }
         },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
         401: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
         500: { type: 'object', properties: { error: { type: 'string' } } }
       }
     }
