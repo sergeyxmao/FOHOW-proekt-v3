@@ -419,8 +419,12 @@ export async function processWebhook(data) {
       } else {
         // === НЕМЕДЛЕННАЯ АКТИВАЦИЯ (апгрейд, продление, или нет активной подписки) ===
 
-        // Проверяем: апгрейд с активной подпиской → стек подписок
-        const isUpgradeWithActive = hasActiveSub && isUpgrade(currentPlanCode, targetPlanCode);
+        // Проверяем: апгрейд с активной ПЛАТНОЙ подпиской → стек подписок
+        // Стек применяется только при переходе с Individual/Premium, не с Demo/Guest
+        const paidPlans = ['individual', 'premium'];
+        const isUpgradeWithActive = hasActiveSub
+          && isUpgrade(currentPlanCode, targetPlanCode)
+          && paidPlans.includes(currentPlanCode);
 
         let expiresAt = new Date(now);
         let scheduledPlanId = null;
