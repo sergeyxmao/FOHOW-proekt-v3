@@ -1202,7 +1202,9 @@ watch(
   overflow: visible;
   touch-action: none;
   display: flex;
-  flex-direction: column;  
+  flex-direction: column;
+  /* НЕ использовать paint — аватарка на больших карточках выступает за границу */
+  contain: layout style;
 }
 
 .card:hover {

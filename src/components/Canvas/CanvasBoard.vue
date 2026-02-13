@@ -3117,6 +3117,29 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   cursor: grabbing !important;
 }
 
+/* Отключаем интерактивность всех объектов во время панорамирования */
+/* Браузер пропускает hit-testing для всех ~90+ карточек, стикеров и линий */
+.canvas-container--panning .card,
+.canvas-container--panning .sticker,
+.canvas-container--panning .canvas-image,
+.canvas-container--panning .line-group {
+  pointer-events: none !important;
+}
+
+/* GPU-ускорение только на время панорамирования */
+/* Постоянный will-change при низком зуме вызывает моргание (GPU-текстура слишком большая) */
+.canvas-container--panning .canvas-content {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Отключаем тяжёлые CSS-эффекты на линиях при панорамировании */
+/* drop-shadow и transition на ~90+ линиях вызывают лишние repaint при каждом кадре */
+.canvas-container--panning .line {
+  transition: none !important;
+  filter: none !important;
+}
+
 /* Отключение CSS transitions при перетаскивании для оптимизации производительности */
 /* При 95+ карточках это предотвращает очередь анимаций и обеспечивает плавное движение */
 .cards-container--dragging .card,
@@ -3145,6 +3168,12 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   cursor: crosshair;
 }
 
+/* Изоляция SVG-слоя — reflow в SVG не затрагивает DOM карточек и наоборот */
+/* НЕ использовать paint/strict — SVG-линии выходят за границы элемента */
+.svg-layer {
+  contain: layout style;
+}
+
 .canvas-content {
   position: absolute;
   top: 0;
@@ -3161,7 +3190,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 .canvas-content::before {
   content: '';
   position: absolute;
-  inset: -5000px;
+  inset: -2000px;
   background-image:
     linear-gradient(to right, var(--grid-line-color) 1px, transparent 1px),
     linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
