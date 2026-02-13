@@ -75,8 +75,6 @@ const imagesStore = useImagesStore();
 const performanceModeStore = usePerformanceModeStore();
 const { mode: performanceMode, animationsEnabled, editingEnabled, gridVisible } = storeToRefs(performanceModeStore);
 const notificationsStore = useNotificationsStore();
-const anchorsStore = useAnchorsStore();  
-const imagesStore = useImagesStore();  
 const emit = defineEmits(['update-connection-status']);
 const props = defineProps({
   isModernTheme: {
