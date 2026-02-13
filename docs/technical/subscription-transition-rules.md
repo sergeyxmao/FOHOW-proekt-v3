@@ -131,6 +131,25 @@ ALTER TABLE users ADD COLUMN scheduled_plan_expires_at TIMESTAMP WITH TIME ZONE;
 
 Source в `subscription_history`: `'scheduled_activation'`
 
+### switchDemoToGuest (02:30 MSK)
+
+Переводит пользователей с истёкшим демо-тарифом на гостевой.
+- Исключает пользователей с `scheduled_plan_id IS NOT NULL` — их судьбу решает `handleSubscriptionExpiry`
+
+### Защита от гонки крон-задач
+
+Три крон-задачи работают с истёкшими подписками и могут конфликтовать:
+
+| Задача | Время | Обработка scheduled |
+|--------|-------|---------------------|
+| `handleSubscriptionExpiry` | 01:00 | **Единственная** задача, которая активирует `scheduled_plan_id` |
+| `handleGracePeriodExpiry` | 01:30 | Безопасна: `handleSubscriptionExpiry` очищает `grace_period_until` при активации scheduled плана |
+| `switchDemoToGuest` | 02:30 | Исключает пользователей с `scheduled_plan_id IS NOT NULL` |
+
+**Правило:** только `handleSubscriptionExpiry` принимает решение о пользователях с запланированным тарифом. Остальные задачи пропускают таких пользователей через SQL-условие `AND u.scheduled_plan_id IS NULL`.
+
+**Проблема до исправления:** если `switchDemoToGuest` срабатывала для пользователя с `scheduled_plan_id` (демо-тариф + запланированный платный), она переводила его на guest и обнуляла `subscription_expires_at`, после чего `handleSubscriptionExpiry` уже не могла найти и активировать запланированный тариф.
+
 ## Фронтенд
 
 ### Состояния кнопок (getPlanButtonState)
@@ -172,3 +191,7 @@ Source в `subscription_history`: `'scheduled_activation'`
 3. **Guest/Demo → любой платный** — всегда разрешено, немедленная активация.
 4. **Запланированный тариф удалён из БД** — FK `ON DELETE SET NULL`, переход на Guest по стандартной логике.
 5. **Grace period + запланированный тариф** — при активации запланированного тарифа `grace_period_until` очищается.
+
+## История изменений
+
+- 2026-02-13: Добавлена защита от гонки крон-задач — `switchDemoToGuest` исключает пользователей с `scheduled_plan_id IS NOT NULL`
