@@ -33,7 +33,7 @@ export function registerImageFavoriteRoutes(app) {
                   preview_placeholder: { type: 'string', nullable: true },
                   width: { type: 'integer', nullable: true },
                   height: { type: 'integer', nullable: true },
-                  folder: { type: 'string', nullable: true },
+                  folder_name: { type: 'string', nullable: true },
                   is_shared: { type: 'boolean', nullable: true },
                   author_full_name: { type: 'string', nullable: true },
                   favorited_at: { type: 'string', format: 'date-time' }
@@ -50,7 +50,7 @@ export function registerImageFavoriteRoutes(app) {
     try {
       const result = await pool.query(
         `SELECT il.id, il.original_name, il.filename, il.public_url, il.preview_url,
-                il.preview_placeholder, il.width, il.height, il.folder, il.is_shared,
+                il.preview_placeholder, il.width, il.height, il.folder_name, il.is_shared,
                 u.full_name AS author_full_name,
                 imf.created_at AS favorited_at
          FROM image_favorites imf

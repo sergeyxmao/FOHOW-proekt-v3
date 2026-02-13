@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useImagesStore } from '../../stores/images.js'
 import { useBoardStore } from '../../stores/board.js'
 import { useImageProxy } from '../../composables/useImageProxy'
@@ -9,6 +9,9 @@ const boardStore = useBoardStore()
 const { getImageUrl } = useImageProxy()
 
 const searchQuery = ref('')
+
+// Кэш загруженных превью: imageId (из библиотеки) -> blob URL
+const thumbCache = ref(new Map())
 
 // Изображения текущей доски из canvas store
 const boardImages = computed(() => {
@@ -30,10 +33,46 @@ const filteredImages = computed(() => {
 const hasBoard = computed(() => !!boardStore.currentBoardId)
 
 /**
- * Получить URL для миниатюры изображения на доске
+ * Загрузить превью для всех изображений на доске
+ */
+async function loadThumbnails() {
+  const images = boardImages.value
+  for (const image of images) {
+    // Если уже есть валидный blob в dataUrl — используем его
+    if (image.dataUrl && image.dataUrl.startsWith('blob:')) {
+      thumbCache.value.set(image.id, image.dataUrl)
+      continue
+    }
+    // Если есть imageId из библиотеки — загружаем через proxy
+    if (image.imageId && !thumbCache.value.has(image.id)) {
+      try {
+        const url = await getImageUrl(image.imageId)
+        if (url) {
+          thumbCache.value.set(image.id, url)
+          // Триггерим реактивность
+          thumbCache.value = new Map(thumbCache.value)
+        }
+      } catch (e) {
+        console.error(`[BoardImagesTab] Thumbnail load error for ${image.id}:`, e)
+      }
+    }
+  }
+}
+
+/**
+ * Получить URL для миниатюры
  */
 const getThumbUrl = (image) => {
-  return image.dataUrl || image.previewDataUrl || ''
+  // Сначала проверяем кэш
+  if (thumbCache.value.has(image.id)) {
+    return thumbCache.value.get(image.id)
+  }
+  // Фоллбэк на dataUrl из store (может быть blob URL)
+  if (image.dataUrl && image.dataUrl.startsWith('blob:')) {
+    return image.dataUrl
+  }
+  // Фоллбэк на previewDataUrl
+  return image.previewDataUrl || ''
 }
 
 /**
@@ -42,6 +81,13 @@ const getThumbUrl = (image) => {
 const handleImageClick = (image) => {
   imagesStore.requestFocusOnImage(image.id)
 }
+
+// Загружаем превью при монтировании и при смене списка изображений
+onMounted(loadThumbnails)
+
+watch(boardImages, () => {
+  loadThumbnails()
+}, { deep: false })
 </script>
 
 <template>
@@ -95,7 +141,9 @@ const handleImageClick = (image) => {
               class="board-images-tab__img"
               loading="lazy"
             />
-            <div v-else class="board-images-tab__placeholder">?</div>
+            <div v-else class="board-images-tab__placeholder">
+              <div class="board-images-tab__spinner"></div>
+            </div>
           </div>
           <p class="board-images-tab__name">{{ image.name || 'Без имени' }}</p>
         </div>
@@ -185,7 +233,19 @@ const handleImageClick = (image) => {
   align-items: center;
   justify-content: center;
   color: #94a3b8;
-  font-size: 20px;
+}
+
+.board-images-tab__spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(15, 23, 42, 0.1);
+  border-top-color: #94a3b8;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .board-images-tab__name {
