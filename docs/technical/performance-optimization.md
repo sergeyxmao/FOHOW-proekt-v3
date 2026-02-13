@@ -127,10 +127,81 @@ stopPanning() / debounce timeout → syncHotToRefs() → однократное 
 - `canvas-container--mode-light` — отключает анимации, transitions, shadows
 - `canvas-container--mode-view` — наследует от light + отключает интерактивность, скрывает контролы
 
-### Запланированные слои (3-4)
+### Слой 3: LOD (Level of Detail) при зуме (реализован)
 
-- **Слой 3:** Оптимизация линий соединений — canvas-рендеринг вместо SVG
-- **Слой 4:** Web Worker для расчётов Engine
+При zoom < 35% карточки автоматически переключаются на упрощённый рендер через CSS, уменьшая количество видимых DOM-элементов с ~50 до ~6 на карточку.
+
+#### Почему CSS, а не v-if
+
+LOD управляется через CSS-класс `canvas-container--lod` на контейнере, а НЕ через `v-if` в `Card.vue`:
+
+1. Во время hot mode (Слой 1) Vue refs не обновляются → computed/v-if не сработает
+2. CSS-класс обновляется из `applyTransformStyles()` — прямой DOM, работает каждый кадр
+3. `display: none` убирает элементы из layout без пересоздания DOM (быстрее v-if)
+
+#### Механизм
+
+```
+applyTransformStyles()  (вызывается каждый кадр через rAF)
+    ↓
+Читаем текущий scale (hot или ref)
+    ↓
+scale < 0.35 ?  →  canvas-container.classList.add('canvas-container--lod')
+scale ≥ 0.35 ?  →  canvas-container.classList.remove('canvas-container--lod')
+    ↓
+CSS правила скрывают элементы с классом .card-lod-hide
+CSS правила показывают элементы с классом .card-lod-summary
+```
+
+#### Порог
+
+- `LOD_THRESHOLD = 0.35` (35%) — константа в `usePanZoom.js`
+- `currentLodActive` — отслеживает текущее состояние, чтобы не дёргать classList каждый кадр
+
+#### CSS-классы на элементах Card.vue
+
+- `.card-lod-hide` — добавлен на все элементы, скрываемые в LOD: кнопка закрытия, баланс, актив-заказы, цикл/этап, bodyHTML, контролы, бейджи, точки соединения, аватар, active-pv-hidden
+- `.card-lod-summary` — компактная строка баланса L/R, видна ТОЛЬКО в LOD режиме
+
+#### Что видно в LOD
+
+| Элемент | Полный рендер | LOD рендер |
+|---------|:------------:|:----------:|
+| Заголовок (имя) | да | да |
+| PV (монетка + значение) | да | да |
+| Компактный баланс L/R | нет | да |
+| Баланс | да | нет |
+| Актив-заказы | да | нет |
+| Цикл/этап | да | нет |
+| Кнопка удаления | да | нет |
+| Кнопка заметки | да | нет |
+| Бейджи (SLF, 奮斗, ранг) | да | нет |
+| Точки соединения | да | нет |
+| Аватар (большие карточки) | да | нет |
+| bodyHTML | да | нет |
+
+#### CSS правила (CanvasBoard.vue)
+
+```css
+.canvas-container--lod .card-lod-hide { display: none !important; }
+.canvas-container--lod .card-body { padding: 10px !important; gap: 4px !important; }
+.canvas-container--lod .card-header { padding: 8px 12px !important; min-height: 32px !important; }
+.canvas-container--lod .card { overflow: hidden; }
+.canvas-container--lod .card, .line, .line-group { animation: none !important; transition: none !important; }
+.card-lod-summary { display: none !important; }
+.canvas-container--lod .card-lod-summary { display: flex !important; }
+```
+
+#### Совместимость
+
+- **Hot mode (Слой 1):** LOD-класс обновляется в `applyTransformStyles()`, которая работает в hot mode — переключение происходит мгновенно при прокрутке колёсиком
+- **Режимы (Слой 2):** LOD работает во всех режимах. В "Просмотр" кнопки итак скрыты через mode-view CSS
+- **Программный зум (fitToContent):** LOD обновляется через `updateTransform()` → `applyTransformStyles()`
+
+### Запланированные слои (4-5)
+
+- **Слой 4:** Оптимизация линий соединений — canvas-рендеринг вместо SVG
+- **Слой 5:** Web Worker для расчётов Engine
 
 ## Возвращаемый API usePanZoom
 
@@ -173,3 +244,4 @@ return {
 | 2026-02-13 | Слой 1: Hot mode, CSS оптимизации, v-memo, freeze-класс |
 | 2026-02-13 | Фикс: убран contain: paint (обрезка контента), прямое DOM-обновление масштаба |
 | 2026-02-13 | Слой 2: Три режима работы (Полный/Лёгкий/Просмотр), store, кнопки, хоткей M |
+| 2026-02-13 | Слой 3: LOD (Level of Detail) — упрощённый рендер при zoom < 35% |
