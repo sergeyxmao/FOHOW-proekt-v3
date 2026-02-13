@@ -10,6 +10,7 @@ import { registerImageFavoriteRoutes } from './favorites.js';
  * - myLibrary.js - личная библиотека изображений (7 роутов)
  * - shared.js - общая библиотека изображений (2 роута)
  * - proxy.js - прокси для получения изображений (1 роут)
+ * - favorites.js - избранные изображения (4 роута)
  *
  * @param {import('fastify').FastifyInstance} app - экземпляр Fastify
  */

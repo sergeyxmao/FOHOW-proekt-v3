@@ -202,6 +202,11 @@ systemctl status fohow-api
 Краткое описание поведения оверлея сброса пароля и редиректа после успеха:
 [routes/reset-password.md](routes/reset-password.md)
 
+### Image Favorites & Board Images Tab
+
+Система избранных изображений, вкладка «На доске», загрузка превью через прокси, фокусировка:
+[image-favorites.md](image-favorites.md)
+
 ### Pencil Mode Image Controls
 
 Управление изображениями в режиме рисования — handles, pinch-to-zoom, desktop vs mobile:
