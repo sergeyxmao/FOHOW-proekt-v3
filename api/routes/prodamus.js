@@ -214,15 +214,8 @@ export function registerProdamusRoutes(app) {
               code: 'DOWNGRADE_TOO_EARLY'
             });
           }
-        } else if (isUpgrade(currentPlanCode, targetPlanCode)) {
-          // Повышение: проверка анти-стакинга (результат не более 60 дней)
-          if (remaining + SUBSCRIPTION_DURATION_DAYS > MAX_EXPIRY_FROM_NOW_DAYS) {
-            return reply.code(400).send({
-              error: `Переход на тариф заблокирован: итоговый срок подписки превысит ${MAX_EXPIRY_FROM_NOW_DAYS} дней. Осталось дней: ${remaining}.`,
-              code: 'STACKING_LIMIT'
-            });
-          }
         }
+        // Повышение тарифа (upgrade): разрешено всегда, без проверки анти-стакинга
       }
 
       // Формируем ссылку: готовая ссылка Продамуса + GET-параметры

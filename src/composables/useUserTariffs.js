@@ -155,8 +155,8 @@ export function useUserTariffs({ subscriptionStore }) {
    * Определение состояния кнопки для карточки тарифа
    *
    * Правила перехода:
-   * - Апгрейд: разрешён если результат <= 60 дней
-   * - Продление: разрешено за 30 дней до окончания
+   * - Апгрейд: разрешён всегда (без ограничений)
+   * - Продление: разрешено за 30 дней до окончания (анти-стакинг: макс 60 дней)
    * - Даунгрейд: разрешён за 30 дней до окончания (отложенная активация)
    * - Запланированный тариф блокирует все покупки
    *
@@ -228,16 +228,8 @@ export function useUserTariffs({ subscriptionStore }) {
       return { label: 'Выбрать тариф', disabled: false, tooltip: '', action: 'upgrade' }
     }
 
-    // Апгрейд (Individual → Premium)
+    // Апгрейд (Individual → Premium) — разрешён всегда
     if (targetLevel > currentLevel) {
-      if (daysLeft + 30 > 60) {
-        return {
-          label: 'Повысить тариф',
-          disabled: true,
-          tooltip: `Переход будет доступен через ${daysLeft - 30} дн.`,
-          action: 'upgrade'
-        }
-      }
       return {
         label: 'Повысить тариф',
         disabled: false,
@@ -307,7 +299,7 @@ export function useUserTariffs({ subscriptionStore }) {
         const errorData = await response.json().catch(() => ({}))
 
         // Обработка специфичных кодов ошибок
-        const warningCodes = ['SCHEDULED_PLAN_EXISTS', 'RENEWAL_TOO_EARLY', 'DOWNGRADE_TOO_EARLY', 'STACKING_LIMIT']
+        const warningCodes = ['SCHEDULED_PLAN_EXISTS', 'RENEWAL_TOO_EARLY', 'DOWNGRADE_TOO_EARLY']
         if (errorData.code && warningCodes.includes(errorData.code)) {
           notificationsStore.addNotification({
             type: 'warning',
