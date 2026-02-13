@@ -19,7 +19,11 @@
 | Файл | Изменения |
 |------|-----------|
 | `src/composables/usePanZoom.js` | Hot mode (прямой DOM), debounce sync |
-| `src/components/Canvas/CanvasBoard.vue` | CSS contain/will-change, freeze-класс, v-memo |
+| `src/components/Canvas/CanvasBoard.vue` | CSS contain/will-change, freeze-класс, v-memo, режимы |
+| `src/stores/performanceMode.js` | Pinia store для режимов (full/light/view) |
+| `src/components/Canvas/Card.vue` | Поддержка performanceMode prop |
+| `src/App.vue` | Кнопка переключения режима (desktop), хоткей M |
+| `src/components/Layout/MobileToolbar.vue` | Кнопка переключения режима (mobile) |
 
 ## Архитектура оптимизации
 
@@ -81,9 +85,50 @@ stopPanning() / debounce timeout → syncHotToRefs() → однократное 
 
 Зависимости v-memo включают все реактивные свойства карточки, от которых зависит рендер `Card.vue`: позиция, размеры, текст, PV, баланс, стили, значки и т.д.
 
-### Запланированные слои (2-4)
+### Слой 2: Три режима работы (реализован)
 
-- **Слой 2:** Виртуализация карточек — рендер только видимых в viewport карточек
+Три режима производительности с ручным переключением. Режим не сохраняется между сессиями — всегда стартуем в "Полный".
+
+#### Режимы
+
+| Функция | Полный | Лёгкий | Просмотр |
+|---------|--------|--------|----------|
+| CSS анимации (пульсация, dash) | да | нет | нет |
+| CSS transitions | да | нет | нет |
+| drop-shadow на линиях | да | нет | нет |
+| Фоновая сетка | да | нет | нет |
+| Анимация баланса (JS watchers) | да | нет | нет |
+| Редактирование заголовка (dblclick) | да | да | нет |
+| Редактирование PV | да | да | нет |
+| Кнопка удаления | да | да | нет |
+| Кнопка заметки | да | да | нет |
+| Drag карточек | да | да | нет |
+| Engine recalc | да | да | нет |
+| Pan/zoom | да | да | да |
+| Отображение карточек и данных | да | да | да |
+
+#### Store
+
+`src/stores/performanceMode.js` — Pinia store с режимом и computed-геттерами:
+- `mode` — ref('full'), текущий режим
+- `isFull`, `isLight`, `isView` — computed-флаги
+- `animationsEnabled`, `editingEnabled`, `dragEnabled`, `controlsVisible`, `gridVisible`, `shadowsEnabled`
+- `cycleMode()` — циклическое переключение: full → light → view → full
+- `setMode(mode)` — установка конкретного режима
+
+#### UI
+
+- Desktop: кнопка `.mode-floating-button` в нижней панели `App.vue`
+- Mobile: кнопка `.mode-button` в `MobileToolbar.vue`
+- Хоткей: `M` — циклическое переключение (не срабатывает в текстовых полях)
+
+#### CSS-классы на canvas-container
+
+- `canvas-container--mode-light` — отключает анимации, transitions, shadows
+- `canvas-container--mode-view` — наследует от light + отключает интерактивность, скрывает контролы
+
+### Запланированные слои (3-4)
+
 - **Слой 3:** Оптимизация линий соединений — canvas-рендеринг вместо SVG
 - **Слой 4:** Web Worker для расчётов Engine
 
@@ -127,3 +172,4 @@ return {
 |------|-----------|
 | 2026-02-13 | Слой 1: Hot mode, CSS оптимизации, v-memo, freeze-класс |
 | 2026-02-13 | Фикс: убран contain: paint (обрезка контента), прямое DOM-обновление масштаба |
+| 2026-02-13 | Слой 2: Три режима работы (Полный/Лёгкий/Просмотр), store, кнопки, хоткей M |
