@@ -3657,6 +3657,54 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   display: none !important;
 }
 
+/* ============================================
+   LOD (Level of Detail) — упрощённый рендер при zoom < 35%
+   Класс canvas-container--lod управляется из usePanZoom.js
+   ============================================ */
+
+/* Скрываем все элементы с классом card-lod-hide */
+.canvas-container--lod .card-lod-hide {
+  display: none !important;
+}
+
+/* Упрощаем отступы card-body в LOD — меньше padding */
+.canvas-container--lod .card-body {
+  padding: 10px 10px 10px !important;
+  gap: 4px !important;
+}
+
+/* Уменьшаем card-header padding */
+.canvas-container--lod .card-header {
+  padding: 8px 12px !important;
+  min-height: 32px !important;
+}
+
+/* Карточка подгоняет высоту под контент */
+.canvas-container--lod .card {
+  overflow: hidden;
+}
+
+/* Отключаем все анимации и transitions в LOD */
+.canvas-container--lod .card,
+.canvas-container--lod .line,
+.canvas-container--lod .line-group {
+  animation: none !important;
+  transition: none !important;
+}
+
+.canvas-container--lod .line {
+  filter: none !important;
+}
+
+/* LOD summary — скрыта по умолчанию, видна только в LOD */
+.card-lod-summary {
+  display: none !important;
+}
+
+.canvas-container--lod .card-lod-summary {
+  display: flex !important;
+}
+
 /* Print Styles - Обеспечиваем корректное отображение холста и карточек при печати */
 @media print {
   .canvas-container {

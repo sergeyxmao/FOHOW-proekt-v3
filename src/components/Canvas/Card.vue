@@ -1008,7 +1008,7 @@ watch(
       <!-- Кнопка закрытия -->
       <button
         v-if="!isViewMode"
-        class="card-close-btn"
+        class="card-close-btn card-lod-hide"
         title="Удалить карточку"
         @click="handleDelete"
       >
@@ -1019,7 +1019,7 @@ watch(
     <!-- Содержимое карточки -->
     <div class="card-body" @dblclick="handleBodyDblClick" @touchend="handleBodyTouchEnd">
       <!-- Аватар пользователя (только для больших и Gold карточек) -->
-      <div v-if="isLargeCard" class="card-avatar-container">
+      <div v-if="isLargeCard" class="card-avatar-container card-lod-hide">
         <div
           v-if="avatarData.avatar_url"
           class="card-avatar"
@@ -1041,7 +1041,7 @@ watch(
       </div>
 
       <div
-        class="active-pv-hidden"
+        class="active-pv-hidden card-lod-hide"
         aria-hidden="true"
         :data-btnl="String(activePvState.manual.left)"
         :data-btnr="String(activePvState.manual.right)"
@@ -1087,8 +1087,15 @@ watch(
           <span class="value pv-value-right">{{ pvRightValue }}</span>
         </div>
       </div>
-      
-      <div class="card-row">
+
+      <!-- Компактная строка баланса — видна только в LOD режиме -->
+      <div class="card-row card-lod-summary">
+        <span class="value" style="font-size: 12px; color: #6b7280;">
+          {{ calculations.L }}/{{ calculations.R }}
+        </span>
+      </div>
+
+      <div class="card-row card-lod-hide">
         <span class="label">Баланс:</span>
         <span
           class="value value-container"
@@ -1115,7 +1122,7 @@ watch(
 
  
 
-      <div class="card-row">
+      <div class="card-row card-lod-hide">
 
         <span class="label">Актив-заказы:</span>
 
@@ -1137,19 +1144,19 @@ watch(
       </div>
 
 
-      <div class="card-row">
+      <div class="card-row card-lod-hide">
         <span class="label">Цикл/этап:</span>
         <span class="value">{{ cyclesDisplay }} / {{ stageDisplay }}</span>
       </div>
 
       <div
         v-if="card.bodyHTML"
-        class="card-body-html"
+        class="card-body-html card-lod-hide"
         v-html="card.bodyHTML"
       ></div>
     </div>
 
-    <div v-if="!isViewMode" class="card-controls">
+    <div v-if="!isViewMode" class="card-controls card-lod-hide">
       <button
         :class="noteButtonClasses"
         type="button"
@@ -1166,33 +1173,33 @@ watch(
       </button>
     </div>    
     <!-- Значки -->
-    <div v-if="card.showSlfBadge" class="slf-badge visible">SLF</div>
-    <div v-if="card.showFendouBadge" class="fendou-badge visible">奋斗</div>
-    <img 
-      v-if="card.rankBadge" 
-      :src="`/rank-${card.rankBadge}.png`" 
-      class="rank-badge visible"
+    <div v-if="card.showSlfBadge" class="slf-badge visible card-lod-hide">SLF</div>
+    <div v-if="card.showFendouBadge" class="fendou-badge visible card-lod-hide">奋斗</div>
+    <img
+      v-if="card.rankBadge"
+      :src="`/rank-${card.rankBadge}.png`"
+      class="rank-badge visible card-lod-hide"
       alt="Ранговый значок"
     />
     
     <!-- Соединительные точки -->
     <div
-      class="connection-point top"
+      class="connection-point top card-lod-hide"
       :data-card-id="card.id"
       data-side="top"
     ></div>
     <div
-      class="connection-point right"
+      class="connection-point right card-lod-hide"
       :data-card-id="card.id"
       data-side="right"
     ></div>
     <div
-      class="connection-point bottom"
+      class="connection-point bottom card-lod-hide"
       :data-card-id="card.id"
       data-side="bottom"
     ></div>
     <div
-      class="connection-point left"
+      class="connection-point left card-lod-hide"
       :data-card-id="card.id"
       data-side="left"
     ></div>

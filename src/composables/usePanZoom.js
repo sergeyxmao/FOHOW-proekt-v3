@@ -7,6 +7,7 @@ export function usePanZoom(canvasElement, options = {}) {
   
   const MIN_SCALE = 0.01  // Минимальное уменьшение - 1%
   const MAX_SCALE = 5     // Максимальное увеличение - 500%
+  const LOD_THRESHOLD = 0.35  // Порог для упрощённого рендера (35%)
 
   const PAN_CURSOR_CLASS = 'canvas-container--panning'
   const SPACE_READY_CLASS = 'canvas-container--space-ready'
@@ -54,6 +55,7 @@ export function usePanZoom(canvasElement, options = {}) {
   let hotScale = 1
   let isHotMode = false
   let wheelSyncTimer = null
+  let currentLodActive = false  // Текущее состояние LOD-класса на DOM
 
   // Состояние для панорамирования через Space + левая кнопка мыши
   let isSpaceDown = false
@@ -199,6 +201,17 @@ export function usePanZoom(canvasElement, options = {}) {
       const mobileZoomEl = document.querySelector('[data-zoom-display]')
       if (mobileZoomEl) {
         mobileZoomEl.textContent = String(Math.round(s * 100))
+      }
+    }
+
+    // LOD: добавить/убрать класс на canvas-container в зависимости от масштаба
+    const shouldLod = s < LOD_THRESHOLD
+    if (shouldLod !== currentLodActive) {
+      currentLodActive = shouldLod
+      if (shouldLod) {
+        canvasElement.value.classList.add('canvas-container--lod')
+      } else {
+        canvasElement.value.classList.remove('canvas-container--lod')
       }
     }
   }
@@ -692,6 +705,7 @@ export function usePanZoom(canvasElement, options = {}) {
     if (canvasElement.value) {
       canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
       canvasElement.value.classList.remove(SPACE_READY_CLASS)
+      canvasElement.value.classList.remove('canvas-container--lod')
     }
     if (transformFrame !== null) {
       cancelAnimationFrame(transformFrame)
