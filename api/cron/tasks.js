@@ -642,6 +642,7 @@ async function switchDemoToGuest() {
         sp.code_name = 'demo'
         AND u.subscription_expires_at IS NOT NULL
         AND u.subscription_expires_at < NOW()
+        AND u.scheduled_plan_id IS NULL
     `;
 
     const expiredDemoUsers = await client.query(expiredDemoUsersQuery);

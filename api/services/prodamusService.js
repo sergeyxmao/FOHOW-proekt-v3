@@ -469,9 +469,9 @@ export async function processWebhook(data) {
           `UPDATE users
            SET plan_id = $1,
                subscription_expires_at = $2,
-               scheduled_plan_id = $3,
-               scheduled_plan_expires_at = $4,
-               scheduled_plan_paid_at = CASE WHEN $3 IS NOT NULL THEN CURRENT_TIMESTAMP ELSE NULL END,
+               scheduled_plan_id = $3::integer,
+               scheduled_plan_expires_at = $4::timestamptz,
+               scheduled_plan_paid_at = CASE WHEN $3::integer IS NOT NULL THEN CURRENT_TIMESTAMP ELSE NULL END,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $5`,
           [planId, expiresAt, scheduledPlanId, scheduledPlanExpiresAt, userId]

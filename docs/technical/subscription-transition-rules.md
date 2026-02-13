@@ -147,6 +147,18 @@ Source в `subscription_history`: `'scheduled_activation'`
 | Каждые 5 мин | `cleanupInactiveSessions` | Автовыход неактивных сессий |
 | Каждый час | Очистка `telegram_link_codes` | Техническая очистка |
 
+### Защита от гонки крон-задач
+
+Несколько крон-задач работают с истёкшими подписками и могут конфликтовать:
+
+| Задача | Время | Обработка scheduled |
+|--------|-------|---------------------|
+| `handleSubscriptionExpiry` | 09:00 | **Единственная** задача, которая активирует `scheduled_plan_id` |
+| `handleGracePeriodExpiry` | 09:05 | Безопасна: `handleSubscriptionExpiry` очищает `grace_period_until` при активации scheduled плана |
+| `switchDemoToGuest` | 09:15 | Исключает пользователей с `scheduled_plan_id IS NOT NULL` |
+
+**Правило:** только `handleSubscriptionExpiry` принимает решение о пользователях с запланированным тарифом. Остальные задачи пропускают таких пользователей через SQL-условие `AND u.scheduled_plan_id IS NULL`.
+
 ## Фронтенд
 
 ### Состояния кнопок (getPlanButtonState)
@@ -191,4 +203,7 @@ Source в `subscription_history`: `'scheduled_activation'`
 
 ## История изменений
 
+## История изменений
+
 - 2026-02-13: Все крон-задачи с уведомлениями перенесены с ночного времени (01:00-03:00) на утреннее (09:00-09:30 МСК)
+- 2026-02-13: Добавлена защита от гонки крон-задач — `switchDemoToGuest` исключает пользователей с `scheduled_plan_id IS NOT NULL`
