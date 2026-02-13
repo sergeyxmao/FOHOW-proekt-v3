@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted, isRef } from 'vue'
+import { ref, computed, onMounted, onUnmounted, isRef } from 'vue'
 
 export function usePanZoom(canvasElement, options = {}) {
   const scale = ref(1)
@@ -45,6 +45,15 @@ export function usePanZoom(canvasElement, options = {}) {
   let panPointerId = null
   let panPointerType = null
   let transformFrame = null
+
+  // "Горячие" значения — обновляются при каждом mousemove, НЕ являются Vue ref
+  // Во время активного pan/zoom transform пишется напрямую в DOM, минуя Vue refs
+  // Vue refs обновляются один раз при завершении действия (syncHotToRefs)
+  let hotTranslateX = 0
+  let hotTranslateY = 0
+  let hotScale = 1
+  let isHotMode = false
+  let wheelSyncTimer = null
 
   // Состояние для панорамирования через Space + левая кнопка мыши
   let isSpaceDown = false
@@ -109,16 +118,33 @@ export function usePanZoom(canvasElement, options = {}) {
     return true
   }
 
+  const enterHotMode = () => {
+    if (isHotMode) return
+    hotTranslateX = translateX.value
+    hotTranslateY = translateY.value
+    hotScale = scale.value
+    isHotMode = true
+  }
+
+  const syncHotToRefs = () => {
+    scale.value = hotScale
+    translateX.value = hotTranslateX
+    translateY.value = hotTranslateY
+    isHotMode = false
+  }
+
   const startPan = (event) => {
     if (!canvasElement.value) {
       return
     }
 
+    enterHotMode()
+
     isPanning = true
     panPointerId = event.pointerId
     panPointerType = event.pointerType
-    startX = event.clientX - translateX.value
-    startY = event.clientY - translateY.value
+    startX = event.clientX - hotTranslateX
+    startY = event.clientY - hotTranslateY
 
     canvasElement.value.classList.add(PAN_CURSOR_CLASS)
     if (event.pointerType !== 'touch') {
@@ -137,6 +163,11 @@ export function usePanZoom(canvasElement, options = {}) {
     panPointerId = null
     panPointerType = null
 
+    // Синхронизируем горячие значения в Vue refs при завершении pan
+    if (isHotMode) {
+      syncHotToRefs()
+    }
+
     if (canvasElement.value) {
       canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
     }
@@ -152,7 +183,10 @@ export function usePanZoom(canvasElement, options = {}) {
 
     const canvasContent = canvasElement.value.querySelector('.canvas-content')
     if (canvasContent) {
-      canvasContent.style.transform = `translate(${translateX.value}px, ${translateY.value}px) scale(${scale.value})`
+      const tx = isHotMode ? hotTranslateX : translateX.value
+      const ty = isHotMode ? hotTranslateY : translateY.value
+      const s = isHotMode ? hotScale : scale.value
+      canvasContent.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`
     }
   }
 
@@ -192,37 +226,33 @@ export function usePanZoom(canvasElement, options = {}) {
   }
 
   const setScale = (value) => {
-    scale.value = clampScale(value)
+    const clamped = clampScale(value)
+    scale.value = clamped
+    hotScale = clamped
     updateTransform()
   }
 
   const setTranslation = (x, y) => {
-    if (Number.isFinite(x)) {
-      translateX.value = x
-    }
-    if (Number.isFinite(y)) {
-      translateY.value = y
-    }
+    if (Number.isFinite(x)) { translateX.value = x; hotTranslateX = x }
+    if (Number.isFinite(y)) { translateY.value = y; hotTranslateY = y }
     updateTransform()
   }
 
-  const setTransform = ({ scale: nextScale, translateX: nextTranslateX, translateY: nextTranslateY } = {}) => {
+  const setTransform = ({ scale: nextScale, translateX: nextTx, translateY: nextTy } = {}) => {
     if (Number.isFinite(nextScale)) {
-      scale.value = clampScale(nextScale)
+      const clamped = clampScale(nextScale)
+      scale.value = clamped
+      hotScale = clamped
     }
-    if (Number.isFinite(nextTranslateX)) {
-      translateX.value = nextTranslateX
-    }
-    if (Number.isFinite(nextTranslateY)) {
-      translateY.value = nextTranslateY
-    }
+    if (Number.isFinite(nextTx)) { translateX.value = nextTx; hotTranslateX = nextTx }
+    if (Number.isFinite(nextTy)) { translateY.value = nextTy; hotTranslateY = nextTy }
     updateTransform()
   }
 
   const resetTransform = () => {
-    scale.value = 1
-    translateX.value = 0
-    translateY.value = 0
+    scale.value = 1; hotScale = 1
+    translateX.value = 0; hotTranslateX = 0
+    translateY.value = 0; hotTranslateY = 0
     updateTransform()
   }
 
@@ -279,7 +309,7 @@ export function usePanZoom(canvasElement, options = {}) {
     if (event.ctrlKey) {
       return
     }
-    
+
     // Игнорируем если wheel над панелями или в области заметки
     if (
       event.target.closest('.ui-panel-left') ||
@@ -288,25 +318,35 @@ export function usePanZoom(canvasElement, options = {}) {
 	) {
       return
     }
-    
+
     event.preventDefault()
-    
+
+    enterHotMode()
+
     // ИСПРАВЛЕНО: Изменен коэффициент с 0.0005 на 0.0001 для плавного масштабирования ±1%
     const delta = -event.deltaY * 0.0001
-    const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale.value + delta))
-    
+    const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, hotScale + delta))
+
     // Зум относительно позиции мыши
     const rect = canvasElement.value.getBoundingClientRect()
     const mouseX = event.clientX - rect.left
     const mouseY = event.clientY - rect.top
-    
-    const scaleRatio = newScale / scale.value
-    
-    translateX.value = mouseX - (mouseX - translateX.value) * scaleRatio
-    translateY.value = mouseY - (mouseY - translateY.value) * scaleRatio
-    scale.value = newScale
-    
+
+    const scaleRatio = newScale / hotScale
+
+    hotTranslateX = mouseX - (mouseX - hotTranslateX) * scaleRatio
+    hotTranslateY = mouseY - (mouseY - hotTranslateY) * scaleRatio
+    hotScale = newScale
+
     updateTransform()
+
+    // Debounce синхронизация — если колёсико перестали крутить, через 150мс синхронизируем refs
+    clearTimeout(wheelSyncTimer)
+    wheelSyncTimer = setTimeout(() => {
+      if (isHotMode && !isPanning) {
+        syncHotToRefs()
+      }
+    }, 150)
   }
   const updatePinchState = () => {
     if (!canvasElement.value || activeTouchPointers.size !== 2) {
@@ -325,21 +365,23 @@ export function usePanZoom(canvasElement, options = {}) {
       return
     }
 
+    enterHotMode()
+
     const rect = canvasElement.value.getBoundingClientRect()
     const centerClientX = (first.x + second.x) / 2
     const centerClientY = (first.y + second.y) / 2
     const centerX = centerClientX - rect.left
     const centerY = centerClientY - rect.top
 
-    const currentScale = scale.value
-    const contentCenterX = (centerX - translateX.value) / currentScale
-    const contentCenterY = (centerY - translateY.value) / currentScale
+    const currentScale = hotScale
+    const contentCenterX = (centerX - hotTranslateX) / currentScale
+    const contentCenterY = (centerY - hotTranslateY) / currentScale
 
     pinchState = {
       initialDistance: distance,
       initialScale: currentScale,
-      initialTranslateX: translateX.value,
-      initialTranslateY: translateY.value,
+      initialTranslateX: hotTranslateX,
+      initialTranslateY: hotTranslateY,
       contentCenterX,
       contentCenterY,
       centerStartX: centerX,
@@ -374,9 +416,9 @@ export function usePanZoom(canvasElement, options = {}) {
     const nextTranslateX = centerX - pinchState.contentCenterX * nextScale
     const nextTranslateY = centerY - pinchState.contentCenterY * nextScale
 
-    scale.value = nextScale
-    translateX.value = nextTranslateX
-    translateY.value = nextTranslateY
+    hotScale = nextScale
+    hotTranslateX = nextTranslateX
+    hotTranslateY = nextTranslateY
 
     pinchState = {
       ...pinchState,
@@ -537,17 +579,17 @@ export function usePanZoom(canvasElement, options = {}) {
 
       if (isPanning && panPointerType === 'touch' && panPointerId === event.pointerId) {
         event.preventDefault()
-        translateX.value = event.clientX - startX
-        translateY.value = event.clientY - startY
-        updateTransform()        
+        hotTranslateX = event.clientX - startX
+        hotTranslateY = event.clientY - startY
+        updateTransform()
       }
       return
     }
     if (!isPanning || panPointerId !== event.pointerId) return
 
     event.preventDefault()
-    translateX.value = event.clientX - startX
-    translateY.value = event.clientY - startY
+    hotTranslateX = event.clientX - startX
+    hotTranslateY = event.clientY - startY
     updateTransform()
   }
   
@@ -559,6 +601,10 @@ export function usePanZoom(canvasElement, options = {}) {
       }
       if (activeTouchPointers.size < 2) {
         pinchState = null
+        // Синхронизируем горячие значения при завершении pinch
+        if (isHotMode && !isPanning) {
+          syncHotToRefs()
+        }
       } else {
         updatePinchState()
       }
@@ -629,6 +675,7 @@ export function usePanZoom(canvasElement, options = {}) {
     window.removeEventListener('keydown', handleKeyDown)
     window.removeEventListener('keyup', handleKeyUp)
     setBodyCursor()
+    clearTimeout(wheelSyncTimer)
     if (canvasElement.value) {
       canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
       canvasElement.value.classList.remove(SPACE_READY_CLASS)
@@ -649,6 +696,7 @@ export function usePanZoom(canvasElement, options = {}) {
     setTransform,
     resetTransform,
     minScale: MIN_SCALE,
-    maxScale: MAX_SCALE
+    maxScale: MAX_SCALE,
+    isInteracting: computed(() => isHotMode)
   }
 }

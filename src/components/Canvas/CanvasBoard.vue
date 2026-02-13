@@ -143,7 +143,8 @@ const {
   translateY: zoomTranslateY,
   clampScale: clampZoomScale,
   setTransform: setZoomTransform,
-  resetTransform: resetZoomTransform
+  resetTransform: resetZoomTransform,
+  isInteracting: isPanZoomInteracting
 } = usePanZoom(canvasContainerRef, {
   // В мобильном режиме с включенным режимом выделения блокируем pan одним пальцем
   // (pan двумя пальцами продолжает работать через pinch-zoom)
@@ -1051,7 +1052,8 @@ const guideOverlayStyle = computed(() => ({
 const canvasContainerClasses = computed(() => ({
   'canvas-container--selection-mode': true,
   'canvas-container--sticker-placement': stickersStore.isPlacementMode,
-  'canvas-container--anchor-placement': placementMode.value === 'anchor'
+  'canvas-container--anchor-placement': placementMode.value === 'anchor',
+  'canvas-container--interacting': isPanZoomInteracting.value || isDraggingAnyRef.value
 }));
 
 const selectionBoxStyle = computed(() => {
@@ -2960,6 +2962,46 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           <Card
           v-for="card in cards.filter(c => c.type !== 'user_card')"
           :key="card.id"
+          v-memo="[
+            card.id,
+            card.x,
+            card.y,
+            card.width,
+            card.height,
+            card.text,
+            card.selected,
+            card.pv,
+            card.balance,
+            card.activePv,
+            card.cycle,
+            card.coinFill,
+            card.headerBg,
+            card.colorIndex,
+            card.type,
+            card.bodyHTML,
+            card.bodyGradient,
+            card.showSlfBadge,
+            card.showFendouBadge,
+            card.rankBadge,
+            card.stage,
+            card.toNext,
+            card.total,
+            card.strokeWidth,
+            card.note?.visible,
+            card.calculated?.L,
+            card.calculated?.R,
+            card.calculated?.cycles,
+            card.activePvManual?.left,
+            card.activePvManual?.right,
+            card.activePvAggregated?.left,
+            card.activePvAggregated?.right,
+            card.activePvAggregated?.remainderLeft,
+            card.activePvAggregated?.remainderRight,
+            card.balanceManualOverride,
+            card.cyclesManualOverride,
+            card.highlighted,
+            isDrawingLine
+          ]"
           :card="card"
           :is-selected="card.selected"
           :is-connecting="isDrawingLine"
@@ -3153,6 +3195,31 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   transition: none !important;
 }
 
+/* Оптимизация при pan/zoom/drag — отключает интерактивность и анимации карточек */
+.canvas-container--interacting .cards-container {
+  pointer-events: none;
+}
+.canvas-container--interacting .card {
+  pointer-events: none;
+  transition: none !important;
+  animation: none !important;
+}
+/* Перетаскиваемая карточка остаётся интерактивной */
+.canvas-container--interacting .card.selected {
+  pointer-events: auto;
+}
+.canvas-container--interacting .svg-layer .line {
+  transition: none !important;
+  animation: none !important;
+  filter: none !important;
+}
+.canvas-container--interacting .line-hitbox {
+  pointer-events: none;
+}
+.canvas-container--interacting .note-window {
+  pointer-events: none;
+}
+
 /* Визуальный эффект при панорамировании холста - затемнение для обратной связи */
 .canvas-container--panning .canvas-content::after {
   content: '';
@@ -3182,6 +3249,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   height: 100%;
   transform-origin: 0 0;
   background: transparent; /* Прозрачный фон, чтобы не перекрывать фон canvas-container */
+  will-change: transform;
+  contain: layout style paint;
   --grid-step: 40px;
   --grid-line-color: rgba(79, 85, 99, 0.15);
   --grid-opacity: 0;
