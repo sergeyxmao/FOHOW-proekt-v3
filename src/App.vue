@@ -31,6 +31,7 @@ import { useUserStore } from './stores/user'
 import { useSubscriptionStore } from './stores/subscription'
 import { useImagesStore } from './stores/images'
 import { useMobileUIScaleGesture } from './composables/useMobileUIScaleGesture'
+import { usePerformanceModeStore } from './stores/performanceMode'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
 import { checkAndAlertCardLimit } from './utils/limitsCheck'
@@ -82,6 +83,17 @@ const { isNotesOpen, isCommentsOpen, isStickerMessagesOpen, isImagesOpen, isAnch
 
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
+
+const performanceModeStore = usePerformanceModeStore()
+const { mode: performanceMode } = storeToRefs(performanceModeStore)
+const performanceModeLabel = computed(() => {
+  const labels = { full: 'Полный', light: 'Лёгкий', view: 'Просмотр' }
+  return labels[performanceMode.value] || 'Полный'
+})
+const performanceModeIcon = computed(() => {
+  const icons = { full: '\uD83D\uDD34', light: '\uD83D\uDFE1', view: '\uD83D\uDFE2' }
+  return icons[performanceMode.value] || '\uD83D\uDD34'
+})
 const isSaveAvailable = computed(() => {
   const boardName = (currentBoardName.value ?? '').trim()
   return boardName.length > 0
@@ -272,6 +284,18 @@ function handleGlobalKeydown(event) {
       stickersStore.deselectAllStickers()
       imagesStore.deselectAllImages()
       event.preventDefault()
+      return
+    }
+  }
+
+  // Переключение режима по клавише M
+  if (!event.ctrlKey && !event.shiftKey && !event.altKey && event.code === 'KeyM') {
+    const activeTag = document.activeElement?.tagName?.toLowerCase()
+    const isInput = activeTag === 'input' || activeTag === 'textarea' ||
+                     document.activeElement?.contentEditable === 'true'
+    if (!isInput) {
+      event.preventDefault()
+      performanceModeStore.cycleMode()
       return
     }
   }
@@ -1317,6 +1341,17 @@ onBeforeUnmount(() => {
       <button
         v-if="isAuthenticated"
         v-show="!isPencilMode && !showResetPassword"
+        class="mode-floating-button no-print"
+        :class="{ 'mode-floating-button--modern': isModernTheme }"
+        type="button"
+        :title="`Режим: ${performanceModeLabel}. Клик для переключения (M)`"
+        @click="performanceModeStore.cycleMode()"
+      >
+        {{ performanceModeIcon }} {{ performanceModeLabel }}
+      </button>
+      <button
+        v-if="isAuthenticated"
+        v-show="!isPencilMode && !showResetPassword"
         class="save-floating-button no-print"
         :class="{ 'save-floating-button--modern': isModernTheme }"
         type="button"
@@ -1819,6 +1854,47 @@ body:has(.app--mobile) {
   border-color: rgba(255, 193, 7, 0.85);
 }
 
+.mode-floating-button {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(calc(-50% + 140px));
+  z-index: 1800;
+  padding: 10px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(248, 250, 252, 0.92);
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.2);
+  transition: box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  backdrop-filter: blur(6px);
+  user-select: none;
+  white-space: nowrap;
+}
+.mode-floating-button:hover {
+  transform: translateX(calc(-50% + 140px)) translateY(-2px);
+  box-shadow: 0 24px 42px rgba(255, 193, 7, 0.4);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+}
+.mode-floating-button--modern {
+  border-color: rgba(104, 171, 255, 0.45);
+  background: rgba(32, 44, 68, 0.9);
+  color: #e5f3ff;
+  box-shadow: 0 22px 42px rgba(6, 11, 21, 0.55);
+}
+.mode-floating-button--modern:hover {
+  transform: translateX(calc(-50% + 140px)) translateY(-2px);
+  box-shadow: 0 28px 48px rgba(255, 193, 7, 0.5);
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+}
+
 .save-floating-button {
   position: fixed;
   right: 24px;
@@ -1897,7 +1973,8 @@ body:has(.app--mobile) {
 
 /* Hide desktop-only elements in mobile mode */
 .app--mobile .save-floating-button,
-.app--mobile .zoom-floating-button {
+.app--mobile .zoom-floating-button,
+.app--mobile .mode-floating-button {
   display: none;
 }
 
@@ -1963,6 +2040,7 @@ body:has(.app--mobile) {
   .no-print,
   .zoom-floating-button,
   .save-floating-button,
+  .mode-floating-button,
   .mobile-auth-overlay,
   .reset-password-overlay,
   .profile-modal-overlay {

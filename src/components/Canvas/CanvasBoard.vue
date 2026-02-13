@@ -42,6 +42,7 @@ import { useMobileStore } from '../../stores/mobile.js';
 import { useStickersStore } from '../../stores/stickers.js';
 import { useBoardStore } from '../../stores/board.js';
 import { useSidePanelsStore } from '../../stores/sidePanels.js';
+import { usePerformanceModeStore } from '../../stores/performanceMode.js';
 import { useNotificationsStore } from '../../stores/notifications';  
 import { Engine } from '../../utils/calculationEngine';
 import {
@@ -69,6 +70,10 @@ const mobileStore = useMobileStore();
 const stickersStore = useStickersStore();
 const boardStore = useBoardStore();
 const sidePanelsStore = useSidePanelsStore();
+const anchorsStore = useAnchorsStore();
+const imagesStore = useImagesStore();
+const performanceModeStore = usePerformanceModeStore();
+const { mode: performanceMode, animationsEnabled, editingEnabled, gridVisible } = storeToRefs(performanceModeStore);
 const notificationsStore = useNotificationsStore();
 const anchorsStore = useAnchorsStore();  
 const imagesStore = useImagesStore();  
@@ -222,7 +227,7 @@ const canvasContentStyle = computed(() => {
 
   const step = Number.isFinite(gridStepRef.value) ? gridStepRef.value : 0;
   const normalizedStep = Math.max(1, Math.round(step));
-  const isVisible = Boolean(isGridBackgroundVisible.value && normalizedStep > 0);
+  const isVisible = Boolean(isGridBackgroundVisible.value && normalizedStep > 0 && gridVisible.value);
   style['--grid-step'] = `${normalizedStep}px`;
   style['--grid-line-color'] = 'rgba(79, 85, 99, 0.15)';
   style['--grid-opacity'] = isVisible ? '1' : '0';
@@ -889,6 +894,11 @@ watch(engineInput, (state) => {
     return;
   }
 
+  // В режиме "Просмотр" пропускаем пересчёт — данные уже посчитаны
+  if (performanceMode.value === 'view') {
+    return;
+  }
+
   if (!state.cards.length) {
     cardsStore.resetCalculationResults();
     applyActivePvPropagation(null, { triggerAnimation: false });
@@ -898,7 +908,7 @@ watch(engineInput, (state) => {
   try {
     const { result, meta } = Engine.recalc(state);
     cardsStore.applyCalculationResults({ result, meta });
-    applyActivePvPropagation(null, { triggerAnimation: true });
+    applyActivePvPropagation(null, { triggerAnimation: animationsEnabled.value });
   } catch (error) {
     console.error('Engine recalculation error:', error);
   }
@@ -1053,7 +1063,9 @@ const canvasContainerClasses = computed(() => ({
   'canvas-container--selection-mode': true,
   'canvas-container--sticker-placement': stickersStore.isPlacementMode,
   'canvas-container--anchor-placement': placementMode.value === 'anchor',
-  'canvas-container--interacting': isPanZoomInteracting.value || isDraggingAnyRef.value
+  'canvas-container--interacting': isPanZoomInteracting.value || isDraggingAnyRef.value,
+  'canvas-container--mode-light': performanceMode.value === 'light',
+  'canvas-container--mode-view': performanceMode.value === 'view'
 }));
 
 const selectionBoxStyle = computed(() => {
@@ -1457,6 +1469,12 @@ const {
 
 // Computed для определения состояния drag (используется для оптимизации производительности)
 const isDraggingAny = computed(() => dragState.value !== null);
+
+// Обёртка startDrag — запрет drag в режиме "Просмотр"
+const handleStartDrag = (event, cardId) => {
+  if (performanceMode.value === 'view') return;
+  startDrag(event, cardId);
+};
 
 // Синхронизируем isDraggingAnyRef с computed для provide
 watch(isDraggingAny, (value) => {
@@ -3000,13 +3018,15 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
             card.balanceManualOverride,
             card.cyclesManualOverride,
             card.highlighted,
-            isDrawingLine
+            isDrawingLine,
+            performanceMode
           ]"
           :card="card"
           :is-selected="card.selected"
           :is-connecting="isDrawingLine"
+          :performance-mode="performanceMode"
           @card-click="(event) => handleCardClick(event, card.id)"
-          @start-drag="startDrag"
+          @start-drag="handleStartDrag"
           @add-note="handleAddNoteClick"
           @pv-changed="handlePvChanged"
           @open-editor="handleOpenCardEditor"
@@ -3021,7 +3041,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
           :is-animated="animatedUserCardIds.has(userCard.id)"
           @user-card-click="(event) => handleCardClick(event, userCard.id)"
           @user-card-dblclick="(event) => handleUserCardDoubleClick(event, userCard.id)"
-          @start-drag="startDrag"
+          @start-drag="handleStartDrag"
           @connection-point-click="handleUserCardConnectionPointClick"
           @contextmenu.native="(event) => handleUserCardContextMenu(event, userCard.id)"
           :style="{
@@ -3570,6 +3590,73 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 .marketing-watermark:active {
   transform: translateY(0);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+}
+
+/* ============================================
+   Режим "Лёгкий" (light) — отключаем тяжёлые визуальные эффекты
+   ============================================ */
+.canvas-container--mode-light .card,
+.canvas-container--mode-light .line,
+.canvas-container--mode-light .line-group {
+  animation: none !important;
+  transition: none !important;
+}
+.canvas-container--mode-light .line {
+  filter: none !important;
+}
+.canvas-container--mode-light .card-close-btn,
+.canvas-container--mode-light .card-note-btn,
+.canvas-container--mode-light .active-pv-btn {
+  transition: none !important;
+}
+.canvas-container--mode-light .line--balance-highlight,
+.canvas-container--mode-light .line--pv-highlight {
+  animation: none !important;
+  stroke-dasharray: none !important;
+}
+
+/* ============================================
+   Режим "Просмотр" (view) — только отображение и навигация
+   ============================================ */
+.canvas-container--mode-view .card,
+.canvas-container--mode-view .line,
+.canvas-container--mode-view .line-group {
+  animation: none !important;
+  transition: none !important;
+}
+.canvas-container--mode-view .line {
+  filter: none !important;
+}
+.canvas-container--mode-view .line--balance-highlight,
+.canvas-container--mode-view .line--pv-highlight {
+  animation: none !important;
+  stroke-dasharray: none !important;
+}
+.canvas-container--mode-view .cards-container {
+  pointer-events: none;
+}
+.canvas-container--mode-view .card {
+  pointer-events: none;
+  cursor: default !important;
+}
+.canvas-container--mode-view .card-close-btn,
+.canvas-container--mode-view .card-controls,
+.canvas-container--mode-view .card-active-controls,
+.canvas-container--mode-view .active-pv-btn,
+.canvas-container--mode-view [data-role="active-pv-buttons"],
+.canvas-container--mode-view .connection-point {
+  display: none !important;
+}
+.canvas-container--mode-view [contenteditable] {
+  pointer-events: none;
+  cursor: default;
+  -webkit-user-modify: read-only;
+}
+.canvas-container--mode-view .line-hitbox {
+  pointer-events: none;
+}
+.canvas-container--mode-view .selection-box {
+  display: none !important;
 }
 
 /* Print Styles - Обеспечиваем корректное отображение холста и карточек при печати */

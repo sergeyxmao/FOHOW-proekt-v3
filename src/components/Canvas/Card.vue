@@ -22,8 +22,14 @@ const props = defineProps({
   isConnecting: {
     type: Boolean,
     default: false
+  },
+  performanceMode: {
+    type: String,
+    default: 'full'
   }
 });
+
+const isViewMode = computed(() => props.performanceMode === 'view');
 
 const emit = defineEmits([
   'card-click',
@@ -185,8 +191,8 @@ const startEditing = () => {
 const handleTitleDblClick = (event) => {
   event.stopPropagation();
   event.preventDefault();
-  // Запрещаем редактирование в readonly режиме
-  if (isReadOnly.value) return;
+  // Запрещаем редактирование в readonly режиме и в режиме Просмотр
+  if (isReadOnly.value || isViewMode.value) return;
   if (!isEditing.value) {
     startEditing();
   }
@@ -443,8 +449,8 @@ const handleDelete = async (event) => {
 const startEditingPv = (event) => {
   event.stopPropagation();
   event.preventDefault();
-  // Запрещаем редактирование в readonly режиме
-  if (isReadOnly.value) return;
+  // Запрещаем редактирование в readonly режиме и в режиме Просмотр
+  if (isReadOnly.value || isViewMode.value) return;
   if (!isEditingPv.value) {
     isEditingPv.value = true;
     editPvLeft.value = pvLeftValue.value;
@@ -710,8 +716,8 @@ watch(
 
     if (!oldValue || newValue === oldValue) return;
 
-    // Проверяем, включена ли анимация (PV changed)
-    if (!viewSettingsStore.isAnimationEnabled) return;
+    // Проверяем, включена ли анимация (PV changed) и режим производительности
+    if (!viewSettingsStore.isAnimationEnabled || props.performanceMode !== 'full') return;
 
     const prev = parseBalanceValue(oldValue);
 
@@ -763,7 +769,7 @@ watch(
 
 );
 
- 
+
 
 // Следим за изменением активных заказов
 
@@ -775,8 +781,8 @@ watch(
 
     if (!oldValue || newValue === oldValue) return;
 
-    // Проверяем, включена ли анимация (PV changed)
-    if (!viewSettingsStore.isAnimationEnabled) return;
+    // Проверяем, включена ли анимация (PV changed) и режим производительности
+    if (!viewSettingsStore.isAnimationEnabled || props.performanceMode !== 'full') return;
 
     const prev = parseBalanceValue(oldValue);
 
@@ -832,8 +838,8 @@ const handleBodyDblClick = (event) => {
   if (event.target.closest('.coin-icon') || event.target.closest('.card-note-btn') || event.target.closest('.card-close-btn')) return;
   // Не открывать модал при редактировании заголовка или PV
   if (isEditing.value || isEditingPv.value) return;
-  // Запрещаем в readonly режиме
-  if (isReadOnly.value) return;
+  // Запрещаем в readonly режиме и в режиме Просмотр
+  if (isReadOnly.value || isViewMode.value) return;
 
   event.stopPropagation();
   emit('open-editor', props.card.id);
@@ -849,7 +855,7 @@ const handleTitleTouchEnd = (event) => {
     event.preventDefault();
     event.stopPropagation();
     lastTitleTapTime = 0;
-    if (isReadOnly.value) return;
+    if (isReadOnly.value || isViewMode.value) return;
     if (!isEditing.value) {
       startEditing();
     }
@@ -862,7 +868,7 @@ let lastBodyTapTime = 0;
 const handleBodyTouchEnd = (event) => {
   if (event.target.closest('.coin-icon') || event.target.closest('.card-note-btn') || event.target.closest('.card-close-btn') || event.target.closest('.card-header')) return;
   if (isEditing.value || isEditingPv.value) return;
-  if (isReadOnly.value) return;
+  if (isReadOnly.value || isViewMode.value) return;
 
   const now = Date.now();
   if (now - lastBodyTapTime < DOUBLE_TAP_MS) {
@@ -1001,6 +1007,7 @@ watch(
       
       <!-- Кнопка закрытия -->
       <button
+        v-if="!isViewMode"
         class="card-close-btn"
         title="Удалить карточку"
         @click="handleDelete"
@@ -1142,7 +1149,7 @@ watch(
       ></div>
     </div>
 
-    <div class="card-controls">
+    <div v-if="!isViewMode" class="card-controls">
       <button
         :class="noteButtonClasses"
         type="button"

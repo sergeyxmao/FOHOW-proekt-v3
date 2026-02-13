@@ -1,10 +1,11 @@
 <script setup>
 import { computed } from 'vue'
-import { storeToRefs } from 'pinia'  
+import { storeToRefs } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardStore } from '@/stores/board'
 import { useMobileStore } from '@/stores/mobile'
 import { useViewportStore } from '@/stores/viewport'
+import { usePerformanceModeStore } from '@/stores/performanceMode'
 
 const props = defineProps({
   isModernTheme: {
@@ -19,6 +20,13 @@ const authStore = useAuthStore()
 const boardStore = useBoardStore()
 const mobileStore = useMobileStore()
 const viewportStore = useViewportStore()
+
+const performanceModeStore = usePerformanceModeStore()
+const { mode: performanceMode } = storeToRefs(performanceModeStore)
+const performanceModeIcon = computed(() => {
+  const icons = { full: '\uD83D\uDD34', light: '\uD83D\uDFE1', view: '\uD83D\uDFE2' }
+  return icons[performanceMode.value] || '\uD83D\uDD34'
+})
 
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const isMobileMode = computed(() => mobileStore.isMobileMode)
@@ -122,6 +130,17 @@ const handleProfileClick = () => {
           aria-label="Автоподгонка масштаба"
         >
           <span class="button-icon zoom-button__value" data-zoom-display>{{ zoomDisplay }}</span>
+        </button>
+        <!-- Переключатель режима производительности -->
+        <button
+          v-if="authStore.isAuthenticated"
+          class="mobile-toolbar-button mode-button"
+          type="button"
+          @click="performanceModeStore.cycleMode()"
+          :title="`Режим: ${performanceMode}`"
+          aria-label="Переключить режим производительности"
+        >
+          <span class="button-icon">{{ performanceModeIcon }}</span>
         </button>
         <!-- Переключатель версии -->
         <button
