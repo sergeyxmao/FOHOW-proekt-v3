@@ -410,3 +410,71 @@ export async function renameImage(imageId, newName) {
     throw error;
   }
 }
+
+/**
+ * Получить список избранных изображений
+ * @returns {Promise<Object>} { success, items }
+ */
+export async function getFavoriteImages() {
+  const response = await fetch(`${API_URL}/images/favorites`, {
+    headers: getAuthHeaders()
+  });
+
+  if (!response.ok) {
+    await handleErrorResponse(response, 'Ошибка загрузки избранных изображений');
+  }
+
+  return await response.json();
+}
+
+/**
+ * Получить ID избранных изображений (для отображения сердечек)
+ * @returns {Promise<Object>} { success, ids }
+ */
+export async function getFavoriteImageIds() {
+  const response = await fetch(`${API_URL}/images/favorite-ids`, {
+    headers: getAuthHeaders()
+  });
+
+  if (!response.ok) {
+    await handleErrorResponse(response, 'Ошибка загрузки ID избранных');
+  }
+
+  return await response.json();
+}
+
+/**
+ * Добавить изображение в избранное
+ * @param {number} imageId
+ * @returns {Promise<Object>} { success }
+ */
+export async function addImageToFavorites(imageId) {
+  const response = await fetch(`${API_URL}/images/${imageId}/favorite`, {
+    method: 'POST',
+    headers: getAuthHeaders()
+  });
+
+  if (!response.ok) {
+    await handleErrorResponse(response, 'Ошибка добавления в избранное');
+  }
+
+  return await response.json();
+}
+
+/**
+ * Убрать изображение из избранного
+ * @param {number} imageId
+ * @returns {Promise<Object>} { success }
+ */
+export async function removeImageFromFavorites(imageId) {
+  const response = await fetch(`${API_URL}/images/${imageId}/favorite`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+
+  if (!response.ok) {
+    await handleErrorResponse(response, 'Ошибка удаления из избранного');
+  }
+
+  return await response.json();
+}

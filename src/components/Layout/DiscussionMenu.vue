@@ -9,6 +9,7 @@ import { useBoardStore } from '../../stores/board.js'
 import { useSubscriptionStore } from '../../stores/subscription.js'
 import { useAuthStore } from '../../stores/auth.js'
 import { useCardsStore } from '../../stores/cards.js'
+import { useNotificationsStore } from '../../stores/notifications'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api'
 const props = defineProps({
@@ -27,6 +28,7 @@ const boardStore = useBoardStore()
 const subscriptionStore = useSubscriptionStore()
 const authStore = useAuthStore()
 const cardsStore = useCardsStore()
+const notificationsStore = useNotificationsStore()
 
 const { hasComments: hasBoardComments } = storeToRefs(boardCommentsStore)
 const {
@@ -39,8 +41,6 @@ const {
 } = storeToRefs(sidePanelsStore)
 const { placementMode } = storeToRefs(boardStore)
 const { currentBoardId } = storeToRefs(boardStore)
-const isGeolocationMenuOpen = ref(false)
-const isStickersMenuOpen = ref(false)
 const isUserCardBoard = computed(() => cardsStore.cards.some(card => card.type === 'user_card'))  
 const createDefaultCounters = () => ({
   partners: 0,
@@ -152,30 +152,22 @@ const handleImagesToggle = () => {
   emit('request-close')
 }
 
-const toggleGeolocationMenu = () => {
-  if (isUserCardBoard.value) {
-    return
-  }  
-  isGeolocationMenuOpen.value = !isGeolocationMenuOpen.value
-  if (isGeolocationMenuOpen.value) {
-    isStickersMenuOpen.value = false
-  }
-}
-
-const toggleStickersMenu = () => {
-  isStickersMenuOpen.value = !isStickersMenuOpen.value
-  if (isStickersMenuOpen.value) {
-    isGeolocationMenuOpen.value = false
-  }
-}
-
 const handleStickerMessagesToggle = () => {
+  if (!currentBoardId.value) {
+    notificationsStore.addNotification({ message: 'Сначала откройте доску', type: 'info', duration: 4000 })
+    emit('request-close')
+    return
+  }
   sidePanelsStore.toggleStickerMessages()
-  isStickersMenuOpen.value = false  
   emit('request-close')
 }
 const handleAnchorsToggle = () => {
   if (isUserCardBoard.value) {
+    return
+  }
+  if (!currentBoardId.value) {
+    notificationsStore.addNotification({ message: 'Сначала откройте доску', type: 'info', duration: 4000 })
+    emit('request-close')
     return
   }
   // Сбрасываем режим стикера, если был активен
@@ -185,25 +177,25 @@ const handleAnchorsToggle = () => {
   if (nextMode) {
     sidePanelsStore.openAnchors()
   }
-  isGeolocationMenuOpen.value = false
   emit('request-close')
 }
 
 const handleAnchorsPanelOpen = () => {
   if (isUserCardBoard.value) {
     return
-  }  
+  }
+  if (!currentBoardId.value) {
+    notificationsStore.addNotification({ message: 'Сначала откройте доску', type: 'info', duration: 4000 })
+    emit('request-close')
+    return
+  }
   sidePanelsStore.openAnchors()
-  isGeolocationMenuOpen.value = false
   emit('request-close')
 }
 watch(isUserCardBoard, (isAvatarMode) => {
   if (!isAvatarMode) {
     return
   }
-
-  isGeolocationMenuOpen.value = false
-  isStickersMenuOpen.value = false
   if (placementMode.value === 'anchor') {
     boardStore.setPlacementMode(null)
   }
@@ -211,7 +203,7 @@ watch(isUserCardBoard, (isAvatarMode) => {
 
 const handleAddSticker = () => {
   if (!currentBoardId.value) {
-    alert(t('discussionMenu.createStructureAlert'))
+    notificationsStore.addNotification({ message: 'Сначала откройте доску', type: 'info', duration: 4000 })
     emit('request-close')
     return
   }
@@ -219,7 +211,6 @@ const handleAddSticker = () => {
   boardStore.setPlacementMode(null)
   sidePanelsStore.openStickerMessages()
   stickersStore.enablePlacementMode()
-  isStickersMenuOpen.value = false
   emit('request-close')
 }
 </script>
@@ -310,86 +301,55 @@ const handleAddSticker = () => {
         aria-hidden="true"
       ></span>
     </div>
-    <div class="discussion-menu__item discussion-menu__item--has-children">
+    <div class="discussion-menu__item">
       <span class="discussion-menu__icon" aria-hidden="true">🧭</span>
-      <div class="discussion-menu__item-content">
-        <div class="discussion-menu__item-header">
-          <button
-            type="button"
-            class="discussion-menu__action"
-            :disabled="isUserCardBoard"          
-            :class="{ 'discussion-menu__action--active': isGeolocationMenuOpen }"
-            @click="toggleGeolocationMenu"
-          >
-            {{ t('discussionMenu.geolocation') }}
-          </button>
-          <span class="discussion-menu__counter">
-            <template v-if="countersLoading">...</template>
-            <template v-else>{{ counters.geolocation }}</template>
-          </span>
-        </div>
-        <transition name="top-menu-fade">
-          <div v-if="isGeolocationMenuOpen" class="discussion-menu__submenu">
-            <button
-              type="button"
-              class="discussion-menu__subaction"
-              :class="{ 'discussion-menu__subaction--active': placementMode === 'anchor' }"
-               :disabled="isUserCardBoard"            
-              @click="handleAnchorsToggle"
-            >
-              {{ t('discussionMenu.setAnchor') }}
-            </button>
-            <button
-              type="button"
-              class="discussion-menu__subaction"
-              :class="{ 'discussion-menu__subaction--active': isAnchorsOpen }"
-               :disabled="isUserCardBoard"             
-              @click="handleAnchorsPanelOpen"
-            >
-              {{ t('discussionMenu.boardAnchors') }}
-            </button>
-          </div>
-        </transition>
-      </div>
+      <button
+        type="button"
+        class="discussion-menu__action"
+        :class="{ 'discussion-menu__action--active': isAnchorsOpen }"
+        :disabled="isUserCardBoard"
+        @click="handleAnchorsPanelOpen"
+      >
+        {{ t('discussionMenu.geolocation') }}
+      </button>
+      <button
+        type="button"
+        class="discussion-menu__add-btn"
+        :class="{ 'discussion-menu__add-btn--active': placementMode === 'anchor' }"
+        :disabled="isUserCardBoard"
+        @click="handleAnchorsToggle"
+        :title="t('discussionMenu.setAnchor')"
+      >
+        +
+      </button>
+      <span class="discussion-menu__counter">
+        <template v-if="countersLoading">...</template>
+        <template v-else>{{ counters.geolocation }}</template>
+      </span>
     </div>
 
-    <div class="discussion-menu__item discussion-menu__item--has-children">
+    <div class="discussion-menu__item">
       <span class="discussion-menu__icon" aria-hidden="true">📌</span>
-      <div class="discussion-menu__item-content">
-        <div class="discussion-menu__item-header">
-          <button
-            type="button"
-            class="discussion-menu__action"
-            :class="{ 'discussion-menu__action--active': isStickersMenuOpen }"
-            @click="toggleStickersMenu"
-          >
-            {{ t('discussionMenu.stickerMessages') }}
-          </button>
-          <span class="discussion-menu__counter">
-            <template v-if="countersLoading">...</template>
-            <template v-else>{{ counters.stickers }}</template>
-          </span>
-        </div>
-        <transition name="top-menu-fade">
-          <div v-if="isStickersMenuOpen" class="discussion-menu__submenu">
-            <button
-              type="button"
-              class="discussion-menu__subaction"
-              :class="{ 'discussion-menu__subaction--active': isStickerMessagesOpen }"
-              @click="handleStickerMessagesToggle"
-            >
-              {{ t('discussionMenu.allStickers') }}
-            </button>
-            <button
-              type="button"
-              class="discussion-menu__subaction"
-              @click="handleAddSticker"
-            >
-              {{ t('discussionMenu.addSticker') }}
-            </button>
-          </div>
-        </transition>
-      </div>
+      <button
+        type="button"
+        class="discussion-menu__action"
+        :class="{ 'discussion-menu__action--active': isStickerMessagesOpen }"
+        @click="handleStickerMessagesToggle"
+      >
+        {{ t('discussionMenu.stickerMessages') }}
+      </button>
+      <button
+        type="button"
+        class="discussion-menu__add-btn"
+        @click="handleAddSticker"
+        :title="t('discussionMenu.addSticker')"
+      >
+        +
+      </button>
+      <span class="discussion-menu__counter">
+        <template v-if="countersLoading">...</template>
+        <template v-else>{{ counters.stickers }}</template>
+      </span>
     </div>
   </div>
 </template>
@@ -414,11 +374,6 @@ const handleAddSticker = () => {
   align-items: center;
   gap: 12px;
   position: relative;
-}
-.discussion-menu__item-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 
 .discussion-menu__icon {
@@ -493,9 +448,42 @@ const handleAddSticker = () => {
   border-color: rgba(255, 193, 7, 0.8);
   box-shadow: 0 16px 28px rgba(255, 193, 7, 0.35);
 }
-.discussion-menu__item-content {
-  flex: 1;
+.discussion-menu__add-btn {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
+
+.discussion-menu__add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.discussion-menu__add-btn:not(:disabled):hover {
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(255, 193, 7, 0.25);
+}
+
+.discussion-menu__add-btn--active {
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 8px 16px rgba(255, 193, 7, 0.25);
+}
+
 .discussion-menu__counter {
   margin-left: auto;
   padding: 4px 10px;
@@ -512,41 +500,6 @@ const handleAddSticker = () => {
 
 .discussion-menu__counter:empty {
   display: none;
-}
-
-.discussion-menu__submenu {
-  margin-top: 8px;
-  display: grid;
-  gap: 8px;
-}
-
-.discussion-menu__subaction {
-  width: 100%;
-  text-align: left;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  background: rgba(248, 250, 252, 0.92);
-  color: #0f172a;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.discussion-menu__subaction:not(:disabled):hover {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.8);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 16px rgba(255, 193, 7, 0.25);
-}
-
-.discussion-menu__subaction--active {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.8);
-  box-shadow: 0 14px 26px rgba(255, 193, 7, 0.3);
 }
 
 .discussion-menu__badge {
@@ -607,24 +560,17 @@ const handleAddSticker = () => {
   box-shadow: 0 0 0 3px rgba(114, 182, 255, 0.3);
 }
 
-.discussion-menu--modern .discussion-menu__subaction {
+.discussion-menu--modern .discussion-menu__add-btn {
   border-color: rgba(96, 164, 255, 0.35);
   background: rgba(24, 34, 58, 0.94);
   color: #e5f3ff;
-  box-shadow: 0 14px 26px rgba(6, 11, 21, 0.58);
 }
 
-.discussion-menu--modern .discussion-menu__subaction:not(:disabled):hover {
+.discussion-menu--modern .discussion-menu__add-btn:not(:disabled):hover,
+.discussion-menu--modern .discussion-menu__add-btn--active {
   background: #ffc107;
   color: #000000;
   border-color: rgba(255, 193, 7, 0.85);
   box-shadow: 0 18px 30px rgba(255, 193, 7, 0.35);
 }
-
-.discussion-menu--modern .discussion-menu__subaction--active {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.85);
-  box-shadow: 0 22px 36px rgba(255, 193, 7, 0.35);
-}  
 </style>

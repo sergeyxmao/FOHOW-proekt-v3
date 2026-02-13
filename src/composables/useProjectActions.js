@@ -1114,6 +1114,16 @@ const restoreAndDownload = async (finalCanvas, exportSettings, tempStyles, canva
 
   // Восстанавливаем временные стили
   tempStyles.forEach(({ element, property, originalValue }) => {
+    // Поддержка CSS custom properties (setProperty:--var-name)
+    if (property.startsWith('setProperty:')) {
+      const varName = property.slice('setProperty:'.length)
+      if (originalValue) {
+        element.style.setProperty(varName, originalValue)
+      } else {
+        element.style.removeProperty(varName)
+      }
+      return
+    }
     if (originalValue) {
       element.style[property] = originalValue
     } else {
@@ -1146,24 +1156,17 @@ const restoreAndDownload = async (finalCanvas, exportSettings, tempStyles, canva
     const link = document.createElement('a')
 
     const now = new Date()
-    const dateStr = now.getFullYear() + '-' +
-      String(now.getMonth() + 1).padStart(2, '0') + '-' +
-      String(now.getDate()).padStart(2, '0')
-    const timeStr = String(now.getHours()).padStart(2, '0') + '-' +
-      String(now.getMinutes()).padStart(2, '0') + '-' +
-      String(now.getSeconds()).padStart(2, '0')
+    const dateStr = String(now.getDate()).padStart(2, '0') + '.' +
+      String(now.getMonth() + 1).padStart(2, '0')
+    const timeStr = String(now.getHours()).padStart(2, '0') + '.' +
+      String(now.getMinutes()).padStart(2, '0')
 
-    const baseFileName = formatProjectFileName(normalizedProjectName.value || projectStore.projectName, 'scheme')
+    // Имя файла = название доски + дд.мм_чч.мин
+    const boardName = boardStore.currentBoardName || normalizedProjectName.value || projectStore.projectName || 'board'
+    // Убираем символы, недопустимые в именах файлов
+    const safeBoardName = boardName.replace(/[<>:"/\\|?*]/g, '_').trim()
 
-    let formatSuffix = ''
-    if (exportSettings && exportSettings.format !== 'original') {
-      formatSuffix = `_${exportSettings.format.toUpperCase()}_${exportSettings.orientation === 'portrait' ? 'P' : 'L'}_${exportSettings.dpi}dpi`
-    }
-
-    // Добавляем суффикс режима экспорта
-    const modeSuffix = exportSettings?.exportOnlyVisible ? '_viewport' : '_full'
-
-    link.download = `${baseFileName}${formatSuffix}${modeSuffix}_${dateStr}_${timeStr}.png`
+    link.download = `${safeBoardName} ${dateStr}_${timeStr}.png`
 
     link.href = url
     link.click()
@@ -1286,8 +1289,47 @@ const handleExportPNG = async (exportSettings = null) => {
       el.style.display = 'none'
     })
 
+    // Скрыть аватар-круг (card-avatar-container) при экспорте всегда
+    const avatarContainers = canvasContainer.querySelectorAll('.card-avatar-container')
+    avatarContainers.forEach(el => {
+      tempStyles.push({ element: el, property: 'display', originalValue: el.style.display })
+      el.style.display = 'none'
+    })
+
+    // Увеличить текст и сделать жирным при экспорте
+    const labels = canvasContainer.querySelectorAll('.label')
+    labels.forEach(el => {
+      tempStyles.push({ element: el, property: 'fontSize', originalValue: el.style.fontSize })
+      tempStyles.push({ element: el, property: 'fontWeight', originalValue: el.style.fontWeight })
+      el.style.fontSize = '20px'
+      el.style.fontWeight = '700'
+    })
+    const values = canvasContainer.querySelectorAll('.value')
+    values.forEach(el => {
+      tempStyles.push({ element: el, property: 'fontSize', originalValue: el.style.fontSize })
+      tempStyles.push({ element: el, property: 'fontWeight', originalValue: el.style.fontWeight })
+      el.style.fontSize = '22px'
+      el.style.fontWeight = '700'
+    })
+    const cardTitlesExport = canvasContainer.querySelectorAll('.card-title')
+    cardTitlesExport.forEach(el => {
+      tempStyles.push({ element: el, property: 'fontSize', originalValue: el.style.fontSize })
+      tempStyles.push({ element: el, property: 'fontWeight', originalValue: el.style.fontWeight })
+      el.style.fontSize = '26px'
+      el.style.fontWeight = '900'
+    })
+
     // Опция "Ч/Б (контур)"
     if (exportSettings?.blackAndWhite) {
+      // Белый фон холста: убираем цвет фона и сетку
+      tempStyles.push({ element: canvasContainer, property: 'backgroundColor', originalValue: canvasContainer.style.backgroundColor })
+      canvasContainer.style.backgroundColor = '#ffffff'
+      const canvasContentEl = canvasContainer.querySelector('.canvas-content')
+      if (canvasContentEl) {
+        tempStyles.push({ element: canvasContentEl, property: 'setProperty:--grid-opacity', originalValue: canvasContentEl.style.getPropertyValue('--grid-opacity') })
+        canvasContentEl.style.setProperty('--grid-opacity', '0')
+      }
+
       // ИСПРАВЛЕНИЕ: Применяем Ч/Б ко ВСЕМ карточкам (включая Gold)
       const cards = canvasContainer.querySelectorAll('.card')
       cards.forEach(card => {

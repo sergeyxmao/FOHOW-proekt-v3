@@ -4,7 +4,7 @@ import { useStickersStore } from '../../stores/stickers'
 import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
 import { useSidePanelsStore } from '../../stores/sidePanels'
-import { getMyFolders, getMyImages, uploadImage, deleteImage, requestShareImage, renameImage, createFolder } from '../../services/imageService'
+import { getMyFolders, getMyImages, uploadImage, deleteImage, requestShareImage, renameImage, createFolder, getFavoriteImageIds, addImageToFavorites, removeImageFromFavorites } from '../../services/imageService'
 import { convertToWebP, isImageFile } from '../../utils/imageUtils'
 import ImageCard from './ImageCard.vue'
 
@@ -39,8 +39,9 @@ const isLoadingMore = ref(false)
 const hasMore = ref(true)
 const gridRef = ref(null)
 const gridWrapperRef = ref(null)
-const indicatorRef = ref(null)  
+const indicatorRef = ref(null)
 const scrollContainerRef = gridRef
+const favoriteIds = ref(new Set())
 let hideTimeout = null
 
 watch(newFolderName, () => {
@@ -620,10 +621,37 @@ defineExpose({
 })
 
 // Жизненный цикл
+async function loadFavoriteIds() {
+  try {
+    const result = await getFavoriteImageIds()
+    favoriteIds.value = new Set(result.ids || [])
+  } catch (e) {
+    console.error('[MyLibraryTab] Load favorite IDs error:', e)
+  }
+}
+
+async function handleToggleFavorite(image) {
+  const imageId = image.id
+  try {
+    if (favoriteIds.value.has(imageId)) {
+      await removeImageFromFavorites(imageId)
+      favoriteIds.value.delete(imageId)
+      favoriteIds.value = new Set(favoriteIds.value)
+    } else {
+      await addImageToFavorites(imageId)
+      favoriteIds.value.add(imageId)
+      favoriteIds.value = new Set(favoriteIds.value)
+    }
+  } catch (e) {
+    console.error('[MyLibraryTab] Toggle favorite error:', e)
+  }
+}
+
 onMounted(async () => {
   await Promise.all([
     loadFolders(),
-    loadInitialImages()
+    loadInitialImages(),
+    loadFavoriteIds()
   ])
 
   await nextTick()
@@ -804,10 +832,13 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
           :key="image.id"
           :image="image"
           :is-my-library="true"
+          :is-favorite="favoriteIds.has(image.id)"
+          :show-favorite-button="true"
           @click="handleImageClick"
           @delete="handleImageDelete"
           @share-request="handleShareRequest"
-          @rename="handleRename"         
+          @rename="handleRename"
+          @toggle-favorite="handleToggleFavorite"
         />
       </div>
     </div>

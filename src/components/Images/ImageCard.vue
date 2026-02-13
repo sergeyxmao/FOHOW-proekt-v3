@@ -11,10 +11,18 @@ const props = defineProps({
   isMyLibrary: {
     type: Boolean,
     default: false
+  },
+  isFavorite: {
+    type: Boolean,
+    default: false
+  },
+  showFavoriteButton: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['click', 'delete', 'share-request', 'rename'])
+const emit = defineEmits(['click', 'delete', 'share-request', 'rename', 'toggle-favorite'])
   
 /**
  * Получить имя файла без расширения
@@ -108,6 +116,11 @@ const handleRename = (e) => {
   emit('rename', props.image)
 }
 
+const handleToggleFavorite = (e) => {
+  e.stopPropagation()
+  emit('toggle-favorite', props.image)
+}
+
 // Проверяем, можно ли отправить на модерацию
 const canShareRequest = computed(() => {
   return props.isMyLibrary && !props.image.is_shared && !props.image.share_requested_at
@@ -153,6 +166,20 @@ const handleDragStart = (event) => {
         loading="lazy"
       />
       <div v-else class="image-card__loading">Загрузка...</div>
+
+      <!-- Кнопка избранного (сердечко) -->
+      <button
+        v-if="showFavoriteButton"
+        type="button"
+        class="image-card__favorite"
+        :class="{ 'image-card__favorite--active': isFavorite }"
+        :title="isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'"
+        @click="handleToggleFavorite"
+      >
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+      </button>
 
       <!-- Индикатор статуса -->
       <div v-if="statusLabel" class="image-card__status-badge">
@@ -400,6 +427,62 @@ const handleDragStart = (event) => {
 }
 
 .image-card__action:active {
+  transform: scale(0.95);
+}
+
+/* Favorite button (heart) */
+.image-card__favorite {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
+  color: #ffffff;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.image-card__favorite svg {
+  width: 16px;
+  height: 16px;
+  fill: transparent;
+  stroke: #ffffff;
+  stroke-width: 2;
+  transition: all 0.2s ease;
+}
+
+.image-card:hover .image-card__favorite {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.image-card__favorite--active {
+  opacity: 1;
+  pointer-events: auto;
+  background: rgba(239, 68, 68, 0.85);
+}
+
+.image-card__favorite--active svg {
+  fill: #ffffff;
+  stroke: #ffffff;
+}
+
+.image-card__favorite:hover {
+  transform: scale(1.1);
+}
+
+.image-card__favorite:active {
   transform: scale(0.95);
 }
 </style>

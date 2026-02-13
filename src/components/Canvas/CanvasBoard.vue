@@ -41,7 +41,8 @@ import { useNotesStore } from '../../stores/notes.js';
 import { useMobileStore } from '../../stores/mobile.js';
 import { useStickersStore } from '../../stores/stickers.js';
 import { useBoardStore } from '../../stores/board.js';
-import { useSidePanelsStore } from '../../stores/sidePanels.js';  
+import { useSidePanelsStore } from '../../stores/sidePanels.js';
+import { useNotificationsStore } from '../../stores/notifications';  
 import { Engine } from '../../utils/calculationEngine';
 import {
   parseActivePV,
@@ -68,6 +69,7 @@ const mobileStore = useMobileStore();
 const stickersStore = useStickersStore();
 const boardStore = useBoardStore();
 const sidePanelsStore = useSidePanelsStore();
+const notificationsStore = useNotificationsStore();
 const anchorsStore = useAnchorsStore();  
 const imagesStore = useImagesStore();  
 const emit = defineEmits(['update-connection-status']);
@@ -661,10 +663,12 @@ const {
   focusCardOnCanvas,
   focusStickerOnCanvas,
   focusAnchorOnCanvas,
+  focusImageOnCanvas,
   getBranchDescendants
 } = useCanvasFocus({
   cardsStore,
   stickersStore,
+  imagesStore,
   boardStore,
   anchors,
   connections,
@@ -1189,6 +1193,14 @@ watch(pendingFocusAnchorId, (anchorId) => {
   }
   focusAnchorOnCanvas(anchorId);
   pendingFocusAnchorId.value = null;
+});
+
+// Наблюдаем за запросами на фокусировку изображения через Pinia store
+watch(() => imagesStore.pendingFocusImageId, (imageId) => {
+  if (imageId !== null) {
+    focusImageOnCanvas(imageId);
+    imagesStore.clearPendingFocusImage();
+  }
 });
 
 
@@ -2567,6 +2579,11 @@ const handleImageDragOver = (event) => {
 const handleImageDrop = async (event) => {
   event.preventDefault();
   event.stopPropagation();
+
+  if (!boardStore.currentBoardId) {
+    notificationsStore.addNotification({ message: 'Сначала откройте доску', type: 'info', duration: 4000 });
+    return;
+  }
 
   // Получаем данные изображения
   const jsonData = event.dataTransfer.getData('application/json');

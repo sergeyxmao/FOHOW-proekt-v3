@@ -2,6 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(dir:*)"
+    ],
+    "additionalDirectories": [
+      "c:\\FOHOW-proekt-v3"
     ]
   }
 }

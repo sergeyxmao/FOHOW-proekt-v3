@@ -977,17 +977,12 @@
                     Ваша подписка истекла, но доступ сохранён до окончания льготного периода. Пожалуйста, продлите подписку.
                   </div>
                   <!-- Запланированный тариф -->
-                  <div v-if="subscriptionStore.scheduledPlan" class="tariff-detail-item scheduled-plan-info">
-                    <span class="detail-label">Запланированный тариф:</span>
-                    <span class="detail-value scheduled-plan-name">{{ subscriptionStore.scheduledPlan.name }}</span>
-                  </div>
                   <div v-if="subscriptionStore.scheduledPlan" class="scheduled-plan-message">
                     <template v-if="subscriptionStore.scheduledPlan.expiresAt">
-                      Период: с {{ formatDate(subscriptionStore.currentPlan?.expiresAt) }} по {{ formatDate(subscriptionStore.scheduledPlan.expiresAt) }}
-                      ({{ getScheduledPlanDays() }} дн.)
+                      С {{ formatDate(subscriptionStore.currentPlan?.expiresAt) }} вы перейдёте на тариф <strong>{{ subscriptionStore.scheduledPlan.name }}</strong> ({{ getScheduledPlanDays() }} дн.)
                     </template>
                     <template v-else>
-                      Тариф активируется автоматически после окончания текущей подписки.
+                      После окончания подписки вы перейдёте на тариф <strong>{{ subscriptionStore.scheduledPlan.name }}</strong>
                     </template>
                   </div>
                 </div>

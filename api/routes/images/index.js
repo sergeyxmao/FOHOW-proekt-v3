@@ -1,6 +1,7 @@
 import { registerMyLibraryRoutes } from './myLibrary.js';
 import { registerSharedRoutes } from './shared.js';
 import { registerProxyRoutes } from './proxy.js';
+import { registerImageFavoriteRoutes } from './favorites.js';
 
 /**
  * Регистрация всех маршрутов для работы с изображениями
@@ -21,4 +22,7 @@ export function registerImageRoutes(app) {
 
   // Прокси для получения изображений
   registerProxyRoutes(app);
+
+  // Избранные изображения
+  registerImageFavoriteRoutes(app);
 }

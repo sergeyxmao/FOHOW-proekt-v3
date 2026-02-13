@@ -7,7 +7,8 @@ import { useHistoryStore } from './history'
 export const useImagesStore = defineStore('images', {
   state: () => ({
     images: [],
-    selectedImageIds: []
+    selectedImageIds: [],
+    pendingFocusImageId: null
   }),
 
   getters: {
@@ -522,6 +523,21 @@ export const useImagesStore = defineStore('images', {
 
         return exportData
       })
+    },
+
+    /**
+     * Запросить фокусировку на изображении по ID
+     * @param {string} imageId - ID изображения на canvas
+     */
+    requestFocusOnImage(imageId) {
+      this.pendingFocusImageId = imageId
+    },
+
+    /**
+     * Очистить запрос фокусировки
+     */
+    clearPendingFocusImage() {
+      this.pendingFocusImageId = null
     },
 
     /**
