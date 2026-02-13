@@ -123,13 +123,41 @@ ALTER TABLE users ADD COLUMN scheduled_plan_expires_at TIMESTAMP WITH TIME ZONE;
 
 ## Крон-задачи
 
-### handleSubscriptionExpiry (01:00 MSK)
+### handleSubscriptionExpiry (09:00 MSK)
 
 Модифицирована: перед переходом на Guest проверяет `scheduled_plan_id`:
 - Если есть → активирует запланированный тариф на 30 дней
 - Если нет → стандартная логика (Guest + grace period)
 
 Source в `subscription_history`: `'scheduled_activation'`
+
+### Расписание крон-задач (порядок критичен)
+
+| Время (МСК) | Задача | Примечание |
+|---|---|---|
+| 09:00 | `handleSubscriptionExpiry` | ПЕРВОЙ — активирует scheduled планы |
+| 09:05 | `handleGracePeriodExpiry` | После обработки подписок, исключает пользователей с `scheduled_plan_id` |
+| 09:10 | `closeDemoPeriods` | Закрытие демо-периодов |
+| 09:15 | `switchDemoToGuest` | Смена Демо → Гостевой, исключает пользователей с `scheduled_plan_id` |
+| 09:20 | `deleteLockedBoardsAfter14Days` | Удаление заблокированных досок |
+| 09:25 | `processDailyLocks` | Обработка Soft/Hard Lock досок |
+| 09:30 | `notifyExpiringSubscriptions` | ПОСЛЕДНЕЙ — после всех изменений статусов |
+| Каждый час | `cleanupOldSessions` | Техническая очистка |
+| Каждый час | `cleanupExpiredVerificationCodes` | Техническая очистка |
+| Каждые 5 мин | `cleanupInactiveSessions` | Автовыход неактивных сессий |
+| Каждый час | Очистка `telegram_link_codes` | Техническая очистка |
+
+### Защита от гонки крон-задач
+
+Несколько крон-задач работают с истёкшими подписками и могут конфликтовать:
+
+| Задача | Время | Обработка scheduled |
+|--------|-------|---------------------|
+| `handleSubscriptionExpiry` | 09:00 | **Единственная** задача, которая активирует `scheduled_plan_id` |
+| `handleGracePeriodExpiry` | 09:05 | Безопасна: `handleSubscriptionExpiry` очищает `grace_period_until` при активации scheduled плана |
+| `switchDemoToGuest` | 09:15 | Исключает пользователей с `scheduled_plan_id IS NOT NULL` |
+
+**Правило:** только `handleSubscriptionExpiry` принимает решение о пользователях с запланированным тарифом. Остальные задачи пропускают таких пользователей через SQL-условие `AND u.scheduled_plan_id IS NULL`.
 
 ## Фронтенд
 
@@ -172,3 +200,10 @@ Source в `subscription_history`: `'scheduled_activation'`
 3. **Guest/Demo → любой платный** — всегда разрешено, немедленная активация.
 4. **Запланированный тариф удалён из БД** — FK `ON DELETE SET NULL`, переход на Guest по стандартной логике.
 5. **Grace period + запланированный тариф** — при активации запланированного тарифа `grace_period_until` очищается.
+
+## История изменений
+
+## История изменений
+
+- 2026-02-13: Все крон-задачи с уведомлениями перенесены с ночного времени (01:00-03:00) на утреннее (09:00-09:30 МСК)
+- 2026-02-13: Добавлена защита от гонки крон-задач — `switchDemoToGuest` исключает пользователей с `scheduled_plan_id IS NOT NULL`

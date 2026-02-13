@@ -5,6 +5,7 @@ export function useCanvasFocus(options) {
   const {
     cardsStore,
     stickersStore,
+    imagesStore,
     boardStore,
     anchors,
     connections,
@@ -119,6 +120,48 @@ export function useCanvasFocus(options) {
     boardStore.selectAnchor(anchorId)
   }
 
+  /**
+   * Фокусировка на изображении по ID
+   */
+  const focusImageOnCanvas = (imageId) => {
+    if (!imagesStore) return
+
+    const image = imagesStore.images.find(img => img.id === imageId)
+    if (!image || !canvasContainerRef.value) {
+      return
+    }
+
+    const scale = 1.0
+    const containerRect = canvasContainerRef.value.getBoundingClientRect()
+    const imageCenterX = image.x + (image.width || 0) / 2
+    const imageCenterY = image.y + (image.height || 0) / 2
+    const targetTranslateX = containerRect.width / 2 - imageCenterX * scale
+    const targetTranslateY = containerRect.height / 2 - imageCenterY * scale
+
+    setZoomTransform({
+      scale,
+      translateX: targetTranslateX,
+      translateY: targetTranslateY
+    })
+
+    // Снимаем выделение со всего
+    imagesStore.deselectAllImages()
+    cardsStore.deselectAllCards()
+
+    // Выделяем изображение и запускаем анимацию
+    setTimeout(() => {
+      imagesStore.selectImage(imageId)
+
+      const imageElement = document.querySelector(`[data-image-id="${imageId}"]`)
+      if (imageElement) {
+        imageElement.classList.add('canvas-image--focused')
+        setTimeout(() => {
+          imageElement.classList.remove('canvas-image--focused')
+        }, 2000)
+      }
+    }, 150)
+  }
+
   // === Вспомогательные функции ===
 
   /**
@@ -193,6 +236,7 @@ export function useCanvasFocus(options) {
     focusCardOnCanvas,
     focusStickerOnCanvas,
     focusAnchorOnCanvas,
+    focusImageOnCanvas,
 
     // Вспомогательные методы
     getBranchDescendants

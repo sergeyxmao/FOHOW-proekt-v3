@@ -82,6 +82,7 @@ GET /api/docs/json
 | `api/routes/images/myLibrary.js` | Schema для 7 эндпоинтов библиотеки изображений |
 | `api/routes/images/shared.js` | Schema для 2 эндпоинтов публичных изображений |
 | `api/routes/images/proxy.js` | Schema для 1 эндпоинта прокси изображений |
+| `api/routes/images/favorites.js` | Schema для 4 эндпоинтов избранных изображений |
 | `api/routes/partners.js` | Schema для 2 эндпоинтов партнёров |
 | `api/routes/relationships.js` | Schema для 4 эндпоинтов связей |
 | `api/routes/favorites.js` | Schema для 3 эндпоинтов избранного |

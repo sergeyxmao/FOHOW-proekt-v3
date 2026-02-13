@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git clean:*)",
+      "Bash(del \"\\\\?\\\\c:\\\\FOHOW-proekt-v3\\\\nul\")",
+      "Bash(cmd.exe /c \"del \\\\?\\\\c:\\\\FOHOW-proekt-v3\\\\nul\")",
+      "Bash(cmd.exe /c \"dir nul\")",
+      "Bash(python:*)"
+    ],
+    "additionalDirectories": [
+      "c:\\FOHOW-proekt-v3",
+      "c:\\FOHOW-proekt-v3\\.git"
     ]
   }
 }

@@ -47,7 +47,15 @@ export default {
     selectHeaderColor: '选择标题颜色',
     changeColor: '更改颜色',
     currentIndex: '当前索引',
-    language: '语言'
+    language: '语言',
+    tooltips: {
+      showGrid: '在画板上显示网格，方便元素对齐',
+      lines: '自定义卡片之间连接线的颜色和粗细',
+      animation: '连接线脉冲动画——帮助直观展示结构',
+      background: '选择画板背景颜色——浅色、深色或自定义',
+      headerColor: '画板上合作伙伴卡片标题的颜色',
+      language: '切换界面语言'
+    }
   },
   projectMenu: {
     saveJson: '保存项目 JSON',
@@ -55,7 +63,15 @@ export default {
     exportHtml: '导出为 HTML',
     exportSvg: '导出为 SVG',
     exportPng: '导出为 PNG',
-    print: '打印'
+    print: '打印',
+    tooltips: {
+      saveJson: '将画板保存到电脑文件中以备份',
+      loadJson: '从电脑中打开之前保存的画板文件',
+      exportHtml: '将画板保存为可在任何浏览器中打开的网页',
+      exportSvg: '将画板保存为矢量格式，适合高质量打印',
+      exportPng: '将画板保存为图片——方便在聊天软件中发送',
+      print: '将画板发送到打印机或保存为PDF'
+    }
   },
   toolsMenu: {
     title: '工具',
@@ -71,19 +87,34 @@ export default {
     newStructureTitle: '新建结构',
     newStructureMessage: '在创建新结构之前是否要保存当前结构？',
     dontSave: '不保存',
-    saveAndCreate: '保存并创建新的'
+    saveAndCreate: '保存并创建新的',
+    tooltips: {
+      drawingMode: '在画板上手绘线条和标注',
+      hierarchyMode: '拖动时自动将合作伙伴按层级排列成树形结构',
+      showGuides: '显示辅助线，帮助精确对齐画板上的元素',
+      clearCanvas: '删除画板上的所有元素——卡片、连接、图片、贴纸',
+      newStructure: '创建新的空白画板。可以先保存当前画板'
+    }
   },
   discussionMenu: {
     title: '讨论',
-    notesList: '笔记列表',
-    boardComments: '评论',
+    notesList: '日历',
+    boardComments: '笔记',
     stickerMessages: '贴纸',
     allStickers: '所有贴纸',
     addSticker: '添加贴纸',
     setAnchor: '设置锚点',
     boardAnchors: '看板上的点',
     geolocation: '地理定位',
-    createStructureAlert: '请创建新结构或进入现有结构以添加贴纸。'
+    createStructureAlert: '请创建新结构或进入现有结构以添加贴纸。',
+    tooltips: {
+      partners: '当前画板上所有合作伙伴的列表，支持搜索和筛选',
+      notesList: '每个许可证的所有日历记录列表。<br>搜索、删除',
+      images: '图片库——上传、查看并放置图片到画板上。<br>创建自定义相册。<br>收藏夹',
+      boardComments: '留下评论和笔记以免遗忘',
+      geolocation: '画板上的地理定位点——如果结构较大，设置定位点以快速导航到所需位置',
+      stickerMessages: '画板上的便签——带文字的彩色卡片'
+    }
   },
   board: {
     saveStructure: '保存结构',
@@ -152,5 +183,9 @@ export default {
   },
   editor: {
     zoom: '缩放'
+  },
+  noteWindow: {
+    zoomIn: '放大日历',
+    zoomOut: '缩小日历'
   }
 }

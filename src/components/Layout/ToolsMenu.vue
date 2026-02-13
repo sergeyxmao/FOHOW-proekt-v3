@@ -99,6 +99,10 @@ const cancelNewStructure = () => {
           @click="handleActivatePencil"
         >
           {{ t('toolsMenu.drawingMode') }}
+          <span class="tools-menu__info" @click.stop>
+            &#9432;
+            <span class="tools-menu__tooltip" v-html="t('toolsMenu.tooltips.drawingMode')"></span>
+          </span>
         </button>
       </div>
       <div class="tools-menu__item">
@@ -110,6 +114,10 @@ const cancelNewStructure = () => {
           @click="toggleHierarchyMode"
         >
           {{ t('toolsMenu.hierarchyMode') }}
+          <span class="tools-menu__info" @click.stop>
+            &#9432;
+            <span class="tools-menu__tooltip" v-html="t('toolsMenu.tooltips.hierarchyMode')"></span>
+          </span>
         </button>
       </div>
       <div class="tools-menu__item">
@@ -121,6 +129,10 @@ const cancelNewStructure = () => {
           @click="toggleGuides"
         >
           {{ t('toolsMenu.showGuides') }}
+          <span class="tools-menu__info" @click.stop>
+            &#9432;
+            <span class="tools-menu__tooltip" v-html="t('toolsMenu.tooltips.showGuides')"></span>
+          </span>
         </button>
       </div>
       <div class="tools-menu__item">
@@ -131,6 +143,10 @@ const cancelNewStructure = () => {
           @click="handleClearCanvas"
         >
           {{ t('toolsMenu.clearCanvas') }}
+          <span class="tools-menu__info" @click.stop>
+            &#9432;
+            <span class="tools-menu__tooltip" v-html="t('toolsMenu.tooltips.clearCanvas')"></span>
+          </span>
         </button>
       </div>
       <div class="tools-menu__item">
@@ -141,6 +157,10 @@ const cancelNewStructure = () => {
           @click="handleNewStructure"
         >
           {{ t('toolsMenu.newStructure') }}
+          <span class="tools-menu__info" @click.stop>
+            &#9432;
+            <span class="tools-menu__tooltip" v-html="t('toolsMenu.tooltips.newStructure')"></span>
+          </span>
         </button>
       </div>
     </div>
@@ -226,6 +246,9 @@ const cancelNewStructure = () => {
 
 .tools-menu__action {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 14px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: 12px;
@@ -361,5 +384,94 @@ const cancelNewStructure = () => {
 .dialog-button--confirm:hover {
   background: #e8a900;
   box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+}
+
+/* Info icon — скрыт по умолчанию, появляется при наведении на кнопку */
+.tools-menu__info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 16px;
+  border-radius: 50%;
+  color: rgba(15, 23, 42, 0.35);
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.15s ease;
+  cursor: help;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.tools-menu__action:hover .tools-menu__info {
+  opacity: 1;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.tools-menu__info:hover {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Modern theme — info icon */
+.tools-menu--modern .tools-menu__info {
+  color: rgba(229, 243, 255, 0.35);
+}
+
+.tools-menu--modern .tools-menu__action:hover .tools-menu__info {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.tools-menu--modern .tools-menu__info:hover {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Tooltip — появляется при наведении на ⓘ */
+.tools-menu__tooltip {
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 230px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.94);
+  color: #f1f5f9;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+/* Стрелка тултипа */
+.tools-menu__tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-right-color: rgba(15, 23, 42, 0.94);
+}
+
+.tools-menu__info:hover .tools-menu__tooltip {
+  opacity: 1;
+}
+
+/* Modern theme — tooltip */
+.tools-menu--modern .tools-menu__tooltip {
+  background: rgba(30, 42, 70, 0.96);
+  border: 1px solid rgba(96, 164, 255, 0.25);
+  box-shadow: 0 8px 24px rgba(6, 11, 21, 0.4);
+}
+
+.tools-menu--modern .tools-menu__tooltip::before {
+  border-right-color: rgba(30, 42, 70, 0.96);
 }
 </style>

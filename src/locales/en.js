@@ -47,7 +47,15 @@ export default {
     selectHeaderColor: 'Select header color',
     changeColor: 'Change color',
     currentIndex: 'Current index',
-    language: 'Language'
+    language: 'Language',
+    tooltips: {
+      showGrid: 'Shows a grid on the board for easier element placement',
+      lines: 'Customize the color and thickness of connection lines between cards',
+      animation: 'Pulsating animation on connection lines — helps visually highlight the structure',
+      background: 'Choose the board background color — light, dark, or custom',
+      headerColor: 'Color of the partner card headers on the board',
+      language: 'Switch the interface language'
+    }
   },
   projectMenu: {
     saveJson: 'Save Project JSON',
@@ -60,7 +68,15 @@ export default {
     exportHtml: 'Export to HTML',
     exportSvg: 'Export to SVG',
     exportPng: 'Export to PNG',
-    print: 'Print'
+    print: 'Print',
+    tooltips: {
+      saveJson: 'Saves the board to a file on your computer for backup',
+      loadJson: 'Opens a previously saved board file from your computer',
+      exportHtml: 'Saves the board as a web page that can be opened in any browser',
+      exportSvg: 'Saves the board in vector format for high-quality printing',
+      exportPng: 'Saves the board as an image — convenient for sharing in messengers',
+      print: 'Sends the board to a printer or saves as PDF'
+    }
   },
   toolsMenu: {
     title: 'Tools',
@@ -76,19 +92,34 @@ export default {
     newStructureTitle: 'New Structure',
     newStructureMessage: 'Do you want to save the current structure before creating a new one?',
     dontSave: "Don't Save",
-    saveAndCreate: 'Save and Create New'
+    saveAndCreate: 'Save and Create New',
+    tooltips: {
+      drawingMode: 'Draw lines and notes freehand directly on the board',
+      hierarchyMode: 'Automatically arranges partners in a tree structure by levels when dragging',
+      showGuides: 'Shows guide lines for precise alignment of elements on the board',
+      clearCanvas: 'Removes all elements from the board — cards, connections, images, stickers',
+      newStructure: 'Creates a new blank board. You can save the current one first'
+    }
   },
   discussionMenu: {
     title: 'Discussion',
-    notesList: 'Notes List',
-    boardComments: 'Comments',
+    notesList: 'Calendar',
+    boardComments: 'Notes',
     stickerMessages: 'Stickers',
     allStickers: 'All stickers',
     addSticker: 'Add Sticker',
     setAnchor: 'Set point',
     boardAnchors: 'Points on board',
     geolocation: 'Geolocation',
-    createStructureAlert: 'Please create a new structure or enter an existing one to add a sticker.'
+    createStructureAlert: 'Please create a new structure or enter an existing one to add a sticker.',
+    tooltips: {
+      partners: 'List of all partners on the current board with search and filtering',
+      notesList: 'List of all calendar entries for each license.<br>Search, delete',
+      images: 'Image library — upload, view, and place images on the board.<br>Create custom galleries.<br>Favorites',
+      boardComments: 'Leave comments and notes so you don\'t forget',
+      geolocation: 'Geolocation points on the board — if the structure is large, set a point to quickly navigate to the right place',
+      stickerMessages: 'Sticky notes on the board — colored cards with text'
+    }
   },
   board: {
     saveStructure: 'Save Structure',
@@ -157,5 +188,9 @@ export default {
   },
   editor: {
     zoom: 'Zoom'
+  },
+  noteWindow: {
+    zoomIn: 'Enlarge calendar',
+    zoomOut: 'Shrink calendar'
   }
 }

@@ -4,7 +4,7 @@ import { useStickersStore } from '../../stores/stickers'
 import { useBoardStore } from '../../stores/board'
 import { useNotificationsStore } from '../../stores/notifications'
 import { useSidePanelsStore } from '../../stores/sidePanels'
-import { getSharedLibrary } from '../../services/imageService'
+import { getSharedLibrary, getFavoriteImageIds, addImageToFavorites, removeImageFromFavorites } from '../../services/imageService'
 import ImageCard from './ImageCard.vue'
 
 const stickersStore = useStickersStore()
@@ -36,6 +36,7 @@ const gridRef = ref(null)
 const scrollContainerRef = gridRef
 const gridWrapperRef = ref(null)
 const indicatorRef = ref(null)
+const favoriteIds = ref(new Set())
 let hideTimeout = null
 function onWheel(e) {
   e.stopPropagation()
@@ -356,9 +357,38 @@ defineExpose({
   resetState
 })
 
+async function loadFavoriteIds() {
+  try {
+    const result = await getFavoriteImageIds()
+    favoriteIds.value = new Set(result.ids || [])
+  } catch (e) {
+    console.error('[SharedLibraryTab] Load favorite IDs error:', e)
+  }
+}
+
+async function handleToggleFavorite(image) {
+  const imageId = image.id
+  try {
+    if (favoriteIds.value.has(imageId)) {
+      await removeImageFromFavorites(imageId)
+      favoriteIds.value.delete(imageId)
+      favoriteIds.value = new Set(favoriteIds.value)
+    } else {
+      await addImageToFavorites(imageId)
+      favoriteIds.value.add(imageId)
+      favoriteIds.value = new Set(favoriteIds.value)
+    }
+  } catch (e) {
+    console.error('[SharedLibraryTab] Toggle favorite error:', e)
+  }
+}
+
 // Жизненный цикл
 onMounted(async () => {
-  await loadSharedLibrary()
+  await Promise.all([
+    loadSharedLibrary(),
+    loadFavoriteIds()
+  ])
 
   await nextTick()
   const container = scrollContainerRef.value
@@ -445,7 +475,10 @@ onBeforeUnmount(() => {
             :key="image.id"
             :image="image"
             :is-my-library="false"
+            :is-favorite="favoriteIds.has(image.id)"
+            :show-favorite-button="true"
             @click="handleImageClick"
+            @toggle-favorite="handleToggleFavorite"
           />
         </div>
       </div>

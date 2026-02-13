@@ -5,6 +5,8 @@ import { useStickersStore } from '../../stores/stickers.js'
 import { useSubscriptionStore } from '../../stores/subscription.js'
 import MyLibraryTab from '../Images/MyLibraryTab.vue'
 import SharedLibraryTab from '../Images/SharedLibraryTab.vue'
+import FavoritesTab from '../Images/FavoritesTab.vue'
+import BoardImagesTab from '../Images/BoardImagesTab.vue'
 
 const props = defineProps({
   isModernTheme: {
@@ -13,7 +15,7 @@ const props = defineProps({
   },
   placementTarget: {
     type: String,
-    default: 'board'    
+    default: 'board'
   }
 })
 
@@ -24,7 +26,7 @@ const subscriptionStore = useSubscriptionStore()
 // Получаем состояние режима рисования из родительского компонента
 const isPencilMode = inject('isPencilMode', ref(false))
 
-// Активная вкладка: 'my' | 'shared'
+// Активная вкладка: 'my' | 'shared' | 'favorites' | 'board'
 const activeTab = ref('my')
 
 // Проверка доступа к библиотеке изображений
@@ -34,7 +36,7 @@ const sharedLibraryRef = ref(null)
 
 const handleClose = () => {
   myLibraryRef.value?.resetState?.()
-  sharedLibraryRef.value?.resetState?.()  
+  sharedLibraryRef.value?.resetState?.()
   sidePanelsStore.closePanel()
 }
 
@@ -77,7 +79,7 @@ const setActiveTab = (tab) => {
       </p>
     </div>
 
-    <!-- Вкладки второго уровня -->
+    <!-- Вкладки: Личные | Общая | ♥ | 🖼 -->
     <div v-else class="images-panel__tabs">
       <button
         type="button"
@@ -85,7 +87,7 @@ const setActiveTab = (tab) => {
         :class="{ 'images-panel__tab--active': activeTab === 'my' }"
         @click="setActiveTab('my')"
       >
-        Моя библиотека
+        Личные
       </button>
       <button
         type="button"
@@ -95,10 +97,32 @@ const setActiveTab = (tab) => {
       >
         Общая
       </button>
+      <button
+        type="button"
+        class="images-panel__tab images-panel__tab--icon"
+        :class="{ 'images-panel__tab--active': activeTab === 'favorites' }"
+        title="Избранное"
+        @click="setActiveTab('favorites')"
+      >
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="images-panel__tab-icon">
+          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="currentColor"/>
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="images-panel__tab images-panel__tab--icon"
+        :class="{ 'images-panel__tab--active': activeTab === 'board' }"
+        title="На доске"
+        @click="setActiveTab('board')"
+      >
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="images-panel__tab-icon">
+          <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" fill="currentColor"/>
+        </svg>
+      </button>
     </div>
 
     <div v-if="canUseImages" class="images-panel__content">
-      <!-- Содержимое "Моя библиотека" -->
+      <!-- Содержимое "Личные" -->
       <div v-if="activeTab === 'my'" class="images-panel__tab-content images-panel__tab-content--full">
         <MyLibraryTab
           ref="myLibraryRef"
@@ -112,6 +136,18 @@ const setActiveTab = (tab) => {
           ref="sharedLibraryRef"
           :placement-target="props.placementTarget"
         />
+      </div>
+
+      <!-- Содержимое "Избранное" -->
+      <div v-if="activeTab === 'favorites'" class="images-panel__tab-content images-panel__tab-content--full">
+        <FavoritesTab
+          :placement-target="props.placementTarget"
+        />
+      </div>
+
+      <!-- Содержимое "На доске" -->
+      <div v-if="activeTab === 'board'" class="images-panel__tab-content images-panel__tab-content--full">
+        <BoardImagesTab />
       </div>
     </div>
   </div>
@@ -193,7 +229,7 @@ const setActiveTab = (tab) => {
 
 .images-panel__tab {
   flex: 1;
-  padding: 10px 16px;
+  padding: 10px 12px;
   border: none;
   background: transparent;
   color: #64748b;
@@ -203,6 +239,20 @@ const setActiveTab = (tab) => {
   border-radius: 6px;
   transition: all 0.2s ease;
   white-space: nowrap;
+}
+
+.images-panel__tab--icon {
+  flex: 0 0 auto;
+  width: 40px;
+  padding: 10px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.images-panel__tab-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .images-panel__tab:hover {

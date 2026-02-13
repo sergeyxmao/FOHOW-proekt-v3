@@ -255,4 +255,24 @@ function handleContextMenu(event) {
   transform: translateY(-50%);
   cursor: w-resize;
 }
+
+/* Анимация при фокусировке из панели "На доске" */
+.canvas-image--focused {
+  animation: imagePulse 2s ease-in-out;
+}
+
+@keyframes imagePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(59, 130, 246, 0);
+  }
+  25% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  }
+  75% {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+  }
+}
 </style>

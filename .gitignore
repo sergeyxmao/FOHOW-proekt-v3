@@ -27,6 +27,7 @@ lerna-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+nul
 
 # Build и dist
 dist/
@@ -53,6 +54,6 @@ server.log
 
 # Build артефакты в корне
 /assets/
-/Avatar.png
+/Avatar.svg
 /rank-*.png
 api/test/

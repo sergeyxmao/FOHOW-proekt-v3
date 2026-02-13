@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background -->
+  <circle cx="100" cy="100" r="100" fill="#D4952B"/>
+  <circle cx="100" cy="100" r="92" fill="#E8AD3B"/>
+
+  <!-- Head -->
+  <circle cx="100" cy="75" r="30" fill="#F5D89A"/>
+
+  <!-- Body (shoulders + torso) -->
+  <ellipse cx="100" cy="165" rx="52" ry="42" fill="#F5D89A"/>
+</svg>

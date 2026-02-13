@@ -144,6 +144,7 @@ function changeLocale(newLocale) {
         <button type="button" class="view-menu__main" @click="toggleSubmenu('grid')">
           <span class="view-menu__icon" aria-hidden="true">▦</span>
           <span class="view-menu__label">{{ t('viewMenu.showGrid') }}</span>
+          <span class="view-menu__info" @click.stop>&#9432;<span class="view-menu__tooltip" v-html="t('viewMenu.tooltips.showGrid')"></span></span>
           <span class="view-menu__caret" aria-hidden="true">›</span>
         </button>
         <div v-if="openSubmenuId === 'grid'" class="view-menu__submenu">
@@ -178,6 +179,7 @@ function changeLocale(newLocale) {
         <button type="button" class="view-menu__main" @click="toggleSubmenu('lines')">
           <span class="view-menu__icon view-menu__icon--swatch" :style="{ backgroundColor: lineColor }" aria-hidden="true"></span>
           <span class="view-menu__label">{{ t('viewMenu.lines') }}</span>
+          <span class="view-menu__info" @click.stop>&#9432;<span class="view-menu__tooltip" v-html="t('viewMenu.tooltips.lines')"></span></span>
           <span class="view-menu__caret" aria-hidden="true">›</span>
         </button>
         <div v-if="openSubmenuId === 'lines'" class="view-menu__submenu">
@@ -224,6 +226,7 @@ function changeLocale(newLocale) {
         <button type="button" class="view-menu__main" @click="toggleSubmenu('animation')">
           <span class="view-menu__icon" aria-hidden="true">⏱️</span>
           <span class="view-menu__label">{{ t('viewMenu.animation') }}</span>
+          <span class="view-menu__info" @click.stop>&#9432;<span class="view-menu__tooltip" v-html="t('viewMenu.tooltips.animation')"></span></span>
           <span class="view-menu__caret" aria-hidden="true">›</span>
         </button>
         <div v-if="openSubmenuId === 'animation'" class="view-menu__submenu">
@@ -275,6 +278,7 @@ function changeLocale(newLocale) {
         <button type="button" class="view-menu__main" @click="toggleSubmenu('background')">
           <span class="view-menu__icon view-menu__icon--swatch" :style="{ backgroundColor: backgroundGradient }" aria-hidden="true"></span>
           <span class="view-menu__label">{{ t('viewMenu.background') }}</span>
+          <span class="view-menu__info" @click.stop>&#9432;<span class="view-menu__tooltip" v-html="t('viewMenu.tooltips.background')"></span></span>
           <span class="view-menu__caret" aria-hidden="true">›</span>
         </button>
         <div v-if="openSubmenuId === 'background'" class="view-menu__submenu">
@@ -300,6 +304,7 @@ function changeLocale(newLocale) {
         <button type="button" class="view-menu__main" @click="toggleSubmenu('header')">
           <span class="view-menu__icon view-menu__icon--swatch" :style="{ backgroundColor: headerColor }" aria-hidden="true"></span>
           <span class="view-menu__label">{{ t('viewMenu.headerColor') }}</span>
+          <span class="view-menu__info" @click.stop>&#9432;<span class="view-menu__tooltip" v-html="t('viewMenu.tooltips.headerColor')"></span></span>
           <span class="view-menu__caret" aria-hidden="true">›</span>
         </button>
         <div v-if="openSubmenuId === 'header'" class="view-menu__submenu">
@@ -326,6 +331,7 @@ function changeLocale(newLocale) {
         <button type="button" class="view-menu__main" @click="toggleSubmenu('language')">
           <span class="view-menu__icon" aria-hidden="true">🌐</span>
           <span class="view-menu__label">{{ t('viewMenu.language') }}</span>
+          <span class="view-menu__info" @click.stop>&#9432;<span class="view-menu__tooltip" v-html="t('viewMenu.tooltips.language')"></span></span>
           <span class="view-menu__caret" aria-hidden="true">›</span>
         </button>
         <div v-if="openSubmenuId === 'language'" class="view-menu__submenu">
@@ -720,5 +726,92 @@ function changeLocale(newLocale) {
 .view-menu__lang-option {
   width: 100%;
   justify-content: flex-start;
+}
+
+/* Info icon — скрыт по умолчанию, появляется при наведении на пункт */
+.view-menu__info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 16px;
+  border-radius: 50%;
+  color: rgba(15, 23, 42, 0.35);
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.15s ease;
+  cursor: help;
+  flex-shrink: 0;
+}
+
+.view-menu__main:hover .view-menu__info {
+  opacity: 1;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.view-menu__info:hover {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Modern theme — info icon */
+.view-menu--modern .view-menu__info {
+  color: rgba(229, 243, 255, 0.35);
+}
+
+.view-menu--modern .view-menu__main:hover .view-menu__info {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.view-menu--modern .view-menu__info:hover {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Tooltip — появляется при наведении на ⓘ */
+.view-menu__tooltip {
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 230px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.94);
+  color: #f1f5f9;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.view-menu__tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-right-color: rgba(15, 23, 42, 0.94);
+}
+
+.view-menu__info:hover .view-menu__tooltip {
+  opacity: 1;
+}
+
+/* Modern theme — tooltip */
+.view-menu--modern .view-menu__tooltip {
+  background: rgba(30, 42, 70, 0.96);
+  border: 1px solid rgba(96, 164, 255, 0.25);
+  box-shadow: 0 8px 24px rgba(6, 11, 21, 0.4);
+}
+
+.view-menu--modern .view-menu__tooltip::before {
+  border-right-color: rgba(30, 42, 70, 0.96);
 }
 </style>

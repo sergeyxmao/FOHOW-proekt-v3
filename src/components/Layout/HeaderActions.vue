@@ -375,7 +375,7 @@ function handleToggleTheme() {
           title="Добавить карточку партнёра"
           @click="addUserCard"
         >
-          <img src="/Avatar.png" alt="" class="header-actions__avatar-icon" aria-hidden="true" />
+          <img src="/Avatar.svg" alt="" class="header-actions__avatar-icon" aria-hidden="true" />
           <span class="visually-hidden">Добавить карточку партнёра</span>
         </button>
       </div>
@@ -459,7 +459,7 @@ function handleToggleTheme() {
           title="Добавить карточку партнёра"
           @click="addUserCard"
         >
-          <img src="/Avatar.png" alt="" class="header-actions__avatar-icon" aria-hidden="true" />
+          <img src="/Avatar.svg" alt="" class="header-actions__avatar-icon" aria-hidden="true" />
           <span class="visually-hidden">Добавить карточку партнёра</span>
         </button>
       </div>

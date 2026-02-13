@@ -135,8 +135,8 @@ const handleClose = () => {
 
 // Получить URL аватара
 const getAvatarUrl = (avatarUrl) => {
-  if (!avatarUrl || avatarUrl === '/Avatar.png') {
-    return '/Avatar.png'
+  if (!avatarUrl || avatarUrl === '/Avatar.svg') {
+    return '/Avatar.svg'
   }
   // Если URL относительный, возвращаем как есть
   if (avatarUrl.startsWith('/')) {

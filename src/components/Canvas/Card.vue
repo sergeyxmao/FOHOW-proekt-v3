@@ -88,9 +88,9 @@ const noteButtonClasses = computed(() => ({
 }));
 const noteButtonTitle = computed(() => {
   if (isNoteVisible.value) {
-    return 'Скрыть заметку';
+    return 'Скрыть календарь';
   }
-  return hasNotes.value ? 'Открыть заметку' : 'Добавить заметку';
+  return hasNotes.value ? 'Открыть календарь' : 'Добавить запись';
 });
 const noteIndicatorColor = computed(() => {
   const color = noteState.value?.highlightColor;
@@ -1156,7 +1156,7 @@ watch(
         :title="noteButtonTitle"
         @click="handleAddNoteClick"
       >
-        📝
+        📅
         <span
           v-if="hasNotes"
           class="card-note-btn__indicator"
@@ -1209,7 +1209,9 @@ watch(
   overflow: visible;
   touch-action: none;
   display: flex;
-  flex-direction: column;  
+  flex-direction: column;
+  /* НЕ использовать paint — аватарка на больших карточках выступает за границу */
+  contain: layout style;
 }
 
 .card:hover {
@@ -1330,27 +1332,27 @@ watch(
 }
 
 .card-note-btn {
-  width: 36px;
-  height: 36px;
+  width: 54px;
+  height: 54px;
   border: none;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 193, 7, 0.22);
   color: #111827;
-  font-size: 18px;
+  font-size: 27px;
   line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
-  position: relative;  
+  box-shadow: 0 6px 18px rgba(255, 193, 7, 0.25);
+  position: relative;
 }
 
 .card-note-btn:hover {
-  background: rgba(15, 23, 42, 0.18);
+  background: rgba(255, 193, 7, 0.35);
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
+  box-shadow: 0 10px 24px rgba(255, 193, 7, 0.35);
 }
 
 .card-note-btn:active {
@@ -1378,10 +1380,10 @@ watch(
 }  
 .card--large .card-note-btn,
 .card--gold .card-note-btn {
-  width: 48px;
-  height: 48px;
-  font-size: 22px;
-  border-radius: 16px;
+  width: 72px;
+  height: 72px;
+  font-size: 33px;
+  border-radius: 20px;
 }
 .card-close-btn {
 .card--large .card-note-btn__indicator,
@@ -1456,14 +1458,14 @@ watch(
 
 .coin-icon-wrapper {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
 }
 
 .coin-icon {
-  width: 32px;
-  height: 32px;
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
 }
 
@@ -1514,7 +1516,7 @@ watch(
 }
 
 .card-avatar--default {
-  background-image: url('/Avatar.png');
+  background-image: url('/Avatar.svg');
   background-size: cover;
   background-position: center;
   border: 4px solid white;
@@ -1527,7 +1529,7 @@ watch(
 .label {
   font-weight: 500;
   color: #6b7280;
-  font-size: 14px;
+  font-size: 23px;
   text-align: center;
   max-width: 100%;
   word-break: break-word;
@@ -1538,7 +1540,7 @@ watch(
 .value {
   color: #111827;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 24px;
   outline: none;
   padding: 3px 6px;
   border-radius: 6px;
@@ -1557,7 +1559,7 @@ watch(
 }
 
 .pv-value {
-  font-size: 18px;
+  font-size: 29px;
   font-weight: 600;
 }
 
@@ -1575,26 +1577,26 @@ watch(
 }
 
 .pv-separator {
-  font-size: 18px;
+  font-size: 29px;
   font-weight: 600;
   color: #111827;
   margin: 0 1px;
 }
 
 .pv-value-right {
-  font-size: 18px;
+  font-size: 29px;
   font-weight: 600;
   cursor: default;
 }
 
 .pv-left-input {
-  width: 60px;
+  width: 80px;
   padding: 2px 6px;
   border: 2px solid #3b82f6;
   border-radius: 4px;
   background: #fff8dc;
   color: #111827;
-  font-size: 18px;
+  font-size: 29px;
   font-weight: 600;
   text-align: center;
   outline: none;
@@ -1708,19 +1710,31 @@ watch(
 
 .card--large .label,
 .card--gold .label {
-  font-size: 20px;
+  font-size: 29px;
   font-weight: 700;
 }
 
 .card--large .value,
 .card--gold .value {
-  font-size: 22px;
+  font-size: 31px;
   font-weight: 700;
+}
+
+.card--large .coin-icon-wrapper,
+.card--gold .coin-icon-wrapper {
+  width: 49px;
+  height: 49px;
+}
+
+.card--large .coin-icon,
+.card--gold .coin-icon {
+  width: 49px;
+  height: 49px;
 }
 
 .card--large .pv-value,
 .card--gold .pv-value {
-  font-size: 26px;
+  font-size: 39px;
   font-weight: 800;
 }
 
@@ -1730,14 +1744,14 @@ watch(
 .card--gold .pv-value-left,
 .card--gold .pv-value-right,
 .card--gold .pv-separator {
-  font-size: 26px;
+  font-size: 39px;
   font-weight: 800;
 }
 
 .card--large .pv-left-input,
 .card--gold .pv-left-input {
-  width: 80px;
-  font-size: 26px;
+  width: 110px;
+  font-size: 39px;
   font-weight: 800;
 }
 
@@ -1800,25 +1814,15 @@ watch(
 /* Контейнер для значений с разделением на части */
 
 .value-container {
-
   display: inline-flex;
-
   align-items: center;
-
   gap: 0;
-
 }
 
- 
-
+.value-container > span,
 .value-separator {
-
-  display: inline-block;
-
-  margin: 0;
-
-  padding: 0;
-
+  font-size: inherit;
+  font-weight: inherit;
 }
 
  
@@ -1900,16 +1904,19 @@ watch(
 .card--gold .card-body {
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Центрируем по вертикали */
-  height: 100%; /* Занимаем всю доступную высоту */
+  justify-content: center;
+  height: 100%;
+  padding-left: 140px; /* Сдвигаем контент правее аватара */
 }
 
 /* Увеличиваем размер шрифта для лейблов и значений */
 .card--large .card-row .label,
-.card--gold .card-row .label,
+.card--gold .card-row .label {
+  font-size: 29px;
+}
 .card--large .card-row .value,
 .card--gold .card-row .value {
-  font-size: 18px; /* Применяем увеличенный размер к обеим частям строки */
+  font-size: 31px;
 }
 
 /* Print Styles - Скрываем кнопки управления при печати */

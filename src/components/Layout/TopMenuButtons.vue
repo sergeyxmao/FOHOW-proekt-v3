@@ -350,6 +350,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 18px 32px rgba(15, 23, 42, 0.16);
   border: 1px solid rgba(15, 23, 42, 0.08);
   backdrop-filter: blur(6px);
+  z-index: 5;
 }
 .top-menu--modern .top-menu__dropdown {
   background: rgba(20, 30, 52, 0.96);

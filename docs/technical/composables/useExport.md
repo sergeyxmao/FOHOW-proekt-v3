@@ -155,7 +155,7 @@ if (svgLayer) {
 
 ```javascript
 await html2canvas(canvasContainer, {
-  backgroundColor: exportSettings?.blackAndWhite ? '#ffffff' : (backgroundColor.value || '#ffffff'),
+  backgroundColor: '#ffffff', // Фон ВСЕГДА белый
   logging: false,
   useCORS: true,
   scale: scale, // зависит от DPI
@@ -175,6 +175,7 @@ await html2canvas(canvasContainer, {
 ```
 
 **Важно:**
+- `backgroundColor` - всегда `'#ffffff'` (белый), независимо от настроек доски
 - `foreignObjectRendering: true` - необходим для корректного рендеринга SVG
 - `onclone` - используется для финальных корректировок элементов перед захватом
 
@@ -211,13 +212,30 @@ tempStyles.forEach(({ element, property, originalValue }) => {
 ## Формат имени файла
 
 ```
-{projectName}_{FORMAT}_{P|L}_{DPI}dpi_{viewport|full}_{YYYY-MM-DD}_{HH-MM-SS}.png
+{boardName} {ДД.ММ}_{ЧЧ.МИН}.png
 ```
 
 Пример:
 ```
-my-project_A4_P_300dpi_viewport_2026-01-09_14-30-00.png
+Моя доска 13.02_14.30.png
 ```
+
+- Имя берётся из `boardStore.currentBoardName`
+- Недопустимые символы для файлов (`<>:"/\|?*`) заменяются на `_`
+
+## Применяемые при экспорте стили
+
+### Фон — всегда белый
+Независимо от настроенного пользователем фона доски, PNG экспорт всегда использует белый фон (`#ffffff`).
+
+### Аватар-круг скрывается
+Контейнер аватара (`.card-avatar-container`) скрывается (`display: none`) при любом экспорте, чтобы пустой круг не появлялся на экспортированном изображении.
+
+### Увеличенный и жирный текст
+При экспорте все текстовые элементы карточек увеличиваются:
+- `.label` (подписи): `font-size: 20px`, `font-weight: 700`
+- `.value` (значения): `font-size: 22px`, `font-weight: 700`
+- `.card-title` (заголовки): `font-size: 26px`, `font-weight: 900`
 
 ## Исправленные проблемы
 

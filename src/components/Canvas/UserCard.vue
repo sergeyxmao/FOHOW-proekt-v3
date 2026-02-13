@@ -194,7 +194,7 @@ const adaptiveStrokeWidth = computed(() => {
 })
 
 const handleImageError = (event) => {
-  event.target.src = '/Avatar.png'
+  event.target.src = '/Avatar.svg'
 }
 </script>
 
@@ -211,7 +211,7 @@ const handleImageError = (event) => {
     <div class="user-card-shape" :style="shapeStyle">
       <div class="user-card-circle" :style="circleStyle">
         <img
-          :src="userCard.avatarUrl || '/Avatar.png'"
+          :src="userCard.avatarUrl || '/Avatar.svg'"
           :alt="userCard.username || 'Avatar'"
           :style="imageStyle"
           @error="handleImageError"
