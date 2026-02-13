@@ -241,6 +241,7 @@ const handleAddSticker = () => {
         @click="handlePartnersToggle"
       >
         Партнеры
+        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('discussionMenu.tooltips.partners')"></span></span>
       </button>
       <span class="discussion-menu__counter">
         <template v-if="countersLoading">...</template>
@@ -249,7 +250,7 @@ const handleAddSticker = () => {
     </div>
 
     <div class="discussion-menu__item">
-      <span class="discussion-menu__icon" aria-hidden="true">🗒️</span>
+      <span class="discussion-menu__icon" aria-hidden="true">📅</span>
       <button
         type="button"
         class="discussion-menu__action"
@@ -258,6 +259,7 @@ const handleAddSticker = () => {
         @click="handleNotesToggle"
       >
         {{ t('discussionMenu.notesList') }}
+        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('discussionMenu.tooltips.notesList')"></span></span>
       </button>
       <span class="discussion-menu__counter">
         <template v-if="countersLoading">...</template>
@@ -274,6 +276,7 @@ const handleAddSticker = () => {
         @click="handleImagesToggle"
       >
         Изображения
+        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('discussionMenu.tooltips.images')"></span></span>
       </button>
       <span class="discussion-menu__counter">
         <template v-if="countersLoading">...</template>
@@ -290,6 +293,7 @@ const handleAddSticker = () => {
         @click="handleCommentsToggle"
       >
         {{ t('discussionMenu.boardComments') }}
+        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('discussionMenu.tooltips.boardComments')"></span></span>
       </button>
       <span class="discussion-menu__counter">
         <template v-if="countersLoading">...</template>
@@ -311,6 +315,7 @@ const handleAddSticker = () => {
         @click="handleAnchorsPanelOpen"
       >
         {{ t('discussionMenu.geolocation') }}
+        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('discussionMenu.tooltips.geolocation')"></span></span>
       </button>
       <button
         type="button"
@@ -337,6 +342,7 @@ const handleAddSticker = () => {
         @click="handleStickerMessagesToggle"
       >
         {{ t('discussionMenu.stickerMessages') }}
+        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('discussionMenu.tooltips.stickerMessages')"></span></span>
       </button>
       <button
         type="button"
@@ -417,6 +423,9 @@ const handleAddSticker = () => {
 
 .discussion-menu__action {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   text-align: left;
   padding: 12px 16px;
   border-radius: 14px;
@@ -572,5 +581,93 @@ const handleAddSticker = () => {
   color: #000000;
   border-color: rgba(255, 193, 7, 0.85);
   box-shadow: 0 18px 30px rgba(255, 193, 7, 0.35);
+}
+
+/* Info icon — скрыт по умолчанию, появляется при наведении на кнопку */
+.discussion-menu__info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 16px;
+  border-radius: 50%;
+  color: rgba(15, 23, 42, 0.35);
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.15s ease;
+  cursor: help;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.discussion-menu__action:hover .discussion-menu__info {
+  opacity: 1;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.discussion-menu__info:hover {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Modern theme — info icon */
+.discussion-menu--modern .discussion-menu__info {
+  color: rgba(229, 243, 255, 0.35);
+}
+
+.discussion-menu--modern .discussion-menu__action:hover .discussion-menu__info {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.discussion-menu--modern .discussion-menu__info:hover {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Tooltip — появляется при наведении на ⓘ */
+.discussion-menu__tooltip {
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 230px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.94);
+  color: #f1f5f9;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.discussion-menu__tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-right-color: rgba(15, 23, 42, 0.94);
+}
+
+.discussion-menu__info:hover .discussion-menu__tooltip {
+  opacity: 1;
+}
+
+/* Modern theme — tooltip */
+.discussion-menu--modern .discussion-menu__tooltip {
+  background: rgba(30, 42, 70, 0.96);
+  border: 1px solid rgba(96, 164, 255, 0.25);
+  box-shadow: 0 8px 24px rgba(6, 11, 21, 0.4);
+}
+
+.discussion-menu--modern .discussion-menu__tooltip::before {
+  border-right-color: rgba(30, 42, 70, 0.96);
 }
 </style>

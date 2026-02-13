@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { storeToRefs } from 'pinia';
+import { useI18n } from 'vue-i18n';
 import { useHistoryStore } from '../../stores/history';
 import { useViewportStore } from '../../stores/viewport';
 import { useNotesStore } from '../../stores/notes';
@@ -25,6 +26,7 @@ const historyStore = useHistoryStore();
 const viewportStore = useViewportStore();
 const notesStore = useNotesStore();
 const boardStore = useBoardStore();
+const { t } = useI18n();
 const { zoomScale } = storeToRefs(viewportStore);
 
 // ============================================
@@ -55,6 +57,10 @@ const resizePointerId = ref(null);
 const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 });
 const cardElement = ref(null);
 const textareaValue = ref('');
+
+// Zoom/magnify mode
+const isZoomed = ref(false);
+const savedBeforeZoom = ref(null);
 
 // ============================================
 // COMPUTED СВОЙСТВА
@@ -122,6 +128,42 @@ function clampNotePosition(options = {}) {
 }
 
 const noteStyle = computed(() => {
+  if (isZoomed.value) {
+    // Zoomed mode: fill screen from top menu (~70px) to scale bar (~60px from bottom)
+    const topOffset = 70;
+    const bottomOffset = 60;
+    const sideMargin = 24;
+    const availableHeight = window.innerHeight - topOffset - bottomOffset;
+    const availableWidth = window.innerWidth - sideMargin * 2;
+
+    // Calculate proportional size based on original aspect ratio
+    const origW = noteWindowState.value.width;
+    const origH = noteWindowState.value.height;
+    const ratio = origW / origH;
+
+    let zoomedW = availableWidth;
+    let zoomedH = zoomedW / ratio;
+
+    if (zoomedH > availableHeight) {
+      zoomedH = availableHeight;
+      zoomedW = zoomedH * ratio;
+    }
+
+    const left = (window.innerWidth - zoomedW) / 2;
+    const top = topOffset;
+
+    return {
+      left: `${left}px`,
+      top: `${top}px`,
+      width: `${zoomedW}px`,
+      height: `${zoomedH}px`,
+      '--note-accent': noteWindowState.value.highlightColor || NOTE_COLORS[0],
+      transform: 'scale(1)',
+      transformOrigin: 'top left',
+      transition: 'left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease'
+    };
+  }
+
   const scale = effectiveScale.value;
   return {
     left: `${noteWindowState.value.x}px`,
@@ -218,7 +260,18 @@ function commitHistory(description = 'Обновлена заметка') {
   historyStore.saveState();
 }
 
+function toggleZoom() {
+  if (isZoomed.value) {
+    // Restore original state
+    isZoomed.value = false;
+  } else {
+    // Save current state and zoom in
+    isZoomed.value = true;
+  }
+}
+
 function handleClose() {
+  isZoomed.value = false;
   emit('close');
   commitHistory('Закрыта заметка для карточки');
 }
@@ -463,7 +516,7 @@ defineExpose({
       <div
         ref="headerRef"
         class="note-header"
-        @pointerdown.prevent="startDrag"
+        @pointerdown.prevent="!isZoomed && startDrag($event)"
       >
         <button
           class="note-header__close"
@@ -471,9 +524,18 @@ defineExpose({
           title="Закрыть"
           @click="handleClose"
           @pointerdown.stop
-          @click.stop="handleClose"          
+          @click.stop="handleClose"
         >
           ×
+        </button>
+        <button
+          class="note-header__zoom"
+          type="button"
+          :title="isZoomed ? t('noteWindow.zoomOut') : t('noteWindow.zoomIn')"
+          @pointerdown.stop
+          @click.stop="toggleZoom"
+        >
+          {{ isZoomed ? '🔍' : '🔎' }}
         </button>
         <div class="note-header__colors">
           <button
@@ -526,6 +588,7 @@ defineExpose({
         ></textarea>
       </div>
       <button
+        v-if="!isZoomed"
         ref="resizeHandleRef"
         class="note-resize-handle"
         type="button"
@@ -595,6 +658,24 @@ defineExpose({
 }
 
 .note-header__close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.note-header__zoom {
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s ease;
+}
+
+.note-header__zoom:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 

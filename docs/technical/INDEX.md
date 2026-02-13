@@ -222,6 +222,11 @@ systemctl status fohow-api
 Экспорт схем в HTML-файлы — интерактивность, touch support, watermark, pinch-zoom:
 [html-export.md](html-export.md)
 
+### Menu Tooltips
+
+Всплывающие подсказки (ⓘ) в пунктах выпадающих меню верхней панели:
+[menu-tooltips.md](menu-tooltips.md)
+
 ---
 
 ### Добавить новый composable

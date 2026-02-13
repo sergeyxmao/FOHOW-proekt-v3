@@ -68,18 +68,21 @@ const items = computed(() => {
       id: 'save-json',
       icon: '💾',
       label: t('projectMenu.saveJson'),
+      tooltip: t('projectMenu.tooltips.saveJson'),
       action: handleSaveProject
     },
     {
       id: 'load-json',
       icon: '📂',
       label: t('projectMenu.loadJson'),
+      tooltip: t('projectMenu.tooltips.loadJson'),
       action: handleLoadProject
     },
     {
       id: 'export-html',
       icon: '🌐',
       label: t('projectMenu.exportHtml'),
+      tooltip: t('projectMenu.tooltips.exportHtml'),
       action: handleExportHTML,
       disabled: isGuest.value,
       hint: isGuest.value ? '(Индивидуальный/Премиум)' : null
@@ -88,18 +91,21 @@ const items = computed(() => {
       id: 'export-svg',
       icon: '🖋️',
       label: t('projectMenu.exportSvg'),
+      tooltip: t('projectMenu.tooltips.exportSvg'),
       action: handleExportSVG
     },
     {
       id: 'export-png',
       icon: '🖼️',
       label: t('projectMenu.exportPng'),
+      tooltip: t('projectMenu.tooltips.exportPng'),
       action: openExportModal
     },
     {
       id: 'print',
       icon: '🖨️',
       label: t('projectMenu.print'),
+      tooltip: t('projectMenu.tooltips.print'),
       action: handlePrint
     }
   ]
@@ -167,6 +173,10 @@ const handleItemClick = async (item) => {
               <span v-if="item.hint" class="project-menu__hint">{{ item.hint }}</span>
             </span>
             <span v-if="item.hasSubmenu" class="project-menu__arrow">▸</span>
+            <span v-if="item.tooltip" class="project-menu__info" @click.stop>
+              &#9432;
+              <span class="project-menu__tooltip" v-html="item.tooltip"></span>
+            </span>
           </button>
 
           <transition name="submenu-slide">
@@ -452,5 +462,94 @@ const handleItemClick = async (item) => {
 
 .project-menu--modern .project-menu__hint {
   color: #94a3b8;
+}
+
+/* Info icon — скрыт по умолчанию, появляется при наведении на пункт меню */
+.project-menu__info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 16px;
+  border-radius: 50%;
+  color: rgba(15, 23, 42, 0.35);
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.15s ease;
+  cursor: help;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.project-menu__item:hover .project-menu__info {
+  opacity: 1;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.project-menu__info:hover {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Modern theme — info icon */
+.project-menu--modern .project-menu__info {
+  color: rgba(229, 243, 255, 0.35);
+}
+
+.project-menu--modern .project-menu__item:hover .project-menu__info {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.project-menu--modern .project-menu__info:hover {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Tooltip — появляется при наведении на ⓘ */
+.project-menu__tooltip {
+  position: absolute;
+  left: calc(100% + 14px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 230px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.94);
+  color: #f1f5f9;
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.5;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+/* Стрелка тултипа */
+.project-menu__tooltip::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-right-color: rgba(15, 23, 42, 0.94);
+}
+
+.project-menu__info:hover .project-menu__tooltip {
+  opacity: 1;
+}
+
+/* Modern theme — tooltip */
+.project-menu--modern .project-menu__tooltip {
+  background: rgba(30, 42, 70, 0.96);
+  border: 1px solid rgba(96, 164, 255, 0.25);
+  box-shadow: 0 8px 24px rgba(6, 11, 21, 0.4);
+}
+
+.project-menu--modern .project-menu__tooltip::before {
+  border-right-color: rgba(30, 42, 70, 0.96);
 }
 </style>

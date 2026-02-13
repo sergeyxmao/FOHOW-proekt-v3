@@ -138,7 +138,7 @@ const handleCardNotesDelete = async (cardId) => {
     }"
       >
     <div class="notes-side-panel__header">
-      <h2 class="notes-side-panel__title">Список заметок</h2>
+      <h2 class="notes-side-panel__title">Календарь</h2>
       <button
         type="button"
         class="notes-side-panel__close"
