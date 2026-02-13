@@ -31,10 +31,13 @@ guest (0) → demo (1) → individual (2) → premium (3)
 - Продлевает от текущей даты окончания + 30 дней
 
 ### 2. Апгрейд (Individual → Premium)
-- Немедленная активация
-- Тариф меняется сразу, оставшиеся дни конвертируются
+- **Стек подписок:** Premium активируется на 30 дней, затем Individual возобновляется
+- Тариф меняется немедленно на Premium (NOW → NOW+30)
+- Оставшиеся дни Individual сохраняются: `scheduled_plan_id` + `scheduled_plan_expires_at`
+- После окончания Premium автоматически активируется Individual до `scheduled_plan_expires_at`
 - **Разрешён в любое время**, без ограничений по анти-стакингу
-- Поощряет пользователей переходить на более дорогие тарифы
+- **Пример:** Individual (50д осталось, до 4 апр) → Premium → Premium до 15 мар, затем Individual 15 мар - 4 апр
+- **Честно для разработчика:** платишь 499₽ за 30 дней Premium, получаешь 30 дней Premium
 
 ### 3. Даунгрейд (Premium → Individual)
 - Доступен только за **30 дней** до окончания подписки
@@ -51,7 +54,8 @@ guest (0) → demo (1) → individual (2) → premium (3)
 ### 5. Запланированный тариф
 - Блокирует любые другие покупки до активации
 - Активируется автоматически крон-задачей при истечении текущей подписки
-- Информация отображается в профиле пользователя
+- Информация отображается в профиле пользователя с указанием периода действия
+- При **продлении** текущего плана с запланированным — запланированный сдвигается на +30 дней
 
 ### 6. Grace Period
 - Сохраняется как есть: 7 дней после окончания платного тарифа
@@ -62,17 +66,22 @@ guest (0) → demo (1) → individual (2) → premium (3)
 ### Новые колонки в таблице `users`
 
 ```sql
+-- Миграция 028
 ALTER TABLE users ADD COLUMN scheduled_plan_id INTEGER
   REFERENCES subscription_plans(id) ON DELETE SET NULL;
 ALTER TABLE users ADD COLUMN scheduled_plan_paid_at TIMESTAMP;
 CREATE INDEX idx_users_scheduled_plan
   ON users(scheduled_plan_id) WHERE scheduled_plan_id IS NOT NULL;
+
+-- Миграция 029
+ALTER TABLE users ADD COLUMN scheduled_plan_expires_at TIMESTAMP WITH TIME ZONE;
 ```
 
 | Колонка | Тип | Описание |
 |---------|-----|----------|
 | `scheduled_plan_id` | INTEGER FK | ID тарифа, ожидающего активации |
 | `scheduled_plan_paid_at` | TIMESTAMP | Дата оплаты запланированного тарифа |
+| `scheduled_plan_expires_at` | TIMESTAMP | Дата окончания запланированного тарифа (для стека подписок) |
 
 ## API изменения
 

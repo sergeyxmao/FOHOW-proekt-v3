@@ -219,7 +219,7 @@ async function handleSubscriptionExpiry() {
     // Найти пользователей с истёкшими подписками
     const expiredUsersQuery = `
       SELECT u.id, u.email, u.plan_id, u.subscription_expires_at, u.telegram_chat_id,
-             u.scheduled_plan_id, u.scheduled_plan_paid_at,
+             u.scheduled_plan_id, u.scheduled_plan_paid_at, u.scheduled_plan_expires_at,
              sp.code_name as current_plan_code, sp.name as current_plan_name
       FROM users u
       JOIN subscription_plans sp ON u.plan_id = sp.id
@@ -236,8 +236,11 @@ async function handleSubscriptionExpiry() {
       try {
         // === Проверка запланированного тарифа ===
         if (user.scheduled_plan_id) {
-          const newExpiresAt = new Date();
-          newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+          // Для стека подписок используем сохранённую дату окончания
+          // Для даунгрейда (старая логика) используем NOW + 30 дней
+          const newExpiresAt = user.scheduled_plan_expires_at
+            ? new Date(user.scheduled_plan_expires_at)
+            : (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })();
 
           // Активируем запланированный тариф вместо перехода на Guest
           await client.query(
@@ -247,6 +250,7 @@ async function handleSubscriptionExpiry() {
                subscription_started_at = NOW(),
                scheduled_plan_id = NULL,
                scheduled_plan_paid_at = NULL,
+               scheduled_plan_expires_at = NULL,
                grace_period_until = NULL,
                boards_locked = FALSE,
                boards_locked_at = NULL,

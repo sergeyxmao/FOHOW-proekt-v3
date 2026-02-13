@@ -418,24 +418,59 @@ export async function processWebhook(data) {
 
       } else {
         // === НЕМЕДЛЕННАЯ АКТИВАЦИЯ (апгрейд, продление, или нет активной подписки) ===
-        const expiresAt = new Date(now);
 
-        // Если подписка ещё активна — продлеваем от текущей даты окончания
-        if (user.subscription_expires_at && new Date(user.subscription_expires_at) > now) {
-          expiresAt.setTime(new Date(user.subscription_expires_at).getTime());
+        // Проверяем: апгрейд с активной подпиской → стек подписок
+        const isUpgradeWithActive = hasActiveSub && isUpgrade(currentPlanCode, targetPlanCode);
+
+        let expiresAt = new Date(now);
+        let scheduledPlanId = null;
+        let scheduledPlanExpiresAt = null;
+
+        if (isUpgradeWithActive) {
+          // === СТЕК ПОДПИСОК: апгрейд с сохранением остатка текущего плана ===
+          // Premium на 30 дней, затем Individual на оставшиеся дни
+          expiresAt.setDate(expiresAt.getDate() + 30);
+
+          // Сохраняем текущий план как запланированный
+          scheduledPlanId = user.plan_id;
+          scheduledPlanExpiresAt = user.subscription_expires_at; // оставшиеся дни
+
+          console.log(`[PRODAMUS] Стек подписок: ${currentPlanCode}(${remaining}д) → ${targetPlanCode}(30д) → ${currentPlanCode}(до ${scheduledPlanExpiresAt})`);
+        } else {
+          // === ОБЫЧНАЯ АКТИВАЦИЯ: продление или нет активной подписки ===
+          // Если подписка ещё активна — продлеваем от текущей даты окончания
+          if (user.subscription_expires_at && new Date(user.subscription_expires_at) > now) {
+            expiresAt.setTime(new Date(user.subscription_expires_at).getTime());
+
+            // Если есть запланированный тариф — сдвигаем его тоже на 30 дней
+            if (user.scheduled_plan_id) {
+              const currentScheduledExpires = await client.query(
+                'SELECT scheduled_plan_expires_at FROM users WHERE id = $1',
+                [userId]
+              );
+              if (currentScheduledExpires.rows[0]?.scheduled_plan_expires_at) {
+                const newScheduledExpires = new Date(currentScheduledExpires.rows[0].scheduled_plan_expires_at);
+                newScheduledExpires.setDate(newScheduledExpires.getDate() + 30);
+                scheduledPlanExpiresAt = newScheduledExpires;
+                scheduledPlanId = user.scheduled_plan_id; // сохраняем существующий
+                console.log(`[PRODAMUS] Продление: сдвигаем scheduled план на 30 дней → ${scheduledPlanExpiresAt}`);
+              }
+            }
+          }
+          expiresAt.setDate(expiresAt.getDate() + 30);
         }
-        expiresAt.setDate(expiresAt.getDate() + 30);
 
         // Обновляем подписку пользователя
         await client.query(
           `UPDATE users
            SET plan_id = $1,
                subscription_expires_at = $2,
-               scheduled_plan_id = NULL,
-               scheduled_plan_paid_at = NULL,
+               scheduled_plan_id = $3,
+               scheduled_plan_expires_at = $4,
+               scheduled_plan_paid_at = CASE WHEN $3 IS NOT NULL THEN CURRENT_TIMESTAMP ELSE NULL END,
                updated_at = CURRENT_TIMESTAMP
-           WHERE id = $3`,
-          [planId, expiresAt, userId]
+           WHERE id = $5`,
+          [planId, expiresAt, scheduledPlanId, scheduledPlanExpiresAt, userId]
         );
 
         // Записываем в историю подписок

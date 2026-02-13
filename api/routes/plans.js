@@ -43,7 +43,8 @@ export function registerPlanRoutes(app) {
                 id: { type: 'integer' },
                 name: { type: 'string' },
                 code_name: { type: 'string' },
-                paidAt: { type: 'string', format: 'date-time', nullable: true }
+                paidAt: { type: 'string', format: 'date-time', nullable: true },
+                expiresAt: { type: 'string', format: 'date-time', nullable: true }
               }
             },
             plan: {
@@ -88,6 +89,7 @@ export function registerPlanRoutes(app) {
           u.grace_period_until,
           u.scheduled_plan_id,
           u.scheduled_plan_paid_at,
+          u.scheduled_plan_expires_at,
           sp.id as plan_id,
           sp.name as plan_name,
           sp.code_name as plan_code_name,
@@ -144,7 +146,8 @@ export function registerPlanRoutes(app) {
           id: data.scheduled_plan_id,
           name: data.scheduled_plan_name,
           code_name: data.scheduled_plan_code_name,
-          paidAt: data.scheduled_plan_paid_at
+          paidAt: data.scheduled_plan_paid_at,
+          expiresAt: data.scheduled_plan_expires_at
         } : null,
         plan: {
           id: data.plan_id,

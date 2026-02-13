@@ -982,7 +982,13 @@
                     <span class="detail-value scheduled-plan-name">{{ subscriptionStore.scheduledPlan.name }}</span>
                   </div>
                   <div v-if="subscriptionStore.scheduledPlan" class="scheduled-plan-message">
-                    Тариф «{{ subscriptionStore.scheduledPlan.name }}» активируется автоматически после окончания текущей подписки.
+                    <template v-if="subscriptionStore.scheduledPlan.expiresAt">
+                      Период: с {{ formatDate(subscriptionStore.currentPlan?.expiresAt) }} по {{ formatDate(subscriptionStore.scheduledPlan.expiresAt) }}
+                      ({{ getScheduledPlanDays() }} дн.)
+                    </template>
+                    <template v-else>
+                      Тариф активируется автоматически после окончания текущей подписки.
+                    </template>
                   </div>
                 </div>
 
@@ -1687,6 +1693,18 @@ function getExpiryDate() {
   return formatDate(expiresAt)
 }
 
+// Количество дней для запланированного тарифа
+function getScheduledPlanDays() {
+  if (!subscriptionStore.scheduledPlan?.expiresAt || !subscriptionStore.currentPlan?.expiresAt) {
+    return 0
+  }
+  const start = new Date(subscriptionStore.currentPlan.expiresAt)
+  const end = new Date(subscriptionStore.scheduledPlan.expiresAt)
+  const diffTime = end - start
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays > 0 ? diffDays : 0
+}
+
 // Проверка: находится ли пользователь в grace-периоде
 function isInGracePeriod() {
   const expiresAt = user.value?.subscription_expires_at
@@ -2309,7 +2327,8 @@ watch(activeTab, (newTab) => {
 }
 
 .expiry-active {
-  color: #4caf50;
+  color: #1b5e20;
+  font-weight: 600;
 }
 
 .expiry-warning {
