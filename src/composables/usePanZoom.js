@@ -182,11 +182,24 @@ export function usePanZoom(canvasElement, options = {}) {
     }
 
     const canvasContent = canvasElement.value.querySelector('.canvas-content')
-    if (canvasContent) {
-      const tx = isHotMode ? hotTranslateX : translateX.value
-      const ty = isHotMode ? hotTranslateY : translateY.value
-      const s = isHotMode ? hotScale : scale.value
-      canvasContent.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`
+    if (!canvasContent) return
+
+    const tx = isHotMode ? hotTranslateX : translateX.value
+    const ty = isHotMode ? hotTranslateY : translateY.value
+    const s = isHotMode ? hotScale : scale.value
+
+    canvasContent.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`
+
+    // Прямое обновление отображения масштаба в DOM во время hot mode
+    if (isHotMode) {
+      const zoomValueEl = document.querySelector('.zoom-floating-button__value')
+      if (zoomValueEl) {
+        zoomValueEl.textContent = `${Math.round(s * 100)}%`
+      }
+      const mobileZoomEl = document.querySelector('[data-zoom-display]')
+      if (mobileZoomEl) {
+        mobileZoomEl.textContent = String(Math.round(s * 100))
+      }
     }
   }
 

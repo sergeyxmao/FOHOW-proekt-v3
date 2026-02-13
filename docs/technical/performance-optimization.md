@@ -62,7 +62,7 @@ stopPanning() / debounce timeout → syncHotToRefs() → однократное 
 ### Слой 1b: CSS оптимизации
 
 - `will-change: transform` на `.canvas-content` — подсказка браузеру создать отдельный compositing layer
-- `contain: layout style paint` на `.canvas-content` — браузер знает, что изменения внутри контейнера не влияют на внешний layout
+- `contain: layout style` на `.canvas-content` — браузер знает, что изменения внутри контейнера не влияют на внешний layout (без `paint` — см. "Известные проблемы")
 
 ### Слой 1c: Freeze-класс при взаимодействии
 
@@ -105,8 +105,25 @@ return {
 - Существующая функциональность не нарушена (drag, selection, connections, touch/pinch)
 - Все изменения обратно совместимы
 
+## Известные проблемы и решения
+
+### contain: paint обрезает контент
+
+**Проблема:** `contain: layout style paint` на `.canvas-content` создаёт paint containment — браузер обрезает всё содержимое, выходящее за границы элемента (аналогично `overflow: hidden`). На холсте видна прямоугольная область с другим оттенком фона, всё за ней обрезано.
+
+**Решение:** Убрано `paint` из `contain`. Оставлено `contain: layout style` — сохраняет оптимизацию layout/style recalculation без обрезки визуального содержимого.
+
+### Масштаб обновляется рывками при zoom
+
+**Проблема:** В hot mode Vue ref `scale` не обновляется до завершения действия (debounce 150мс). Цепочка `scale ref → watcher → viewportStore → zoomPercentage computed → шаблон` замирает, потом прыгает.
+
+**Решение:** В `applyTransformStyles()` добавлено прямое обновление DOM-элемента масштаба (`.zoom-floating-button__value` и `[data-zoom-display]`) во время hot mode, минуя Vue реактивность. Элементы:
+- Desktop: `<span class="zoom-floating-button__value">` в `App.vue`
+- Mobile: `<span data-zoom-display>` в `MobileToolbar.vue`
+
 ## История изменений
 
 | Дата | Изменение |
 |------|-----------|
 | 2026-02-13 | Слой 1: Hot mode, CSS оптимизации, v-memo, freeze-класс |
+| 2026-02-13 | Фикс: убран contain: paint (обрезка контента), прямое DOM-обновление масштаба |
