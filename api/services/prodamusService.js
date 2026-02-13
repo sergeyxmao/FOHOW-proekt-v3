@@ -4,7 +4,7 @@ import boardLockService from '../services/boardLockService.js';
 import { sendSubscriptionEmail } from '../utils/emailService.js';
 import { sendTelegramMessage } from '../utils/telegramService.js';
 import { getSubscriptionActivatedMessage } from '../templates/telegramTemplates.js';
-import { PLAN_ID_TO_CODE, isDowngrade, daysRemaining } from '../utils/planHierarchy.js';
+import { PLAN_ID_TO_CODE, isDowngrade, isUpgrade, daysRemaining } from '../utils/planHierarchy.js';
 
 /**
  * Сервис интеграции с платёжной системой Продамус (Prodamus)
