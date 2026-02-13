@@ -54,6 +54,6 @@ server.log
 
 # Build артефакты в корне
 /assets/
-/Avatar.png
+/Avatar.svg
 /rank-*.png
 api/test/

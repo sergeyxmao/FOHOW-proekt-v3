@@ -1507,7 +1507,7 @@ watch(
 }
 
 .card-avatar--default {
-  background-image: url('/Avatar.png');
+  background-image: url('/Avatar.svg');
   background-size: cover;
   background-position: center;
   border: 4px solid white;

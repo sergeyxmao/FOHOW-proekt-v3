@@ -157,7 +157,7 @@ export function registerBoardPartnerRoutes(app) {
             userId: userRow.id,
             username: isEnabled(visibility, 'username') ? userRow.username : null,
             full_name: isEnabled(visibility, 'full_name') ? userRow.full_name : null,
-            avatar_url: isEnabled(visibility, 'avatar_url') ? (getAvatarUrl(userRow.id, userRow.avatar_url) || '/Avatar.png') : '/Avatar.png',
+            avatar_url: isEnabled(visibility, 'avatar_url') ? (getAvatarUrl(userRow.id, userRow.avatar_url) || '/Avatar.svg') : '/Avatar.svg',
             personal_id: isEnabled(visibility, 'personal_id') ? userRow.personal_id : null,
             phone: isEnabled(visibility, 'phone') ? userRow.phone : null,
             city: isEnabled(visibility, 'city') ? userRow.city : null,

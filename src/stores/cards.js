@@ -414,7 +414,7 @@ export const useCardsStore = defineStore('cards', {
         diameter: diameter,
         personalId: '',
         userId: null,
-        avatarUrl: '/Avatar.png',
+        avatarUrl: '/Avatar.svg',
         username: '',
         stroke: '#5D8BF4',
         strokeWidth: 3,
@@ -597,7 +597,7 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
             diameter: diameter,
             personalId: cardData.personalId || '',
             userId: cardData.userId || null,
-            avatarUrl: cardData.avatarUrl || '/Avatar.png',
+            avatarUrl: cardData.avatarUrl || '/Avatar.svg',
             username: cardData.username || '',
             stroke: cardData.stroke || '#5D8BF4',
             strokeWidth: Number.isFinite(cardData.strokeWidth) ? cardData.strokeWidth : 3,
@@ -762,13 +762,13 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
         // Сброс на дефолтные значения
         userCard.personalId = ''
         userCard.userId = null
-        userCard.avatarUrl = '/Avatar.png'
+        userCard.avatarUrl = '/Avatar.svg'
         userCard.username = ''
       } else {
         // Подстановка данных пользователя
         userCard.personalId = userData.personalId || ''
         userCard.userId = userData.id || null
-        userCard.avatarUrl = userData.avatarUrl || '/Avatar.png'
+        userCard.avatarUrl = userData.avatarUrl || '/Avatar.svg'
         userCard.username = userData.username || ''
       }
 
