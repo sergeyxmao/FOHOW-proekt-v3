@@ -7,9 +7,10 @@ export function usePanZoom(canvasElement, options = {}) {
   
   const MIN_SCALE = 0.01  // Минимальное уменьшение - 1%
   const MAX_SCALE = 5     // Максимальное увеличение - 500%
-  const LOD_THRESHOLD = 0.35       // Порог LOD уровень 1 (35%) — скрываем PV числа, controls, badges
-  const LOD_THRESHOLD_DEEP = 0.20  // Порог LOD уровень 2 (20%) — скрываем баланс, актив-заказы
+  const LOD_THRESHOLD = 0.35       // Порог LOD уровень 1 (35%) — скрываем PV, labels, монетку, красим body
+  const LOD_THRESHOLD_DEEP = 0.20  // Порог LOD уровень 2 (20%) — зарезервирован
   const LOD_THRESHOLD_MINIMAL = 0.15 // Порог LOD уровень 3 (15%) — скрываем аватарку
+  const LOD_THRESHOLD_ULTRA = 0.10   // Порог LOD уровень 4 (10%) — скрываем цифры, показываем имя
 
   const PAN_CURSOR_CLASS = 'canvas-container--panning'
   const SPACE_READY_CLASS = 'canvas-container--space-ready'
@@ -60,6 +61,7 @@ export function usePanZoom(canvasElement, options = {}) {
   let currentLodActive = false       // Текущее состояние LOD-класса на DOM
   let currentLodDeepActive = false   // LOD уровень 2
   let currentLodMinimalActive = false // LOD уровень 3
+  let currentLodUltraActive = false  // LOD уровень 4
 
   // Состояние для панорамирования через Space + левая кнопка мыши
   let isSpaceDown = false
@@ -224,6 +226,12 @@ export function usePanZoom(canvasElement, options = {}) {
     if (shouldLodMinimal !== currentLodMinimalActive) {
       currentLodMinimalActive = shouldLodMinimal
       canvasElement.value.classList.toggle('canvas-container--lod-minimal', shouldLodMinimal)
+    }
+
+    const shouldLodUltra = s < LOD_THRESHOLD_ULTRA
+    if (shouldLodUltra !== currentLodUltraActive) {
+      currentLodUltraActive = shouldLodUltra
+      canvasElement.value.classList.toggle('canvas-container--lod-ultra', shouldLodUltra)
     }
   }
 
@@ -719,6 +727,7 @@ export function usePanZoom(canvasElement, options = {}) {
       canvasElement.value.classList.remove('canvas-container--lod')
       canvasElement.value.classList.remove('canvas-container--lod-deep')
       canvasElement.value.classList.remove('canvas-container--lod-minimal')
+      canvasElement.value.classList.remove('canvas-container--lod-ultra')
     }
     if (transformFrame !== null) {
       cancelAnimationFrame(transformFrame)

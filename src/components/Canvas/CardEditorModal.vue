@@ -20,6 +20,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'close',
+  'update-title',
   'update-pv',
   'update-balance',
   'clear-balance',
@@ -28,6 +29,18 @@ const emit = defineEmits([
   'update-cycles-stage',
   'clear-cycles-stage'
 ]);
+
+// === Title editing ===
+
+const titleInputRef = ref(null);
+const editingTitle = ref('');
+
+const handleTitleChange = () => {
+  const newTitle = editingTitle.value.trim();
+  if (newTitle && newTitle !== props.card.text) {
+    emit('update-title', { cardId: props.card.id, text: newTitle });
+  }
+};
 
 // === Constants ===
 
@@ -308,7 +321,17 @@ const handleEscape = (event) => {
   if (event.key === 'Escape') emit('close');
 };
 
-onMounted(() => document.addEventListener('keydown', handleEscape));
+onMounted(() => {
+  document.addEventListener('keydown', handleEscape);
+  editingTitle.value = props.card?.text || '';
+  // Автофокус на поле имени при открытии
+  requestAnimationFrame(() => {
+    if (titleInputRef.value) {
+      titleInputRef.value.focus();
+      titleInputRef.value.select();
+    }
+  });
+});
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleEscape);
   handleDragEnd();
@@ -327,7 +350,14 @@ onBeforeUnmount(() => {
       >
         <!-- Header -->
         <div class="editor-header">
-          <span class="editor-title">{{ card.text }}</span>
+          <input
+            ref="titleInputRef"
+            v-model="editingTitle"
+            class="editor-title-input"
+            @change="handleTitleChange"
+            @keydown.enter="handleTitleChange"
+            @click.stop
+          />
           <button class="editor-close" @click="emit('close')" title="Закрыть">&times;</button>
         </div>
 
@@ -444,15 +474,29 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 
-.editor-title {
+.editor-title-input {
+  flex: 1;
   color: #fff;
   font-size: 15px;
   font-weight: 700;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   line-height: 1.2;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 6px;
+  outline: none;
+  min-width: 0;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.editor-title-input:focus {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.editor-title-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .editor-close {

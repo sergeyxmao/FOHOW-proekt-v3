@@ -67,6 +67,15 @@ const isLargeCard = computed(() => {
   return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 543.4;
 });
 
+// Заголовок для LOD-ultra (< 10%): большие — обрезаем 9 последних цифр номера
+const lodUltraTitle = computed(() => {
+  const text = props.card?.text || '';
+  if (isLargeCard.value && text.length > 9) {
+    return text.slice(0, -9);
+  }
+  return text;
+});
+
 // Проверка наличия заметок из store
 const hasNotes = computed(() => {
   const cardNotes = notesStore.getNotesForCard(props.card.id);
@@ -122,6 +131,9 @@ const cardStyle = computed(() => {
 
   // Добавляем CSS-переменную для цвета анимации (PV changed)
   style['--user-card-animation-color'] = viewSettingsStore.animationColor || '#ef4444';
+
+  // CSS-переменная для цвета монетки (используется в LOD-deep для покраски body)
+  style['--coin-fill-color'] = coinFillColor.value;
 
   return style;
 });
@@ -974,6 +986,8 @@ watch(
       'editing': isEditing,
       'card--large': isLargeCard,
       'card--gold': card.type === 'gold',
+      'card--coin-gold': isCoinGold,
+      'card--coin-blue': isCoinBlue,
       'note-active': isNoteVisible,
       'highlighted': card.highlighted
     }"
@@ -1018,6 +1032,9 @@ watch(
     
     <!-- Содержимое карточки -->
     <div class="card-body" @dblclick="handleBodyDblClick" @touchend="handleBodyTouchEnd">
+      <!-- Имя из шапки — видно только при LOD-ultra (zoom < 10%) -->
+      <div class="card-lod-title">{{ lodUltraTitle }}</div>
+
       <!-- Аватар пользователя (только для больших и Gold карточек) -->
       <div v-if="isLargeCard" class="card-avatar-container card-lod-hide-minimal">
         <div
@@ -1095,8 +1112,8 @@ watch(
         </span>
       </div>
 
-      <div class="card-row card-lod-hide-deep">
-        <span class="label">Баланс:</span>
+      <div class="card-row">
+        <span class="label card-lod-hide">Баланс:</span>
         <span
           class="value value-container"
 
@@ -1122,9 +1139,9 @@ watch(
 
  
 
-      <div class="card-row card-lod-hide-deep">
+      <div class="card-row">
 
-        <span class="label">Актив-заказы:</span>
+        <span class="label card-lod-hide">Актив-заказы:</span>
 
         <span class="value value-container">
 

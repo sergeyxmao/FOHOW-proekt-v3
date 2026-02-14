@@ -159,46 +159,56 @@ CSS правила показывают элементы с классом .card
 
 #### Пороги
 
-Три уровня LOD, управляемые константами в `usePanZoom.js`:
+Четыре уровня LOD, управляемые константами в `usePanZoom.js`:
 
-| Порог | Константа | CSS-класс | Что скрывается |
+| Порог | Константа | CSS-класс | Что происходит |
 |-------|-----------|-----------|----------------|
-| < 35% | `LOD_THRESHOLD = 0.35` | `canvas-container--lod` | PV числа, close btn, controls, badges, bodyHTML, cycle, connection points |
-| < 20% | `LOD_THRESHOLD_DEEP = 0.20` | `canvas-container--lod-deep` | + баланс, актив-заказы (появляется компактная сводка L/R) |
-| < 15% | `LOD_THRESHOLD_MINIMAL = 0.15` | `canvas-container--lod-minimal` | + аватарка |
+| < 35% | `LOD_THRESHOLD = 0.35` | `canvas-container--lod` | Скрываются: PV, монетка, labels, controls, badges, cycle. Body красится: большая → золотой (#ffd700), малая → цвет монетки. Цифры баланса/актив крупные (80px/60px) |
+| < 20% | `LOD_THRESHOLD_DEEP = 0.20` | `canvas-container--lod-deep` | (зарезервирован, CSS-правил нет) |
+| < 15% | `LOD_THRESHOLD_MINIMAL = 0.15` | `canvas-container--lod-minimal` | + аватарка скрывается. padding-left убирается у больших карточек |
+| < 10% | `LOD_THRESHOLD_ULTRA = 0.10` | `canvas-container--lod-ultra` | + цифры и header скрываются. Показывается имя из шапки в body (card-lod-title) |
 
 #### CSS-классы на элементах Card.vue
 
-- `.card-lod-hide` — скрывается при zoom < 35%: PV числа, кнопка закрытия, цикл/этап, bodyHTML, контролы, бейджи, точки соединения, active-pv-hidden
-- `.card-lod-hide-deep` — скрывается при zoom < 20%: баланс, актив-заказы
+- `.card-lod-hide` — скрывается при zoom < 35%: PV числа, labels «Баланс:»/«Актив-заказы:», кнопка закрытия, цикл/этап, bodyHTML, контролы, бейджи, точки соединения, active-pv-hidden
 - `.card-lod-hide-minimal` — скрывается при zoom < 15%: аватар
-- `.card-lod-summary` — компактная строка баланса L/R, видна ТОЛЬКО при zoom < 20%
+- `.card-lod-title` — имя из шапки карточки, скрыто по умолчанию, показывается при zoom < 10%
+- `.card-lod-summary` — компактная строка баланса L/R, скрыта по умолчанию (зарезервирована)
+- `.card--coin-gold` / `.card--coin-blue` — классы на карточке для цвета монетки (используются для LOD стилизации body и текста)
 
 #### Что видно в LOD
 
-| Элемент | 100-35% | 35-20% | 20-15% | < 15% |
-|---------|:-------:|:------:|:------:|:-----:|
-| Заголовок (имя) | да | да | да | да |
-| Монетка (жёлтый/синий круг) | да | да | да | да |
+| Элемент | 100-35% | < 35% | < 15% | < 10% |
+|---------|:-------:|:-----:|:-----:|:-----:|
+| Заголовок (header) | да | да | да | нет |
+| Имя в body (card-lod-title) | нет | нет | нет | да (50px) |
+| Монетка (жёлтый/синий круг) | да | нет | нет | нет |
 | PV числа (330/330pv) | да | нет | нет | нет |
-| Баланс | да | да | нет | нет |
-| Актив-заказы | да | да | нет | нет |
-| Компактный баланс L/R | нет | нет | да | да |
-| Аватар (большие карточки) | да | да | да | нет |
+| Баланс: цифры | да (с label) | да (80/60px) | да | нет |
+| Актив-заказы: цифры | да (с label) | да (80/60px) | да | нет |
+| Аватар (большие карточки) | да | да | нет | нет |
 | Цикл/этап | да | нет | нет | нет |
 | Кнопки, бейджи, точки | да | нет | нет | нет |
+| Цвет body | белый | золотой/синий | золотой/синий | золотой/синий |
 
 #### CSS правила (CanvasBoard.vue)
 
 Все правила используют `:deep()` для проникновения через scoped CSS в дочерние компоненты (Card.vue):
 
 ```css
-.canvas-container--lod :deep(.card-lod-hide) { display: none !important; }
-.canvas-container--lod :deep(.card-body) { padding: 10px !important; gap: 4px !important; }
-.canvas-container--lod :deep(.card-header) { padding: 8px 12px !important; min-height: 32px !important; }
-.canvas-container--lod :deep(.card), :deep(.line), :deep(.line-group) { animation: none !important; transition: none !important; }
-:deep(.card-lod-summary) { display: none !important; }
-.canvas-container--lod :deep(.card-lod-summary) { display: flex !important; }
+/* LOD (< 35%) — основные правила */
+.canvas-container--lod :deep(.card-lod-hide) { display: none; }       /* PV, labels, controls */
+.canvas-container--lod :deep(.pv-row) { display: none; }              /* монетка + PV */
+.canvas-container--lod :deep(.card--coin-gold .card-body) { background: #ffd700; }
+.canvas-container--lod :deep(.card--coin-blue .card-body) { background: #3d85c6; }
+.canvas-container--lod :deep(.card--large .card-body) { background: #ffd700; }
+.canvas-container--lod :deep(.card--large .card-row .value) { font-size: 80px; }
+.canvas-container--lod :deep(.card-row .value) { font-size: 60px; }
+/* Контраст: тёмный текст на золотом (#5a3e00), белый на синем (#fff) */
+
+/* LOD-minimal (< 15%) */
+.canvas-container--lod-minimal :deep(.card-lod-hide-minimal) { display: none; }  /* аватар */
+.canvas-container--lod-minimal :deep(.card--large .card-body) { padding-left: 10px; }
 ```
 
 **Важно:** Не использовать `overflow: hidden` на `.card` в LOD — это обрезает аватарку на больших/gold карточках.

@@ -483,6 +483,10 @@ const handleCloseCardEditor = () => {
   editorModalCardId.value = null;
 };
 
+const handleEditorUpdateTitle = ({ cardId, text }) => {
+  cardsStore.updateCard(cardId, { text });
+};
+
 const handleEditorUpdatePv = ({ cardId, pv }) => {
   cardsStore.updateCard(cardId, { pv });
   handlePvChanged(cardId);
@@ -1063,7 +1067,12 @@ const canvasContainerClasses = computed(() => ({
   'canvas-container--anchor-placement': placementMode.value === 'anchor',
   'canvas-container--interacting': isPanZoomInteracting.value || isDraggingAnyRef.value,
   'canvas-container--mode-light': performanceMode.value === 'light',
-  'canvas-container--mode-view': performanceMode.value === 'view'
+  'canvas-container--mode-view': performanceMode.value === 'view',
+  // LOD классы — дублируем из usePanZoom для сохранения при Vue re-render
+  'canvas-container--lod': zoomScale.value < 0.35,
+  'canvas-container--lod-deep': zoomScale.value < 0.20,
+  'canvas-container--lod-minimal': zoomScale.value < 0.15,
+  'canvas-container--lod-ultra': zoomScale.value < 0.10
 }));
 
 const selectionBoxStyle = computed(() => {
@@ -3134,6 +3143,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       :visible="!!editorModalCard"
       :card-rect="editorModalCardRect"
       @close="handleCloseCardEditor"
+      @update-title="handleEditorUpdateTitle"
       @update-pv="handleEditorUpdatePv"
       @update-balance="handleEditorUpdateBalance"
       @clear-balance="handleEditorClearBalance"
@@ -3646,17 +3656,14 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
    Класс canvas-container--lod управляется из usePanZoom.js
    ============================================ */
 
-/* Скрываем все элементы с классом card-lod-hide внутри дочерних компонентов */
+/* Скрываем все элементы с классом card-lod-hide (PV, labels, controls, монетка и т.д.) */
 .canvas-container--lod :deep(.card-lod-hide) {
   display: none !important;
 }
 
-/* Упрощаем отступы card-body в LOD — НЕ трогаем padding-left (140px для больших карточек) */
-.canvas-container--lod :deep(.card-body) {
-  padding-top: 10px !important;
-  padding-right: 10px !important;
-  padding-bottom: 10px !important;
-  gap: 4px !important;
+/* Скрываем всю pv-row (монетка + PV значения) */
+.canvas-container--lod :deep(.pv-row) {
+  display: none !important;
 }
 
 /* Уменьшаем card-header padding */
@@ -3665,7 +3672,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   min-height: 32px !important;
 }
 
-/* Отключаем все анимации и transitions в LOD */
+/* Отключаем все анимации и transitions */
 .canvas-container--lod :deep(.card),
 .canvas-container--lod :deep(.line),
 .canvas-container--lod :deep(.line-group) {
@@ -3677,46 +3684,132 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   filter: none !important;
 }
 
-/* LOD: увеличиваем монетку и центрируем контент при 35-20% */
-.canvas-container--lod :deep(.coin-icon-wrapper) {
-  width: 80px !important;
-  height: 80px !important;
-}
-.canvas-container--lod :deep(.coin-icon) {
-  width: 80px !important;
-  height: 80px !important;
-}
-.canvas-container--lod :deep(.pv-row) {
-  justify-content: center !important;
-}
-.canvas-container--lod :deep(.card-row .label) {
-  font-size: 36px !important;
-}
-.canvas-container--lod :deep(.card-row .value) {
-  font-size: 38px !important;
-}
-.canvas-container--lod :deep(.card-body) {
-  justify-content: center !important;
-  align-items: center !important;
-  gap: 8px !important;
-}
-
-/* LOD summary — скрыта по умолчанию, видна только в LOD-deep (< 20%) */
+/* LOD summary — скрыта по умолчанию */
 :deep(.card-lod-summary) {
   display: none !important;
 }
 
-.canvas-container--lod-deep :deep(.card-lod-summary) {
-  display: flex !important;
+/* Упрощаем card-body — НЕ трогаем padding-left (140px для больших карточек) */
+.canvas-container--lod :deep(.card-body) {
+  padding-top: 10px !important;
+  padding-right: 10px !important;
+  padding-bottom: 10px !important;
+  gap: 8px !important;
+  justify-content: center !important;
+  align-items: center !important;
 }
 
-/* LOD уровень 2 (< 20%) — скрываем баланс и актив-заказы */
-.canvas-container--lod-deep :deep(.card-lod-hide-deep) {
-  display: none !important;
+/* === Цвет body === */
+
+/* Малая карточка с золотой монеткой — body золотой */
+.canvas-container--lod :deep(.card--coin-gold .card-body) {
+  background: #ffd700 !important;
+}
+
+/* Малая карточка с синей монеткой — body синий */
+.canvas-container--lod :deep(.card--coin-blue .card-body) {
+  background: #3d85c6 !important;
+}
+
+/* Большая лицензия — body всегда золотой */
+.canvas-container--lod :deep(.card--large .card-body) {
+  background: #ffd700 !important;
+}
+
+/* === Центрирование и размер цифр === */
+
+.canvas-container--lod :deep(.card-row) {
+  justify-content: center !important;
+  width: 100% !important;
+}
+
+/* Большие карточки — цифры крупные (80px) */
+.canvas-container--lod :deep(.card--large .card-row .value) {
+  display: inline-flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  font-size: 80px !important;
+  font-weight: 700 !important;
+}
+
+/* Малые карточки — цифры крупные (60px) */
+.canvas-container--lod :deep(.card-row .value) {
+  display: inline-flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  font-size: 60px !important;
+  font-weight: 700 !important;
+}
+
+/* === Контрастный цвет текста === */
+
+/* Золотой фон — тёмный текст */
+.canvas-container--lod :deep(.card--coin-gold .card-body .value),
+.canvas-container--lod :deep(.card--coin-gold .card-body .value span),
+.canvas-container--lod :deep(.card--coin-gold .card-body .value-separator) {
+  color: #5a3e00 !important;
+}
+
+/* Синий фон — белый текст */
+.canvas-container--lod :deep(.card--coin-blue .card-body .value),
+.canvas-container--lod :deep(.card--coin-blue .card-body .value span),
+.canvas-container--lod :deep(.card--coin-blue .card-body .value-separator) {
+  color: #ffffff !important;
+}
+
+/* Большие карточки — ВСЕГДА тёмный текст (body всегда золотой) */
+.canvas-container--lod :deep(.card--large .card-body .value),
+.canvas-container--lod :deep(.card--large .card-body .value span),
+.canvas-container--lod :deep(.card--large .card-body .value-separator) {
+  color: #5a3e00 !important;
 }
 
 /* LOD уровень 3 (< 15%) — скрываем аватарку */
 .canvas-container--lod-minimal :deep(.card-lod-hide-minimal) {
+  display: none !important;
+}
+
+/* При скрытой аватарке убираем лишний padding-left у больших карточек */
+.canvas-container--lod-minimal :deep(.card--large .card-body) {
+  padding-left: 10px !important;
+}
+
+/* LOD уровень 4 (< 10%) — скрываем цифры, показываем имя из шапки */
+
+/* card-lod-title скрыт по умолчанию (без !important — чтобы override легко перекрывал) */
+:deep(.card-lod-title) {
+  display: none;
+}
+
+/* При LOD-ultra показываем card-lod-title */
+.canvas-container--lod-ultra :deep(.card-lod-title) {
+  display: block !important;
+  font-size: 140px !important;
+  font-weight: 900 !important;
+  text-align: center !important;
+  line-height: 1 !important;
+  overflow: hidden !important;
+  color: #ffffff !important;
+}
+
+/* Большие карточки — текст крупный */
+.canvas-container--lod-ultra :deep(.card--large .card-lod-title) {
+  font-size: 120px !important;
+  color: #5a3e00 !important;
+}
+
+/* Малые с золотой монеткой — тёмный текст */
+.canvas-container--lod-ultra :deep(.card--coin-gold .card-lod-title) {
+  color: #5a3e00 !important;
+}
+
+/* Скрываем цифры баланса и актив-заказов при LOD-ultra */
+.canvas-container--lod-ultra :deep(.card-row) {
+  display: none !important;
+}
+
+/* Скрываем заголовок (header) при LOD-ultra — имя уже в body */
+.canvas-container--lod-ultra :deep(.card-header) {
   display: none !important;
 }
 
