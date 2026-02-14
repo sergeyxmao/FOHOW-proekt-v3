@@ -3593,22 +3593,22 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 /* ============================================
    Режим "Лёгкий" (light) — отключаем тяжёлые визуальные эффекты
    ============================================ */
-.canvas-container--mode-light .card,
-.canvas-container--mode-light .line,
-.canvas-container--mode-light .line-group {
+.canvas-container--mode-light :deep(.card),
+.canvas-container--mode-light :deep(.line),
+.canvas-container--mode-light :deep(.line-group) {
   animation: none !important;
   transition: none !important;
 }
-.canvas-container--mode-light .line {
+.canvas-container--mode-light :deep(.line) {
   filter: none !important;
 }
-.canvas-container--mode-light .card-close-btn,
-.canvas-container--mode-light .card-note-btn,
-.canvas-container--mode-light .active-pv-btn {
+.canvas-container--mode-light :deep(.card-close-btn),
+.canvas-container--mode-light :deep(.card-note-btn),
+.canvas-container--mode-light :deep(.active-pv-btn) {
   transition: none !important;
 }
-.canvas-container--mode-light .line--balance-highlight,
-.canvas-container--mode-light .line--pv-highlight {
+.canvas-container--mode-light :deep(.line--balance-highlight),
+.canvas-container--mode-light :deep(.line--pv-highlight) {
   animation: none !important;
   stroke-dasharray: none !important;
 }
@@ -3616,41 +3616,41 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
 /* ============================================
    Режим "Просмотр" (view) — только отображение и навигация
    ============================================ */
-.canvas-container--mode-view .card,
-.canvas-container--mode-view .line,
-.canvas-container--mode-view .line-group {
+.canvas-container--mode-view :deep(.card),
+.canvas-container--mode-view :deep(.line),
+.canvas-container--mode-view :deep(.line-group) {
   animation: none !important;
   transition: none !important;
 }
-.canvas-container--mode-view .line {
+.canvas-container--mode-view :deep(.line) {
   filter: none !important;
 }
-.canvas-container--mode-view .line--balance-highlight,
-.canvas-container--mode-view .line--pv-highlight {
+.canvas-container--mode-view :deep(.line--balance-highlight),
+.canvas-container--mode-view :deep(.line--pv-highlight) {
   animation: none !important;
   stroke-dasharray: none !important;
 }
 .canvas-container--mode-view .cards-container {
   pointer-events: none;
 }
-.canvas-container--mode-view .card {
+.canvas-container--mode-view :deep(.card) {
   pointer-events: none;
   cursor: default !important;
 }
-.canvas-container--mode-view .card-close-btn,
-.canvas-container--mode-view .card-controls,
-.canvas-container--mode-view .card-active-controls,
-.canvas-container--mode-view .active-pv-btn,
-.canvas-container--mode-view [data-role="active-pv-buttons"],
-.canvas-container--mode-view .connection-point {
+.canvas-container--mode-view :deep(.card-close-btn),
+.canvas-container--mode-view :deep(.card-controls),
+.canvas-container--mode-view :deep(.card-active-controls),
+.canvas-container--mode-view :deep(.active-pv-btn),
+.canvas-container--mode-view :deep([data-role="active-pv-buttons"]),
+.canvas-container--mode-view :deep(.connection-point) {
   display: none !important;
 }
-.canvas-container--mode-view [contenteditable] {
+.canvas-container--mode-view :deep([contenteditable]) {
   pointer-events: none;
   cursor: default;
   -webkit-user-modify: read-only;
 }
-.canvas-container--mode-view .line-hitbox {
+.canvas-container--mode-view :deep(.line-hitbox) {
   pointer-events: none;
 }
 .canvas-container--mode-view .selection-box {
@@ -3662,46 +3662,41 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
    Класс canvas-container--lod управляется из usePanZoom.js
    ============================================ */
 
-/* Скрываем все элементы с классом card-lod-hide */
-.canvas-container--lod .card-lod-hide {
+/* Скрываем все элементы с классом card-lod-hide внутри дочерних компонентов */
+.canvas-container--lod :deep(.card-lod-hide) {
   display: none !important;
 }
 
 /* Упрощаем отступы card-body в LOD — меньше padding */
-.canvas-container--lod .card-body {
+.canvas-container--lod :deep(.card-body) {
   padding: 10px 10px 10px !important;
   gap: 4px !important;
 }
 
 /* Уменьшаем card-header padding */
-.canvas-container--lod .card-header {
+.canvas-container--lod :deep(.card-header) {
   padding: 8px 12px !important;
   min-height: 32px !important;
 }
 
-/* Карточка подгоняет высоту под контент */
-.canvas-container--lod .card {
-  overflow: hidden;
-}
-
 /* Отключаем все анимации и transitions в LOD */
-.canvas-container--lod .card,
-.canvas-container--lod .line,
-.canvas-container--lod .line-group {
+.canvas-container--lod :deep(.card),
+.canvas-container--lod :deep(.line),
+.canvas-container--lod :deep(.line-group) {
   animation: none !important;
   transition: none !important;
 }
 
-.canvas-container--lod .line {
+.canvas-container--lod :deep(.line) {
   filter: none !important;
 }
 
 /* LOD summary — скрыта по умолчанию, видна только в LOD */
-.card-lod-summary {
+:deep(.card-lod-summary) {
   display: none !important;
 }
 
-.canvas-container--lod .card-lod-summary {
+.canvas-container--lod :deep(.card-lod-summary) {
   display: flex !important;
 }
 

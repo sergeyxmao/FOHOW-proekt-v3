@@ -127,6 +127,8 @@ stopPanning() / debounce timeout → syncHotToRefs() → однократное 
 - `canvas-container--mode-light` — отключает анимации, transitions, shadows
 - `canvas-container--mode-view` — наследует от light + отключает интерактивность, скрывает контролы
 
+**Важно:** Все CSS правила для режимов Light/View используют `:deep()` для проникновения через scoped CSS в дочерние компоненты (Card.vue, SVG линии).
+
 ### Слой 3: LOD (Level of Detail) при зуме (реализован)
 
 При zoom < 35% карточки автоматически переключаются на упрощённый рендер через CSS, уменьшая количество видимых DOM-элементов с ~50 до ~6 на карточку.
@@ -182,15 +184,18 @@ CSS правила показывают элементы с классом .card
 
 #### CSS правила (CanvasBoard.vue)
 
+Все правила используют `:deep()` для проникновения через scoped CSS в дочерние компоненты (Card.vue):
+
 ```css
-.canvas-container--lod .card-lod-hide { display: none !important; }
-.canvas-container--lod .card-body { padding: 10px !important; gap: 4px !important; }
-.canvas-container--lod .card-header { padding: 8px 12px !important; min-height: 32px !important; }
-.canvas-container--lod .card { overflow: hidden; }
-.canvas-container--lod .card, .line, .line-group { animation: none !important; transition: none !important; }
-.card-lod-summary { display: none !important; }
-.canvas-container--lod .card-lod-summary { display: flex !important; }
+.canvas-container--lod :deep(.card-lod-hide) { display: none !important; }
+.canvas-container--lod :deep(.card-body) { padding: 10px !important; gap: 4px !important; }
+.canvas-container--lod :deep(.card-header) { padding: 8px 12px !important; min-height: 32px !important; }
+.canvas-container--lod :deep(.card), :deep(.line), :deep(.line-group) { animation: none !important; transition: none !important; }
+:deep(.card-lod-summary) { display: none !important; }
+.canvas-container--lod :deep(.card-lod-summary) { display: flex !important; }
 ```
+
+**Важно:** Не использовать `overflow: hidden` на `.card` в LOD — это обрезает аватарку на больших/gold карточках.
 
 #### Совместимость
 
@@ -245,3 +250,4 @@ return {
 | 2026-02-13 | Фикс: убран contain: paint (обрезка контента), прямое DOM-обновление масштаба |
 | 2026-02-13 | Слой 2: Три режима работы (Полный/Лёгкий/Просмотр), store, кнопки, хоткей M |
 | 2026-02-13 | Слой 3: LOD (Level of Detail) — упрощённый рендер при zoom < 35% |
+| 2026-02-14 | Фикс: :deep() для LOD/Light/View CSS (scoped style penetration), убран overflow:hidden (обрезка аватарки) |
