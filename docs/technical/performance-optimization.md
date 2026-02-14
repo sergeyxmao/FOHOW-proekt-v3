@@ -65,8 +65,10 @@ stopPanning() / debounce timeout → syncHotToRefs() → однократное 
 
 ### Слой 1b: CSS оптимизации
 
-- `will-change: transform` на `.canvas-content` — подсказка браузеру создать отдельный compositing layer
+- `will-change: transform` + `backface-visibility: hidden` на `.canvas-container--panning .canvas-content` — GPU compositing layer **только во время панорамирования**. Постоянный `will-change` вызывал моргание при зуме < 10% (огромная GPU-текстура не помещалась в видеопамять)
 - `contain: layout style` на `.canvas-content` — браузер знает, что изменения внутри контейнера не влияют на внешний layout (без `paint` — см. "Известные проблемы")
+- `contain: layout style` на `.card` — изоляция каждой карточки от соседних
+- `contain: layout style` на `.svg-layer` — изоляция SVG-слоя от карточек
 
 ### Слой 1c: Freeze-класс при взаимодействии
 

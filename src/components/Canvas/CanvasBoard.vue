@@ -3177,27 +3177,12 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   cursor: grabbing !important;
 }
 
-/* Отключаем интерактивность всех объектов во время панорамирования */
-/* Браузер пропускает hit-testing для всех ~90+ карточек, стикеров и линий */
-.canvas-container--panning .card,
-.canvas-container--panning .sticker,
-.canvas-container--panning .canvas-image,
-.canvas-container--panning .line-group {
-  pointer-events: none !important;
-}
-
 /* GPU-ускорение только на время панорамирования */
-/* Постоянный will-change при низком зуме вызывает моргание (GPU-текстура слишком большая) */
+/* Постоянный will-change вызывает моргание при низком зуме (GPU-текстура слишком большая) */
+/* Интерактивность и transitions уже отключены через .canvas-container--interacting */
 .canvas-container--panning .canvas-content {
   will-change: transform;
   backface-visibility: hidden;
-}
-
-/* Отключаем тяжёлые CSS-эффекты на линиях при панорамировании */
-/* drop-shadow и transition на ~90+ линиях вызывают лишние repaint при каждом кадре */
-.canvas-container--panning .line {
-  transition: none !important;
-  filter: none !important;
 }
 
 /* Отключение CSS transitions при перетаскивании для оптимизации производительности */
@@ -3267,7 +3252,6 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   height: 100%;
   transform-origin: 0 0;
   background: transparent; /* Прозрачный фон, чтобы не перекрывать фон canvas-container */
-  will-change: transform;
   contain: layout style;
   --grid-step: 40px;
   --grid-line-color: rgba(79, 85, 99, 0.15);
