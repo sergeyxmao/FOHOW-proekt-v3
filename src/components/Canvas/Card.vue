@@ -1019,7 +1019,7 @@ watch(
     <!-- Содержимое карточки -->
     <div class="card-body" @dblclick="handleBodyDblClick" @touchend="handleBodyTouchEnd">
       <!-- Аватар пользователя (только для больших и Gold карточек) -->
-      <div v-if="isLargeCard" class="card-avatar-container card-lod-hide">
+      <div v-if="isLargeCard" class="card-avatar-container card-lod-hide-minimal">
         <div
           v-if="avatarData.avatar_url"
           class="card-avatar"
@@ -1066,7 +1066,7 @@ watch(
             <circle cx="50" cy="50" r="45" :fill="coinFillColor" stroke="#DAA520" stroke-width="5"/>
           </svg>
         </div>
-        <div class="pv-value-container">
+        <div class="pv-value-container card-lod-hide">
           <input
             v-if="isEditingPv"
             ref="pvLeftInput"
@@ -1095,7 +1095,7 @@ watch(
         </span>
       </div>
 
-      <div class="card-row card-lod-hide">
+      <div class="card-row card-lod-hide-deep">
         <span class="label">Баланс:</span>
         <span
           class="value value-container"
@@ -1122,7 +1122,7 @@ watch(
 
  
 
-      <div class="card-row card-lod-hide">
+      <div class="card-row card-lod-hide-deep">
 
         <span class="label">Актив-заказы:</span>
 

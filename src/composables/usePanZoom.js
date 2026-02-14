@@ -7,7 +7,9 @@ export function usePanZoom(canvasElement, options = {}) {
   
   const MIN_SCALE = 0.01  // Минимальное уменьшение - 1%
   const MAX_SCALE = 5     // Максимальное увеличение - 500%
-  const LOD_THRESHOLD = 0.35  // Порог для упрощённого рендера (35%)
+  const LOD_THRESHOLD = 0.35       // Порог LOD уровень 1 (35%) — скрываем PV числа, controls, badges
+  const LOD_THRESHOLD_DEEP = 0.20  // Порог LOD уровень 2 (20%) — скрываем баланс, актив-заказы
+  const LOD_THRESHOLD_MINIMAL = 0.15 // Порог LOD уровень 3 (15%) — скрываем аватарку
 
   const PAN_CURSOR_CLASS = 'canvas-container--panning'
   const SPACE_READY_CLASS = 'canvas-container--space-ready'
@@ -55,7 +57,9 @@ export function usePanZoom(canvasElement, options = {}) {
   let hotScale = 1
   let isHotMode = false
   let wheelSyncTimer = null
-  let currentLodActive = false  // Текущее состояние LOD-класса на DOM
+  let currentLodActive = false       // Текущее состояние LOD-класса на DOM
+  let currentLodDeepActive = false   // LOD уровень 2
+  let currentLodMinimalActive = false // LOD уровень 3
 
   // Состояние для панорамирования через Space + левая кнопка мыши
   let isSpaceDown = false
@@ -204,15 +208,22 @@ export function usePanZoom(canvasElement, options = {}) {
       }
     }
 
-    // LOD: добавить/убрать класс на canvas-container в зависимости от масштаба
+    // LOD: добавить/убрать классы на canvas-container в зависимости от масштаба
     const shouldLod = s < LOD_THRESHOLD
+    const shouldLodDeep = s < LOD_THRESHOLD_DEEP
+    const shouldLodMinimal = s < LOD_THRESHOLD_MINIMAL
+
     if (shouldLod !== currentLodActive) {
       currentLodActive = shouldLod
-      if (shouldLod) {
-        canvasElement.value.classList.add('canvas-container--lod')
-      } else {
-        canvasElement.value.classList.remove('canvas-container--lod')
-      }
+      canvasElement.value.classList.toggle('canvas-container--lod', shouldLod)
+    }
+    if (shouldLodDeep !== currentLodDeepActive) {
+      currentLodDeepActive = shouldLodDeep
+      canvasElement.value.classList.toggle('canvas-container--lod-deep', shouldLodDeep)
+    }
+    if (shouldLodMinimal !== currentLodMinimalActive) {
+      currentLodMinimalActive = shouldLodMinimal
+      canvasElement.value.classList.toggle('canvas-container--lod-minimal', shouldLodMinimal)
     }
   }
 
@@ -706,6 +717,8 @@ export function usePanZoom(canvasElement, options = {}) {
       canvasElement.value.classList.remove(PAN_CURSOR_CLASS)
       canvasElement.value.classList.remove(SPACE_READY_CLASS)
       canvasElement.value.classList.remove('canvas-container--lod')
+      canvasElement.value.classList.remove('canvas-container--lod-deep')
+      canvasElement.value.classList.remove('canvas-container--lod-minimal')
     }
     if (transformFrame !== null) {
       cancelAnimationFrame(transformFrame)

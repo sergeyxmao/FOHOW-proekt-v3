@@ -3675,13 +3675,23 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   filter: none !important;
 }
 
-/* LOD summary — скрыта по умолчанию, видна только в LOD */
+/* LOD summary — скрыта по умолчанию, видна только в LOD-deep (< 20%) */
 :deep(.card-lod-summary) {
   display: none !important;
 }
 
-.canvas-container--lod :deep(.card-lod-summary) {
+.canvas-container--lod-deep :deep(.card-lod-summary) {
   display: flex !important;
+}
+
+/* LOD уровень 2 (< 20%) — скрываем баланс и актив-заказы */
+.canvas-container--lod-deep :deep(.card-lod-hide-deep) {
+  display: none !important;
+}
+
+/* LOD уровень 3 (< 15%) — скрываем аватарку */
+.canvas-container--lod-minimal :deep(.card-lod-hide-minimal) {
+  display: none !important;
 }
 
 /* Print Styles - Обеспечиваем корректное отображение холста и карточек при печати */
