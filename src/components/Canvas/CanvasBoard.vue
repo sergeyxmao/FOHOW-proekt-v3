@@ -3651,9 +3651,11 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   display: none !important;
 }
 
-/* Упрощаем отступы card-body в LOD — меньше padding */
+/* Упрощаем отступы card-body в LOD — НЕ трогаем padding-left (140px для больших карточек) */
 .canvas-container--lod :deep(.card-body) {
-  padding: 10px 10px 10px !important;
+  padding-top: 10px !important;
+  padding-right: 10px !important;
+  padding-bottom: 10px !important;
   gap: 4px !important;
 }
 
