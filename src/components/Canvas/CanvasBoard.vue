@@ -3675,6 +3675,30 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   filter: none !important;
 }
 
+/* LOD: увеличиваем монетку и центрируем контент при 35-20% */
+.canvas-container--lod :deep(.coin-icon-wrapper) {
+  width: 80px !important;
+  height: 80px !important;
+}
+.canvas-container--lod :deep(.coin-icon) {
+  width: 80px !important;
+  height: 80px !important;
+}
+.canvas-container--lod :deep(.pv-row) {
+  justify-content: center !important;
+}
+.canvas-container--lod :deep(.card-row .label) {
+  font-size: 36px !important;
+}
+.canvas-container--lod :deep(.card-row .value) {
+  font-size: 38px !important;
+}
+.canvas-container--lod :deep(.card-body) {
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
 /* LOD summary — скрыта по умолчанию, видна только в LOD-deep (< 20%) */
 :deep(.card-lod-summary) {
   display: none !important;
