@@ -1858,7 +1858,7 @@ body:has(.app--mobile) {
   position: fixed;
   left: 50%;
   bottom: 24px;
-  transform: translateX(calc(-50% + 140px));
+  transform: translateX(calc(-50% + 250px));
   z-index: 1800;
   padding: 10px 18px;
   border-radius: 18px;
@@ -1875,7 +1875,7 @@ body:has(.app--mobile) {
   white-space: nowrap;
 }
 .mode-floating-button:hover {
-  transform: translateX(calc(-50% + 140px)) translateY(-2px);
+  transform: translateX(calc(-50% + 250px)) translateY(-2px);
   box-shadow: 0 24px 42px rgba(255, 193, 7, 0.4);
   background: #ffc107;
   color: #000000;
@@ -1888,7 +1888,7 @@ body:has(.app--mobile) {
   box-shadow: 0 22px 42px rgba(6, 11, 21, 0.55);
 }
 .mode-floating-button--modern:hover {
-  transform: translateX(calc(-50% + 140px)) translateY(-2px);
+  transform: translateX(calc(-50% + 250px)) translateY(-2px);
   box-shadow: 0 28px 48px rgba(255, 193, 7, 0.5);
   background: #ffc107;
   color: #000000;
