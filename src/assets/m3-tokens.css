@@ -34,17 +34,18 @@
   --md-ref-secondary-95: #eef0ff;
   --md-ref-secondary-99: #fefbff;
 
-  /* === TERTIARY TONAL PALETTE (warm mauve) === */
-  --md-ref-tertiary-10: #2b1221;
-  --md-ref-tertiary-20: #422736;
-  --md-ref-tertiary-30: #5a3d4d;
-  --md-ref-tertiary-40: #745465;
-  --md-ref-tertiary-50: #8e6d7e;
-  --md-ref-tertiary-60: #aa8698;
-  --md-ref-tertiary-70: #c6a0b3;
-  --md-ref-tertiary-80: #e3bbce;
-  --md-ref-tertiary-90: #ffd8ea;
-  --md-ref-tertiary-95: #ffecf2;
+  /* === TERTIARY TONAL PALETTE (gold / amber — for Gold license) === */
+  --md-ref-tertiary-10: #291800;
+  --md-ref-tertiary-20: #452b00;
+  --md-ref-tertiary-25: #533500;
+  --md-ref-tertiary-30: #5a3a00;
+  --md-ref-tertiary-40: #7a4a00;
+  --md-ref-tertiary-50: #c08b00;
+  --md-ref-tertiary-60: #d9a21a;
+  --md-ref-tertiary-70: #f5b300;
+  --md-ref-tertiary-80: #ffc107;
+  --md-ref-tertiary-90: #ffe272;
+  --md-ref-tertiary-95: #fff3c4;
 
   /* === ERROR TONAL PALETTE (red) === */
   --md-ref-error-10: #410002;
@@ -58,29 +59,29 @@
   --md-ref-error-90: #ffdad6;
   --md-ref-error-95: #ffedea;
 
-  /* === NEUTRAL TONAL PALETTE (surfaces) === */
+  /* === NEUTRAL TONAL PALETTE (blue-tinted — matches desktop dark navy) === */
   --md-ref-neutral-0: #000000;
-  --md-ref-neutral-4: #0d0e11;
-  --md-ref-neutral-6: #121316;
-  --md-ref-neutral-10: #1b1b1f;
-  --md-ref-neutral-12: #1f2024;
-  --md-ref-neutral-17: #292a2e;
-  --md-ref-neutral-20: #303034;
-  --md-ref-neutral-22: #353539;
-  --md-ref-neutral-24: #39393e;
-  --md-ref-neutral-30: #46464a;
-  --md-ref-neutral-40: #5e5e62;
-  --md-ref-neutral-50: #77777a;
-  --md-ref-neutral-60: #919094;
-  --md-ref-neutral-70: #acabaf;
-  --md-ref-neutral-80: #c7c6ca;
-  --md-ref-neutral-87: #dad9dd;
-  --md-ref-neutral-90: #e3e2e6;
-  --md-ref-neutral-92: #e9e8ec;
-  --md-ref-neutral-94: #eeeeef;
-  --md-ref-neutral-95: #f3f2f6;
-  --md-ref-neutral-96: #f6f5f9;
-  --md-ref-neutral-98: #fdf8fd;
+  --md-ref-neutral-4: #080c16;
+  --md-ref-neutral-6: #0d121e;
+  --md-ref-neutral-10: #141b2a;
+  --md-ref-neutral-12: #181f30;
+  --md-ref-neutral-17: #1f2940;
+  --md-ref-neutral-20: #253048;
+  --md-ref-neutral-22: #29354d;
+  --md-ref-neutral-24: #2d3952;
+  --md-ref-neutral-30: #3a4764;
+  --md-ref-neutral-40: #52607a;
+  --md-ref-neutral-50: #6b7992;
+  --md-ref-neutral-60: #8591a8;
+  --md-ref-neutral-70: #a0abbe;
+  --md-ref-neutral-80: #bcc6d6;
+  --md-ref-neutral-87: #d4dce8;
+  --md-ref-neutral-90: #dfe5ef;
+  --md-ref-neutral-92: #e5eaf3;
+  --md-ref-neutral-94: #ebeff5;
+  --md-ref-neutral-95: #f0f3f8;
+  --md-ref-neutral-96: #f4f6fa;
+  --md-ref-neutral-98: #fafbfd;
   --md-ref-neutral-99: #fefbff;
   --md-ref-neutral-100: #ffffff;
 

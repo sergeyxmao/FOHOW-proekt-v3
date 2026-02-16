@@ -432,31 +432,11 @@ const handleProfileClick = () => {
   background: var(--md-sys-color-surface-container-high);
 }
 
-/* --- Save button (success / green filled) --- */
+/* --- Save button (same surface treatment as other buttons) --- */
 .save-button {
-  background: var(--md-sys-color-success);
-  color: var(--md-sys-color-on-success);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
   box-shadow: var(--md-sys-elevation-1);
-}
-
-.save-button::after {
-  background: var(--md-sys-color-on-success);
-}
-
-.mobile-toolbar--dark .save-button {
-  background: var(--md-sys-color-success);
-  color: var(--md-sys-color-on-success);
-}
-
-.save-button:active:not(:disabled) {
-  box-shadow: var(--md-sys-elevation-1);
-}
-
-.save-button:disabled {
-  background: var(--md-sys-color-on-surface);
-  color: var(--md-sys-color-surface);
-  opacity: var(--md-sys-state-disabled-opacity);
-  box-shadow: var(--md-sys-elevation-0);
 }
 
 /* --- Mode button (same surface treatment) --- */
