@@ -38,7 +38,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:4000',
+        target: process.env.API_PROXY_TARGET || 'https://1508.marketingfohow.ru',
         changeOrigin: true,
         secure: false, // Для HTTPS прокси
       }

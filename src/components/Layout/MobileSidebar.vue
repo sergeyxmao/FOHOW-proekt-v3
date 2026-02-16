@@ -286,7 +286,7 @@ onBeforeUnmount(() => {
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   z-index: 1100;
 }
 
@@ -295,16 +295,17 @@ onBeforeUnmount(() => {
 }
 
 .mobile-sidebar-button {
-  width: 52px;
-  height: 52px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  color: #111827;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+  box-shadow: var(--md-sys-elevation-3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -314,41 +315,36 @@ onBeforeUnmount(() => {
 }
 
 .mobile-sidebar--dark .mobile-sidebar-button {
-  background: rgba(28, 38, 58, 0.95);
-  color: #e5f3ff;
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--md-ref-neutral-22);
+  color: var(--md-ref-neutral-90);
 }
+
 .mobile-sidebar--scaled {
-  gap: 16px;
+  gap: 20px;
 }
 
 .mobile-sidebar--scaled .mobile-sidebar-button {
   transform: scale(var(--menu-scale, 1));
 }
+
 .mobile-sidebar-button:hover:not(:disabled) {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.8);
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  box-shadow: var(--md-sys-elevation-4);
 }
 
 .mobile-sidebar--dark .mobile-sidebar-button:hover:not(:disabled) {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.85);
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+  background: var(--md-ref-primary-30);
+  color: var(--md-ref-primary-90);
 }
 
 .mobile-sidebar-button:active:not(:disabled) {
-  background: #e8a900;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.8);
   transform: scale(calc(var(--menu-scale, 1) * 0.95));
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--md-sys-elevation-1);
 }
 
 .mobile-sidebar-button:disabled {
-  opacity: 0.5;
+  opacity: var(--md-sys-state-disabled-opacity);
   cursor: not-allowed;
 }
 
@@ -359,22 +355,30 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
-/* Gold button */
+/* Gold button — uses tertiary container instead of gradient */
 .gold-button {
-  background: linear-gradient(135deg, #ffe272 0%, #f5b300 100%);
-  color: #7a4a00;
-  border-color: rgba(245, 179, 0, 0.5);
-  box-shadow: 0 4px 12px rgba(245, 179, 0, 0.4);
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+}
+
+.gold-button:hover:not(:disabled) {
+  background: var(--md-sys-color-tertiary);
+  color: var(--md-sys-color-on-tertiary);
 }
 
 .gold-button:active:not(:disabled) {
-  background: linear-gradient(135deg, #ffec8f 0%, #ffbc1f 100%);
-  color: #5b3600;
+  background: var(--md-sys-color-tertiary);
+  color: var(--md-sys-color-on-tertiary);
 }
 
 .mobile-sidebar--dark .gold-button {
-  color: #5a3a00;
-  box-shadow: 0 4px 12px rgba(255, 206, 84, 0.5);
+  background: var(--md-ref-tertiary-30);
+  color: var(--md-ref-tertiary-90);
+}
+
+.mobile-sidebar--dark .gold-button:hover:not(:disabled) {
+  background: var(--md-ref-tertiary-40);
+  color: var(--md-ref-tertiary-99);
 }
 
 /* Template menu */
@@ -385,55 +389,53 @@ onBeforeUnmount(() => {
   min-width: 200px;
   max-height: 320px;
   overflow-y: auto;
-  padding: 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(10px);
+  padding: 8px;
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-high);
+  border: none;
+  box-shadow: var(--md-sys-elevation-3);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   z-index: 1000;
 }
 
 .mobile-sidebar--dark .sidebar-template-menu {
-  background: rgba(28, 38, 58, 0.95);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--md-ref-neutral-22);
 }
 
 .sidebar-menu-item {
-  padding: 8px 12px;
-  border-radius: 10px;
+  padding: 10px 14px;
+  border-radius: var(--md-sys-shape-corner-medium);
   border: none;
-  background: rgba(0, 0, 0, 0.04);
-  color: #111827;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .sidebar-menu-item:hover {
-  background: #ffc107;
-  color: #000000;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
 }
 
 .mobile-sidebar--dark .sidebar-menu-item {
-  background: rgba(255, 255, 255, 0.08);
-  color: #e5f3ff;
+  color: var(--md-ref-neutral-90);
 }
 
 .mobile-sidebar--dark .sidebar-menu-item:hover {
-  background: #ffc107;
-  color: #000000;
+  background: var(--md-ref-primary-30);
+  color: var(--md-ref-primary-90);
 }
 
 /* Transition */
 .sidebar-menu-enter-active,
 .sidebar-menu-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .sidebar-menu-enter-from,
@@ -442,11 +444,10 @@ onBeforeUnmount(() => {
   transform: translateX(10px);
 }
 
-/* Адаптация для маленьких экранов */
 @media (max-width: 480px) {
   .mobile-sidebar {
     right: 6px;
-    gap: 10px;
+    gap: 12px;
   }
 
   .mobile-sidebar-button {

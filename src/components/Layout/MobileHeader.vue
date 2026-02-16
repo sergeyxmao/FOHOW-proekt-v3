@@ -453,6 +453,12 @@ watch(
 </template>
 
 <style scoped>
+/* ============================================================
+   MobileHeader — Material Design 3 Style
+   Uses tokens from m3-tokens.css
+   ============================================================ */
+
+/* --- Header bar --- */
 .mobile-header {
   position: fixed;
   top: env(safe-area-inset-top, 0);
@@ -501,6 +507,7 @@ watch(
   margin-left: auto;
 }
 
+/* --- Header buttons (pill shape, 44x44) --- */
 .mobile-header-button {
   display: flex;
   align-items: center;
@@ -508,20 +515,27 @@ watch(
   min-width: 44px;
   width: 44px;
   height: 44px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: color-mix(in srgb, var(--md-sys-color-surface-container-high) 92%, transparent);
   backdrop-filter: none;
-  color: #111827;
+  color: var(--md-sys-color-on-surface);
   font-size: 20px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    border-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
   user-select: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--md-sys-elevation-1);
   flex-shrink: 0;
   transform: scale(var(--menu-scale, 1));
-  transform-origin: center; 
+  transform-origin: center;
 }
+
+/* Scaled mode */
 .mobile-header--scaled .mobile-header-button,
 .mobile-header--scaled .mobile-header-avatar {
   transform: scale(var(--menu-scale, 1));
@@ -534,51 +548,67 @@ watch(
 .mobile-header--scaled .mobile-header-section {
   gap: 12px;
 }
+
+/* Dark mode button */
 .mobile-header--dark .mobile-header-button {
-  background: rgba(28, 38, 58, 0.95);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #e5f3ff;
+  background: color-mix(in srgb, var(--md-sys-color-surface-container-high) 92%, transparent);
+  border-color: var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface);
 }
 
+/* Hover: state layer */
 .mobile-header-button:hover:not(:disabled) {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.8);
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover-opacity) * 100%),
+    var(--md-sys-color-surface-container-high)
+  );
+  border-color: var(--md-sys-color-outline);
+  box-shadow: var(--md-sys-elevation-2);
 }
 
 .mobile-header--dark .mobile-header-button:hover:not(:disabled) {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.85);
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover-opacity) * 100%),
+    var(--md-sys-color-surface-container-high)
+  );
+  border-color: var(--md-sys-color-outline);
+  box-shadow: var(--md-sys-elevation-2);
 }
 
+/* Pressed */
 .mobile-header-button:active:not(:disabled) {
-  background: #e8a900;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.8);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) calc(var(--md-sys-state-pressed-opacity) * 100%),
+    var(--md-sys-color-surface-container-high)
+  );
+  border-color: var(--md-sys-color-outline);
+  box-shadow: var(--md-sys-elevation-1);
 }
 
+/* Disabled */
 .mobile-header-button:disabled {
-  opacity: 0.4;
+  opacity: var(--md-sys-state-disabled-opacity);
   cursor: not-allowed;
 }
 
+/* Active (toggled on) — primary-container */
 .mobile-header-button--active {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.8);
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-color: color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
+  box-shadow: var(--md-sys-elevation-2);
 }
 
 .mobile-header--dark .mobile-header-button--active {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.85);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-color: color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
 }
 
+/* --- Button icon --- */
 .button-icon {
   font-size: 20px;
   display: flex;
@@ -586,13 +616,14 @@ watch(
   justify-content: center;
 }
 
+/* --- Avatar button --- */
 .mobile-header-avatar {
   min-width: 44px;
   width: 44px;
   height: 44px;
   border-radius: 50%;
   background: transparent;
-  color: #111827;
+  color: var(--md-sys-color-on-surface);
   font-size: 18px;
   font-weight: 700;
   display: flex;
@@ -601,7 +632,8 @@ watch(
   border: none;
   cursor: pointer;
   box-shadow: none;
-  transition: all 0.2s ease;
+  transition:
+    all var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
   user-select: none;
   flex-shrink: 0;
   padding: 0;
@@ -614,13 +646,18 @@ watch(
   transform: scale(calc(var(--menu-scale, 1) * 0.95));
 }
 
+/* --- Avatar container --- */
 .avatar-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+  transition:
+    border-color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard),
+    background var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
 }
 
+/* Verified avatar — goldPulse preserved */
 .avatar-container--verified {
   padding: 3px;
   border-radius: 50%;
@@ -648,6 +685,7 @@ watch(
   }
 }
 
+/* Avatar image */
 .avatar-image {
   width: 34px;
   height: 34px;
@@ -657,12 +695,13 @@ watch(
   flex-shrink: 0;
 }
 
+/* Avatar initials — M3 primary-container instead of gradient */
 .avatar-initials {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
-  color: #5a3e00;
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
   font-size: 14px;
   font-weight: 700;
   display: flex;
@@ -670,10 +709,19 @@ watch(
   justify-content: center;
   flex-shrink: 0;
 }
+
+/* ============================================================
+   TELEPORTED MENUS
+   These teleport to <body>, outside #app / .m3-dark ancestor.
+   Light mode uses --md-ref-neutral-* light values directly.
+   Dark mode (--dark suffix) uses --md-ref-neutral-* dark values.
+   ============================================================ */
+
+/* --- User menu overlay --- */
 .mobile-user-menu-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.35);
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 32%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -683,59 +731,62 @@ watch(
 }
 
 .mobile-user-menu-overlay--dark {
-  background: rgba(11, 16, 28, 0.6);
+  background: color-mix(in srgb, var(--md-ref-neutral-0) 55%, transparent);
 }
 
+/* --- User menu panel --- */
 .mobile-user-menu {
   position: relative;
   width: min(360px, calc(100vw - 32px));
   max-height: calc(100vh - 64px);
   overflow-y: auto;
-  background: rgba(255, 255, 255, 0.98);
-  color: #0f172a;
-  border-radius: 22px;
+  background: var(--md-ref-neutral-98);
+  color: var(--md-ref-neutral-10);
+  border-radius: var(--md-sys-shape-corner-extra-large);
   padding: 24px;
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+  box-shadow: var(--md-sys-elevation-3);
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
 .mobile-user-menu--dark {
-  background: rgba(28, 38, 58, 0.96);
-  color: #e5f3ff;
-  box-shadow: 0 24px 48px rgba(5, 10, 18, 0.45);
-  border: 1px solid rgba(229, 243, 255, 0.1);
+  background: var(--md-ref-neutral-17);
+  color: var(--md-ref-neutral-90);
+  box-shadow: var(--md-sys-elevation-3);
+  border: 1px solid color-mix(in srgb, var(--md-ref-neutral-variant-60) 20%, transparent);
 }
 
+/* Close button — pill shape */
 .mobile-user-menu__close {
   position: absolute;
   top: 14px;
   right: 14px;
   width: 34px;
   height: 34px;
-  border-radius: 12px;
+  border-radius: var(--md-sys-shape-corner-full);
   border: none;
-  background: rgba(15, 23, 42, 0.08);
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 8%, transparent);
   color: inherit;
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .mobile-user-menu--dark .mobile-user-menu__close {
-  background: rgba(229, 243, 255, 0.12);
+  background: color-mix(in srgb, var(--md-ref-neutral-90) 12%, transparent);
 }
 
 .mobile-user-menu__close:hover {
-  background: rgba(15, 23, 42, 0.12);
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 12%, transparent);
 }
 
 .mobile-user-menu--dark .mobile-user-menu__close:hover {
-  background: rgba(229, 243, 255, 0.2);
+  background: color-mix(in srgb, var(--md-ref-neutral-90) 20%, transparent);
 }
 
+/* --- Menu sections --- */
 .mobile-user-menu__section {
   display: flex;
   flex-direction: column;
@@ -758,40 +809,45 @@ watch(
   padding-right: 26px;
   gap: 10px;
 }
+
+/* --- Project button --- */
 .mobile-user-menu__project-button {
   display: inline-flex;
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(15, 23, 42, 0.05);
+  border-radius: var(--md-sys-shape-corner-large);
+  border: 1px solid color-mix(in srgb, var(--md-ref-neutral-10) 8%, transparent);
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 5%, transparent);
   color: inherit;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  transition:
+    background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    border-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
   max-width: 100%;
 }
 
 .mobile-user-menu--dark .mobile-user-menu__project-button {
-  background: rgba(229, 243, 255, 0.05);
-  border-color: rgba(229, 243, 255, 0.18);
+  background: color-mix(in srgb, var(--md-ref-neutral-90) 5%, transparent);
+  border-color: color-mix(in srgb, var(--md-ref-neutral-90) 18%, transparent);
 }
 
 .mobile-user-menu__project-button:hover {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.8);
+  background: var(--md-ref-primary-90);
+  color: var(--md-ref-primary-10);
+  border-color: color-mix(in srgb, var(--md-ref-primary-40) 30%, transparent);
   transform: translateY(-1px);
 }
 
 .mobile-user-menu--dark .mobile-user-menu__project-button:hover {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.8);
+  background: var(--md-ref-primary-30);
+  color: var(--md-ref-primary-90);
+  border-color: color-mix(in srgb, var(--md-ref-primary-80) 30%, transparent);
 }
 
 .mobile-user-menu__project-button:focus-visible {
-  outline: 2px solid rgba(59, 130, 246, 0.8);
+  outline: 2px solid var(--md-ref-primary-40);
   outline-offset: 3px;
 }
 
@@ -808,9 +864,10 @@ watch(
 .mobile-user-menu__project-edit {
   font-size: 18px;
   flex-shrink: 0;
-  opacity: 0.75; 
+  opacity: 0.75;
 }
 
+/* --- Save status --- */
 .mobile-user-menu__status {
   display: flex;
   align-items: center;
@@ -834,36 +891,40 @@ watch(
   font-weight: 700;
 }
 
+/* --- Menu items --- */
 .mobile-user-menu__item {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--md-sys-shape-corner-large);
   border: none;
-  background: rgba(15, 23, 42, 0.04);
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 4%, transparent);
   color: inherit;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition:
+    background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .mobile-user-menu__item:hover {
-  background: #ffc107;
-  color: #000000;
+  background: var(--md-ref-primary-90);
+  color: var(--md-ref-primary-10);
   transform: translateY(-1px);
 }
 
 .mobile-user-menu--dark .mobile-user-menu__item {
-  background: rgba(229, 243, 255, 0.05);
+  background: color-mix(in srgb, var(--md-ref-neutral-90) 5%, transparent);
 }
 
 .mobile-user-menu--dark .mobile-user-menu__item:hover {
-  background: #ffc107;
-  color: #000000;
+  background: var(--md-ref-primary-30);
+  color: var(--md-ref-primary-90);
 }
 
+/* Static item (disabled-looking) */
 .mobile-user-menu__item--static {
   cursor: default;
   background: transparent;
@@ -873,37 +934,59 @@ watch(
 
 .mobile-user-menu__item--static:hover {
   background: transparent;
+  color: inherit;
   transform: none;
 }
 
+/* Danger item — error-container */
 .mobile-user-menu__item--danger {
-  background: rgba(244, 67, 54, 0.08);
+  background: color-mix(in srgb, var(--md-ref-error-40) 8%, transparent);
 }
 
 .mobile-user-menu__item--danger:hover {
-  background: #ffc107;
-  color: #000000;
+  background: var(--md-ref-error-90);
+  color: var(--md-ref-error-10);
 }
 
+.mobile-user-menu--dark .mobile-user-menu__item--danger {
+  background: color-mix(in srgb, var(--md-ref-error-80) 10%, transparent);
+}
+
+.mobile-user-menu--dark .mobile-user-menu__item--danger:hover {
+  background: var(--md-ref-error-30);
+  color: var(--md-ref-error-90);
+}
+
+/* Admin item */
 .mobile-user-menu__item--admin {
-  background: rgba(33, 150, 243, 0.08);
+  background: color-mix(in srgb, var(--md-ref-primary-40) 8%, transparent);
 }
 
 .mobile-user-menu__item--admin:hover {
-  background: #ffc107;
-  color: #000000;
+  background: var(--md-ref-primary-90);
+  color: var(--md-ref-primary-10);
 }
 
+.mobile-user-menu--dark .mobile-user-menu__item--admin {
+  background: color-mix(in srgb, var(--md-ref-primary-80) 10%, transparent);
+}
+
+.mobile-user-menu--dark .mobile-user-menu__item--admin:hover {
+  background: var(--md-ref-primary-30);
+  color: var(--md-ref-primary-90);
+}
+
+/* --- Divider --- */
 .mobile-user-menu__divider {
   height: 1px;
-  background: rgba(15, 23, 42, 0.12);
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 12%, transparent);
 }
 
 .mobile-user-menu--dark .mobile-user-menu__divider {
-  background: rgba(229, 243, 255, 0.18);
+  background: color-mix(in srgb, var(--md-ref-neutral-90) 16%, transparent);
 }
 
-/* Адаптация для очень маленьких экранов */
+/* --- Responsive: small screens --- */
 @media (max-width: 480px) {
   .mobile-header {
     height: 52px;
@@ -912,7 +995,7 @@ watch(
 
   .mobile-header-layout,
   .mobile-header-section {
-   gap: 6px;
+    gap: 6px;
   }
 
   .mobile-header-button {
@@ -951,11 +1034,16 @@ watch(
   }
 }
 
-/* Стили для модального окна "Поделиться" */
+/* ============================================================
+   SHARE MENU (Teleported)
+   Same M3 treatment as user menu
+   ============================================================ */
+
+/* --- Share menu overlay --- */
 .mobile-share-menu-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.35);
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 32%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -965,59 +1053,62 @@ watch(
 }
 
 .mobile-share-menu-overlay--dark {
-  background: rgba(11, 16, 28, 0.6);
+  background: color-mix(in srgb, var(--md-ref-neutral-0) 55%, transparent);
 }
 
+/* --- Share menu panel --- */
 .mobile-share-menu {
   position: relative;
   width: min(360px, calc(100vw - 32px));
   max-height: calc(100vh - 64px);
   overflow-y: auto;
-  background: rgba(255, 255, 255, 0.98);
-  color: #0f172a;
-  border-radius: 22px;
+  background: var(--md-ref-neutral-98);
+  color: var(--md-ref-neutral-10);
+  border-radius: var(--md-sys-shape-corner-extra-large);
   padding: 24px;
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+  box-shadow: var(--md-sys-elevation-3);
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
 .mobile-share-menu--dark {
-  background: rgba(28, 38, 58, 0.96);
-  color: #e5f3ff;
-  box-shadow: 0 24px 48px rgba(5, 10, 18, 0.45);
-  border: 1px solid rgba(229, 243, 255, 0.1);
+  background: var(--md-ref-neutral-17);
+  color: var(--md-ref-neutral-90);
+  box-shadow: var(--md-sys-elevation-3);
+  border: 1px solid color-mix(in srgb, var(--md-ref-neutral-variant-60) 20%, transparent);
 }
 
+/* Close button — pill */
 .mobile-share-menu__close {
   position: absolute;
   top: 14px;
   right: 14px;
   width: 34px;
   height: 34px;
-  border-radius: 12px;
+  border-radius: var(--md-sys-shape-corner-full);
   border: none;
-  background: rgba(15, 23, 42, 0.08);
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 8%, transparent);
   color: inherit;
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .mobile-share-menu--dark .mobile-share-menu__close {
-  background: rgba(229, 243, 255, 0.12);
+  background: color-mix(in srgb, var(--md-ref-neutral-90) 12%, transparent);
 }
 
 .mobile-share-menu__close:hover {
-  background: rgba(15, 23, 42, 0.12);
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 12%, transparent);
 }
 
 .mobile-share-menu--dark .mobile-share-menu__close:hover {
-  background: rgba(229, 243, 255, 0.2);
+  background: color-mix(in srgb, var(--md-ref-neutral-90) 20%, transparent);
 }
 
+/* Title */
 .mobile-share-menu__title {
   font-size: 20px;
   font-weight: 700;
@@ -1026,61 +1117,68 @@ watch(
   color: inherit;
 }
 
+/* Section */
 .mobile-share-menu__section {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
+/* Item wrapper (for submenu positioning) */
 .mobile-share-menu__item-wrapper {
   position: relative;
 }
 
+/* Share menu items */
 .mobile-share-menu__item {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--md-sys-shape-corner-large);
   border: none;
-  background: rgba(15, 23, 42, 0.04);
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 4%, transparent);
   color: inherit;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition:
+    background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
   width: 100%;
 }
 
 .mobile-share-menu__item:hover {
-  background: #ffc107;
-  color: #000000;
+  background: var(--md-ref-primary-90);
+  color: var(--md-ref-primary-10);
   transform: translateY(-1px);
 }
 
 .mobile-share-menu__item--active {
-  background: rgba(255, 193, 7, 0.15);
+  background: color-mix(in srgb, var(--md-ref-primary-40) 15%, transparent);
 }
 
 .mobile-share-menu--dark .mobile-share-menu__item {
-  background: rgba(229, 243, 255, 0.05);
+  background: color-mix(in srgb, var(--md-ref-neutral-90) 5%, transparent);
 }
 
 .mobile-share-menu--dark .mobile-share-menu__item:hover {
-  background: #ffc107;
-  color: #000000;
+  background: var(--md-ref-primary-30);
+  color: var(--md-ref-primary-90);
 }
 
+/* Arrow (for expandable items) */
 .mobile-share-menu__arrow {
   margin-left: auto;
   font-size: 14px;
-  transition: transform 0.2s ease;
+  transition: transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .mobile-share-menu__arrow--rotated {
   transform: rotate(90deg);
 }
 
+/* Submenu */
 .mobile-share-menu__submenu {
   margin-top: 8px;
   margin-left: 16px;
@@ -1095,35 +1193,44 @@ watch(
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: var(--md-sys-shape-corner-medium);
   border: none;
-  background: rgba(15, 23, 42, 0.03);
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 3%, transparent);
   color: inherit;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition:
+    background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
   width: 100%;
 }
 
 .mobile-share-menu__submenu-item:hover {
-  background: #ffc107;
-  color: #000000;
+  background: var(--md-ref-primary-90);
+  color: var(--md-ref-primary-10);
   transform: translateX(2px);
 }
 
 .mobile-share-menu--dark .mobile-share-menu__submenu-item {
-  background: rgba(229, 243, 255, 0.04);
+  background: color-mix(in srgb, var(--md-ref-neutral-90) 4%, transparent);
 }
 
 .mobile-share-menu--dark .mobile-share-menu__submenu-item:hover {
-  background: #ffc107;
-  color: #000000;
+  background: var(--md-ref-primary-30);
+  color: var(--md-ref-primary-90);
 }
 
+/* ============================================================
+   TRANSITIONS
+   ============================================================ */
+
+/* Submenu slide */
 .submenu-slide-enter-active,
 .submenu-slide-leave-active {
-  transition: opacity 0.2s ease, max-height 0.3s ease;
+  transition:
+    opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    max-height var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
   overflow: hidden;
 }
 
@@ -1143,9 +1250,10 @@ watch(
   max-height: 0;
 }
 
+/* Fade (overlay appear/disappear) */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .fade-enter-from,

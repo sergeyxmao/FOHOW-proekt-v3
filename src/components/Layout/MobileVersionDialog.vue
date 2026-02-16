@@ -52,7 +52,7 @@ const handleContinueMobile = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -62,12 +62,12 @@ const handleContinueMobile = () => {
 }
 
 .mobile-dialog {
-  background: #ffffff;
-  border-radius: 20px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: var(--md-sys-shape-corner-extra-large);
   max-width: 400px;
   width: 100%;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
-  animation: slideUp 0.3s ease-out;
+  box-shadow: var(--md-sys-elevation-3);
+  animation: slideUp var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized-decelerate);
 }
 
 @keyframes slideUp {
@@ -87,9 +87,9 @@ const handleContinueMobile = () => {
 }
 
 .mobile-dialog-icon {
-  font-size: 64px;
+  font-size: 56px;
   margin-bottom: 16px;
-  animation: bounce 0.6s ease;
+  animation: bounce 0.6s var(--md-sys-motion-easing-emphasized);
 }
 
 @keyframes bounce {
@@ -103,15 +103,15 @@ const handleContinueMobile = () => {
 
 .mobile-dialog-title {
   font-size: 24px;
-  font-weight: 700;
-  color: #111827;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
   margin: 0 0 12px 0;
 }
 
 .mobile-dialog-message {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.6;
-  color: #6b7280;
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0 0 28px 0;
 }
 
@@ -127,47 +127,51 @@ const handleContinueMobile = () => {
   justify-content: center;
   gap: 10px;
   width: 100%;
-  padding: 14px 20px;
+  padding: 14px 24px;
   border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .button-icon {
   font-size: 20px;
 }
 
+/* Primary filled button */
 .mobile-dialog-button--desktop {
-  background: #ffc107;
-  color: #000000;
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  box-shadow: var(--md-sys-elevation-1);
 }
 
 .mobile-dialog-button--desktop:hover {
-  background: #e8a900;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4);
+  box-shadow: var(--md-sys-elevation-2);
 }
 
 .mobile-dialog-button--desktop:active {
-  transform: translateY(0);
+  transform: scale(0.98);
 }
 
+/* Outlined button */
 .mobile-dialog-button--mobile {
-  background: #f3f4f6;
-  color: #111827;
-  border: 1px solid #e5e7eb;
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline);
 }
 
 .mobile-dialog-button--mobile:hover {
-  background: #e5e7eb;
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
 }
 
 .mobile-dialog-button--mobile:active {
-  background: #d1d5db;
+  background: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+  transform: scale(0.98);
 }
 
 @media (max-width: 480px) {
@@ -176,7 +180,7 @@ const handleContinueMobile = () => {
   }
 
   .mobile-dialog-icon {
-    font-size: 48px;
+    font-size: 44px;
   }
 
   .mobile-dialog-title {
@@ -184,12 +188,12 @@ const handleContinueMobile = () => {
   }
 
   .mobile-dialog-message {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .mobile-dialog-button {
-    padding: 12px 16px;
-    font-size: 15px;
+    padding: 12px 20px;
+    font-size: 14px;
   }
 }
 </style>

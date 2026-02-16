@@ -185,6 +185,11 @@ const handleProfileClick = () => {
 </template>
 
 <style scoped>
+/* ============================================================
+   MobileToolbar — Material Design 3 style
+   Uses global M3 tokens from m3-tokens.css
+   ============================================================ */
+
 .mobile-toolbar {
   position: fixed;
   bottom: env(safe-area-inset-bottom, 0);
@@ -212,7 +217,6 @@ const handleProfileClick = () => {
   align-items: center;
   gap: 8px;
   width: 100%;
-  gap: 8px;
 }
 
 .mobile-toolbar-section {
@@ -232,30 +236,50 @@ const handleProfileClick = () => {
 }
 
 .mobile-toolbar-section--right {
-  margin-left: auto;  
+  margin-left: auto;
 }
 
+/* --- Base button (tonal filled, pill shape) --- */
 .mobile-toolbar-button {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 44px;
   width: 44px;
   height: 44px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: none;
-  color: #111827;
+  border: none;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard),
+    opacity var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
   user-select: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--md-sys-elevation-1);
   text-decoration: none;
   flex-shrink: 0;
   transform: scale(var(--menu-scale, 1));
   pointer-events: auto;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
+
+/* State layer (pseudo-element for M3 hover/active tints) */
+.mobile-toolbar-button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--md-sys-color-on-surface);
+  opacity: 0;
+  transition: opacity var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+  pointer-events: none;
+}
+
 .mobile-toolbar--scaled .mobile-toolbar-button {
   transform: scale(var(--menu-scale, 1));
 }
@@ -264,37 +288,41 @@ const handleProfileClick = () => {
   gap: 12px;
 }
 
+/* Dark mode base button */
 .mobile-toolbar--dark .mobile-toolbar-button {
-  background: rgba(28, 38, 58, 0.95);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #e5f3ff;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  box-shadow: var(--md-sys-elevation-1);
+}
+
+/* Hover: 8% state layer tint */
+.mobile-toolbar-button:hover:not(:disabled)::after {
+  opacity: var(--md-sys-state-hover-opacity);
 }
 
 .mobile-toolbar-button:hover:not(:disabled) {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.8);
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+  box-shadow: var(--md-sys-elevation-2);
 }
 
-.mobile-toolbar--dark .mobile-toolbar-button:hover:not(:disabled) {
-  background: #ffc107;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.85);
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+/* Active: scale down + 12% state layer */
+.mobile-toolbar-button:active:not(:disabled)::after {
+  opacity: var(--md-sys-state-pressed-opacity);
 }
 
 .mobile-toolbar-button:active:not(:disabled) {
-  background: #e8a900;
-  color: #000000;
-  border-color: rgba(255, 193, 7, 0.8);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   transform: scale(calc(var(--menu-scale, 1) * 0.95));
+  box-shadow: var(--md-sys-elevation-1);
 }
 
+/* Disabled */
 .mobile-toolbar-button:disabled {
-  opacity: 0.5;
+  opacity: var(--md-sys-state-disabled-opacity);
   cursor: not-allowed;
+  box-shadow: var(--md-sys-elevation-0);
+}
+
+.mobile-toolbar-button:disabled::after {
+  display: none;
 }
 
 .button-icon {
@@ -304,12 +332,20 @@ const handleProfileClick = () => {
   justify-content: center;
 }
 
-/* Кнопка маркетинга */
+/* --- Marketing button (primary filled) --- */
 .marketing-button {
-  background: linear-gradient(135deg, #0088cc 0%, #0066a1 100%);
-  color: #ffffff;
-  border-color: rgba(0, 136, 204, 0.5);
-  box-shadow: 0 2px 8px rgba(0, 136, 204, 0.3);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  box-shadow: var(--md-sys-elevation-1);
+}
+
+.marketing-button::after {
+  background: var(--md-sys-color-on-primary);
+}
+
+.mobile-toolbar--dark .marketing-button {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
 }
 
 .marketing-icon {
@@ -317,43 +353,39 @@ const handleProfileClick = () => {
   height: 20px;
 }
 
-/* Переключатель темы */
+/* --- Theme toggle button (secondary container) --- */
 .theme-button {
-  background: linear-gradient(145deg, rgba(59, 130, 246, 0.18), rgba(59, 130, 246, 0));
-  border-color: rgba(15, 23, 42, 0.12);
-}
-/* Кнопка масштаба */
-.zoom-button {
-  min-width: 52px;
-  padding: 0 6px;
-  font-variant-numeric: tabular-nums;
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
-.zoom-button__value {
-  font-size: 18px;
-  font-weight: 600;
+.theme-button::after {
+  background: var(--md-sys-color-on-secondary-container);
 }
 
-.mobile-toolbar--dark .zoom-button {
-  border-color: rgba(96, 164, 255, 0.32);
-}
 .mobile-toolbar--dark .theme-button {
-  background: linear-gradient(145deg, rgba(114, 182, 255, 0.32), rgba(114, 182, 255, 0));
-  border-color: rgba(96, 164, 255, 0.42);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
+/* Theme icon — moon (light mode) */
 .theme-icon {
   position: relative;
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%);
-  box-shadow: inset -4px -4px 10px rgba(255, 255, 255, 0.22), 0 6px 12px rgba(15, 23, 42, 0.18);
+  background: var(--md-sys-color-on-secondary-container);
+  box-shadow:
+    inset -4px -4px 10px rgba(255, 255, 255, 0.15),
+    0 4px 8px rgba(0, 0, 0, 0.12);
 }
 
+/* Theme icon — sun (dark mode) */
 .mobile-toolbar--dark .theme-icon {
-  background: linear-gradient(135deg, #e5f3ff 0%, #73c8ff 100%);
-  box-shadow: inset -4px -4px 10px rgba(6, 11, 21, 0.35), 0 6px 12px rgba(6, 11, 21, 0.3);
+  background: var(--md-sys-color-on-secondary-container);
+  box-shadow:
+    inset -4px -4px 10px rgba(0, 0, 0, 0.25),
+    0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .theme-icon::before,
@@ -374,39 +406,71 @@ const handleProfileClick = () => {
   opacity: 0.2;
 }
 
-/* Переключатель версии */
+/* --- Zoom button (surface, wider for numbers) --- */
+.zoom-button {
+  min-width: 52px;
+  padding: 0 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.zoom-button__value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* --- Version button (surface container high) --- */
 .version-button {
-  background: rgba(15, 98, 254, 0.1);
+  background: var(--md-sys-color-surface-container-high);
 }
 
 .mobile-toolbar--dark .version-button {
-  background: rgba(59, 130, 246, 0.2);
+  background: var(--md-sys-color-surface-container-high);
 }
 
-/* Кнопка сохранения */
+/* --- Auth button (same surface treatment) --- */
+.auth-button {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+/* --- Save button (success / green filled) --- */
 .save-button {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #ffffff;
-  border-color: rgba(16, 185, 129, 0.5);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  background: var(--md-sys-color-success);
+  color: var(--md-sys-color-on-success);
+  box-shadow: var(--md-sys-elevation-1);
+}
+
+.save-button::after {
+  background: var(--md-sys-color-on-success);
+}
+
+.mobile-toolbar--dark .save-button {
+  background: var(--md-sys-color-success);
+  color: var(--md-sys-color-on-success);
 }
 
 .save-button:active:not(:disabled) {
-  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+  box-shadow: var(--md-sys-elevation-1);
 }
 
 .save-button:disabled {
-  background: #9ca3af;
-  border-color: rgba(156, 163, 175, 0.5);
-  box-shadow: none;
+  background: var(--md-sys-color-on-surface);
+  color: var(--md-sys-color-surface);
+  opacity: var(--md-sys-state-disabled-opacity);
+  box-shadow: var(--md-sys-elevation-0);
 }
 
-/* Адаптация для маленьких экранов */
+/* --- Mode button (same surface treatment) --- */
+.mode-button {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+/* --- Responsive: small screens --- */
 @media (max-width: 480px) {
   .mobile-toolbar {
     height: 52px;
     padding: 0 6px;
   }
+
   .mobile-toolbar-layout,
   .mobile-toolbar-section {
     gap: 6px;

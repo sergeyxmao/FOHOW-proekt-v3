@@ -1,0 +1,236 @@
+/* ============================================================
+   Material Design 3 (Material You) Design Tokens
+   Seed color: #0f62fe (brand blue)
+   ============================================================ */
+
+:root {
+  /* === PRIMARY TONAL PALETTE (blue) === */
+  --md-ref-primary-0: #000000;
+  --md-ref-primary-10: #001b3e;
+  --md-ref-primary-20: #002f65;
+  --md-ref-primary-25: #003a79;
+  --md-ref-primary-30: #00458e;
+  --md-ref-primary-35: #0050a3;
+  --md-ref-primary-40: #0f62fe;
+  --md-ref-primary-50: #3d7aff;
+  --md-ref-primary-60: #6b96ff;
+  --md-ref-primary-70: #9ab2ff;
+  --md-ref-primary-80: #b6c7ff;
+  --md-ref-primary-90: #d9e2ff;
+  --md-ref-primary-95: #eef0ff;
+  --md-ref-primary-99: #fefbff;
+  --md-ref-primary-100: #ffffff;
+
+  /* === SECONDARY TONAL PALETTE (muted blue) === */
+  --md-ref-secondary-10: #121c2b;
+  --md-ref-secondary-20: #273141;
+  --md-ref-secondary-30: #3e4759;
+  --md-ref-secondary-40: #555f71;
+  --md-ref-secondary-50: #6e778a;
+  --md-ref-secondary-60: #8891a5;
+  --md-ref-secondary-70: #a3abc0;
+  --md-ref-secondary-80: #bec6dc;
+  --md-ref-secondary-90: #dae2f9;
+  --md-ref-secondary-95: #eef0ff;
+  --md-ref-secondary-99: #fefbff;
+
+  /* === TERTIARY TONAL PALETTE (warm mauve) === */
+  --md-ref-tertiary-10: #2b1221;
+  --md-ref-tertiary-20: #422736;
+  --md-ref-tertiary-30: #5a3d4d;
+  --md-ref-tertiary-40: #745465;
+  --md-ref-tertiary-50: #8e6d7e;
+  --md-ref-tertiary-60: #aa8698;
+  --md-ref-tertiary-70: #c6a0b3;
+  --md-ref-tertiary-80: #e3bbce;
+  --md-ref-tertiary-90: #ffd8ea;
+  --md-ref-tertiary-95: #ffecf2;
+
+  /* === ERROR TONAL PALETTE (red) === */
+  --md-ref-error-10: #410002;
+  --md-ref-error-20: #690005;
+  --md-ref-error-30: #93000a;
+  --md-ref-error-40: #ba1a1a;
+  --md-ref-error-50: #de3730;
+  --md-ref-error-60: #ff5449;
+  --md-ref-error-70: #ff897d;
+  --md-ref-error-80: #ffb4ab;
+  --md-ref-error-90: #ffdad6;
+  --md-ref-error-95: #ffedea;
+
+  /* === NEUTRAL TONAL PALETTE (surfaces) === */
+  --md-ref-neutral-0: #000000;
+  --md-ref-neutral-4: #0d0e11;
+  --md-ref-neutral-6: #121316;
+  --md-ref-neutral-10: #1b1b1f;
+  --md-ref-neutral-12: #1f2024;
+  --md-ref-neutral-17: #292a2e;
+  --md-ref-neutral-20: #303034;
+  --md-ref-neutral-22: #353539;
+  --md-ref-neutral-24: #39393e;
+  --md-ref-neutral-30: #46464a;
+  --md-ref-neutral-40: #5e5e62;
+  --md-ref-neutral-50: #77777a;
+  --md-ref-neutral-60: #919094;
+  --md-ref-neutral-70: #acabaf;
+  --md-ref-neutral-80: #c7c6ca;
+  --md-ref-neutral-87: #dad9dd;
+  --md-ref-neutral-90: #e3e2e6;
+  --md-ref-neutral-92: #e9e8ec;
+  --md-ref-neutral-94: #eeeeef;
+  --md-ref-neutral-95: #f3f2f6;
+  --md-ref-neutral-96: #f6f5f9;
+  --md-ref-neutral-98: #fdf8fd;
+  --md-ref-neutral-99: #fefbff;
+  --md-ref-neutral-100: #ffffff;
+
+  /* === NEUTRAL VARIANT (outlines, surface-variant) === */
+  --md-ref-neutral-variant-20: #2d3240;
+  --md-ref-neutral-variant-30: #444857;
+  --md-ref-neutral-variant-40: #5c5f71;
+  --md-ref-neutral-variant-50: #74788a;
+  --md-ref-neutral-variant-60: #8e92a4;
+  --md-ref-neutral-variant-70: #a9adbf;
+  --md-ref-neutral-variant-80: #c4c8db;
+  --md-ref-neutral-variant-90: #e1e1f4;
+  --md-ref-neutral-variant-95: #eef0ff;
+
+  /* === LIGHT SCHEME (default) === */
+  --md-sys-color-primary: var(--md-ref-primary-40);
+  --md-sys-color-on-primary: var(--md-ref-primary-100);
+  --md-sys-color-primary-container: var(--md-ref-primary-90);
+  --md-sys-color-on-primary-container: var(--md-ref-primary-10);
+
+  --md-sys-color-secondary: var(--md-ref-secondary-40);
+  --md-sys-color-on-secondary: var(--md-ref-secondary-99);
+  --md-sys-color-secondary-container: var(--md-ref-secondary-90);
+  --md-sys-color-on-secondary-container: var(--md-ref-secondary-10);
+
+  --md-sys-color-tertiary: var(--md-ref-tertiary-40);
+  --md-sys-color-on-tertiary: var(--md-ref-tertiary-99);
+  --md-sys-color-tertiary-container: var(--md-ref-tertiary-90);
+  --md-sys-color-on-tertiary-container: var(--md-ref-tertiary-10);
+
+  --md-sys-color-error: var(--md-ref-error-40);
+  --md-sys-color-on-error: var(--md-ref-error-100);
+  --md-sys-color-error-container: var(--md-ref-error-90);
+  --md-sys-color-on-error-container: var(--md-ref-error-10);
+
+  --md-sys-color-surface: var(--md-ref-neutral-98);
+  --md-sys-color-on-surface: var(--md-ref-neutral-10);
+  --md-sys-color-surface-variant: var(--md-ref-neutral-variant-90);
+  --md-sys-color-on-surface-variant: var(--md-ref-neutral-variant-30);
+
+  --md-sys-color-surface-container-lowest: var(--md-ref-neutral-100);
+  --md-sys-color-surface-container-low: var(--md-ref-neutral-96);
+  --md-sys-color-surface-container: var(--md-ref-neutral-94);
+  --md-sys-color-surface-container-high: var(--md-ref-neutral-92);
+  --md-sys-color-surface-container-highest: var(--md-ref-neutral-90);
+
+  --md-sys-color-outline: var(--md-ref-neutral-variant-50);
+  --md-sys-color-outline-variant: var(--md-ref-neutral-variant-80);
+  --md-sys-color-inverse-surface: var(--md-ref-neutral-20);
+  --md-sys-color-inverse-on-surface: var(--md-ref-neutral-95);
+  --md-sys-color-inverse-primary: var(--md-ref-primary-80);
+  --md-sys-color-scrim: var(--md-ref-neutral-0);
+  --md-sys-color-shadow: var(--md-ref-neutral-0);
+
+  /* === Custom extension: success/green === */
+  --md-sys-color-success: #10b981;
+  --md-sys-color-on-success: #ffffff;
+  --md-sys-color-success-container: #d1fae5;
+  --md-sys-color-on-success-container: #064e3b;
+
+  /* === SHAPE === */
+  --md-sys-shape-corner-none: 0px;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-full: 9999px;
+
+  /* === ELEVATION === */
+  --md-sys-elevation-0: none;
+  --md-sys-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-2: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-3: 0 4px 8px 3px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --md-sys-elevation-4: 0 6px 10px 4px rgba(0, 0, 0, 0.15), 0 2px 3px rgba(0, 0, 0, 0.3);
+  --md-sys-elevation-5: 0 8px 12px 6px rgba(0, 0, 0, 0.15), 0 4px 4px rgba(0, 0, 0, 0.3);
+
+  /* === STATE LAYERS === */
+  --md-sys-state-hover-opacity: 0.08;
+  --md-sys-state-focus-opacity: 0.10;
+  --md-sys-state-pressed-opacity: 0.12;
+  --md-sys-state-dragged-opacity: 0.16;
+  --md-sys-state-disabled-opacity: 0.38;
+  --md-sys-state-disabled-container-opacity: 0.12;
+
+  /* === MOTION === */
+  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0.0, 0, 1.0);
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0.0, 0, 1.0);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1.0);
+  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0.0, 0.8, 0.15);
+  --md-sys-motion-duration-short1: 50ms;
+  --md-sys-motion-duration-short2: 100ms;
+  --md-sys-motion-duration-short3: 150ms;
+  --md-sys-motion-duration-short4: 200ms;
+  --md-sys-motion-duration-medium1: 250ms;
+  --md-sys-motion-duration-medium2: 300ms;
+  --md-sys-motion-duration-medium3: 350ms;
+  --md-sys-motion-duration-medium4: 400ms;
+  --md-sys-motion-duration-long1: 450ms;
+  --md-sys-motion-duration-long2: 500ms;
+}
+
+/* === DARK SCHEME === */
+.m3-dark {
+  --md-sys-color-primary: var(--md-ref-primary-80);
+  --md-sys-color-on-primary: var(--md-ref-primary-20);
+  --md-sys-color-primary-container: var(--md-ref-primary-30);
+  --md-sys-color-on-primary-container: var(--md-ref-primary-90);
+
+  --md-sys-color-secondary: var(--md-ref-secondary-80);
+  --md-sys-color-on-secondary: var(--md-ref-secondary-20);
+  --md-sys-color-secondary-container: var(--md-ref-secondary-30);
+  --md-sys-color-on-secondary-container: var(--md-ref-secondary-90);
+
+  --md-sys-color-tertiary: var(--md-ref-tertiary-80);
+  --md-sys-color-on-tertiary: var(--md-ref-tertiary-20);
+  --md-sys-color-tertiary-container: var(--md-ref-tertiary-30);
+  --md-sys-color-on-tertiary-container: var(--md-ref-tertiary-90);
+
+  --md-sys-color-error: var(--md-ref-error-80);
+  --md-sys-color-on-error: var(--md-ref-error-20);
+  --md-sys-color-error-container: var(--md-ref-error-30);
+  --md-sys-color-on-error-container: var(--md-ref-error-90);
+
+  --md-sys-color-surface: var(--md-ref-neutral-6);
+  --md-sys-color-on-surface: var(--md-ref-neutral-90);
+  --md-sys-color-surface-variant: var(--md-ref-neutral-variant-30);
+  --md-sys-color-on-surface-variant: var(--md-ref-neutral-variant-80);
+
+  --md-sys-color-surface-container-lowest: var(--md-ref-neutral-4);
+  --md-sys-color-surface-container-low: var(--md-ref-neutral-10);
+  --md-sys-color-surface-container: var(--md-ref-neutral-12);
+  --md-sys-color-surface-container-high: var(--md-ref-neutral-17);
+  --md-sys-color-surface-container-highest: var(--md-ref-neutral-22);
+
+  --md-sys-color-outline: var(--md-ref-neutral-variant-60);
+  --md-sys-color-outline-variant: var(--md-ref-neutral-variant-30);
+  --md-sys-color-inverse-surface: var(--md-ref-neutral-90);
+  --md-sys-color-inverse-on-surface: var(--md-ref-neutral-20);
+  --md-sys-color-inverse-primary: var(--md-ref-primary-40);
+
+  --md-sys-color-success: #34d399;
+  --md-sys-color-on-success: #064e3b;
+  --md-sys-color-success-container: #065f46;
+  --md-sys-color-on-success-container: #d1fae5;
+
+  /* Dark mode elevation uses lighter shadows */
+  --md-sys-elevation-1: 0 1px 3px 1px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.6);
+  --md-sys-elevation-2: 0 2px 6px 2px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.6);
+  --md-sys-elevation-3: 0 4px 8px 3px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.6);
+  --md-sys-elevation-4: 0 6px 10px 4px rgba(0, 0, 0, 0.4), 0 2px 3px rgba(0, 0, 0, 0.6);
+  --md-sys-elevation-5: 0 8px 12px 6px rgba(0, 0, 0, 0.4), 0 4px 4px rgba(0, 0, 0, 0.6);
+}

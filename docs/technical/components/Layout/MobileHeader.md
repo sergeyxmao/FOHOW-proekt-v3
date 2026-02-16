@@ -43,35 +43,44 @@ src/components/Layout/MobileHeader.vue
 - **`useBoardStore`** — управление досками
 - **`useMobileStore`** — мобильные настройки (масштаб меню)
 
-## Стили
+## Стили (Material Design 3)
+
+Стили полностью переведены на Material Design 3 токены из `src/assets/m3-tokens.css`.
 
 ### Основные классы
 
-- `.mobile-header` — основной контейнер, фиксированное позиционирование сверху
-- `.mobile-header--dark` — модификатор для тёмной темы
-- `.mobile-header--scaled` — модификатор для масштабированного меню
-- `.mobile-header-button` — кнопка с "стеклянным" эффектом
+- `.mobile-header` — основной контейнер, фиксированное позиционирование сверху (transparent background)
+- `.mobile-header--dark` — модификатор для тёмной темы (токены auto-switch через `.m3-dark` ancestor)
+- `.mobile-header--scaled` — модификатор для масштабированного меню (сохранён `--menu-scale` механизм)
+- `.mobile-header-button` — кнопка 44x44px, pill-shape (`--md-sys-shape-corner-full`)
 - `.mobile-header-avatar` — аватар пользователя
 
-### Визуальное оформление
+### Визуальное оформление (M3 токены)
 
-Контейнер использует полупрозрачный фон с blur-эффектом:
+**Кнопки:**
+- Фон: `color-mix(in srgb, var(--md-sys-color-surface-container-high) 92%, transparent)`
+- Граница: `var(--md-sys-color-outline-variant)`
+- Тень: `var(--md-sys-elevation-1)`
+- Форма: pill (`var(--md-sys-shape-corner-full)` = 9999px)
+- Переходы: `var(--md-sys-motion-duration-short4)` + `var(--md-sys-motion-easing-standard)`
 
-```css
-.mobile-header {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
+**Состояния кнопок:**
+- Hover: state layer effect с `var(--md-sys-state-hover-opacity)`
+- Active (toggled): `var(--md-sys-color-primary-container)` фон вместо жёлтого (#ffc107)
+- Pressed: state layer с `var(--md-sys-state-pressed-opacity)`
+- Disabled: `var(--md-sys-state-disabled-opacity)`
 
-.mobile-header--dark {
-  background: rgba(28, 38, 58, 0.85);
-}
-```
+**Аватар:**
+- Инициалы: `var(--md-sys-color-primary-container)` фон вместо gradient
+- Анимация `goldPulse` для верифицированных пользователей — сохранена
 
-Кнопки имеют аналогичный "стеклянный" эффект:
-- Светлая тема: `background: rgba(255, 255, 255, 0.95)`
-- Тёмная тема: `background: rgba(28, 38, 58, 0.95)`
+**Телепортированные меню (user menu, share menu):**
+- Панели: `var(--md-ref-neutral-98)` фон, `var(--md-sys-shape-corner-extra-large)` (28px) border-radius
+- Close кнопка: pill-shape (`var(--md-sys-shape-corner-full)`)
+- Menu items: `var(--md-sys-shape-corner-large)` (16px) border-radius
+- Hover: `var(--md-ref-primary-90)` фон (light) / `var(--md-ref-primary-30)` (dark) — вместо жёлтого
+- Danger item: `var(--md-ref-error-90)` hover (light) / `var(--md-ref-error-30)` (dark)
+- Dark mode: прямые `--md-ref-*` токены (т.к. `.m3-dark` не каскадируется в Teleport → body)
 
 ### Адаптивность
 
@@ -93,6 +102,18 @@ src/components/Layout/MobileHeader.vue
 ```
 
 ## История изменений
+
+### 2026-02-16
+- Полный рефакторинг CSS на Material Design 3 токены (`m3-tokens.css`)
+  - Кнопки: pill-shape, M3 surface/elevation/state-layer вместо белого фона с жёлтым hover
+  - Active state: `primary-container` вместо `#ffc107`
+  - Avatar initials: `primary-container` фон вместо gradient
+  - Teleported menus: `--md-ref-*` reference tokens для корректной работы dark mode
+  - Menu items: 16px radius, primary-container tint hover вместо жёлтого
+  - Danger item: error-container фон
+  - Все transitions используют M3 motion tokens
+  - Close buttons: pill-shape
+  - Сохранены: `--menu-scale` механизм, `goldPulse` анимация, responsive media queries, fade transitions
 
 ### 2026-01-25 (v3)
 - Сделаны взаимоисключающими режимы иерархии и выделения

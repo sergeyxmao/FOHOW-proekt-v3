@@ -36,7 +36,7 @@
 import { ref, watch } from 'vue'
 import LoginForm from './LoginForm.vue'
 import RegisterForm from './RegisterForm.vue'
-import ForgotPasswordForm from './ForgotPasswordForm.vue'  
+import ForgotPasswordForm from './ForgotPasswordForm.vue'
 
 const props = defineProps({
   isOpen: {
@@ -49,7 +49,7 @@ const props = defineProps({
   },
   isModernTheme: {
     type: Boolean,
-    default: false    
+    default: false
   }
 })
 
@@ -88,102 +88,120 @@ function handleSuccess() {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10000;
+  backdrop-filter: blur(4px);
 }
 
 .modal-content {
   position: relative;
-  border-radius: 24px;
+  border-radius: var(--md-sys-shape-corner-extra-large);
   max-width: 520px;
   width: min(520px, calc(100vw - 32px));
   max-height: min(92vh, 720px);
   overflow-y: auto;
-  padding: 56px 48px 48px;
+  padding: 48px 40px 40px;
   box-sizing: border-box;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 24px;
-  border: 1px solid var(--auth-border);
-  background: var(--auth-surface);
-  box-shadow: var(--auth-shadow);
-  color: var(--auth-text);
-  backdrop-filter: blur(22px);
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease,
-    color 0.3s ease;
-  --auth-surface: rgba(255, 255, 255, 0.96);
-  --auth-border: rgba(15, 23, 42, 0.14);
-  --auth-shadow: 0 26px 54px rgba(15, 23, 42, 0.14);
-  --auth-text: #111827;
-  --auth-heading: #0f172a;
-  --auth-muted: rgba(71, 85, 105, 0.78);
-  --auth-input-bg: rgba(255, 255, 255, 0.98);
-  --auth-input-border: rgba(148, 163, 184, 0.48);
-  --auth-input-focus-border: rgba(15, 98, 254, 0.75);
-  --auth-input-focus-ring: rgba(15, 98, 254, 0.18);
-  --auth-input-placeholder: rgba(100, 116, 139, 0.68);
-  --auth-primary: #0f62fe;
-  --auth-primary-hover: #0c54d4;
-  --auth-primary-disabled: rgba(15, 98, 254, 0.35);
-  --auth-primary-shadow: rgba(15, 98, 254, 0.26);
-  --auth-link: #0f62fe;
-  --auth-link-hover: #073b98;
-  --auth-error: #ef4444;
-  --auth-success: #16a34a;
-  --auth-error-bg: rgba(239, 68, 68, 0.12);
-  --auth-success-bg: rgba(22, 163, 74, 0.12);
-  --auth-error-border: rgba(239, 68, 68, 0.28);
-  --auth-success-border: rgba(22, 163, 74, 0.32);
+  background: var(--md-sys-color-surface-container-high);
+  border: none;
+  box-shadow: var(--md-sys-elevation-3);
+  color: var(--md-sys-color-on-surface);
+  transition: background var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-standard);
+
+  /* Auth token bridge — propagates M3 colors to child forms */
+  --auth-surface: var(--md-sys-color-surface-container-high);
+  --auth-border: var(--md-sys-color-outline-variant);
+  --auth-shadow: var(--md-sys-elevation-3);
+  --auth-text: var(--md-sys-color-on-surface);
+  --auth-heading: var(--md-sys-color-on-surface);
+  --auth-muted: var(--md-sys-color-on-surface-variant);
+  --auth-input-bg: var(--md-sys-color-surface-container-lowest);
+  --auth-input-border: var(--md-sys-color-outline);
+  --auth-input-focus-border: var(--md-sys-color-primary);
+  --auth-input-focus-ring: color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
+  --auth-input-placeholder: var(--md-sys-color-on-surface-variant);
+  --auth-primary: var(--md-sys-color-primary);
+  --auth-primary-hover: var(--md-ref-primary-35);
+  --auth-primary-disabled: color-mix(in srgb, var(--md-sys-color-primary) 38%, transparent);
+  --auth-primary-shadow: color-mix(in srgb, var(--md-sys-color-primary) 24%, transparent);
+  --auth-link: var(--md-sys-color-primary);
+  --auth-link-hover: var(--md-ref-primary-30);
+  --auth-error: var(--md-sys-color-error);
+  --auth-success: var(--md-sys-color-success);
+  --auth-error-bg: var(--md-sys-color-error-container);
+  --auth-success-bg: var(--md-sys-color-success-container);
+  --auth-error-border: color-mix(in srgb, var(--md-sys-color-error) 28%, transparent);
+  --auth-success-border: color-mix(in srgb, var(--md-sys-color-success) 32%, transparent);
 }
 
 .modal-content--modern {
-  --auth-surface: rgba(18, 27, 43, 0.94);
-  --auth-border: rgba(114, 182, 255, 0.35);
-  --auth-shadow: 0 32px 64px rgba(3, 8, 20, 0.62);
-  --auth-text: #e5f3ff;
-  --auth-heading: #f8fbff;
-  --auth-muted: rgba(186, 208, 247, 0.78);
-  --auth-input-bg: rgba(8, 18, 36, 0.82);
-  --auth-input-border: rgba(114, 182, 255, 0.45);
-  --auth-input-focus-border: rgba(123, 196, 255, 0.95);
-  --auth-input-focus-ring: rgba(79, 168, 255, 0.26);
-  --auth-input-placeholder: rgba(186, 208, 247, 0.62);
-  --auth-primary: #73c8ff;
-  --auth-primary-hover: #5fb9f7;
-  --auth-primary-disabled: rgba(115, 200, 255, 0.35);
-  --auth-primary-shadow: rgba(115, 200, 255, 0.32);
-  --auth-link: #8fd0ff;
-  --auth-link-hover: #b6e5ff;
-  --auth-error: #ff8f8f;
-  --auth-success: #7cffc2;
-  --auth-error-bg: rgba(255, 143, 143, 0.14);
-  --auth-success-bg: rgba(124, 255, 194, 0.18);
-  --auth-error-border: rgba(255, 143, 143, 0.36);
-  --auth-success-border: rgba(124, 255, 194, 0.4);
+  /* Teleported to body — outside #app .m3-dark, so must set dark tokens explicitly */
+  background: var(--md-ref-neutral-17);
+  color: var(--md-ref-neutral-90);
+  --auth-surface: var(--md-ref-neutral-17);
+  --auth-border: var(--md-ref-neutral-variant-30);
+  --auth-text: var(--md-ref-neutral-90);
+  --auth-heading: var(--md-ref-neutral-90);
+  --auth-muted: var(--md-ref-neutral-variant-80);
+  --auth-input-bg: var(--md-ref-neutral-4);
+  --auth-input-border: var(--md-ref-neutral-variant-60);
+  --auth-input-focus-border: var(--md-ref-primary-80);
+  --auth-input-focus-ring: color-mix(in srgb, var(--md-ref-primary-80) 18%, transparent);
+  --auth-input-placeholder: var(--md-ref-neutral-variant-70);
+  --auth-primary: var(--md-ref-primary-80);
+  --auth-primary-hover: var(--md-ref-primary-90);
+  --auth-primary-disabled: color-mix(in srgb, var(--md-ref-primary-80) 38%, transparent);
+  --auth-primary-shadow: color-mix(in srgb, var(--md-ref-primary-80) 24%, transparent);
+  --auth-link: var(--md-ref-primary-80);
+  --auth-link-hover: var(--md-ref-primary-90);
+  --auth-error: var(--md-ref-error-80);
+  --auth-success: #34d399;
+  --auth-error-bg: var(--md-ref-error-30);
+  --auth-success-bg: #065f46;
+  --auth-error-border: color-mix(in srgb, var(--md-ref-error-80) 28%, transparent);
+  --auth-success-border: color-mix(in srgb, #34d399 32%, transparent);
 }
 
 .modal-content--classic {
-  /* Используются значения по умолчанию, заданные в .modal-content */
+  /* Uses default M3 light tokens from .modal-content */
 }
 
 .close-btn {
   position: absolute;
-  top: 18px;
-  right: 22px;
-  background: none;
+  top: 14px;
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--md-sys-color-surface-variant);
   border: none;
-  font-size: 30px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-size: 22px;
+  line-height: 1;
   cursor: pointer;
-  color: var(--auth-muted);
+  color: var(--md-sys-color-on-surface-variant);
   z-index: 1;
-  transition: color 0.2s ease;  
+  transition: background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .close-btn:hover {
-  color: var(--auth-text);
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+}
+
+.close-btn:active {
+  transform: scale(0.95);
 }
 </style>

@@ -1291,7 +1291,8 @@ onBeforeUnmount(() => {
     id="app"
     :class="{
       'app--mobile': isMobileMode,
-      'app--admin': layout === 'admin'
+      'app--admin': layout === 'admin',
+      'm3-dark': isModernTheme
     }"
   >
     <!-- Для публичных страниц показываем только компонент маршрута -->
@@ -1672,50 +1673,51 @@ body:has(.app--mobile) {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(10, 18, 36, 0.45);
+  background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
+  backdrop-filter: blur(4px);
   z-index: 1100;
 }
 
 .mobile-auth-dialog {
   width: 100%;
   max-width: 360px;
-  background: rgba(255, 255, 255, 0.98);
-  border-radius: 18px;
-  box-shadow: 0 20px 45px rgba(15, 24, 44, 0.28);
-  padding: 24px 20px 20px;
+  background: var(--md-sys-color-surface-container-high);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  box-shadow: var(--md-sys-elevation-3);
+  padding: 28px 24px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   text-align: center;
-  backdrop-filter: blur(12px);
+  border: none;
 }
 
 .mobile-auth-dialog--modern {
-  background: rgba(24, 33, 54, 0.96);
-  color: #e5f3ff;
-  box-shadow: 0 24px 60px rgba(12, 20, 38, 0.45);
-  border: 1px solid rgba(87, 148, 255, 0.28);
+  background: var(--md-ref-neutral-17);
+  color: var(--md-ref-neutral-90);
+  box-shadow: var(--md-sys-elevation-3);
+  border: none;
 }
 
 .mobile-auth-dialog__title {
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: #111827;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
 }
 
 .mobile-auth-dialog--modern .mobile-auth-dialog__title {
-  color: #f8fbff;
+  color: var(--md-ref-neutral-90);
 }
 
 .mobile-auth-dialog__subtitle {
   margin: 0;
   font-size: 14px;
-  color: #4b5563;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .mobile-auth-dialog--modern .mobile-auth-dialog__subtitle {
-  color: rgba(229, 243, 255, 0.72);
+  color: var(--md-ref-neutral-variant-80);
 }
 
 .mobile-auth-dialog__actions {
@@ -1727,30 +1729,40 @@ body:has(.app--mobile) {
 .mobile-auth-dialog__button {
   width: 100%;
   border: none;
-  border-radius: 12px;
-  padding: 12px 16px;
-  font-size: 16px;
-  font-weight: 600;
+  border-radius: var(--md-sys-shape-corner-full);
+  padding: 14px 24px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    box-shadow var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
 .mobile-auth-dialog__button--primary {
-  background: linear-gradient(135deg, #0f62fe 0%, #0353e9 100%);
-  color: #ffffff;
-  box-shadow: 0 12px 24px rgba(15, 98, 254, 0.35);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  box-shadow: var(--md-sys-elevation-1);
+}
+
+.mobile-auth-dialog__button--primary:hover {
+  box-shadow: var(--md-sys-elevation-2);
 }
 
 .mobile-auth-dialog__button--secondary {
-  background: rgba(15, 98, 254, 0.08);
-  color: #0f62fe;
-  border: 1px solid rgba(15, 98, 254, 0.4);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.mobile-auth-dialog--modern .mobile-auth-dialog__button--primary {
+  background: var(--md-ref-primary-80);
+  color: var(--md-ref-primary-20);
 }
 
 .mobile-auth-dialog--modern .mobile-auth-dialog__button--secondary {
-  background: rgba(37, 99, 235, 0.18);
-  color: #e5f3ff;
-  border-color: rgba(118, 169, 255, 0.45);
+  background: var(--md-ref-secondary-30);
+  color: var(--md-ref-secondary-90);
 }
 
 .mobile-auth-dialog__button:active {
@@ -1760,11 +1772,39 @@ body:has(.app--mobile) {
 .mobile-auth-dialog__close {
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: var(--md-sys-color-on-surface-variant);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-} 
+  transition: color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
+}
+
+.mobile-auth-dialog__close:hover {
+  color: var(--md-sys-color-on-surface);
+}
+
+.mobile-auth-dialog--modern .mobile-auth-dialog__close {
+  color: var(--md-ref-neutral-variant-70);
+}
+
+.mobile-auth-dialog--modern .mobile-auth-dialog__close:hover {
+  color: var(--md-ref-neutral-90);
+}
+
+@media (max-width: 420px) {
+  .mobile-auth-dialog {
+    max-width: 320px;
+    padding: 24px 20px 20px;
+  }
+
+  .mobile-auth-dialog__title {
+    font-size: 18px;
+  }
+
+  .mobile-auth-dialog__button {
+    font-size: 14px;
+  }
+}
 .profile-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1778,25 +1818,6 @@ body:has(.app--mobile) {
 
 .profile-modal-overlay--modern {
   background: rgba(5, 12, 24, 0.8);
-}
-
-.mobile-auth-dialog--modern .mobile-auth-dialog__close {
-  color: rgba(229, 243, 255, 0.7);
-}
-
-@media (max-width: 420px) {
-  .mobile-auth-dialog {
-    max-width: 320px;
-    padding: 20px 16px 16px;
-  }
-
-  .mobile-auth-dialog__title {
-    font-size: 18px;
-  }
-
-  .mobile-auth-dialog__button {
-    font-size: 15px;
-  }
 }
 
 .zoom-floating-button {
