@@ -594,18 +594,18 @@ watch(
   cursor: not-allowed;
 }
 
-/* Active (toggled on) — primary-container */
+/* Active (toggled on) — filled primary for high contrast */
 .mobile-header-button--active {
-  background: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-on-primary-container);
-  border-color: color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-color: var(--md-sys-color-primary);
   box-shadow: var(--md-sys-elevation-2);
 }
 
 .mobile-header--dark .mobile-header-button--active {
-  background: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-on-primary-container);
-  border-color: color-mix(in srgb, var(--md-sys-color-primary) 30%, transparent);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-color: var(--md-sys-color-primary);
 }
 
 /* --- Button icon --- */
