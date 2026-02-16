@@ -8,6 +8,7 @@ import TopMenuButtons from './components/Layout/TopMenuButtons.vue'
 import MobileHeader from './components/Layout/MobileHeader.vue'
 import MobileToolbar from './components/Layout/MobileToolbar.vue'
 import MobileSidebar from './components/Layout/MobileSidebar.vue'
+import MobileFullMenu from './components/Layout/MobileFullMenu.vue'
 import MobileVersionDialog from './components/Layout/MobileVersionDialog.vue'
 import VersionSwitcher from './components/Layout/VersionSwitcher.vue'
 import PencilOverlay from './components/Overlay/PencilOverlay.vue'
@@ -85,7 +86,8 @@ const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
 
 const performanceModeStore = usePerformanceModeStore()
-const { mode: performanceMode } = storeToRefs(performanceModeStore)
+const { mode: performanceMode, isFull: isFullMode } = storeToRefs(performanceModeStore)
+const showMobileFullMenu = ref(false)
 const performanceModeLabel = computed(() => {
   const labels = { full: 'Полный', light: 'Лёгкий', view: 'Просмотр' }
   return labels[performanceMode.value] || 'Полный'
@@ -1097,6 +1099,14 @@ async function handleMobileLoadJSON() {
     handleLoadProject()
   }
 }
+function handleOpenFullMenu() {
+  showMobileFullMenu.value = true
+}
+
+function handleCloseFullMenu() {
+  showMobileFullMenu.value = false
+}
+
 function openMobileAuthPrompt() {
   showMobileAuthPrompt.value = true
 }
@@ -1374,6 +1384,7 @@ onBeforeUnmount(() => {
         @request-auth="openMobileAuthPrompt"
         @export-html="handleMobileExportHTML"
         @activate-pencil="handleActivatePencil"
+        @open-full-menu="handleOpenFullMenu"
       />
       <MobileToolbar
         v-show="!isPencilMode && !showResetPassword"
@@ -1396,6 +1407,15 @@ onBeforeUnmount(() => {
         @add-template="handleAddTemplate"
       />
       <MobileVersionDialog class="no-print" />
+      <MobileFullMenu
+        :visible="showMobileFullMenu"
+        :is-dark="isModernTheme"
+        @close="handleCloseFullMenu"
+        @activate-pencil="handleActivatePencil"
+        @toggle-theme="toggleTheme"
+        @clear-canvas="handleClearCanvas"
+        @new-structure="handleNewStructure"
+      />
     </template>
     
     <transition name="fade">

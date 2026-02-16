@@ -22,7 +22,7 @@ const mobileStore = useMobileStore()
 const viewportStore = useViewportStore()
 
 const performanceModeStore = usePerformanceModeStore()
-const { mode: performanceMode } = storeToRefs(performanceModeStore)
+const { mode: performanceMode, isView } = storeToRefs(performanceModeStore)
 const performanceModeIcon = computed(() => {
   const icons = { full: '\uD83D\uDD34', light: '\uD83D\uDFE1', view: '\uD83D\uDFE2' }
   return icons[performanceMode.value] || '\uD83D\uDD34'
@@ -109,9 +109,9 @@ const handleProfileClick = () => {
       </div>
 
       <div class="mobile-toolbar-section mobile-toolbar-section--center">
-        <!-- Переключатель темы -->
+        <!-- Переключатель темы (скрыт в View-режиме) -->
         <button
-          v-if="authStore.isAuthenticated"
+          v-if="authStore.isAuthenticated && !isView"
           class="mobile-toolbar-button theme-button"
           type="button"
           @click="handleToggleTheme"
@@ -167,9 +167,9 @@ const handleProfileClick = () => {
           <span class="button-icon">👤</span>
         </button>
 
-        <!-- Кнопка сохранения -->
+        <!-- Кнопка сохранения (скрыта в View-режиме) -->
         <button
-          v-if="authStore.isAuthenticated"
+          v-if="authStore.isAuthenticated && !isView"
           class="mobile-toolbar-button save-button"
           type="button"
           :disabled="isSaving || !isSaveAvailable"

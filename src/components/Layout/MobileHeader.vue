@@ -6,6 +6,7 @@ import { useHistoryStore } from '@/stores/history'
 import { useCanvasStore } from '@/stores/canvas'
 import { useBoardStore } from '@/stores/board'
 import { useMobileStore } from '@/stores/mobile'
+import { usePerformanceModeStore } from '@/stores/performanceMode'
 import { useProjectActions } from '@/composables/useProjectActions'
 import { storeToRefs } from 'pinia'
 
@@ -22,7 +23,8 @@ const emit = defineEmits([
   'request-auth',
   'open-boards',
   'export-html',
-  'activate-pencil'
+  'activate-pencil',
+  'open-full-menu'
 ])
 
 const router = useRouter()
@@ -31,10 +33,12 @@ const historyStore = useHistoryStore()
 const canvasStore = useCanvasStore()
 const boardStore = useBoardStore()
 const mobileStore = useMobileStore()
+const performanceModeStore = usePerformanceModeStore()
 
 const { isAuthenticated, user, isLoadingProfile } = storeToRefs(authStore)
 const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
 const { isMenuScaled, menuScale, isMobileMode, isSelectionMode } = storeToRefs(mobileStore)
+const { isFull, isLight, isView } = storeToRefs(performanceModeStore)
 
 const { handleSaveAsHTML, handleShareProject } = useProjectActions()
 
@@ -162,6 +166,10 @@ const handleActivatePencil = () => {
   emit('activate-pencil')
 }
 
+const handleOpenFullMenu = () => {
+  emit('open-full-menu')
+}
+
 const handleExportHTML = () => {
   showShareMenu.value = true
 }
@@ -231,9 +239,20 @@ watch(
    >
    <div class="mobile-header-layout">
       <div class="mobile-header-section mobile-header-section--left">
-        <!-- Отмена -->
+        <!-- Full-режим: гамбургер-кнопка -->
         <button
-          v-if="isAuthenticated"
+          v-if="isAuthenticated && isFull"
+          class="mobile-header-button"
+          type="button"
+          @click="handleOpenFullMenu"
+          title="Меню"
+        >
+          <span class="button-icon">☰</span>
+        </button>
+
+        <!-- Light-режим: Отмена / Повтор слева -->
+        <button
+          v-if="isAuthenticated && isLight"
           class="mobile-header-button"
           type="button"
           :disabled="!historyStore.canUndo"
@@ -242,10 +261,8 @@ watch(
         >
           <span class="button-icon">↶</span>
         </button>
-
-        <!-- Повтор -->
         <button
-          v-if="isAuthenticated"
+          v-if="isAuthenticated && isLight"
           class="mobile-header-button"
           type="button"
           :disabled="!historyStore.canRedo"
@@ -257,9 +274,29 @@ watch(
       </div>
 
       <div class="mobile-header-section mobile-header-section--center">
-        <!-- Режим иерархии -->
+        <!-- Full-режим: Отмена / Повтор + иерархия / выделение по центру -->
         <button
-          v-if="isAuthenticated"
+          v-if="isAuthenticated && isFull"
+          class="mobile-header-button"
+          type="button"
+          :disabled="!historyStore.canUndo"
+          @click="handleUndo"
+          title="Отменить"
+        >
+          <span class="button-icon">↶</span>
+        </button>
+        <button
+          v-if="isAuthenticated && isFull"
+          class="mobile-header-button"
+          type="button"
+          :disabled="!historyStore.canRedo"
+          @click="handleRedo"
+          title="Повторить"
+        >
+          <span class="button-icon">↷</span>
+        </button>
+        <button
+          v-if="isAuthenticated && isFull"
           class="mobile-header-button"
           :class="{ 'mobile-header-button--active': isHierarchyMode }"
           type="button"
@@ -268,10 +305,30 @@ watch(
         >
           <span class="button-icon">🌳</span>
         </button>
-
-        <!-- Режим рисования -->
         <button
-          v-if="isAuthenticated"
+          v-if="isAuthenticated && isFull"
+          class="mobile-header-button"
+          :class="{ 'mobile-header-button--active': isSelectionMode }"
+          type="button"
+          @click="toggleSelectionMode"
+          title="Режим выделения"
+        >
+          <span class="button-icon">⬚</span>
+        </button>
+
+        <!-- Light-режим: иерархия, рисование, поделиться, выделение -->
+        <button
+          v-if="isAuthenticated && isLight"
+          class="mobile-header-button"
+          :class="{ 'mobile-header-button--active': isHierarchyMode }"
+          type="button"
+          @click="toggleHierarchyMode"
+          title="Режим иерархии"
+        >
+          <span class="button-icon">🌳</span>
+        </button>
+        <button
+          v-if="isAuthenticated && isLight"
           class="mobile-header-button"
           type="button"
           @click="handleActivatePencil"
@@ -280,7 +337,7 @@ watch(
           <span class="button-icon">✏️</span>
         </button>
 
-        <!-- Поделиться проектом -->
+        <!-- Поделиться — видна во всех режимах -->
         <button
           v-if="isAuthenticated"
           class="mobile-header-button"
@@ -291,9 +348,8 @@ watch(
           <span class="button-icon">📄</span>
         </button>
 
-        <!-- Режим выделения -->
         <button
-          v-if="isAuthenticated"
+          v-if="isAuthenticated && isLight"
           class="mobile-header-button"
           :class="{ 'mobile-header-button--active': isSelectionMode }"
           type="button"

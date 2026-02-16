@@ -6,6 +6,7 @@ import { useConnectionsStore } from '@/stores/connections'
 import { useViewSettingsStore } from '@/stores/viewSettings'
 import { useMobileStore } from '@/stores/mobile'
 import { useAuthStore } from '@/stores/auth'
+import { usePerformanceModeStore } from '@/stores/performanceMode'
 import { checkAndAlertCardLimit } from '@/utils/limitsCheck'
 import { calculateTemplateOffset } from '@/utils/viewport'
  
@@ -28,6 +29,8 @@ const connectionsStore = useConnectionsStore()
 const viewSettingsStore = useViewSettingsStore()
 const mobileStore = useMobileStore()
 const authStore = useAuthStore()
+const performanceModeStore = usePerformanceModeStore()
+const { isView } = storeToRefs(performanceModeStore)
 
 const { headerColor, headerColorIndex, lineColor, lineThickness, animationSeconds } = storeToRefs(viewSettingsStore)
 const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
@@ -210,7 +213,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    v-if="authStore.isAuthenticated"
+    v-if="authStore.isAuthenticated && !isView"
     class="mobile-sidebar"
     :class="{ 'mobile-sidebar--dark': isModernTheme, 'mobile-sidebar--scaled': isMenuScaled }"
     :style="{ '--menu-scale': menuScale }"
