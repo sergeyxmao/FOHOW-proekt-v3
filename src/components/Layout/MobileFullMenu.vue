@@ -45,7 +45,13 @@ const {
 const openSections = ref({ tools: false, view: false, discussion: false })
 
 const toggleSection = (key) => {
-  openSections.value[key] = !openSections.value[key]
+  const wasOpen = openSections.value[key]
+  // Закрываем все секции
+  openSections.value = { tools: false, view: false, discussion: false }
+  // Если была закрыта — открываем, если была открыта — оставляем закрытой
+  if (!wasOpen) {
+    openSections.value[key] = true
+  }
 }
 
 // --- Tools actions ---

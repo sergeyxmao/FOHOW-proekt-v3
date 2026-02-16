@@ -1540,10 +1540,10 @@ onBeforeUnmount(() => {
       </div>
     </Teleport>
 
-    <!-- Side Panels -->
+    <!-- Side Panels (desktop always, mobile only in Full mode) -->
     <transition name="side-panel-slide">
       <PartnersPanel
-        v-if="isPartnersOpen && !isMobileMode"
+        v-if="isPartnersOpen && (!isMobileMode || isFullMode)"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
@@ -1551,7 +1551,7 @@ onBeforeUnmount(() => {
 
     <transition name="side-panel-slide">
       <NotesSidePanel
-        v-if="isNotesOpen && !isMobileMode"
+        v-if="isNotesOpen && (!isMobileMode || isFullMode)"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
@@ -1559,7 +1559,7 @@ onBeforeUnmount(() => {
 
     <transition name="side-panel-slide">
       <CommentsSidePanel
-        v-if="isCommentsOpen && !isMobileMode"
+        v-if="isCommentsOpen && (!isMobileMode || isFullMode)"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
@@ -1567,7 +1567,7 @@ onBeforeUnmount(() => {
 
     <transition name="side-panel-slide">
       <StickerMessagesPanel
-        v-if="isStickerMessagesOpen && !isMobileMode"
+        v-if="isStickerMessagesOpen && (!isMobileMode || isFullMode)"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
@@ -1575,14 +1575,14 @@ onBeforeUnmount(() => {
 
     <transition name="side-panel-slide">
       <ImagesPanel
-        v-if="isImagesOpen && !isMobileMode && !isPencilMode"
+        v-if="isImagesOpen && (!isMobileMode || isFullMode) && !isPencilMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
     </transition>
     <transition name="side-panel-slide">
       <BoardAnchorsPanel
-        v-if="isAnchorsOpen && !isMobileMode"
+        v-if="isAnchorsOpen && (!isMobileMode || isFullMode)"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
@@ -2111,6 +2111,19 @@ body:has(.app--mobile) {
     transform: none !important;
     page-break-after: avoid !important;
     page-break-inside: avoid !important;
+  }
+}
+
+/* Mobile: адаптация ширины боковых панелей */
+@media (max-width: 480px) {
+  .partners-panel,
+  .notes-side-panel,
+  .comments-side-panel,
+  .sticker-messages-panel,
+  .images-panel,
+  .anchors-panel {
+    width: 100vw !important;
+    max-width: 100vw !important;
   }
 }
 </style>
