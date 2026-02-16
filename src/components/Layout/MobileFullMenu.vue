@@ -518,19 +518,22 @@ const handleOverlayClick = () => {
   top: 0;
   left: 0;
   bottom: 0;
-  width: min(320px, 85vw);
-  background: var(--md-ref-neutral-98);
+  width: min(50vw, 280px);
+  background: color-mix(in srgb, var(--md-ref-neutral-98) 78%, transparent);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
   color: var(--md-ref-neutral-10);
   box-shadow: var(--md-sys-elevation-4);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border-right: 1px solid color-mix(in srgb, var(--md-ref-neutral-10) 8%, transparent);
 }
 
 .fullmenu-panel--dark {
-  background: var(--md-ref-neutral-12);
+  background: color-mix(in srgb, var(--md-ref-neutral-12) 72%, transparent);
   color: var(--md-ref-neutral-90);
-  border-right: 1px solid color-mix(in srgb, var(--md-ref-neutral-variant-60) 20%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--md-ref-neutral-variant-60) 15%, transparent);
 }
 
 /* --- Header --- */
@@ -538,7 +541,7 @@ const handleOverlayClick = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 12px 14px;
   border-bottom: 1px solid color-mix(in srgb, var(--md-ref-neutral-10) 10%, transparent);
   flex-shrink: 0;
 }
@@ -548,14 +551,14 @@ const handleOverlayClick = () => {
 }
 
 .fullmenu-header__title {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: 0.3px;
 }
 
 .fullmenu-close {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--md-sys-shape-corner-full);
   border: none;
   background: color-mix(in srgb, var(--md-ref-neutral-10) 8%, transparent);
@@ -601,16 +604,16 @@ const handleOverlayClick = () => {
 .fullmenu-section__toggle {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
-  padding: 14px 20px;
+  padding: 12px 14px;
   border: none;
   background: transparent;
   color: inherit;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  min-height: 52px;
+  min-height: 48px;
   transition: background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard);
 }
 
@@ -623,7 +626,7 @@ const handleOverlayClick = () => {
 }
 
 .fullmenu-section__icon {
-  font-size: 20px;
+  font-size: 17px;
   flex-shrink: 0;
 }
 
@@ -644,27 +647,27 @@ const handleOverlayClick = () => {
 
 /* --- Section body --- */
 .fullmenu-section__body {
-  padding: 4px 12px 12px;
+  padding: 4px 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 /* --- Menu item (button) --- */
 .fullmenu-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
-  padding: 12px 14px;
+  padding: 10px 10px;
   border: none;
-  border-radius: var(--md-sys-shape-corner-large);
+  border-radius: var(--md-sys-shape-corner-medium);
   background: color-mix(in srgb, var(--md-ref-neutral-10) 4%, transparent);
   color: inherit;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  min-height: 48px;
+  min-height: 42px;
   transition:
     background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
     transform var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
@@ -708,9 +711,9 @@ const handleOverlayClick = () => {
 }
 
 .fullmenu-item__icon {
-  font-size: 18px;
+  font-size: 15px;
   flex-shrink: 0;
-  width: 24px;
+  width: 20px;
   text-align: center;
 }
 
@@ -735,20 +738,20 @@ const handleOverlayClick = () => {
 }
 
 .fullmenu-subsection__header {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
   opacity: 0.6;
-  padding: 0 8px 8px;
+  padding: 0 6px 6px;
 }
 
 /* --- Row (horizontal items) --- */
 .fullmenu-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 8px;
+  gap: 6px;
+  padding: 0 6px;
   flex-wrap: wrap;
 }
 
@@ -757,15 +760,15 @@ const handleOverlayClick = () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 14px;
+  padding: 4px 10px;
   border: 1px solid color-mix(in srgb, var(--md-ref-neutral-10) 12%, transparent);
   border-radius: var(--md-sys-shape-corner-full);
   background: transparent;
   color: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  min-height: 36px;
+  min-height: 32px;
   transition:
     background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
     border-color var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
@@ -798,16 +801,16 @@ const handleOverlayClick = () => {
 
 /* --- Color swatch --- */
 .fullmenu-swatch {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--md-sys-shape-corner-medium);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--md-sys-shape-corner-small);
   border: 2px solid color-mix(in srgb, var(--md-ref-neutral-10) 15%, transparent);
   cursor: pointer;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 14px;
   transition: transform var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
 }
 
@@ -824,8 +827,8 @@ const handleOverlayClick = () => {
 }
 
 .fullmenu-swatch--preset {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--md-sys-shape-corner-small);
 }
 
@@ -842,8 +845,8 @@ const handleOverlayClick = () => {
 .fullmenu-inline-input {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: 4px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -857,13 +860,13 @@ const handleOverlayClick = () => {
 }
 
 .fullmenu-input {
-  width: 60px;
-  padding: 6px 8px;
+  width: 50px;
+  padding: 4px 6px;
   border: 1px solid color-mix(in srgb, var(--md-ref-neutral-10) 15%, transparent);
   border-radius: var(--md-sys-shape-corner-small);
   background: color-mix(in srgb, var(--md-ref-neutral-10) 4%, transparent);
   color: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   text-align: center;
   outline: none;
