@@ -400,9 +400,7 @@ async function createStructureWithName(name, action = null, initialState = null)
     return true
   } catch (err) {
     console.error('❌ Ошибка создания структуры:', err)
-    if (!isMobileMode.value) {
-      alert(t('board.createFailed'))
-    }
+    alert(t('board.createFailed'))
     boardStore.isSaving = false
     return false
   }

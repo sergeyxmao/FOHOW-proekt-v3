@@ -355,30 +355,31 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
-/* Gold button — uses tertiary container instead of gradient */
+/* Gold button — bright gold / amber */
 .gold-button {
-  background: var(--md-sys-color-tertiary-container);
-  color: var(--md-sys-color-on-tertiary-container);
+  background: var(--md-ref-tertiary-90);
+  color: var(--md-ref-tertiary-10);
 }
 
 .gold-button:hover:not(:disabled) {
-  background: var(--md-sys-color-tertiary);
-  color: var(--md-sys-color-on-tertiary);
+  background: var(--md-ref-tertiary-80);
+  color: var(--md-ref-tertiary-10);
 }
 
 .gold-button:active:not(:disabled) {
-  background: var(--md-sys-color-tertiary);
-  color: var(--md-sys-color-on-tertiary);
+  background: var(--md-ref-tertiary-70);
+  color: var(--md-ref-tertiary-10);
+  transform: scale(calc(var(--menu-scale, 1) * 0.95));
 }
 
 .mobile-sidebar--dark .gold-button {
-  background: var(--md-ref-tertiary-30);
-  color: var(--md-ref-tertiary-90);
+  background: var(--md-ref-tertiary-80);
+  color: var(--md-ref-tertiary-10);
 }
 
 .mobile-sidebar--dark .gold-button:hover:not(:disabled) {
-  background: var(--md-ref-tertiary-40);
-  color: var(--md-ref-tertiary-99);
+  background: var(--md-ref-tertiary-90);
+  color: var(--md-ref-tertiary-10);
 }
 
 /* Template menu */
