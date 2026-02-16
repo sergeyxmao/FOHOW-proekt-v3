@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue'  
+import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import PanelSwitchBar from './PanelSwitchBar.vue'
 import { useNotesStore } from '../../stores/notes.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useBoardStore } from '../../stores/board.js'
@@ -148,6 +149,7 @@ const handleCardNotesDelete = async (cardId) => {
         ×
       </button>
     </div>
+    <PanelSwitchBar :is-modern-theme="isModernTheme" />
     <div class="notes-side-panel__search">
       <input
         v-model="searchQuery"

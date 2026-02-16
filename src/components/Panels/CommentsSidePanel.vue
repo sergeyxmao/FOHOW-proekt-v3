@@ -1,6 +1,7 @@
 <script setup>
 import { useI18n } from 'vue-i18n'
 import UserComments from './UserComments.vue'
+import PanelSwitchBar from './PanelSwitchBar.vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
 
@@ -40,6 +41,8 @@ const handleClose = () => {
         ×
       </button>
     </div>
+
+    <PanelSwitchBar :is-modern-theme="isModernTheme" />
 
     <div class="comments-side-panel__content">
       <UserComments />

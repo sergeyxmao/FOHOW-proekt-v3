@@ -1,5 +1,6 @@
 <script setup>
 import StickerMessages from './StickerMessages.vue'
+import PanelSwitchBar from './PanelSwitchBar.vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
 
@@ -37,6 +38,8 @@ const handleClose = () => {
         ×
       </button>
     </div>
+
+    <PanelSwitchBar :is-modern-theme="isModernTheme" />
 
     <div class="sticker-messages-panel__content">
       <StickerMessages :isModernTheme="props.isModernTheme" />

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, inject } from 'vue'
+import PanelSwitchBar from './PanelSwitchBar.vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
 import { useSubscriptionStore } from '../../stores/subscription.js'
@@ -65,6 +66,8 @@ const setActiveTab = (tab) => {
         ×
       </button>
     </div>
+
+    <PanelSwitchBar :is-modern-theme="isModernTheme" />
 
     <!-- Сообщение об ограничении доступа -->
     <div v-if="!canUseImages" class="images-panel__access-denied">

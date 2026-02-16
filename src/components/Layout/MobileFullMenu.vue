@@ -5,6 +5,9 @@ import { useI18n } from 'vue-i18n'
 import { useCanvasStore } from '@/stores/canvas'
 import { useViewSettingsStore } from '@/stores/viewSettings'
 import { useSidePanelsStore } from '@/stores/sidePanels'
+import { useMobileStore } from '@/stores/mobile'
+import { useBoardStore } from '@/stores/board'
+import { useStickersStore } from '@/stores/stickers'
 
 const props = defineProps({
   visible: {
@@ -29,8 +32,11 @@ const { locale } = useI18n()
 const canvasStore = useCanvasStore()
 const viewSettingsStore = useViewSettingsStore()
 const sidePanelsStore = useSidePanelsStore()
+const mobileStore = useMobileStore()
+const boardStore = useBoardStore()
+const stickersStore = useStickersStore()
 
-const { guidesEnabled, isGridBackgroundVisible, gridStep } = storeToRefs(canvasStore)
+const { isGridBackgroundVisible, gridStep } = storeToRefs(canvasStore)
 const {
   lineColor,
   lineThickness,
@@ -60,12 +66,17 @@ const handlePencil = () => {
   emit('close')
 }
 
-const handleToggleGuides = () => {
-  canvasStore.toggleGuides()
-}
-
 const handleToggleTheme = () => {
   emit('toggle-theme')
+  emit('close')
+}
+
+const handleToggleVersion = () => {
+  if (mobileStore.isMobileMode) {
+    mobileStore.switchToDesktop()
+  } else {
+    mobileStore.switchToMobile()
+  }
   emit('close')
 }
 
@@ -176,8 +187,18 @@ const handleToggleAnchors = () => {
   sidePanelsStore.toggleAnchors()
   emit('close')
 }
+const handleAddAnchor = () => {
+  stickersStore.disablePlacementMode()
+  boardStore.setPlacementMode(boardStore.placementMode === 'anchor' ? null : 'anchor')
+  emit('close')
+}
 const handleToggleStickers = () => {
   sidePanelsStore.toggleStickerMessages()
+  emit('close')
+}
+const handleAddSticker = () => {
+  boardStore.setPlacementMode(null)
+  stickersStore.enablePlacementMode()
   emit('close')
 }
 
@@ -230,19 +251,13 @@ const handleOverlayClick = () => {
                     <span class="fullmenu-item__icon">✏️</span>
                     <span>Рисование</span>
                   </button>
-                  <button
-                    class="fullmenu-item"
-                    :class="{ 'fullmenu-item--active': guidesEnabled }"
-                    type="button"
-                    @click="handleToggleGuides"
-                  >
-                    <span class="fullmenu-item__icon">📐</span>
-                    <span>Направляющие</span>
-                    <span class="fullmenu-item__badge" v-if="guidesEnabled">ВКЛ</span>
-                  </button>
                   <button class="fullmenu-item" type="button" @click="handleToggleTheme">
                     <span class="fullmenu-item__icon">🎨</span>
                     <span>Смена темы</span>
+                  </button>
+                  <button class="fullmenu-item" type="button" @click="handleToggleVersion">
+                    <span class="fullmenu-item__icon">💻</span>
+                    <span>Версия для ПК</span>
                   </button>
                   <button class="fullmenu-item fullmenu-item--danger" type="button" @click="handleClearCanvas">
                     <span class="fullmenu-item__icon">🧹</span>
@@ -473,14 +488,24 @@ const handleOverlayClick = () => {
                     <span class="fullmenu-item__icon">💬</span>
                     <span>Комментарии</span>
                   </button>
-                  <button class="fullmenu-item" type="button" @click="handleToggleAnchors">
-                    <span class="fullmenu-item__icon">🧭</span>
-                    <span>Геолокация</span>
-                  </button>
-                  <button class="fullmenu-item" type="button" @click="handleToggleStickers">
-                    <span class="fullmenu-item__icon">📌</span>
-                    <span>Стикеры</span>
-                  </button>
+                  <div class="fullmenu-item-row">
+                    <button class="fullmenu-item fullmenu-item--grow" type="button" @click="handleToggleAnchors">
+                      <span class="fullmenu-item__icon">🧭</span>
+                      <span>Геолокация</span>
+                    </button>
+                    <button class="fullmenu-add-btn" type="button" @click="handleAddAnchor" title="Добавить на холст">
+                      ＋
+                    </button>
+                  </div>
+                  <div class="fullmenu-item-row">
+                    <button class="fullmenu-item fullmenu-item--grow" type="button" @click="handleToggleStickers">
+                      <span class="fullmenu-item__icon">📌</span>
+                      <span>Стикеры</span>
+                    </button>
+                    <button class="fullmenu-add-btn" type="button" @click="handleAddSticker" title="Добавить на холст">
+                      ＋
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -728,6 +753,57 @@ const handleOverlayClick = () => {
 }
 
 .fullmenu-panel--dark .fullmenu-item__badge {
+  background: var(--md-ref-primary-30);
+  color: var(--md-ref-primary-90);
+}
+
+/* --- Item row (item + add button) --- */
+.fullmenu-item-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fullmenu-item--grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.fullmenu-add-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--md-ref-primary-40) 30%, transparent);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: color-mix(in srgb, var(--md-ref-primary-40) 10%, transparent);
+  color: var(--md-ref-primary-40);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--md-sys-motion-duration-short4) var(--md-sys-motion-easing-standard),
+    transform var(--md-sys-motion-duration-short3) var(--md-sys-motion-easing-standard);
+}
+
+.fullmenu-add-btn:hover {
+  background: var(--md-ref-primary-90);
+  color: var(--md-ref-primary-10);
+}
+
+.fullmenu-add-btn:active {
+  transform: scale(0.92);
+}
+
+.fullmenu-panel--dark .fullmenu-add-btn {
+  border-color: color-mix(in srgb, var(--md-ref-primary-80) 30%, transparent);
+  background: color-mix(in srgb, var(--md-ref-primary-80) 10%, transparent);
+  color: var(--md-ref-primary-80);
+}
+
+.fullmenu-panel--dark .fullmenu-add-btn:hover {
   background: var(--md-ref-primary-30);
   color: var(--md-ref-primary-90);
 }

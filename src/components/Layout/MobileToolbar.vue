@@ -14,7 +14,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['save', 'toggle-theme', 'fit-to-content', 'open-profile', 'request-auth'])
+const emit = defineEmits(['save', 'fit-to-content', 'open-profile', 'request-auth'])
 
 const authStore = useAuthStore()
 const boardStore = useBoardStore()
@@ -29,7 +29,6 @@ const performanceModeIcon = computed(() => {
 })
 
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
-const isMobileMode = computed(() => mobileStore.isMobileMode)
 const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => String(zoomPercentage.value ?? 0))
@@ -51,18 +50,6 @@ const handleSave = () => {
   }
   
   emit('save')
-}
-
-const handleToggleTheme = () => {
-  emit('toggle-theme')
-}
-
-const handleToggleVersion = () => {
-  if (isMobileMode.value) {
-    mobileStore.switchToDesktop()
-  } else {
-    mobileStore.switchToMobile()
-  }
 }
 
 const openMarketingLink = () => {
@@ -109,17 +96,6 @@ const handleProfileClick = () => {
       </div>
 
       <div class="mobile-toolbar-section mobile-toolbar-section--center">
-        <!-- Переключатель темы (скрыт в View-режиме) -->
-        <button
-          v-if="authStore.isAuthenticated && !isView"
-          class="mobile-toolbar-button theme-button"
-          type="button"
-          @click="handleToggleTheme"
-          :title="isModernTheme ? 'Светлая тема' : 'Темная тема'"
-          aria-label="Переключить тему"
-        >
-          <span class="theme-icon"></span>
-        </button>
         <!-- Текущий масштаб -->
         <button
           v-if="authStore.isAuthenticated"
@@ -141,17 +117,6 @@ const handleProfileClick = () => {
           aria-label="Переключить режим производительности"
         >
           <span class="button-icon">{{ performanceModeIcon }}</span>
-        </button>
-        <!-- Переключатель версии -->
-        <button
-          v-if="authStore.isAuthenticated"
-          class="mobile-toolbar-button version-button"
-          type="button"
-          @click="handleToggleVersion"
-          :title="isMobileMode ? 'Версия для ПК' : 'Мобильная версия'"
-          aria-label="Переключить версию"
-        >
-          <span class="button-icon">{{ isMobileMode ? '💻' : '📱' }}</span>
         </button>
       </div>
 
@@ -353,59 +318,6 @@ const handleProfileClick = () => {
   height: 20px;
 }
 
-/* --- Theme toggle button (secondary container) --- */
-.theme-button {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
-}
-
-.theme-button::after {
-  background: var(--md-sys-color-on-secondary-container);
-}
-
-.mobile-toolbar--dark .theme-button {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
-}
-
-/* Theme icon — moon (light mode) */
-.theme-icon {
-  position: relative;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--md-sys-color-on-secondary-container);
-  box-shadow:
-    inset -4px -4px 10px rgba(255, 255, 255, 0.15),
-    0 4px 8px rgba(0, 0, 0, 0.12);
-}
-
-/* Theme icon — sun (dark mode) */
-.mobile-toolbar--dark .theme-icon {
-  background: var(--md-sys-color-on-secondary-container);
-  box-shadow:
-    inset -4px -4px 10px rgba(0, 0, 0, 0.25),
-    0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.theme-icon::before,
-.theme-icon::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  background: transparent;
-}
-
-.theme-icon::before {
-  inset: 4px;
-  opacity: 0.4;
-}
-
-.theme-icon::after {
-  inset: 7px;
-  opacity: 0.2;
-}
-
 /* --- Zoom button (surface, wider for numbers) --- */
 .zoom-button {
   min-width: 52px;
@@ -416,15 +328,6 @@ const handleProfileClick = () => {
 .zoom-button__value {
   font-size: 18px;
   font-weight: 600;
-}
-
-/* --- Version button (surface container high) --- */
-.version-button {
-  background: var(--md-sys-color-surface-container-high);
-}
-
-.mobile-toolbar--dark .version-button {
-  background: var(--md-sys-color-surface-container-high);
 }
 
 /* --- Auth button (same surface treatment) --- */
@@ -464,11 +367,6 @@ const handleProfileClick = () => {
 
   .button-icon {
     font-size: 18px;
-  }
-
-  .theme-icon {
-    width: 18px;
-    height: 18px;
   }
 }
 </style>

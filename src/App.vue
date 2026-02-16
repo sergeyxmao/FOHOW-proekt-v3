@@ -1233,6 +1233,16 @@ watch(routeBoardId, async (boardId) => {
   await loadBoard(boardId)
 }, { immediate: true })
 
+// Авто-скрытие боковой панели при активации placement mode на мобильном
+watch(
+  () => [boardStore.placementMode, stickersStore.isPlacementMode],
+  ([placementMode, stickerPlacement]) => {
+    if (isMobileMode.value && (placementMode || stickerPlacement)) {
+      sidePanelsStore.closePanel()
+    }
+  }
+)
+
 onMounted(async () => {
   // Вся асинхронная инициализация (authStore.init) УЖЕ ЗАВЕРШИЛАСЬ в main.js
   // до того, как этот компонент был смонтирован.
@@ -1391,7 +1401,6 @@ onBeforeUnmount(() => {
         class="no-print"
         :is-modern-theme="isModernTheme"
         @save="saveCurrentBoard"
-        @toggle-theme="toggleTheme"
         @fit-to-content="handleFitToContent"
         @open-profile="handleOpenProfile"
         @request-auth="openMobileAuthPrompt"

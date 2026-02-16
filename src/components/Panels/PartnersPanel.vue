@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
+import PanelSwitchBar from './PanelSwitchBar.vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useBoardStore } from '../../stores/board.js'
 import { useAuthStore } from '../../stores/auth.js'
@@ -304,6 +305,8 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
         ×
       </button>
     </div>
+
+    <PanelSwitchBar :is-modern-theme="isModernTheme" />
 
     <!-- Строка поиска -->
     <div class="panel-search">

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import PanelSwitchBar from './PanelSwitchBar.vue'
 import { useBoardStore } from '../../stores/board.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useAnchorsStore } from '../../stores/anchors.js'
@@ -116,6 +117,7 @@ watch(anchors, () => {
         ×
       </button>
     </div>
+    <PanelSwitchBar :is-modern-theme="isModernTheme" />
     <div class="anchors-panel__search">
       <input
         v-model="searchQuery"
