@@ -7,6 +7,7 @@ import { useCanvasStore } from '@/stores/canvas'
 import { useBoardStore } from '@/stores/board'
 import { useMobileStore } from '@/stores/mobile'
 import { usePerformanceModeStore } from '@/stores/performanceMode'
+import { useDesignModeStore } from '@/stores/designMode'
 import { useProjectActions } from '@/composables/useProjectActions'
 import { storeToRefs } from 'pinia'
 
@@ -34,11 +35,13 @@ const canvasStore = useCanvasStore()
 const boardStore = useBoardStore()
 const mobileStore = useMobileStore()
 const performanceModeStore = usePerformanceModeStore()
+const designModeStore = useDesignModeStore()
 
 const { isAuthenticated, user, isLoadingProfile } = storeToRefs(authStore)
 const { currentBoardName, isSaving, lastSaved } = storeToRefs(boardStore)
 const { isMenuScaled, menuScale, isMobileMode, isSelectionMode } = storeToRefs(mobileStore)
 const { isFull, isLight, isView } = storeToRefs(performanceModeStore)
+const { isAuroraDesign } = storeToRefs(designModeStore)
 
 const { handleSaveAsHTML, handleShareProject } = useProjectActions()
 
@@ -234,7 +237,7 @@ watch(
 <template>
   <div
     class="mobile-header"
-    :class="{ 'mobile-header--dark': isModernTheme, 'mobile-header--scaled': isMenuScaled }"
+    :class="{ 'mobile-header--dark': isModernTheme, 'mobile-header--scaled': isMenuScaled, 'mobile-header--aurora': isAuroraDesign }"
     :style="{ '--menu-scale': menuScale }"  
    >
    <div class="mobile-header-layout">
@@ -1315,5 +1318,88 @@ watch(
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* ============================================================
+   AURORA DESIGN — Spatial Glass Header
+   ============================================================ */
+
+.mobile-header--aurora {
+  background: rgba(8, 12, 20, 0.55);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  border-bottom: 1px solid transparent;
+  background-clip: padding-box;
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+}
+
+/* Aurora gradient border-bottom shimmer */
+.mobile-header--aurora::before {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 5%, #00d4aa 20%, #0088ff 50%, #8b5cf6 80%, transparent 95%);
+  opacity: 0.6;
+}
+
+/* Aurora glow under header */
+.mobile-header--aurora::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 10%;
+  right: 10%;
+  height: 8px;
+  background: linear-gradient(90deg, transparent, rgba(0, 212, 170, 0.12), rgba(0, 136, 255, 0.12), rgba(139, 92, 246, 0.08), transparent);
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+/* Aurora buttons */
+.mobile-header--aurora .mobile-header-button {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-header--aurora .mobile-header-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(0, 212, 170, 0.25);
+  box-shadow: 0 0 16px rgba(0, 212, 170, 0.1), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-header--aurora .mobile-header-button:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(0, 212, 170, 0.3);
+  box-shadow: 0 0 8px rgba(0, 212, 170, 0.08);
+}
+
+/* Aurora active button */
+.mobile-header--aurora .mobile-header-button--active {
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.25), rgba(0, 136, 255, 0.25));
+  border-color: rgba(0, 212, 170, 0.5);
+  color: #00d4aa;
+  box-shadow: 0 0 20px rgba(0, 212, 170, 0.15), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Aurora avatar */
+.mobile-header--aurora .avatar-initials {
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.2), rgba(0, 136, 255, 0.2));
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 12px rgba(0, 212, 170, 0.15);
+}
+
+.mobile-header--aurora .mobile-header-avatar {
+  box-shadow: 0 0 0 2px rgba(0, 212, 170, 0.2);
+  border-radius: 50%;
+}
+
+/* Aurora disabled */
+.mobile-header--aurora .mobile-header-button:disabled {
+  opacity: 0.3;
 }
 </style>

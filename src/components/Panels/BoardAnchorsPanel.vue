@@ -5,6 +5,7 @@ import PanelSwitchBar from './PanelSwitchBar.vue'
 import { useBoardStore } from '../../stores/board.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useAnchorsStore } from '../../stores/anchors.js'
+import { useMobileStore } from '../../stores/mobile.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -15,7 +16,8 @@ const props = defineProps({
 
 const boardStore = useBoardStore()
 const sidePanelsStore = useSidePanelsStore()
-const anchorsStore = useAnchorsStore()  
+const anchorsStore = useAnchorsStore()
+const mobileStore = useMobileStore()  
 
 const { selectedAnchorId, pendingEditAnchorId } = storeToRefs(boardStore)
 const { anchors } = storeToRefs(anchorsStore)
@@ -58,6 +60,9 @@ const formatDateTime = (value) => {
 
 const handleSelect = (anchorId) => {
   boardStore.focusAnchor(anchorId)
+  if (mobileStore.isMobileMode) {
+    sidePanelsStore.closePanel()
+  }
 }
 
 const handleStartEdit = (anchor) => {

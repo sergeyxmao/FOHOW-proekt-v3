@@ -6,6 +6,7 @@ import { useNotesStore } from '../../stores/notes.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useBoardStore } from '../../stores/board.js'
 import { useStickersStore } from '../../stores/stickers.js'
+import { useMobileStore } from '../../stores/mobile.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -17,6 +18,7 @@ const props = defineProps({
 const notesStore = useNotesStore()
 const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
+const mobileStore = useMobileStore()
 
 const { cardsWithEntries } = storeToRefs(notesStore)
 const searchQuery = ref('')
@@ -54,10 +56,16 @@ const handleClose = () => {
 
 const handleNoteItemClick = (cardId) => {
   notesStore.requestOpen(cardId, { focus: true })
+  if (mobileStore.isMobileMode) {
+    sidePanelsStore.closePanel()
+  }
 }
 
 const handleNoteEntryClick = (cardId, date) => {
   notesStore.requestOpen(cardId, { focus: true, date })
+  if (mobileStore.isMobileMode) {
+    sidePanelsStore.closePanel()
+  }
 }
 
 const handleNoteEntryDelete = async (cardId, date) => {

@@ -8,6 +8,7 @@ import { useSidePanelsStore } from '@/stores/sidePanels'
 import { useMobileStore } from '@/stores/mobile'
 import { useBoardStore } from '@/stores/board'
 import { useStickersStore } from '@/stores/stickers'
+import { useDesignModeStore } from '@/stores/designMode'
 
 const props = defineProps({
   visible: {
@@ -35,6 +36,8 @@ const sidePanelsStore = useSidePanelsStore()
 const mobileStore = useMobileStore()
 const boardStore = useBoardStore()
 const stickersStore = useStickersStore()
+const designModeStore = useDesignModeStore()
+const { isAuroraDesign } = storeToRefs(designModeStore)
 
 const { isGridBackgroundVisible, gridStep } = storeToRefs(canvasStore)
 const {
@@ -213,14 +216,14 @@ const handleOverlayClick = () => {
       <div
         v-if="visible"
         class="fullmenu-overlay"
-        :class="{ 'fullmenu-overlay--dark': isDark }"
+        :class="{ 'fullmenu-overlay--dark': isDark, 'fullmenu-overlay--aurora': isAuroraDesign }"
         @click.self="handleOverlayClick"
       >
         <transition name="fullmenu-slide">
           <div
             v-if="visible"
             class="fullmenu-panel"
-            :class="{ 'fullmenu-panel--dark': isDark }"
+            :class="{ 'fullmenu-panel--dark': isDark, 'fullmenu-panel--aurora': isAuroraDesign }"
           >
             <!-- Header -->
             <div class="fullmenu-header">
@@ -508,6 +511,19 @@ const handleOverlayClick = () => {
                   </div>
                 </div>
               </div>
+
+              <!-- Переключатель дизайна -->
+              <button
+                class="fullmenu-aurora-toggle"
+                :class="{ 'fullmenu-aurora-toggle--active': isAuroraDesign }"
+                type="button"
+                @click="designModeStore.toggleDesign()"
+              >
+                <span class="fullmenu-aurora-toggle__glow"></span>
+                <span class="fullmenu-aurora-toggle__label">
+                  {{ isAuroraDesign ? '✦ Aurora' : '✦ Новый дизайн' }}
+                </span>
+              </button>
 
             </div>
           </div>
@@ -1050,5 +1066,264 @@ const handleOverlayClick = () => {
 .fullmenu-slide-enter-from,
 .fullmenu-slide-leave-to {
   transform: translateX(-100%);
+}
+
+/* ============================================================
+   AURORA DESIGN — Spatial Glass Theme
+   ============================================================ */
+
+/* --- Aurora Toggle Button --- */
+.fullmenu-aurora-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 16px;
+  padding: 12px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.08), rgba(0, 136, 255, 0.08), rgba(139, 92, 246, 0.08));
+  color: var(--md-ref-neutral-30);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fullmenu-panel--dark .fullmenu-aurora-toggle {
+  color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.fullmenu-aurora-toggle:hover {
+  border-color: rgba(0, 212, 170, 0.3);
+  box-shadow: 0 0 24px rgba(0, 212, 170, 0.12);
+}
+
+.fullmenu-aurora-toggle--active {
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.2), rgba(0, 136, 255, 0.2), rgba(139, 92, 246, 0.2));
+  border-color: rgba(0, 212, 170, 0.4);
+  box-shadow: 0 0 30px rgba(0, 212, 170, 0.15), inset 0 0 20px rgba(0, 136, 255, 0.05);
+  color: #00d4aa;
+}
+
+.fullmenu-aurora-toggle__glow {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #00d4aa, #0088ff, #8b5cf6);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: -1;
+  filter: blur(8px);
+}
+
+.fullmenu-aurora-toggle--active .fullmenu-aurora-toggle__glow {
+  opacity: 0.25;
+}
+
+.fullmenu-aurora-toggle__label {
+  position: relative;
+  z-index: 1;
+  letter-spacing: 0.5px;
+}
+
+/* --- Aurora Overlay --- */
+.fullmenu-overlay--aurora {
+  background: rgba(4, 6, 14, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* --- Aurora Panel --- */
+.fullmenu-panel--aurora {
+  background: rgba(8, 12, 20, 0.82);
+  backdrop-filter: blur(30px) saturate(1.4);
+  -webkit-backdrop-filter: blur(30px) saturate(1.4);
+  border-right: none;
+  box-shadow:
+    1px 0 0 0 rgba(0, 212, 170, 0.15),
+    4px 0 30px rgba(0, 136, 255, 0.08),
+    inset -1px 0 0 0 rgba(255, 255, 255, 0.04);
+}
+
+.fullmenu-panel--aurora .fullmenu-header {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.fullmenu-panel--aurora .fullmenu-header__title {
+  color: rgba(255, 255, 255, 0.92);
+  background: linear-gradient(135deg, #e0f7fa, #00d4aa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.fullmenu-panel--aurora .fullmenu-close {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fullmenu-panel--aurora .fullmenu-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+/* Aurora sections */
+.fullmenu-panel--aurora .fullmenu-section {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.fullmenu-panel--aurora .fullmenu-section__toggle {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.88);
+  border-color: transparent;
+}
+
+.fullmenu-panel--aurora .fullmenu-section__toggle:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.fullmenu-panel--aurora .fullmenu-section__icon {
+  filter: drop-shadow(0 0 4px rgba(0, 212, 170, 0.3));
+}
+
+.fullmenu-panel--aurora .fullmenu-section__arrow {
+  color: rgba(0, 212, 170, 0.6);
+}
+
+.fullmenu-panel--aurora .fullmenu-section__body {
+  border-top-color: rgba(255, 255, 255, 0.04);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Aurora menu items */
+.fullmenu-panel--aurora .fullmenu-item {
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+
+.fullmenu-panel--aurora .fullmenu-item:hover {
+  background: rgba(0, 212, 170, 0.1);
+  color: #00d4aa;
+  box-shadow: 0 0 16px rgba(0, 212, 170, 0.08);
+}
+
+.fullmenu-panel--aurora .fullmenu-item:active {
+  background: rgba(0, 212, 170, 0.15);
+}
+
+.fullmenu-panel--aurora .fullmenu-item__icon {
+  filter: drop-shadow(0 0 3px rgba(0, 212, 170, 0.2));
+}
+
+/* Aurora chips */
+.fullmenu-panel--aurora .fullmenu-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.fullmenu-panel--aurora .fullmenu-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(0, 212, 170, 0.2);
+}
+
+.fullmenu-panel--aurora .fullmenu-chip--active {
+  background: rgba(0, 212, 170, 0.15);
+  border-color: rgba(0, 212, 170, 0.4);
+  color: #00d4aa;
+  box-shadow: 0 0 12px rgba(0, 212, 170, 0.1);
+}
+
+/* Aurora inputs */
+.fullmenu-panel--aurora .fullmenu-input {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.fullmenu-panel--aurora .fullmenu-input:focus {
+  border-color: rgba(0, 212, 170, 0.4);
+  box-shadow: 0 0 12px rgba(0, 212, 170, 0.1);
+}
+
+/* Aurora range */
+.fullmenu-panel--aurora .fullmenu-range {
+  accent-color: #00d4aa;
+}
+
+/* Aurora color swatches */
+.fullmenu-panel--aurora .fullmenu-swatch {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.fullmenu-panel--aurora .fullmenu-swatch--active {
+  border-color: #00d4aa;
+  box-shadow: 0 0 12px rgba(0, 212, 170, 0.3);
+}
+
+/* Aurora add buttons */
+.fullmenu-panel--aurora .fullmenu-add-btn {
+  background: rgba(0, 212, 170, 0.1);
+  border-color: rgba(0, 212, 170, 0.3);
+  color: #00d4aa;
+}
+
+.fullmenu-panel--aurora .fullmenu-add-btn:hover {
+  background: rgba(0, 212, 170, 0.2);
+  box-shadow: 0 0 16px rgba(0, 212, 170, 0.15);
+}
+
+/* Aurora labels */
+.fullmenu-panel--aurora .fullmenu-label {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Aurora lang buttons */
+.fullmenu-panel--aurora .fullmenu-lang-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.fullmenu-panel--aurora .fullmenu-lang-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.fullmenu-panel--aurora .fullmenu-lang-btn--active {
+  background: rgba(0, 212, 170, 0.15);
+  border-color: rgba(0, 212, 170, 0.4);
+  color: #00d4aa;
+}
+
+/* Aurora custom scrollbar */
+.fullmenu-panel--aurora .fullmenu-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.fullmenu-panel--aurora .fullmenu-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fullmenu-panel--aurora .fullmenu-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 170, 0.3);
+  border-radius: 4px;
+}
+
+/* Aurora close button glow on hover */
+.fullmenu-panel--aurora .fullmenu-close:hover {
+  border-color: rgba(255, 80, 80, 0.3);
+  box-shadow: 0 0 12px rgba(255, 80, 80, 0.1);
 }
 </style>

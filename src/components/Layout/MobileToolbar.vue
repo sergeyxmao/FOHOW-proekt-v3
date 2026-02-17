@@ -6,6 +6,7 @@ import { useBoardStore } from '@/stores/board'
 import { useMobileStore } from '@/stores/mobile'
 import { useViewportStore } from '@/stores/viewport'
 import { usePerformanceModeStore } from '@/stores/performanceMode'
+import { useDesignModeStore } from '@/stores/designMode'
 
 const props = defineProps({
   isModernTheme: {
@@ -22,7 +23,9 @@ const mobileStore = useMobileStore()
 const viewportStore = useViewportStore()
 
 const performanceModeStore = usePerformanceModeStore()
+const designModeStore = useDesignModeStore()
 const { mode: performanceMode, isView } = storeToRefs(performanceModeStore)
+const { isAuroraDesign } = storeToRefs(designModeStore)
 const performanceModeIcon = computed(() => {
   const icons = { full: '\uD83D\uDD34', light: '\uD83D\uDFE1', view: '\uD83D\uDFE2' }
   return icons[performanceMode.value] || '\uD83D\uDD34'
@@ -73,7 +76,7 @@ const handleProfileClick = () => {
 <template>
   <div
     class="mobile-toolbar"
-    :class="{ 'mobile-toolbar--dark': isModernTheme, 'mobile-toolbar--scaled': isMenuScaled }"
+    :class="{ 'mobile-toolbar--dark': isModernTheme, 'mobile-toolbar--scaled': isMenuScaled, 'mobile-toolbar--aurora': isAuroraDesign }"
     :style="{ '--menu-scale': menuScale }"  
     >
     <div class="mobile-toolbar-layout">
@@ -368,5 +371,88 @@ const handleProfileClick = () => {
   .button-icon {
     font-size: 18px;
   }
+}
+
+/* ============================================================
+   AURORA DESIGN — Floating Glass Island
+   ============================================================ */
+
+.mobile-toolbar--aurora .mobile-toolbar-layout {
+  background: rgba(8, 12, 20, 0.6);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  border-radius: 28px;
+  padding: 6px 12px;
+  margin: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 0.5px rgba(255, 255, 255, 0.06) inset;
+  position: relative;
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+}
+
+/* Aurora gradient border glow */
+.mobile-toolbar--aurora .mobile-toolbar-layout::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.2), rgba(0, 136, 255, 0.15), rgba(139, 92, 246, 0.2));
+  z-index: -1;
+  filter: blur(1px);
+  opacity: 0.5;
+}
+
+.mobile-toolbar--aurora .mobile-toolbar-button {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  box-shadow: none;
+}
+
+.mobile-toolbar--aurora .mobile-toolbar-button::after {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-toolbar--aurora .mobile-toolbar-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(0, 212, 170, 0.2);
+  box-shadow: 0 0 12px rgba(0, 212, 170, 0.08);
+}
+
+.mobile-toolbar--aurora .mobile-toolbar-button:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: none;
+}
+
+/* Aurora marketing button */
+.mobile-toolbar--aurora .marketing-button {
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.25), rgba(0, 136, 255, 0.25));
+  border-color: rgba(0, 212, 170, 0.3);
+  color: #00d4aa;
+}
+
+.mobile-toolbar--aurora .marketing-button:hover:not(:disabled) {
+  box-shadow: 0 0 16px rgba(0, 212, 170, 0.15);
+}
+
+.mobile-toolbar--aurora .marketing-button::after {
+  background: rgba(0, 212, 170, 0.15);
+}
+
+/* Aurora save button */
+.mobile-toolbar--aurora .save-button {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  box-shadow: none;
+}
+
+/* Aurora zoom button */
+.mobile-toolbar--aurora .zoom-button__value {
+  color: rgba(0, 212, 170, 0.9);
+  font-family: 'Manrope', system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 </style>

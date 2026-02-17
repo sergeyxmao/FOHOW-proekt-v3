@@ -126,3 +126,63 @@ Watcher на `boardStore.placementMode` и `stickersStore.isPlacementMode`. Ко
 14. Фото: при выборе фото для размещения панель авто-скрывается
 15. Инструменты → Версия для ПК: переключает на десктопную версию
 16. Тема и версия отсутствуют в нижней панели (toolbar)
+
+## Aurora Design — альтернативная тема
+
+**Концепция:** "Spatial Glass" — вдохновлено visionOS / Apple Vision Pro. Frosted glass, aurora градиенты, soft glow эффекты, уникальная типографика.
+
+**Переключение:** кнопка "Новый дизайн" в MobileFullMenu ниже секции "Обсуждение". Toggle — повторное нажатие возвращает стандартный дизайн.
+
+**Store:** `src/stores/designMode.js` — `isAuroraDesign` (Boolean), `toggleDesign()`
+
+**Типографика:** Google Font "Manrope" (геометрический гротеск) — заменяет Inter для всего UI в Aurora-режиме. Импортируется через CSS @import в App.vue.
+
+**Палитра (CSS-переменные в `#app.app--aurora`):**
+- Фон: `--aurora-bg-deep: #080c14`
+- Стекло: `--aurora-glass: rgba(255,255,255,0.04)` + `blur(32px)`
+- Aurora-градиент: `--aurora-gradient: #00d4aa → #0088ff → #8b5cf6`
+- Акцент: `--aurora-accent: #00d4aa`
+- Текст: `--aurora-text: rgba(255,255,255,0.92)`
+- Граница: `--aurora-border: rgba(255,255,255,0.07)`
+
+**Архитектура стилей:**
+
+| Уровень | Подход | Пример |
+|---------|--------|--------|
+| Компоненты (Header, Toolbar, Sidebar, Menu) | Scoped CSS с `--aurora` модификатором | `.mobile-header--aurora` |
+| Боковые панели (все 6) | Глобальный CSS с `#app.app--aurora` | `#app.app--aurora .images-panel` |
+| Режим рисования (PencilOverlay) | Глобальный CSS с `#app.app--aurora` | `#app.app--aurora .pencil-overlay__tools-bar` |
+| MobileFullMenu (teleported) | Scoped CSS + глобальный `body .fullmenu-panel--aurora` | Шрифт через body-селектор |
+
+**Затронутые компоненты:**
+
+| Компонент | CSS-модификатор | Визуальные изменения |
+|-----------|----------------|---------------------|
+| MobileHeader | `--aurora` | Glass bar + aurora shimmer border + glow + Manrope |
+| MobileToolbar | `--aurora` | Floating glass island, aurora gradient border + Manrope |
+| MobileSidebar | `--aurora` | Glass buttons, aurora border on hover |
+| MobileFullMenu | `--aurora` | Glass panel, aurora left-border glow, glass sections + Manrope |
+| ImagesPanel | global CSS | Glass panel + animated left border + gradient title |
+| PartnersPanel | global CSS | Glass panel + glass list items + gradient title |
+| CommentsSidePanel | global CSS | Glass panel + gradient title |
+| StickerMessagesPanel | global CSS | Glass panel + gradient title |
+| BoardAnchorsPanel | global CSS | Glass panel + glass items + gradient title |
+| NotesSidePanel | global CSS | Glass panel + glass entries + gradient title |
+| PanelSwitchBar | global CSS | Glass bar + animated aurora bottom border |
+| PencilOverlay | global CSS | Glass tools bar + glass buttons + glass undo bar |
+| App root | `app--aurora` | Root class + CSS variables + font-family |
+
+**Специфичность CSS:**
+- Глобальный `#app.app--aurora .class` = (1,1,0) — выше scoped `(0,2,0)` → без `!important`
+
+**Тестирование Aurora:**
+1. Меню → кнопка "Новый дизайн" → UI переключается
+2. Header: стеклянная полоса с aurora подсветкой + шрифт Manrope
+3. Toolbar: floating island по центру + Manrope
+4. Sidebar: стеклянные кнопки
+5. Меню: glass panel с aurora-бордером + Manrope
+6. **Панели:** все 6 панелей (Изображения, Партнёры, Комментарии, Стикеры, Геолокация, Заметки) — стеклянный фон, градиентные заголовки, анимированная левая граница, тонкие скроллбары
+7. **Режим рисования:** tools bar, кнопки, undo/redo — стеклянный стиль
+8. **PanelSwitchBar:** стеклянные кнопки с aurora-акцентами
+9. Повторное нажатие → возврат к стандартному дизайну
+10. Работает в обоих режимах (light/dark)

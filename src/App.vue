@@ -33,6 +33,7 @@ import { useSubscriptionStore } from './stores/subscription'
 import { useImagesStore } from './stores/images'
 import { useMobileUIScaleGesture } from './composables/useMobileUIScaleGesture'
 import { usePerformanceModeStore } from './stores/performanceMode'
+import { useDesignModeStore } from './stores/designMode'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
 import { checkAndAlertCardLimit } from './utils/limitsCheck'
@@ -86,7 +87,9 @@ const { zoomPercentage } = storeToRefs(viewportStore)
 const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
 
 const performanceModeStore = usePerformanceModeStore()
+const designModeStore = useDesignModeStore()
 const { mode: performanceMode, isFull: isFullMode } = storeToRefs(performanceModeStore)
+const { isAuroraDesign } = storeToRefs(designModeStore)
 const showMobileFullMenu = ref(false)
 const performanceModeLabel = computed(() => {
   const labels = { full: 'Полный', light: 'Лёгкий', view: 'Просмотр' }
@@ -1310,7 +1313,8 @@ onBeforeUnmount(() => {
     :class="{
       'app--mobile': isMobileMode,
       'app--admin': layout === 'admin',
-      'm3-dark': isModernTheme
+      'm3-dark': isModernTheme,
+      'app--aurora': isAuroraDesign
     }"
   >
     <!-- Для публичных страниц показываем только компонент маршрута -->
@@ -1617,6 +1621,8 @@ onBeforeUnmount(() => {
 </template>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap');
+
 :root{
   --card-width: 418px;
   --brand: #0f62fe;
@@ -2134,6 +2140,687 @@ body:has(.app--mobile) {
     width: 100vw !important;
     max-width: 100vw !important;
   }
+}
+
+/* ============================================================
+   AURORA DESIGN — Global Theme Override
+   Selector prefix: #app.app--aurora  (specificity 1,1,0+)
+   Beats scoped CSS (0,2,0) — no !important needed
+   ============================================================ */
+
+/* --- Aurora CSS Variables --- */
+#app.app--aurora {
+  --aurora-bg-deep: #080c14;
+  --aurora-glass: rgba(255, 255, 255, 0.04);
+  --aurora-glass-hover: rgba(255, 255, 255, 0.08);
+  --aurora-glass-active: rgba(255, 255, 255, 0.12);
+  --aurora-border: rgba(255, 255, 255, 0.07);
+  --aurora-border-hover: rgba(0, 212, 170, 0.25);
+  --aurora-text: rgba(255, 255, 255, 0.92);
+  --aurora-text-secondary: rgba(255, 255, 255, 0.55);
+  --aurora-text-muted: rgba(255, 255, 255, 0.35);
+  --aurora-accent: #00d4aa;
+  --aurora-accent-blue: #0088ff;
+  --aurora-accent-purple: #8b5cf6;
+  --aurora-glow: 0 0 20px rgba(0, 212, 170, 0.12);
+  --aurora-glow-strong: 0 0 30px rgba(0, 212, 170, 0.2);
+  --aurora-gradient: linear-gradient(135deg, #00d4aa, #0088ff, #8b5cf6);
+  --aurora-panel-bg: rgba(8, 12, 20, 0.88);
+  --aurora-panel-blur: blur(32px) saturate(1.4);
+  --aurora-radius: 16px;
+  --aurora-radius-sm: 10px;
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+}
+
+/* --- Aurora Keyframe Animations --- */
+@keyframes aurora-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes aurora-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* ==========================================================
+   SIDE PANELS — Common Aurora base
+   ========================================================== */
+
+#app.app--aurora .images-panel,
+#app.app--aurora .partners-panel,
+#app.app--aurora .comments-side-panel,
+#app.app--aurora .sticker-messages-panel,
+#app.app--aurora .anchors-panel,
+#app.app--aurora .notes-side-panel {
+  background: var(--aurora-panel-bg);
+  backdrop-filter: var(--aurora-panel-blur);
+  -webkit-backdrop-filter: var(--aurora-panel-blur);
+  border-color: var(--aurora-border);
+  color: var(--aurora-text);
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  box-shadow:
+    -4px 0 40px rgba(0, 0, 0, 0.4),
+    0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
+}
+
+/* --- Panel left-border aurora gradient glow (animated) --- */
+#app.app--aurora .images-panel::before,
+#app.app--aurora .partners-panel::before,
+#app.app--aurora .comments-side-panel::before,
+#app.app--aurora .sticker-messages-panel::before,
+#app.app--aurora .anchors-panel::before,
+#app.app--aurora .notes-side-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--aurora-gradient);
+  background-size: 200% 200%;
+  animation: aurora-shimmer 4s ease infinite;
+  z-index: 1;
+}
+
+/* --- Panel headers --- */
+#app.app--aurora .images-panel__header,
+#app.app--aurora .partners-panel__header,
+#app.app--aurora .comments-side-panel__header,
+#app.app--aurora .sticker-messages-panel__header,
+#app.app--aurora .anchors-panel__header,
+#app.app--aurora .notes-side-panel__header {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--aurora-border);
+}
+
+/* --- Panel titles — aurora gradient text --- */
+#app.app--aurora .images-panel__title,
+#app.app--aurora .partners-panel__title,
+#app.app--aurora .comments-side-panel__title,
+#app.app--aurora .sticker-messages-panel__title,
+#app.app--aurora .anchors-panel__title,
+#app.app--aurora .notes-side-panel__title {
+  background: var(--aurora-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* --- Close buttons (frosted glass circle) --- */
+#app.app--aurora .images-panel__close,
+#app.app--aurora .partners-panel__close,
+#app.app--aurora .comments-side-panel__close,
+#app.app--aurora .sticker-messages-panel__close,
+#app.app--aurora .anchors-panel__close,
+#app.app--aurora .notes-side-panel__close {
+  background: var(--aurora-glass);
+  border: 1px solid var(--aurora-border);
+  color: var(--aurora-text-secondary);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .images-panel__close:hover,
+#app.app--aurora .partners-panel__close:hover,
+#app.app--aurora .comments-side-panel__close:hover,
+#app.app--aurora .sticker-messages-panel__close:hover,
+#app.app--aurora .anchors-panel__close:hover,
+#app.app--aurora .notes-side-panel__close:hover {
+  background: var(--aurora-glass-hover);
+  border-color: rgba(255, 80, 80, 0.3);
+  color: #ff5c5c;
+  box-shadow: 0 0 12px rgba(255, 80, 80, 0.1);
+}
+
+/* --- Panel content areas --- */
+#app.app--aurora .images-panel__content,
+#app.app--aurora .partners-panel__content,
+#app.app--aurora .comments-side-panel__content,
+#app.app--aurora .sticker-messages-panel__content,
+#app.app--aurora .anchors-panel__content,
+#app.app--aurora .notes-side-panel__content {
+  background: transparent;
+  color: var(--aurora-text);
+}
+
+/* --- Aurora thin scrollbars --- */
+#app.app--aurora .images-panel__content::-webkit-scrollbar,
+#app.app--aurora .partners-panel__content::-webkit-scrollbar,
+#app.app--aurora .comments-side-panel__content::-webkit-scrollbar,
+#app.app--aurora .sticker-messages-panel__content::-webkit-scrollbar,
+#app.app--aurora .anchors-panel__content::-webkit-scrollbar,
+#app.app--aurora .notes-side-panel__content::-webkit-scrollbar {
+  width: 4px;
+}
+
+#app.app--aurora .images-panel__content::-webkit-scrollbar-track,
+#app.app--aurora .partners-panel__content::-webkit-scrollbar-track,
+#app.app--aurora .comments-side-panel__content::-webkit-scrollbar-track,
+#app.app--aurora .sticker-messages-panel__content::-webkit-scrollbar-track,
+#app.app--aurora .anchors-panel__content::-webkit-scrollbar-track,
+#app.app--aurora .notes-side-panel__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#app.app--aurora .images-panel__content::-webkit-scrollbar-thumb,
+#app.app--aurora .partners-panel__content::-webkit-scrollbar-thumb,
+#app.app--aurora .comments-side-panel__content::-webkit-scrollbar-thumb,
+#app.app--aurora .sticker-messages-panel__content::-webkit-scrollbar-thumb,
+#app.app--aurora .anchors-panel__content::-webkit-scrollbar-thumb,
+#app.app--aurora .notes-side-panel__content::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 170, 0.3);
+  border-radius: 4px;
+}
+
+/* ==========================================================
+   IMAGES PANEL — Aurora specifics
+   ========================================================== */
+
+/* Tabs bar */
+#app.app--aurora .images-panel__tabs {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--aurora-border);
+}
+
+#app.app--aurora .images-panel__tab {
+  color: var(--aurora-text-secondary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .images-panel__tab:hover {
+  color: var(--aurora-text);
+  background: var(--aurora-glass);
+}
+
+#app.app--aurora .images-panel__tab--active {
+  color: var(--aurora-accent);
+  background: rgba(0, 212, 170, 0.06);
+  border-bottom-color: var(--aurora-accent);
+}
+
+/* Empty / access denied states */
+#app.app--aurora .images-panel__empty-text,
+#app.app--aurora .images-panel__access-denied-title {
+  color: var(--aurora-text-secondary);
+}
+
+#app.app--aurora .images-panel__empty-hint,
+#app.app--aurora .images-panel__access-denied-hint {
+  color: var(--aurora-text-muted);
+}
+
+#app.app--aurora .images-panel__access-denied-icon {
+  opacity: 0.5;
+}
+
+/* ==========================================================
+   PARTNERS PANEL — Aurora specifics
+   ========================================================== */
+
+/* Search inputs (shared across panels) */
+#app.app--aurora .panel-search .search-input,
+#app.app--aurora .anchors-panel__search-input,
+#app.app--aurora .notes-side-panel__search-input {
+  background: var(--aurora-glass);
+  border: 1px solid var(--aurora-border);
+  color: var(--aurora-text);
+  border-radius: var(--aurora-radius-sm);
+  font-family: 'Manrope', system-ui, sans-serif;
+  transition: all 0.25s ease;
+}
+
+#app.app--aurora .panel-search .search-input::placeholder,
+#app.app--aurora .anchors-panel__search-input::placeholder,
+#app.app--aurora .notes-side-panel__search-input::placeholder {
+  color: var(--aurora-text-muted);
+}
+
+#app.app--aurora .panel-search .search-input:focus,
+#app.app--aurora .anchors-panel__search-input:focus,
+#app.app--aurora .notes-side-panel__search-input:focus {
+  border-color: var(--aurora-accent);
+  box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1), var(--aurora-glow);
+  background: rgba(0, 212, 170, 0.04);
+  outline: none;
+}
+
+/* Partner list items */
+#app.app--aurora .partner-item {
+  background: var(--aurora-glass);
+  border: 1px solid var(--aurora-border);
+  border-radius: var(--aurora-radius-sm);
+  color: var(--aurora-text);
+  margin-bottom: 4px;
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .partner-item:hover {
+  background: var(--aurora-glass-hover);
+  border-color: var(--aurora-border-hover);
+  box-shadow: var(--aurora-glow);
+}
+
+#app.app--aurora .partner-item--selected {
+  background: rgba(0, 212, 170, 0.08);
+  border-color: rgba(0, 212, 170, 0.3);
+  box-shadow: 0 0 16px rgba(0, 212, 170, 0.08);
+}
+
+#app.app--aurora .partner-name {
+  color: var(--aurora-text);
+}
+
+#app.app--aurora .partner-avatar {
+  border: 1px solid var(--aurora-border);
+  border-radius: 50%;
+}
+
+/* Partner details card */
+#app.app--aurora .partner-details-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--aurora-border);
+  border-radius: var(--aurora-radius);
+  color: var(--aurora-text);
+}
+
+#app.app--aurora .partner-details-name {
+  color: var(--aurora-text);
+  font-weight: 700;
+}
+
+#app.app--aurora .partner-details-number,
+#app.app--aurora .partner-details-label {
+  color: var(--aurora-text-secondary);
+}
+
+#app.app--aurora .partner-details-link {
+  color: var(--aurora-accent);
+}
+
+#app.app--aurora .partner-details-link:hover {
+  color: var(--aurora-accent-blue);
+}
+
+#app.app--aurora .partner-details-close {
+  color: var(--aurora-text-secondary);
+}
+
+#app.app--aurora .partner-details-close:hover {
+  color: #ff5c5c;
+}
+
+/* Loading / Empty states */
+#app.app--aurora .loading-state,
+#app.app--aurora .empty-state {
+  color: var(--aurora-text-secondary);
+}
+
+/* ==========================================================
+   ANCHORS PANEL — Aurora specifics
+   ========================================================== */
+
+#app.app--aurora .anchors-panel__item {
+  background: var(--aurora-glass);
+  border: 1px solid var(--aurora-border);
+  border-radius: var(--aurora-radius-sm);
+  color: var(--aurora-text);
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .anchors-panel__item:hover {
+  background: var(--aurora-glass-hover);
+  border-color: var(--aurora-border-hover);
+}
+
+#app.app--aurora .anchors-panel__item--active {
+  background: rgba(0, 212, 170, 0.06);
+  border-color: rgba(0, 212, 170, 0.3);
+}
+
+#app.app--aurora .anchors-panel__meta {
+  color: var(--aurora-text-muted);
+}
+
+#app.app--aurora .anchors-panel__text {
+  color: var(--aurora-text);
+}
+
+#app.app--aurora .anchors-panel__textarea {
+  background: var(--aurora-glass);
+  border: 1px solid var(--aurora-border);
+  color: var(--aurora-text);
+  border-radius: var(--aurora-radius-sm);
+  font-family: 'Manrope', system-ui, sans-serif;
+}
+
+#app.app--aurora .anchors-panel__textarea:focus {
+  border-color: var(--aurora-accent);
+  box-shadow: 0 0 0 3px rgba(0, 212, 170, 0.1);
+  outline: none;
+}
+
+#app.app--aurora .anchors-panel__action {
+  background: var(--aurora-glass);
+  border: 1px solid var(--aurora-border);
+  color: var(--aurora-text-secondary);
+  border-radius: var(--aurora-radius-sm);
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .anchors-panel__action:hover {
+  background: var(--aurora-glass-hover);
+  border-color: var(--aurora-border-hover);
+  color: var(--aurora-text);
+}
+
+#app.app--aurora .anchors-panel__icon {
+  color: var(--aurora-text-secondary);
+}
+
+#app.app--aurora .anchors-panel__icon--danger {
+  color: #ff5c5c;
+}
+
+#app.app--aurora .anchors-panel__empty {
+  color: var(--aurora-text-muted);
+}
+
+/* ==========================================================
+   NOTES PANEL — Aurora specifics
+   ========================================================== */
+
+#app.app--aurora .notes-side-panel__group {
+  border-bottom: 1px solid var(--aurora-border);
+}
+
+#app.app--aurora .notes-side-panel__card-row {
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .notes-side-panel__card-button {
+  color: var(--aurora-text);
+  background: transparent;
+  border-radius: var(--aurora-radius-sm);
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .notes-side-panel__card-button:hover {
+  background: var(--aurora-glass-hover);
+}
+
+#app.app--aurora .notes-side-panel__entry {
+  background: var(--aurora-glass);
+  border: 1px solid var(--aurora-border);
+  border-radius: var(--aurora-radius-sm);
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .notes-side-panel__entry:hover {
+  background: var(--aurora-glass-hover);
+  border-color: var(--aurora-border-hover);
+}
+
+#app.app--aurora .notes-side-panel__entry-button {
+  color: var(--aurora-text);
+}
+
+#app.app--aurora .notes-side-panel__entry-label {
+  color: var(--aurora-text-secondary);
+}
+
+#app.app--aurora .notes-side-panel__icon-button {
+  background: var(--aurora-glass);
+  border: 1px solid var(--aurora-border);
+  color: var(--aurora-text-secondary);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .notes-side-panel__icon-button:hover {
+  background: var(--aurora-glass-hover);
+  border-color: var(--aurora-border-hover);
+  color: var(--aurora-text);
+}
+
+#app.app--aurora .notes-side-panel__icon-button--danger {
+  color: #ff5c5c;
+}
+
+#app.app--aurora .notes-side-panel__icon-button--danger:hover {
+  border-color: rgba(255, 80, 80, 0.3);
+  box-shadow: 0 0 12px rgba(255, 80, 80, 0.1);
+}
+
+#app.app--aurora .notes-side-panel__empty {
+  color: var(--aurora-text-muted);
+}
+
+/* ==========================================================
+   PANEL SWITCH BAR — Aurora floating glass bar
+   ========================================================== */
+
+#app.app--aurora .panel-switch-bar {
+  position: relative;
+  background: rgba(8, 12, 20, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: none;
+  gap: 2px;
+  padding: 6px 10px;
+}
+
+/* Animated aurora gradient line at the bottom */
+#app.app--aurora .panel-switch-bar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: var(--aurora-gradient);
+  background-size: 200% 200%;
+  animation: aurora-shimmer 4s ease infinite;
+  opacity: 0.6;
+}
+
+#app.app--aurora .panel-switch-bar__btn {
+  background: var(--aurora-glass);
+  border: 1px solid transparent;
+  color: var(--aurora-text-secondary);
+  border-radius: var(--aurora-radius-sm);
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .panel-switch-bar__btn:hover {
+  background: var(--aurora-glass-hover);
+  border-color: var(--aurora-border-hover);
+  box-shadow: 0 0 10px rgba(0, 212, 170, 0.06);
+}
+
+#app.app--aurora .panel-switch-bar__btn:active {
+  transform: scale(0.92);
+}
+
+#app.app--aurora .panel-switch-bar__btn--active {
+  background: rgba(0, 212, 170, 0.1);
+  border-color: rgba(0, 212, 170, 0.3);
+  box-shadow: 0 0 14px rgba(0, 212, 170, 0.1);
+}
+
+/* ==========================================================
+   PENCIL OVERLAY — Aurora glass drawing tools
+   ========================================================== */
+
+#app.app--aurora .pencil-overlay {
+  font-family: 'Manrope', system-ui, sans-serif;
+}
+
+/* Tools bar — frosted glass capsule */
+#app.app--aurora .pencil-overlay__tools-bar {
+  background: rgba(8, 12, 20, 0.78);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  border: 1px solid var(--aurora-border);
+  border-radius: 20px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 0 0.5px rgba(255, 255, 255, 0.06) inset;
+  padding: 6px;
+}
+
+/* Tool buttons — frosted glass chips */
+#app.app--aurora .pencil-overlay__tool-btn {
+  background: var(--aurora-glass);
+  border: 1px solid var(--aurora-border);
+  color: var(--aurora-text-secondary);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .pencil-overlay__tool-btn:hover {
+  background: var(--aurora-glass-hover);
+  border-color: var(--aurora-border-hover);
+  color: var(--aurora-text);
+  box-shadow: 0 0 12px rgba(0, 212, 170, 0.08);
+}
+
+#app.app--aurora .pencil-overlay__tool-btn--active {
+  background: rgba(0, 212, 170, 0.12);
+  border-color: rgba(0, 212, 170, 0.35);
+  color: var(--aurora-accent);
+  box-shadow: 0 0 20px rgba(0, 212, 170, 0.12);
+}
+
+/* Close button — frosted glass circle */
+#app.app--aurora .pencil-overlay__close-button {
+  background: rgba(8, 12, 20, 0.78);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--aurora-border);
+  color: var(--aurora-text-secondary);
+  border-radius: 50%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .pencil-overlay__close-button:hover {
+  background: rgba(255, 80, 80, 0.12);
+  border-color: rgba(255, 80, 80, 0.3);
+  color: #ff5c5c;
+  box-shadow: 0 0 16px rgba(255, 80, 80, 0.1);
+}
+
+/* Undo/Redo bar — frosted glass capsule */
+#app.app--aurora .pencil-overlay__undo-redo-bar {
+  background: rgba(8, 12, 20, 0.78);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  border: 1px solid var(--aurora-border);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 0 0.5px rgba(255, 255, 255, 0.06) inset;
+}
+
+#app.app--aurora .pencil-overlay__undo-redo-btn {
+  background: var(--aurora-glass);
+  border: 1px solid var(--aurora-border);
+  color: var(--aurora-text-secondary);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+#app.app--aurora .pencil-overlay__undo-redo-btn:hover:not(:disabled) {
+  background: var(--aurora-glass-hover);
+  border-color: var(--aurora-border-hover);
+  color: var(--aurora-text);
+}
+
+#app.app--aurora .pencil-overlay__undo-redo-btn:disabled {
+  opacity: 0.25;
+}
+
+/* Dropdown menus */
+#app.app--aurora .pencil-overlay__dropdown-content {
+  background: rgba(8, 12, 20, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--aurora-border);
+  border-radius: var(--aurora-radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  color: var(--aurora-text);
+}
+
+#app.app--aurora .pencil-overlay__dropdown-select-btn {
+  color: var(--aurora-text-secondary);
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+#app.app--aurora .pencil-overlay__dropdown-select-btn:hover {
+  background: var(--aurora-glass-hover);
+  color: var(--aurora-text);
+}
+
+#app.app--aurora .pencil-overlay__control {
+  color: var(--aurora-text-secondary);
+}
+
+#app.app--aurora .pencil-overlay__helper-text {
+  color: var(--aurora-text-muted);
+}
+
+/* Image frame in pencil mode */
+#app.app--aurora .pencil-overlay__image-frame {
+  border-color: var(--aurora-accent);
+}
+
+#app.app--aurora .pencil-overlay__image-handle {
+  background: var(--aurora-accent);
+  border-color: rgba(0, 212, 170, 0.6);
+}
+
+/* Text input */
+#app.app--aurora .pencil-overlay__text-input {
+  border-color: var(--aurora-accent);
+  color: var(--aurora-text);
+  font-family: 'Manrope', system-ui, sans-serif;
+}
+
+/* ==========================================================
+   AURORA — Global font & element overrides
+   ========================================================== */
+
+/* Form elements don't inherit font — force Manrope globally */
+#app.app--aurora button,
+#app.app--aurora input,
+#app.app--aurora textarea,
+#app.app--aurora select {
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+}
+
+/* MobileFullMenu is teleported to <body> — needs separate selector */
+body .fullmenu-panel--aurora {
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+}
+
+body .fullmenu-panel--aurora button,
+body .fullmenu-panel--aurora input,
+body .fullmenu-panel--aurora textarea {
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+}
+
+/* Aurora title gradient for fullmenu header (teleported) */
+body .fullmenu-panel--aurora .fullmenu-header__title {
+  font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 </style>
 // Test webhook Tue Jan 20 12:59:42 PM UTC 2026

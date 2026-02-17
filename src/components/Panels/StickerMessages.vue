@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useStickersStore } from '../../stores/stickers.js'
+import { useSidePanelsStore } from '../../stores/sidePanels.js'
+import { useMobileStore } from '../../stores/mobile.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -10,6 +12,8 @@ const props = defineProps({
 })
 
 const stickersStore = useStickersStore()
+const sidePanelsStore = useSidePanelsStore()
+const mobileStore = useMobileStore()
 const searchQuery = ref('')
   
 // Вычисляемое свойство для получения всех стикеров (включая пустые)
@@ -41,6 +45,9 @@ const handleStickerClick = (sticker, event) => {
 
   // Запрашиваем фокусировку через store
   stickersStore.requestFocusOnSticker(sticker.id)
+  if (mobileStore.isMobileMode) {
+    sidePanelsStore.closePanel()
+  }
 }
 
 const handleEdit = (sticker, event) => {

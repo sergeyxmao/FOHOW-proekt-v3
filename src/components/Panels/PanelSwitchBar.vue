@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSidePanelsStore } from '@/stores/sidePanels'
 import { useMobileStore } from '@/stores/mobile'
@@ -16,6 +16,7 @@ const mobileStore = useMobileStore()
 
 const { activePanel } = storeToRefs(sidePanelsStore)
 const isMobile = computed(() => mobileStore.isMobileMode)
+const isPencilMode = inject('isPencilMode', ref(false))
 
 const panels = [
   { key: 'partners', icon: '👤', label: 'Партнёры', action: () => sidePanelsStore.openPartners() },
@@ -35,7 +36,7 @@ const handleSwitch = (panel) => {
 
 <template>
   <div
-    v-if="isMobile"
+    v-if="isMobile && !isPencilMode"
     class="panel-switch-bar"
     :class="{ 'panel-switch-bar--dark': isModernTheme }"
   >

@@ -5,6 +5,7 @@ import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useBoardStore } from '../../stores/board.js'
 import { useAuthStore } from '../../stores/auth.js'
 import { useCardsStore } from '../../stores/cards.js'
+import { useMobileStore } from '../../stores/mobile.js'
 
 const props = defineProps({
   isModernTheme: {
@@ -17,6 +18,7 @@ const sidePanelsStore = useSidePanelsStore()
 const boardStore = useBoardStore()
 const authStore = useAuthStore()
 const cardsStore = useCardsStore()
+const mobileStore = useMobileStore()
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 // Подготовка ссылок на VK/Telegram/Instagram
@@ -252,6 +254,12 @@ const navigateToUserCardPartner = (partner) => {
 
 // Открытие модального окна с деталями (БЕЗ фокусировки на карточке)
 const openPartnerDetails = (partner) => {
+  // На мобильном — сразу центрируем на карточке и закрываем панель
+  if (mobileStore.isMobileMode) {
+    navigateToPartnerCard(partner)
+    sidePanelsStore.closePanel()
+    return
+  }
   if (selectedPartner.value?.id === partner.id) {
     // Повторный клик - закрываем модалку
     selectedPartner.value = null

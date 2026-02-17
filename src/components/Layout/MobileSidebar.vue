@@ -7,6 +7,7 @@ import { useViewSettingsStore } from '@/stores/viewSettings'
 import { useMobileStore } from '@/stores/mobile'
 import { useAuthStore } from '@/stores/auth'
 import { usePerformanceModeStore } from '@/stores/performanceMode'
+import { useDesignModeStore } from '@/stores/designMode'
 import { checkAndAlertCardLimit } from '@/utils/limitsCheck'
 import { calculateTemplateOffset } from '@/utils/viewport'
  
@@ -30,7 +31,9 @@ const viewSettingsStore = useViewSettingsStore()
 const mobileStore = useMobileStore()
 const authStore = useAuthStore()
 const performanceModeStore = usePerformanceModeStore()
+const designModeStore = useDesignModeStore()
 const { isView } = storeToRefs(performanceModeStore)
+const { isAuroraDesign } = storeToRefs(designModeStore)
 
 const { headerColor, headerColorIndex, lineColor, lineThickness, animationSeconds } = storeToRefs(viewSettingsStore)
 const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
@@ -215,7 +218,7 @@ onBeforeUnmount(() => {
   <div
     v-if="authStore.isAuthenticated && !isView"
     class="mobile-sidebar"
-    :class="{ 'mobile-sidebar--dark': isModernTheme, 'mobile-sidebar--scaled': isMenuScaled }"
+    :class="{ 'mobile-sidebar--dark': isModernTheme, 'mobile-sidebar--scaled': isMenuScaled, 'mobile-sidebar--aurora': isAuroraDesign }"
     :style="{ '--menu-scale': menuScale }"
    >
    <!-- Добавить лицензию -->
@@ -466,5 +469,70 @@ onBeforeUnmount(() => {
   .sidebar-template-menu {
     min-width: 180px;
   }
+}
+
+/* ============================================================
+   AURORA DESIGN — Glass Floating Sidebar
+   ============================================================ */
+
+.mobile-sidebar--aurora .mobile-sidebar-button {
+  background: rgba(8, 12, 20, 0.6);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 0 0 0.5px rgba(255, 255, 255, 0.04) inset;
+}
+
+.mobile-sidebar--aurora .mobile-sidebar-button:hover:not(:disabled) {
+  background: rgba(8, 12, 20, 0.7);
+  border-color: rgba(0, 212, 170, 0.25);
+  color: #00d4aa;
+  box-shadow: 0 0 20px rgba(0, 212, 170, 0.1), 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-sidebar--aurora .mobile-sidebar-button:active:not(:disabled) {
+  background: rgba(8, 12, 20, 0.75);
+  border-color: rgba(0, 212, 170, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Aurora gold button */
+.mobile-sidebar--aurora .gold-button {
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.15), rgba(139, 92, 246, 0.15));
+  border-color: rgba(0, 212, 170, 0.3);
+  color: #00d4aa;
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+}
+
+.mobile-sidebar--aurora .gold-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.25), rgba(139, 92, 246, 0.25));
+  border-color: rgba(0, 212, 170, 0.5);
+  box-shadow: 0 0 24px rgba(0, 212, 170, 0.15), 0 4px 16px rgba(0, 0, 0, 0.3);
+  color: #00d4aa;
+}
+
+.mobile-sidebar--aurora .gold-button:active:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.3), rgba(139, 92, 246, 0.3));
+  color: #00d4aa;
+}
+
+/* Aurora template menu */
+.mobile-sidebar--aurora .sidebar-template-menu {
+  background: rgba(8, 12, 20, 0.85);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.mobile-sidebar--aurora .sidebar-menu-item {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.mobile-sidebar--aurora .sidebar-menu-item:hover {
+  background: rgba(0, 212, 170, 0.12);
+  color: #00d4aa;
 }
 </style>
