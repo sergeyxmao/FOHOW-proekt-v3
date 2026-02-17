@@ -502,7 +502,8 @@ onBeforeUnmount(() => {
 });
 
 defineExpose({
-  syncWithCardPosition
+  syncWithCardPosition,
+  setZoomed(value) { isZoomed.value = value; }
 });
 </script>
 

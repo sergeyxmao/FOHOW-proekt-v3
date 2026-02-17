@@ -34,7 +34,8 @@ const emit = defineEmits([
   'update-cycles-stage',
   'clear-cycles-stage',
   'delete-card',
-  'open-note'
+  'open-note',
+  'open-partners'
 ]);
 
 // === Large card detection ===
@@ -123,6 +124,10 @@ const hasNotes = computed(() => {
 
 const handleOpenNote = () => {
   emit('open-note', { cardId: props.card.id });
+};
+
+const handleAvatarDblClick = () => {
+  emit('open-partners', { cardId: props.card.id });
 };
 
 // === Title editing ===
@@ -521,23 +526,23 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- Avatar (right side, only for large/gold cards) -->
-            <div v-if="isLargeCard" class="editor-avatar-container">
+            <div v-if="isLargeCard" class="editor-avatar-container" @dblclick.stop="handleAvatarDblClick">
               <div
                 v-if="avatarData.avatar_url"
-                class="editor-avatar"
+                class="editor-avatar editor-avatar--clickable"
                 :style="{ backgroundImage: `url(${getAvatarUrl(avatarData.avatar_url)})` }"
                 :title="avatarData.full_name || avatarData.username"
               ></div>
               <div
                 v-else-if="avatarData.initials"
-                class="editor-avatar editor-avatar--placeholder"
+                class="editor-avatar editor-avatar--placeholder editor-avatar--clickable"
                 :title="avatarData.full_name || avatarData.username"
               >
                 {{ avatarData.initials }}
               </div>
               <div
                 v-else
-                class="editor-avatar editor-avatar--default"
+                class="editor-avatar editor-avatar--default editor-avatar--clickable"
                 title="Партнёр"
               ></div>
             </div>
@@ -947,6 +952,16 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.editor-avatar--clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.editor-avatar--clickable:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
 }
 
 .editor-avatar--default {

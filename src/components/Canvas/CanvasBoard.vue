@@ -490,6 +490,19 @@ const handleEditorOpenNote = ({ cardId }) => {
   if (!note.visible) {
     openNoteForCard(card);
   }
+  // На мобильном сразу раскрыть на весь экран
+  if (isMobileMode.value) {
+    nextTick(() => {
+      const noteRef = noteWindowRefs.get(cardId);
+      if (noteRef && typeof noteRef.setZoomed === 'function') {
+        noteRef.setZoomed(true);
+      }
+    });
+  }
+};
+
+const handleEditorOpenPartners = () => {
+  sidePanelsStore.openPartners();
 };
 
 const handleEditorDeleteCard = async ({ cardId }) => {
@@ -3185,6 +3198,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       @clear-cycles-stage="handleEditorClearCyclesStage"
       @delete-card="handleEditorDeleteCard"
       @open-note="handleEditorOpenNote"
+      @open-partners="handleEditorOpenPartners"
     />
   </div>
 </template>

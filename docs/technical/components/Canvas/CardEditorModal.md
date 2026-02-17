@@ -52,6 +52,7 @@
 | `update-active-pv` | `{ cardId, direction, step }` | Изменение Active PV (дельта от текущего) |
 | `clear-active-pv` | `{ cardId }` | Очистка Active PV |
 | `open-note` | `{ cardId }` | Открытие NoteWindow (календарь/заметки) для карточки |
+| `open-partners` | `{ cardId }` | Открытие панели «Партнёры» (по dblclick на аватар) |
 
 ### Закрытие
 - Клик на overlay (за пределами модала)
@@ -79,10 +80,11 @@ CanvasBoard (handler)
   |- handleEditorClearBalance -> сброс balanceManualOverride и manualAdjustments
   |- handleEditorUpdateActivePv -> applyActivePvDelta + applyActivePvPropagation
   |- handleEditorClearActivePv -> applyActivePvClear + applyActivePvPropagation
-  +- handleEditorOpenNote -> openNoteForCard (открывает NoteWindow)
+  |- handleEditorOpenNote -> openNoteForCard (открывает NoteWindow)
+  +- handleEditorOpenPartners -> sidePanelsStore.openPartners()
 ```
 
 ## История изменений
-- 2026-02-17: v3 — добавлен аватар пользователя для большой/gold лицензии (с загрузкой по personal_id), кнопка «Заметка» для всех типов карточек
+- 2026-02-17: v3 — добавлен аватар пользователя для большой/gold лицензии (с загрузкой по personal_id), кнопка «Заметка» для всех типов карточек, dblclick на аватар открывает панель «Партнёры»
 - 2025-02-04: v2 — компактный дизайн, позиционирование поверх карточки, числовые input вместо кнопок +/-, раздельные кнопки сброса для баланса и актива
 - 2025-02-04: v1 — создан компонент для оптимизации производительности

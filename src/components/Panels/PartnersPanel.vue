@@ -256,18 +256,20 @@ const navigateToUserCardPartner = (partner) => {
 
 // Открытие модального окна с деталями (БЕЗ фокусировки на карточке)
 const openPartnerDetails = (partner) => {
-  // На мобильном — сразу центрируем на карточке и закрываем панель
-  if (mobileStore.isMobileMode) {
-    navigateToPartnerCard(partner)
-    sidePanelsStore.closePanel()
-    return
-  }
   if (selectedPartner.value?.id === partner.id) {
     // Повторный клик - закрываем модалку
     selectedPartner.value = null
   } else {
-    // Открываем модалку
+    // Открываем модалку с контактами
     selectedPartner.value = partner
+  }
+}
+
+// Клик по аватарке в развернутых контактах — фокус на лицензию
+const handleDetailsAvatarClick = (partner) => {
+  navigateToPartnerCard(partner)
+  if (mobileStore.isMobileMode) {
+    sidePanelsStore.closePanel()
   }
 }
 
@@ -340,7 +342,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
         :src="getAvatarUrl(selectedPartner.avatar_url)"
         :alt="selectedPartner.username"
         class="partner-details-avatar partner-details-avatar--clickable"
-        @click="navigateToPartnerCard(selectedPartner)"
+        @click="handleDetailsAvatarClick(selectedPartner)"
         :title="t('panels.goToLicense')"
       />
       <div class="partner-details-info">
