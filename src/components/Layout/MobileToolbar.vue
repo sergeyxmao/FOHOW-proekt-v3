@@ -33,6 +33,14 @@ const performanceModeIcon = computed(() => {
   return icons[performanceMode.value] || '\uD83D\uDD34'
 })
 
+const showDesktopButton = computed(() => {
+  return authStore.isAuthenticated && (performanceMode.value === 'light' || performanceMode.value === 'view')
+})
+
+const handleSwitchToDesktop = () => {
+  mobileStore.switchToDesktop()
+}
+
 const { isSaving, currentBoardId, currentBoardName } = storeToRefs(boardStore)
 const { isMenuScaled, menuScale } = storeToRefs(mobileStore)
 const { zoomPercentage } = storeToRefs(viewportStore)
@@ -101,6 +109,17 @@ const handleProfileClick = () => {
       </div>
 
       <div class="mobile-toolbar-section mobile-toolbar-section--center">
+        <!-- Кнопка переключения на версию для ПК -->
+        <button
+          v-if="showDesktopButton"
+          class="mobile-toolbar-button desktop-button"
+          type="button"
+          @click="handleSwitchToDesktop"
+          :title="t('mobileMenu.desktopVersion')"
+          :aria-label="t('mobileMenu.desktopVersion')"
+        >
+          <span class="button-icon">💻</span>
+        </button>
         <!-- Текущий масштаб -->
         <button
           v-if="authStore.isAuthenticated"
@@ -347,6 +366,11 @@ const handleProfileClick = () => {
   box-shadow: var(--md-sys-elevation-1);
 }
 
+/* --- Desktop button (same surface treatment) --- */
+.desktop-button {
+  background: var(--md-sys-color-surface-container-high);
+}
+
 /* --- Mode button (same surface treatment) --- */
 .mode-button {
   background: var(--md-sys-color-surface-container-high);
@@ -448,6 +472,11 @@ const handleProfileClick = () => {
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.85);
   box-shadow: none;
+}
+
+/* Aurora desktop button */
+.mobile-toolbar--aurora .desktop-button {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* Aurora zoom button */

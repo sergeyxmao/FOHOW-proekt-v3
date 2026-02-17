@@ -483,6 +483,11 @@ const handleCloseCardEditor = () => {
   editorModalCardId.value = null;
 };
 
+const handleEditorDeleteCard = async ({ cardId }) => {
+  editorModalCardId.value = null;
+  await cardsStore.removeCard(cardId);
+};
+
 const handleEditorUpdateTitle = ({ cardId, text }) => {
   cardsStore.updateCard(cardId, { text });
 };
@@ -921,14 +926,14 @@ const resetActiveGuides = () => {
   activeGuides.value = { vertical: null, horizontal: null };
 };
 
-const snapDelta = (value) => {
+const snapToGrid = (position) => {
   const step = gridStepRef.value;
 
   if (!step || step <= 0) {
-    return value;
+    return position;
   }
 
-  return Math.round(value / step) * step;
+  return Math.round(position / step) * step;
 };
 
 const computeGuideSnap = (primaryCardId, proposedX, proposedY) => {
@@ -956,7 +961,13 @@ const computeGuideSnap = (primaryCardId, proposedX, proposedY) => {
     bottom: proposedY + cardHeight
   };
 
-  const bestMatch = {
+  // Два "ведра": одноимённые рёбра (top-to-top, left-to-left) имеют абсолютный приоритет
+  // Перекрёстные (top-to-middle, left-to-right) — только как fallback
+  const bestSame = {
+    vertical: { diff: GUIDE_SNAP_THRESHOLD + 1 },
+    horizontal: { diff: GUIDE_SNAP_THRESHOLD + 1 }
+  };
+  const bestCross = {
     vertical: { diff: GUIDE_SNAP_THRESHOLD + 1 },
     horizontal: { diff: GUIDE_SNAP_THRESHOLD + 1 }
   };
@@ -984,7 +995,9 @@ const computeGuideSnap = (primaryCardId, proposedX, proposedY) => {
     Object.entries(currentEdges).forEach(([position, value]) => {
       Object.entries(otherEdges).forEach(([otherPosition, otherValue]) => {
         const diff = Math.abs(value - otherValue);
-        if (diff < bestMatch.vertical.diff && diff <= GUIDE_SNAP_THRESHOLD) {
+        if (diff > GUIDE_SNAP_THRESHOLD) return;
+        const bucket = position === otherPosition ? bestSame : bestCross;
+        if (diff < bucket.vertical.diff) {
           let targetX = proposedX;
           switch (position) {
             case 'left':
@@ -997,7 +1010,7 @@ const computeGuideSnap = (primaryCardId, proposedX, proposedY) => {
               targetX = otherValue - cardWidth;
               break;
           }
-          bestMatch.vertical = {
+          bucket.vertical = {
             diff,
             guidePosition: otherValue,
             adjust: targetX - proposedX
@@ -1009,7 +1022,9 @@ const computeGuideSnap = (primaryCardId, proposedX, proposedY) => {
     Object.entries(currentRows).forEach(([position, value]) => {
       Object.entries(otherRows).forEach(([otherPosition, otherValue]) => {
         const diff = Math.abs(value - otherValue);
-        if (diff < bestMatch.horizontal.diff && diff <= GUIDE_SNAP_THRESHOLD) {
+        if (diff > GUIDE_SNAP_THRESHOLD) return;
+        const bucket = position === otherPosition ? bestSame : bestCross;
+        if (diff < bucket.horizontal.diff) {
           let targetY = proposedY;
           switch (position) {
             case 'top':
@@ -1022,7 +1037,7 @@ const computeGuideSnap = (primaryCardId, proposedX, proposedY) => {
               targetY = otherValue - cardHeight;
               break;
           }
-          bestMatch.horizontal = {
+          bucket.horizontal = {
             diff,
             guidePosition: otherValue,
             adjust: targetY - proposedY
@@ -1032,20 +1047,28 @@ const computeGuideSnap = (primaryCardId, proposedX, proposedY) => {
     });
   });
 
+  // Одноимённые рёбра — абсолютный приоритет; перекрёстные — только fallback
+  const bestVertical = bestSame.vertical.diff <= GUIDE_SNAP_THRESHOLD
+    ? bestSame.vertical
+    : bestCross.vertical;
+  const bestHorizontal = bestSame.horizontal.diff <= GUIDE_SNAP_THRESHOLD
+    ? bestSame.horizontal
+    : bestCross.horizontal;
+
   const result = {
     adjustX: 0,
     adjustY: 0,
     guides: { vertical: null, horizontal: null }
   };
 
-  if (bestMatch.vertical.diff <= GUIDE_SNAP_THRESHOLD) {
-    result.adjustX = bestMatch.vertical.adjust;
-    result.guides.vertical = bestMatch.vertical.guidePosition;
+  if (bestVertical.diff <= GUIDE_SNAP_THRESHOLD) {
+    result.adjustX = bestVertical.adjust;
+    result.guides.vertical = bestVertical.guidePosition;
   }
 
-  if (bestMatch.horizontal.diff <= GUIDE_SNAP_THRESHOLD) {
-    result.adjustY = bestMatch.horizontal.adjust;
-    result.guides.horizontal = bestMatch.horizontal.guidePosition;
+  if (bestHorizontal.diff <= GUIDE_SNAP_THRESHOLD) {
+    result.adjustY = bestHorizontal.adjust;
+    result.guides.horizontal = bestHorizontal.guidePosition;
   }
 
   if (!result.guides.vertical && !result.guides.horizontal) {
@@ -1468,7 +1491,7 @@ const {
   resetActiveGuides,
   activeGuides,
   isSelecting,
-  snapDelta,
+  snapToGrid,
   collectDragTargets,
   collectStickerDragTargets,
   collectImageDragTargets
@@ -3151,6 +3174,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       @clear-active-pv="handleEditorClearActivePv"
       @update-cycles-stage="handleEditorUpdateCyclesStage"
       @clear-cycles-stage="handleEditorClearCyclesStage"
+      @delete-card="handleEditorDeleteCard"
     />
   </div>
 </template>

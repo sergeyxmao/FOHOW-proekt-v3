@@ -64,7 +64,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 
 // Вычисляемое свойство для проверки, является ли карточка большой
 const isLargeCard = computed(() => {
-  return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 543.4;
+  return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 600;
 });
 
 // Заголовок для LOD-ultra (< 10%): большие — обрезаем 9 последних цифр номера
@@ -122,7 +122,7 @@ const cardStyle = computed(() => {
     border: `${strokeWidth}px solid ${borderColor}`
   };
   if (Number.isFinite(props.card.height)) {
-    style.minHeight = `${props.card.height}px`;
+    style.height = `${props.card.height}px`;
   }
 
   Object.entries(cssVariables).forEach(([name, value]) => {
@@ -1455,7 +1455,7 @@ watch(
   overflow: visible;
 }
 .card:not(.card--large):not(.card--gold) .card-body {
-  padding-bottom: 40px;
+  padding-bottom: 30px; /* Компенсация фиксированной высоты 300px (было 40px) */
   gap: 8px;
 }
 .card--large .card-body,

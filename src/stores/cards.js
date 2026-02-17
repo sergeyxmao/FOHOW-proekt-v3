@@ -289,22 +289,22 @@ export const useCardsStore = defineStore('cards', {
       // Пресеты для разных типов лицензий
       const presets = {
         large: {
-          width: 543.4,
-          height: 364,
+          width: 600,
+          height: 400,
           pv: '30/330pv',
           text: 'RUY68123456789',
           historyText: 'Создана большая лицензия'
         },
         small: {
-          width: 418,
-          height: 280,
+          width: 400,
+          height: 300,
           pv: '30/330pv',
           text: 'Малая лицензия',
           historyText: 'Создана малая лицензия'
            },
         gold: {
-          width: 543.4,
-          height: 364,
+          width: 600,
+          height: 400,
           pv: '30/330pv',
           text: 'RUY68123456789',
           historyText: 'Создана золотая лицензия',
@@ -488,8 +488,10 @@ async removeCard(cardId) {
 updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
       const card = this.cards.find(c => c.id === cardId)
       if (card) {
-        card.x = x
-        card.y = y
+        // Округляем до целых чтобы предотвратить накопление дробных значений
+        // при guide-snap через карточки с дробной шириной
+        card.x = Math.round(x)
+        card.y = Math.round(y)
         
         if (options.saveToHistory) {
           const historyStore = useHistoryStore()
@@ -578,9 +580,9 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
       this.calculationMeta = createEmptyMeta()
 
       const typeDefaults = {
-        large: { width: 543.4, height: 364 },
-        gold: { width: 543.4, height: 364 },
-        small: { width: 418, height: 280 }
+        large: { width: 600, height: 400 },
+        gold: { width: 600, height: 400 },
+        small: { width: 400, height: 300 }
       }
       cardsData.forEach(cardData => {
         // Если это карточка партнёра (UserCard), обрабатываем её отдельно
@@ -611,7 +613,7 @@ updateCardPosition(cardId, x, y, options = { saveToHistory: true }) {
 
         // Обработка обычных карточек (лицензий)
         const detectedType = cardData.type
-          || ((cardData.width && cardData.width >= 543.4) || (cardData.height && cardData.height >= 364)
+          || ((cardData.width && cardData.width >= 600) || (cardData.height && cardData.height >= 400)
             ? 'large'
             : 'small')
 

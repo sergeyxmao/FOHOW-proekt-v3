@@ -3,7 +3,6 @@ import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 
-import { useCanvasStore } from '../../stores/canvas.js'
 import { useViewSettingsStore } from '../../stores/viewSettings.js'
 const props = defineProps({
   isModernTheme: {
@@ -13,10 +12,8 @@ const props = defineProps({
 })
 
 const { t, locale } = useI18n()
-const canvasStore = useCanvasStore()
 const viewSettingsStore = useViewSettingsStore()
 
-const { isGridBackgroundVisible, gridStep } = storeToRefs(canvasStore)
 const {
   lineColor,
   lineThickness,
@@ -35,31 +32,11 @@ const animationColorPickerRef = ref(null)
 const headerColorPickerRef = ref(null)
 const backgroundPickerRef = ref(null)
 
-const GRID_STEP_MIN = 5
-const GRID_STEP_MAX = 200
-
-const gridStepModel = computed({
-  get() {
-    return gridStep.value
-  },
-  set(value) {
-    const numericValue = Number(value)
-    if (!Number.isFinite(numericValue)) {
-      return
-    }
-    const clamped = Math.min(Math.max(Math.round(numericValue), GRID_STEP_MIN), GRID_STEP_MAX)
-    canvasStore.setGridStep(clamped)
-  }
-})
 
 const sliderTrackStyle = computed(() => viewSettingsStore.sliderTrackStyle)
 
 function toggleSubmenu(id) {
   openSubmenuId.value = openSubmenuId.value === id ? null : id
-}
-
-function toggleGridBackground() {
-  canvasStore.toggleGridBackground()
 }
 
 function handleLineThickness(value) {
@@ -137,41 +114,6 @@ function changeLocale(newLocale) {
   >
     <h3 class="view-menu__title">{{ t('viewMenu.title') }}</h3>
     <div class="view-menu__list">
-      <div
-        class="view-menu__item view-menu__item--submenu"
-        :class="{ 'view-menu__item--open': openSubmenuId === 'grid' }"
-      >
-        <button type="button" class="view-menu__main" @click="toggleSubmenu('grid')">
-          <span class="view-menu__icon" aria-hidden="true">▦</span>
-          <span class="view-menu__label">{{ t('viewMenu.showGrid') }}</span>
-          <span class="view-menu__info" @click.stop>&#9432;<span class="view-menu__tooltip" v-html="t('viewMenu.tooltips.showGrid')"></span></span>
-          <span class="view-menu__caret" aria-hidden="true">›</span>
-        </button>
-        <div v-if="openSubmenuId === 'grid'" class="view-menu__submenu">
-          <label class="view-menu__field" for="view-menu-grid-step">
-            <span class="view-menu__field-label">{{ t('viewMenu.gridStep') }}</span>
-            <input
-              id="view-menu-grid-step"
-              class="view-menu__number"
-              type="number"
-              :min="GRID_STEP_MIN"
-              :max="GRID_STEP_MAX"
-              step="1"
-              v-model.number="gridStepModel"
-            >
-            <span class="view-menu__field-suffix">px</span>
-          </label>
-          <button
-            type="button"
-            class="view-menu__control"
-            :class="{ 'view-menu__control--active': isGridBackgroundVisible }"
-            @click.stop="toggleGridBackground"
-          >
-            {{ t('viewMenu.gridBackground') }}
-          </button>
-        </div>
-      </div>
-
       <div
         class="view-menu__item view-menu__item--submenu"
         :class="{ 'view-menu__item--open': openSubmenuId === 'lines' }"

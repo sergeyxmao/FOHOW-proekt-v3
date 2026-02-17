@@ -6,6 +6,7 @@
  */
 
 const CANVAS_SAFE_MARGIN = 32
+const GRID_STEP = 50
 
 /**
  * Разбирает CSS transform строку и извлекает scale, translateX, translateY
@@ -106,9 +107,12 @@ export function getViewportAnchoredPosition(objectWidth = 0, objectHeight = 0) {
   const canvasX = (viewportX - safeTranslateX) / safeScale
   const canvasY = (viewportY - safeTranslateY) / safeScale - objectHeight
 
+  // Привязываем к сетке (GRID_STEP), чтобы карточки всегда создавались на пересечении
+  const snappedX = Math.round(canvasX / GRID_STEP) * GRID_STEP
+  const snappedY = Math.round(canvasY / GRID_STEP) * GRID_STEP
   return {
-    x: Math.max(0, Math.round(canvasX)),
-    y: Math.max(0, Math.round(canvasY))
+    x: Math.max(0, snappedX),
+    y: Math.max(0, snappedY)
   }
 }
 

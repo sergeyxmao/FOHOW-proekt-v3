@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
-import { useCanvasStore } from '@/stores/canvas'
 import { useViewSettingsStore } from '@/stores/viewSettings'
 import { useSidePanelsStore } from '@/stores/sidePanels'
 import { useMobileStore } from '@/stores/mobile'
@@ -30,7 +29,6 @@ const emit = defineEmits([
 ])
 
 const { t, locale } = useI18n()
-const canvasStore = useCanvasStore()
 const viewSettingsStore = useViewSettingsStore()
 const sidePanelsStore = useSidePanelsStore()
 const mobileStore = useMobileStore()
@@ -39,7 +37,6 @@ const stickersStore = useStickersStore()
 const designModeStore = useDesignModeStore()
 const { isAuroraDesign } = storeToRefs(designModeStore)
 
-const { isGridBackgroundVisible, gridStep } = storeToRefs(canvasStore)
 const {
   lineColor,
   lineThickness,
@@ -97,21 +94,6 @@ const handleNewStructure = () => {
     emit('close')
   }
 }
-
-// --- View: Grid ---
-const handleGridToggle = () => {
-  canvasStore.toggleGridBackground()
-}
-
-const gridStepLocal = computed({
-  get: () => gridStep.value,
-  set: (val) => {
-    const num = Number(val)
-    if (Number.isFinite(num) && num >= 5 && num <= 200) {
-      canvasStore.setGridStep(num)
-    }
-  }
-})
 
 // --- View: Lines ---
 const lineColorInput = ref(null)
@@ -282,31 +264,6 @@ const handleOverlayClick = () => {
                 </button>
 
                 <div v-if="openSections.view" class="fullmenu-section__body">
-                  <!-- Grid -->
-                  <div class="fullmenu-subsection">
-                    <div class="fullmenu-subsection__header">{{ t('mobileMenu.grid') }}</div>
-                    <div class="fullmenu-row">
-                      <button
-                        class="fullmenu-chip"
-                        :class="{ 'fullmenu-chip--active': isGridBackgroundVisible }"
-                        type="button"
-                        @click="handleGridToggle"
-                      >{{ isGridBackgroundVisible ? t('mobileMenu.on') : t('mobileMenu.off') }}</button>
-                      <label class="fullmenu-inline-input">
-                        <span class="fullmenu-inline-input__label">{{ t('mobileMenu.step') }}</span>
-                        <input
-                          type="number"
-                          class="fullmenu-input"
-                          :value="gridStepLocal"
-                          @change="gridStepLocal = $event.target.value"
-                          min="5"
-                          max="200"
-                          step="5"
-                        >
-                        <span class="fullmenu-inline-input__unit">px</span>
-                      </label>
-                    </div>
-                  </div>
 
                   <!-- Lines -->
                   <div class="fullmenu-subsection">

@@ -22,7 +22,7 @@ import { useThrottleFn } from '@vueuse/core'
  * @property {Function} resetActiveGuides - Функция сброса активных направляющих
  * @property {import('vue').Ref} activeGuides - Ref на активные направляющие
  * @property {import('vue').Ref} isSelecting - Ref на состояние выделения
- * @property {Function} snapDelta - Функция привязки дельты к сетке
+ * @property {Function} snapToGrid - Функция привязки абсолютной позиции к сетке
  * @property {Function} collectDragTargets - Функция сбора целей для drag карточки
  * @property {Function} collectStickerDragTargets - Функция сбора целей для drag стикера
  * @property {Function} collectImageDragTargets - Функция сбора целей для drag изображения
@@ -48,7 +48,7 @@ export function useCanvasDrag(options) {
     resetActiveGuides,
     activeGuides,
     isSelecting,
-    snapDelta,
+    snapToGrid,
     collectDragTargets,
     collectStickerDragTargets,
     collectImageDragTargets
@@ -85,8 +85,20 @@ export function useCanvasDrag(options) {
     const canvasPos = screenToCanvas(event.clientX, event.clientY)
     const rawDx = canvasPos.x - dragState.value.startPointer.x
     const rawDy = canvasPos.y - dragState.value.startPointer.y
-    let dx = snapDelta ? snapDelta(rawDx) : rawDx
-    let dy = snapDelta ? snapDelta(rawDy) : rawDy
+
+    // Snap по абсолютной позиции top-left главной карточки (а не по дельте),
+    // чтобы карточка всегда вставала на пересечение сетки
+    const primaryCardStart = dragState.value.primaryCardStart
+    let dx, dy
+    if (snapToGrid && primaryCardStart) {
+      const proposedX = primaryCardStart.x + rawDx
+      const proposedY = primaryCardStart.y + rawDy
+      dx = snapToGrid(proposedX) - primaryCardStart.x
+      dy = snapToGrid(proposedY) - primaryCardStart.y
+    } else {
+      dx = rawDx
+      dy = rawDy
+    }
 
     const shiftPressed = Boolean(event.shiftKey)
     let axisLock = dragState.value.axisLock
@@ -114,15 +126,27 @@ export function useCanvasDrag(options) {
 
     let guideAdjustX = 0
     let guideAdjustY = 0
+    let hasGuideX = false
+    let hasGuideY = false
 
     if (dragState.value.primaryCardId && dragState.value.primaryCardStart && computeGuideSnap) {
-      const proposedX = dragState.value.primaryCardStart.x + dx
-      const proposedY = dragState.value.primaryCardStart.y + dy
+      // Используем raw (не grid-snapped) дельты для поиска guides,
+      // чтобы сетка не создавала "мёртвые зоны" где guide snap не срабатывает
+      const rawDxForGuide = axisLock === 'vertical' ? 0 : rawDx
+      const rawDyForGuide = axisLock === 'horizontal' ? 0 : rawDy
+      const proposedX = dragState.value.primaryCardStart.x + rawDxForGuide
+      const proposedY = dragState.value.primaryCardStart.y + rawDyForGuide
       const guideResult = computeGuideSnap(dragState.value.primaryCardId, proposedX, proposedY)
 
       if (guideResult) {
-        guideAdjustX = axisLock === 'vertical' ? 0 : guideResult.adjustX
-        guideAdjustY = axisLock === 'horizontal' ? 0 : guideResult.adjustY
+        if (axisLock !== 'vertical' && guideResult.guides?.vertical !== null) {
+          guideAdjustX = guideResult.adjustX
+          hasGuideX = true
+        }
+        if (axisLock !== 'horizontal' && guideResult.guides?.horizontal !== null) {
+          guideAdjustY = guideResult.adjustY
+          hasGuideY = true
+        }
         if (activeGuides) {
           activeGuides.value = guideResult.guides
         }
@@ -131,8 +155,12 @@ export function useCanvasDrag(options) {
       }
     }
 
-    const finalDx = dx + guideAdjustX
-    const finalDy = dy + guideAdjustY
+    // Guide snap переопределяет grid snap на осях где найдено совпадение,
+    // на остальных осях используется grid-snapped дельта
+    const rawDxLocked = axisLock === 'vertical' ? 0 : rawDx
+    const rawDyLocked = axisLock === 'horizontal' ? 0 : rawDy
+    const finalDx = hasGuideX ? (rawDxLocked + guideAdjustX) : dx
+    const finalDy = hasGuideY ? (rawDyLocked + guideAdjustY) : dy
 
     // Обновляем позиции карточек
     dragState.value.cards.forEach(item => {

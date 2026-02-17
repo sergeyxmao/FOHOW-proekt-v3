@@ -27,7 +27,8 @@ const emit = defineEmits([
   'update-active-pv',
   'clear-active-pv',
   'update-cycles-stage',
-  'clear-cycles-stage'
+  'clear-cycles-stage',
+  'delete-card'
 ]);
 
 // === Title editing ===
@@ -309,6 +310,23 @@ const handleClearActive = () => {
   emit('clear-active-pv', { cardId: props.card.id });
 };
 
+// === Delete card ===
+
+const showDeleteConfirm = ref(false);
+
+const handleDeleteClick = () => {
+  showDeleteConfirm.value = true;
+};
+
+const handleDeleteConfirm = () => {
+  showDeleteConfirm.value = false;
+  emit('delete-card', { cardId: props.card.id });
+};
+
+const handleDeleteCancel = () => {
+  showDeleteConfirm.value = false;
+};
+
 // === Close ===
 
 const handleBackdropClick = (event) => {
@@ -424,7 +442,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <!-- Cycle/stage -->
+          <!-- Cycle/stage + Delete -->
           <div class="editor-row">
             <span class="editor-label">Цикл/этап:</span>
             <input
@@ -437,6 +455,18 @@ onBeforeUnmount(() => {
             <span class="editor-sep">/</span>
             <span class="editor-input editor-input--readonly">{{ stageDisplay }}</span>
             <button class="editor-trash" @click="handleClearCyclesStage" title="Сбросить цикл/этап">🗑️</button>
+            <button class="editor-delete-btn" @click="handleDeleteClick" title="Удалить карточку">🗑️</button>
+          </div>
+        </div>
+
+        <!-- Delete confirmation overlay -->
+        <div v-if="showDeleteConfirm" class="delete-confirm-overlay" @click.stop>
+          <div class="delete-confirm-box">
+            <p class="delete-confirm-text">Удалить карточку «{{ card.text }}»?</p>
+            <div class="delete-confirm-actions">
+              <button class="delete-confirm-btn delete-confirm-btn--yes" @click="handleDeleteConfirm">Да</button>
+              <button class="delete-confirm-btn delete-confirm-btn--no" @click="handleDeleteCancel">Нет</button>
+            </div>
           </div>
         </div>
       </div>
@@ -664,5 +694,88 @@ onBeforeUnmount(() => {
 
 .active-pv-btn--clear:hover {
   background: rgba(220, 53, 69, 0.14);
+}
+
+/* Delete card button */
+.editor-delete-btn {
+  margin-left: auto;
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  background: rgba(220, 53, 69, 0.08);
+  color: #dc3545;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.editor-delete-btn:hover {
+  background: rgba(220, 53, 69, 0.18);
+}
+
+/* Delete confirmation */
+.delete-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.delete-confirm-box {
+  text-align: center;
+  padding: 16px;
+}
+
+.delete-confirm-text {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  line-height: 1.4;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.delete-confirm-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 6px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  user-select: none;
+}
+
+.delete-confirm-btn:active {
+  transform: translateY(1px);
+}
+
+.delete-confirm-btn--yes {
+  background: #dc3545;
+  color: #fff;
+}
+
+.delete-confirm-btn--yes:hover {
+  background: #c82333;
+}
+
+.delete-confirm-btn--no {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.delete-confirm-btn--no:hover {
+  background: #d1d5db;
 }
 </style>
