@@ -254,14 +254,6 @@ const handleOverlayClick = () => {
                     <span class="fullmenu-item__icon">✏️</span>
                     <span>Рисование</span>
                   </button>
-                  <button class="fullmenu-item" type="button" @click="handleToggleTheme">
-                    <span class="fullmenu-item__icon">🎨</span>
-                    <span>Смена темы</span>
-                  </button>
-                  <button class="fullmenu-item" type="button" @click="handleToggleVersion">
-                    <span class="fullmenu-item__icon">💻</span>
-                    <span>Версия для ПК</span>
-                  </button>
                   <button class="fullmenu-item fullmenu-item--danger" type="button" @click="handleClearCanvas">
                     <span class="fullmenu-item__icon">🧹</span>
                     <span>Очистить холст</span>
@@ -441,19 +433,19 @@ const handleOverlayClick = () => {
                         :class="{ 'fullmenu-chip--active': locale === 'ru' }"
                         type="button"
                         @click="changeLocale('ru')"
-                      >🇷🇺 RU</button>
+                      >🇷🇺</button>
                       <button
                         class="fullmenu-chip"
                         :class="{ 'fullmenu-chip--active': locale === 'en' }"
                         type="button"
                         @click="changeLocale('en')"
-                      >🇬🇧 EN</button>
+                      >🇬🇧</button>
                       <button
                         class="fullmenu-chip"
                         :class="{ 'fullmenu-chip--active': locale === 'zh' }"
                         type="button"
                         @click="changeLocale('zh')"
-                      >🇨🇳 ZH</button>
+                      >🇨🇳</button>
                     </div>
                   </div>
                 </div>
@@ -512,18 +504,43 @@ const handleOverlayClick = () => {
                 </div>
               </div>
 
-              <!-- Переключатель дизайна -->
-              <button
-                class="fullmenu-aurora-toggle"
-                :class="{ 'fullmenu-aurora-toggle--active': isAuroraDesign }"
-                type="button"
-                @click="designModeStore.toggleDesign()"
-              >
-                <span class="fullmenu-aurora-toggle__glow"></span>
-                <span class="fullmenu-aurora-toggle__label">
-                  {{ isAuroraDesign ? '✦ Aurora' : '✦ Новый дизайн' }}
-                </span>
-              </button>
+              <!-- Нижние кнопки-переключатели -->
+              <div class="fullmenu-bottom-actions">
+                <!-- Переключатель дизайна -->
+                <button
+                  class="fullmenu-aurora-toggle"
+                  :class="{ 'fullmenu-aurora-toggle--active': isAuroraDesign }"
+                  type="button"
+                  @click="designModeStore.toggleDesign()"
+                >
+                  <span class="fullmenu-aurora-toggle__glow"></span>
+                  <span class="fullmenu-aurora-toggle__label">
+                    ✦ Тема Aurora
+                  </span>
+                </button>
+
+                <!-- Переключатель светлой/тёмной темы -->
+                <button
+                  class="fullmenu-theme-toggle"
+                  :class="{ 'fullmenu-theme-toggle--dark': isDark, 'fullmenu-theme-toggle--aurora': isAuroraDesign }"
+                  type="button"
+                  @click="handleToggleTheme"
+                >
+                  <span class="fullmenu-theme-toggle__icon" aria-hidden="true"></span>
+                  <span class="fullmenu-theme-toggle__label">{{ isDark ? 'Светлая' : 'Тёмная' }}</span>
+                </button>
+
+                <!-- Версия для ПК -->
+                <button
+                  class="fullmenu-theme-toggle"
+                  :class="{ 'fullmenu-theme-toggle--aurora': isAuroraDesign }"
+                  type="button"
+                  @click="handleToggleVersion"
+                >
+                  <span class="fullmenu-theme-toggle__pc-icon" aria-hidden="true">💻</span>
+                  <span class="fullmenu-theme-toggle__label">Версия для ПК</span>
+                </button>
+              </div>
 
             </div>
           </div>
@@ -1072,6 +1089,20 @@ const handleOverlayClick = () => {
    AURORA DESIGN — Spatial Glass Theme
    ============================================================ */
 
+/* --- Bottom actions container --- */
+.fullmenu-bottom-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 14px 8px;
+}
+
+.fullmenu-bottom-actions .fullmenu-aurora-toggle,
+.fullmenu-bottom-actions .fullmenu-theme-toggle {
+  margin-top: 0;
+}
+
 /* --- Aurora Toggle Button --- */
 .fullmenu-aurora-toggle {
   position: relative;
@@ -1130,6 +1161,106 @@ const handleOverlayClick = () => {
   position: relative;
   z-index: 1;
   letter-spacing: 0.5px;
+}
+
+/* --- Theme Toggle Button (light/dark) --- */
+.fullmenu-theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  padding: 10px 20px;
+  border: 1px solid color-mix(in srgb, var(--md-ref-neutral-10) 10%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 4%, transparent);
+  color: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fullmenu-panel--dark .fullmenu-theme-toggle {
+  border-color: color-mix(in srgb, var(--md-ref-neutral-90) 12%, transparent);
+  background: color-mix(in srgb, var(--md-ref-neutral-90) 5%, transparent);
+}
+
+.fullmenu-theme-toggle:hover {
+  background: color-mix(in srgb, var(--md-ref-neutral-10) 8%, transparent);
+}
+
+.fullmenu-panel--dark .fullmenu-theme-toggle:hover {
+  background: color-mix(in srgb, var(--md-ref-neutral-90) 10%, transparent);
+}
+
+.fullmenu-theme-toggle:active {
+  transform: scale(0.98);
+}
+
+.fullmenu-theme-toggle__icon {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%);
+  box-shadow: inset -4px -4px 10px rgba(255, 255, 255, 0.22), 0 4px 8px rgba(15, 23, 42, 0.18);
+}
+
+.fullmenu-theme-toggle__icon::before,
+.fullmenu-theme-toggle__icon::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  transition: opacity 0.2s ease;
+}
+
+.fullmenu-theme-toggle__icon::before {
+  inset: 4px;
+  opacity: 0.4;
+}
+
+.fullmenu-theme-toggle__icon::after {
+  inset: 7px;
+  opacity: 0.2;
+}
+
+/* Dark theme — light icon */
+.fullmenu-theme-toggle--dark .fullmenu-theme-toggle__icon {
+  background: linear-gradient(135deg, #e5f3ff 0%, #73c8ff 100%);
+  box-shadow: inset -4px -4px 10px rgba(6, 11, 21, 0.35), 0 4px 8px rgba(6, 11, 21, 0.3);
+}
+
+.fullmenu-theme-toggle__label {
+  letter-spacing: 0.3px;
+}
+
+.fullmenu-theme-toggle__pc-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+  line-height: 1;
+}
+
+/* Aurora variant */
+.fullmenu-theme-toggle--aurora {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.fullmenu-theme-toggle--aurora:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(0, 212, 170, 0.2);
+}
+
+.fullmenu-theme-toggle--aurora .fullmenu-theme-toggle__icon {
+  box-shadow: inset -3px -3px 8px rgba(255, 255, 255, 0.15), 0 0 10px rgba(0, 212, 170, 0.15);
 }
 
 /* --- Aurora Overlay --- */
