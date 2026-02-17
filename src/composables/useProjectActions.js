@@ -410,6 +410,8 @@ const getExportSvgCss = () => `
   #canvas .note-resize-handle{position:absolute;right:4px;bottom:2px;width:28px;height:28px;border-radius:50%;border:none;background:rgba(15,23,42,0.08);color:#0f172a;display:grid;place-items:center;font-size:18px;}
 `
 
+// buildSvgViewOnlyScript removed — SVG export is now a clean static vector for print
+
 export function useProjectActions() {
   const cardsStore = useCardsStore()
   const connectionsStore = useConnectionsStore()
@@ -680,7 +682,7 @@ export function useProjectActions() {
         minX = Math.min(minX, left)
         minY = Math.min(minY, top)
         maxX = Math.max(maxX, left + width)
-        maxY = Math.max(maxY, top + height)
+        maxY = Math.max(maxY, top + height + 80)
       })
 
       const defaultLineColor = connectionsStore.defaultLineColor || '#4c79ff'
@@ -744,9 +746,14 @@ export function useProjectActions() {
         '.card-controls',
         '.active-pv-btn',
         '.card-note-btn',
-        '[data-role="active-pv-buttons"]'
+        '[data-role="active-pv-buttons"]',
+        '.card-lod-title',
+        '.card-lod-summary',
+        '.active-pv-hidden',
+        '.card-avatar-container',
+        '.coin-icon-wrapper'
       ]
-      
+
       const exportCanvas = document.createElement('div')
       exportCanvas.id = 'canvas'
       exportCanvas.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml')
@@ -809,6 +816,14 @@ export function useProjectActions() {
           input.style.pointerEvents = 'none'
         })
 
+        // Сдвигаем карточки в положительные координаты внутри foreignObject
+        // SVG transform не влияет на HTML-рендеринг внутри foreignObject,
+        // поэтому нужно корректировать CSS-позиции напрямую
+        const originalLeft = parseFloat(cardClone.style.left) || 0
+        const originalTop = parseFloat(cardClone.style.top) || 0
+        cardClone.style.left = `${originalLeft + translateX}px`
+        cardClone.style.top = `${originalTop + translateY}px`
+
         cardsContainer.appendChild(cardClone)
       })
 
@@ -843,24 +858,26 @@ export function useProjectActions() {
     </filter>
     <marker id="marker-dot" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto" fill="currentColor">
       <circle cx="5" cy="5" r="4"/>
-    </marker>    
+    </marker>
   </defs>
-  <rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="${background}"/>
+  <rect width="${totalWidth}" height="${totalHeight}" fill="${background}"/>
   <g transform="translate(${translateX} ${translateY})">
     <g class="connections-layer">
 ${connectionPathsSvg}
     </g>
-    <foreignObject x="0" y="0" width="${totalWidth}" height="${totalHeight}" filter="url(#card-shadow)">
-      ${exportCanvas.outerHTML}
-    </foreignObject>
   </g>
+  <foreignObject x="0" y="0" width="${totalWidth}" height="${totalHeight}" filter="url(#card-shadow)">
+    ${exportCanvas.outerHTML}
+  </foreignObject>
+  <text x="${totalWidth - 20}" y="${totalHeight - 15}" text-anchor="end" font-family="Inter,system-ui,-apple-system,sans-serif" font-size="14" font-weight="500" fill="rgba(15,23,42,0.3)">@MarketingFohow</text>
 </svg>`
 
       const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `scheme-${Date.now()}.svg`
+      const baseName = formatProjectFileName(boardStore.currentBoardName || normalizedProjectName.value || projectStore.projectName)
+      link.download = `${baseName}.svg`
       link.click()
       URL.revokeObjectURL(url)
 
@@ -1206,9 +1223,20 @@ const restoreAndDownload = async (finalCanvas, exportSettings, tempStyles, canva
 }
 
 const handleExportPNG = async (exportSettings = null) => {
+  // Объявляем переменные на уровне функции для доступа в catch
+  let canvasContainer = null
+  let canvasContent = null
+  let activeLodClasses = []
+  let tempStyles = []
+  let originalImageSources = null
+  let originalTransform = ''
+  let originalTransformOrigin = ''
+  let originalContentLeft = ''
+  let originalContentTop = ''
+
   try {
-    const canvasContainer = document.querySelector('.canvas-container')
-    const canvasContent = canvasContainer?.querySelector('.canvas-content')
+    canvasContainer = document.querySelector('.canvas-container')
+    canvasContent = canvasContainer?.querySelector('.canvas-content')
 
     if (!canvasContainer || !canvasContent) {
       alert('Не удалось найти содержимое холста для экспорта.')
@@ -1225,7 +1253,7 @@ const handleExportPNG = async (exportSettings = null) => {
 
     // Временно отключаем LOD-режим: при экспорте карточки должны рендериться полностью
     const lodClasses = ['canvas-container--lod', 'canvas-container--lod-deep', 'canvas-container--lod-minimal', 'canvas-container--lod-ultra']
-    const activeLodClasses = lodClasses.filter(cls => canvasContainer.classList.contains(cls))
+    activeLodClasses = lodClasses.filter(cls => canvasContainer.classList.contains(cls))
     activeLodClasses.forEach(cls => canvasContainer.classList.remove(cls))
 
     // =====================================================
@@ -1235,7 +1263,7 @@ const handleExportPNG = async (exportSettings = null) => {
     // =====================================================
 
     // Сохраняем оригинальные src для восстановления после экспорта
-    const originalImageSources = new Map()
+    originalImageSources = new Map()
     const allImages = canvasContainer.querySelectorAll('img')
     allImages.forEach((img, index) => {
       originalImageSources.set(img, img.getAttribute('src'))
@@ -1263,8 +1291,7 @@ const handleExportPNG = async (exportSettings = null) => {
       }
     }
 
-    // Временные стили
-    const tempStyles = []
+    // Временные стили (массив объявлен на уровне функции)
 
     // Опция "Скрыть содержимое"
     if (exportSettings?.hideContent) {
@@ -1512,8 +1539,11 @@ const handleExportPNG = async (exportSettings = null) => {
       })
     }
 
-    // Сохраняем оригинальный transform
-    const originalTransform = canvasContent.style.transform
+    // Сохраняем оригинальный transform (на уровне функции для восстановления при ошибке)
+    originalTransform = canvasContent.style.transform
+    originalTransformOrigin = canvasContent.style.transformOrigin
+    originalContentLeft = canvasContent.style.left
+    originalContentTop = canvasContent.style.top
 
     let contentCanvas
     let contentWidth
@@ -1534,6 +1564,7 @@ const handleExportPNG = async (exportSettings = null) => {
       const originalSvgHeight = svgLayer?.getAttribute('height')
       const originalSvgStyleWidth = svgLayer?.style.width
       const originalSvgStyleHeight = svgLayer?.style.height
+      const originalSvgStyleOverflow = svgLayer?.style.overflow
 
       // Временно устанавливаем размеры SVG равными видимой области
       if (svgLayer) {
@@ -1688,10 +1719,11 @@ const handleExportPNG = async (exportSettings = null) => {
 
       // Восстанавливаем оригинальные размеры SVG
       if (svgLayer) {
-        if (originalSvgWidth) svgLayer.setAttribute('width', originalSvgWidth)
-        if (originalSvgHeight) svgLayer.setAttribute('height', originalSvgHeight)
+        if (originalSvgWidth) { svgLayer.setAttribute('width', originalSvgWidth) } else { svgLayer.removeAttribute('width') }
+        if (originalSvgHeight) { svgLayer.setAttribute('height', originalSvgHeight) } else { svgLayer.removeAttribute('height') }
         svgLayer.style.width = originalSvgStyleWidth || ''
         svgLayer.style.height = originalSvgStyleHeight || ''
+        svgLayer.style.overflow = originalSvgStyleOverflow || ''
       }
 
       // Финализируем canvas
@@ -1835,10 +1867,7 @@ const handleExportPNG = async (exportSettings = null) => {
       contentWidth = maxX - minX
       contentHeight = maxY - minY
 
-      // Сохраняем оригинальные значения позиции и transform
-      const originalLeft = canvasContent.style.left
-      const originalTop = canvasContent.style.top
-      const originalTransformOrigin = canvasContent.style.transformOrigin
+      // Оригинальные transform/left/top уже сохранены на уровне функции
 
       // Сбрасываем transform и позиционируем контент для захвата всей области
       canvasContent.style.transform = 'none'
@@ -1854,6 +1883,7 @@ const handleExportPNG = async (exportSettings = null) => {
       const originalSvgHeight = svgLayer?.getAttribute('height')
       const originalSvgStyleWidth = svgLayer?.style.width
       const originalSvgStyleHeight = svgLayer?.style.height
+      const originalSvgStyleOverflow2 = svgLayer?.style.overflow
       const originalSvgViewBox = svgLayer?.getAttribute('viewBox')
       const originalCanvasWidth = imagesCanvas?.width
       const originalCanvasHeight = imagesCanvas?.height
@@ -2084,11 +2114,12 @@ const handleExportPNG = async (exportSettings = null) => {
 
       // Восстанавливаем оригинальные размеры SVG-слоя и canvas-слоя
       if (svgLayer) {
-        if (originalSvgWidth) svgLayer.setAttribute('width', originalSvgWidth)
-        if (originalSvgHeight) svgLayer.setAttribute('height', originalSvgHeight)
-        if (originalSvgViewBox) svgLayer.setAttribute('viewBox', originalSvgViewBox)
+        if (originalSvgWidth) { svgLayer.setAttribute('width', originalSvgWidth) } else { svgLayer.removeAttribute('width') }
+        if (originalSvgHeight) { svgLayer.setAttribute('height', originalSvgHeight) } else { svgLayer.removeAttribute('height') }
+        if (originalSvgViewBox) { svgLayer.setAttribute('viewBox', originalSvgViewBox) } else { svgLayer.removeAttribute('viewBox') }
         svgLayer.style.width = originalSvgStyleWidth || ''
         svgLayer.style.height = originalSvgStyleHeight || ''
+        svgLayer.style.overflow = originalSvgStyleOverflow2 || ''
       }
 
       if (imagesCanvas) {
@@ -2104,8 +2135,8 @@ const handleExportPNG = async (exportSettings = null) => {
       // Восстанавливаем оригинальные значения transform и position
       canvasContent.style.transform = originalTransform
       canvasContent.style.transformOrigin = originalTransformOrigin
-      canvasContent.style.left = originalLeft
-      canvasContent.style.top = originalTop
+      canvasContent.style.left = originalContentLeft
+      canvasContent.style.top = originalContentTop
 
       // Финализируем canvas
       let finalCanvas
@@ -2144,11 +2175,46 @@ const handleExportPNG = async (exportSettings = null) => {
 
   } catch (error) {
     console.error('Ошибка при экспорте в PNG:', error)
-    // Восстанавливаем LOD-классы и capturing при ошибке
-    if (canvasContainer) {
-      canvasContainer.classList.remove('canvas-container--capturing')
-      activeLodClasses.forEach(cls => canvasContainer.classList.add(cls))
+
+    // Восстанавливаем ВСЕ модификации DOM при ошибке
+    try {
+      if (canvasContainer) {
+        canvasContainer.classList.remove('canvas-container--capturing')
+        activeLodClasses.forEach(cls => canvasContainer.classList.add(cls))
+      }
+
+      // Восстанавливаем временные стили
+      if (tempStyles.length > 0) {
+        tempStyles.forEach(({ element, property, originalValue }) => {
+          if (property.startsWith('setProperty:')) {
+            const varName = property.slice('setProperty:'.length)
+            if (originalValue) { element.style.setProperty(varName, originalValue) } else { element.style.removeProperty(varName) }
+            return
+          }
+          element.style[property] = originalValue || ''
+        })
+      }
+
+      // Восстанавливаем оригинальные src изображений
+      if (originalImageSources && originalImageSources.size > 0) {
+        originalImageSources.forEach((originalSrc, img) => {
+          if (originalSrc && img.getAttribute('src') !== originalSrc) {
+            img.setAttribute('src', originalSrc)
+          }
+        })
+      }
+
+      // Восстанавливаем transform/position canvasContent (MODE 2 модифицирует их)
+      if (canvasContent) {
+        canvasContent.style.transform = originalTransform || ''
+        canvasContent.style.transformOrigin = originalTransformOrigin || ''
+        canvasContent.style.left = originalContentLeft || ''
+        canvasContent.style.top = originalContentTop || ''
+      }
+    } catch (restoreError) {
+      console.error('Ошибка при восстановлении DOM после неудачного экспорта:', restoreError)
     }
+
     alert('Экспорт в PNG завершился ошибкой. Подробности в консоли.')
   }
 }

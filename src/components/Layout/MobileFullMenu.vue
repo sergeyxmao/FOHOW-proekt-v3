@@ -526,8 +526,6 @@ const handleOverlayClick = () => {
   inset: 0;
   background: color-mix(in srgb, var(--md-ref-neutral-10) 32%, transparent);
   z-index: 2500;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 }
 
 .fullmenu-overlay--dark {
@@ -1230,8 +1228,6 @@ const handleOverlayClick = () => {
 /* --- Aurora Overlay --- */
 .fullmenu-overlay--aurora {
   background: rgba(4, 6, 14, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
 }
 
 /* --- Aurora Panel --- */

@@ -275,5 +275,6 @@ tempStyles.forEach(({ element, property, originalValue }) => {
 
 - `src/composables/useProjectActions.js` - реализация экспорта
 - `src/components/ExportSettingsModal.vue` - UI для настроек экспорта
+- [docs/technical/png-export.md](../png-export.md) - документация UI модального окна "Сохранить как картинку"
 - `src/components/Canvas/Card.vue` - компонент карточки
 - `src/utils/imageUtils.js` - утилиты для работы с изображениями

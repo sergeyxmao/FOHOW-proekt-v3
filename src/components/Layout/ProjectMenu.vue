@@ -24,8 +24,7 @@ const {
   handleLoadProject,
   handleExportHTML,
   handleExportSVG,
-  handleExportPNG,
-  handlePrint
+  handleExportPNG
 } = useProjectActions()
 
 const showExportModal = ref(false)
@@ -89,28 +88,23 @@ const items = computed(() => {
     },
     {
       id: 'export-svg',
-      icon: '🖋️',
+      icon: '🖨️',
       label: t('projectMenu.exportSvg'),
       tooltip: t('projectMenu.tooltips.exportSvg'),
-      action: handleExportSVG
+      action: handleExportSVG,
+      disabled: isGuest.value,
+      hint: isGuest.value ? '(Индивидуальный/Премиум)' : null
     },
     {
       id: 'export-png',
       icon: '🖼️',
-      label: t('projectMenu.exportPng'),
-      tooltip: t('projectMenu.tooltips.exportPng'),
+      label: t('projectMenu.saveAsImage'),
+      tooltip: t('projectMenu.tooltips.saveAsImage'),
       action: openExportModal
-    },
-    {
-      id: 'print',
-      icon: '🖨️',
-      label: t('projectMenu.print'),
-      tooltip: t('projectMenu.tooltips.print'),
-      action: handlePrint
     }
   ]
 
-  const adminOnlyItems = new Set(['save-json', 'load-json', 'export-svg'])
+  const adminOnlyItems = new Set(['save-json', 'load-json'])
 
   return baseItems.filter((item) => !adminOnlyItems.has(item.id) || isAdmin.value)
 })

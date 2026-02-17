@@ -1,163 +1,51 @@
 <script setup>
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
-import { useCardsStore } from '../stores/cards.js'
+import { computed, ref } from 'vue'
 import { useAuthStore } from '../stores/auth.js'
 import { useSubscriptionStore } from '../stores/subscription.js'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const emit = defineEmits(['close', 'export'])
-const cardsStore = useCardsStore()
 const authStore = useAuthStore()
 const subscriptionStore = useSubscriptionStore()
 const isAdmin = computed(() => authStore.user?.role === 'admin')
 
-// Проверяем, является ли пользователь на guest тарифе
 const isGuestPlan = computed(() => {
   return subscriptionStore.currentPlan?.code_name === 'guest'
 })
 
-// Получаем доступные форматы PNG из тарифа
-const availableFormats = computed(() => {
-  const formats = subscriptionStore.features?.can_export_png_formats
-  if (Array.isArray(formats) && formats.length > 0) {
-    // Преобразуем форматы к нижнему регистру для сравнения
-    return formats.map(f => f.toLowerCase())
-  }
-  // По умолчанию все форматы доступны (для админов и старых тарифов)
-  return ['original', 'a4', 'a3', 'a2', 'a1']
-})
-
-// Проверяем, доступен ли конкретный формат
-const isFormatAvailable = (formatId) => {
-  if (isAdmin.value) return true
-  return availableFormats.value.includes(formatId.toLowerCase())
-}
-
-// Проверяем, доступно ли конкретное DPI
-const isDpiAvailable = (dpi) => {
-  if (isAdmin.value) return true
-  // Для guest тарифа доступно только 300 DPI
-  if (isGuestPlan.value) {
-    return dpi === 300
-  }
-  return true
-}  
-  
-// Форматы листа с размерами в миллиметрах
 const pageFormats = [
   { id: 'a4', label: 'A4', width: 210, height: 297 },
-  { id: 'a3', label: 'A3', width: 297, height: 420 },
-  { id: 'a2', label: 'A2', width: 420, height: 594 },
-  { id: 'a1', label: 'A1', width: 594, height: 841 }
+  { id: 'a3', label: 'A3', width: 297, height: 420 }
 ]
 
-// DPI опции
-const dpiOptions = [
-  { value: 300, label: '300 DPI', description: 'печать' },
-  { value: 600, label: '600 DPI', description: 'высокое качество' }
-]
-
-// Состояние формы
-const selectedFormat = ref('a4')
-const selectedOrientation = ref('portrait') // 'portrait' или 'landscape'
-const selectedDPI = ref(300)
-const exportOnlyVisible = ref(true)
-const effectiveExportOnlyVisible = computed(() => (
-  isAdmin.value ? exportOnlyVisible.value : true
-))  
-const hideContent = ref(false) // Скрыть содержимое
-const blackAndWhite = ref(false) // Ч/Б (контур)
-const mmToPixels = (mm, dpi) => Math.round((mm / 25.4) * dpi)
-
-const viewportSize = ref({ width: 0, height: 0 })
-const contentSize = ref({ width: 0, height: 0 })
-
-const updateViewportSize = () => {
-  const container = document.querySelector('.canvas-container')
-  if (!container) {
-    viewportSize.value = { width: 0, height: 0 }
-    return
-  }
-
-  const rect = container.getBoundingClientRect()
-  viewportSize.value = {
-    width: rect.width,
-    height: rect.height
-  }
-}
-
-const updateContentSize = () => {
-  const content = document.querySelector('.canvas-content')
-  if (!content) {
-    contentSize.value = { width: 0, height: 0 }
-    return
-  }
-
-  const style = window.getComputedStyle(content)
-  const width = parseFloat(style.width)
-  const height = parseFloat(style.height)
-
-  contentSize.value = {
-    width: Number.isFinite(width) ? width : 0,
-    height: Number.isFinite(height) ? height : 0
-  }
-}
-
-onMounted(() => {
-  updateViewportSize()
-  updateContentSize()
-  window.addEventListener('resize', updateViewportSize)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateViewportSize)
-})
-
-const targetResolution = computed(() => {
-  if (selectedFormat.value !== 'original') {
-    const format = pageFormats.find(f => f.id === selectedFormat.value)
-    if (!format) return null
-
-    const widthMm = selectedOrientation.value === 'portrait' ? format.width : format.height
-    const heightMm = selectedOrientation.value === 'portrait' ? format.height : format.width
-
-    return {
-      width: mmToPixels(widthMm, selectedDPI.value),
-      height: mmToPixels(heightMm, selectedDPI.value),
-      dpi: selectedDPI.value,
-      mode: 'format'
-    }
-  }
-
-  if (cardsStore.cards.length === 0 || !viewportSize.value.width || !viewportSize.value.height) {
-    return null
-  }
-
-  const areaSize = effectiveExportOnlyVisible.value ? viewportSize.value : contentSize.value
-    if (!areaSize.width || !areaSize.height) {
-    return null
-  }
-
-  return {
-    width: Math.round(areaSize.width * 2),
-    height: Math.round(areaSize.height * 2),
-    dpi: 192, // Масштаб 2x от базовых 96 DPI
-    mode: 'original'
-  }
-})
+const mode = ref('print')
+const selectedFormat = ref('a3')
+const selectedOrientation = ref('landscape')
+const hideContent = ref(false)
+const blackAndWhite = ref(false)
 
 const handleExport = () => {
-  const format = pageFormats.find(f => f.id === selectedFormat.value)
-
-  emit('export', {
-    format: selectedFormat.value,
-    width: format.width,
-    height: format.height,
-    orientation: selectedOrientation.value,
-    dpi: selectedDPI.value,
-    exportOnlyVisible: effectiveExportOnlyVisible.value,
-    hideContent: hideContent.value,
-    blackAndWhite: blackAndWhite.value
-  })
+  if (mode.value === 'messenger') {
+    emit('export', {
+      format: 'original',
+      exportOnlyVisible: true,
+      hideContent: hideContent.value,
+      blackAndWhite: blackAndWhite.value
+    })
+  } else {
+    const format = pageFormats.find(f => f.id === selectedFormat.value)
+    emit('export', {
+      format: selectedFormat.value,
+      width: format.width,
+      height: format.height,
+      orientation: selectedOrientation.value,
+      dpi: 300,
+      exportOnlyVisible: isAdmin.value ? false : true,
+      hideContent: hideContent.value,
+      blackAndWhite: blackAndWhite.value
+    })
+  }
 }
 
 const handleClose = () => {
@@ -168,164 +56,84 @@ const handleClose = () => {
 <template>
   <div class="export-settings-panel">
     <div class="export-settings-panel__header">
-      <h3 class="export-settings-panel__title">Настройки экспорта PNG</h3>
-      <button
-        type="button"
-        class="export-settings-panel__close"
-        @click="handleClose"
-        aria-label="Закрыть"
-      >
-        ×
-      </button>
+      <h3 class="export-settings-panel__title">{{ t('saveAsImage.title') }}</h3>
+      <button type="button" class="export-settings-panel__close" @click="handleClose" aria-label="Close">×</button>
     </div>
 
     <div class="export-settings-panel__body">
-      <!-- Формат листа -->
-      <div class="form-group">
-        <label class="form-label">Формат листа:</label>
-        <div class="format-buttons">
-          <button
-            v-for="format in pageFormats"
-            :key="format.id"
-            type="button"
-            class="format-btn"
-            :class="{
-              active: selectedFormat === format.id,
-              'format-btn--disabled': !isFormatAvailable(format.id)
-            }"
-            :disabled="!isFormatAvailable(format.id)"
-            @click="selectedFormat = format.id"
-          >
-            {{ format.label }}
-          </button>
-        </div>
+      <!-- Переключатель режимов -->
+      <div class="mode-tabs">
+        <button type="button" class="mode-tab" :class="{ active: mode === 'print' }" @click="mode = 'print'">
+          🖨️ {{ t('saveAsImage.forPrint') }}
+        </button>
+        <button type="button" class="mode-tab" :class="{ active: mode === 'messenger' }" @click="mode = 'messenger'">
+          💬 {{ t('saveAsImage.forMessenger') }}
+        </button>
       </div>
 
-      <!-- Ориентация -->
-      <div class="form-group">
-        <label class="form-label">Ориентация:</label>
-        <div class="orientation-buttons">
-          <button
-            type="button"
-            class="orientation-btn"
-            :class="{ active: selectedOrientation === 'portrait' }"
-            @click="selectedOrientation = 'portrait'"
-          >
-            <span class="orientation-icon">📄</span>
-            <span>Книжная</span>
-          </button>
-          <button
-            type="button"
-            class="orientation-btn"
-            :class="{ active: selectedOrientation === 'landscape' }"
-            @click="selectedOrientation = 'landscape'"
-          >
-            <span class="orientation-icon">📃</span>
-            <span>Альбомная</span>
-          </button>
+      <!-- Настройки печати -->
+      <template v-if="mode === 'print'">
+        <div class="form-group">
+          <label class="form-label">{{ t('saveAsImage.format') }}:</label>
+          <div class="format-buttons">
+            <button
+              v-for="format in pageFormats"
+              :key="format.id"
+              type="button"
+              class="format-btn"
+              :class="{ active: selectedFormat === format.id }"
+              @click="selectedFormat = format.id"
+            >{{ format.label }}</button>
+          </div>
         </div>
-      </div>
 
-      <!-- Разрешение (DPI) -->
-      <div class="form-group">
-        <label class="form-label">Разрешение:</label>
-        <div class="dpi-buttons">
-          <button
-            v-for="dpi in dpiOptions"
-            :key="dpi.value"
-            type="button"
-            class="dpi-btn"
-            :class="{
-              active: selectedDPI === dpi.value,
-              'dpi-btn--disabled': !isDpiAvailable(dpi.value)
-            }"
-            :disabled="!isDpiAvailable(dpi.value)"
-            @click="selectedDPI = dpi.value"
-          >
-            <span class="dpi-btn__label">{{ dpi.label }}</span>
-            <span class="dpi-btn__desc">{{ dpi.description }}</span>
-          </button>
+        <div class="form-group">
+          <label class="form-label">{{ t('saveAsImage.orientation') }}:</label>
+          <div class="orientation-buttons">
+            <button type="button" class="orientation-btn" :class="{ active: selectedOrientation === 'portrait' }" @click="selectedOrientation = 'portrait'">
+              <span class="orientation-icon">📄</span>
+              <span>{{ t('saveAsImage.portrait') }}</span>
+            </button>
+            <button type="button" class="orientation-btn" :class="{ active: selectedOrientation === 'landscape' }" @click="selectedOrientation = 'landscape'">
+              <span class="orientation-icon">📃</span>
+              <span>{{ t('saveAsImage.landscape') }}</span>
+            </button>
+          </div>
         </div>
-      </div>
+      </template>
 
-      <!-- Дополнительные опции -->
+      <!-- Описание мессенджера -->
+      <template v-else>
+        <p class="messenger-hint">{{ t('saveAsImage.messengerHint') }}</p>
+      </template>
+
+      <!-- Общие чекбоксы -->
       <div class="form-group">
-        <label class="form-label">Дополнительные опции:</label>
         <div class="checkbox-group">
           <label class="checkbox-label" :class="{ 'checkbox-label--disabled': isGuestPlan && !isAdmin }">
-            <input
-              type="checkbox"
-              v-model="hideContent"
-              class="checkbox-input"
-              :disabled="isGuestPlan && !isAdmin"
-            />
-            <span class="checkbox-text">Скрыть содержимое{{ (isGuestPlan && !isAdmin) ? ' (недоступно)' : '' }}</span>
+            <input type="checkbox" v-model="hideContent" class="checkbox-input" :disabled="isGuestPlan && !isAdmin" />
+            <span class="checkbox-text">{{ t('saveAsImage.hideContent') }}{{ (isGuestPlan && !isAdmin) ? ` (${t('saveAsImage.unavailable')})` : '' }}</span>
           </label>
           <label class="checkbox-label" :class="{ 'checkbox-label--disabled': isGuestPlan && !isAdmin }">
-            <input
-              type="checkbox"
-              v-model="blackAndWhite"
-              class="checkbox-input"
-              :disabled="isGuestPlan && !isAdmin"
-            />
-            <span class="checkbox-text">Ч/Б (контур){{ (isGuestPlan && !isAdmin) ? ' (недоступно)' : '' }}</span>
+            <input type="checkbox" v-model="blackAndWhite" class="checkbox-input" :disabled="isGuestPlan && !isAdmin" />
+            <span class="checkbox-text">{{ t('saveAsImage.blackAndWhite') }}{{ (isGuestPlan && !isAdmin) ? ` (${t('saveAsImage.unavailable')})` : '' }}</span>
           </label>
-          <label
-            v-if="isAdmin"
-            class="checkbox-label"
-          >
-            <input
-              type="checkbox"
-              v-model="exportOnlyVisible"
-              class="checkbox-input"
-            />
-            <span class="checkbox-text">Экспортировать только видимую область</span>
-          </label>
-          <div
-            v-else
-            class="checkbox-label checkbox-label--info"
-          >
-            <span class="checkbox-text">Экспортирует только видимую область (фиксировано вашим тарифом)</span>
-          </div>          
         </div>
-      </div>
-
-      <!-- Информация о размере -->
-      <div class="info-box">
-        <template v-if="targetResolution">
-          <p class="info-text">
-            <strong>Итоговое разрешение:</strong>
-            {{ targetResolution.width }} × {{ targetResolution.height }} пикселей
-            <span class="info-hint">({{ targetResolution.dpi }} DPI{{ targetResolution.mode === 'original' ? ', масштаб 2x' : '' }})</span>
-          </p>
-        </template>
-        <p v-else class="info-text info-text--muted">
-          На доске нет элементов для экспорта.
-        </p>
       </div>
     </div>
 
     <div class="export-settings-panel__footer">
-      <button
-        type="button"
-        class="export-btn export-btn--secondary"
-        @click="handleClose"
-      >
-        Отмена
+      <button type="button" class="export-btn export-btn--secondary" @click="handleClose">
+        {{ t('saveAsImage.cancel') }}
       </button>
-      <button
-        type="button"
-        class="export-btn export-btn--primary"
-        @click="handleExport"
-      >
-        Экспорт
+      <button type="button" class="export-btn export-btn--primary" @click="handleExport">
+        {{ t('saveAsImage.export') }}
       </button>
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Стили остаются без изменений */
 .export-settings-panel {
   min-width: 360px;
   max-width: 420px;
@@ -439,30 +247,52 @@ const handleClose = () => {
   letter-spacing: 0.01em;
 }
 
-.form-select {
-  width: 100%;
-  padding: 10px 14px;
-  font-size: 14px;
-  font-family: inherit;
+/* Переключатель режимов */
+.mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid rgba(15, 23, 42, 0.1);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.8);
+  font-size: 15px;
+  font-weight: 700;
   color: #0f172a;
-  background: rgba(248, 250, 252, 0.95);
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
+  text-align: center;
 }
 
-.form-select:hover {
-  border-color: rgba(255, 193, 7, 0.6);
-  background: rgba(255, 255, 255, 1);
+.mode-tab:hover {
+  border-color: rgba(255, 193, 7, 0.5);
+  background: rgba(255, 193, 7, 0.06);
 }
 
-.form-select:focus {
-  outline: none;
+.mode-tab.active {
   border-color: #ffc107;
-  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.2);
+  background: rgba(255, 193, 7, 0.12);
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.25);
 }
 
+/* Подсказка мессенджера */
+.messenger-hint {
+  padding: 16px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: center;
+  background: rgba(248, 250, 252, 0.6);
+  border-radius: 10px;
+  border: 1px dashed rgba(15, 23, 42, 0.12);
+  margin: 0;
+}
+
+/* Кнопки ориентации */
 .orientation-buttons {
   display: flex;
   gap: 12px;
@@ -528,7 +358,7 @@ const handleClose = () => {
   text-align: center;
 }
 
-.format-btn:hover:not(:disabled) {
+.format-btn:hover {
   border-color: rgba(255, 193, 7, 0.6);
   background: rgba(255, 193, 7, 0.1);
   transform: translateY(-1px);
@@ -542,95 +372,11 @@ const handleClose = () => {
   box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.3);
 }
 
-.format-btn:active:not(:disabled) {
+.format-btn:active {
   transform: translateY(0);
 }
 
-.format-btn--disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* Кнопки DPI */
-.dpi-buttons {
-  display: flex;
-  gap: 10px;
-}
-
-.dpi-btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 12px 8px;
-  border: 1.5px solid rgba(15, 23, 42, 0.12);
-  border-radius: 12px;
-  background: rgba(248, 250, 252, 0.8);
-  color: #0f172a;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.dpi-btn:hover:not(:disabled) {
-  border-color: rgba(255, 193, 7, 0.6);
-  background: rgba(255, 193, 7, 0.1);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(255, 193, 7, 0.2);
-}
-
-.dpi-btn.active {
-  border-color: #ffc107;
-  background: rgba(255, 193, 7, 0.15);
-  color: #000000;
-  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.3);
-}
-
-.dpi-btn:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.dpi-btn--disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.dpi-btn__label {
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.dpi-btn__desc {
-  font-size: 11px;
-  font-weight: 500;
-  color: #64748b;
-}
-
-.info-box {
-  margin-top: 16px;
-  padding: 12px 14px;
-  background: rgba(255, 193, 7, 0.1);
-  border: 1px solid rgba(255, 193, 7, 0.3);
-  border-radius: 10px;
-}
-
-.info-text {
-  margin: 0;
-  font-size: 13px;
-  color: #92400e;
-  line-height: 1.5;
-}
-.info-text--muted {
-  color: #475569;
-}
-
-.info-hint {
-  display: inline-block;
-  margin-left: 6px;
-  color: #475569;
-  font-size: 12px;
-}
-
+/* Футер */
 .export-settings-panel__footer {
   display: flex;
   align-items: center;
@@ -685,6 +431,7 @@ const handleClose = () => {
   box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
 }
 
+/* Чекбоксы */
 .checkbox-group {
   display: flex;
   flex-direction: column;
@@ -702,17 +449,6 @@ const handleClose = () => {
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
-}
-.checkbox-label--info {
-  cursor: default;
-  background: rgba(248, 250, 252, 0.5);
-  border-style: dashed;
-  color: #475569;
-}
-
-.checkbox-label--info .checkbox-text {
-  font-weight: 500;
-  color: inherit;
 }
 
 .checkbox-label--disabled {

@@ -61,17 +61,32 @@ export default {
     saveJson: '保存项目 JSON',
     loadJson: '加载项目 JSON',
     exportHtml: '导出为 HTML',
-    exportSvg: '导出为 SVG',
-    exportPng: '导出为 PNG',
+    exportSvg: '导出打印版',
+    saveAsImage: '保存为图片',
     print: '打印',
     tooltips: {
       saveJson: '将画板保存到电脑文件中以备份',
       loadJson: '从电脑中打开之前保存的画板文件',
       exportHtml: '将画板保存为可在任何浏览器中打开的网页',
-      exportSvg: '将画板保存为矢量格式，适合高质量打印',
-      exportPng: '将画板保存为图片——方便在聊天软件中发送',
+      exportSvg: '将画板保存为矢量格式(SVG)——非常适合横幅、海报和印刷品。缩放不会损失质量',
+      saveAsImage: '将画板保存为图片——用于打印或在聊天中分享',
       print: '将画板发送到打印机或保存为PDF'
     }
+  },
+  saveAsImage: {
+    title: '保存为图片',
+    forPrint: '打印',
+    forMessenger: '聊天',
+    messengerHint: '适合通过 Telegram、WhatsApp 等聊天工具发送',
+    format: '格式',
+    orientation: '方向',
+    portrait: '纵向',
+    landscape: '横向',
+    hideContent: '隐藏内容',
+    blackAndWhite: '黑白（轮廓）',
+    export: '保存',
+    cancel: '取消',
+    unavailable: '不可用'
   },
   toolsMenu: {
     title: '工具',

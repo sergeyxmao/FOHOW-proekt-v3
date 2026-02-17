@@ -66,17 +66,32 @@ export default {
     shareTelegram: 'Telegram',
     shareVk: 'VKontakte',
     exportHtml: 'Export to HTML',
-    exportSvg: 'Export to SVG',
-    exportPng: 'Export to PNG',
+    exportSvg: 'Export for print',
+    saveAsImage: 'Save as image',
     print: 'Print',
     tooltips: {
       saveJson: 'Saves the board to a file on your computer for backup',
       loadJson: 'Opens a previously saved board file from your computer',
       exportHtml: 'Saves the board as a web page that can be opened in any browser',
-      exportSvg: 'Saves the board in vector format for high-quality printing',
-      exportPng: 'Saves the board as an image — convenient for sharing in messengers',
+      exportSvg: 'Saves the board in vector format (SVG) — ideal for printing on banners, posters and in print shops. Scales without quality loss',
+      saveAsImage: 'Saves the board as an image — for printing or sharing in messenger',
       print: 'Sends the board to a printer or saves as PDF'
     }
+  },
+  saveAsImage: {
+    title: 'Save as image',
+    forPrint: 'Print',
+    forMessenger: 'Messenger',
+    messengerHint: 'Optimal size for sharing via Telegram, WhatsApp and other chats',
+    format: 'Format',
+    orientation: 'Orientation',
+    portrait: 'Portrait',
+    landscape: 'Landscape',
+    hideContent: 'Hide content',
+    blackAndWhite: 'B&W (outline)',
+    export: 'Save',
+    cancel: 'Cancel',
+    unavailable: 'unavailable'
   },
   toolsMenu: {
     title: 'Tools',

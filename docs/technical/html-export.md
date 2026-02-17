@@ -290,6 +290,7 @@ if (!clone.querySelector('.marketing-watermark')) {
 - [src/composables/useProjectActions.js](../../src/composables/useProjectActions.js) — реализация экспорта
 - [src/components/Canvas/CanvasBoard.vue](../../src/components/Canvas/CanvasBoard.vue) — основной компонент canvas
 - [docs/technical/composables/useExport.md](./composables/useExport.md) — документация экспорта PNG
+- [docs/technical/svg-export.md](./svg-export.md) — документация экспорта SVG
 
 ## История изменений
 
