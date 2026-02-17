@@ -49,12 +49,12 @@ const {
 } = storeToRefs(viewSettingsStore)
 
 // Accordion state
-const openSections = ref({ tools: false, view: false, discussion: false })
+const openSections = ref({ project: false, view: false, elements: false })
 
 const toggleSection = (key) => {
   const wasOpen = openSections.value[key]
   // Закрываем все секции
-  openSections.value = { tools: false, view: false, discussion: false }
+  openSections.value = { project: false, view: false, elements: false }
   // Если была закрыта — открываем, если была открыта — оставляем закрытой
   if (!wasOpen) {
     openSections.value[key] = true
@@ -217,33 +217,29 @@ const handleOverlayClick = () => {
             <!-- Scrollable content -->
             <div class="fullmenu-content">
 
-              <!-- ========== TOOLS SECTION ========== -->
+              <!-- ========== PROJECT SECTION ========== -->
               <div class="fullmenu-section">
                 <button
                   class="fullmenu-section__toggle"
                   type="button"
-                  @click="toggleSection('tools')"
+                  @click="toggleSection('project')"
                 >
-                  <span class="fullmenu-section__icon">🛠️</span>
-                  <span class="fullmenu-section__label">{{ t('topMenu.tools') }}</span>
+                  <span class="fullmenu-section__icon">📋</span>
+                  <span class="fullmenu-section__label">{{ t('topMenu.project') }}</span>
                   <span
                     class="fullmenu-section__arrow"
-                    :class="{ 'fullmenu-section__arrow--open': openSections.tools }"
+                    :class="{ 'fullmenu-section__arrow--open': openSections.project }"
                   >▸</span>
                 </button>
 
-                <div v-if="openSections.tools" class="fullmenu-section__body">
-                  <button class="fullmenu-item" type="button" @click="handlePencil">
-                    <span class="fullmenu-item__icon">✏️</span>
-                    <span>{{ t('mobileMenu.drawing') }}</span>
-                  </button>
+                <div v-if="openSections.project" class="fullmenu-section__body">
                   <button class="fullmenu-item fullmenu-item--danger" type="button" @click="handleClearCanvas">
                     <span class="fullmenu-item__icon">🧹</span>
-                    <span>{{ t('toolsMenu.clearCanvas') }}</span>
+                    <span>{{ t('projectMenu.clearCanvas') }}</span>
                   </button>
                   <button class="fullmenu-item" type="button" @click="handleNewStructure">
                     <span class="fullmenu-item__icon">📄</span>
-                    <span>{{ t('toolsMenu.newStructure') }}</span>
+                    <span>{{ t('projectMenu.newStructure') }}</span>
                   </button>
                 </div>
               </div>
@@ -415,22 +411,22 @@ const handleOverlayClick = () => {
                 </div>
               </div>
 
-              <!-- ========== DISCUSSION SECTION ========== -->
+              <!-- ========== ELEMENTS SECTION ========== -->
               <div class="fullmenu-section">
                 <button
                   class="fullmenu-section__toggle"
                   type="button"
-                  @click="toggleSection('discussion')"
+                  @click="toggleSection('elements')"
                 >
-                  <span class="fullmenu-section__icon">💬</span>
-                  <span class="fullmenu-section__label">{{ t('discussionMenu.title') }}</span>
+                  <span class="fullmenu-section__icon">📦</span>
+                  <span class="fullmenu-section__label">{{ t('elementsMenu.title') }}</span>
                   <span
                     class="fullmenu-section__arrow"
-                    :class="{ 'fullmenu-section__arrow--open': openSections.discussion }"
+                    :class="{ 'fullmenu-section__arrow--open': openSections.elements }"
                   >▸</span>
                 </button>
 
-                <div v-if="openSections.discussion" class="fullmenu-section__body">
+                <div v-if="openSections.elements" class="fullmenu-section__body">
                   <button class="fullmenu-item" type="button" @click="handleTogglePartners">
                     <span class="fullmenu-item__icon">👤</span>
                     <span>{{ t('mobileMenu.partners') }}</span>
@@ -450,7 +446,7 @@ const handleOverlayClick = () => {
                   <div class="fullmenu-item-row">
                     <button class="fullmenu-item fullmenu-item--grow" type="button" @click="handleToggleAnchors">
                       <span class="fullmenu-item__icon">🧭</span>
-                      <span>{{ t('discussionMenu.geolocation') }}</span>
+                      <span>{{ t('elementsMenu.geolocation') }}</span>
                     </button>
                     <button class="fullmenu-add-btn" type="button" @click="handleAddAnchor" :title="t('mobileMenu.addToCanvas')">
                       ＋
@@ -671,6 +667,21 @@ const handleOverlayClick = () => {
   display: flex;
   flex-direction: column;
   gap: 3px;
+}
+
+/* --- Separator --- */
+.fullmenu-separator {
+  height: 1px;
+  background: rgba(15, 23, 42, 0.08);
+  margin: 4px 0;
+}
+
+.fullmenu-panel--dark .fullmenu-separator {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.fullmenu-panel--aurora .fullmenu-separator {
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* --- Menu item (button) --- */

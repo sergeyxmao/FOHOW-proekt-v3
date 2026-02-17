@@ -149,7 +149,7 @@ const handleCardNotesDelete = async (cardId) => {
     }"
       >
     <div class="notes-side-panel__header">
-      <h2 class="notes-side-panel__title">{{ t('discussionMenu.notesList') }}</h2>
+      <h2 class="notes-side-panel__title">{{ t('elementsMenu.notesList') }}</h2>
       <button
         type="button"
         class="notes-side-panel__close"

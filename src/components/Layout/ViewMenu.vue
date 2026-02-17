@@ -4,6 +4,8 @@ import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 
 import { useViewSettingsStore } from '../../stores/viewSettings.js'
+import { useCanvasStore } from '../../stores/canvas.js'
+
 const props = defineProps({
   isModernTheme: {
     type: Boolean,
@@ -11,8 +13,12 @@ const props = defineProps({
   }
 })
 
-const { t, locale } = useI18n()
+const emit = defineEmits(['activate-pencil'])
+
+const { t } = useI18n()
 const viewSettingsStore = useViewSettingsStore()
+const canvasStore = useCanvasStore()
+const { isHierarchicalDragMode, guidesEnabled } = storeToRefs(canvasStore)
 
 const {
   lineColor,
@@ -92,16 +98,16 @@ function selectPresetBackground(color) {
   viewSettingsStore.setBackground(color)
 }
 
-// Language switcher
-const availableLocales = [
-  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'zh', name: '中文', flag: '🇨🇳' }
-]
+function handleActivatePencil() {
+  emit('activate-pencil')
+}
 
-function changeLocale(newLocale) {
-  locale.value = newLocale
-  localStorage.setItem('locale', newLocale)
+function toggleHierarchyMode() {
+  canvasStore.toggleHierarchicalDragMode()
+}
+
+function toggleGuides() {
+  canvasStore.toggleGuides()
 }
 </script>
 
@@ -114,6 +120,49 @@ function changeLocale(newLocale) {
   >
     <h3 class="view-menu__title">{{ t('viewMenu.title') }}</h3>
     <div class="view-menu__list">
+      <!-- Режимы и инструменты -->
+      <div class="view-menu__item">
+        <button type="button" class="view-menu__main" @click="handleActivatePencil">
+          <span class="view-menu__icon-wrapper"><span class="view-menu__icon">✏️</span></span>
+          <span class="view-menu__label">{{ t('viewMenu.drawingMode') }}</span>
+          <span class="view-menu__info" @click.stop>&#9432;
+            <span class="view-menu__tooltip" v-html="t('viewMenu.tooltips.drawingMode')"></span>
+          </span>
+        </button>
+      </div>
+
+      <div class="view-menu__item">
+        <button
+          type="button"
+          class="view-menu__main"
+          :class="{ 'view-menu__main--active': isHierarchicalDragMode }"
+          @click="toggleHierarchyMode"
+        >
+          <span class="view-menu__icon-wrapper"><span class="view-menu__icon">🌳</span></span>
+          <span class="view-menu__label">{{ t('viewMenu.hierarchyMode') }}</span>
+          <span class="view-menu__info" @click.stop>&#9432;
+            <span class="view-menu__tooltip" v-html="t('viewMenu.tooltips.hierarchyMode')"></span>
+          </span>
+        </button>
+      </div>
+
+      <div class="view-menu__item">
+        <button
+          type="button"
+          class="view-menu__main"
+          :class="{ 'view-menu__main--active': guidesEnabled }"
+          @click="toggleGuides"
+        >
+          <span class="view-menu__icon-wrapper"><span class="view-menu__icon">📐</span></span>
+          <span class="view-menu__label">{{ t('viewMenu.showGuides') }}</span>
+          <span class="view-menu__info" @click.stop>&#9432;
+            <span class="view-menu__tooltip" v-html="t('viewMenu.tooltips.showGuides')"></span>
+          </span>
+        </button>
+      </div>
+
+      <div class="view-menu__separator"></div>
+
       <div
         class="view-menu__item view-menu__item--submenu"
         :class="{ 'view-menu__item--open': openSubmenuId === 'lines' }"
@@ -265,31 +314,6 @@ function changeLocale(newLocale) {
         </div>
       </div>
 
-      <!-- Language Switcher -->
-      <div
-        class="view-menu__item view-menu__item--submenu"
-        :class="{ 'view-menu__item--open': openSubmenuId === 'language' }"
-      >
-        <button type="button" class="view-menu__main" @click="toggleSubmenu('language')">
-          <span class="view-menu__icon" aria-hidden="true">🌐</span>
-          <span class="view-menu__label">{{ t('viewMenu.language') }}</span>
-          <span class="view-menu__info" @click.stop>&#9432;<span class="view-menu__tooltip" v-html="t('viewMenu.tooltips.language')"></span></span>
-          <span class="view-menu__caret" aria-hidden="true">›</span>
-        </button>
-        <div v-if="openSubmenuId === 'language'" class="view-menu__submenu">
-          <button
-            v-for="lang in availableLocales"
-            :key="lang.code"
-            type="button"
-            class="view-menu__control view-menu__lang-option"
-            :class="{ 'view-menu__control--active': locale === lang.code }"
-            @click="changeLocale(lang.code)"
-            :title="lang.name"
-          >
-            {{ lang.flag }} {{ lang.name }}
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -664,10 +688,57 @@ function changeLocale(newLocale) {
   box-shadow: 0 12px 22px rgba(6, 11, 21, 0.65);
 }
 
-/* Language Switcher Styles */
-.view-menu__lang-option {
-  width: 100%;
-  justify-content: flex-start;
+/* Разделитель */
+.view-menu__separator {
+  height: 1px;
+  background: rgba(15, 23, 42, 0.08);
+  margin: 4px 0;
+}
+
+.view-menu--modern .view-menu__separator {
+  background: rgba(96, 164, 255, 0.15);
+}
+
+/* Активное состояние для переключателей */
+.view-menu__main--active {
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.8);
+  box-shadow: 0 10px 24px rgba(255, 193, 7, 0.35);
+}
+
+.view-menu__main--active .view-menu__label {
+  color: #000000;
+}
+
+.view-menu--modern .view-menu__main--active {
+  background: #ffc107;
+  color: #000000;
+  border-color: rgba(255, 193, 7, 0.85);
+  box-shadow: 0 20px 40px rgba(255, 193, 7, 0.4);
+}
+
+.view-menu--modern .view-menu__main--active .view-menu__label {
+  color: #000000;
+}
+
+/* Обёртка иконки для режимов */
+.view-menu__icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.view-menu--modern .view-menu__icon-wrapper {
+  background: rgba(114, 182, 255, 0.16);
+}
+
+.view-menu__main--active .view-menu__icon-wrapper {
+  background: rgba(0, 0, 0, 0.1);
 }
 
 /* Info icon — скрыт по умолчанию, появляется при наведении на пункт */

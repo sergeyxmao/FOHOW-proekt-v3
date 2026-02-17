@@ -33,7 +33,7 @@ const handleClose = () => {
     }"
   >
     <div class="comments-side-panel__header">
-      <h2 class="comments-side-panel__title">{{ t('discussionMenu.boardComments') }}</h2>
+      <h2 class="comments-side-panel__title">{{ t('elementsMenu.boardComments') }}</h2>
       <div v-if="userCommentsRef" class="comments-side-panel__colors">
         <button
           v-for="color in userCommentsRef.colorPalette"

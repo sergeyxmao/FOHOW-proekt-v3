@@ -13,7 +13,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['request-close'])
+const emit = defineEmits(['request-close', 'clear-canvas', 'new-structure'])
 const { t } = useI18n()
 const authStore = useAuthStore()
 const subscriptionStore = useSubscriptionStore()
@@ -28,6 +28,8 @@ const {
 } = useProjectActions()
 
 const showExportModal = ref(false)
+const showClearCanvasDialog = ref(false)
+const showNewStructureDialog = ref(false)
 const activeSubmenus = ref(new Set())
 
 const openExportModal = () => {
@@ -61,22 +63,38 @@ const handleExport = async (settings) => {
   }
 }
 
+const handleClearCanvas = () => {
+  showClearCanvasDialog.value = true
+}
+
+const confirmClearCanvas = () => {
+  showClearCanvasDialog.value = false
+  emit('clear-canvas')
+  emit('request-close')
+}
+
+const cancelClearCanvas = () => {
+  showClearCanvasDialog.value = false
+}
+
+const handleNewStructure = () => {
+  showNewStructureDialog.value = true
+}
+
+const confirmNewStructure = (shouldSave) => {
+  showNewStructureDialog.value = false
+  emit('new-structure', shouldSave)
+  emit('request-close')
+}
+
+const cancelNewStructure = () => {
+  showNewStructureDialog.value = false
+}
+
 const items = computed(() => {
-  const baseItems = [
-    {
-      id: 'save-json',
-      icon: '💾',
-      label: t('projectMenu.saveJson'),
-      tooltip: t('projectMenu.tooltips.saveJson'),
-      action: handleSaveProject
-    },
-    {
-      id: 'load-json',
-      icon: '📂',
-      label: t('projectMenu.loadJson'),
-      tooltip: t('projectMenu.tooltips.loadJson'),
-      action: handleLoadProject
-    },
+  const result = []
+
+  result.push(
     {
       id: 'export-html',
       icon: '🌐',
@@ -102,11 +120,48 @@ const items = computed(() => {
       tooltip: t('projectMenu.tooltips.saveAsImage'),
       action: openExportModal
     }
-  ]
+  )
 
-  const adminOnlyItems = new Set(['save-json', 'load-json'])
+  result.push({ id: 'sep-1', separator: true })
 
-  return baseItems.filter((item) => !adminOnlyItems.has(item.id) || isAdmin.value)
+  result.push(
+    {
+      id: 'clear-canvas',
+      icon: '🧹',
+      label: t('projectMenu.clearCanvas'),
+      tooltip: t('projectMenu.tooltips.clearCanvas'),
+      action: handleClearCanvas
+    },
+    {
+      id: 'new-structure',
+      icon: '📄',
+      label: t('projectMenu.newStructure'),
+      tooltip: t('projectMenu.tooltips.newStructure'),
+      action: handleNewStructure
+    }
+  )
+
+  if (isAdmin.value) {
+    result.push({ id: 'sep-2', separator: true })
+    result.push(
+      {
+        id: 'save-json',
+        icon: '💾',
+        label: t('projectMenu.saveJson'),
+        tooltip: t('projectMenu.tooltips.saveJson'),
+        action: handleSaveProject
+      },
+      {
+        id: 'load-json',
+        icon: '📂',
+        label: t('projectMenu.loadJson'),
+        tooltip: t('projectMenu.tooltips.loadJson'),
+        action: handleLoadProject
+      }
+    )
+  }
+
+  return result
 })
 
 const handleItemClick = async (item) => {
@@ -148,7 +203,8 @@ const handleItemClick = async (item) => {
       role="menu"
     >
       <template v-for="item in items" :key="item.id">
-        <div class="project-menu__item-wrapper">
+        <div v-if="item.separator" class="project-menu__separator"></div>
+        <div v-else class="project-menu__item-wrapper">
           <button
             type="button"
             class="project-menu__item"
@@ -221,6 +277,45 @@ const handleItemClick = async (item) => {
         />
       </div>
     </transition>
+
+    <!-- Диалог подтверждения очистки холста -->
+    <Teleport to="body">
+      <div v-if="showClearCanvasDialog" class="dialog-overlay" @click="cancelClearCanvas">
+        <div class="dialog-content" @click.stop>
+          <h3 class="dialog-title">{{ t('projectMenu.clearConfirmTitle') }}</h3>
+          <p class="dialog-message">{{ t('projectMenu.clearConfirmMessage') }}</p>
+          <div class="dialog-actions">
+            <button class="dialog-button dialog-button--cancel" @click="cancelClearCanvas">
+              {{ t('common.cancel') }}
+            </button>
+            <button class="dialog-button dialog-button--confirm" @click="confirmClearCanvas">
+              {{ t('projectMenu.continueAction') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Диалог новой структуры -->
+    <Teleport to="body">
+      <div v-if="showNewStructureDialog" class="dialog-overlay" @click="cancelNewStructure">
+        <div class="dialog-content" @click.stop>
+          <h3 class="dialog-title">{{ t('projectMenu.newStructureTitle') }}</h3>
+          <p class="dialog-message">{{ t('projectMenu.newStructureMessage') }}</p>
+          <div class="dialog-actions">
+            <button class="dialog-button dialog-button--cancel" @click="cancelNewStructure">
+              {{ t('common.cancel') }}
+            </button>
+            <button class="dialog-button dialog-button--secondary" @click="confirmNewStructure(false)">
+              {{ t('projectMenu.dontSave') }}
+            </button>
+            <button class="dialog-button dialog-button--confirm" @click="confirmNewStructure(true)">
+              {{ t('projectMenu.saveAndCreate') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -545,5 +640,98 @@ const handleItemClick = async (item) => {
 
 .project-menu--modern .project-menu__tooltip::before {
   border-right-color: rgba(30, 42, 70, 0.96);
+}
+
+/* Разделитель */
+.project-menu__separator {
+  height: 1px;
+  background: rgba(15, 23, 42, 0.08);
+  margin: 4px 0;
+}
+
+.project-menu--modern .project-menu__separator {
+  background: rgba(96, 164, 255, 0.15);
+}
+
+/* Диалоговые окна */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+
+.dialog-content {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.dialog-title {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dialog-message {
+  margin: 0 0 24px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.dialog-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dialog-button--cancel {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.dialog-button--cancel:hover {
+  background: #cbd5e1;
+}
+
+.dialog-button--secondary {
+  background: #f59e0b;
+  color: white;
+}
+
+.dialog-button--secondary:hover {
+  background: #d97706;
+}
+
+.dialog-button--confirm {
+  background: #ffc107;
+  color: #000000;
+}
+
+.dialog-button--confirm:hover {
+  background: #e8a900;
+  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
 }
 </style>

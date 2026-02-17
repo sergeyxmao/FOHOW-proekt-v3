@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import DiscussionMenu from './DiscussionMenu.vue'
-import ToolsMenu from './ToolsMenu.vue'
 import ViewMenu from './ViewMenu.vue'
 import ProjectMenu from './ProjectMenu.vue'
 import { useHistoryStore } from '../../stores/history.js'
@@ -17,25 +16,31 @@ const props = defineProps({
 
 const emit = defineEmits(['activate-pencil', 'toggle-theme', 'clear-canvas', 'new-structure'])
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const historyStore = useHistoryStore()
 const { canUndo, canRedo } = storeToRefs(historyStore)
 
 const menuItems = computed(() => [
   { id: 'project', label: t('topMenu.project') },
-  { id: 'tools', label: t('topMenu.tools') },
   { id: 'view', label: t('topMenu.view') },
-  { id: 'discussion', label: t('topMenu.discussions') }
+  { id: 'elements', label: t('topMenu.elements') }
 ])
 
 const openMenuId = ref(null)
+const showLangDropdown = ref(false)
 const menuWrapperRef = ref(null)
 const menuComponents = {
   project: ProjectMenu,
-  discussion: DiscussionMenu,
-  tools: ToolsMenu,
+  elements: DiscussionMenu,
   view: ViewMenu
 }
+
+const availableLocales = [
+  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
+  { code: 'en', name: 'English', flag: '🇬🇧' },
+  { code: 'zh', name: '中文', flag: '🇨🇳' }
+]
+
 const themeTitle = computed(() =>
   props.isModernTheme ? t('topMenu.lightTheme') : t('topMenu.darkTheme')
 )
@@ -44,12 +49,25 @@ function getMenuComponent(id) {
 }
 
 function toggleMenu(id) {
+  showLangDropdown.value = false
   openMenuId.value = openMenuId.value === id ? null : id
 }
 
 function closeMenu() {
   openMenuId.value = null
 }
+
+function toggleLangDropdown() {
+  openMenuId.value = null
+  showLangDropdown.value = !showLangDropdown.value
+}
+
+function changeLocale(newLocale) {
+  locale.value = newLocale
+  localStorage.setItem('locale', newLocale)
+  showLangDropdown.value = false
+}
+
 function handleActivatePencil() {
   emit('activate-pencil')
   closeMenu()
@@ -81,6 +99,7 @@ function handleClickOutside(event) {
   if (!menuWrapperRef.value) return
   if (!menuWrapperRef.value.contains(event.target)) {
     closeMenu()
+    showLangDropdown.value = false
   }
 }
 
@@ -127,6 +146,34 @@ onBeforeUnmount(() => {
     >
       ↷
     </button>
+
+    <!-- Кнопка языка -->
+    <div class="top-menu__item">
+      <button
+        type="button"
+        class="top-menu__action-button top-menu__lang-button"
+        :title="t('topMenu.language')"
+        @click.stop="toggleLangDropdown"
+      >
+        🌐
+      </button>
+      <transition name="top-menu-fade">
+        <div v-if="showLangDropdown" class="top-menu__dropdown top-menu__dropdown--lang">
+          <button
+            v-for="lang in availableLocales"
+            :key="lang.code"
+            type="button"
+            class="lang-option"
+            :class="{ 'lang-option--active': locale === lang.code }"
+            @click="changeLocale(lang.code)"
+          >
+            <span>{{ lang.flag }}</span>
+            <span>{{ lang.name }}</span>
+          </button>
+        </div>
+      </transition>
+    </div>
+
     <div v-for="item in menuItems" :key="item.id" class="top-menu__item">
       <button
         type="button"
@@ -288,7 +335,8 @@ onBeforeUnmount(() => {
 
 .top-menu--modern .top-menu__theme-icon {
   background: linear-gradient(135deg, #e5f3ff 0%, #73c8ff 100%);
-  box-shadow: inset -4px -4px 10px rgba(6, 11, 21, 0.35), 0 6px 12px rgba(6, 11, 21, 0.3);}
+  box-shadow: inset -4px -4px 10px rgba(6, 11, 21, 0.35), 0 6px 12px rgba(6, 11, 21, 0.3);
+}
 
 .top-menu__button {
   padding: 10px 18px;
@@ -357,6 +405,57 @@ onBeforeUnmount(() => {
   border-color: rgba(96, 164, 255, 0.35);
   box-shadow: 0 22px 38px rgba(6, 11, 21, 0.6);
 }
+
+/* Language dropdown */
+.top-menu__dropdown--lang {
+  min-width: 150px;
+  min-height: auto;
+  padding: 8px;
+}
+
+.top-menu__lang-button {
+  border-radius: 50%;
+  font-size: 20px;
+}
+
+.lang-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lang-option:hover {
+  background: rgba(255, 193, 7, 0.15);
+}
+
+.lang-option--active {
+  background: #ffc107;
+  color: #000000;
+}
+
+.top-menu--modern .lang-option {
+  color: #e5f3ff;
+}
+
+.top-menu--modern .lang-option:hover {
+  background: rgba(255, 193, 7, 0.15);
+}
+
+.top-menu--modern .lang-option--active {
+  background: #ffc107;
+  color: #000000;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

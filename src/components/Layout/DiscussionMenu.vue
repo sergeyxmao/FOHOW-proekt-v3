@@ -220,7 +220,7 @@ const handleAddSticker = () => {
     class="discussion-menu"
     :class="{ 'discussion-menu--modern': props.isModernTheme }"
   >
-    <div class="discussion-menu__title">{{ t('discussionMenu.title') }}</div>
+    <div class="discussion-menu__title">{{ t('elementsMenu.title') }}</div>
 
     <div class="discussion-menu__item">
       <div class="discussion-menu__avatar-wrapper">
@@ -241,7 +241,7 @@ const handleAddSticker = () => {
         @click="handlePartnersToggle"
       >
         Партнеры
-        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('discussionMenu.tooltips.partners')"></span></span>
+        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('elementsMenu.tooltips.partners')"></span></span>
       </button>
       <span class="discussion-menu__counter">
         <template v-if="countersLoading">...</template>
@@ -258,8 +258,8 @@ const handleAddSticker = () => {
         :disabled="isUserCardBoard"        
         @click="handleNotesToggle"
       >
-        {{ t('discussionMenu.notesList') }}
-        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('discussionMenu.tooltips.notesList')"></span></span>
+        {{ t('elementsMenu.notesList') }}
+        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('elementsMenu.tooltips.notesList')"></span></span>
       </button>
       <span class="discussion-menu__counter">
         <template v-if="countersLoading">...</template>
@@ -276,7 +276,7 @@ const handleAddSticker = () => {
         @click="handleImagesToggle"
       >
         Изображения
-        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('discussionMenu.tooltips.images')"></span></span>
+        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('elementsMenu.tooltips.images')"></span></span>
       </button>
       <span class="discussion-menu__counter">
         <template v-if="countersLoading">...</template>
@@ -292,8 +292,8 @@ const handleAddSticker = () => {
         :class="{ 'discussion-menu__action--active': isCommentsOpen }"
         @click="handleCommentsToggle"
       >
-        {{ t('discussionMenu.boardComments') }}
-        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('discussionMenu.tooltips.boardComments')"></span></span>
+        {{ t('elementsMenu.boardComments') }}
+        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('elementsMenu.tooltips.boardComments')"></span></span>
       </button>
       <span class="discussion-menu__counter">
         <template v-if="countersLoading">...</template>
@@ -314,8 +314,8 @@ const handleAddSticker = () => {
         :disabled="isUserCardBoard"
         @click="handleAnchorsPanelOpen"
       >
-        {{ t('discussionMenu.geolocation') }}
-        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('discussionMenu.tooltips.geolocation')"></span></span>
+        {{ t('elementsMenu.geolocation') }}
+        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('elementsMenu.tooltips.geolocation')"></span></span>
       </button>
       <button
         type="button"
@@ -323,7 +323,7 @@ const handleAddSticker = () => {
         :class="{ 'discussion-menu__add-btn--active': placementMode === 'anchor' }"
         :disabled="isUserCardBoard"
         @click="handleAnchorsToggle"
-        :title="t('discussionMenu.setAnchor')"
+        :title="t('elementsMenu.setAnchor')"
       >
         +
       </button>
@@ -341,14 +341,14 @@ const handleAddSticker = () => {
         :class="{ 'discussion-menu__action--active': isStickerMessagesOpen }"
         @click="handleStickerMessagesToggle"
       >
-        {{ t('discussionMenu.stickerMessages') }}
-        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('discussionMenu.tooltips.stickerMessages')"></span></span>
+        {{ t('elementsMenu.stickerMessages') }}
+        <span class="discussion-menu__info" @click.stop>&#9432;<span class="discussion-menu__tooltip" v-html="t('elementsMenu.tooltips.stickerMessages')"></span></span>
       </button>
       <button
         type="button"
         class="discussion-menu__add-btn"
         @click="handleAddSticker"
-        :title="t('discussionMenu.addSticker')"
+        :title="t('elementsMenu.addSticker')"
       >
         +
       </button>

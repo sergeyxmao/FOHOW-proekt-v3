@@ -25,7 +25,7 @@ const panels = computed(() => [
   { key: 'notes', icon: '📅', label: t('mobileMenu.notes'), action: () => sidePanelsStore.openNotes() },
   { key: 'images', icon: '🖼️', label: t('panels.photos'), action: () => sidePanelsStore.openImages() },
   { key: 'comments', icon: '💬', label: t('mobileMenu.comments'), action: () => sidePanelsStore.openComments() },
-  { key: 'anchors', icon: '🧭', label: t('discussionMenu.geolocation'), action: () => sidePanelsStore.openAnchors() },
+  { key: 'anchors', icon: '🧭', label: t('elementsMenu.geolocation'), action: () => sidePanelsStore.openAnchors() },
   { key: 'stickerMessages', icon: '📌', label: t('mobileMenu.stickers'), action: () => sidePanelsStore.openStickerMessages() }
 ])
 

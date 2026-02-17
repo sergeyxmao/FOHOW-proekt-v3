@@ -73,7 +73,7 @@ const formatDate = (isoString) => {
 <template>
   <div class="board-comments">
     <div class="board-comments__header">
-      <h3 class="board-comments__title">{{ t('discussionMenu.boardComments') }}</h3>
+      <h3 class="board-comments__title">{{ t('elementsMenu.boardComments') }}</h3>
     </div>
     <form class="board-comments__form" @submit.prevent="handleSubmit">
       <textarea

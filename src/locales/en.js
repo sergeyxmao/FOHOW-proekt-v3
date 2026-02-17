@@ -14,9 +14,9 @@ export default {
   },
   topMenu: {
     project: 'Project',
-    tools: 'Tools',
     view: 'View',
-    discussions: 'Discussions',
+    elements: 'Elements',
+    language: 'Language',
     toggleTheme: 'Toggle theme',
     lightTheme: 'Switch to light menu',
     darkTheme: 'Switch to dark menu',
@@ -25,6 +25,9 @@ export default {
   },
   viewMenu: {
     title: 'View',
+    drawingMode: 'Drawing Mode',
+    hierarchyMode: 'Hierarchy Mode',
+    showGuides: 'Guides',
     showGrid: 'Show Grid',
     gridStep: 'Step',
     gridBackground: 'Grid Background',
@@ -36,7 +39,7 @@ export default {
     animation: 'Animation',
     animationEnabled: 'Animation on',
     animationDisabled: 'Animation off',
-    selectAnimationColor: 'Select animation color', 
+    selectAnimationColor: 'Select animation color',
     duration: 'Duration',
     seconds: 'sec',
     background: 'Background',
@@ -47,14 +50,15 @@ export default {
     selectHeaderColor: 'Select header color',
     changeColor: 'Change color',
     currentIndex: 'Current index',
-    language: 'Language',
     tooltips: {
+      drawingMode: 'Draw lines and notes freehand directly on the board',
+      hierarchyMode: 'Automatically arranges partners in a tree structure by levels when dragging',
+      showGuides: 'Shows guide lines for precise alignment of elements on the board',
       showGrid: 'Shows a grid on the board for easier element placement',
       lines: 'Customize the color and thickness of connection lines between cards',
       animation: 'Pulsating animation on connection lines — helps visually highlight the structure',
       background: 'Choose the board background color — light, dark, or custom',
-      headerColor: 'Color of the partner card headers on the board',
-      language: 'Switch the interface language'
+      headerColor: 'Color of the partner card headers on the board'
     }
   },
   projectMenu: {
@@ -69,13 +73,24 @@ export default {
     exportSvg: 'Export for print',
     saveAsImage: 'Save as image',
     print: 'Print',
+    clearCanvas: 'Clear Canvas',
+    newStructure: 'New Structure',
+    clearConfirmTitle: 'Confirm Clear',
+    clearConfirmMessage: 'Are you sure you want to clear the canvas? All objects will be deleted.',
+    continueAction: 'Continue',
+    newStructureTitle: 'New Structure',
+    newStructureMessage: 'Do you want to save the current structure before creating a new one?',
+    dontSave: "Don't Save",
+    saveAndCreate: 'Save and Create New',
     tooltips: {
       saveJson: 'Saves the board to a file on your computer for backup',
       loadJson: 'Opens a previously saved board file from your computer',
       exportHtml: 'Saves the board as a web page that can be opened in any browser',
       exportSvg: 'Saves the board in vector format (SVG) — ideal for printing on banners, posters and in print shops. Scales without quality loss',
       saveAsImage: 'Saves the board as an image — for printing or sharing in messenger',
-      print: 'Sends the board to a printer or saves as PDF'
+      print: 'Sends the board to a printer or saves as PDF',
+      clearCanvas: 'Removes all elements from the board — cards, connections, images, stickers',
+      newStructure: 'Creates a new blank board. You can save the current one first'
     }
   },
   saveAsImage: {
@@ -93,31 +108,8 @@ export default {
     cancel: 'Cancel',
     unavailable: 'unavailable'
   },
-  toolsMenu: {
-    title: 'Tools',
-    selectionMode: 'Selection Mode',
-    hierarchyMode: 'Hierarchy Mode',
-    drawingMode: 'Drawing Mode',
-    showGuides: 'Show Guides',
-    clearCanvas: 'Clear Canvas',
-    newStructure: 'New Structure',
-    clearConfirmTitle: 'Confirm Clear',
-    clearConfirmMessage: 'Are you sure you want to clear the canvas? All objects will be deleted.',
-    continueAction: 'Continue',
-    newStructureTitle: 'New Structure',
-    newStructureMessage: 'Do you want to save the current structure before creating a new one?',
-    dontSave: "Don't Save",
-    saveAndCreate: 'Save and Create New',
-    tooltips: {
-      drawingMode: 'Draw lines and notes freehand directly on the board',
-      hierarchyMode: 'Automatically arranges partners in a tree structure by levels when dragging',
-      showGuides: 'Shows guide lines for precise alignment of elements on the board',
-      clearCanvas: 'Removes all elements from the board — cards, connections, images, stickers',
-      newStructure: 'Creates a new blank board. You can save the current one first'
-    }
-  },
-  discussionMenu: {
-    title: 'Discussion',
+  elementsMenu: {
+    title: 'Elements',
     notesList: 'Calendar',
     boardComments: 'Notes',
     stickerMessages: 'Stickers',

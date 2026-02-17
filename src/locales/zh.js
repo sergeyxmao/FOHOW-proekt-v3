@@ -14,9 +14,9 @@ export default {
   },
   topMenu: {
     project: '项目',
-    tools: '工具',
     view: '视图',
-    discussions: '讨论',
+    elements: '元素',
+    language: '语言',
     toggleTheme: '切换主题',
     lightTheme: '切换到浅色菜单',
     darkTheme: '切换到深色菜单',
@@ -25,6 +25,9 @@ export default {
   },
   viewMenu: {
     title: '视图',
+    drawingMode: '绘图模式',
+    hierarchyMode: '层级模式',
+    showGuides: '参考线',
     showGrid: '显示网格',
     gridStep: '步长',
     gridBackground: '网格背景',
@@ -36,7 +39,7 @@ export default {
     animation: '动画',
     animationEnabled: '动画已开启',
     animationDisabled: '动画已关闭',
-    selectAnimationColor: '选择动画颜色',    
+    selectAnimationColor: '选择动画颜色',
     duration: '持续时间',
     seconds: '秒',
     background: '背景',
@@ -47,14 +50,15 @@ export default {
     selectHeaderColor: '选择标题颜色',
     changeColor: '更改颜色',
     currentIndex: '当前索引',
-    language: '语言',
     tooltips: {
+      drawingMode: '在画板上手绘线条和标注',
+      hierarchyMode: '拖动时自动将合作伙伴按层级排列成树形结构',
+      showGuides: '显示辅助线，帮助精确对齐画板上的元素',
       showGrid: '在画板上显示网格，方便元素对齐',
       lines: '自定义卡片之间连接线的颜色和粗细',
       animation: '连接线脉冲动画——帮助直观展示结构',
       background: '选择画板背景颜色——浅色、深色或自定义',
-      headerColor: '画板上合作伙伴卡片标题的颜色',
-      language: '切换界面语言'
+      headerColor: '画板上合作伙伴卡片标题的颜色'
     }
   },
   projectMenu: {
@@ -64,13 +68,24 @@ export default {
     exportSvg: '导出打印版',
     saveAsImage: '保存为图片',
     print: '打印',
+    clearCanvas: '清空画布',
+    newStructure: '新建结构',
+    clearConfirmTitle: '确认清空',
+    clearConfirmMessage: '您确定要清空画布吗？所有对象都将被删除。',
+    continueAction: '继续',
+    newStructureTitle: '新建结构',
+    newStructureMessage: '在创建新结构之前是否要保存当前结构？',
+    dontSave: '不保存',
+    saveAndCreate: '保存并创建新的',
     tooltips: {
       saveJson: '将画板保存到电脑文件中以备份',
       loadJson: '从电脑中打开之前保存的画板文件',
       exportHtml: '将画板保存为可在任何浏览器中打开的网页',
       exportSvg: '将画板保存为矢量格式(SVG)——非常适合横幅、海报和印刷品。缩放不会损失质量',
       saveAsImage: '将画板保存为图片——用于打印或在聊天中分享',
-      print: '将画板发送到打印机或保存为PDF'
+      print: '将画板发送到打印机或保存为PDF',
+      clearCanvas: '删除画板上的所有元素——卡片、连接、图片、贴纸',
+      newStructure: '创建新的空白画板。可以先保存当前画板'
     }
   },
   saveAsImage: {
@@ -88,31 +103,8 @@ export default {
     cancel: '取消',
     unavailable: '不可用'
   },
-  toolsMenu: {
-    title: '工具',
-    selectionMode: '选择模式',
-    hierarchyMode: '层次模式',
-    drawingMode: '绘图模式',
-    showGuides: '显示参考线',
-    clearCanvas: '清空画布',
-    newStructure: '新建结构',
-    clearConfirmTitle: '确认清空',
-    clearConfirmMessage: '您确定要清空画布吗？所有对象都将被删除。',
-    continueAction: '继续',
-    newStructureTitle: '新建结构',
-    newStructureMessage: '在创建新结构之前是否要保存当前结构？',
-    dontSave: '不保存',
-    saveAndCreate: '保存并创建新的',
-    tooltips: {
-      drawingMode: '在画板上手绘线条和标注',
-      hierarchyMode: '拖动时自动将合作伙伴按层级排列成树形结构',
-      showGuides: '显示辅助线，帮助精确对齐画板上的元素',
-      clearCanvas: '删除画板上的所有元素——卡片、连接、图片、贴纸',
-      newStructure: '创建新的空白画板。可以先保存当前画板'
-    }
-  },
-  discussionMenu: {
-    title: '讨论',
+  elementsMenu: {
+    title: '元素',
     notesList: '日历',
     boardComments: '笔记',
     stickerMessages: '贴纸',
