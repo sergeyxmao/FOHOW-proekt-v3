@@ -33,6 +33,8 @@ const tempPosition = ref({ x: null, y: null });
 const stickerRef = ref(null);
 // Время начала редактирования (для защиты от ложных срабатываний handleClickOutside)
 const editingStartTime = ref(0);
+// Для определения двойного тапа на мобильных устройствах
+let lastTapTime = 0;
 
 // Вычисляемые свойства
 const stickerStyle = computed(() => ({
@@ -193,6 +195,17 @@ const handlePointerDown = (e) => {
     }
     return;
   }
+
+  // Определяем двойной тап на мобильных (dblclick не срабатывает с touch-action: none)
+  const now = Date.now();
+  if (now - lastTapTime < 400) {
+    lastTapTime = 0;
+    e.stopPropagation();
+    e.preventDefault();
+    handleDoubleClick();
+    return;
+  }
+  lastTapTime = now;
 
   // Останавливаем всплытие для ВСЕХ остальных случаев
   e.stopPropagation();
