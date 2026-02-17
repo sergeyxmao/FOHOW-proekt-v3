@@ -39,12 +39,16 @@
    const clone = canvasRoot.cloneNode(true)
    ```
 
-2. **Удаление интерактивных элементов** (строки 459-473):
+2. **Удаление интерактивных и LOD-элементов** (строки 477-491):
    - Кнопки закрытия карточек (`.card-close-btn`)
    - Точки соединений (`.connection-point`)
    - Hitbox-слой соединений (`.line-hitbox`)
    - Контролы выделения (`.selection-box`, `.card-active-controls`)
    - Кнопки Active PV (`[data-role="active-pv-buttons"]`)
+   - LOD-заголовки (`.card-lod-title`) — сокращённые имена для мелкого масштаба
+   - LOD-сводки (`.card-lod-summary`) — компактные значения баланса
+   - Скрытые данные Active PV (`.active-pv-hidden`)
+   - Контейнеры аватарок (`.card-avatar-container`) — не работают без сервера
 
 3. **Очистка стилей** (строки 475-484):
    - Удаление классов `selected`, `connecting`, `editing`
@@ -155,6 +159,8 @@ currentY = centerY - (centerY - pinchState.initialY) * actualScaleRatio
 #### 3. Fit to Content (кнопка "Масштаб")
 
 Автоматически подгоняет масштаб так, чтобы все карточки были видны на экране с отступом 100px.
+
+**Вызывается автоматически при загрузке** — контент всегда отцентрирован при открытии HTML-файла, а также по клику на кнопку "Масштаб".
 
 **Алгоритм:**
 1. Находит границы всех карточек (min/max X/Y)
@@ -286,6 +292,12 @@ if (!clone.querySelector('.marketing-watermark')) {
 - [docs/technical/composables/useExport.md](./composables/useExport.md) — документация экспорта PNG
 
 ## История изменений
+
+### 2026-02-17
+- Исправлено смещение контента при открытии экспортированного HTML: добавлен автоматический вызов `fitToContent()` при загрузке страницы
+- Добавлен запас высоты (+80px) при расчёте границ карточек в `fitToContent` для учёта контента, выходящего за пределы карточки
+- Удалены LOD-элементы из DOM при экспорте (`.card-lod-title`, `.card-lod-summary`, `.active-pv-hidden`, `.card-avatar-container`)
+- Добавлены CSS-правила для скрытия LOD-элементов (safety net)
 
 ### 2026-02-11
 - Имя файла HTML-экспорта теперь содержит название доски и текущую дату (`{название}_{дд.мм.гггг}.html`) вместо timestamp
