@@ -298,6 +298,24 @@ if (!clone.querySelector('.marketing-watermark')) {
 - Добавлен запас высоты (+80px) при расчёте границ карточек в `fitToContent` для учёта контента, выходящего за пределы карточки
 - Удалены LOD-элементы из DOM при экспорте (`.card-lod-title`, `.card-lod-summary`, `.active-pv-hidden`, `.card-avatar-container`)
 - Добавлены CSS-правила для скрытия LOD-элементов (safety net)
+- **Полная синхронизация `getExportHtmlCss()` с Card.vue scoped-стилями:**
+  - `.card` border-radius: 26px → 14px, box-shadow и border синхронизированы с Card.vue
+  - Добавлена поддержка CSS-переменных (`--card-shell-background`, `--card-border-color`, `--card-body-background`, `--card-body-divider`) для корректного отображения цветовых тем карточек
+  - Добавлен `.card-header` (padding, min-height, border-radius, box-shadow)
+  - `.card-title`: color → #fff, font-size → 20px, добавлен text-shadow, удалён padding (теперь на header)
+  - `.card-body`: добавлены border-radius, border-top, flex, width, box-sizing, line-height, overflow
+  - Добавлены стили для маленьких карточек (padding-bottom: 30px, gap: 8px)
+  - `.card-row`: flex-wrap → wrap (было nowrap)
+  - `.label`: font-weight 700 → 500, font-size 24px → 23px, добавлен line-height
+  - `.value`: font-weight 700 → 600, font-size 28px → 24px, line-height 1.5 → 1.2
+  - Добавлены `.pv-value`, `.pv-value-left`, `.pv-value-right` (29px, 600)
+  - `.pv-separator`: 28px → 29px, 700 → 600, добавлен color и margin
+  - Добавлен `.value-container` (inline-flex, gap: 0)
+  - Добавлен `.card.card--gold` с отдельным box-shadow
+  - Large/gold `.card-title`: 32px → 30px
+  - Large/gold `.label`: добавлен font-weight: 700
+  - Исправлены text-shadow значков (.slf-badge, .fendou-badge)
+  - `.card-body-html`: text-align → center, line-height → 1.5, убран margin-top
 
 ### 2026-02-11
 - Имя файла HTML-экспорта теперь содержит название доски и текущую дату (`{название}_{дд.мм.гггг}.html`) вместо timestamp

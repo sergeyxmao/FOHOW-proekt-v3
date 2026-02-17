@@ -339,28 +339,37 @@ const getExportHtmlCss = () => `
   @keyframes lineBalanceFlow{0%{stroke-dashoffset:-24;}50%{stroke:#d93025;}100%{stroke-dashoffset:24;}}
   @keyframes linePvFlow{0%{stroke-dashoffset:-18;}50%{stroke:#0f62fe;}100%{stroke-dashoffset:18;}}
   #canvas .cards-container{position:absolute;inset:0;pointer-events:none;}
-  #canvas .card{position:absolute;display:flex;flex-direction:column;align-items:stretch;box-sizing:border-box;border-radius:26px;overflow:visible;background:rgba(255,255,255,0.92);box-shadow:0 18px 48px rgba(15,23,42,0.18);border:1px solid rgba(15,23,42,0.08);}
-  #canvas .card-title{display:flex;align-items:center;justify-content:center;width:100%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:18px 12px;font-size:18px;font-weight:700;letter-spacing:0.01em;color:#0f172a;}
-  #canvas .card-body{padding:20px 20px 60px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;color:#111827;font-size:16px;}
-  #canvas .card-row{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;flex-wrap:nowrap;white-space:nowrap;width:100%;}
-  #canvas .label{color:#6b7280;font-weight:700;font-size:24px;text-align:center;max-width:100%;word-break:break-word;overflow-wrap:anywhere;}
-  #canvas .value{color:#111827;font-weight:700;font-size:28px;outline:none;padding:3px 6px;border-radius:6px;line-height:1.5;}
-  #canvas .pv-row .value{font-size:28px;font-weight:700;}
-  #canvas .pv-separator{font-size:28px;font-weight:700;}
+  #canvas .card{position:absolute;display:flex;flex-direction:column;align-items:stretch;box-sizing:border-box;border-radius:14px;overflow:visible;background:var(--card-shell-background,#ffffff);box-shadow:0 18px 32px rgba(47,128,237,0.12);border:1px solid var(--card-border-color,rgba(47,128,237,0.25));contain:layout style;}
+  #canvas .card.card--gold{box-shadow:0 18px 32px rgba(209,173,68,0.28);}
+  #canvas .card-header{padding:16px 48px 14px;position:relative;border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:center;text-align:center;flex-shrink:0;min-height:64px;box-shadow:inset 0 -2px 0 rgba(255,255,255,0.35);}
+  #canvas .card-title{color:#fff;text-align:center;font-size:20px;line-height:1;font-weight:700;letter-spacing:0.3px;width:100%;display:flex;align-items:center;justify-content:center;text-shadow:0 1px 2px rgba(0,0,0,0.25);}
+  #canvas .card-body{position:relative;padding:20px 20px 60px;background:var(--card-body-background,var(--card-body-gradient,#ffffff));border-radius:0 0 14px 14px;display:flex;flex-direction:column;align-items:center;gap:12px;flex:1 1 auto;width:100%;box-sizing:border-box;line-height:1.3;border-top:1px solid var(--card-body-divider,var(--card-border-color,rgba(47,128,237,0.25)));overflow:visible;}
+  #canvas .card:not(.card--large):not(.card--gold) .card-body{padding-bottom:30px;gap:8px;}
+  #canvas .card-row{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;flex-wrap:wrap;width:100%;}
+  #canvas .card:not(.card--large):not(.card--gold) .card-row{gap:8px;}
+  #canvas .card-row.pv-row{justify-content:center;gap:10px;flex-wrap:nowrap;}
+  #canvas .label{color:#6b7280;font-weight:500;font-size:23px;text-align:center;max-width:100%;word-break:break-word;overflow-wrap:anywhere;line-height:1.2;}
+  #canvas .value{color:#111827;font-weight:600;font-size:24px;outline:none;padding:3px 6px;border-radius:6px;text-align:center;max-width:100%;word-break:break-word;overflow-wrap:anywhere;line-height:1.2;}
+  #canvas .pv-value{font-size:29px;font-weight:600;}
   #canvas .pv-value-container{display:flex;align-items:center;gap:2px;white-space:nowrap;flex-wrap:nowrap;}
+  #canvas .pv-separator{font-size:29px;font-weight:600;color:#111827;margin:0 1px;}
+  #canvas .pv-value-left{font-size:29px;font-weight:600;}
+  #canvas .pv-value-right{font-size:29px;font-weight:600;}
   #canvas .pv-row{flex-wrap:nowrap;}
-  #canvas .coin-icon{width:32px;height:32px;flex-shrink:0;}
+  #canvas .value-container{display:inline-flex;align-items:center;gap:0;}
+  #canvas .value-container>span,#canvas .value-separator{font-size:inherit;font-weight:inherit;}
   #canvas .slf-badge,#canvas .fendou-badge,#canvas .rank-badge{position:absolute;display:none;pointer-events:none;user-select:none;}
-  #canvas .slf-badge.visible{display:block;top:15px;left:15px;font-size:36px;font-weight:900;color:#ffc700;text-shadow:1px 2px 6px rgba(15,23,42,0.35);}
-  #canvas .fendou-badge.visible{display:block;top:-25px;left:50%;transform:translateX(-50%);font-size:56px;font-weight:900;color:#ef4444;text-shadow:1px 2px 6px rgba(15,23,42,0.35);}
+  #canvas .slf-badge.visible{display:block;top:15px;left:15px;font-size:36px;font-weight:900;color:#ffc700;text-shadow:1px 1px 2px rgba(0,0,0,0.5);}
+  #canvas .fendou-badge.visible{display:block;top:-25px;left:50%;transform:translateX(-50%);font-size:56px;font-weight:900;color:red;text-shadow:2px 2px 4px rgba(0,0,0,0.3);}
   #canvas .rank-badge.visible{display:block;top:-15px;right:15px;width:80px;height:auto;transform:rotate(15deg);}
-  #canvas .card-body-html{margin-top:8px;text-align:left;width:100%;font-size:14px;line-height:1.45;color:#111827;}
+  #canvas .card-body-html{font-size:14px;color:#111827;line-height:1.5;width:100%;text-align:center;word-break:break-word;overflow-wrap:anywhere;}
   #canvas .card--large .card-body,#canvas .card--gold .card-body{justify-content:center;align-items:center;padding-left:20px;}
   #canvas .card--large .card-row,#canvas .card--gold .card-row{font-size:18px;line-height:1.6;justify-content:center;text-align:center;}
-  #canvas .card--large .card-row .label,#canvas .card--gold .card-row .label{font-size:29px;}
+  #canvas .card--large .card-row .label,#canvas .card--gold .card-row .label{font-size:29px;font-weight:700;}
   #canvas .card--large .card-row .value,#canvas .card--gold .card-row .value{font-size:31px;font-weight:700;}
+  #canvas .card--large .pv-value,#canvas .card--gold .pv-value{font-size:31px;font-weight:700;}
   #canvas .card--large .pv-value-left,#canvas .card--large .pv-value-right,#canvas .card--large .pv-separator,#canvas .card--gold .pv-value-left,#canvas .card--gold .pv-value-right,#canvas .card--gold .pv-separator{font-size:31px;font-weight:700;}
-  #canvas .card--large .card-title,#canvas .card--gold .card-title{font-size:32px;font-weight:900;}
+  #canvas .card--large .card-title,#canvas .card--gold .card-title{font-size:30px;font-weight:900;}
   #canvas [data-side]{display:none;}
   #canvas .card-lod-title{display:none;}
   #canvas .card-lod-summary{display:none;}
