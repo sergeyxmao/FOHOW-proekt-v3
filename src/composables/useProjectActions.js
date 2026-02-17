@@ -339,19 +339,28 @@ const getExportHtmlCss = () => `
   @keyframes lineBalanceFlow{0%{stroke-dashoffset:-24;}50%{stroke:#d93025;}100%{stroke-dashoffset:24;}}
   @keyframes linePvFlow{0%{stroke-dashoffset:-18;}50%{stroke:#0f62fe;}100%{stroke-dashoffset:18;}}
   #canvas .cards-container{position:absolute;inset:0;pointer-events:none;}
-  #canvas .card{position:absolute;display:flex;flex-direction:column;align-items:stretch;box-sizing:border-box;border-radius:26px;overflow:hidden;background:rgba(255,255,255,0.92);box-shadow:0 18px 48px rgba(15,23,42,0.18);border:1px solid rgba(15,23,42,0.08);}
+  #canvas .card{position:absolute;display:flex;flex-direction:column;align-items:stretch;box-sizing:border-box;border-radius:26px;overflow:visible;background:rgba(255,255,255,0.92);box-shadow:0 18px 48px rgba(15,23,42,0.18);border:1px solid rgba(15,23,42,0.08);}
   #canvas .card-title{display:flex;align-items:center;justify-content:center;width:100%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:18px 12px;font-size:18px;font-weight:700;letter-spacing:0.01em;color:#0f172a;}
   #canvas .card-body{padding:20px 20px 60px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;color:#111827;font-size:16px;}
-  #canvas .card-row{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;flex-wrap:wrap;width:100%;}
-  #canvas .label{color:#6b7280;font-weight:500;font-size:14px;text-align:center;max-width:100%;word-break:break-word;overflow-wrap:anywhere;}
-  #canvas .value{color:#111827;font-weight:600;font-size:15px;outline:none;padding:3px 6px;border-radius:6px;line-height:1.5;}
-  #canvas .pv-row .value{font-size:18px;font-weight:600;}
+  #canvas .card-row{display:flex;align-items:center;justify-content:center;gap:10px;text-align:center;flex-wrap:nowrap;white-space:nowrap;width:100%;}
+  #canvas .label{color:#6b7280;font-weight:700;font-size:24px;text-align:center;max-width:100%;word-break:break-word;overflow-wrap:anywhere;}
+  #canvas .value{color:#111827;font-weight:700;font-size:28px;outline:none;padding:3px 6px;border-radius:6px;line-height:1.5;}
+  #canvas .pv-row .value{font-size:28px;font-weight:700;}
+  #canvas .pv-separator{font-size:28px;font-weight:700;}
+  #canvas .pv-value-container{display:flex;align-items:center;gap:2px;white-space:nowrap;flex-wrap:nowrap;}
+  #canvas .pv-row{flex-wrap:nowrap;}
   #canvas .coin-icon{width:32px;height:32px;flex-shrink:0;}
   #canvas .slf-badge,#canvas .fendou-badge,#canvas .rank-badge{position:absolute;display:none;pointer-events:none;user-select:none;}
   #canvas .slf-badge.visible{display:block;top:15px;left:15px;font-size:36px;font-weight:900;color:#ffc700;text-shadow:1px 2px 6px rgba(15,23,42,0.35);}
   #canvas .fendou-badge.visible{display:block;top:-25px;left:50%;transform:translateX(-50%);font-size:56px;font-weight:900;color:#ef4444;text-shadow:1px 2px 6px rgba(15,23,42,0.35);}
   #canvas .rank-badge.visible{display:block;top:-15px;right:15px;width:80px;height:auto;transform:rotate(15deg);}
   #canvas .card-body-html{margin-top:8px;text-align:left;width:100%;font-size:14px;line-height:1.45;color:#111827;}
+  #canvas .card--large .card-body,#canvas .card--gold .card-body{justify-content:center;align-items:center;padding-left:20px;}
+  #canvas .card--large .card-row,#canvas .card--gold .card-row{font-size:18px;line-height:1.6;justify-content:center;text-align:center;}
+  #canvas .card--large .card-row .label,#canvas .card--gold .card-row .label{font-size:29px;}
+  #canvas .card--large .card-row .value,#canvas .card--gold .card-row .value{font-size:31px;font-weight:700;}
+  #canvas .card--large .pv-value-left,#canvas .card--large .pv-value-right,#canvas .card--large .pv-separator,#canvas .card--gold .pv-value-left,#canvas .card--gold .pv-value-right,#canvas .card--gold .pv-separator{font-size:31px;font-weight:700;}
+  #canvas .card--large .card-title,#canvas .card--gold .card-title{font-size:32px;font-weight:900;}
   #canvas [data-side]{display:none;}
 `
 
@@ -1108,9 +1117,12 @@ ${connectionPathsSvg}
   }
 
 // Вспомогательная функция для восстановления стилей и скачивания
-const restoreAndDownload = async (finalCanvas, exportSettings, tempStyles, canvasContainer, originalImageSources = null) => {
+const restoreAndDownload = async (finalCanvas, exportSettings, tempStyles, canvasContainer, originalImageSources = null, lodClassesToRestore = []) => {
   // Убираем класс capturing
   canvasContainer.classList.remove('canvas-container--capturing')
+
+  // Восстанавливаем LOD-классы
+  lodClassesToRestore.forEach(cls => canvasContainer.classList.add(cls))
 
   // Восстанавливаем временные стили
   tempStyles.forEach(({ element, property, originalValue }) => {
@@ -1191,6 +1203,11 @@ const handleExportPNG = async (exportSettings = null) => {
 
     // Добавить класс для скрытия UI элементов
     canvasContainer.classList.add('canvas-container--capturing')
+
+    // Временно отключаем LOD-режим: при экспорте карточки должны рендериться полностью
+    const lodClasses = ['canvas-container--lod', 'canvas-container--lod-deep', 'canvas-container--lod-minimal', 'canvas-container--lod-ultra']
+    const activeLodClasses = lodClasses.filter(cls => canvasContainer.classList.contains(cls))
+    activeLodClasses.forEach(cls => canvasContainer.classList.remove(cls))
 
     // =====================================================
     // КРИТИЧНО: Конвертируем все изображения в data URI ДО экспорта
@@ -1296,26 +1313,81 @@ const handleExportPNG = async (exportSettings = null) => {
       el.style.display = 'none'
     })
 
+    // ИСПРАВЛЕНИЕ: Убираем фиксированную высоту карточек — при увеличенных шрифтах контент может не поместиться
+    const allCards = canvasContainer.querySelectorAll('.card')
+    allCards.forEach(el => {
+      if (el.style.height) {
+        tempStyles.push({ element: el, property: 'minHeight', originalValue: el.style.minHeight })
+        tempStyles.push({ element: el, property: 'height', originalValue: el.style.height })
+        el.style.minHeight = el.style.height
+        el.style.height = 'auto'
+      }
+      // Убираем overflow: hidden чтобы контент не обрезался
+      tempStyles.push({ element: el, property: 'overflow', originalValue: el.style.overflow })
+      el.style.overflow = 'visible'
+    })
+
+    // ИСПРАВЛЕНИЕ: Для больших/Gold карточек убираем padding-left (аватар скрыт) и центрируем
+    const largeCardBodies = canvasContainer.querySelectorAll('.card--large .card-body, .card--gold .card-body')
+    largeCardBodies.forEach(el => {
+      tempStyles.push({ element: el, property: 'paddingLeft', originalValue: el.style.paddingLeft })
+      el.style.paddingLeft = '20px'
+    })
+
+    // Центрировать card-body и card-row на ВСЕХ карточках
+    const allCardBodies = canvasContainer.querySelectorAll('.card-body')
+    allCardBodies.forEach(el => {
+      tempStyles.push({ element: el, property: 'alignItems', originalValue: el.style.alignItems })
+      tempStyles.push({ element: el, property: 'textAlign', originalValue: el.style.textAlign })
+      el.style.alignItems = 'center'
+      el.style.textAlign = 'center'
+    })
+    const allCardRows = canvasContainer.querySelectorAll('.card-row')
+    allCardRows.forEach(el => {
+      tempStyles.push({ element: el, property: 'justifyContent', originalValue: el.style.justifyContent })
+      tempStyles.push({ element: el, property: 'textAlign', originalValue: el.style.textAlign })
+      tempStyles.push({ element: el, property: 'flexWrap', originalValue: el.style.flexWrap })
+      tempStyles.push({ element: el, property: 'whiteSpace', originalValue: el.style.whiteSpace })
+      el.style.justifyContent = 'center'
+      el.style.textAlign = 'center'
+      el.style.flexWrap = 'nowrap'
+      el.style.whiteSpace = 'nowrap'
+    })
+
     // Увеличить текст и сделать жирным при экспорте
     const labels = canvasContainer.querySelectorAll('.label')
     labels.forEach(el => {
+      const isLargeCard = el.closest('.card--large') || el.closest('.card--gold')
       tempStyles.push({ element: el, property: 'fontSize', originalValue: el.style.fontSize })
       tempStyles.push({ element: el, property: 'fontWeight', originalValue: el.style.fontWeight })
-      el.style.fontSize = '20px'
+      tempStyles.push({ element: el, property: 'textAlign', originalValue: el.style.textAlign })
+      el.style.fontSize = isLargeCard ? '29px' : '24px'
       el.style.fontWeight = '700'
+      el.style.textAlign = 'center'
     })
     const values = canvasContainer.querySelectorAll('.value')
     values.forEach(el => {
+      const isLargeCard = el.closest('.card--large') || el.closest('.card--gold')
       tempStyles.push({ element: el, property: 'fontSize', originalValue: el.style.fontSize })
       tempStyles.push({ element: el, property: 'fontWeight', originalValue: el.style.fontWeight })
-      el.style.fontSize = '22px'
+      el.style.fontSize = isLargeCard ? '31px' : '28px'
+      el.style.fontWeight = '700'
+    })
+    // Увеличить PV-разделитель
+    const pvSeparators = canvasContainer.querySelectorAll('.pv-separator')
+    pvSeparators.forEach(el => {
+      const isLargeCard = el.closest('.card--large') || el.closest('.card--gold')
+      tempStyles.push({ element: el, property: 'fontSize', originalValue: el.style.fontSize })
+      tempStyles.push({ element: el, property: 'fontWeight', originalValue: el.style.fontWeight })
+      el.style.fontSize = isLargeCard ? '31px' : '28px'
       el.style.fontWeight = '700'
     })
     const cardTitlesExport = canvasContainer.querySelectorAll('.card-title')
     cardTitlesExport.forEach(el => {
+      const isLargeCard = el.closest('.card--large') || el.closest('.card--gold')
       tempStyles.push({ element: el, property: 'fontSize', originalValue: el.style.fontSize })
       tempStyles.push({ element: el, property: 'fontWeight', originalValue: el.style.fontWeight })
-      el.style.fontSize = '26px'
+      el.style.fontSize = isLargeCard ? '32px' : '28px'
       el.style.fontWeight = '900'
     })
 
@@ -1635,7 +1707,7 @@ const handleExportPNG = async (exportSettings = null) => {
       }
 
       // Восстановить стили и скачать
-      await restoreAndDownload(finalCanvas, exportSettings, tempStyles, canvasContainer, originalImageSources)
+      await restoreAndDownload(finalCanvas, exportSettings, tempStyles, canvasContainer, originalImageSources, activeLodClasses)
 
     // =====================================================
     // РЕЖИМ 2: Экспорт всей схемы (ИСПРАВЛЕН)
@@ -2048,11 +2120,16 @@ const handleExportPNG = async (exportSettings = null) => {
       }
 
       // Восстановить стили и скачать
-      await restoreAndDownload(finalCanvas, exportSettings, tempStyles, canvasContainer, originalImageSources)
+      await restoreAndDownload(finalCanvas, exportSettings, tempStyles, canvasContainer, originalImageSources, activeLodClasses)
     }
 
   } catch (error) {
     console.error('Ошибка при экспорте в PNG:', error)
+    // Восстанавливаем LOD-классы и capturing при ошибке
+    if (canvasContainer) {
+      canvasContainer.classList.remove('canvas-container--capturing')
+      activeLodClasses.forEach(cls => canvasContainer.classList.add(cls))
+    }
     alert('Экспорт в PNG завершился ошибкой. Подробности в консоли.')
   }
 }

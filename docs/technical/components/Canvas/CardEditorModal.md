@@ -20,6 +20,8 @@
 - Во время редактирования заголовка или PV
 
 ## Функционал
+- **Аватар пользователя** (только для большой/gold лицензии) — загружается по personal_id (текст карточки)
+- **Кнопка «Заметка»** (для всех типов карточек) — открывает NoteWindow/календарь
 - Редактирование PV (числовой input, 30–330)
 - Редактирование баланса L/R (числовые input) + кнопка сброса
 - Редактирование актив-заказов L/R (числовые input) + кнопка сброса
@@ -49,6 +51,7 @@
 | `clear-balance` | `{ cardId }` | Сброс ручного баланса |
 | `update-active-pv` | `{ cardId, direction, step }` | Изменение Active PV (дельта от текущего) |
 | `clear-active-pv` | `{ cardId }` | Очистка Active PV |
+| `open-note` | `{ cardId }` | Открытие NoteWindow (календарь/заметки) для карточки |
 
 ### Закрытие
 - Клик на overlay (за пределами модала)
@@ -75,9 +78,11 @@ CanvasBoard (handler)
   |- handleEditorUpdateBalance -> cardsStore.updateCard (balanceManualOverride)
   |- handleEditorClearBalance -> сброс balanceManualOverride и manualAdjustments
   |- handleEditorUpdateActivePv -> applyActivePvDelta + applyActivePvPropagation
-  +- handleEditorClearActivePv -> applyActivePvClear + applyActivePvPropagation
+  |- handleEditorClearActivePv -> applyActivePvClear + applyActivePvPropagation
+  +- handleEditorOpenNote -> openNoteForCard (открывает NoteWindow)
 ```
 
 ## История изменений
+- 2026-02-17: v3 — добавлен аватар пользователя для большой/gold лицензии (с загрузкой по personal_id), кнопка «Заметка» для всех типов карточек
 - 2025-02-04: v2 — компактный дизайн, позиционирование поверх карточки, числовые input вместо кнопок +/-, раздельные кнопки сброса для баланса и актива
 - 2025-02-04: v1 — создан компонент для оптимизации производительности

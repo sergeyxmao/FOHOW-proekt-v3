@@ -44,7 +44,6 @@ const isDpiAvailable = (dpi) => {
   
 // Форматы листа с размерами в миллиметрах
 const pageFormats = [
-  { id: 'original', label: 'Оригинальный размер', width: null, height: null },
   { id: 'a4', label: 'A4', width: 210, height: 297 },
   { id: 'a3', label: 'A3', width: 297, height: 420 },
   { id: 'a2', label: 'A2', width: 420, height: 594 },
@@ -53,10 +52,8 @@ const pageFormats = [
 
 // DPI опции
 const dpiOptions = [
-  { value: 96, label: '96 DPI (веб)' },
-  { value: 150, label: '150 DPI (стандарт)' },
-  { value: 300, label: '300 DPI (печать)' },
-  { value: 600, label: '600 DPI (высокое качество)' }
+  { value: 300, label: '300 DPI', description: 'печать' },
+  { value: 600, label: '600 DPI', description: 'высокое качество' }
 ]
 
 // Состояние формы
@@ -185,21 +182,23 @@ const handleClose = () => {
     <div class="export-settings-panel__body">
       <!-- Формат листа -->
       <div class="form-group">
-        <label for="page-format" class="form-label">Формат листа:</label>
-        <select
-          id="page-format"
-          v-model="selectedFormat"
-          class="form-select"
-        >
-          <option
+        <label class="form-label">Формат листа:</label>
+        <div class="format-buttons">
+          <button
             v-for="format in pageFormats"
             :key="format.id"
-            :value="format.id"
+            type="button"
+            class="format-btn"
+            :class="{
+              active: selectedFormat === format.id,
+              'format-btn--disabled': !isFormatAvailable(format.id)
+            }"
             :disabled="!isFormatAvailable(format.id)"
+            @click="selectedFormat = format.id"
           >
-            {{ format.label }}{{ !isFormatAvailable(format.id) ? ' (недоступно)' : '' }}
-          </option>
-        </select>
+            {{ format.label }}
+          </button>
+        </div>
       </div>
 
       <!-- Ориентация -->
@@ -229,21 +228,24 @@ const handleClose = () => {
 
       <!-- Разрешение (DPI) -->
       <div class="form-group">
-        <label for="dpi" class="form-label">Разрешение:</label>
-        <select
-          id="dpi"
-          v-model.number="selectedDPI"
-          class="form-select"
-        >
-          <option
+        <label class="form-label">Разрешение:</label>
+        <div class="dpi-buttons">
+          <button
             v-for="dpi in dpiOptions"
             :key="dpi.value"
-            :value="dpi.value"
+            type="button"
+            class="dpi-btn"
+            :class="{
+              active: selectedDPI === dpi.value,
+              'dpi-btn--disabled': !isDpiAvailable(dpi.value)
+            }"
             :disabled="!isDpiAvailable(dpi.value)"
+            @click="selectedDPI = dpi.value"
           >
-            {{ dpi.label }}{{ !isDpiAvailable(dpi.value) ? ' (недоступно)' : '' }}
-          </option>
-        </select>
+            <span class="dpi-btn__label">{{ dpi.label }}</span>
+            <span class="dpi-btn__desc">{{ dpi.description }}</span>
+          </button>
+        </div>
       </div>
 
       <!-- Дополнительные опции -->
@@ -504,6 +506,104 @@ const handleClose = () => {
 .orientation-icon {
   font-size: 28px;
   line-height: 1;
+}
+
+/* Кнопки формата листа */
+.format-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.format-btn {
+  flex: 1;
+  padding: 10px 8px;
+  border: 1.5px solid rgba(15, 23, 42, 0.12);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.8);
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.format-btn:hover:not(:disabled) {
+  border-color: rgba(255, 193, 7, 0.6);
+  background: rgba(255, 193, 7, 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(255, 193, 7, 0.15);
+}
+
+.format-btn.active {
+  border-color: #ffc107;
+  background: rgba(255, 193, 7, 0.15);
+  color: #000000;
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.3);
+}
+
+.format-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.format-btn--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Кнопки DPI */
+.dpi-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.dpi-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 8px;
+  border: 1.5px solid rgba(15, 23, 42, 0.12);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.8);
+  color: #0f172a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dpi-btn:hover:not(:disabled) {
+  border-color: rgba(255, 193, 7, 0.6);
+  background: rgba(255, 193, 7, 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(255, 193, 7, 0.2);
+}
+
+.dpi-btn.active {
+  border-color: #ffc107;
+  background: rgba(255, 193, 7, 0.15);
+  color: #000000;
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.3);
+}
+
+.dpi-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.dpi-btn--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dpi-btn__label {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.dpi-btn__desc {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
 }
 
 .info-box {

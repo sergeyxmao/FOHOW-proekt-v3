@@ -483,6 +483,15 @@ const handleCloseCardEditor = () => {
   editorModalCardId.value = null;
 };
 
+const handleEditorOpenNote = ({ cardId }) => {
+  const card = findCardById(cardId);
+  if (!card) return;
+  const note = ensureCardNote(card);
+  if (!note.visible) {
+    openNoteForCard(card);
+  }
+};
+
 const handleEditorDeleteCard = async ({ cardId }) => {
   editorModalCardId.value = null;
   await cardsStore.removeCard(cardId);
@@ -3175,6 +3184,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       @update-cycles-stage="handleEditorUpdateCyclesStage"
       @clear-cycles-stage="handleEditorClearCyclesStage"
       @delete-card="handleEditorDeleteCard"
+      @open-note="handleEditorOpenNote"
     />
   </div>
 </template>

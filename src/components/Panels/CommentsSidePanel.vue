@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import UserComments from './UserComments.vue'
 import PanelSwitchBar from './PanelSwitchBar.vue'
@@ -16,6 +17,7 @@ const props = defineProps({
 
 const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
+const userCommentsRef = ref(null)
 
 const handleClose = () => {
   sidePanelsStore.closePanel()
@@ -32,6 +34,17 @@ const handleClose = () => {
   >
     <div class="comments-side-panel__header">
       <h2 class="comments-side-panel__title">{{ t('discussionMenu.boardComments') }}</h2>
+      <div v-if="userCommentsRef" class="comments-side-panel__colors">
+        <button
+          v-for="color in userCommentsRef.colorPalette"
+          :key="color"
+          type="button"
+          class="comments-side-panel__color-btn"
+          :class="{ 'comments-side-panel__color-btn--active': userCommentsRef.newCommentColor === color }"
+          :style="{ backgroundColor: color }"
+          @click="userCommentsRef.newCommentColor = color"
+        />
+      </div>
       <button
         type="button"
         class="comments-side-panel__close"
@@ -45,7 +58,7 @@ const handleClose = () => {
     <PanelSwitchBar :is-modern-theme="isModernTheme" />
 
     <div class="comments-side-panel__content">
-      <UserComments />
+      <UserComments ref="userCommentsRef" />
     </div>
   </div>
 </template>
@@ -84,6 +97,33 @@ const handleClose = () => {
   font-size: 20px;
   font-weight: 700;
   color: #1f2937;
+}
+
+.comments-side-panel__colors {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  margin-right: 12px;
+}
+
+.comments-side-panel__color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.comments-side-panel__color-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.comments-side-panel__color-btn--active {
+  border-color: #1f2937;
+  box-shadow: 0 0 0 2px rgba(31, 41, 55, 0.2);
 }
 
 .comments-side-panel__close {

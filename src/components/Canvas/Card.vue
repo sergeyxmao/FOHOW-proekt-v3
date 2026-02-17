@@ -1478,6 +1478,7 @@ watch(
 .card-row.pv-row {
   justify-content: center;
   gap: 10px;
+  flex-wrap: nowrap;
 }
 
 .coin-icon-wrapper {
@@ -1591,6 +1592,8 @@ watch(
   display: flex;
   align-items: center;
   gap: 2px;
+  white-space: nowrap;
+  flex-wrap: nowrap;
 }
 
 .pv-value-left {
@@ -1758,8 +1761,8 @@ watch(
 
 .card--large .pv-value,
 .card--gold .pv-value {
-  font-size: 39px;
-  font-weight: 800;
+  font-size: 31px;
+  font-weight: 700;
 }
 
 .card--large .pv-value-left,
@@ -1768,15 +1771,15 @@ watch(
 .card--gold .pv-value-left,
 .card--gold .pv-value-right,
 .card--gold .pv-separator {
-  font-size: 39px;
-  font-weight: 800;
+  font-size: 31px;
+  font-weight: 700;
 }
 
 .card--large .pv-left-input,
 .card--gold .pv-left-input {
   width: 110px;
-  font-size: 39px;
-  font-weight: 800;
+  font-size: 31px;
+  font-weight: 700;
 }
 
 .active-pv-hidden {

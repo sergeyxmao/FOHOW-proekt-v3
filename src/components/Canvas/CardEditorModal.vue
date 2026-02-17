@@ -1,7 +1,12 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useAuthStore } from '../../stores/auth';
+import { useNotesStore } from '../../stores/notes';
 import { parseActivePV } from '../../utils/activePv';
 import { calcStagesAndCycles } from '../../utils/calculationEngine';
+
+const authStore = useAuthStore();
+const notesStore = useNotesStore();
 
 const props = defineProps({
   card: {
@@ -28,8 +33,97 @@ const emit = defineEmits([
   'clear-active-pv',
   'update-cycles-stage',
   'clear-cycles-stage',
-  'delete-card'
+  'delete-card',
+  'open-note'
 ]);
+
+// === Large card detection ===
+
+const isLargeCard = computed(() => {
+  return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 600;
+});
+
+// === Avatar (only for large/gold cards) ===
+
+const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfohow.ru/api';
+
+const avatarData = ref({
+  avatar_url: null,
+  username: null,
+  full_name: null,
+  initials: null
+});
+
+let searchTimeout = null;
+
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.split(' ');
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+}
+
+function getAvatarUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  return `${API_URL.replace('/api', '')}${url}`;
+}
+
+async function fetchAvatarByPersonalId(value) {
+  if (searchTimeout) clearTimeout(searchTimeout);
+
+  if (!value || value.trim() === '') {
+    avatarData.value = { avatar_url: null, username: null, full_name: null, initials: null };
+    return;
+  }
+
+  searchTimeout = setTimeout(async () => {
+    try {
+      const response = await fetch(`${API_URL}/users/search-by-personal-id/${value}`, {
+        headers: { 'Authorization': `Bearer ${authStore.token}` }
+      });
+      const data = await response.json();
+      if (data.found) {
+        avatarData.value = {
+          avatar_url: data.user.avatar_url,
+          username: data.user.username,
+          full_name: data.user.full_name,
+          initials: getInitials(data.user.full_name || data.user.username)
+        };
+      } else {
+        avatarData.value = { avatar_url: null, username: null, full_name: null, initials: null };
+      }
+    } catch (err) {
+      console.error('Ошибка поиска пользователя:', err);
+    }
+  }, 500);
+}
+
+watch(
+  () => props.card.text,
+  (newText) => {
+    if (isLargeCard.value) {
+      fetchAvatarByPersonalId(newText);
+    }
+  },
+  { immediate: true }
+);
+
+// === Notes ===
+
+const hasNotes = computed(() => {
+  const cardNotes = notesStore.getNotesForCard(props.card.id);
+  if (!cardNotes || typeof cardNotes !== 'object') return false;
+  return Object.values(cardNotes).some(note =>
+    note && typeof note.content === 'string' && note.content.trim().length > 0
+  );
+});
+
+const handleOpenNote = () => {
+  emit('open-note', { cardId: props.card.id });
+};
 
 // === Title editing ===
 
@@ -175,7 +269,7 @@ const stageDisplay = computed(() => {
 
 // === Modal positioning (viewport-aware + drag) ===
 
-const MIN_MODAL_WIDTH = 380;
+const MIN_MODAL_WIDTH = 340;
 const VIEWPORT_PADDING = 4;
 
 // Смещение при перетаскивании
@@ -381,46 +475,75 @@ onBeforeUnmount(() => {
 
         <!-- Body -->
         <div class="editor-body">
-          <!-- PV -->
-          <div class="editor-row">
-            <span class="editor-label">PV:</span>
-            <input
-              type="number"
-              class="editor-input"
-              :value="pvLeftValue"
-              :min="MIN_LEFT_PV"
-              :max="MAX_LEFT_PV"
-              @change="handlePvChange"
-            />
-            <span class="editor-hint">/ {{ PV_RIGHT_VALUE }}pv</span>
+          <div class="editor-body-layout">
+            <!-- Fields (left side) -->
+            <div class="editor-fields">
+              <!-- PV -->
+              <div class="editor-row">
+                <span class="editor-label">PV:</span>
+                <input
+                  type="number"
+                  class="editor-input"
+                  :value="pvLeftValue"
+                  :min="MIN_LEFT_PV"
+                  :max="MAX_LEFT_PV"
+                  @change="handlePvChange"
+                />
+                <span class="editor-hint">/ {{ PV_RIGHT_VALUE }}pv</span>
+              </div>
+
+              <!-- Balance -->
+              <div class="editor-row">
+                <span class="editor-label">Баланс:</span>
+                <input
+                  type="number"
+                  class="editor-input"
+                  :value="balanceL"
+                  :min="automaticBalance.L"
+                  @change="handleBalanceChange('left', $event)"
+                />
+                <span class="editor-sep">/</span>
+                <input
+                  type="number"
+                  class="editor-input"
+                  :value="balanceR"
+                  :min="automaticBalance.R"
+                  @change="handleBalanceChange('right', $event)"
+                />
+                <button class="editor-trash" @click="handleClearBalance" title="Сбросить баланс">🗑️</button>
+              </div>
+
+              <!-- Active orders -->
+              <div class="editor-row">
+                <span class="editor-label">Актив:</span>
+                <span class="editor-readonly">{{ activeOrdersDisplay }}</span>
+              </div>
+            </div>
+
+            <!-- Avatar (right side, only for large/gold cards) -->
+            <div v-if="isLargeCard" class="editor-avatar-container">
+              <div
+                v-if="avatarData.avatar_url"
+                class="editor-avatar"
+                :style="{ backgroundImage: `url(${getAvatarUrl(avatarData.avatar_url)})` }"
+                :title="avatarData.full_name || avatarData.username"
+              ></div>
+              <div
+                v-else-if="avatarData.initials"
+                class="editor-avatar editor-avatar--placeholder"
+                :title="avatarData.full_name || avatarData.username"
+              >
+                {{ avatarData.initials }}
+              </div>
+              <div
+                v-else
+                class="editor-avatar editor-avatar--default"
+                title="Партнёр"
+              ></div>
+            </div>
           </div>
 
-          <!-- Balance -->
-          <div class="editor-row">
-            <span class="editor-label">Баланс:</span>
-            <input
-              type="number"
-              class="editor-input"
-              :value="balanceL"
-              :min="automaticBalance.L"
-              @change="handleBalanceChange('left', $event)"
-            />
-            <span class="editor-sep">/</span>
-            <input
-              type="number"
-              class="editor-input"
-              :value="balanceR"
-              :min="automaticBalance.R"
-              @change="handleBalanceChange('right', $event)"
-            />
-            <button class="editor-trash" @click="handleClearBalance" title="Сбросить баланс">🗑️</button>
-          </div>
-
-          <!-- Active orders (кнопки +1/+10/-1/-10, идентично main) -->
-          <div class="editor-row">
-            <span class="editor-label">Актив:</span>
-            <span class="editor-readonly">{{ activeOrdersDisplay }}</span>
-          </div>
+          <!-- Active PV controls -->
           <div class="editor-active-controls">
             <div class="active-pv-controls__group">
               <button type="button" class="active-pv-btn" @click="handleActiveStep('left', 1)">+1</button>
@@ -442,7 +565,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <!-- Cycle/stage + Delete -->
+          <!-- Cycle/stage + Note + Delete -->
           <div class="editor-row">
             <span class="editor-label">Цикл/этап:</span>
             <input
@@ -455,6 +578,13 @@ onBeforeUnmount(() => {
             <span class="editor-sep">/</span>
             <span class="editor-input editor-input--readonly">{{ stageDisplay }}</span>
             <button class="editor-trash" @click="handleClearCyclesStage" title="Сбросить цикл/этап">🗑️</button>
+            <button
+              type="button"
+              class="editor-note-btn"
+              :class="{ 'editor-note-btn--active': hasNotes }"
+              :title="hasNotes ? 'Открыть календарь' : 'Добавить запись'"
+              @click="handleOpenNote"
+            >📅</button>
             <button class="editor-delete-btn" @click="handleDeleteClick" title="Удалить карточку">🗑️</button>
           </div>
         </div>
@@ -646,7 +776,7 @@ onBeforeUnmount(() => {
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 6px;
   flex-wrap: nowrap;
   padding: 2px 0 4px;
@@ -777,5 +907,98 @@ onBeforeUnmount(() => {
 
 .delete-confirm-btn--no:hover {
   background: #d1d5db;
+}
+
+/* Body layout: fields left, avatar right */
+.editor-body-layout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.editor-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.editor-avatar-container {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.editor-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  border: 2px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.editor-avatar--placeholder {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editor-avatar--default {
+  background: #e5e7eb;
+  position: relative;
+}
+
+.editor-avatar--default::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  background: #9ca3af;
+  border-radius: 50%;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E") no-repeat center;
+  mask-size: contain;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E") no-repeat center;
+  -webkit-mask-size: contain;
+}
+
+/* Note button (inline, in bottom row) */
+.editor-note-btn {
+  margin-left: auto;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.06);
+  color: #3b82f6;
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.editor-note-btn:hover {
+  background: rgba(59, 130, 246, 0.14);
+}
+
+.editor-note-btn--active {
+  background: rgba(249, 115, 22, 0.1);
+  border-color: rgba(249, 115, 22, 0.3);
+  color: #f97316;
+}
+
+.editor-note-btn--active:hover {
+  background: rgba(249, 115, 22, 0.18);
 }
 </style>

@@ -134,6 +134,8 @@ const handleDelete = async (id) => {
 }
 
 // Форматирование даты
+defineExpose({ colorPalette, newCommentColor })
+
 const formatDate = (isoString) => {
   try {
     const date = new Date(isoString)
@@ -149,21 +151,6 @@ const formatDate = (isoString) => {
 
 <template>
   <div class="user-comments">
-    <!-- Форма добавления нового комментария -->
-    <div class="user-comments__header">
-      <div class="user-comments__header-colors">
-        <button
-          v-for="color in colorPalette"
-          :key="color"
-          type="button"
-          class="user-comments__color-btn"
-          :class="{ 'user-comments__color-btn--active': newCommentColor === color }"
-          :style="{ backgroundColor: color }"
-          :title="color"
-          @click="newCommentColor = color"
-        />
-      </div>
-    </div>
     <div class="user-comments__search">
       <input
         v-model="searchQuery"
@@ -270,16 +257,6 @@ const formatDate = (isoString) => {
   width: 100%;
 }
 
-.user-comments__header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-.user-comments__search {
-  margin-top: -4px;
-}
-
 .user-comments__search-input {
   width: 100%;
   padding: 10px 12px;
@@ -293,13 +270,6 @@ const formatDate = (isoString) => {
 .user-comments__search-input:focus {
   border-color: #5d8bf4;
   box-shadow: 0 0 0 3px rgba(93, 139, 244, 0.1);
-}
-
-.user-comments__header-colors {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  width: 100%;  
 }
 
 .user-comments__form {
@@ -324,25 +294,6 @@ const formatDate = (isoString) => {
   outline: none;
   border-color: #5d8bf4;
   box-shadow: 0 0 0 3px rgba(93, 139, 244, 0.1);
-}
-
-.user-comments__color-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.user-comments__color-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.user-comments__color-btn--active {
-  border-color: #1f2937;
-  box-shadow: 0 0 0 2px rgba(31, 41, 55, 0.2);
 }
 
 .user-comments__submit {
