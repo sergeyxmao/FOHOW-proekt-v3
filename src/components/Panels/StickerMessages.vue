@@ -1,8 +1,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useStickersStore } from '../../stores/stickers.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useMobileStore } from '../../stores/mobile.js'
+
+const { t } = useI18n()
 
 const props = defineProps({
   isModernTheme: {
@@ -77,7 +80,7 @@ const handleCancelEdit = () => {
 const handleDelete = async (sticker, event) => {
   event.stopPropagation()
 
-  if (!confirm(`Вы уверены, что хотите удалить стикер?`)) {
+  if (!confirm(t('stickerMsg.deleteConfirm'))) {
     return
   }
 
@@ -107,7 +110,7 @@ const formatDate = (dateString) => {
 
 // Получаем превью текста (первые 100 символов)
 const getPreview = (content) => {
-  if (!content || !content.trim()) return 'Пустой стикер'
+  if (!content || !content.trim()) return t('stickerMsg.emptySticker')
   const text = content.trim()
   if (text.length <= 100) return text
   return text.substring(0, 100) + '...'
@@ -123,7 +126,7 @@ onMounted(() => {
   <div class="sticker-messages" :class="{ 'sticker-messages--modern': props.isModernTheme }">
     <div class="sticker-messages__header">
       <h3 class="sticker-messages__title">
-        Сообщения
+        {{ t('stickerMsg.messages') }}
         <span v-if="hasMessages" class="sticker-messages__count">({{ messagesStickers.length }})</span>
       </h3>
     </div>
@@ -132,17 +135,17 @@ onMounted(() => {
         v-model="searchQuery"
         class="sticker-messages__search-input"
         type="search"
-        placeholder="Поиск по сообщениям..."
+        :placeholder="t('stickerMsg.searchPlaceholder')"
       />
     </div>
 
     <div v-if="!hasMessages" class="sticker-messages__empty">
       <div class="sticker-messages__empty-icon">📌</div>
       <p class="sticker-messages__empty-text">
-        Нет сообщений в стикерах
+        {{ t('stickerMsg.noMessages') }}
       </p>
       <p class="sticker-messages__empty-hint">
-        Добавьте текст в стикеры, чтобы увидеть их здесь
+        {{ t('stickerMsg.addTextHint') }}
       </p>
     </div>
 
@@ -160,13 +163,13 @@ onMounted(() => {
       >
         <div class="sticker-message-item__header">
           <span class="sticker-message-item__author">
-            {{ sticker.author_username || 'Неизвестный пользователь' }}
+            {{ sticker.author_username || t('stickerMsg.unknownUser') }}
           </span>
           <div class="sticker-message-item__actions">
             <button
               type="button"
               class="sticker-message-item__action sticker-message-item__action--edit"
-              title="Редактировать"
+              :title="t('common.edit')"
               @click="handleEdit(sticker, $event)"
             >
               ✏️
@@ -174,7 +177,7 @@ onMounted(() => {
             <button
               type="button"
               class="sticker-message-item__action sticker-message-item__action--delete"
-              title="Удалить"
+              :title="t('common.delete')"
               @click="handleDelete(sticker, $event)"
             >
               🗑️
@@ -192,7 +195,7 @@ onMounted(() => {
           <textarea
             v-model="editingContent"
             class="sticker-message-item__textarea"
-            placeholder="Введите текст стикера..."
+            :placeholder="t('stickerMsg.enterText')"
             @click.stop
           ></textarea>
           <div class="sticker-message-item__edit-actions">
@@ -201,14 +204,14 @@ onMounted(() => {
               class="sticker-message-item__edit-btn sticker-message-item__edit-btn--save"
               @click.stop="handleSaveEdit(sticker.id)"
             >
-              Сохранить
+              {{ t('common.save') }}
             </button>
             <button
               type="button"
               class="sticker-message-item__edit-btn sticker-message-item__edit-btn--cancel"
               @click.stop="handleCancelEdit"
             >
-              Отмена
+              {{ t('common.cancel') }}
             </button>
           </div>
         </div>
@@ -217,7 +220,7 @@ onMounted(() => {
         </div>
       </div>
 
-      <p v-if="!filteredMessages.length" class="sticker-messages__empty-text">Ничего не найдено</p>      
+      <p v-if="!filteredMessages.length" class="sticker-messages__empty-text">{{ t('imageLibrary.nothingFound') }}</p>      
     </div>
   </div>
 </template>

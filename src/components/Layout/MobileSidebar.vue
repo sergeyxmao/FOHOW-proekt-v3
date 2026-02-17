@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useCardsStore } from '@/stores/cards'
 import { useConnectionsStore } from '@/stores/connections'
 import { useViewSettingsStore } from '@/stores/viewSettings'
@@ -25,6 +26,7 @@ const emit = defineEmits([
   'add-template'
 ])
 
+const { t } = useI18n()
 const cardsStore = useCardsStore()
 const connectionsStore = useConnectionsStore()
 const viewSettingsStore = useViewSettingsStore()
@@ -226,7 +228,7 @@ onBeforeUnmount(() => {
       class="mobile-sidebar-button"
       type="button"
       @click="handleAddLicense"
-      title="Добавить лицензию"
+      :title="t('sidebar.addLicense')"
     >
       <span class="sidebar-icon">□</span>
     </button>
@@ -236,7 +238,7 @@ onBeforeUnmount(() => {
       class="mobile-sidebar-button"
       type="button"
       @click="handleAddLower"
-      title="Добавить более низкую"
+      :title="t('sidebar.addLower')"
     >
       <span class="sidebar-icon">⧠</span>
     </button>
@@ -246,7 +248,7 @@ onBeforeUnmount(() => {
       class="mobile-sidebar-button gold-button"
       type="button"
       @click="handleAddGold"
-      title="Добавить Gold"
+      :title="t('sidebar.addGold')"
     >
       <span class="sidebar-icon">★</span>
     </button>
@@ -258,7 +260,7 @@ onBeforeUnmount(() => {
         type="button"
         @click="toggleTemplateMenu"
         :disabled="!templateOptions.length"
-        title="Добавить шаблон"
+        :title="t('sidebar.addTemplate')"
       >
         <span class="sidebar-icon">⧉</span>
       </button>

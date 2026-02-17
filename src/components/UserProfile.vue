@@ -6,14 +6,14 @@
     ]"
   >
     <div class="profile-header">
-      <h2>Мой профиль</h2>
+      <h2>{{ t('userProfile.myProfile') }}</h2>
       <button
         class="tariff-btn"
         :style="getPlanBadgeStyle()"
         @click="selectTab('tariffs')"
-        title="Перейти в раздел тарифы"
+        :title="t('userProfile.goToTariffs')"
       >
-        {{ subscriptionStore.currentPlan?.name || 'Не определен' }}
+        {{ subscriptionStore.currentPlan?.name || t('userProfile.notDefined') }}
       </button>
       <button class="close-btn" @click="$emit('close')">×</button>
     </div>
@@ -32,7 +32,7 @@
           <div
             :class="['avatar-wrapper', 'avatar-wrapper--clickable', { 'avatar-wrapper--verified': user.is_verified }]"
             @click="openAvatarEdit"
-            title="Нажмите для редактирования аватара"
+            :title="t('userProfile.editAvatar')"
           >
             <img
               v-if="user.avatar_url"
@@ -83,47 +83,47 @@
             <div v-if="isInGracePeriod()" class="grace-warning">
               <div class="grace-warning-icon">⚠️</div>
               <div class="grace-warning-content">
-                <p class="grace-warning-title">Льготный период доступа</p>
+                <p class="grace-warning-title">{{ t('userProfile.gracePeriodTitle') }}</p>
                 <p class="grace-warning-text">
-                  Срок вашей подписки истек, но доступ сохранен до <strong>{{ getGracePeriodDate() }}</strong>.
-                  Продлите подписку, чтобы не потерять доступ к платным функциям.
+                  {{ t('userProfile.gracePeriodText') }} <strong>{{ getGracePeriodDate() }}</strong>.
+                  {{ t('userProfile.gracePeriodHint') }}
                 </p>
                 <button @click="activeTab = 'tariffs'" class="grace-warning-button">
-                  Продлить подписку
+                  {{ t('userProfile.renewSubscription') }}
                 </button>
               </div>
             </div>
 
             <div class="info-grid">
               <div class="info-item">
-                <label>Email:</label>
+                <label>{{ t('userProfile.email') }}</label>
                 <span>{{ user.email }}</span>
               </div>
 
               <div class="info-item">
-                <label>Имя пользователя:</label>
-                <span>{{ user.username || 'Не указано' }}</span>
+                <label>{{ t('userProfile.username') }}</label>
+                <span>{{ user.username || t('userProfile.notSpecified') }}</span>
               </div>
 
               <div class="info-item">
-                <label>Дата регистрации:</label>
+                <label>{{ t('userProfile.registrationDate') }}</label>
                 <span>{{ formatDate(user.created_at) }}</span>
               </div>
 
               <div class="info-item">
-                <label>Текущий тариф:</label>
+                <label>{{ t('userProfile.currentPlan') }}</label>
                 <span class="plan-badge" :style="getPlanBadgeStyle()">
-                  {{ subscriptionStore.currentPlan?.name || 'Не определен' }}
+                  {{ subscriptionStore.currentPlan?.name || t('userProfile.notDefined') }}
                 </span>
               </div>
 
               <div class="info-item">
-                <label>Начало подписки:</label>
+                <label>{{ t('userProfile.subscriptionStart') }}</label>
                 <span>{{ getStartDate() }}</span>
               </div>
 
               <div class="info-item">
-                <label>Окончание подписки:</label>
+                <label>{{ t('userProfile.subscriptionEnd') }}</label>
                 <span :class="getExpiryClass()">
                   {{ getExpiryDate() }}
                 </span>
@@ -135,29 +135,29 @@
           <div v-if="activeTab === 'personal' && !isAvatarEditMode" class="tab-panel">
             <form @submit.prevent="savePersonalInfo" class="info-form">
               <div class="form-group">
-                <label for="username">Имя пользователя:</label>
+                <label for="username">{{ t('userProfile.username') }}</label>
                 <input
                   id="username"
                   v-model="personalForm.username"
                   type="text"
-                  placeholder="Введите имя пользователя"
+                  :placeholder="t('userProfile.enterUsername')"
                   maxlength="50"
                 />
-                <span class="form-hint">Будет отображаться в системе</span>
+                <span class="form-hint">{{ t('userProfile.usernameHint') }}</span>
               </div>
 
               <div class="form-group">
-                <label for="full-name">Полное имя:</label>
+                <label for="full-name">{{ t('userProfile.fullName') }}</label>
                 <input
                   id="full-name"
                   v-model="personalForm.full_name"
                   type="text"
-                  placeholder="Введите полное имя"
+                  :placeholder="t('userProfile.enterFullName')"
                 />
               </div>
 
               <div class="form-group">
-                <label for="phone">Телефон:</label>
+                <label for="phone">{{ t('userProfile.phone') }}</label>
                 <input
                   id="phone"
                   v-model="personalForm.phone"
@@ -167,27 +167,27 @@
               </div>
 
               <div class="form-group">
-                <label for="city">Город:</label>
+                <label for="city">{{ t('userProfile.city') }}</label>
                 <input
                   id="city"
                   v-model="personalForm.city"
                   type="text"
-                  placeholder="Введите город"
+                  :placeholder="t('userProfile.enterCity')"
                 />
               </div>
 
               <div class="form-group">
-                <label for="country">Страна:</label>
+                <label for="country">{{ t('userProfile.country') }}</label>
                 <input
                   id="country"
                   v-model="personalForm.country"
                   type="text"
-                  placeholder="Введите страну"
+                  :placeholder="t('userProfile.enterCountry')"
                 />
               </div>
 
               <div class="form-group">
-                <label for="office">Представительство:</label>
+                <label for="office">{{ t('userProfile.representation') }}</label>
                 <input
                   id="office"
                   v-model="personalForm.office"
@@ -204,8 +204,8 @@
                   for="personal-id-input"
                   :class="{ 'verified-label': user.is_verified }"
                 >
-                  Компьютерный номер:
-                  <span v-if="user.is_verified" class="verified-icon" title="Верифицирован">⭐</span>
+                  {{ t('userProfile.computerNumber') }}
+                  <span v-if="user.is_verified" class="verified-icon" :title="t('userProfile.verified')">⭐</span>
                 </label>
                 <div
                   :class="[
@@ -218,14 +218,14 @@
                     id="personal-id-input"
                     v-model="personalIdSuffix"
                     type="text"
-                    placeholder="9 цифр"
+                    :placeholder="t('userProfile.digits9')"
                     maxlength="9"
                     @input="updatePersonalId"
                   />
                 </div>
                 <div v-if="personalIdError" class="error-text">{{ personalIdError }}</div>
-                <p class="hint-text">Введите 9 цифр после автоматического префикса</p>
-                <p v-if="user.is_verified" class="hint-text hint-text--warning">Изменение номера или представительства приведет к потере статуса верификации.</p>
+                <p class="hint-text">{{ t('userProfile.digits9hint') }}</p>
+                <p v-if="user.is_verified" class="hint-text hint-text--warning">{{ t('userProfile.verificationWarning') }}</p>
                 <!-- Кнопка верификации и сообщение об отклонении -->
                 <div v-if="!user.is_verified" class="verification-section">
                   <button
@@ -236,7 +236,7 @@
                     :disabled="!canSubmitVerification"
                   >
                     <span class="btn-icon">✓</span>
-                    Верифицировать
+                    {{ t('userProfile.verify') }}
                   </button>
                   <!-- Подсказка почему кнопка неактивна -->
                   <p v-if="verificationBlockReason && !verificationStatus.hasPendingRequest" class="hint-text hint-text--info">
@@ -246,7 +246,7 @@
                   <div v-else-if="verificationStatus.hasPendingRequest" class="verification-pending-wrapper">
                     <div class="verification-pending">
                       <span class="pending-icon">⏳</span>
-                      Заявка на модерации
+                      {{ t('userProfile.requestOnModeration') }}
                     </div>
                     <button
                       type="button"
@@ -254,7 +254,7 @@
                       @click="openCancelConfirm"
                       :disabled="cancellingVerification"
                     >
-                      {{ cancellingVerification ? 'Отмена...' : 'Отменить запрос' }}
+                      {{ cancellingVerification ? t('userProfile.cancelling') : t('userProfile.cancelRequest') }}
                     </button>
                   </div>
 
@@ -262,7 +262,7 @@
                   <div v-if="verificationStatus.lastRejection" class="rejection-message">
                     <div class="rejection-header">
                       <span class="rejection-icon">❌</span>
-                      <strong>Заявка отклонена</strong>
+                      <strong>{{ t('userProfile.requestRejected') }}</strong>
                     </div>
                     <p class="rejection-reason">{{ verificationStatus.lastRejection.rejection_reason }}</p>
                     <p class="rejection-date">
@@ -279,7 +279,7 @@
                 <!-- Кнопка истории верификации -->
                 <div v-if="verificationHistory.length > 0 || user.is_verified" class="verification-history-link">
                   <button type="button" class="btn-history" @click="openHistory">
-                    📋 История верификации
+                    📋 {{ t('userProfile.verificationHistory') }}
                   </button>
                 </div>
               </div>
@@ -299,7 +299,7 @@
               <div v-if="personalSuccess" class="success-message">{{ personalSuccess }}</div>
 
               <button type="submit" class="btn-save" :disabled="savingPersonal">
-                {{ savingPersonal ? 'Сохранение...' : '💾 Сохранить изменения' }}
+                {{ savingPersonal ? t('userProfile.saving') : '💾 ' + t('userProfile.saveChanges') }}
               </button>
             </form>
           </div>
@@ -308,7 +308,7 @@
           <div v-if="activeTab === 'social' && !isAvatarEditMode" class="tab-panel">
             <form @submit.prevent="saveSocialInfo" class="info-form">
               <div class="form-group">
-                <label for="telegram">Telegram (@username):</label>
+                <label for="telegram">{{ t('userProfile.telegramLabel') }}</label>
                 <input
                   id="telegram"
                   v-model="socialForm.telegram_user"
@@ -318,7 +318,7 @@
               </div>
 
               <div class="form-group">
-                <label for="vk">VK (ссылка):</label>
+                <label for="vk">{{ t('userProfile.vkLabel') }}</label>
                 <input
                   id="vk"
                   v-model="socialForm.vk_profile"
@@ -328,7 +328,7 @@
               </div>
 
               <div class="form-group">
-                <label for="instagram">Instagram (@username):</label>
+                <label for="instagram">{{ t('userProfile.instagramLabel') }}</label>
                 <input
                   id="instagram"
                   v-model="socialForm.instagram_profile"
@@ -338,7 +338,7 @@
               </div>
 
               <div class="form-group">
-                <label for="website">Сайт (URL):</label>
+                <label for="website">{{ t('userProfile.websiteLabel') }}</label>
                 <input
                   id="website"
                   v-model="socialForm.website"
@@ -351,7 +351,7 @@
               <div v-if="socialSuccess" class="success-message">{{ socialSuccess }}</div>
 
               <button type="submit" class="btn-save" :disabled="savingSocial">
-                {{ savingSocial ? 'Сохранение...' : '💾 Сохранить изменения' }}
+                {{ savingSocial ? t('userProfile.saving') : '💾 ' + t('userProfile.saveChanges') }}
               </button>
             </form>
           </div>
@@ -359,21 +359,21 @@
           <!-- ===== TAB 4: Настройки конфиденциальности ===== -->
           <div v-if="activeTab === 'privacy' && !isAvatarEditMode" class="tab-panel">
             <div class="privacy-settings-main">
-              <h3 class="privacy-settings-title">Управление видимостью данных</h3>
+              <h3 class="privacy-settings-title">{{ t('userProfile.dataVisibility') }}</h3>
               <p class="privacy-settings-hint">
-                Настройте, какие данные будут доступны для поиска другим пользователям.
-                Разрешенные поля (<svg class="lock-icon-inline lock-icon-inline--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/><path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg>) будут видны в результатах поиска, запрещенные (<svg class="lock-icon-inline lock-icon-inline--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/><path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg>) — скрыты.
+                {{ t('userProfile.privacyDescription') }}
+                {{ t('userProfile.searchAllowed') }} (<svg class="lock-icon-inline lock-icon-inline--open" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" fill="#4CAF50" stroke="#2E7D32" stroke-width="1.5"/><path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg>) {{ t('userProfile.privacyAllowedExplain') }} (<svg class="lock-icon-inline lock-icon-inline--closed" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="5" y="11" width="14" height="10" rx="2" fill="#F44336" stroke="#C62828" stroke-width="1.5"/><path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg>) {{ t('userProfile.privacyHiddenExplain') }}
               </p>
 
               <div class="privacy-fields-grid">
                 <!-- Личная информация -->
                 <div class="privacy-section">
-                  <h4 class="privacy-section-title">📋 Личная информация</h4>
+                  <h4 class="privacy-section-title">📋 {{ t('userProfile.personalInfoSection') }}</h4>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
-                      <span class="privacy-field-label">Имя пользователя</span>
-                      <span class="privacy-field-value">{{ personalForm.username || 'Не указано' }}</span>
+                      <span class="privacy-field-label">{{ t('userProfile.privacyUsername') }}</span>
+                      <span class="privacy-field-value">{{ personalForm.username || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -391,14 +391,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.username ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.username ? t('userProfile.searchAllowed') : t('userProfile.searchForbidden') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
-                      <span class="privacy-field-label">Полное имя</span>
-                      <span class="privacy-field-value">{{ personalForm.full_name || 'Не указано' }}</span>
+                      <span class="privacy-field-label">{{ t('userProfile.privacyFullName') }}</span>
+                      <span class="privacy-field-value">{{ personalForm.full_name || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -416,14 +416,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.full_name ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.full_name ? t('userProfile.searchAllowed') : t('userProfile.searchForbidden') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
-                      <span class="privacy-field-label">Телефон</span>
-                      <span class="privacy-field-value">{{ personalForm.phone || 'Не указано' }}</span>
+                      <span class="privacy-field-label">{{ t('userProfile.privacyPhone') }}</span>
+                      <span class="privacy-field-value">{{ personalForm.phone || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -441,14 +441,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.phone ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.phone ? t('userProfile.searchAllowed') : t('userProfile.searchForbidden') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
-                      <span class="privacy-field-label">Город</span>
-                      <span class="privacy-field-value">{{ personalForm.city || 'Не указано' }}</span>
+                      <span class="privacy-field-label">{{ t('userProfile.privacyCity') }}</span>
+                      <span class="privacy-field-value">{{ personalForm.city || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -466,14 +466,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.city ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.city ? t('userProfile.searchAllowed') : t('userProfile.searchForbidden') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
-                      <span class="privacy-field-label">Страна</span>
-                      <span class="privacy-field-value">{{ personalForm.country || 'Не указано' }}</span>
+                      <span class="privacy-field-label">{{ t('userProfile.privacyCountry') }}</span>
+                      <span class="privacy-field-value">{{ personalForm.country || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -491,14 +491,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.country ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.country ? t('userProfile.searchAllowed') : t('userProfile.searchForbidden') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
-                      <span class="privacy-field-label">Офис</span>
-                      <span class="privacy-field-value">{{ personalForm.office || 'Не указано' }}</span>
+                      <span class="privacy-field-label">{{ t('userProfile.privacyOffice') }}</span>
+                      <span class="privacy-field-value">{{ personalForm.office || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -516,14 +516,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.office ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.office ? t('userProfile.searchAllowed') : t('userProfile.searchForbidden') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
-                      <span class="privacy-field-label">Личный ID</span>
-                      <span class="privacy-field-value">{{ personalForm.personal_id || 'Не указано' }}</span>
+                      <span class="privacy-field-label">{{ t('userProfile.privacyPersonalId') }}</span>
+                      <span class="privacy-field-value">{{ personalForm.personal_id || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -541,19 +541,19 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.personal_id ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.personal_id ? t('userProfile.searchAllowed') : t('userProfile.searchForbidden') }}</span>
                     </button>
                   </div>
                 </div>
 
                 <!-- Социальные сети -->
                 <div class="privacy-section">
-                  <h4 class="privacy-section-title">🌐 Социальные сети</h4>
+                  <h4 class="privacy-section-title">🌐 {{ t('userProfile.socialNetworksSection') }}</h4>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
                       <span class="privacy-field-label">Telegram</span>
-                      <span class="privacy-field-value">{{ socialForm.telegram_user || 'Не указано' }}</span>
+                      <span class="privacy-field-value">{{ socialForm.telegram_user || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -571,14 +571,14 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.telegram_user ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.telegram_user ? t('userProfile.searchAllowed') : t('userProfile.searchForbidden') }}</span>
                     </button>
                   </div>
 
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
                       <span class="privacy-field-label">Instagram</span>
-                      <span class="privacy-field-value">{{ socialForm.instagram_profile || 'Не указано' }}</span>
+                      <span class="privacy-field-value">{{ socialForm.instagram_profile || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -596,7 +596,7 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.instagram_profile ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.instagram_profile ? t('userProfile.searchAllowed') : t('userProfile.searchForbidden') }}</span>
                     </button>
                   </div>
 
@@ -604,7 +604,7 @@
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
                       <span class="privacy-field-label">VK</span>
-                      <span class="privacy-field-value">{{ socialForm.vk_profile || 'Не указано' }}</span>
+                      <span class="privacy-field-value">{{ socialForm.vk_profile || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -622,15 +622,15 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.vk_profile ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.vk_profile ? t('userProfile.searchAllowed') : t('userProfile.searchForbidden') }}</span>
                     </button>
                   </div>
 
                   <!-- Сайт -->
                   <div class="privacy-field-item">
                     <div class="privacy-field-info">
-                      <span class="privacy-field-label">Сайт</span>
-                      <span class="privacy-field-value">{{ socialForm.website || 'Не указано' }}</span>
+                      <span class="privacy-field-label">{{ t('userProfile.privacyWebsite') }}</span>
+                      <span class="privacy-field-value">{{ socialForm.website || t('userProfile.notSpecified') }}</span>
                     </div>
                     <button
                       type="button"
@@ -648,7 +648,7 @@
                         <path d="M8 11V7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7V11" stroke="#F44336" stroke-width="2" stroke-linecap="round"/>
                         <circle cx="12" cy="16" r="1.5" fill="white"/>
                       </svg>
-                      <span class="privacy-toggle-text">{{ privacySettings.website ? 'Разрешен поиск' : 'Запрещен поиск' }}</span>
+                      <span class="privacy-toggle-text">{{ privacySettings.website ? t('userProfile.searchAllowed') : t('userProfile.searchForbidden') }}</span>
                     </button>
                   </div>
                 </div>
@@ -663,7 +663,7 @@
                 :disabled="savingPrivacy"
                 @click="savePrivacySettings"
               >
-                {{ savingPrivacy ? 'Сохранение...' : '🔒 Сохранить настройки конфиденциальности' }}
+                {{ savingPrivacy ? t('userProfile.saving') : '🔒 ' + t('userProfile.savePrivacy') }}
               </button>
             </div>
           </div>
@@ -671,53 +671,53 @@
           <!-- ===== TAB 5: Безопасность ===== -->
           <div v-if="activeTab === 'security' && !isAvatarEditMode" class="tab-panel">
             <div class="security-section">
-              <h3 class="security-title">Смена пароля</h3>
+              <h3 class="security-title">{{ t('userProfile.changePassword') }}</h3>
               <p class="security-hint">
-                Для повышения безопасности вашего аккаунта рекомендуем использовать надежный пароль длиной не менее 6 символов.
+                {{ t('userProfile.securityHint') }}
               </p>
 
               <form @submit.prevent="savePassword" class="info-form security-form">
                 <div class="form-group">
-                  <label for="current-password">Текущий пароль:</label>
+                  <label for="current-password">{{ t('userProfile.currentPassword') }}</label>
                   <input
                     id="current-password"
                     v-model="securityForm.currentPassword"
                     type="password"
-                    placeholder="Введите текущий пароль"
+                    :placeholder="t('userProfile.enterCurrentPassword')"
                     autocomplete="current-password"
                     :disabled="savingSecurity"
                   />
                 </div>
 
                 <div class="form-group">
-                  <label for="new-password">Новый пароль:</label>
+                  <label for="new-password">{{ t('userProfile.newPassword') }}</label>
                   <input
                     id="new-password"
                     v-model="securityForm.newPassword"
                     type="password"
-                    placeholder="Введите новый пароль (мин. 6 символов)"
+                    :placeholder="t('userProfile.enterNewPassword')"
                     autocomplete="new-password"
                     :class="{ 'input-error': securityForm.newPassword && !isNewPasswordValid }"
                     :disabled="savingSecurity"
                   />
                   <span v-if="securityForm.newPassword && !isNewPasswordValid" class="form-hint form-hint--error">
-                    Пароль должен содержать минимум 6 символов
+                    {{ t('userProfile.passwordMinLength') }}
                   </span>
                 </div>
 
                 <div class="form-group">
-                  <label for="confirm-password">Подтверждение нового пароля:</label>
+                  <label for="confirm-password">{{ t('userProfile.confirmNewPassword') }}</label>
                   <input
                     id="confirm-password"
                     v-model="securityForm.confirmPassword"
                     type="password"
-                    placeholder="Повторите новый пароль"
+                    :placeholder="t('userProfile.repeatNewPassword')"
                     autocomplete="new-password"
                     :class="{ 'input-error': securityForm.confirmPassword && !passwordsMatch }"
                     :disabled="savingSecurity"
                   />
                   <span v-if="securityForm.confirmPassword && !passwordsMatch" class="form-hint form-hint--error">
-                    Пароли не совпадают
+                    {{ t('userProfile.passwordsDoNotMatch') }}
                   </span>
                 </div>
 
@@ -729,7 +729,7 @@
                   class="btn-save btn-security"
                   :disabled="!isFormFilled || savingSecurity || !passwordsMatch || !isNewPasswordValid"
                 >
-                  {{ savingSecurity ? 'Сохранение...' : '🔐 Изменить пароль' }}
+                  {{ savingSecurity ? t('userProfile.saving') : '🔐 ' + t('userProfile.changePasswordBtn') }}
                 </button>
               </form>
             </div>
@@ -744,7 +744,7 @@
               <div class="limit-card">
                 <div class="limit-card-header">
                   <span class="limit-icon">📋</span>
-                  <span class="limit-title">Доски</span>
+                  <span class="limit-title">{{ t('userProfile.boards') }}</span>
                 </div>
                 <div class="limit-card-body">
                   <div class="limit-stats">
@@ -764,7 +764,7 @@
               <div class="limit-card">
                 <div class="limit-card-header">
                   <span class="limit-icon">📝</span>
-                  <span class="limit-title">Заметки</span>
+                  <span class="limit-title">{{ t('userProfile.notes') }}</span>
                 </div>
                 <div class="limit-card-body">
                   <div class="limit-stats">
@@ -784,7 +784,7 @@
               <div class="limit-card">
                 <div class="limit-card-header">
                   <span class="limit-icon">💬</span>
-                  <span class="limit-title">Комментарии</span>
+                  <span class="limit-title">{{ t('userProfile.comments') }}</span>
                 </div>
                 <div class="limit-card-body">
                   <div class="limit-stats">
@@ -804,7 +804,7 @@
               <div class="limit-card">
                 <div class="limit-card-header">
                   <span class="limit-icon">📒</span>
-                  <span class="limit-title">Стикеры</span>
+                  <span class="limit-title">{{ t('userProfile.stickers') }}</span>
                 </div>
                 <div class="limit-card-body">
                   <div class="limit-stats">
@@ -824,7 +824,7 @@
               <div class="limit-card">
                 <div class="limit-card-header">
                   <span class="limit-icon">🎫</span>
-                  <span class="limit-title">Лицензии</span>
+                  <span class="limit-title">{{ t('userProfile.licenses') }}</span>
                 </div>
                 <div class="limit-card-body">
                   <div class="limit-stats">
@@ -844,7 +844,7 @@
               <div v-if="imageLibraryStats" class="limit-card">
                 <div class="limit-card-header">
                   <span class="limit-icon">🖼️</span>
-                  <span class="limit-title">Файлы изображений</span>
+                  <span class="limit-title">{{ t('userProfile.imageFiles') }}</span>
                 </div>
                 <div class="limit-card-body">
                   <div class="limit-stats">
@@ -864,7 +864,7 @@
               <div v-if="imageLibraryStats" class="limit-card">
                 <div class="limit-card-header">
                   <span class="limit-icon">📁</span>
-                  <span class="limit-title">Папки</span>
+                  <span class="limit-title">{{ t('userProfile.folders') }}</span>
                 </div>
                 <div class="limit-card-body">
                   <div class="limit-stats">
@@ -884,7 +884,7 @@
               <div v-if="imageLibraryStats" class="limit-card">
                 <div class="limit-card-header">
                   <span class="limit-icon">💾</span>
-                  <span class="limit-title">Объём хранилища</span>
+                  <span class="limit-title">{{ t('userProfile.storageVolume') }}</span>
                 </div>
                 <div class="limit-card-body">
                   <div class="limit-stats">
@@ -917,9 +917,9 @@
               <div class="notification-block notification-block--coming-soon">
                 <h3 class="notification-title">
                   <span class="notification-icon">🔔</span>
-                  Push-уведомления
+                  {{ t('userProfile.pushNotifications') }}
                 </h3>
-                <p class="coming-soon-text">Скоро появится</p>
+                <p class="coming-soon-text">{{ t('userProfile.comingSoon') }}</p>
               </div>
             </div>
           </div>
@@ -928,13 +928,13 @@
           <div v-if="activeTab === 'promo' && !isAvatarEditMode" class="tab-panel">
             <div class="promo-section">
               <div class="promo-description">
-                <p>Введите промокод для получения бонусов или продления подписки:</p>
+                <p>{{ t('userProfile.promoDescription') }}</p>
               </div>
               <div class="promo-input-group">
                 <input
                   v-model="promoCodeInput"
                   type="text"
-                  placeholder="Введите промокод"
+                  :placeholder="t('userProfile.promoPlaceholder')"
                   class="promo-input"
                   :disabled="applyingPromo"
                 />
@@ -943,7 +943,7 @@
                   @click="handleApplyPromo"
                   :disabled="!promoCodeInput.trim() || applyingPromo"
                 >
-                  {{ applyingPromo ? 'Применение...' : 'Применить' }}
+                  {{ applyingPromo ? t('userProfile.applying') : t('userProfile.apply') }}
                 </button>
               </div>
 
@@ -957,32 +957,32 @@
             <div class="tariffs-section">
               <!-- Текущий тариф -->
               <div class="current-tariff-card">
-                <div class="tariff-badge tariff-badge--current">Текущий тариф</div>
-                <h3 class="tariff-name">{{ subscriptionStore.currentPlan?.name || 'Не определен' }}</h3>
+                <div class="tariff-badge tariff-badge--current">{{ t('userProfile.currentTariffLabel') }}</div>
+                <h3 class="tariff-name">{{ subscriptionStore.currentPlan?.name || t('userProfile.notDefined') }}</h3>
                 <div class="tariff-details">
                   <div class="tariff-detail-item">
-                    <span class="detail-label">Начало подписки:</span>
+                    <span class="detail-label">{{ t('userProfile.subscriptionStartLabel') }}</span>
                     <span class="detail-value">{{ getStartDate() }}</span>
                   </div>
                   <div class="tariff-detail-item">
-                    <span class="detail-label">Окончание подписки:</span>
+                    <span class="detail-label">{{ t('userProfile.subscriptionEndLabel') }}</span>
                     <span class="detail-value" :class="getExpiryClass()">{{ getExpiryDate() }}</span>
                   </div>
                   <!-- Grace-период -->
                   <div v-if="isInGracePeriod()" class="tariff-detail-item grace-period-warning">
-                    <span class="detail-label">⚠️ Льготный период:</span>
-                    <span class="detail-value grace-period-date">До {{ getGracePeriodDate() }}</span>
+                    <span class="detail-label">⚠️ {{ t('userProfile.gracePeriodLabel') }}</span>
+                    <span class="detail-value grace-period-date">{{ t('userProfile.gracePeriodTo') }} {{ getGracePeriodDate() }}</span>
                   </div>
                   <div v-if="isInGracePeriod()" class="grace-period-message">
-                    Ваша подписка истекла, но доступ сохранён до окончания льготного периода. Пожалуйста, продлите подписку.
+                    {{ t('userProfile.gracePeriodSubscriptionExpired') }}
                   </div>
                   <!-- Запланированный тариф -->
                   <div v-if="subscriptionStore.scheduledPlan" class="scheduled-plan-message">
                     <template v-if="subscriptionStore.scheduledPlan.expiresAt">
-                      С {{ formatDate(subscriptionStore.currentPlan?.expiresAt) }} вы перейдёте на тариф <strong>{{ subscriptionStore.scheduledPlan.name }}</strong> ({{ getScheduledPlanDays() }} дн.)
+                      {{ t('userProfile.scheduledPlanFrom') }} {{ formatDate(subscriptionStore.currentPlan?.expiresAt) }} {{ t('userProfile.scheduledPlanTransition') }} <strong>{{ subscriptionStore.scheduledPlan.name }}</strong> ({{ getScheduledPlanDays() }} {{ t('userProfile.scheduledPlanDays') }})
                     </template>
                     <template v-else>
-                      После окончания подписки вы перейдёте на тариф <strong>{{ subscriptionStore.scheduledPlan.name }}</strong>
+                      {{ t('userProfile.afterSubscriptionEnd') }} <strong>{{ subscriptionStore.scheduledPlan.name }}</strong>
                     </template>
                   </div>
                 </div>
@@ -1015,7 +1015,7 @@
                     class="btn-show-current-features"
                     @click="showCurrentTariffFeatures = !showCurrentTariffFeatures"
                   >
-                    {{ showCurrentTariffFeatures ? 'Скрыть возможности ▲' : 'Показать возможности ▼' }}
+                    {{ showCurrentTariffFeatures ? t('userProfile.hideFeatures') : t('userProfile.showFeatures') }}
                   </button>
                   <div v-if="showCurrentTariffFeatures" class="current-features-list">
                     <ul class="tariff-features tariff-features--current">
@@ -1042,12 +1042,12 @@
 
               <!-- Доступные тарифы -->
               <div class="available-tariffs">
-                <h4 class="tariffs-subtitle">Доступные тарифы</h4>
+                <h4 class="tariffs-subtitle">{{ t('userProfile.availableTariffs') }}</h4>
                 <div v-if="loadingPlans" class="tariffs-loading">
-                  Загрузка тарифов...
+                  {{ t('userProfile.loadingTariffs') }}
                 </div>
                 <div v-else-if="availablePlans.length === 0" class="tariffs-empty">
-                  Нет доступных тарифов для перехода
+                  {{ t('userProfile.noAvailableTariffs') }}
                 </div>
                 <div v-else class="tariffs-grid">
                   <div
@@ -1059,12 +1059,12 @@
                       'tariff-card--expanded': isPlanExpanded(plan.id)
                     }"
                   >
-                    <div v-if="plan.is_featured" class="tariff-recommended-badge">Рекомендуем</div>
+                    <div v-if="plan.is_featured" class="tariff-recommended-badge">{{ t('userProfile.recommended') }}</div>
                     <h4 class="tariff-card-name">{{ plan.name }}</h4>
                     <p v-if="plan.description" class="tariff-card-description">{{ plan.description }}</p>
                     <p class="tariff-card-price">
                       <span class="price-amount">{{ plan.price_monthly || 0 }}</span>
-                      <span class="price-period">₽/мес</span>
+                      <span class="price-period">{{ t('userProfile.perMonth') }}</span>
                     </p>
 
                     <!-- Основные функции (всегда видны) -->
@@ -1085,8 +1085,8 @@
                       class="btn-expand-features"
                       @click="togglePlanExpanded(plan.id)"
                     >
-                      <span v-if="isPlanExpanded(plan.id)">Скрыть подробности ▲</span>
-                      <span v-else>Подробнее ▼</span>
+                      <span v-if="isPlanExpanded(plan.id)">{{ t('userProfile.hideDetails') }}</span>
+                      <span v-else>{{ t('userProfile.moreDetails') }}</span>
                     </button>
 
                     <!-- Дополнительные функции (раскрываются) -->
@@ -1127,13 +1127,13 @@
           <!-- ===== Режим редактирования аватара ===== -->
           <div v-if="isAvatarEditMode" class="tab-panel avatar-edit-panel">
             <div class="avatar-editor">
-              <h3 class="avatar-editor-title">Редактирование аватара</h3>
+              <h3 class="avatar-editor-title">{{ t('userProfile.avatarEditing') }}</h3>
               <div class="avatar-preview-large">
                 <img
                   v-if="user.avatar_url"
                   :key="avatarKey"
                   :src="getAvatarUrl(user.avatar_url)"
-                  alt="Аватар"
+                  :alt="t('userProfile.avatarAlt')"
                   class="avatar-large-img"
                 >
                 <div v-else class="avatar-large-placeholder">
@@ -1148,17 +1148,17 @@
                     @change="handleAvatarChangeAndClose"
                     style="display: none"
                   >
-                  📷 Загрузить фото
+                  📷 {{ t('userProfile.uploadPhoto') }}
                 </label>
                 <button
                   v-if="user.avatar_url"
                   class="btn-delete-large"
                   @click="handleAvatarDeleteAndClose"
                 >
-                  🗑️ Удалить фото
+                  🗑️ {{ t('userProfile.deletePhoto') }}
                 </button>
                 <button class="btn-cancel-edit" @click="closeAvatarEdit">
-                  ← Назад
+                  ← {{ t('userProfile.back') }}
                 </button>
               </div>
             </div>
@@ -1168,7 +1168,7 @@
     </div>
 
     <!-- Показываем заглушку, если user еще не загружен -->
-    <div v-else class="loading">Загрузка профиля...</div>
+    <div v-else class="loading">{{ t('userProfile.loadingProfile') }}</div>
   </div>
 
   <!-- Cropper -->
@@ -1179,7 +1179,7 @@
     >
       <div class="cropper-modal">
         <div class="cropper-header">
-          <h3>Обрезка аватара</h3>
+          <h3>{{ t('userProfile.cropAvatar') }}</h3>
           <button type="button" class="cropper-close" @click="cancelCrop">×</button>
         </div>
         <div class="cropper-body">
@@ -1187,13 +1187,13 @@
             v-if="selectedImageUrl"
             :src="selectedImageUrl"
             ref="cropperImage"
-            alt="Предпросмотр аватара"
+            :alt="t('userProfile.avatarPreviewAlt')"
             class="cropper-image"
           >
         </div>
         <div class="cropper-footer">
           <button type="button" class="btn-secondary" @click="cancelCrop">
-            Отмена
+            {{ t('userProfile.cancel') }}
           </button>
           <button
             type="button"
@@ -1201,7 +1201,7 @@
             :disabled="uploadingAvatar"
             @click="confirmCrop"
           >
-            {{ uploadingAvatar ? 'Загрузка...' : 'Сохранить' }}
+            {{ uploadingAvatar ? t('userProfile.uploading') : t('userProfile.save') }}
           </button>
         </div>
       </div>
@@ -1217,23 +1217,23 @@
       >
         <div class="verification-modal">
           <div class="verification-modal__header">
-            <h3>Заявка на верификацию</h3>
+            <h3>{{ t('userProfile.verificationRequest') }}</h3>
             <button class="modal-close" @click="closeVerificationModal">×</button>
           </div>
 
           <div class="verification-modal__body">
             <div class="form-group">
-              <label for="verification-full-name">Полное имя</label>
+              <label for="verification-full-name">{{ t('userProfile.verificationFullName') }}</label>
               <input
                 id="verification-full-name"
                 v-model="verificationForm.full_name"
                 type="text"
-                placeholder="Введите полное ФИО"
+                :placeholder="t('userProfile.enterFullNamePlaceholder')"
               />
             </div>
 
             <div class="form-group">
-              <label for="verification-link">Реферальная ссылка</label>
+              <label for="verification-link">{{ t('userProfile.referralLink') }}</label>
               <input
                 id="verification-link"
                 v-model="verificationForm.referral_link"
@@ -1242,14 +1242,14 @@
               />
             </div>
 
-            <p class="helper-text">Укажите вашу персональную реферальную ссылку из личного кабинета FOHOW (раздел "Рекомендовать"), содержащую ваш ID. подтвердить компьютерный номер.</p>
+            <p class="helper-text">{{ t('userProfile.referralLinkHint') }}</p>
 
             <div v-if="verificationError" class="error-message">{{ verificationError }}</div>
           </div>
 
           <div class="verification-modal__footer">
             <button class="btn-secondary" type="button" @click="closeVerificationModal">
-              Отмена
+              {{ t('userProfile.cancel') }}
             </button>
             <button
               class="btn-primary"
@@ -1257,7 +1257,7 @@
               :disabled="submittingVerification"
               @click="submitVerification"
             >
-              {{ submittingVerification ? 'Отправка...' : 'Отправить заявку' }}
+              {{ submittingVerification ? t('userProfile.sending') : t('userProfile.sendRequest') }}
             </button>
           </div>
         </div>
@@ -1271,20 +1271,20 @@
       <div v-if="showPersonalIdWarning" class="modal-overlay" @click.self="cancelPersonalIdChange">
         <div class="modal-warning">
           <div class="modal-warning-header">
-            <h3>ВНИМАНИЕ!</h3>
+            <h3>{{ t('userProfile.attention') }}</h3>
             <button class="modal-close" @click="cancelPersonalIdChange">×</button>
           </div>
           <div class="modal-warning-body">
-            <p>Изменение компьютерного номера или представительства приведет к <strong>потере статуса верификации</strong>.</p>
-            <p>Вам придется заново пройти процедуру верификации.</p>
-            <p class="modal-warning-question">Вы уверены, что хотите изменить данные?</p>
+            <p>{{ t('userProfile.changeDataWarning') }} <strong>{{ t('userProfile.lossOfVerification') }}</strong>.</p>
+            <p>{{ t('userProfile.reverificationRequired') }}</p>
+            <p class="modal-warning-question">{{ t('userProfile.confirmChangeQuestion') }}</p>
           </div>
           <div class="modal-warning-actions">
             <button class="btn-cancel" @click="cancelPersonalIdChange">
-              Отменить
+              {{ t('userProfile.cancelBtn') }}
             </button>
             <button class="btn-confirm-danger" @click="confirmPersonalIdChange">
-              Изменить данные
+              {{ t('userProfile.changeData') }}
             </button>
           </div>
         </div>
@@ -1298,19 +1298,19 @@
       <div v-if="showPendingWarning" class="modal-overlay" @click.self="cancelPendingChange">
         <div class="modal-warning">
           <div class="modal-warning-header">
-            <h3>Заявка на верификации</h3>
+            <h3>{{ t('userProfile.pendingVerification') }}</h3>
             <button class="modal-close" @click="cancelPendingChange">×</button>
           </div>
           <div class="modal-warning-body">
-            <p>У вас есть активная заявка на верификацию.</p>
-            <p>Изменение представительства или компьютерного номера <strong>отменит текущую заявку</strong>.</p>
+            <p>{{ t('userProfile.activeRequestMessage') }}</p>
+            <p>{{ t('userProfile.changeWillCancelPending') }} <strong>{{ t('userProfile.willCancelCurrentRequest') }}</strong>.</p>
           </div>
           <div class="modal-warning-actions">
             <button class="btn-cancel" @click="cancelPendingChange">
-              Отменить изменения
+              {{ t('userProfile.cancelChanges') }}
             </button>
             <button class="btn-confirm-danger" @click="confirmPendingChange" :disabled="cancellingVerification">
-              {{ cancellingVerification ? 'Отмена заявки...' : 'Отменить верификацию' }}
+              {{ cancellingVerification ? t('userProfile.cancellingRequest') : t('userProfile.cancelVerification') }}
             </button>
           </div>
         </div>
@@ -1324,18 +1324,18 @@
       <div v-if="showCancelConfirm" class="modal-overlay" @click.self="closeCancelConfirm">
         <div class="modal-warning">
           <div class="modal-warning-header">
-            <h3>Отменить заявку?</h3>
+            <h3>{{ t('userProfile.cancelRequestQuestion') }}</h3>
             <button class="modal-close" @click="closeCancelConfirm">×</button>
           </div>
           <div class="modal-warning-body">
-            <p>Вы уверены, что хотите отменить заявку на верификацию?</p>
+            <p>{{ t('userProfile.cancelRequestConfirm') }}</p>
           </div>
           <div class="modal-warning-actions">
             <button class="btn-cancel" @click="closeCancelConfirm">
-              Нет, оставить
+              {{ t('userProfile.noKeep') }}
             </button>
             <button class="btn-confirm-danger" @click="confirmCancelVerification" :disabled="cancellingVerification">
-              {{ cancellingVerification ? 'Отмена...' : 'Да, отменить' }}
+              {{ cancellingVerification ? t('userProfile.cancellingShort') : t('userProfile.yesCancel') }}
             </button>
           </div>
         </div>
@@ -1349,18 +1349,18 @@
       <div v-if="showHistory" class="modal-overlay" @click.self="closeHistory">
         <div class="modal-history">
           <div class="modal-history-header">
-            <h3>История верификации</h3>
+            <h3>{{ t('userProfile.verificationHistory') }}</h3>
             <button class="modal-close" @click="closeHistory">×</button>
           </div>
 
           <div class="modal-history-body">
             <div v-if="loadingHistory" class="loading-history">
               <div class="spinner-small"></div>
-              <p>Загрузка истории...</p>
+              <p>{{ t('userProfile.loadingHistory') }}</p>
             </div>
 
             <div v-else-if="verificationHistory.length === 0" class="empty-history">
-              <p>История верификации пуста</p>
+              <p>{{ t('userProfile.emptyHistory') }}</p>
             </div>
 
             <div v-else class="history-list">
@@ -1376,18 +1376,18 @@
                 </div>
 
                 <div class="history-item-body">
-                  <p><strong>ФИО:</strong> {{ item.full_name }}</p>
-                  <p><strong>Дата подачи:</strong> {{ formatDate(item.submitted_at) }}</p>
+                  <p><strong>{{ t('userProfile.historyFullName') }}</strong> {{ item.full_name }}</p>
+                  <p><strong>{{ t('userProfile.submissionDate') }}</strong> {{ formatDate(item.submitted_at) }}</p>
 
                   <div v-if="item.processed_at">
-                    <p><strong>Дата обработки:</strong> {{ formatDate(item.processed_at) }}</p>
+                    <p><strong>{{ t('userProfile.processingDate') }}</strong> {{ formatDate(item.processed_at) }}</p>
                     <p v-if="item.processed_by_username">
-                      <strong>Обработал:</strong> {{ item.processed_by_username }}
+                      <strong>{{ t('userProfile.processedBy') }}</strong> {{ item.processed_by_username }}
                     </p>
                   </div>
 
                   <div v-if="item.status === 'rejected' && item.rejection_reason" class="rejection-reason-history">
-                    <strong>Причина отклонения:</strong>
+                    <strong>{{ t('userProfile.rejectionReason') }}</strong>
                     <p>{{ item.rejection_reason }}</p>
                   </div>
                 </div>
@@ -1401,8 +1401,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import 'cropperjs/dist/cropper.css'
 import { useAuthStore } from '@/stores/auth'
 import { useSubscriptionStore } from '@/stores/subscription'
@@ -1428,6 +1429,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'openVerificationModal'])
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const subscriptionStore = useSubscriptionStore()
 const { user } = storeToRefs(authStore)
@@ -1436,35 +1438,35 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 
 // Табы
 const activeTab = ref('basic')
-const tabGroups = [
+const tabGroups = computed(() => [
   {
-    label: 'Профиль',
+    label: t('userProfile.groupProfile'),
     tabs: [
-      { id: 'basic', label: 'Основная информация', icon: 'ℹ️' },
-      { id: 'personal', label: 'Личная информация', icon: '👤' },
-      { id: 'social', label: 'Соц. сети', icon: '🔗' }
+      { id: 'basic', label: t('userProfile.basicInfo'), icon: 'ℹ️' },
+      { id: 'personal', label: t('userProfile.personalInfo'), icon: '👤' },
+      { id: 'social', label: t('userProfile.socialNetworks'), icon: '🔗' }
     ]
   },
   {
-    label: 'Подписка',
+    label: t('userProfile.groupSubscription'),
     tabs: [
-      { id: 'tariffs', label: 'Тарифы', icon: '💳' },
-      { id: 'limits', label: 'Лимиты', icon: '📊' },
-      { id: 'promo', label: 'Промокод', icon: '🎁' }
+      { id: 'tariffs', label: t('userProfile.tariffs'), icon: '💳' },
+      { id: 'limits', label: t('userProfile.limits'), icon: '📊' },
+      { id: 'promo', label: t('userProfile.promoCode'), icon: '🎁' }
     ]
   },
   {
-    label: 'Настройки',
+    label: t('userProfile.groupSettings'),
     tabs: [
-      { id: 'notifications', label: 'Уведомления', icon: '🔔' },
-      { id: 'security', label: 'Безопасность', icon: '🛡️' },
-      { id: 'privacy', label: 'Настройки конфиденциальности', icon: '👁️' }
+      { id: 'notifications', label: t('userProfile.notifications'), icon: '🔔' },
+      { id: 'security', label: t('userProfile.security'), icon: '🛡️' },
+      { id: 'privacy', label: t('userProfile.privacySettings'), icon: '👁️' }
     ]
   }
-]
+])
 
 // Плоский список табов для совместимости с остальным кодом
-const tabs = tabGroups.flatMap(group => group.tabs)
+const tabs = computed(() => tabGroups.value.flatMap(group => group.tabs))
 
 // === Инициализация Composables ===
 

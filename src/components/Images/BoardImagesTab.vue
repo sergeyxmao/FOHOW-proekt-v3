@@ -3,7 +3,9 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useImagesStore } from '../../stores/images.js'
 import { useBoardStore } from '../../stores/board.js'
 import { useImageProxy } from '../../composables/useImageProxy'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const imagesStore = useImagesStore()
 const boardStore = useBoardStore()
 const { getImageUrl } = useImageProxy()
@@ -103,9 +105,9 @@ watch(boardImages, () => {
   <div class="board-images-tab">
     <!-- Нет доски -->
     <div v-if="!hasBoard" class="board-images-tab__empty">
-      <p class="board-images-tab__empty-text">Сначала откройте доску</p>
+      <p class="board-images-tab__empty-text">{{ t('imageLibrary.openBoardFirst') }}</p>
       <p class="board-images-tab__empty-hint">
-        Здесь будут показаны изображения, размещённые на текущей доске
+        {{ t('imageLibrary.boardImagesHint') }}
       </p>
     </div>
 
@@ -116,21 +118,21 @@ watch(boardImages, () => {
           v-model="searchQuery"
           type="text"
           class="board-images-tab__search-input"
-          placeholder="Поиск по имени..."
+          :placeholder="t('imageLibrary.searchByName')"
         />
       </div>
 
       <!-- Нет изображений на доске -->
       <div v-if="boardImages.length === 0" class="board-images-tab__empty">
-        <p class="board-images-tab__empty-text">Нет изображений на доске</p>
+        <p class="board-images-tab__empty-text">{{ t('imageLibrary.noBoardImages') }}</p>
         <p class="board-images-tab__empty-hint">
-          Добавьте изображения из библиотеки на доску
+          {{ t('imageLibrary.addFromLibrary') }}
         </p>
       </div>
 
       <!-- Нет результатов поиска -->
       <div v-else-if="filteredImages.length === 0" class="board-images-tab__empty">
-        <p class="board-images-tab__empty-text">Ничего не найдено</p>
+        <p class="board-images-tab__empty-text">{{ t('imageLibrary.nothingFound') }}</p>
       </div>
 
       <!-- Сетка изображений -->
@@ -139,7 +141,7 @@ watch(boardImages, () => {
           v-for="image in filteredImages"
           :key="image.id"
           class="board-images-tab__item"
-          :title="image.name || 'Изображение'"
+          :title="image.name || t('imageLibrary.image')"
           @click="handleImageClick(image)"
         >
           <div class="board-images-tab__thumb">
@@ -154,7 +156,7 @@ watch(boardImages, () => {
               <div class="board-images-tab__spinner"></div>
             </div>
           </div>
-          <p class="board-images-tab__name">{{ image.name || 'Без имени' }}</p>
+          <p class="board-images-tab__name">{{ image.name || t('imageLibrary.noName') }}</p>
         </div>
       </div>
     </template>

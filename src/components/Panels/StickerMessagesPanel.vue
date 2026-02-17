@@ -1,8 +1,11 @@
 <script setup>
+import { useI18n } from 'vue-i18n'
 import StickerMessages from './StickerMessages.vue'
 import PanelSwitchBar from './PanelSwitchBar.vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
+
+const { t } = useI18n()
 
 const props = defineProps({
   isModernTheme: {
@@ -28,11 +31,11 @@ const handleClose = () => {
     }"
   >
     <div class="sticker-messages-panel__header">
-      <h2 class="sticker-messages-panel__title">Сообщения стикеров</h2>
+      <h2 class="sticker-messages-panel__title">{{ t('panels.stickerMessages') }}</h2>
       <button
         type="button"
         class="sticker-messages-panel__close"
-        title="Закрыть"
+        :title="t('common.close')"
         @click="handleClose"
       >
         ×

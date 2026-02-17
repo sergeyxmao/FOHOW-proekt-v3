@@ -7,6 +7,9 @@ import { useSidePanelsStore } from '../../stores/sidePanels'
 import { getMyFolders, getMyImages, uploadImage, deleteImage, requestShareImage, renameImage, createFolder, getFavoriteImageIds, addImageToFavorites, removeImageFromFavorites } from '../../services/imageService'
 import { convertToWebP, isImageFile } from '../../utils/imageUtils'
 import ImageCard from './ImageCard.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
@@ -85,10 +88,10 @@ const filteredImages = computed(() => {
 
 // Опции для выпадающего списка папок
 const folderOptions = computed(() => [
-  { value: '', label: 'Все папки' },
+  { value: '', label: t('imageLibrary.allFolders') },
   ...folders.value.map(folderName => ({
     value: folderName,
-    label: folderName || 'Без названия'
+    label: folderName || t('imageLibrary.unnamed')
   }))
 ])
 
@@ -717,7 +720,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
             stroke-linejoin="round"
           />
         </svg>
-        <span>Папка</span>
+        <span>{{ t('imageLibrary.folder') }}</span>
       </button>
 
       <!-- Кнопка загрузки -->
@@ -730,8 +733,8 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
         <svg v-if="!isUploading" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M9 16V10H5L12 3L19 10H15V16H9ZM5 20V18H19V20H5Z" fill="currentColor"/>
         </svg>
-        <span v-if="isUploading">Загрузка...</span>
-        <span v-else>Загрузить</span>
+        <span v-if="isUploading">{{ t('imageLibrary.uploading') }}</span>
+        <span v-else>{{ t('imageLibrary.upload') }}</span>
       </button>
 
       <!-- Скрытый input для выбора файлов -->
@@ -751,14 +754,14 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
     >
       <div class="my-library-tab__modal">
         <header class="my-library-tab__modal-header">
-          <h3>Создать новую папку</h3>
-          <button class="my-library-tab__modal-close" @click="closeCreateFolderModal" aria-label="Закрыть диалог">
+          <h3>{{ t('imageLibrary.createFolder') }}</h3>
+          <button class="my-library-tab__modal-close" @click="closeCreateFolderModal" :aria-label="t('imageLibrary.closeDialog')">
             ×
           </button>
         </header>
 
         <div class="my-library-tab__modal-body">
-          <label class="my-library-tab__modal-label" for="my-library-folder-name">Название папки</label>
+          <label class="my-library-tab__modal-label" for="my-library-folder-name">{{ t('imageLibrary.folderName') }}</label>
           <input
             id="my-library-folder-name"
             ref="folderNameInputRef"
@@ -766,7 +769,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
             type="text"
             maxlength="255"
             class="my-library-tab__modal-input"
-            placeholder="Введите название"
+            :placeholder="t('imageLibrary.enterName')"
             @keyup.enter="confirmCreateFolder"
           />
           <p v-if="createFolderError" class="my-library-tab__modal-error">{{ createFolderError }}</p>
@@ -774,7 +777,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
 
         <footer class="my-library-tab__modal-footer">
           <button type="button" class="my-library-tab__modal-btn my-library-tab__modal-btn--secondary" @click="closeCreateFolderModal">
-            Отмена
+            {{ t('common.cancel') }}
           </button>
           <button
             type="button"
@@ -782,7 +785,7 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
             :disabled="isCreatingFolder || !newFolderName.trim()"
             @click="confirmCreateFolder"
           >
-            {{ isCreatingFolder ? 'Создание...' : 'Создать' }}
+            {{ isCreatingFolder ? t('imageLibrary.creating') : t('common.create') }}
           </button>
         </footer>
       </div>
@@ -793,14 +796,14 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
         v-model="searchQuery"
         type="text"
         class="my-library-tab__search-input"
-        placeholder="Поиск по имени..."
+        :placeholder="t('imageLibrary.searchByName')"
       />
     </div>
 
     <!-- Индикатор загрузки -->
     <div v-if="isInitialLoading" class="my-library-tab__loading">
       <div class="my-library-tab__spinner"></div>
-      <span>Загрузка изображений...</span>
+      <span>{{ t('imageLibrary.loadingImages') }}</span>
     </div>
 
     <!-- Ошибка доступа -->
@@ -809,13 +812,13 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
         🔒
       </div>
       <p class="my-library-tab__access-denied-title">
-        Библиотека изображений недоступна на текущем тарифе
+        {{ t('imageLibrary.libraryUnavailable') }}
       </p>
       <p class="my-library-tab__access-denied-text">
         {{ error.message }}
       </p>
       <p class="my-library-tab__access-denied-hint">
-        Обновите тариф для получения доступа к библиотеке изображений.
+        {{ t('imageLibrary.upgradePlan') }}
       </p>
     </div>
 
@@ -845,19 +848,19 @@ watch(() => stickersStore.currentBoardId, (newBoardId) => {
     <div v-if="filteredImages.length > 0" class="my-library-tab__footer">
       <div v-if="isLoadingMore" class="my-library-tab__loading-more">
         <div class="my-library-tab__spinner my-library-tab__spinner--small"></div>
-        <span>Загружаем ещё...</span>
+        <span>{{ t('imageLibrary.loadingMore') }}</span>
       </div>
       <div v-else-if="!hasMore" class="my-library-tab__no-more">
-        Больше изображений нет
+        {{ t('imageLibrary.noMoreImages') }}
       </div>
     </div>
     <!-- Пустое состояние -->
     <div v-else-if="!error" class="my-library-tab__empty">
       <p class="my-library-tab__empty-text">
-        {{ searchQuery ? 'Изображения не найдены' : 'Нет изображений' }}
+        {{ searchQuery ? t('imageLibrary.imagesNotFound') : t('imageLibrary.noImages') }}
       </p>
       <p v-if="!searchQuery" class="my-library-tab__empty-hint">
-        Нажмите "Загрузить", чтобы добавить изображения
+        {{ t('imageLibrary.clickUpload') }}
       </p>
     </div>
 

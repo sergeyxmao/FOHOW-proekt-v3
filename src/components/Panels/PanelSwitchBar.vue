@@ -1,6 +1,7 @@
 <script setup>
 import { computed, inject, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useSidePanelsStore } from '@/stores/sidePanels'
 import { useMobileStore } from '@/stores/mobile'
 
@@ -11,6 +12,7 @@ const props = defineProps({
   }
 })
 
+const { t } = useI18n()
 const sidePanelsStore = useSidePanelsStore()
 const mobileStore = useMobileStore()
 
@@ -18,14 +20,14 @@ const { activePanel } = storeToRefs(sidePanelsStore)
 const isMobile = computed(() => mobileStore.isMobileMode)
 const isPencilMode = inject('isPencilMode', ref(false))
 
-const panels = [
-  { key: 'partners', icon: '👤', label: 'Партнёры', action: () => sidePanelsStore.openPartners() },
-  { key: 'notes', icon: '📅', label: 'Заметки', action: () => sidePanelsStore.openNotes() },
-  { key: 'images', icon: '🖼️', label: 'Фото', action: () => sidePanelsStore.openImages() },
-  { key: 'comments', icon: '💬', label: 'Комментарии', action: () => sidePanelsStore.openComments() },
-  { key: 'anchors', icon: '🧭', label: 'Геолокация', action: () => sidePanelsStore.openAnchors() },
-  { key: 'stickerMessages', icon: '📌', label: 'Стикеры', action: () => sidePanelsStore.openStickerMessages() }
-]
+const panels = computed(() => [
+  { key: 'partners', icon: '👤', label: t('mobileMenu.partners'), action: () => sidePanelsStore.openPartners() },
+  { key: 'notes', icon: '📅', label: t('mobileMenu.notes'), action: () => sidePanelsStore.openNotes() },
+  { key: 'images', icon: '🖼️', label: t('panels.photos'), action: () => sidePanelsStore.openImages() },
+  { key: 'comments', icon: '💬', label: t('mobileMenu.comments'), action: () => sidePanelsStore.openComments() },
+  { key: 'anchors', icon: '🧭', label: t('discussionMenu.geolocation'), action: () => sidePanelsStore.openAnchors() },
+  { key: 'stickerMessages', icon: '📌', label: t('mobileMenu.stickers'), action: () => sidePanelsStore.openStickerMessages() }
+])
 
 const handleSwitch = (panel) => {
   if (activePanel.value !== panel.key) {

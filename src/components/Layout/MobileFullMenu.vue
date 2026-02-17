@@ -29,7 +29,7 @@ const emit = defineEmits([
   'new-structure'
 ])
 
-const { locale } = useI18n()
+const { t, locale } = useI18n()
 const canvasStore = useCanvasStore()
 const viewSettingsStore = useViewSettingsStore()
 const sidePanelsStore = useSidePanelsStore()
@@ -45,6 +45,7 @@ const {
   lineThickness,
   isAnimationEnabled,
   animationSeconds,
+  isGlobalLineMode,
   headerColor,
   headerColorIndex,
   backgroundGradient
@@ -84,14 +85,14 @@ const handleToggleVersion = () => {
 }
 
 const handleClearCanvas = () => {
-  if (confirm('Очистить холст? Все объекты будут удалены.')) {
+  if (confirm(t('mobileMenu.clearConfirm'))) {
     emit('clear-canvas')
     emit('close')
   }
 }
 
 const handleNewStructure = () => {
-  if (confirm('Создать новую структуру? Текущие данные могут быть потеряны.')) {
+  if (confirm(t('mobileMenu.newStructureConfirm'))) {
     emit('new-structure')
     emit('close')
   }
@@ -227,7 +228,7 @@ const handleOverlayClick = () => {
           >
             <!-- Header -->
             <div class="fullmenu-header">
-              <span class="fullmenu-header__title">Меню</span>
+              <span class="fullmenu-header__title">{{ t('mobile.menu') }}</span>
               <button class="fullmenu-close" type="button" @click="emit('close')">✕</button>
             </div>
 
@@ -242,7 +243,7 @@ const handleOverlayClick = () => {
                   @click="toggleSection('tools')"
                 >
                   <span class="fullmenu-section__icon">🛠️</span>
-                  <span class="fullmenu-section__label">Инструменты</span>
+                  <span class="fullmenu-section__label">{{ t('topMenu.tools') }}</span>
                   <span
                     class="fullmenu-section__arrow"
                     :class="{ 'fullmenu-section__arrow--open': openSections.tools }"
@@ -252,15 +253,15 @@ const handleOverlayClick = () => {
                 <div v-if="openSections.tools" class="fullmenu-section__body">
                   <button class="fullmenu-item" type="button" @click="handlePencil">
                     <span class="fullmenu-item__icon">✏️</span>
-                    <span>Рисование</span>
+                    <span>{{ t('mobileMenu.drawing') }}</span>
                   </button>
                   <button class="fullmenu-item fullmenu-item--danger" type="button" @click="handleClearCanvas">
                     <span class="fullmenu-item__icon">🧹</span>
-                    <span>Очистить холст</span>
+                    <span>{{ t('toolsMenu.clearCanvas') }}</span>
                   </button>
                   <button class="fullmenu-item" type="button" @click="handleNewStructure">
                     <span class="fullmenu-item__icon">📄</span>
-                    <span>Новая структура</span>
+                    <span>{{ t('toolsMenu.newStructure') }}</span>
                   </button>
                 </div>
               </div>
@@ -273,7 +274,7 @@ const handleOverlayClick = () => {
                   @click="toggleSection('view')"
                 >
                   <span class="fullmenu-section__icon">👁️</span>
-                  <span class="fullmenu-section__label">Вид</span>
+                  <span class="fullmenu-section__label">{{ t('topMenu.view') }}</span>
                   <span
                     class="fullmenu-section__arrow"
                     :class="{ 'fullmenu-section__arrow--open': openSections.view }"
@@ -283,16 +284,16 @@ const handleOverlayClick = () => {
                 <div v-if="openSections.view" class="fullmenu-section__body">
                   <!-- Grid -->
                   <div class="fullmenu-subsection">
-                    <div class="fullmenu-subsection__header">Сетка</div>
+                    <div class="fullmenu-subsection__header">{{ t('mobileMenu.grid') }}</div>
                     <div class="fullmenu-row">
                       <button
                         class="fullmenu-chip"
                         :class="{ 'fullmenu-chip--active': isGridBackgroundVisible }"
                         type="button"
                         @click="handleGridToggle"
-                      >{{ isGridBackgroundVisible ? 'ВКЛ' : 'ВЫКЛ' }}</button>
+                      >{{ isGridBackgroundVisible ? t('mobileMenu.on') : t('mobileMenu.off') }}</button>
                       <label class="fullmenu-inline-input">
-                        <span class="fullmenu-inline-input__label">Шаг:</span>
+                        <span class="fullmenu-inline-input__label">{{ t('mobileMenu.step') }}</span>
                         <input
                           type="number"
                           class="fullmenu-input"
@@ -309,14 +310,20 @@ const handleOverlayClick = () => {
 
                   <!-- Lines -->
                   <div class="fullmenu-subsection">
-                    <div class="fullmenu-subsection__header">Линии</div>
+                    <div class="fullmenu-subsection__header">{{ t('viewMenu.lines') }}</div>
                     <div class="fullmenu-row">
+                      <button
+                        class="fullmenu-chip"
+                        :class="{ 'fullmenu-chip--active': isGlobalLineMode }"
+                        type="button"
+                        @click="viewSettingsStore.toggleGlobalLineMode()"
+                      >{{ t('mobileMenu.allLines') }}</button>
                       <button
                         class="fullmenu-swatch"
                         type="button"
                         :style="{ background: lineColor }"
                         @click="openLineColorPicker"
-                        title="Цвет линий"
+                        :title="t('mobileMenu.lineColor')"
                       ></button>
                       <input
                         ref="lineColorInput"
@@ -342,14 +349,14 @@ const handleOverlayClick = () => {
 
                   <!-- Animation -->
                   <div class="fullmenu-subsection">
-                    <div class="fullmenu-subsection__header">Анимация</div>
+                    <div class="fullmenu-subsection__header">{{ t('viewMenu.animation') }}</div>
                     <div class="fullmenu-row">
                       <button
                         class="fullmenu-chip"
                         :class="{ 'fullmenu-chip--active': isAnimationEnabled }"
                         type="button"
                         @click="handleAnimationToggle"
-                      >{{ isAnimationEnabled ? 'ВКЛ' : 'ВЫКЛ' }}</button>
+                      >{{ isAnimationEnabled ? t('mobileMenu.on') : t('mobileMenu.off') }}</button>
                       <label class="fullmenu-inline-input">
                         <input
                           type="number"
@@ -360,35 +367,35 @@ const handleOverlayClick = () => {
                           max="999"
                           step="1"
                         >
-                        <span class="fullmenu-inline-input__unit">сек</span>
+                        <span class="fullmenu-inline-input__unit">{{ t('mobileMenu.sec') }}</span>
                       </label>
                     </div>
                   </div>
 
                   <!-- Background -->
                   <div class="fullmenu-subsection">
-                    <div class="fullmenu-subsection__header">Фон</div>
+                    <div class="fullmenu-subsection__header">{{ t('viewMenu.background') }}</div>
                     <div class="fullmenu-row">
                       <button
                         class="fullmenu-swatch fullmenu-swatch--preset"
                         type="button"
                         style="background: #f5f7fb"
                         @click="selectPresetBg('#f5f7fb')"
-                        title="Светлый"
+                        :title="t('mobileMenu.lightBg')"
                       ></button>
                       <button
                         class="fullmenu-swatch fullmenu-swatch--preset"
                         type="button"
                         style="background: #111827"
                         @click="selectPresetBg('#111827')"
-                        title="Тёмный"
+                        :title="t('mobileMenu.darkBg')"
                       ></button>
                       <button
                         class="fullmenu-swatch"
                         type="button"
                         :style="{ background: backgroundGradient }"
                         @click="openBgColorPicker"
-                        title="Свой цвет"
+                        :title="t('mobileMenu.customColor')"
                       >🎨</button>
                       <input
                         ref="bgColorInput"
@@ -401,14 +408,14 @@ const handleOverlayClick = () => {
 
                   <!-- Header color -->
                   <div class="fullmenu-subsection">
-                    <div class="fullmenu-subsection__header">Цвет заголовка</div>
+                    <div class="fullmenu-subsection__header">{{ t('viewMenu.headerColor') }}</div>
                     <div class="fullmenu-row">
                       <button
                         class="fullmenu-swatch"
                         type="button"
                         :style="{ background: headerColor }"
                         @click="openHeaderColorPicker"
-                        title="Выбрать цвет"
+                        :title="t('mobileMenu.selectColor')"
                       ></button>
                       <input
                         ref="headerColorInput"
@@ -418,7 +425,7 @@ const handleOverlayClick = () => {
                         @input="handleHeaderColorChange"
                       >
                       <button class="fullmenu-chip" type="button" @click="handleCycleHeaderColor">
-                        Сменить
+                        {{ t('mobileMenu.change') }}
                       </button>
                       <span class="fullmenu-muted">#{{ headerColorIndex }}</span>
                     </div>
@@ -426,7 +433,7 @@ const handleOverlayClick = () => {
 
                   <!-- Language -->
                   <div class="fullmenu-subsection">
-                    <div class="fullmenu-subsection__header">Язык</div>
+                    <div class="fullmenu-subsection__header">{{ t('viewMenu.language') }}</div>
                     <div class="fullmenu-row">
                       <button
                         class="fullmenu-chip"
@@ -459,7 +466,7 @@ const handleOverlayClick = () => {
                   @click="toggleSection('discussion')"
                 >
                   <span class="fullmenu-section__icon">💬</span>
-                  <span class="fullmenu-section__label">Обсуждение</span>
+                  <span class="fullmenu-section__label">{{ t('discussionMenu.title') }}</span>
                   <span
                     class="fullmenu-section__arrow"
                     :class="{ 'fullmenu-section__arrow--open': openSections.discussion }"
@@ -469,35 +476,35 @@ const handleOverlayClick = () => {
                 <div v-if="openSections.discussion" class="fullmenu-section__body">
                   <button class="fullmenu-item" type="button" @click="handleTogglePartners">
                     <span class="fullmenu-item__icon">👤</span>
-                    <span>Партнёры</span>
+                    <span>{{ t('mobileMenu.partners') }}</span>
                   </button>
                   <button class="fullmenu-item" type="button" @click="handleToggleNotes">
                     <span class="fullmenu-item__icon">📅</span>
-                    <span>Заметки</span>
+                    <span>{{ t('mobileMenu.notes') }}</span>
                   </button>
                   <button class="fullmenu-item" type="button" @click="handleToggleImages">
                     <span class="fullmenu-item__icon">🖼️</span>
-                    <span>Изображения</span>
+                    <span>{{ t('mobileMenu.images') }}</span>
                   </button>
                   <button class="fullmenu-item" type="button" @click="handleToggleComments">
                     <span class="fullmenu-item__icon">💬</span>
-                    <span>Комментарии</span>
+                    <span>{{ t('mobileMenu.comments') }}</span>
                   </button>
                   <div class="fullmenu-item-row">
                     <button class="fullmenu-item fullmenu-item--grow" type="button" @click="handleToggleAnchors">
                       <span class="fullmenu-item__icon">🧭</span>
-                      <span>Геолокация</span>
+                      <span>{{ t('discussionMenu.geolocation') }}</span>
                     </button>
-                    <button class="fullmenu-add-btn" type="button" @click="handleAddAnchor" title="Добавить на холст">
+                    <button class="fullmenu-add-btn" type="button" @click="handleAddAnchor" :title="t('mobileMenu.addToCanvas')">
                       ＋
                     </button>
                   </div>
                   <div class="fullmenu-item-row">
                     <button class="fullmenu-item fullmenu-item--grow" type="button" @click="handleToggleStickers">
                       <span class="fullmenu-item__icon">📌</span>
-                      <span>Стикеры</span>
+                      <span>{{ t('mobileMenu.stickers') }}</span>
                     </button>
-                    <button class="fullmenu-add-btn" type="button" @click="handleAddSticker" title="Добавить на холст">
+                    <button class="fullmenu-add-btn" type="button" @click="handleAddSticker" :title="t('mobileMenu.addToCanvas')">
                       ＋
                     </button>
                   </div>
@@ -515,7 +522,7 @@ const handleOverlayClick = () => {
                 >
                   <span class="fullmenu-aurora-toggle__glow"></span>
                   <span class="fullmenu-aurora-toggle__label">
-                    ✦ Тема Aurora
+                    ✦ {{ t('mobileMenu.themeAurora') }}
                   </span>
                 </button>
 
@@ -527,7 +534,7 @@ const handleOverlayClick = () => {
                   @click="handleToggleTheme"
                 >
                   <span class="fullmenu-theme-toggle__icon" aria-hidden="true"></span>
-                  <span class="fullmenu-theme-toggle__label">{{ isDark ? 'Светлая' : 'Тёмная' }}</span>
+                  <span class="fullmenu-theme-toggle__label">{{ isDark ? t('mobileMenu.lightTheme') : t('mobileMenu.darkTheme') }}</span>
                 </button>
 
                 <!-- Версия для ПК -->
@@ -538,7 +545,7 @@ const handleOverlayClick = () => {
                   @click="handleToggleVersion"
                 >
                   <span class="fullmenu-theme-toggle__pc-icon" aria-hidden="true">💻</span>
-                  <span class="fullmenu-theme-toggle__label">Версия для ПК</span>
+                  <span class="fullmenu-theme-toggle__label">{{ t('mobileMenu.desktopVersion') }}</span>
                 </button>
               </div>
 

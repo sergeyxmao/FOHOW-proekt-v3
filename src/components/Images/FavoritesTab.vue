@@ -6,6 +6,9 @@ import { useNotificationsStore } from '../../stores/notifications.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { getFavoriteImages, removeImageFromFavorites } from '../../services/imageService'
 import ImageCard from './ImageCard.vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps({
   placementTarget: {
@@ -111,34 +114,34 @@ onMounted(loadFavorites)
         v-model="searchQuery"
         type="text"
         class="favorites-tab__search-input"
-        placeholder="Поиск по имени..."
+        :placeholder="t('imageLibrary.searchByName')"
       />
     </div>
 
     <!-- Загрузка -->
     <div v-if="isLoading" class="favorites-tab__empty">
-      <p class="favorites-tab__empty-text">Загрузка...</p>
+      <p class="favorites-tab__empty-text">{{ t('common.loading') }}</p>
     </div>
 
     <!-- Ошибка -->
     <div v-else-if="error" class="favorites-tab__empty">
       <p class="favorites-tab__empty-text">{{ error }}</p>
       <button type="button" class="favorites-tab__retry" @click="loadFavorites">
-        Повторить
+        {{ t('imageLibrary.retry') }}
       </button>
     </div>
 
     <!-- Пусто -->
     <div v-else-if="images.length === 0" class="favorites-tab__empty">
-      <p class="favorites-tab__empty-text">Нет избранных изображений</p>
+      <p class="favorites-tab__empty-text">{{ t('imageLibrary.noFavorites') }}</p>
       <p class="favorites-tab__empty-hint">
-        Нажмите на сердечко на любом изображении, чтобы добавить его в избранное
+        {{ t('imageLibrary.addToFavorites') }}
       </p>
     </div>
 
     <!-- Нет результатов поиска -->
     <div v-else-if="filteredImages.length === 0" class="favorites-tab__empty">
-      <p class="favorites-tab__empty-text">Ничего не найдено</p>
+      <p class="favorites-tab__empty-text">{{ t('imageLibrary.nothingFound') }}</p>
     </div>
 
     <!-- Сетка изображений -->

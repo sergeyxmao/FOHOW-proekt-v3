@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useBoardStore } from '@/stores/board'
 import { useMobileStore } from '@/stores/mobile'
@@ -17,6 +18,7 @@ const props = defineProps({
 
 const emit = defineEmits(['save', 'fit-to-content', 'open-profile', 'request-auth'])
 
+const { t } = useI18n()
 const authStore = useAuthStore()
 const boardStore = useBoardStore()
 const mobileStore = useMobileStore()
@@ -43,8 +45,8 @@ const isSaveAvailable = computed(() => {
 
 const saveTooltip = computed(() =>
   isSaveAvailable.value
-    ? 'Сохранить'
-    : 'Задайте название проекта, чтобы сохранить'
+    ? t('common.save')
+    : t('board.savePrompt')
 )
 
 const handleSave = () => {
@@ -87,7 +89,7 @@ const handleProfileClick = () => {
           type="button"
           @click="openMarketingLink"
           title="@marketingFohow"
-          aria-label="Открыть Telegram @marketingFohow"
+          :aria-label="t('common.close')"
         >
           <svg class="marketing-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path
@@ -105,8 +107,8 @@ const handleProfileClick = () => {
           class="mobile-toolbar-button zoom-button"
           type="button"
           @click="handleFitToContent"
-          :title="`Текущий масштаб: ${zoomDisplay}%`"
-          aria-label="Автоподгонка масштаба"
+          :title="`${t('editor.zoom')}: ${zoomDisplay}%`"
+          :aria-label="t('board.autoFitZoom')"
         >
           <span class="button-icon zoom-button__value" data-zoom-display>{{ zoomDisplay }}</span>
         </button>
@@ -116,8 +118,8 @@ const handleProfileClick = () => {
           class="mobile-toolbar-button mode-button"
           type="button"
           @click="performanceModeStore.cycleMode()"
-          :title="`Режим: ${performanceMode}`"
-          aria-label="Переключить режим производительности"
+          :title="`Mode: ${performanceMode}`"
+          aria-label="Performance mode"
         >
           <span class="button-icon">{{ performanceModeIcon }}</span>
         </button>
@@ -129,8 +131,8 @@ const handleProfileClick = () => {
           class="mobile-toolbar-button auth-button"
           type="button"
           @click="handleProfileClick"
-          title="Войти"
-          aria-label="Открыть окно авторизации"
+          :title="t('auth.login')"
+          :aria-label="t('auth.login')"
         >
           <span class="button-icon">👤</span>
         </button>

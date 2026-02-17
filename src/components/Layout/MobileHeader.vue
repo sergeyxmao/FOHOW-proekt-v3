@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useHistoryStore } from '@/stores/history'
@@ -28,6 +29,7 @@ const emit = defineEmits([
   'open-full-menu'
 ])
 
+const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
 const historyStore = useHistoryStore()
@@ -314,7 +316,7 @@ watch(
           :class="{ 'mobile-header-button--active': isSelectionMode }"
           type="button"
           @click="toggleSelectionMode"
-          title="Режим выделения"
+          :title="t('userMenu.selectionMode')"
         >
           <span class="button-icon">⬚</span>
         </button>
@@ -346,7 +348,7 @@ watch(
           class="mobile-header-button"
           type="button"
           @click="handleExportHTML"
-          title="Поделиться проектом"
+          :title="t('userMenu.shareProject')"
         >
           <span class="button-icon">📄</span>
         </button>
@@ -357,7 +359,7 @@ watch(
           :class="{ 'mobile-header-button--active': isSelectionMode }"
           type="button"
           @click="toggleSelectionMode"
-          title="Режим выделения"
+          :title="t('userMenu.selectionMode')"
         >
           <span class="button-icon">⬚</span>
         </button>
@@ -371,13 +373,13 @@ watch(
           ref="userMenuTriggerRef"
           type="button"
           @click="handleAvatarClick"
-          :title="user?.name || 'Профиль'"
+          :title="user?.name || t('profile.title')"
         >
           <div :class="['avatar-container', { 'avatar-container--verified': user?.is_verified }]">
             <img
               v-if="user?.avatar_url"
               :src="getAvatarUrl(user.avatar_url)"
-              alt="Аватар"
+              :alt="t('profile.title')"
               class="avatar-image"
             >
             <span v-else class="avatar-initials">{{ userInitials }}</span>
@@ -388,7 +390,7 @@ watch(
           class="mobile-header-button"
           type="button"
           @click="handleAuthButtonClick"
-          title="Войти"
+          :title="t('auth.login')"
         >
           <span class="button-icon">👤</span>
         </button>
@@ -411,7 +413,7 @@ watch(
 
             <div class="mobile-user-menu__section mobile-user-menu__section--account">
               <div class="mobile-user-menu__account-number">
-                {{ user?.personal_id || 'Не указан' }}
+                {{ user?.personal_id || t('userMenu.notSpecified') }}
               </div>
             </div>
             <div class="mobile-user-menu__divider" />
@@ -420,7 +422,7 @@ watch(
               <button
                 class="mobile-user-menu__project-button"
                 type="button"
-                title="Переименовать проект"
+                :title="t('userMenu.renameProject')"
                 @click="handleRenameCurrentBoard"
               >
                 <span class="mobile-user-menu__project-name">{{ currentBoardName }}</span>
@@ -429,24 +431,24 @@ watch(
              <div class="mobile-user-menu__status">
                 <template v-if="isSaving">
                   <span class="status-spinner">⏳</span>
-                  <span>Сохранение...</span>
+                  <span>{{ t('board.saving') }}</span>
                 </template>
                 <template v-else-if="formattedLastSaved">
                   <span class="status-icon">✓</span>
-                  <span>Сохранено в {{ formattedLastSaved }}</span>
+                  <span>{{ t('board.savedAt') }} {{ formattedLastSaved }}</span>
                 </template>
                 <template v-else>
-                  <span>Нет сохранений</span>
+                  <span>{{ t('board.noSaves') }}</span>
                 </template>
               </div>
             </div>
 
             <div class="mobile-user-menu__section">
               <button class="mobile-user-menu__item" type="button" @click="handleMenuProjects">
-                📁 Мои проекты
+                📁 {{ t('userMenu.myProjects') }}
               </button>
               <div class="mobile-user-menu__item mobile-user-menu__item--static">
-                🤝 Совместные проекты
+                🤝 {{ t('userMenu.sharedProjects') }}
               </div>
             </div>
 
@@ -454,7 +456,7 @@ watch(
 
             <div class="mobile-user-menu__section">
               <button class="mobile-user-menu__item" type="button" @click="handleMenuProfile">
-                👤 Профиль
+                👤 {{ t('profile.title') }}
               </button>
               <button
                 v-if="user?.role === 'admin'"
@@ -469,7 +471,7 @@ watch(
                 type="button"
                 @click="handleMenuLogout"
               >
-                🚪 Выйти
+                🚪 {{ t('auth.logout') }}
               </button>
             </div>
           </div>
@@ -492,16 +494,16 @@ watch(
             <button class="mobile-share-menu__close" type="button" @click="closeShareMenu">✕</button>
 
             <div class="mobile-share-menu__title">
-              Поделиться проектом
+              {{ t('userMenu.shareProject') }}
             </div>
 
             <div class="mobile-share-menu__section">
               <button class="mobile-share-menu__item" type="button" @click="handleSaveAs">
-                💾 Сохранить как
+                💾 {{ t('userMenu.saveAs') }}
               </button>
 
               <button class="mobile-share-menu__item" type="button" @click="handleShare">
-                📤 Поделиться
+                📤 {{ t('userMenu.share') }}
               </button>
             </div>
           </div>

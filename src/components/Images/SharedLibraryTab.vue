@@ -6,7 +6,9 @@ import { useNotificationsStore } from '../../stores/notifications'
 import { useSidePanelsStore } from '../../stores/sidePanels'
 import { getSharedLibrary, getFavoriteImageIds, addImageToFavorites, removeImageFromFavorites } from '../../services/imageService'
 import ImageCard from './ImageCard.vue'
+import { useI18n } from 'vue-i18n'
 
+const { t } = useI18n()
 const stickersStore = useStickersStore()
 const boardStore = useBoardStore()
 const notificationsStore = useNotificationsStore()
@@ -107,13 +109,13 @@ const folderOptions = computed(() => {
     const folderName = img.folder_name ?? img.folderName ?? img.folder?.name
 
     if (folderId !== undefined && folderId !== null && !optionsMap.has(folderId)) {
-      optionsMap.set(folderId, folderName || 'Без названия')
+      optionsMap.set(folderId, folderName || t('imageLibrary.unnamed'))
     }
   })
-  
+
   return [
-    { value: null, label: 'Все папки' },
-    ...Array.from(optionsMap.entries()).map(([value, label]) => ({ value, label: label || 'Без названия' }))
+    { value: null, label: t('imageLibrary.allFolders') },
+    ...Array.from(optionsMap.entries()).map(([value, label]) => ({ value, label: label || t('imageLibrary.unnamed') }))
 
   ]
 })
@@ -435,14 +437,14 @@ onBeforeUnmount(() => {
         v-model="searchQuery"
         type="text"
         class="shared-library-tab__search-input"
-        placeholder="Поиск по имени файла, автору..."
+        :placeholder="t('imageLibrary.searchByNameAuthor')"
       />
     </div>
 
     <!-- Индикатор загрузки -->
     <div v-if="isInitialLoading" class="shared-library-tab__loading">
       <div class="shared-library-tab__spinner"></div>
-      <span>Загрузка общей библиотеки...</span>
+      <span>{{ t('imageLibrary.loadingShared') }}</span>
     </div>
 
     <!-- Ошибка доступа -->
@@ -451,13 +453,13 @@ onBeforeUnmount(() => {
         🔒
       </div>
       <p class="shared-library-tab__access-denied-title">
-        Доступ ограничен
+        {{ t('imageLibrary.accessRestricted') }}
       </p>
       <p class="shared-library-tab__access-denied-text">
         {{ error.message }}
       </p>
       <p class="shared-library-tab__access-denied-hint">
-        Обновите тариф для получения доступа к общей библиотеке изображений.
+        {{ t('imageLibrary.upgradePlanShared') }}
       </p>
     </div>
 
@@ -486,20 +488,20 @@ onBeforeUnmount(() => {
       <div v-if="filteredImages.length > 0" class="shared-library-tab__footer">
         <div v-if="isLoadingMore" class="shared-library-tab__loading-more">
           <div class="shared-library-tab__spinner shared-library-tab__spinner--small"></div>
-          <span>Загружаем ещё...</span>
+          <span>{{ t('imageLibrary.loadingMore') }}</span>
         </div>
         <div v-else-if="!hasMore" class="shared-library-tab__no-more">
-          Больше изображений нет
+          {{ t('imageLibrary.noMoreImages') }}
         </div>
       </div>
 
       <!-- Пустое состояние -->
       <div v-else class="shared-library-tab__empty">
         <p class="shared-library-tab__empty-text">
-          {{ searchQuery ? 'Изображения не найдены' : 'Общая библиотека пуста' }}
+          {{ searchQuery ? t('imageLibrary.imagesNotFound') : t('imageLibrary.sharedEmpty') }}
         </p>
         <p v-if="!searchQuery" class="shared-library-tab__empty-hint">
-          Пока нет изображений, одобренных администратором
+          {{ t('imageLibrary.noApprovedImages') }}
         </p>
       </div>
     </template>

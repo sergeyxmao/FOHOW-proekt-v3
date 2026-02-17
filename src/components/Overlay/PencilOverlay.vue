@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useSidePanelsStore } from '../../stores/sidePanels.js';
 import { useStickersStore } from '../../stores/stickers.js';
 import ImagesPanel from '../Panels/ImagesPanel.vue';
@@ -37,6 +38,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close']);
+const { t } = useI18n();
 const sidePanelsStore = useSidePanelsStore();
 const stickersStore = useStickersStore();
 
@@ -1341,46 +1343,46 @@ onBeforeUnmount(() => {
           @pointerleave.stop.prevent="finishImageTransform"
           @pointercancel.stop.prevent="finishImageTransform"
         >
-          <img :src="image.src" alt="Вставленное изображение" class="pencil-overlay__image" draggable="false" />
+          <img :src="image.src" :alt="t('pencil.insertedImage')" class="pencil-overlay__image" draggable="false" />
           <div v-if="image.id === activeImageId" class="pencil-overlay__image-frame">
             <span
               class="pencil-overlay__image-handle pencil-overlay__image-handle--top-left"
-              title="Масштабировать"
+              :title="t('pencil.scale')"
               @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'top-left', $event)"
             ></span>
             <span
               class="pencil-overlay__image-handle pencil-overlay__image-handle--top"
-              title="Масштабировать"
+              :title="t('pencil.scale')"
               @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'top', $event)"
             ></span>
             <span
               class="pencil-overlay__image-handle pencil-overlay__image-handle--top-right"
-              title="Масштабировать"
+              :title="t('pencil.scale')"
               @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'top-right', $event)"
             ></span>
             <span
               class="pencil-overlay__image-handle pencil-overlay__image-handle--right"
-              title="Масштабировать"
+              :title="t('pencil.scale')"
               @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'right', $event)"
             ></span>
             <span
               class="pencil-overlay__image-handle pencil-overlay__image-handle--bottom-right"
-              title="Масштабировать"
+              :title="t('pencil.scale')"
               @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'bottom-right', $event)"
             ></span>
             <span
               class="pencil-overlay__image-handle pencil-overlay__image-handle--bottom"
-              title="Масштабировать"
+              :title="t('pencil.scale')"
               @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'bottom', $event)"
             ></span>
             <span
               class="pencil-overlay__image-handle pencil-overlay__image-handle--bottom-left"
-              title="Масштабировать"
+              :title="t('pencil.scale')"
               @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'bottom-left', $event)"
             ></span>
             <span
               class="pencil-overlay__image-handle pencil-overlay__image-handle--left"
-              title="Масштабировать"
+              :title="t('pencil.scale')"
               @pointerdown.stop.prevent="beginImageTransform(image.id, 'resize', 'left', $event)"
             ></span>
           </div>
@@ -1432,7 +1434,7 @@ onBeforeUnmount(() => {
         'pencil-overlay__close-button',
         { 'pencil-overlay__close-button--modern': props.isModernTheme }
       ]"
-      title="Сохранить и выйти"
+      :title="t('pencil.saveAndExit')"
       @click="handleClose"
     >
       ✕
@@ -1449,7 +1451,7 @@ onBeforeUnmount(() => {
             { 'pencil-overlay__tool-btn--active': currentTool === 'brush' },
             { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
           ]"
-          title="Карандаш"
+          :title="t('pencil.pencilTool')"
           @click="toggleDropdown('brush')"
         >
           ✏️
@@ -1464,14 +1466,14 @@ onBeforeUnmount(() => {
               class="pencil-overlay__dropdown-select-btn"
               @click="selectTool('brush')"
             >
-              Выбрать карандаш
+              {{ t('pencil.selectPencil') }}
             </button>
             <label class="pencil-overlay__control">
-              <span>Цвет</span>
+              <span>{{ t('pencil.color') }}</span>
               <input v-model="brushColor" type="color" />
             </label>
             <label class="pencil-overlay__control">
-              <span>Толщина: {{ brushSize }} px</span>
+              <span>{{ t('pencil.thickness') }} {{ brushSize }} px</span>
               <input
                 v-model.number="brushSize"
                 type="range"
@@ -1492,7 +1494,7 @@ onBeforeUnmount(() => {
             { 'pencil-overlay__tool-btn--active': currentTool === 'marker' },
             { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
           ]"
-          title="Маркер"
+          :title="t('pencil.marker')"
           @click="toggleDropdown('marker')"
         >
           🖍️
@@ -1507,14 +1509,14 @@ onBeforeUnmount(() => {
               class="pencil-overlay__dropdown-select-btn"
               @click="selectTool('marker')"
             >
-              Выбрать маркер
+              {{ t('pencil.selectMarker') }}
             </button>
             <label class="pencil-overlay__control">
-              <span>Цвет</span>
+              <span>{{ t('pencil.color') }}</span>
               <input v-model="brushColor" type="color" />
             </label>
             <label class="pencil-overlay__control">
-              <span>Толщина: {{ markerSize }} px</span>
+              <span>{{ t('pencil.thickness') }}: {{ markerSize }} px</span>
               <input
                 v-model.number="markerSize"
                 type="range"
@@ -1523,7 +1525,7 @@ onBeforeUnmount(() => {
               />
             </label>
             <label class="pencil-overlay__control">
-              <span>Прозрачность: {{ markerOpacityPercent }}%</span>
+              <span>{{ t('pencil.opacity') }}: {{ markerOpacityPercent }}%</span>
               <input
                 v-model.number="markerOpacity"
                 type="range"
@@ -1545,7 +1547,7 @@ onBeforeUnmount(() => {
             { 'pencil-overlay__tool-btn--active': currentTool === 'eraser' },
             { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
           ]"
-          title="Ластик"
+          :title="t('pencil.eraser')"
           @click="toggleDropdown('eraser')"
         >
           🧽
@@ -1560,10 +1562,10 @@ onBeforeUnmount(() => {
               class="pencil-overlay__dropdown-select-btn"
               @click="selectTool('eraser')"
             >
-              Выбрать ластик
+              {{ t('pencil.selectEraser') }}
             </button>
             <label class="pencil-overlay__control">
-              <span>Диаметр: {{ eraserSize }} px</span>
+              <span>{{ t('pencil.diameter') }}: {{ eraserSize }} px</span>
               <input
                 v-model.number="eraserSize"
                 type="range"
@@ -1584,7 +1586,7 @@ onBeforeUnmount(() => {
             { 'pencil-overlay__tool-btn--active': currentTool === 'selection' },
             { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
           ]"
-          title="Выделение"
+          :title="t('pencil.selection')"
           @click="toggleDropdown('selection')"
         >
           🔲
@@ -1599,10 +1601,10 @@ onBeforeUnmount(() => {
               class="pencil-overlay__dropdown-select-btn"
               @click="selectTool('selection')"
             >
-              Выбрать выделение
+              {{ t('pencil.selectSelection') }}
             </button>
             <p class="pencil-overlay__helper-text">
-              Выделите область, затем перемещайте содержимое левой кнопкой мыши. Для отмены выделения нажмите Esc или кликните по свободной области.
+              {{ t('pencil.selectionHint') }}
             </p>
           </div>
         </div>
@@ -1617,7 +1619,7 @@ onBeforeUnmount(() => {
             { 'pencil-overlay__tool-btn--active': currentTool === 'text' },
             { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
           ]"
-          title="Текст"
+          :title="t('pencil.textTool')"
           @click="toggleDropdown('text')"
         >
           Aa
@@ -1632,14 +1634,14 @@ onBeforeUnmount(() => {
               class="pencil-overlay__dropdown-select-btn"
               @click="selectTool('text')"
             >
-              Выбрать текст
+              {{ t('pencil.selectText') }}
             </button>
             <label class="pencil-overlay__control">
-              <span>Цвет</span>
+              <span>{{ t('pencil.color') }}</span>
               <input v-model="textColor" type="color" />
             </label>
             <label class="pencil-overlay__control">
-              <span>Размер: {{ textSize }}px</span>
+              <span>{{ t('pencil.size') }}: {{ textSize }}px</span>
               <input
                 v-model.number="textSize"
                 type="range"
@@ -1659,7 +1661,7 @@ onBeforeUnmount(() => {
             'pencil-overlay__tool-btn',
             { 'pencil-overlay__tool-btn--modern': props.isModernTheme }
           ]"
-          title="Изображения"
+          :title="t('pencil.imagesTool')"
           @click="openImagesPanel"
         >
           🖼️
@@ -1677,7 +1679,7 @@ onBeforeUnmount(() => {
         ]"
         :disabled="!canUndo"
         @click="undo"
-        title="Отмена"
+        :title="t('pencil.undo')"
       >
         <span class="pencil-overlay__btn-icon">↶</span>
       </button>
@@ -1689,7 +1691,7 @@ onBeforeUnmount(() => {
         ]"
         :disabled="!canRedo"
         @click="redo"
-        title="Повтор"
+        :title="t('pencil.redo')"
       >
         <span class="pencil-overlay__btn-icon">↷</span>
       </button>

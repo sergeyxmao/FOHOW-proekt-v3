@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import PanelSwitchBar from './PanelSwitchBar.vue'
 import { useNotesStore } from '../../stores/notes.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
@@ -15,6 +16,7 @@ const props = defineProps({
   }
 })
 
+const { t } = useI18n()
 const notesStore = useNotesStore()
 const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
@@ -69,7 +71,7 @@ const handleNoteEntryClick = (cardId, date) => {
 }
 
 const handleNoteEntryDelete = async (cardId, date) => {
-  if (!confirm('Вы уверены, что хотите удалить эту заметку?')) return
+  if (!confirm(t('panels.deleteNoteConfirm'))) return
 
   console.log('🗑️ Попытка удалить заметку:', { cardId, date })
 
@@ -147,11 +149,11 @@ const handleCardNotesDelete = async (cardId) => {
     }"
       >
     <div class="notes-side-panel__header">
-      <h2 class="notes-side-panel__title">Календарь</h2>
+      <h2 class="notes-side-panel__title">{{ t('discussionMenu.notesList') }}</h2>
       <button
         type="button"
         class="notes-side-panel__close"
-        title="Закрыть"
+        :title="t('common.close')"
         @click="handleClose"
       >
         ×
@@ -163,7 +165,7 @@ const handleCardNotesDelete = async (cardId) => {
         v-model="searchQuery"
         class="notes-side-panel__search-input"
         type="search"
-        placeholder="Поиск по заметкам..."
+        :placeholder="t('panels.searchNotes')"
       />
     </div>
 
@@ -184,7 +186,7 @@ const handleCardNotesDelete = async (cardId) => {
           <button
             type="button"
             class="notes-side-panel__icon-button notes-side-panel__icon-button--danger"
-            title="Удалить все заметки"
+            :title="t('panels.deleteAllNotes')"
             @click="handleCardNotesDelete(item.id)"
           >
             🗑️
@@ -210,7 +212,7 @@ const handleCardNotesDelete = async (cardId) => {
             <button
               type="button"
               class="notes-side-panel__icon-button"
-              title="Удалить заметку"
+              :title="t('panels.deleteNote')"
               @click="handleNoteEntryDelete(item.id, entry.date)"
             >
               🗑️
@@ -220,7 +222,7 @@ const handleCardNotesDelete = async (cardId) => {
       </div>
 
       <p v-if="!filteredCards.length && searchQuery.trim()" class="notes-side-panel__empty">
-        Ничего не найдено
+        {{ t('panels.nothingFound') }}
       </p>      
     </div>
   </div>

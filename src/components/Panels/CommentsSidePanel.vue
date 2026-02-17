@@ -35,7 +35,7 @@ const handleClose = () => {
       <button
         type="button"
         class="comments-side-panel__close"
-        title="Закрыть"
+        :title="t('common.close')"
         @click="handleClose"
       >
         ×

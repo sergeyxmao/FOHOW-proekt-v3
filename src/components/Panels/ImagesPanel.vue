@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, inject } from 'vue'
+import { useI18n } from 'vue-i18n'
 import PanelSwitchBar from './PanelSwitchBar.vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useStickersStore } from '../../stores/stickers.js'
@@ -20,6 +21,7 @@ const props = defineProps({
   }
 })
 
+const { t } = useI18n()
 const sidePanelsStore = useSidePanelsStore()
 const stickersStore = useStickersStore()
 const subscriptionStore = useSubscriptionStore()
@@ -56,11 +58,11 @@ const setActiveTab = (tab) => {
     }"
   >
     <div class="images-panel__header">
-      <h2 class="images-panel__title">Изображения</h2>
+      <h2 class="images-panel__title">{{ t('mobileMenu.images') }}</h2>
       <button
         type="button"
         class="images-panel__close"
-        title="Закрыть"
+        :title="t('common.close')"
         @click="handleClose"
       >
         ×
@@ -75,10 +77,10 @@ const setActiveTab = (tab) => {
         🔒
       </div>
       <p class="images-panel__access-denied-title">
-        Библиотека изображений недоступна на текущем тарифе
+        {{ t('panels.accessDenied') }}
       </p>
       <p class="images-panel__access-denied-hint">
-        Обновите тариф для получения доступа к библиотеке изображений.
+        {{ t('panels.accessDeniedHint') }}
       </p>
     </div>
 
@@ -90,7 +92,7 @@ const setActiveTab = (tab) => {
         :class="{ 'images-panel__tab--active': activeTab === 'my' }"
         @click="setActiveTab('my')"
       >
-        Личные
+        {{ t('panels.personal') }}
       </button>
       <button
         type="button"
@@ -98,13 +100,13 @@ const setActiveTab = (tab) => {
         :class="{ 'images-panel__tab--active': activeTab === 'shared' }"
         @click="setActiveTab('shared')"
       >
-        Общая
+        {{ t('panels.shared') }}
       </button>
       <button
         type="button"
         class="images-panel__tab images-panel__tab--icon"
         :class="{ 'images-panel__tab--active': activeTab === 'favorites' }"
-        title="Избранное"
+        :title="t('panels.favorites')"
         @click="setActiveTab('favorites')"
       >
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="images-panel__tab-icon">
@@ -115,7 +117,7 @@ const setActiveTab = (tab) => {
         type="button"
         class="images-panel__tab images-panel__tab--icon"
         :class="{ 'images-panel__tab--active': activeTab === 'board' }"
-        title="На доске"
+        :title="t('panels.onBoard')"
         @click="setActiveTab('board')"
       >
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="images-panel__tab-icon">

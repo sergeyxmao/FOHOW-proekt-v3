@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import PanelSwitchBar from './PanelSwitchBar.vue'
 import { useBoardStore } from '../../stores/board.js'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
@@ -14,6 +15,7 @@ const props = defineProps({
   }
 })
 
+const { t } = useI18n()
 const boardStore = useBoardStore()
 const sidePanelsStore = useSidePanelsStore()
 const anchorsStore = useAnchorsStore()
@@ -112,11 +114,11 @@ watch(anchors, () => {
     :class="{ 'anchors-panel--modern': props.isModernTheme }"
   >
     <div class="anchors-panel__header">
-      <h2 class="anchors-panel__title">Точки</h2>
+      <h2 class="anchors-panel__title">{{ t('panels.anchors') }}</h2>
       <button
         type="button"
         class="anchors-panel__close"
-        title="Закрыть"
+        :title="t('common.close')"
         @click="handleClose"
       >
         ×
@@ -128,7 +130,7 @@ watch(anchors, () => {
         v-model="searchQuery"
         class="anchors-panel__search-input"
         type="search"
-        placeholder="Поиск по точкам..."
+        :placeholder="t('panels.searchAnchors')"
       />
     </div>
 
@@ -147,27 +149,27 @@ watch(anchors, () => {
             v-model="editText"
             class="anchors-panel__textarea"
             rows="3"
-            placeholder="Описание точки"
+            :placeholder="t('panels.pointDescription')"
             @keydown.enter.prevent="handleSave(anchor.id)"
           ></textarea>
           <div class="anchors-panel__actions">
             <button type="button" class="anchors-panel__action" @click.stop="handleSave(anchor.id)">
-              Сохранить
+              {{ t('common.save') }}
             </button>
           </div>
         </div>
-        <div v-else class="anchors-panel__text">{{ anchor.description || 'Нет описания' }}</div>
+        <div v-else class="anchors-panel__text">{{ anchor.description || t('panels.noDescription') }}</div>
         <div class="anchors-panel__toolbar" @click.stop>
-          <button type="button" class="anchors-panel__icon" title="Редактировать" @click="handleStartEdit(anchor)">
+          <button type="button" class="anchors-panel__icon" :title="t('common.edit')" @click="handleStartEdit(anchor)">
             ✏️
           </button>
-          <button type="button" class="anchors-panel__icon anchors-panel__icon--danger" title="Удалить" @click="handleDelete(anchor.id)">
+          <button type="button" class="anchors-panel__icon anchors-panel__icon--danger" :title="t('common.delete')" @click="handleDelete(anchor.id)">
             🗑
           </button>
         </div>
       </div>
-      <p v-if="!sortedAnchors.length && !searchQuery.trim()" class="anchors-panel__empty">Точек пока нет</p>
-      <p v-else-if="!filteredAnchors.length" class="anchors-panel__empty">Ничего не найдено</p>
+      <p v-if="!sortedAnchors.length && !searchQuery.trim()" class="anchors-panel__empty">{{ t('panels.noPointsYet') }}</p>
+      <p v-else-if="!filteredAnchors.length" class="anchors-panel__empty">{{ t('panels.nothingFound') }}</p>
     </div>
   </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import PanelSwitchBar from './PanelSwitchBar.vue'
 import { useSidePanelsStore } from '../../stores/sidePanels.js'
 import { useBoardStore } from '../../stores/board.js'
@@ -14,6 +15,7 @@ const props = defineProps({
   }
 })
 
+const { t } = useI18n()
 const sidePanelsStore = useSidePanelsStore()
 const boardStore = useBoardStore()
 const authStore = useAuthStore()
@@ -303,11 +305,11 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
     :class="{ 'partners-panel--modern': props.isModernTheme }"
   >
     <div class="partners-panel__header">
-      <h2 class="partners-panel__title">Партнеры</h2>
+      <h2 class="partners-panel__title">{{ t('mobileMenu.partners') }}</h2>
       <button
         type="button"
         class="partners-panel__close"
-        title="Закрыть"
+        :title="t('common.close')"
         @click="handleClose"
       >
         ×
@@ -322,7 +324,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
         v-model="searchQuery"
         @input="handleSearch"
         type="text"
-        placeholder="Поиск по имени, городу, номеру..."
+        :placeholder="t('panels.searchPartners')"
         class="search-input"
         :class="{ 'search-input--modern': props.isModernTheme }"
       />
@@ -339,7 +341,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
         :alt="selectedPartner.username"
         class="partner-details-avatar partner-details-avatar--clickable"
         @click="navigateToPartnerCard(selectedPartner)"
-        title="Нажмите, чтобы перейти к лицензии"
+        :title="t('panels.goToLicense')"
       />
       <div class="partner-details-info">
         <!-- Полное имя - если разрешено -->
@@ -347,7 +349,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
           {{ selectedPartner.full_name }}
         </h4>
         <h4 v-else class="partner-details-name partner-details-hidden">
-          🔒 Скрыто
+          🔒 {{ t('panels.hidden') }}
         </h4>
 
         <p class="partner-details-number">{{ selectedPartner.personal_id }}</p>
@@ -355,29 +357,29 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
         <!-- Представительство -->
         <div class="partner-details-field">
           <span class="partner-details-icon" aria-hidden="true">🏢</span>          
-          <span class="partner-details-label">Представительство:</span>
+          <span class="partner-details-label">{{ t('panels.office') }}</span>
           <span v-if="selectedPartner.office">{{ selectedPartner.office }}</span>
-          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+          <span v-else class="partner-details-hidden">🔒 {{ t('panels.hidden') }}</span>
         </div>
         <!-- Страна -->
         <div class="partner-details-field">
           <span class="partner-details-icon" aria-hidden="true">🌍</span>
-          <span class="partner-details-label">Страна:</span>
+          <span class="partner-details-label">{{ t('panels.country') }}</span>
           <span v-if="selectedPartner.country">{{ selectedPartner.country }}</span>
-          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+          <span v-else class="partner-details-hidden">🔒 {{ t('panels.hidden') }}</span>
         </div>
 
         <!-- Город -->
         <div class="partner-details-field">
           <span class="partner-details-icon" aria-hidden="true">🏙️</span>
-          <span class="partner-details-label">Город:</span>
+          <span class="partner-details-label">{{ t('panels.city') }}</span>
           <span v-if="selectedPartner.city">{{ selectedPartner.city }}</span>
-          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+          <span v-else class="partner-details-hidden">🔒 {{ t('panels.hidden') }}</span>
         </div>
         <!-- Телефон -->
         <div class="partner-details-field">
           <span class="partner-details-icon" aria-hidden="true">📞</span>          
-          <span class="partner-details-label">Телефон:</span>
+          <span class="partner-details-label">{{ t('panels.phone') }}</span>
           <span v-if="selectedPartner.phone">
             <a
               :href="`tel:${normalizePhone(selectedPartner.phone)}`"
@@ -387,7 +389,7 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
               {{ selectedPartner.phone }}
             </a>
           </span>
-          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+          <span v-else class="partner-details-hidden">🔒 {{ t('panels.hidden') }}</span>
         </div>
 
         <!-- VK -->
@@ -401,10 +403,10 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
               target="_blank"
               rel="noopener"
             >
-              Профиль
+              {{ t('panels.profileLink') }}
             </a>
           </span>
-          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+          <span v-else class="partner-details-hidden">🔒 {{ t('panels.hidden') }}</span>
         </div>
 
         <!-- Telegram -->
@@ -419,10 +421,10 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
               rel="noopener"
               @click.prevent="openTelegram(selectedPartner.telegram_user)"
             >
-              Профиль
+              {{ t('panels.profileLink') }}
             </a>
           </span>
-          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+          <span v-else class="partner-details-hidden">🔒 {{ t('panels.hidden') }}</span>
         </div>
 
         <!-- Instagram -->
@@ -437,16 +439,16 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
               rel="noopener"
               @click.prevent="openInstagram(selectedPartner.instagram_profile)"
             >
-              Профиль
+              {{ t('panels.profileLink') }}
             </a>
           </span>
-          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+          <span v-else class="partner-details-hidden">🔒 {{ t('panels.hidden') }}</span>
         </div>
 
         <!-- Сайт -->
         <div class="partner-details-field">
           <span class="partner-details-icon" aria-hidden="true">🌐</span>
-          <span class="partner-details-label">Сайт:</span>
+          <span class="partner-details-label">{{ t('panels.website') }}</span>
           <span v-if="selectedPartner.website">
             <a
               :href="selectedPartner.website.startsWith('http') ? selectedPartner.website : 'https://' + selectedPartner.website"
@@ -454,10 +456,10 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
               target="_blank"
               rel="noopener"
             >
-              Профиль
+              {{ t('panels.profileLink') }}
             </a>
           </span>
-          <span v-else class="partner-details-hidden">🔒 Скрыто</span>
+          <span v-else class="partner-details-hidden">🔒 {{ t('panels.hidden') }}</span>
         </div>
       </div>
       <button @click="closeDetails" class="partner-details-close">×</button>
@@ -466,13 +468,13 @@ const isEmpty = computed(() => !loading.value && partners.value.length === 0)
     <div class="partners-panel__content">
       <!-- Загрузка -->
       <div v-if="loading" class="loading-state">
-        <p>Загрузка партнёров...</p>
+        <p>{{ t('panels.loadingPartners') }}</p>
       </div>
 
       <!-- Пустое состояние -->
       <div v-else-if="isEmpty" class="empty-state">
-        <p v-if="searchQuery">Партнёры не найдены</p>
-        <p v-else>На этой доске нет добавленных партнёров</p>
+        <p v-if="searchQuery">{{ t('panels.noPartnersFound') }}</p>
+        <p v-else>{{ t('panels.noPartnersOnBoard') }}</p>
       </div>
 
       <!-- Список партнёров (сетка аватаров) -->
