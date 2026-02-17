@@ -222,6 +222,11 @@ systemctl status fohow-api
 Экспорт схем в HTML-файлы — интерактивность, touch support, watermark, pinch-zoom:
 [html-export.md](html-export.md)
 
+### Top Menu
+
+Архитектура верхнего меню — 3 вкладки (Проект, Вид, Элементы), кнопка языка, мобильная версия:
+[top-menu.md](top-menu.md)
+
 ### Menu Tooltips
 
 Всплывающие подсказки (ⓘ) в пунктах выпадающих меню верхней панели:

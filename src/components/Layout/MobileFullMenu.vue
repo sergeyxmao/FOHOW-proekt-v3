@@ -142,7 +142,7 @@ const handleCycleHeaderColor = () => {
   viewSettingsStore.cycleHeaderColor()
 }
 
-// --- View: Language ---
+// --- Language ---
 const changeLocale = (newLocale) => {
   locale.value = newLocale
   try {
@@ -260,6 +260,13 @@ const handleOverlayClick = () => {
                 </button>
 
                 <div v-if="openSections.view" class="fullmenu-section__body">
+
+                  <!-- Drawing mode -->
+                  <button class="fullmenu-item" type="button" @click="handlePencil">
+                    <span class="fullmenu-item__icon">✏️</span>
+                    <span>{{ t('mobileMenu.drawing') }}</span>
+                  </button>
+                  <div class="fullmenu-separator"></div>
 
                   <!-- Lines -->
                   <div class="fullmenu-subsection">
@@ -384,30 +391,6 @@ const handleOverlayClick = () => {
                     </div>
                   </div>
 
-                  <!-- Language -->
-                  <div class="fullmenu-subsection">
-                    <div class="fullmenu-subsection__header">{{ t('viewMenu.language') }}</div>
-                    <div class="fullmenu-row">
-                      <button
-                        class="fullmenu-chip"
-                        :class="{ 'fullmenu-chip--active': locale === 'ru' }"
-                        type="button"
-                        @click="changeLocale('ru')"
-                      >🇷🇺</button>
-                      <button
-                        class="fullmenu-chip"
-                        :class="{ 'fullmenu-chip--active': locale === 'en' }"
-                        type="button"
-                        @click="changeLocale('en')"
-                      >🇬🇧</button>
-                      <button
-                        class="fullmenu-chip"
-                        :class="{ 'fullmenu-chip--active': locale === 'zh' }"
-                        type="button"
-                        @click="changeLocale('zh')"
-                      >🇨🇳</button>
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -466,6 +449,28 @@ const handleOverlayClick = () => {
 
               <!-- Нижние кнопки-переключатели -->
               <div class="fullmenu-bottom-actions">
+                <!-- Language -->
+                <div class="fullmenu-lang-row">
+                  <button
+                    class="fullmenu-chip"
+                    :class="{ 'fullmenu-chip--active': locale === 'ru' }"
+                    type="button"
+                    @click="changeLocale('ru')"
+                  >🇷🇺</button>
+                  <button
+                    class="fullmenu-chip"
+                    :class="{ 'fullmenu-chip--active': locale === 'en' }"
+                    type="button"
+                    @click="changeLocale('en')"
+                  >🇬🇧</button>
+                  <button
+                    class="fullmenu-chip"
+                    :class="{ 'fullmenu-chip--active': locale === 'zh' }"
+                    type="button"
+                    @click="changeLocale('zh')"
+                  >🇨🇳</button>
+                </div>
+
                 <!-- Переключатель дизайна -->
                 <button
                   class="fullmenu-aurora-toggle"
@@ -1076,6 +1081,15 @@ const handleOverlayClick = () => {
   margin-top: 0;
 }
 
+/* --- Language row --- */
+.fullmenu-lang-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
 /* --- Aurora Toggle Button --- */
 .fullmenu-aurora-toggle {
   position: relative;
@@ -1390,23 +1404,6 @@ const handleOverlayClick = () => {
 /* Aurora labels */
 .fullmenu-panel--aurora .fullmenu-label {
   color: rgba(255, 255, 255, 0.5);
-}
-
-/* Aurora lang buttons */
-.fullmenu-panel--aurora .fullmenu-lang-btn {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.fullmenu-panel--aurora .fullmenu-lang-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.fullmenu-panel--aurora .fullmenu-lang-btn--active {
-  background: rgba(0, 212, 170, 0.15);
-  border-color: rgba(0, 212, 170, 0.4);
-  color: #00d4aa;
 }
 
 /* Aurora custom scrollbar */
