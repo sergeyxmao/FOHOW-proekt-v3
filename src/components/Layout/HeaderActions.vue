@@ -6,8 +6,11 @@ import { useAuthStore } from '../../stores/auth'
 import { useCardsStore } from '../../stores/cards'
 import { useConnectionsStore } from '../../stores/connections'
 import { useViewSettingsStore } from '../../stores/viewSettings'
+import { useHistoryStore } from '../../stores/history'
+import { useBoardStore } from '../../stores/board'
 import { checkAndAlertCardLimit } from '../../utils/limitsCheck'
 import { calculateTemplateOffset } from '../../utils/viewport'
+import { calculateAutoLayout, findRootAmongSelected } from '../../utils/autoLayout'
 
 const props = defineProps({
   isModernTheme: {
@@ -30,6 +33,8 @@ const authStore = useAuthStore()
 const cardsStore = useCardsStore()
 const connectionsStore = useConnectionsStore()
 const viewSettingsStore = useViewSettingsStore()
+const historyStore = useHistoryStore()
+const boardStore = useBoardStore()
 
 const {
   lineColor,
@@ -88,6 +93,8 @@ const templateOptions = computed(() =>
     }))
 )
 
+const hasSelectedCard = computed(() => cardsStore.selectedCards.length > 0)
+
 const themeTitle = computed(() =>
   props.isModernTheme ? 'Вернуть светлое меню' : 'Включить тёмное меню'
 )
@@ -132,6 +139,47 @@ function addGoldCard() {
 
 function addUserCard() {
   cardsStore.addUserCard()
+}
+
+function handleAutoLayout() {
+  if (boardStore.isReadOnly) return
+
+  const selectedCards = cardsStore.selectedCards
+  if (selectedCards.length === 0) return
+
+  let rootId, targetCards, targetConnections
+
+  if (selectedCards.length === 1) {
+    rootId = selectedCards[0].id
+    targetCards = cardsStore.cards
+    targetConnections = connectionsStore.connections
+  } else {
+    const selectedIds = new Set(selectedCards.map(c => c.id))
+    targetCards = selectedCards
+    targetConnections = connectionsStore.connections.filter(
+      conn => selectedIds.has(conn.from) && selectedIds.has(conn.to)
+    )
+    rootId = findRootAmongSelected(selectedCards, targetConnections)
+  }
+
+  if (!rootId) return
+
+  const result = calculateAutoLayout({
+    rootId,
+    cards: targetCards,
+    connections: targetConnections
+  })
+
+  if (result.affectedCardIds.length === 0) return
+
+  historyStore.setActionMetadata('update', `Авто-раскладка (${result.affectedCardIds.length} карточек)`)
+
+  for (const [cardId, pos] of result.positions) {
+    cardsStore.updateCardPosition(cardId, pos.x, pos.y, { saveToHistory: false })
+  }
+
+  historyStore.saveState()
+  boardStore.markAsChanged()
 }
 
 function closeTemplateMenu() {
@@ -369,6 +417,16 @@ function handleToggleTheme() {
           </transition>
         </div>
         <button
+          class="header-actions__grid-button header-actions__grid-button--auto-layout"
+          type="button"
+          title="Авто-раскладка структуры"
+          :disabled="!hasSelectedCard"
+          @click="handleAutoLayout"
+        >
+          <span class="header-actions__icon" aria-hidden="true">⊞</span>
+          <span class="visually-hidden">Авто-раскладка структуры</span>
+        </button>
+        <button
           v-if="authStore.user?.role === 'admin'"
           class="header-actions__grid-button header-actions__grid-button--avatar"
           type="button"
@@ -452,6 +510,16 @@ function handleToggleTheme() {
             </div>
           </transition>
         </div>
+        <button
+          class="header-actions__button header-actions__button--auto-layout"
+          type="button"
+          title="Авто-раскладка структуры"
+          :disabled="!hasSelectedCard"
+          @click="handleAutoLayout"
+        >
+          <span class="header-actions__icon" aria-hidden="true">⊞</span>
+          <span class="visually-hidden">Авто-раскладка структуры</span>
+        </button>
         <button
           v-if="authStore.user?.role === 'admin'"
           class="header-actions__button header-actions__button--avatar"

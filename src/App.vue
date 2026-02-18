@@ -37,6 +37,7 @@ import { useDesignModeStore } from './stores/designMode'
 import { storeToRefs } from 'pinia'
 import { makeBoardThumbnail } from './utils/boardThumbnail'
 import { checkAndAlertCardLimit } from './utils/limitsCheck'
+import { calculateAutoLayout, findRootAmongSelected } from './utils/autoLayout'
 import NotesSidePanel from './components/Panels/NotesSidePanel.vue'
 import CommentsSidePanel from './components/Panels/CommentsSidePanel.vue'
 import StickerMessagesPanel from './components/Panels/StickerMessagesPanel.vue'
@@ -72,6 +73,7 @@ const viewportStore = useViewportStore()
 const mobileStore = useMobileStore()
 const viewSettingsStore = useViewSettingsStore()
 const notesStore = useNotesStore()
+const historyStore = useHistoryStore()
 const sidePanelsStore = useSidePanelsStore()
 const notificationsStore = useNotificationsStore()
 const userStore = useUserStore()
@@ -1091,6 +1093,47 @@ async function handleAddTemplate(templateId) {
   }
 }
 
+function handleAutoLayout() {
+  if (boardStore.isReadOnly) return
+
+  const selectedCards = cardsStore.selectedCards
+  if (selectedCards.length === 0) return
+
+  let rootId, targetCards, targetConnections
+
+  if (selectedCards.length === 1) {
+    rootId = selectedCards[0].id
+    targetCards = cardsStore.cards
+    targetConnections = connectionsStore.connections
+  } else {
+    const selectedIds = new Set(selectedCards.map(c => c.id))
+    targetCards = selectedCards
+    targetConnections = connectionsStore.connections.filter(
+      conn => selectedIds.has(conn.from) && selectedIds.has(conn.to)
+    )
+    rootId = findRootAmongSelected(selectedCards, targetConnections)
+  }
+
+  if (!rootId) return
+
+  const result = calculateAutoLayout({
+    rootId,
+    cards: targetCards,
+    connections: targetConnections
+  })
+
+  if (result.affectedCardIds.length === 0) return
+
+  historyStore.setActionMetadata('update', `Авто-раскладка (${result.affectedCardIds.length} карточек)`)
+
+  for (const [cardId, pos] of result.positions) {
+    cardsStore.updateCardPosition(cardId, pos.x, pos.y, { saveToHistory: false })
+  }
+
+  historyStore.saveState()
+  boardStore.markAsChanged()
+}
+
 function handleMobileExportHTML() {
   handleExportHTML()
 }
@@ -1367,7 +1410,7 @@ onBeforeUnmount(() => {
         class="mode-floating-button no-print"
         :class="{ 'mode-floating-button--modern': isModernTheme }"
         type="button"
-        :title="`Режим: ${performanceModeLabel}. Клик для переключения (M)`"
+        :title="`${performanceModeLabel} (M)`"
         @click="performanceModeStore.cycleMode()"
       >
         {{ performanceModeIcon }} {{ performanceModeLabel }}
@@ -1418,6 +1461,7 @@ onBeforeUnmount(() => {
         @add-lower="handleAddLower"
         @add-gold="handleAddGold"
         @add-template="handleAddTemplate"
+        @auto-layout="handleAutoLayout"
       />
       <MobileVersionDialog class="no-print" />
       <MobileFullMenu

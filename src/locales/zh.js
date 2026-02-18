@@ -50,6 +50,8 @@ export default {
     selectHeaderColor: '选择标题颜色',
     changeColor: '更改颜色',
     currentIndex: '当前索引',
+    darkTheme: '切换到深色菜单',
+    lightTheme: '切换到浅色菜单',
     tooltips: {
       drawingMode: '在画板上手绘线条和标注',
       hierarchyMode: '拖动时自动将合作伙伴按层级排列成树形结构',
@@ -282,7 +284,8 @@ export default {
     addLicense: '添加许可证',
     addLower: '添加低级别',
     addGold: '添加 Gold',
-    addTemplate: '添加模板'
+    addTemplate: '添加模板',
+    autoLayout: '自动排列'
   },
   imageLibrary: {
     allFolders: '所有文件夹',

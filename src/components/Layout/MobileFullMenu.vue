@@ -42,6 +42,7 @@ const {
   lineThickness,
   isAnimationEnabled,
   animationSeconds,
+  animationColor,
   isGlobalLineMode,
   headerColor,
   headerColorIndex,
@@ -108,6 +109,7 @@ const handleLineThicknessChange = (e) => {
 }
 
 // --- View: Animation ---
+const animationColorInput = ref(null)
 const handleAnimationToggle = () => {
   viewSettingsStore.toggleAnimation()
 }
@@ -116,6 +118,12 @@ const handleAnimationSecondsChange = (e) => {
   if (Number.isFinite(val) && val >= 2 && val <= 999) {
     viewSettingsStore.setAnimationSeconds(val)
   }
+}
+const openAnimationColorPicker = () => {
+  animationColorInput.value?.click()
+}
+const handleAnimationColorChange = (e) => {
+  viewSettingsStore.setAnimationColor(e.target.value)
 }
 
 // --- View: Background ---
@@ -317,6 +325,20 @@ const handleOverlayClick = () => {
                         type="button"
                         @click="handleAnimationToggle"
                       >{{ isAnimationEnabled ? t('mobileMenu.on') : t('mobileMenu.off') }}</button>
+                      <button
+                        class="fullmenu-swatch"
+                        type="button"
+                        :style="{ background: animationColor }"
+                        @click="openAnimationColorPicker"
+                        :title="t('viewMenu.selectAnimationColor')"
+                      ></button>
+                      <input
+                        ref="animationColorInput"
+                        type="color"
+                        class="fullmenu-hidden-input"
+                        :value="animationColor"
+                        @input="handleAnimationColorChange"
+                      >
                       <label class="fullmenu-inline-input">
                         <input
                           type="number"

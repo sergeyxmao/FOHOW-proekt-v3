@@ -176,8 +176,9 @@ const handleItemClick = async (item) => {
   }
 
   if (typeof item.action === 'function') {
-    // Для экспорта PNG не закрываем меню сразу - модальное окно само закроет
-    if (item.id === 'export-png') {
+    // Для элементов с собственными диалогами не закрываем меню сразу
+    const hasOwnDialog = ['export-png', 'clear-canvas', 'new-structure'].includes(item.id)
+    if (hasOwnDialog) {
       item.action()
     } else {
       try {

@@ -67,6 +67,11 @@ const isLargeCard = computed(() => {
   return props.card?.type === 'large' || props.card?.type === 'gold' || props.card.width >= 600;
 });
 
+// Является ли карточка лицензией (large, small, gold)
+const isLicenseCard = computed(() => {
+  return ['small', 'large', 'gold'].includes(props.card?.type);
+});
+
 // Заголовок для LOD-ultra (< 10%): большие — обрезаем 9 последних цифр номера
 const lodUltraTitle = computed(() => {
   const text = props.card?.text || '';
@@ -1201,22 +1206,23 @@ watch(
     
     <!-- Соединительные точки -->
     <div
-      class="connection-point top card-lod-hide"
+      class="connection-point top"
       :data-card-id="card.id"
       data-side="top"
     ></div>
     <div
-      class="connection-point right card-lod-hide"
+      class="connection-point right"
       :data-card-id="card.id"
       data-side="right"
     ></div>
     <div
-      class="connection-point bottom card-lod-hide"
+      v-if="!isLicenseCard"
+      class="connection-point bottom"
       :data-card-id="card.id"
       data-side="bottom"
     ></div>
     <div
-      class="connection-point left card-lod-hide"
+      class="connection-point left"
       :data-card-id="card.id"
       data-side="left"
     ></div>

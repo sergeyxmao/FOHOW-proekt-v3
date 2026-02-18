@@ -375,7 +375,10 @@ const getExportHtmlCss = () => `
   #canvas .card-lod-summary{display:none;}
   #canvas .active-pv-hidden{display:none;}
   #canvas .card-avatar-container{display:none;}
-  #canvas .coin-icon-wrapper{display:none;}
+  #canvas .coin-icon-wrapper{position:relative;width:52px;height:52px;flex-shrink:0;}
+  #canvas .coin-icon{width:52px;height:52px;flex-shrink:0;pointer-events:none;cursor:default;}
+  #canvas .card--large .coin-icon-wrapper,#canvas .card--gold .coin-icon-wrapper{width:49px;height:49px;}
+  #canvas .card--large .coin-icon,#canvas .card--gold .coin-icon{width:49px;height:49px;}
 `
 
 const getExportSvgCss = () => `
@@ -496,8 +499,7 @@ export function useProjectActions() {
       '.card-lod-title',
       '.card-lod-summary',
       '.active-pv-hidden',
-      '.card-avatar-container',
-      '.coin-icon-wrapper'
+      '.card-avatar-container'
     ]
 
     clone.querySelectorAll(selectorsToRemove.join(', ')).forEach((element) => {

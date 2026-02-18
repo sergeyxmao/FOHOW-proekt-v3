@@ -3709,6 +3709,40 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   display: none !important;
 }
 
+/* В LOD-режиме скрываем точки подключения по умолчанию */
+.canvas-container--lod :deep(.connection-point) {
+  display: none !important;
+}
+
+/* В LOD-режиме показываем увеличенные точки при наведении (чтобы начать соединение) */
+.canvas-container--lod :deep(.card:hover .connection-point) {
+  display: block !important;
+  width: 44px;
+  height: 44px;
+  border-width: 6px;
+  border-color: rgb(93, 139, 244);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 10px rgba(93, 139, 244, 0.5);
+}
+
+/* В LOD-режиме при активном рисовании — показываем увеличенные точки на ВСЕХ карточках */
+.canvas-container--lod :deep(.card.connecting .connection-point) {
+  display: block !important;
+  width: 44px;
+  height: 44px;
+  border-width: 6px;
+  border-color: rgb(93, 139, 244);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 10px rgba(93, 139, 244, 0.5);
+}
+
+.canvas-container--lod :deep(.card:hover .connection-point:hover),
+.canvas-container--lod :deep(.card.connecting .connection-point:hover) {
+  background: rgb(93, 139, 244);
+  transform: scale(1.2) translate(-50%, -50%);
+  box-shadow: 0 0 12px rgba(93, 139, 244, 0.8);
+}
+
 /* Скрываем всю pv-row (монетка + PV значения) */
 .canvas-container--lod :deep(.pv-row) {
   display: none !important;

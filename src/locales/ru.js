@@ -50,6 +50,8 @@ export default {
     selectHeaderColor: 'Выбрать цвет заголовка',
     changeColor: 'Сменить цвет',
     currentIndex: 'Текущий индекс',
+    darkTheme: 'Включить тёмное меню',
+    lightTheme: 'Вернуть светлое меню',
     tooltips: {
       drawingMode: 'Переключение в режим рисования:<br>1) Делает снимок видимой области<br>2) Подходит для презентаций',
       hierarchyMode: 'При захвате и перемещении лицензии:<br>Шапка — перемещает всю структуру ниже<br>Левый край — перемещает левую ветку<br>Правый край — перемещает правую ветку',
@@ -287,7 +289,8 @@ export default {
     addLicense: 'Добавить лицензию',
     addLower: 'Добавить более низкую',
     addGold: 'Добавить Gold',
-    addTemplate: 'Добавить шаблон'
+    addTemplate: 'Добавить шаблон',
+    autoLayout: 'Авто-раскладка'
   },
   imageLibrary: {
     allFolders: 'Все папки',

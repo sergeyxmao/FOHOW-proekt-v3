@@ -23,7 +23,8 @@ const emit = defineEmits([
   'add-license',
   'add-lower',
   'add-gold',
-  'add-template'
+  'add-template',
+  'auto-layout'
 ])
 
 const { t } = useI18n()
@@ -84,6 +85,8 @@ const templateOptions = computed(() =>
     }))
 )
 
+const hasSelectedCard = computed(() => cardsStore.selectedCards.length > 0)
+
 const handleAddLicense = () => {
   emit('add-license')
 }
@@ -94,6 +97,10 @@ const handleAddLower = () => {
 
 const handleAddGold = () => {
   emit('add-gold')
+}
+
+const handleAutoLayout = () => {
+  emit('auto-layout')
 }
 
 const toggleTemplateMenu = () => {
@@ -283,6 +290,17 @@ onBeforeUnmount(() => {
         </div>
       </transition>
     </div>
+
+    <!-- Авто-раскладка -->
+    <button
+      class="mobile-sidebar-button"
+      type="button"
+      :disabled="!hasSelectedCard"
+      @click="handleAutoLayout"
+      :title="t('sidebar.autoLayout')"
+    >
+      <span class="sidebar-icon">⊞</span>
+    </button>
   </div>
 </template>
 

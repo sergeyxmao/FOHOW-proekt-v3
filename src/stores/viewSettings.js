@@ -50,7 +50,7 @@ export const useViewSettingsStore = defineStore('viewSettings', {
       : '#b9c4da'
     const animationColorFromProfile = typeof uiPreferencesSource.animationColor === 'string'
       ? uiPreferencesSource.animationColor
-      : '#5D8BF4'
+      : '#e53935'
     const animationEnabledFromProfile = typeof uiPreferencesSource.isAnimationEnabled === 'boolean'
       ? uiPreferencesSource.isAnimationEnabled
       : true

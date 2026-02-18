@@ -50,6 +50,8 @@ export default {
     selectHeaderColor: 'Select header color',
     changeColor: 'Change color',
     currentIndex: 'Current index',
+    darkTheme: 'Switch to dark menu',
+    lightTheme: 'Switch to light menu',
     tooltips: {
       drawingMode: 'Draw lines and notes freehand directly on the board',
       hierarchyMode: 'Automatically arranges partners in a tree structure by levels when dragging',
@@ -287,7 +289,8 @@ export default {
     addLicense: 'Add license',
     addLower: 'Add lower tier',
     addGold: 'Add Gold',
-    addTemplate: 'Add template'
+    addTemplate: 'Add template',
+    autoLayout: 'Auto-layout'
   },
   imageLibrary: {
     allFolders: 'All folders',

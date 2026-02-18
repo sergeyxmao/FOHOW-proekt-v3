@@ -170,7 +170,8 @@ CSS правила показывают элементы с классом .card
 
 #### CSS-классы на элементах Card.vue
 
-- `.card-lod-hide` — скрывается при zoom < 35%: PV числа, labels «Баланс:»/«Актив-заказы:», кнопка закрытия, цикл/этап, bodyHTML, контролы, бейджи, точки соединения, active-pv-hidden
+- `.card-lod-hide` — скрывается при zoom < 35%: PV числа, labels «Баланс:»/«Актив-заказы:», кнопка закрытия, цикл/этап, bodyHTML, контролы, бейджи, active-pv-hidden
+- **Точки соединения** — управляются отдельными CSS правилами (не через `card-lod-hide`): скрыты в LOD по умолчанию, но показываются увеличенными при наведении на карточку или в режиме рисования соединений (`.connecting`)
 - `.card-lod-hide-minimal` — скрывается при zoom < 15%: аватар
 - `.card-lod-title` — имя из шапки карточки, скрыто по умолчанию, показывается при zoom < 10%
 - `.card-lod-summary` — компактная строка баланса L/R, скрыта по умолчанию (зарезервирована)
@@ -188,7 +189,8 @@ CSS правила показывают элементы с классом .card
 | Актив-заказы: цифры | да (с label) | да (80/60px) | да | нет |
 | Аватар (большие карточки) | да | да | нет | нет |
 | Цикл/этап | да | нет | нет | нет |
-| Кнопки, бейджи, точки | да | нет | нет | нет |
+| Кнопки, бейджи | да | нет | нет | нет |
+| Точки соединения | при hover | при hover/connecting (32px) | при hover/connecting (32px) | при hover/connecting (32px) |
 | Цвет body | белый | золотой/синий | золотой/синий | золотой/синий |
 
 #### CSS правила (CanvasBoard.vue)
@@ -205,6 +207,14 @@ CSS правила показывают элементы с классом .card
 .canvas-container--lod :deep(.card--large .card-row .value) { font-size: 80px; }
 .canvas-container--lod :deep(.card-row .value) { font-size: 60px; }
 /* Контраст: тёмный текст на золотом (#5a3e00), белый на синем (#fff) */
+
+/* LOD — точки соединения: скрыты по умолчанию, видны при hover/connecting */
+.canvas-container--lod :deep(.connection-point) { display: none; }
+.canvas-container--lod :deep(.card:hover .connection-point),
+.canvas-container--lod :deep(.card.connecting .connection-point) {
+  display: block; width: 32px; height: 32px;  /* увеличенные для удобства */
+  box-shadow: 0 0 8px rgba(93, 139, 244, 0.5);
+}
 
 /* LOD-minimal (< 15%) */
 .canvas-container--lod-minimal :deep(.card-lod-hide-minimal) { display: none; }  /* аватар */

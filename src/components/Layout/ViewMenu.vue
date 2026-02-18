@@ -13,7 +13,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['activate-pencil'])
+const emit = defineEmits(['activate-pencil', 'toggle-theme'])
 
 const { t } = useI18n()
 const viewSettingsStore = useViewSettingsStore()
@@ -109,6 +109,10 @@ function toggleHierarchyMode() {
 function toggleGuides() {
   canvasStore.toggleGuides()
 }
+
+function handleToggleTheme() {
+  emit('toggle-theme')
+}
 </script>
 
 <template>
@@ -158,6 +162,18 @@ function toggleGuides() {
           <span class="view-menu__info" @click.stop>&#9432;
             <span class="view-menu__tooltip" v-html="t('viewMenu.tooltips.showGuides')"></span>
           </span>
+        </button>
+      </div>
+
+      <div class="view-menu__item">
+        <button
+          type="button"
+          class="view-menu__main"
+          :class="{ 'view-menu__main--active': props.isModernTheme }"
+          @click="handleToggleTheme"
+        >
+          <span class="view-menu__icon-wrapper"><span class="view-menu__icon">🌙</span></span>
+          <span class="view-menu__label">{{ props.isModernTheme ? t('viewMenu.lightTheme') : t('viewMenu.darkTheme') }}</span>
         </button>
       </div>
 

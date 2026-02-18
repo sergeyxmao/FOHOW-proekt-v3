@@ -1,11 +1,11 @@
 {
   "version": "1.0",
-  "timestamp": 1762294280290,
+  "timestamp": 1771423138248,
   "cards": [
     {
-      "id": "1762294104568163mxxpft",
-      "x": 700,
-      "y": 50,
+      "id": "17714230850248euan7jwm",
+      "x": 850,
+      "y": 2200,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
@@ -44,6 +44,12 @@
         "offsetX": null,
         "offsetY": null
       },
+      "total": 0,
+      "stage": 0,
+      "toNext": 6,
+      "balanceManualOverride": null,
+      "manualAdjustments": null,
+      "cyclesManualOverride": null,
       "calculated": {
         "L": 0,
         "R": 0,
@@ -52,9 +58,6 @@
         "stage": 0,
         "toNext": 6
       },
-      "total": 0,
-      "stage": 0,
-      "toNext": 6,
       "calculatedIsFull": true,
       "activePvManual": {
         "left": 0,
@@ -86,9 +89,9 @@
       "activePvCycles": 0
     },
     {
-      "id": "17622941045691oowa0no9",
-      "x": 1100,
-      "y": 1200,
+      "id": "1771423085024qtw1y7nd1",
+      "x": 1175,
+      "y": 3440,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
@@ -127,6 +130,12 @@
         "offsetX": null,
         "offsetY": null
       },
+      "total": 0,
+      "stage": 0,
+      "toNext": 6,
+      "balanceManualOverride": null,
+      "manualAdjustments": null,
+      "cyclesManualOverride": null,
       "calculated": {
         "L": 0,
         "R": 0,
@@ -135,9 +144,6 @@
         "stage": 0,
         "toNext": 6
       },
-      "total": 0,
-      "stage": 0,
-      "toNext": 6,
       "calculatedIsFull": false,
       "activePvManual": {
         "left": 0,
@@ -169,9 +175,9 @@
       "activePvCycles": 0
     },
     {
-      "id": "17622941045696zgpuv93z",
-      "x": 1100,
-      "y": 850,
+      "id": "17714230850241mup4ct4t",
+      "x": 1175,
+      "y": 3060,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
@@ -210,6 +216,12 @@
         "offsetX": null,
         "offsetY": null
       },
+      "total": 0,
+      "stage": 0,
+      "toNext": 6,
+      "balanceManualOverride": null,
+      "manualAdjustments": null,
+      "cyclesManualOverride": null,
       "calculated": {
         "L": 0,
         "R": 0,
@@ -218,9 +230,6 @@
         "stage": 0,
         "toNext": 6
       },
-      "total": 0,
-      "stage": 0,
-      "toNext": 6,
       "calculatedIsFull": false,
       "activePvManual": {
         "left": 0,
@@ -252,9 +261,9 @@
       "activePvCycles": 0
     },
     {
-      "id": "1762294104570kseohsd3o",
-      "x": 500,
-      "y": 850,
+      "id": "1771423085025e9ga5ajx4",
+      "x": 725,
+      "y": 3060,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
@@ -293,6 +302,12 @@
         "offsetX": null,
         "offsetY": null
       },
+      "total": 0,
+      "stage": 0,
+      "toNext": 6,
+      "balanceManualOverride": null,
+      "manualAdjustments": null,
+      "cyclesManualOverride": null,
       "calculated": {
         "L": 0,
         "R": 0,
@@ -301,9 +316,6 @@
         "stage": 0,
         "toNext": 6
       },
-      "total": 0,
-      "stage": 0,
-      "toNext": 6,
       "calculatedIsFull": false,
       "activePvManual": {
         "left": 0,
@@ -335,9 +347,9 @@
       "activePvCycles": 0
     },
     {
-      "id": "176229410457027vn7h2p8",
-      "x": 500,
-      "y": 1200,
+      "id": "1771423085026js1e2p5de",
+      "x": 725,
+      "y": 3440,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
@@ -376,6 +388,12 @@
         "offsetX": null,
         "offsetY": null
       },
+      "total": 0,
+      "stage": 0,
+      "toNext": 6,
+      "balanceManualOverride": null,
+      "manualAdjustments": null,
+      "cyclesManualOverride": null,
       "calculated": {
         "L": 0,
         "R": 0,
@@ -384,9 +402,6 @@
         "stage": 0,
         "toNext": 6
       },
-      "total": 0,
-      "stage": 0,
-      "toNext": 6,
       "calculatedIsFull": false,
       "activePvManual": {
         "left": 0,
@@ -418,9 +433,9 @@
       "activePvCycles": 0
     },
     {
-      "id": "1762294104571pzkdcy7nz",
-      "x": 500,
-      "y": 500,
+      "id": "1771423085026kkscqnpm4",
+      "x": 725,
+      "y": 2680,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
@@ -459,6 +474,12 @@
         "offsetX": null,
         "offsetY": null
       },
+      "total": 0,
+      "stage": 0,
+      "toNext": 6,
+      "balanceManualOverride": null,
+      "manualAdjustments": null,
+      "cyclesManualOverride": null,
       "calculated": {
         "L": 0,
         "R": 0,
@@ -467,9 +488,6 @@
         "stage": 0,
         "toNext": 6
       },
-      "total": 0,
-      "stage": 0,
-      "toNext": 6,
       "calculatedIsFull": false,
       "activePvManual": {
         "left": 0,
@@ -501,9 +519,9 @@
       "activePvCycles": 0
     },
     {
-      "id": "1762294104572qa5bgoyfm",
-      "x": 1100,
-      "y": 500,
+      "id": "1771423085027hedkvvlxb",
+      "x": 1175,
+      "y": 2680,
       "fill": "#ffffff",
       "stroke": "#000000",
       "strokeWidth": 2,
@@ -542,6 +560,12 @@
         "offsetX": null,
         "offsetY": null
       },
+      "total": 0,
+      "stage": 0,
+      "toNext": 6,
+      "balanceManualOverride": null,
+      "manualAdjustments": null,
+      "cyclesManualOverride": null,
       "calculated": {
         "L": 0,
         "R": 0,
@@ -550,9 +574,6 @@
         "stage": 0,
         "toNext": 6
       },
-      "total": 0,
-      "stage": 0,
-      "toNext": 6,
       "calculatedIsFull": false,
       "activePvManual": {
         "left": 0,
@@ -586,9 +607,9 @@
   ],
   "connections": [
     {
-      "id": "1762294104574-qtvc09m",
-      "from": "1762294104568163mxxpft",
-      "to": "1762294104571pzkdcy7nz",
+      "id": "1771423085028-9lfp2yy",
+      "from": "17714230850248euan7jwm",
+      "to": "1771423085026kkscqnpm4",
       "fromSide": "left",
       "toSide": "top",
       "color": "#0f62fe",
@@ -597,9 +618,9 @@
       "animationDuration": 2000
     },
     {
-      "id": "1762294104575-i7zqdy5",
-      "from": "1762294104568163mxxpft",
-      "to": "1762294104572qa5bgoyfm",
+      "id": "1771423085031-c284x01",
+      "from": "17714230850248euan7jwm",
+      "to": "1771423085027hedkvvlxb",
       "fromSide": "right",
       "toSide": "top",
       "color": "#0f62fe",
@@ -608,10 +629,10 @@
       "animationDuration": 2000
     },
     {
-      "id": "1762294104575-wjjk1ot",
-      "from": "1762294104571pzkdcy7nz",
-      "to": "1762294104570kseohsd3o",
-      "fromSide": "bottom",
+      "id": "1771423093829-op8hcz6",
+      "from": "1771423085026kkscqnpm4",
+      "to": "1771423085025e9ga5ajx4",
+      "fromSide": "left",
       "toSide": "top",
       "color": "#0f62fe",
       "thickness": 5,
@@ -619,10 +640,10 @@
       "animationDuration": 2000
     },
     {
-      "id": "1762294104576-v4ih8dl",
-      "from": "1762294104570kseohsd3o",
-      "to": "176229410457027vn7h2p8",
-      "fromSide": "bottom",
+      "id": "1771423099203-kecd90i",
+      "from": "1771423085025e9ga5ajx4",
+      "to": "1771423085026js1e2p5de",
+      "fromSide": "left",
       "toSide": "top",
       "color": "#0f62fe",
       "thickness": 5,
@@ -630,10 +651,10 @@
       "animationDuration": 2000
     },
     {
-      "id": "1762294104577-3htvyg3",
-      "from": "1762294104572qa5bgoyfm",
-      "to": "17622941045696zgpuv93z",
-      "fromSide": "bottom",
+      "id": "1771423111828-70gv2vc",
+      "from": "1771423085027hedkvvlxb",
+      "to": "17714230850241mup4ct4t",
+      "fromSide": "left",
       "toSide": "top",
       "color": "#0f62fe",
       "thickness": 5,
@@ -641,10 +662,10 @@
       "animationDuration": 2000
     },
     {
-      "id": "1762294104577-gfyg7vn",
-      "from": "17622941045696zgpuv93z",
-      "to": "17622941045691oowa0no9",
-      "fromSide": "bottom",
+      "id": "1771423115041-wc40xlx",
+      "from": "17714230850241mup4ct4t",
+      "to": "1771423085024qtw1y7nd1",
+      "fromSide": "left",
       "toSide": "top",
       "color": "#0f62fe",
       "thickness": 5,
@@ -659,8 +680,8 @@
     "animationDuration": 2000
   },
   "canvas": {
-    "backgroundColor": "#b9c4da",
-    "isHierarchicalDragMode": false,
+    "backgroundColor": "#ffffff",
+    "isHierarchicalDragMode": true,
     "guidesEnabled": true,
     "gridStep": 50,
     "isGridBackgroundVisible": true
