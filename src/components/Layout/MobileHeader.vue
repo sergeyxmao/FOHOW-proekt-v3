@@ -656,14 +656,19 @@ watch(
 }
 
 /* Active (toggled on) — filled primary for high contrast */
-.mobile-header-button--active {
+/* Повышаем специфичность чтобы перебить :hover и :active на мобильных */
+.mobile-header-button--active,
+.mobile-header-button--active:hover:not(:disabled),
+.mobile-header-button--active:active:not(:disabled) {
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
   border-color: var(--md-sys-color-primary);
   box-shadow: var(--md-sys-elevation-2);
 }
 
-.mobile-header--dark .mobile-header-button--active {
+.mobile-header--dark .mobile-header-button--active,
+.mobile-header--dark .mobile-header-button--active:hover:not(:disabled),
+.mobile-header--dark .mobile-header-button--active:active:not(:disabled) {
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
   border-color: var(--md-sys-color-primary);
@@ -1381,7 +1386,9 @@ watch(
 }
 
 /* Aurora active button */
-.mobile-header--aurora .mobile-header-button--active {
+.mobile-header--aurora .mobile-header-button--active,
+.mobile-header--aurora .mobile-header-button--active:hover:not(:disabled),
+.mobile-header--aurora .mobile-header-button--active:active:not(:disabled) {
   background: linear-gradient(135deg, rgba(0, 212, 170, 0.25), rgba(0, 136, 255, 0.25));
   border-color: rgba(0, 212, 170, 0.5);
   color: #00d4aa;
