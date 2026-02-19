@@ -234,8 +234,27 @@ onBeforeUnmount(() => {
 })
 ```
 
+## Утилиты (src/utils/activePv.js)
+
+### applyActivePvManualSet({ cards, cardId, left, right })
+Устанавливает значение `activePv` (remainder) карточки напрямую, **без propagation** вверх по структуре.
+Обрабатывает 330-цикл: если значение >= 330, добавляет пачки (`activePacks`) и `localBalance`.
+
+Используется для ручного ввода Active PV в модальном окне редактирования.
+
+```javascript
+const result = applyActivePvManualSet({
+  cards: cardsStore.cards,
+  cardId: 'card-123',
+  left: 320,          // установить remainder left = 320
+  right: undefined    // не менять right
+});
+// result.updates содержит обновлённый payload для updateCard
+```
+
 ## Связанные файлы
 
+- `src/utils/activePv.js` — утилиты Active PV (applyActivePvDelta, applyActivePvManualSet, propagateActivePvUp)
 - `src/stores/cards.js` — данные PV карточек
 - `src/stores/connections.js` — связи между карточками
 - `src/components/Canvas/Card.vue` — UI карточки с кнопкой PV

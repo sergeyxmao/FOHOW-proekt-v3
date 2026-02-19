@@ -51,6 +51,7 @@
 | `clear-balance` | `{ cardId }` | Сброс ручного баланса |
 | `update-active-pv` | `{ cardId, direction, step }` | Изменение Active PV (дельта от текущего) |
 | `clear-active-pv` | `{ cardId }` | Очистка Active PV |
+| `update-active-orders-manual` | `{ cardId, left?, right? }` | Ручная установка remainder Active PV (без propagation вверх). Передаётся только изменённая сторона. |
 | `open-note` | `{ cardId }` | Открытие NoteWindow (календарь/заметки) для карточки |
 | `open-partners` | `{ cardId }` | Открытие панели «Партнёры» (по dblclick на аватар) |
 
@@ -80,11 +81,26 @@ CanvasBoard (handler)
   |- handleEditorClearBalance -> сброс balanceManualOverride и manualAdjustments
   |- handleEditorUpdateActivePv -> applyActivePvDelta + applyActivePvPropagation
   |- handleEditorClearActivePv -> applyActivePvClear + applyActivePvPropagation
+  |- handleEditorUpdateActiveOrdersManual -> applyActivePvManualSet (устанавливает remainder напрямую, без propagation)
   |- handleEditorOpenNote -> openNoteForCard (открывает NoteWindow)
   +- handleEditorOpenPartners -> sidePanelsStore.openPartners()
 ```
 
+## Ручной ввод Active PV
+
+Поля «Актив: L / R» позволяют ввести значение вручную. Введённое значение **устанавливается напрямую** в реальную систему Active PV (`activePvState.activePv`), но **не распространяется** вверх по структуре.
+
+### Как это работает
+1. Ручной ввод устанавливает `activePvState.activePv.left/right` (remainder карточки)
+2. Если введённое значение >= 330, срабатывает 330-цикл: `remainder = value % 330`, `+N баллов`
+3. Кнопки +1/+10 продолжают работать от нового значения и корректно обрабатывают 330-цикл
+4. Propagation от дочерних карточек корректно обновляет отображение
+
+### Отличие от `balanceManualOverride`
+`balanceManualOverride` — отдельный overlay, который скрывает вычисленный баланс. Ручной ввод Active PV интегрирован в реальную систему `activePvState`, что обеспечивает корректную работу 330-цикла и +1 баланса.
+
 ## История изменений
+- 2026-02-19: v4 — ручной ввод Active PV интегрирован в реальную систему activePvState (убран activeOrdersManualOverride), исправлена проблема двойного счётчика и обновления родительских карточек при propagation
 - 2026-02-17: v3 — добавлен аватар пользователя для большой/gold лицензии (с загрузкой по personal_id), кнопка «Заметка» для всех типов карточек, dblclick на аватар открывает панель «Партнёры»
 - 2025-02-04: v2 — компактный дизайн, позиционирование поверх карточки, числовые input вместо кнопок +/-, раздельные кнопки сброса для баланса и актива
 - 2025-02-04: v1 — создан компонент для оптимизации производительности

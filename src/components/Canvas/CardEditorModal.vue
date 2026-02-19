@@ -35,7 +35,9 @@ const emit = defineEmits([
   'clear-cycles-stage',
   'delete-card',
   'open-note',
-  'open-partners'
+  'open-partners',
+  'toggle-coin',
+  'update-active-orders-manual'
 ]);
 
 // === Large card detection ===
@@ -128,6 +130,19 @@ const handleOpenNote = () => {
 
 const handleAvatarDblClick = () => {
   emit('open-partners', { cardId: props.card.id });
+};
+
+// === Coin (blue/gold toggle) ===
+
+const coinFillColor = computed(() => {
+  const fill = props.card?.coinFill;
+  return typeof fill === 'string' && fill.trim() ? fill : '#3d85c6';
+});
+
+const isCoinBlue = computed(() => coinFillColor.value === '#3d85c6');
+
+const handleCoinToggle = () => {
+  emit('toggle-coin', { cardId: props.card.id });
 };
 
 // === Title editing ===
@@ -397,9 +412,12 @@ const handleClearCyclesStage = () => {
 
 // === Active PV (фиксированные шаги, идентично main) ===
 
-const activeOrdersDisplay = computed(
-  () => `${activePvState.value.remainder.left} / ${activePvState.value.remainder.right}`
-);
+const activeOrdersLeft = computed(() => activePvState.value.remainder.left);
+const activeOrdersRight = computed(() => activePvState.value.remainder.right);
+
+// Актив: отображение берётся из реальной системы activePvState (remainder)
+const activeOrdersDisplayLeft = computed(() => activeOrdersLeft.value);
+const activeOrdersDisplayRight = computed(() => activeOrdersRight.value);
 
 const handleActiveStep = (direction, step) => {
   emit('update-active-pv', { cardId: props.card.id, direction, step });
@@ -408,6 +426,17 @@ const handleActiveStep = (direction, step) => {
 const handleClearActive = () => {
   emit('clear-active-pv', { cardId: props.card.id });
 };
+
+const handleActiveOrdersManualChange = (side, event) => {
+  const val = Math.max(0, parseInt(event.target.value, 10) || 0);
+  // Передаём только изменённую сторону, чтобы не перезаписать другую
+  emit('update-active-orders-manual', {
+    cardId: props.card.id,
+    left: side === 'left' ? val : undefined,
+    right: side === 'right' ? val : undefined
+  });
+};
+
 
 // === Delete card ===
 
@@ -486,6 +515,15 @@ onBeforeUnmount(() => {
               <!-- PV -->
               <div class="editor-row">
                 <span class="editor-label">PV:</span>
+                <svg
+                  class="editor-coin"
+                  viewBox="0 0 100 100"
+                  xmlns="http://www.w3.org/2000/svg"
+                  @click.stop="handleCoinToggle"
+                  :title="isCoinBlue ? 'Установить 330 (золотой)' : 'Вернуть предыдущее (синий)'"
+                >
+                  <circle cx="50" cy="50" r="45" :fill="coinFillColor" stroke="#DAA520" stroke-width="5"/>
+                </svg>
                 <input
                   type="number"
                   class="editor-input"
@@ -518,10 +556,24 @@ onBeforeUnmount(() => {
                 <button class="editor-trash" @click="handleClearBalance" title="Сбросить баланс">🗑️</button>
               </div>
 
-              <!-- Active orders -->
+              <!-- Active orders (ручной ввод не поднимается вверх по структуре) -->
               <div class="editor-row">
                 <span class="editor-label">Актив:</span>
-                <span class="editor-readonly">{{ activeOrdersDisplay }}</span>
+                <input
+                  type="number"
+                  class="editor-input"
+                  :value="activeOrdersDisplayLeft"
+                  min="0"
+                  @change="handleActiveOrdersManualChange('left', $event)"
+                />
+                <span class="editor-sep">/</span>
+                <input
+                  type="number"
+                  class="editor-input"
+                  :value="activeOrdersDisplayRight"
+                  min="0"
+                  @change="handleActiveOrdersManualChange('right', $event)"
+                />
               </div>
             </div>
 
@@ -740,6 +792,23 @@ onBeforeUnmount(() => {
 .editor-input:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.editor-coin {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.editor-coin:hover {
+  transform: scale(1.15);
+  filter: brightness(1.15);
+}
+
+.editor-coin:active {
+  transform: scale(1.05);
 }
 
 .editor-sep {

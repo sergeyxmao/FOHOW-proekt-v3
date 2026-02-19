@@ -49,7 +49,8 @@ import {
   parseActivePV,
   propagateActivePvUp,
   applyActivePvDelta,
-  applyActivePvClear
+  applyActivePvClear,
+  applyActivePvManualSet
 } from '../../utils/activePv';
 import {
   ensureNoteStructure,
@@ -519,6 +520,34 @@ const handleEditorUpdatePv = ({ cardId, pv }) => {
   handlePvChanged(cardId);
 };
 
+const handleEditorToggleCoin = ({ cardId }) => {
+  const card = cardsStore.cards.find(c => c.id === cardId);
+  if (!card) return;
+
+  const PV_RIGHT = 330;
+  const MIN_LEFT = 30;
+  const MAX_LEFT = 330;
+  const currentFill = typeof card.coinFill === 'string' && card.coinFill.trim() ? card.coinFill : '#3d85c6';
+  const pvMatch = typeof card.pv === 'string' ? card.pv.match(/^(\s*)(\d{1,3})/) : null;
+  const currentLeft = pvMatch ? Math.min(Math.max(Number.parseInt(pvMatch[2], 10), MIN_LEFT), MAX_LEFT) : MAX_LEFT;
+
+  if (currentFill === '#3d85c6') {
+    cardsStore.updateCard(cardId, {
+      pv: `${MAX_LEFT}/${PV_RIGHT}pv`,
+      coinFill: '#ffd700',
+      previousPvLeft: currentLeft
+    });
+  } else {
+    const previousLeft = Number.isFinite(card.previousPvLeft) ? card.previousPvLeft : MIN_LEFT;
+    cardsStore.updateCard(cardId, {
+      pv: `${previousLeft}/${PV_RIGHT}pv`,
+      coinFill: '#3d85c6',
+      previousPvLeft: currentLeft
+    });
+  }
+  handlePvChanged(cardId);
+};
+
 const handleEditorUpdateBalance = ({ cardId, left, right }) => {
   const card = cardsStore.cards.find(c => c.id === cardId);
   if (!card) return;
@@ -666,12 +695,52 @@ const handleEditorClearActivePv = ({ cardId }) => {
     cardsStore.updateCard(id, payload, { saveToHistory: false });
   });
 
+  // Убираем устаревший overlay если был
+  if (card.activeOrdersManualOverride) {
+    cardsStore.updateCard(cardId, { activeOrdersManualOverride: null }, { saveToHistory: false });
+  }
+
   const description = card?.text
     ? `Active-PV очищены для "${card.text}"`
     : 'Очищены бонусы Active-PV';
 
   applyActivePvPropagation(cardId, { saveHistory: true, historyDescription: description, triggerAnimation: false });
 };
+
+// Ручной ввод актив-заказов — напрямую устанавливает remainder в реальной системе activePvState
+// БЕЗ распространения наверх по структуре (аналогично balanceManualOverride по духу,
+// но интегрировано в реальную систему для корректного 330-цикла и +1 баланса)
+const handleEditorUpdateActiveOrdersManual = ({ cardId, left, right }) => {
+  const card = cardsStore.cards.find(c => c.id === cardId);
+  if (!card) return;
+
+  const result = applyActivePvManualSet({
+    cards: cardsStore.cards,
+    cardId,
+    left: Number.isFinite(left) ? left : undefined,
+    right: Number.isFinite(right) ? right : undefined
+  });
+
+  const updates = result?.updates || {};
+  const updateEntries = Object.entries(updates);
+  if (updateEntries.length === 0) return;
+
+  updateEntries.forEach(([id, payload]) => {
+    cardsStore.updateCard(id, payload, { saveToHistory: false });
+  });
+
+  // Убираем устаревший overlay если был
+  if (card.activeOrdersManualOverride) {
+    cardsStore.updateCard(cardId, { activeOrdersManualOverride: null }, { saveToHistory: false });
+  }
+
+  const description = card?.text
+    ? `Установлен ручной актив для "${card.text}"`
+    : 'Установлен ручной актив';
+
+  applyActivePvPropagation(cardId, { saveHistory: true, historyDescription: description, triggerAnimation: false });
+};
+
 
 // Note Windows
 const {
@@ -3199,6 +3268,8 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
       @delete-card="handleEditorDeleteCard"
       @open-note="handleEditorOpenNote"
       @open-partners="handleEditorOpenPartners"
+      @toggle-coin="handleEditorToggleCoin"
+      @update-active-orders-manual="handleEditorUpdateActiveOrdersManual"
     />
   </div>
 </template>

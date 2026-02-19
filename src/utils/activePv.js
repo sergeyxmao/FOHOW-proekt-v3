@@ -216,20 +216,28 @@ function distributePositiveToAncestor(state, side, amount) {
     return;
   }
 
-  const remainderBefore = Math.max(0, toInteger(state.balance[side]));
+  const ownPv = Math.max(0, toInteger(state.activePv[side]));
+  const balanceBefore = Math.max(0, toInteger(state.balance[side]));
   const unitsBefore = Math.max(0, toInteger(state.localBalance[side]));
 
-  let remainder = remainderBefore + positiveAmount;
+  // Считаем комбинированное значение (собственное + от дочерних + новое)
+  let combined = ownPv + balanceBefore + positiveAmount;
   let units = unitsBefore;
 
-  if (remainder >= ACTIVE_PV_BASE) {
-    const extraUnits = Math.floor(remainder / ACTIVE_PV_BASE);
-    remainder -= extraUnits * ACTIVE_PV_BASE;
+  if (combined >= ACTIVE_PV_BASE) {
+    // 330-цикл на комбинированном значении
+    const extraUnits = Math.floor(combined / ACTIVE_PV_BASE);
+    combined -= extraUnits * ACTIVE_PV_BASE;
     units += extraUnits;
     state.activePacks += extraUnits;
+    // После цикла: activePv обнуляется, остаток уходит в balance
+    state.activePv[side] = 0;
+    state.balance[side] = combined;
+  } else {
+    // Нет цикла — activePv не трогаем, только balance увеличивается
+    state.balance[side] = balanceBefore + positiveAmount;
   }
 
-  state.balance[side] = remainder;
   state.localBalance[side] = units;
 }
 
@@ -457,6 +465,67 @@ function applyActivePvClear({ cards = [], meta = {}, cardId }) {
   return { updates, changedIds: Array.from(changed) };
 }
 
+/**
+ * Устанавливает значение activePv (remainder) для карточки напрямую,
+ * БЕЗ распространения наверх по структуре.
+ * Обнуляет balance (остаток от дочерних) чтобы отображение = введённому значению.
+ * Обрабатывает 330-цикл: если значение >= 330, добавляет пачки и localBalance.
+ */
+function applyActivePvManualSet({ cards = [], cardId, left, right }) {
+  if (!cardId) {
+    return { updates: {} };
+  }
+
+  const stateMap = prepareStateMap(cards);
+  if (!stateMap.has(cardId)) {
+    return { updates: {} };
+  }
+
+  const state = stateMap.get(cardId);
+
+  // Обработка левой стороны
+  if (Number.isFinite(left)) {
+    const value = Math.max(0, toInteger(left));
+    const extraPacks = Math.floor(value / ACTIVE_PV_BASE);
+    const remainder = value % ACTIVE_PV_BASE;
+
+    // Обнулить остаток от дочерних, чтобы отображение = remainder
+    // Формула: display = min(330, activePv + balance), при balance=0 → display = activePv
+    state.balance.left = 0;
+
+    if (extraPacks > 0) {
+      state.activePacks += extraPacks;
+      state.localBalance.left += extraPacks;
+    }
+    state.activePv.left = remainder;
+  }
+
+  // Обработка правой стороны
+  if (Number.isFinite(right)) {
+    const value = Math.max(0, toInteger(right));
+    const extraPacks = Math.floor(value / ACTIVE_PV_BASE);
+    const remainder = value % ACTIVE_PV_BASE;
+
+    // Обнулить остаток от дочерних
+    state.balance.right = 0;
+
+    if (extraPacks > 0) {
+      state.activePacks += extraPacks;
+      state.localBalance.right += extraPacks;
+    }
+    state.activePv.right = remainder;
+  }
+
+  // Пересчитать циклы (matched left/right localBalance)
+  settleAncestorCycles(state);
+
+  stateMap.set(cardId, state);
+
+  const changed = new Set([cardId]);
+  const updates = buildUpdates(stateMap, changed);
+  return { updates };
+}
+
 function propagateActivePvUp(cards = [], meta = {}) {
   if (!Array.isArray(cards) || cards.length === 0) {
     return {};
@@ -522,7 +591,8 @@ export {
   setActivePV,
   propagateActivePvUp,
   applyActivePvDelta,
-  applyActivePvClear
+  applyActivePvClear,
+  applyActivePvManualSet
 };
 
 export default {
@@ -530,5 +600,6 @@ export default {
   setActivePV,
   propagateActivePvUp,
   applyActivePvDelta,
-  applyActivePvClear
+  applyActivePvClear,
+  applyActivePvManualSet
 };

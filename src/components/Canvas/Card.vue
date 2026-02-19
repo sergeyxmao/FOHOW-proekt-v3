@@ -364,9 +364,11 @@ const manualBalanceOverride = computed(() => manualBalanceOverrideValue.value?.f
 const balanceDisplay = computed(() => manualBalanceOverride.value ?? calculatedBalanceDisplay.value);
 const manualBalanceOffset = ref(null);  
 
-const activeOrdersDisplay = computed(
-  () => `${activePvState.value.remainder.left} / ${activePvState.value.remainder.right}`
-);
+const activeOrdersDisplay = computed(() => {
+  const remainderLeft = activePvState.value.remainder.left;
+  const remainderRight = activePvState.value.remainder.right;
+  return `${remainderLeft} / ${remainderRight}`;
+});
 const cyclesDisplay = computed(() => {
   const override = props.card?.cyclesManualOverride;
   if (override && Number.isFinite(override.cycles)) return override.cycles;
