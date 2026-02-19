@@ -44,6 +44,7 @@ import { registerNoteRoutes } from './routes/notes.js';
 import { registerCommentRoutes } from './routes/comments.js';
 import { registerBoardPartnerRoutes } from './routes/boardPartners.js';
 import { registerProdamusRoutes } from './routes/prodamus.js';
+import { registerHelpRoutes } from './routes/help.js';
 import { initializeCronTasks } from './cron/tasks.js';
 import { initializeTelegramBot } from './bot/telegramBot.js';
 import { setupWebSocket, notifyNewMessage, notifyChatsUpdate } from './socket.js';
@@ -411,6 +412,11 @@ registerChatRoutes(app); // <--- ВОТ ЭТУ СТРОКУ ВСТАВИТЬ С�
 // ИЗБРАННОЕ FOGRUP
 // ============================================
 registerFavoriteRoutes(app, pool, authenticateToken);
+
+// ============================================
+// HELP-ЦЕНТР (СПРАВОЧНАЯ СИСТЕМА)
+// ============================================
+registerHelpRoutes(app);
 
 const PORT = Number(process.env.PORT || 4000);
 const HOST = '127.0.0.1';

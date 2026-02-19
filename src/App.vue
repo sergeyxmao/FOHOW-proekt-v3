@@ -46,6 +46,8 @@ import BoardAnchorsPanel from './components/Panels/BoardAnchorsPanel.vue'
 import PartnersPanel from './components/Panels/PartnersPanel.vue'  
 import TheNotifications from './components/TheNotifications.vue'
 import SessionExpiredModal from './components/Common/SessionExpiredModal.vue'
+import HelpButton from './components/Help/HelpButton.vue'
+import HelpPanel from './components/Help/HelpPanel.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
 import { useNotificationsStore } from './stores/notifications'
 
@@ -131,6 +133,7 @@ const pendingAction = ref(null)
 const showResetPassword = ref(false)
 const resetToken = ref('')
 const graceNotificationShown = ref(false) // Флаг показа уведомления о grace-периоде
+const isHelpOpen = ref(false)
 
 // Состояние для модала завершения сессии
 const isSessionExpiredModalOpen = ref(false)
@@ -1651,6 +1654,20 @@ onBeforeUnmount(() => {
         :is-modern-theme="isModernTheme"
       />
     </transition>
+
+    <!-- Help Center -->
+    <HelpButton
+      v-if="isAuthenticated"
+      v-show="!isPencilMode && !showResetPassword"
+      :is-open="isHelpOpen"
+      :is-modern-theme="isModernTheme"
+      @toggle="isHelpOpen = !isHelpOpen"
+    />
+    <HelpPanel
+      v-if="isHelpOpen && isAuthenticated"
+      :is-modern-theme="isModernTheme"
+      @close="isHelpOpen = false"
+    />
 
     <!-- Контейнер для тост-уведомлений -->
     <TheNotifications />

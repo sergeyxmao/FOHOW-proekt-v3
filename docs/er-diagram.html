@@ -44,7 +44,7 @@
 <body>
 <div id="controls">
   <h1>📊 FOHOW ER-диаграмма</h1>
-  <span class="info">31 таблица · 45 связей</span>
+  <span class="info">33 таблицы · 46 связей</span>
   <input type="text" id="search" placeholder="🔍 Таблица или колонка...">
   <button id="btnAll" class="active">Все</button>
   <button id="btnCore">Ядро</button>
@@ -105,7 +105,9 @@ password_resets:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:
 telegram_link_codes:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:"code",t:"varchar",r:1},{n:"expires_at",t:"ts",r:1},{n:"used",t:"bool"},{n:"created_at",t:"ts"}],g:"system",x:400,y:1380},
 system_logs:{c:[{n:"id",t:"int",p:1},{n:"level",t:"varchar",r:1},{n:"action",t:"varchar",r:1},{n:"user_id",t:"int",f:"users"},{n:"details",t:"jsonb"},{n:"ip_address",t:"varchar"},{n:"created_at",t:"ts"}],g:"system",x:680,y:1170},
 user_verifications:{c:[{n:"id",t:"int",p:1},{n:"user_id",t:"int",r:1,f:"users"},{n:"full_name",t:"varchar",r:1},{n:"status",t:"varchar",r:1},{n:"rejection_reason",t:"text"},{n:"submitted_at",t:"ts"},{n:"processed_at",t:"ts"},{n:"processed_by",t:"int",f:"users"},{n:"referral_link",t:"varchar",r:1},{n:"pending_personal_id",t:"varchar"}],g:"core",x:1050,y:430},
-personal_id_counter:{c:[{n:"id",t:"int",p:1},{n:"last_issued_number",t:"int",r:1},{n:"updated_at",t:"ts"}],g:"system",x:950,y:1380}};
+personal_id_counter:{c:[{n:"id",t:"int",p:1},{n:"last_issued_number",t:"int",r:1},{n:"updated_at",t:"ts"}],g:"system",x:950,y:1380},
+help_categories:{c:[{n:"id",t:"int",p:1},{n:"icon",t:"varchar",r:1},{n:"title",t:"varchar",r:1},{n:"sort_order",t:"int"},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"system",x:1200,y:1380},
+help_articles:{c:[{n:"id",t:"int",p:1},{n:"category_id",t:"int",r:1,f:"help_categories"},{n:"title",t:"varchar",r:1},{n:"content",t:"text"},{n:"sort_order",t:"int"},{n:"created_at",t:"ts"},{n:"updated_at",t:"ts"}],g:"system",x:1500,y:1380}};
 
 const GC={core:{bg:"#0c4a6e",h:"#0ea5e9",b:"#0ea5e9",l:"#0ea5e9"},boards:{bg:"#14532d",h:"#22c55e",b:"#22c55e",l:"#22c55e"},subs:{bg:"#3b0764",h:"#a855f7",b:"#a855f7",l:"#a855f7"},chat:{bg:"#7c2d12",h:"#f97316",b:"#f97316",l:"#f97316"},images:{bg:"#831843",h:"#ec4899",b:"#ec4899",l:"#ec4899"},system:{bg:"#1e293b",h:"#64748b",b:"#475569",l:"#64748b"}};
 const CH=17,HH=34,P=6,W=270;
