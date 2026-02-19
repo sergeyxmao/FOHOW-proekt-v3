@@ -299,8 +299,9 @@ async function saveArticleTitle(articleId, newTitle) {
 }
 
 // --- Сохранение/восстановление выделения ---
-// Используем document selectionchange — сохраняем при каждом изменении выделения внутри редактора
 let savedRange = null
+const isBoldActive = ref(false)
+const isItalicActive = ref(false)
 
 function onSelectionChange() {
   const sel = window.getSelection()
@@ -309,15 +310,19 @@ function onSelectionChange() {
   // Сохраняем только если выделение внутри нашего contenteditable
   if (contentEditableRef.value && contentEditableRef.value.contains(range.commonAncestorContainer)) {
     savedRange = range.cloneRange()
+    updateFormatButtons()
   }
 }
 
-function restoreSelection() {
+function restoreSelectionForSelect() {
+  // Используется ТОЛЬКО для <select> (шрифт/размер), которые реально крадут фокус
   if (!savedRange || !contentEditableRef.value) return
   contentEditableRef.value.focus()
   const sel = window.getSelection()
-  sel.removeAllRanges()
-  sel.addRange(savedRange)
+  if (sel) {
+    sel.removeAllRanges()
+    sel.addRange(savedRange.cloneRange())
+  }
 }
 
 onMounted(() => {
@@ -330,18 +335,36 @@ onBeforeUnmount(() => {
 
 // --- Форматирование ---
 function execCmd(command, value) {
-  restoreSelection()
+  // НЕ вызываем restoreSelection — @mousedown.prevent на кнопках сохраняет
+  // живое выделение в contenteditable. restoreSelection ЛОМАЕТ его,
+  // заменяя клоном, из-за чего execCommand работает неправильно.
   document.execCommand(command, false, value || null)
+  // Обновляем savedRange после применения команды
+  const sel = window.getSelection()
+  if (sel && sel.rangeCount > 0) {
+    savedRange = sel.getRangeAt(0).cloneRange()
+  }
+  // Обновляем состояние кнопок
+  updateFormatButtons()
+}
+
+function updateFormatButtons() {
+  try {
+    isBoldActive.value = document.queryCommandState('bold')
+  } catch (e) { isBoldActive.value = false }
+  try {
+    isItalicActive.value = document.queryCommandState('italic')
+  } catch (e) { isItalicActive.value = false }
 }
 
 function setFont(e) {
-  restoreSelection()
-  execCmd('fontName', e.target.value)
+  restoreSelectionForSelect()
+  document.execCommand('fontName', false, e.target.value)
 }
 
 function setFontSize(e) {
-  restoreSelection()
-  execCmd('fontSize', e.target.value)
+  restoreSelectionForSelect()
+  document.execCommand('fontSize', false, e.target.value)
 }
 
 function normalizeFontSizes(html) {
@@ -759,23 +782,27 @@ function handleContentMouseOut(e) {
                 </select>
                 <button
                   class="help-toolbar__btn"
-                  :class="{ 'help-toolbar__btn--modern': isModernTheme }"
+                  :class="[
+                    { 'help-toolbar__btn--modern': isModernTheme },
+                    { 'help-toolbar__btn--active': isBoldActive }
+                  ]"
                   type="button"
                   title="Жирный"
-                  @mousedown.prevent
-                  @click="execCmd('bold')"
+                  @mousedown.prevent="execCmd('bold')"
                 >
-                  <strong>Ж</strong>
+                  <span style="font-weight: 700">Ж</span>
                 </button>
                 <button
                   class="help-toolbar__btn"
-                  :class="{ 'help-toolbar__btn--modern': isModernTheme }"
+                  :class="[
+                    { 'help-toolbar__btn--modern': isModernTheme },
+                    { 'help-toolbar__btn--active': isItalicActive }
+                  ]"
                   type="button"
                   title="Курсив"
-                  @mousedown.prevent
-                  @click="execCmd('italic')"
+                  @mousedown.prevent="execCmd('italic')"
                 >
-                  <em>К</em>
+                  <span style="font-style: italic">К</span>
                 </button>
                 <button
                   class="help-toolbar__btn"
@@ -1451,6 +1478,18 @@ function handleContentMouseOut(e) {
 
 .help-toolbar__btn:hover {
   background: rgba(0, 0, 0, 0.06);
+}
+
+.help-toolbar__btn--active {
+  background: rgba(15, 98, 254, 0.15);
+  border-color: rgba(15, 98, 254, 0.4);
+  color: #0f62fe;
+}
+
+.help-toolbar__btn--modern.help-toolbar__btn--active {
+  background: rgba(96, 165, 250, 0.25);
+  border-color: rgba(96, 165, 250, 0.5);
+  color: #60a5fa;
 }
 
 .help-toolbar__btn--modern {
