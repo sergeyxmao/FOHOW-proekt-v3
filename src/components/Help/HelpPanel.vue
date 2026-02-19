@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import HelpImageLightbox from './HelpImageLightbox.vue'
 
@@ -298,19 +298,49 @@ async function saveArticleTitle(articleId, newTitle) {
   }
 }
 
-// --- Форматирование ---
-function execCmd(command, value) {
-  document.execCommand(command, false, value || null)
-  if (contentEditableRef.value) {
-    contentEditableRef.value.focus()
+// --- Сохранение/восстановление выделения ---
+// Используем document selectionchange — сохраняем при каждом изменении выделения внутри редактора
+let savedRange = null
+
+function onSelectionChange() {
+  const sel = window.getSelection()
+  if (!sel || sel.rangeCount === 0) return
+  const range = sel.getRangeAt(0)
+  // Сохраняем только если выделение внутри нашего contenteditable
+  if (contentEditableRef.value && contentEditableRef.value.contains(range.commonAncestorContainer)) {
+    savedRange = range.cloneRange()
   }
 }
 
+function restoreSelection() {
+  if (!savedRange || !contentEditableRef.value) return
+  contentEditableRef.value.focus()
+  const sel = window.getSelection()
+  sel.removeAllRanges()
+  sel.addRange(savedRange)
+}
+
+onMounted(() => {
+  document.addEventListener('selectionchange', onSelectionChange)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('selectionchange', onSelectionChange)
+})
+
+// --- Форматирование ---
+function execCmd(command, value) {
+  restoreSelection()
+  document.execCommand(command, false, value || null)
+}
+
 function setFont(e) {
+  restoreSelection()
   execCmd('fontName', e.target.value)
 }
 
 function setFontSize(e) {
+  restoreSelection()
   execCmd('fontSize', e.target.value)
 }
 
@@ -732,6 +762,7 @@ function handleContentMouseOut(e) {
                   :class="{ 'help-toolbar__btn--modern': isModernTheme }"
                   type="button"
                   title="Жирный"
+                  @mousedown.prevent
                   @click="execCmd('bold')"
                 >
                   <strong>Ж</strong>
@@ -741,6 +772,7 @@ function handleContentMouseOut(e) {
                   :class="{ 'help-toolbar__btn--modern': isModernTheme }"
                   type="button"
                   title="Курсив"
+                  @mousedown.prevent
                   @click="execCmd('italic')"
                 >
                   <em>К</em>
@@ -750,6 +782,7 @@ function handleContentMouseOut(e) {
                   :class="{ 'help-toolbar__btn--modern': isModernTheme }"
                   type="button"
                   title="Вставить изображение"
+                  @mousedown.prevent
                   @click="triggerFileUpload"
                 >
                   🖼
@@ -766,6 +799,7 @@ function handleContentMouseOut(e) {
                   :class="{ 'help-toolbar__save--modern': isModernTheme }"
                   type="button"
                   :disabled="isSavingArticle"
+                  @mousedown.prevent
                   @click="saveArticleContent"
                 >
                   {{ isSavingArticle ? '...' : '💾' }}
