@@ -436,6 +436,83 @@ export const useAdminStore = defineStore('admin', {
     },
 
     /**
+     * Заблокировать пользователя
+     */
+    async blockUser(userId, reason) {
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/users/${userId}/block`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ reason })
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Ошибка блокировки')
+        }
+
+        return await response.json()
+      } catch (err) {
+        console.error('[ADMIN] Ошибка блокировки пользователя:', err)
+        throw err
+      }
+    },
+
+    /**
+     * Разблокировать пользователя
+     */
+    async unblockUser(userId) {
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/users/${userId}/unblock`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          }
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Ошибка разблокировки')
+        }
+
+        return await response.json()
+      } catch (err) {
+        console.error('[ADMIN] Ошибка разблокировки пользователя:', err)
+        throw err
+      }
+    },
+
+    /**
+     * Сбросить пароль пользователя
+     */
+    async resetUserPassword(userId) {
+      try {
+        const authStore = useAuthStore()
+        const response = await fetch(`${API_URL}/admin/users/${userId}/reset-password`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authStore.token}`
+          }
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Ошибка сброса пароля')
+        }
+
+        return await response.json()
+      } catch (err) {
+        console.error('[ADMIN] Ошибка сброса пароля:', err)
+        throw err
+      }
+    },
+
+    /**
      * Очистить ошибки
      */
     clearError() {

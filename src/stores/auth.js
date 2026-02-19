@@ -196,6 +196,13 @@ export const useAuthStore = defineStore('auth', {
       const data = await response.json()
 
       if (!response.ok) {
+        // Передаём флаг blocked через ошибку
+        if (data.blocked) {
+          const err = new Error(data.error || 'Аккаунт заблокирован')
+          err.blocked = true
+          err.email = data.email
+          throw err
+        }
         throw new Error(data.error || 'Ошибка входа')
       }
 

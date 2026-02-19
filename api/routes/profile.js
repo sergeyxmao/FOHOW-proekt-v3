@@ -461,6 +461,9 @@ export function registerProfileRoutes(app) {
         passwordHash = await bcrypt.hash(newPassword, 10);
       }
 
+      // Очищаем временный пароль при смене пароля пользователем
+      const clearTempPassword = (newPassword && newPassword.trim().length > 0) ? ', admin_temp_password = NULL' : '';
+
       const queryText = `UPDATE users SET
            username = COALESCE($1, username), email = COALESCE($2, email), password = COALESCE($3, password),
            country = COALESCE($4, country), city = COALESCE($5, city), office = COALESCE($6, office),
@@ -470,7 +473,7 @@ export function registerProfileRoutes(app) {
            instagram_profile = COALESCE($14, instagram_profile), whatsapp_contact = COALESCE($15, whatsapp_contact),
            ui_preferences = COALESCE($16, ui_preferences),
            website = COALESCE($17, website),
-           updated_at = CURRENT_TIMESTAMP
+           updated_at = CURRENT_TIMESTAMP${clearTempPassword}
          WHERE id = $18
          RETURNING *`;
 

@@ -1,65 +1,99 @@
 <template>
   <div :class="['auth-card', props.isModernTheme ? 'auth-card--modern' : 'auth-card--classic']">
-    <h2 class="auth-card__title">Вход</h2>
-    <form class="auth-card__form" @submit.prevent="handleLogin">
-      <div class="auth-card__group">
-        <label for="email">Email:</label>
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          required
-          placeholder="example@email.com"
-        />
-      </div>
-
-      <div class="auth-card__group">
-        <label for="password">Пароль:</label>
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          required
-          placeholder="••••••••"
-        />
-      </div>
-      <div class="auth-card__group">
-        <label for="verification">Проверочный код:</label>
-        <input
-          id="verification"
-          v-model="verificationInput"
-          type="text"
-          inputmode="numeric"
-          maxlength="4"
-          required
-          placeholder="Введите код"
-        />
-        <div class="auth-card__verification-code" @click="regenerateVerificationCode">
-          {{ verificationLoading ? '••••' : (verificationCode || '••••') }}
+    <!-- Форма разблокировки -->
+    <template v-if="showUnblockForm">
+      <h2 class="auth-card__title">Аккаунт заблокирован</h2>
+      <form class="auth-card__form" @submit.prevent="handleUnblock">
+        <div class="auth-card__message auth-card__message--error">
+          Ваш аккаунт заблокирован. Введите код разблокировки, полученный от администратора.
         </div>
-        <button
-          type="button"
-          class="auth-card__verification-refresh"
-          @click="regenerateVerificationCode"
-          :disabled="verificationLoading || refreshCooldown > 0"
-        >
-          {{ refreshCooldown > 0 && errorType !== 'info' ? `Обновить код (${refreshCooldown}с)` : 'Обновить код' }}
+        <div class="auth-card__group">
+          <label for="unblock-code">Код разблокировки:</label>
+          <input
+            id="unblock-code"
+            v-model="unblockCode"
+            type="text"
+            inputmode="numeric"
+            maxlength="6"
+            required
+            placeholder="6-значный код"
+            class="unblock-code-input"
+          />
+        </div>
+        <div v-if="unblockError" class="auth-card__message auth-card__message--error">{{ unblockError }}</div>
+        <div v-if="unblockSuccess" class="auth-card__message auth-card__message--success">{{ unblockSuccess }}</div>
+        <button class="auth-card__submit" type="submit" :disabled="unblockLoading">
+          {{ unblockLoading ? 'Разблокировка...' : 'Разблокировать' }}
         </button>
-      </div>
-      <div v-if="error" :class="['auth-card__message', errorType === 'info' ? 'auth-card__message--info' : 'auth-card__message--error']">{{ error }}</div>
+        <p class="switch-form">
+          <a @click="backToLogin">Назад к входу</a>
+        </p>
+      </form>
+    </template>
 
-      <button class="auth-card__submit" type="submit" :disabled="loading">
-        {{ loading ? 'Вход...' : 'Войти' }}
-      </button>
+    <!-- Форма входа -->
+    <template v-else>
+      <h2 class="auth-card__title">Вход</h2>
+      <form class="auth-card__form" @submit.prevent="handleLogin">
+        <div class="auth-card__group">
+          <label for="email">Email:</label>
+          <input
+            id="email"
+            v-model="email"
+            type="email"
+            required
+            placeholder="example@email.com"
+          />
+        </div>
 
-<p class="forgot-password-link">
-  <a @click="$emit('switch-to-forgot')">Забыли пароль?</a>
-</p>
+        <div class="auth-card__group">
+          <label for="password">Пароль:</label>
+          <input
+            id="password"
+            v-model="password"
+            type="password"
+            required
+            placeholder="••••••••"
+          />
+        </div>
+        <div class="auth-card__group">
+          <label for="verification">Проверочный код:</label>
+          <input
+            id="verification"
+            v-model="verificationInput"
+            type="text"
+            inputmode="numeric"
+            maxlength="4"
+            required
+            placeholder="Введите код"
+          />
+          <div class="auth-card__verification-code" @click="regenerateVerificationCode">
+            {{ verificationLoading ? '••••' : (verificationCode || '••••') }}
+          </div>
+          <button
+            type="button"
+            class="auth-card__verification-refresh"
+            @click="regenerateVerificationCode"
+            :disabled="verificationLoading || refreshCooldown > 0"
+          >
+            {{ refreshCooldown > 0 && errorType !== 'info' ? `Обновить код (${refreshCooldown}с)` : 'Обновить код' }}
+          </button>
+        </div>
+        <div v-if="error" :class="['auth-card__message', errorType === 'info' ? 'auth-card__message--info' : 'auth-card__message--error']">{{ error }}</div>
 
-<p class="switch-form">
-  Нет аккаунта? <a @click="$emit('switch-to-register')">Зарегистрироваться</a>
-</p>
-    </form>
+        <button class="auth-card__submit" type="submit" :disabled="loading">
+          {{ loading ? 'Вход...' : 'Войти' }}
+        </button>
+
+        <p class="forgot-password-link">
+          <a @click="$emit('switch-to-forgot')">Забыли пароль?</a>
+        </p>
+
+        <p class="switch-form">
+          Нет аккаунта? <a @click="$emit('switch-to-register')">Зарегистрироваться</a>
+        </p>
+      </form>
+    </template>
   </div>
 </template>
 
@@ -90,6 +124,14 @@ const loading = ref(false)
 const verificationLoading = ref(false)
 const refreshCooldown = ref(0)
 const refreshCooldownTimer = ref(null)
+
+// Состояние разблокировки
+const showUnblockForm = ref(false)
+const blockedEmail = ref('')
+const unblockCode = ref('')
+const unblockError = ref('')
+const unblockSuccess = ref('')
+const unblockLoading = ref(false)
 
 async function fetchVerificationCode(showError = true) {
   try {
@@ -208,12 +250,58 @@ async function handleLogin() {
     // Обычный вход - emit успешного входа
     emit('login-success')
   } catch (err) {
+    // Проверяем, заблокирован ли аккаунт
+    if (err.blocked) {
+      blockedEmail.value = err.email || email.value
+      showUnblockForm.value = true
+      return
+    }
     errorType.value = 'error'
     error.value = err.message
     await fetchVerificationCode(false)
   } finally {
     loading.value = false
   }
+}
+
+async function handleUnblock() {
+  unblockError.value = ''
+  unblockSuccess.value = ''
+  unblockLoading.value = true
+
+  try {
+    const response = await fetch(`${API_URL}/unblock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: blockedEmail.value,
+        code: unblockCode.value
+      })
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Ошибка разблокировки')
+    }
+
+    unblockSuccess.value = data.message || 'Аккаунт разблокирован! Теперь вы можете войти.'
+    setTimeout(() => {
+      backToLogin()
+    }, 2000)
+  } catch (err) {
+    unblockError.value = err.message
+  } finally {
+    unblockLoading.value = false
+  }
+}
+
+function backToLogin() {
+  showUnblockForm.value = false
+  blockedEmail.value = ''
+  unblockCode.value = ''
+  unblockError.value = ''
+  unblockSuccess.value = ''
 }
 </script>
 
@@ -431,5 +519,17 @@ input:focus {
 .switch-form a:hover {
   color: var(--auth-link-hover);
   text-decoration: underline;
+}
+
+.auth-card__message--success {
+  color: var(--auth-success, #16a34a);
+  background: var(--auth-success-bg, rgba(22, 163, 74, 0.1));
+}
+
+.unblock-code-input {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
 }
 </style>

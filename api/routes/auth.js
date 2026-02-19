@@ -8,6 +8,7 @@
  * - POST /api/resend-verification-code - Повторная отправка кода
  * - POST /api/forgot-password - Восстановление пароля
  * - POST /api/reset-password - Сброс пароля
+ * - POST /api/unblock - Разблокировка аккаунта по коду
  */
 
 import bcrypt from 'bcryptjs';
@@ -352,6 +353,14 @@ export function registerAuthRoutes(app) {
           type: 'object',
           properties: { error: { type: 'string' } }
         },
+        403: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            blocked: { type: 'boolean' },
+            email: { type: 'string' }
+          }
+        },
         429: {
           type: 'object',
           properties: { error: { type: 'string' } }
@@ -406,7 +415,16 @@ export function registerAuthRoutes(app) {
         return reply.code(401).send({ error: 'Неверный email или пароль' });
       }
 
-      // 3. Проверить, верифицирован ли email
+      // 3. Проверка блокировки аккаунта
+      if (user.is_blocked) {
+        return reply.code(403).send({
+          error: 'Ваш аккаунт временно заблокирован. Для разблокировки введите код, полученный от администратора.',
+          blocked: true,
+          email: email
+        });
+      }
+
+      // 4. Проверить, верифицирован ли email
       if (!user.email_verified) {
         // Генерировать 6-значный код
         const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -1125,6 +1143,85 @@ export function registerAuthRoutes(app) {
       return reply.send({ success: true, message: 'Пароль успешно изменен' });
     } catch (err) {
       console.error('❌ Ошибка reset-password:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  // === РАЗБЛОКИРОВКА ПО КОДУ (пользователь) ===
+  app.post('/api/unblock', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Разблокировка аккаунта по коду',
+      description: 'Пользователь вводит 6-значный код разблокировки, полученный от администратора. Не требует аутентификации.',
+      body: {
+        type: 'object',
+        required: ['email', 'code'],
+        properties: {
+          email: { type: 'string', format: 'email', description: 'Email пользователя' },
+          code: { type: 'string', minLength: 6, maxLength: 6, description: '6-значный код разблокировки' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    },
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes',
+        errorResponseBuilder: () => ({ error: 'Слишком много попыток. Попробуйте позже.' })
+      }
+    }
+  }, async (req, reply) => {
+    try {
+      const { email, code } = req.body;
+
+      if (!email || !code) {
+        return reply.code(400).send({ error: 'Email и код обязательны' });
+      }
+
+      const result = await pool.query(
+        'SELECT id, is_blocked, block_code FROM users WHERE email = $1',
+        [email]
+      );
+
+      if (result.rows.length === 0) {
+        return reply.code(404).send({ error: 'Пользователь не найден' });
+      }
+
+      const user = result.rows[0];
+
+      if (!user.is_blocked) {
+        return reply.code(400).send({ error: 'Аккаунт не заблокирован' });
+      }
+
+      if (user.block_code !== code) {
+        return reply.code(400).send({ error: 'Неверный код разблокировки' });
+      }
+
+      await pool.query(
+        `UPDATE users SET is_blocked = false, block_code = NULL, blocked_at = NULL, blocked_reason = NULL
+         WHERE id = $1`,
+        [user.id]
+      );
+
+      console.log(`✅ Аккаунт разблокирован по коду: email=${email}`);
+
+      return reply.send({
+        success: true,
+        message: 'Аккаунт разблокирован. Теперь вы можете войти.'
+      });
+    } catch (err) {
+      console.error('❌ Ошибка разблокировки:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });

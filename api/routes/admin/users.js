@@ -3,6 +3,7 @@ import { authenticateToken } from '../../middleware/auth.js';
 import { requireAdmin } from '../../middleware/requireAdmin.js';
 import { getAvatarUrl } from '../../utils/avatarUtils.js';
 import boardLockService from '../../services/boardLockService.js';
+import bcrypt from 'bcryptjs';
 
 /**
  * Регистрация маршрутов управления пользователями
@@ -165,6 +166,7 @@ export function registerAdminUsersRoutes(app) {
           u.telegram_user, u.telegram_channel, u.telegram_chat_id,
           u.vk_profile, u.ok_profile, u.instagram_profile, u.whatsapp_contact,
           u.visibility_settings, u.search_settings,
+          u.is_blocked, u.block_code, u.blocked_at, u.blocked_reason, u.admin_temp_password,
           sp.id as plan_id, sp.name as plan_name, sp.code_name as plan_code, sp.features,
           (SELECT COUNT(*) FROM boards WHERE owner_id = u.id) as boards_count,
           (SELECT COUNT(*) FROM notes n JOIN boards b ON n.board_id = b.id WHERE b.owner_id = u.id) as notes_count,
@@ -571,11 +573,72 @@ export function registerAdminUsersRoutes(app) {
       }
 
       const deletedUser = userInfo.rows[0];
+      const deletionLog = {};
 
-      // Удаляем пользователя (каскадное удаление настроено в БД)
-      await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+      // Каскадное удаление в транзакции
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
 
-      console.log(`[ADMIN] Пользователь удален: user_id=${userId}, email=${deletedUser.email}, admin_id=${req.user.id}`);
+        // Безопасный DELETE с логированием (игнорирует отсутствующие таблицы)
+        const safeDelete = async (table, where, params) => {
+          try {
+            const result = await client.query(`DELETE FROM ${table} WHERE ${where}`, params);
+            deletionLog[table] = result.rowCount;
+          } catch (e) {
+            if (e.code === '42P01') { // undefined_table
+              deletionLog[table] = 'таблица не существует';
+            } else {
+              throw e;
+            }
+          }
+        };
+
+        // 1. Данные, зависящие от досок пользователя
+        await safeDelete('notes', 'board_id IN (SELECT id FROM boards WHERE owner_id = $1)', [userId]);
+        await safeDelete('stickers', 'board_id IN (SELECT id FROM boards WHERE owner_id = $1)', [userId]);
+        await safeDelete('board_anchors', 'board_id IN (SELECT id FROM boards WHERE owner_id = $1)', [userId]);
+        await safeDelete('user_comments', 'board_id IN (SELECT id FROM boards WHERE owner_id = $1)', [userId]);
+
+        // 2. Доски и папки
+        await safeDelete('boards', 'owner_id = $1', [userId]);
+        await safeDelete('board_folders', 'owner_id = $1', [userId]);
+
+        // 3. Пользовательские данные
+        await safeDelete('favorites', 'user_id = $1', [userId]);
+        await safeDelete('image_favorites', 'user_id = $1', [userId]);
+        await safeDelete('image_library', 'user_id = $1', [userId]);
+        await safeDelete('subscription_history', 'user_id = $1', [userId]);
+        await safeDelete('promo_code_usages', 'user_id = $1', [userId]);
+        await safeDelete('active_sessions', 'user_id = $1', [userId]);
+        await safeDelete('telegram_link_codes', 'user_id = $1', [userId]);
+        await safeDelete('demo_trials', 'user_id = $1', [userId]);
+        await safeDelete('user_verifications', 'user_id = $1', [userId]);
+        await safeDelete('image_rename_audit', 'user_id = $1', [userId]);
+
+        // 4. По email
+        const userEmail = deletedUser.email;
+        await safeDelete('verified_emails', 'email = $1', [userEmail]);
+        await safeDelete('email_verification_codes', 'email = $1', [userEmail]);
+        await safeDelete('password_resets', 'email = $1', [userEmail]);
+
+        // 5. Чаты/уведомления
+        await safeDelete('fogrup_notifications', 'user_id = $1 OR from_user_id = $1', [userId]);
+        await safeDelete('fogrup_chat_participants', 'user_id = $1', [userId]);
+
+        // 6. Удаляем самого пользователя
+        await client.query('DELETE FROM users WHERE id = $1', [userId]);
+        deletionLog['users'] = 1;
+
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+      } finally {
+        client.release();
+      }
+
+      console.log(`[ADMIN] Пользователь удален: user_id=${userId}, email=${deletedUser.email}, admin_id=${req.user.id}, deletionLog:`, deletionLog);
 
       return reply.send({
         success: true,
@@ -693,6 +756,222 @@ export function registerAdminUsersRoutes(app) {
       });
     } catch (err) {
       console.error('[ADMIN] Ошибка завершения сессий пользователя:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  /**
+   * Заблокировать пользователя
+   * POST /api/admin/users/:userId/block
+   */
+  app.post('/api/admin/users/:userId/block', {
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Заблокировать пользователя',
+      description: 'Временная блокировка пользователя с генерацией 6-значного кода разблокировки. Завершает все активные сессии.',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          userId: { type: 'integer' }
+        },
+        required: ['userId']
+      },
+      body: {
+        type: 'object',
+        properties: {
+          reason: { type: 'string', description: 'Причина блокировки' }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            block_code: { type: 'string' },
+            message: { type: 'string' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
+  }, async (req, reply) => {
+    try {
+      const { userId } = req.params;
+      const { reason } = req.body || {};
+
+      if (parseInt(userId) === req.user.id) {
+        return reply.code(403).send({ error: 'Нельзя заблокировать собственный аккаунт' });
+      }
+
+      const userCheck = await pool.query(
+        'SELECT id, email, is_blocked FROM users WHERE id = $1',
+        [userId]
+      );
+
+      if (userCheck.rows.length === 0) {
+        return reply.code(404).send({ error: 'Пользователь не найден' });
+      }
+
+      if (userCheck.rows[0].is_blocked) {
+        return reply.code(400).send({ error: 'Пользователь уже заблокирован' });
+      }
+
+      const blockCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      await pool.query(
+        `UPDATE users SET is_blocked = true, block_code = $1, blocked_at = NOW(), blocked_reason = $2
+         WHERE id = $3`,
+        [blockCode, reason || null, userId]
+      );
+
+      // Завершаем все активные сессии
+      await pool.query('DELETE FROM active_sessions WHERE user_id = $1', [userId]);
+
+      console.log(`[ADMIN] Пользователь заблокирован: user_id=${userId}, email=${userCheck.rows[0].email}, admin_id=${req.user.id}, reason=${reason || 'не указана'}`);
+
+      return reply.send({
+        success: true,
+        block_code: blockCode,
+        message: 'Пользователь заблокирован'
+      });
+    } catch (err) {
+      console.error('[ADMIN] Ошибка блокировки пользователя:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  /**
+   * Разблокировать пользователя (admin)
+   * POST /api/admin/users/:userId/unblock
+   */
+  app.post('/api/admin/users/:userId/unblock', {
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Разблокировать пользователя',
+      description: 'Ручная разблокировка пользователя администратором',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          userId: { type: 'integer' }
+        },
+        required: ['userId']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            message: { type: 'string' }
+          }
+        },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
+  }, async (req, reply) => {
+    try {
+      const { userId } = req.params;
+
+      const result = await pool.query(
+        `UPDATE users SET is_blocked = false, block_code = NULL, blocked_at = NULL, blocked_reason = NULL
+         WHERE id = $1 RETURNING id, email`,
+        [userId]
+      );
+
+      if (result.rows.length === 0) {
+        return reply.code(404).send({ error: 'Пользователь не найден' });
+      }
+
+      console.log(`[ADMIN] Пользователь разблокирован: user_id=${userId}, email=${result.rows[0].email}, admin_id=${req.user.id}`);
+
+      return reply.send({
+        success: true,
+        message: 'Пользователь разблокирован'
+      });
+    } catch (err) {
+      console.error('[ADMIN] Ошибка разблокировки пользователя:', err);
+      return reply.code(500).send({ error: 'Ошибка сервера' });
+    }
+  });
+
+  /**
+   * Сброс пароля пользователя (admin)
+   * POST /api/admin/users/:userId/reset-password
+   */
+  app.post('/api/admin/users/:userId/reset-password', {
+    preHandler: [authenticateToken, requireAdmin],
+    schema: {
+      tags: ['Admin'],
+      summary: 'Сбросить пароль пользователя',
+      description: 'Генерирует случайный временный пароль. Завершает все активные сессии пользователя.',
+      security: [{ bearerAuth: [] }],
+      params: {
+        type: 'object',
+        properties: {
+          userId: { type: 'integer' }
+        },
+        required: ['userId']
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            tempPassword: { type: 'string' },
+            message: { type: 'string' }
+          }
+        },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        404: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
+  }, async (req, reply) => {
+    try {
+      const { userId } = req.params;
+
+      if (parseInt(userId) === req.user.id) {
+        return reply.code(403).send({ error: 'Нельзя сбросить собственный пароль через админ-панель' });
+      }
+
+      const userCheck = await pool.query('SELECT id, email FROM users WHERE id = $1', [userId]);
+      if (userCheck.rows.length === 0) {
+        return reply.code(404).send({ error: 'Пользователь не найден' });
+      }
+
+      // Генерация временного пароля (без спутывающих символов)
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+      let tempPassword = '';
+      for (let i = 0; i < 10; i++) {
+        tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+
+      const hash = await bcrypt.hash(tempPassword, 10);
+
+      await pool.query(
+        'UPDATE users SET password = $1, admin_temp_password = $2 WHERE id = $3',
+        [hash, tempPassword, userId]
+      );
+
+      // Завершаем все сессии
+      await pool.query('DELETE FROM active_sessions WHERE user_id = $1', [userId]);
+
+      console.log(`[ADMIN] Пароль сброшен: user_id=${userId}, email=${userCheck.rows[0].email}, admin_id=${req.user.id}`);
+
+      return reply.send({
+        success: true,
+        tempPassword,
+        message: 'Пароль сброшен'
+      });
+    } catch (err) {
+      console.error('[ADMIN] Ошибка сброса пароля:', err);
       return reply.code(500).send({ error: 'Ошибка сервера' });
     }
   });

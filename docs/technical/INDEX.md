@@ -161,8 +161,14 @@ DATABASE_URL=postgresql://user:pass@host:5432/dbname
 | POST | `/boards/:id/stickers` | Добавить стикер |
 | POST | `/images/upload` | Загрузить изображение |
 | GET | `/admin/users` | Список пользователей (admin) |
+| POST | `/admin/users/:id/block` | Заблокировать пользователя (admin) |
+| POST | `/admin/users/:id/unblock` | Разблокировать пользователя (admin) |
+| POST | `/admin/users/:id/reset-password` | Сбросить пароль (admin) |
+| POST | `/unblock` | Разблокировка по коду (пользователь) |
 
 Полный список: [api-endpoints.md](api-endpoints.md)
+
+Управление пользователями: [admin-user-management.md](admin-user-management.md)
 
 ---
 

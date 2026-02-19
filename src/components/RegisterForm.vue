@@ -224,7 +224,12 @@ async function handleRegister() {
   } catch (err) {
     errorType.value = 'error'
     error.value = err.message
+    const savedError = err.message
+    const savedErrorType = 'error'
     await fetchVerificationCode(false)
+    // Восстанавливаем ошибку регистрации после обновления кода
+    error.value = savedError
+    errorType.value = savedErrorType
   } finally {
     loading.value = false
   }

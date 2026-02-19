@@ -147,6 +147,30 @@
               <span class="label">Создан:</span>
               <span class="value">{{ formatDateTime(selectedUser.created_at) }}</span>
             </div>
+
+            <!-- Статус блокировки -->
+            <div v-if="selectedUser.is_blocked" class="info-row info-row--blocked">
+              <span class="label">Статус:</span>
+              <span class="value status-blocked">Заблокирован</span>
+            </div>
+            <div v-if="selectedUser.is_blocked && selectedUser.blocked_reason" class="info-row">
+              <span class="label">Причина:</span>
+              <span class="value">{{ selectedUser.blocked_reason }}</span>
+            </div>
+            <div v-if="selectedUser.is_blocked && selectedUser.block_code" class="info-row">
+              <span class="label">Код разблокировки:</span>
+              <span class="value code-value">{{ selectedUser.block_code }}</span>
+            </div>
+            <div v-if="selectedUser.blocked_at" class="info-row">
+              <span class="label">Заблокирован:</span>
+              <span class="value">{{ formatDateTime(selectedUser.blocked_at) }}</span>
+            </div>
+
+            <!-- Временный пароль -->
+            <div v-if="selectedUser.admin_temp_password" class="info-row info-row--password">
+              <span class="label">Временный пароль:</span>
+              <span class="value code-value">{{ selectedUser.admin_temp_password }}</span>
+            </div>
           </div>
 
           <div class="action-buttons">
@@ -156,7 +180,24 @@
             <button @click="changePlan" class="btn btn-primary">
               Изменить тариф
             </button>
-            <button @click="terminateSessions" class="btn btn-warning">
+            <button @click="resetPassword" class="btn btn-warning">
+              Сбросить пароль
+            </button>
+            <button
+              v-if="!selectedUser.is_blocked"
+              @click="blockUser"
+              class="btn btn-warning"
+            >
+              Заблокировать
+            </button>
+            <button
+              v-else
+              @click="unblockUser"
+              class="btn btn-success"
+            >
+              Разблокировать
+            </button>
+            <button @click="terminateSessions" class="btn btn-secondary">
               Завершить сессии
             </button>
             <button @click="deleteUser" class="btn btn-danger">
@@ -225,6 +266,34 @@
         </div>
       </div>
     </div>
+
+    <!-- Модальное окно блокировки -->
+    <div v-if="showBlockModal" class="modal-overlay" @click="showBlockModal = false">
+      <div class="modal-content small" @click.stop>
+        <div class="modal-header">
+          <h3>Заблокировать пользователя</h3>
+          <button @click="showBlockModal = false" class="close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Пользователь: <strong>{{ selectedUser?.email }}</strong></p>
+          <label>Причина / заметка:</label>
+          <textarea
+            v-model="blockReason"
+            rows="3"
+            placeholder="Опишите причину блокировки..."
+            class="block-reason-input"
+          ></textarea>
+          <div class="modal-actions">
+            <button @click="confirmBlock" class="btn btn-danger">
+              Заблокировать
+            </button>
+            <button @click="showBlockModal = false" class="btn btn-secondary">
+              Отмена
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -242,9 +311,11 @@ const sortOrder = ref('DESC')
 const showUserModal = ref(false)
 const showRoleModal = ref(false)
 const showPlanModal = ref(false)
+const showBlockModal = ref(false)
 const selectedRole = ref('user')
 const selectedPlanId = ref('')
 const planDuration = ref(30)
+const blockReason = ref('')
 
 const users = computed(() => adminStore.users)
 const pagination = computed(() => adminStore.pagination)
@@ -369,6 +440,47 @@ const terminateSessions = async () => {
   } catch (err) {
     console.error('[ADMIN] Ошибка завершения сессий:', err)
     alert('Ошибка завершения сессий: ' + err.message)
+  }
+}
+
+const blockUser = () => {
+  blockReason.value = ''
+  showBlockModal.value = true
+}
+
+const confirmBlock = async () => {
+  try {
+    await adminStore.blockUser(selectedUser.value.id, blockReason.value)
+    showBlockModal.value = false
+    await adminStore.fetchUserDetails(selectedUser.value.id)
+    alert('Пользователь заблокирован. Код разблокировки отображается в деталях.')
+  } catch (err) {
+    console.error('[ADMIN] Ошибка блокировки:', err)
+    alert('Ошибка: ' + err.message)
+  }
+}
+
+const unblockUser = async () => {
+  if (!confirm('Разблокировать пользователя?')) return
+  try {
+    await adminStore.unblockUser(selectedUser.value.id)
+    await adminStore.fetchUserDetails(selectedUser.value.id)
+    alert('Пользователь разблокирован')
+  } catch (err) {
+    console.error('[ADMIN] Ошибка разблокировки:', err)
+    alert('Ошибка: ' + err.message)
+  }
+}
+
+const resetPassword = async () => {
+  if (!confirm(`Сбросить пароль для ${selectedUser.value.email}? Текущий пароль будет заменён.`)) return
+  try {
+    const result = await adminStore.resetUserPassword(selectedUser.value.id)
+    await adminStore.fetchUserDetails(selectedUser.value.id)
+    alert(`Новый пароль: ${result.tempPassword}\n\nОн также отображается в деталях пользователя.`)
+  } catch (err) {
+    console.error('[ADMIN] Ошибка сброса пароля:', err)
+    alert('Ошибка: ' + err.message)
   }
 }
 
@@ -566,6 +678,15 @@ h2 {
   background: #fcc419;
 }
 
+.btn-success {
+  background: #51cf66;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #40c057;
+}
+
 .btn-danger {
   background: #ff6b6b;
   color: white;
@@ -685,6 +806,43 @@ h2 {
 
 .info-row .value {
   color: #333;
+}
+
+.info-row--blocked {
+  background: #fff3f3;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.status-blocked {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.code-value {
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f62fe;
+  letter-spacing: 2px;
+  user-select: all;
+}
+
+.info-row--password {
+  background: #fff8e6;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.block-reason-input {
+  width: 100%;
+  margin: 8px 0;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 14px;
 }
 
 .action-buttons {
