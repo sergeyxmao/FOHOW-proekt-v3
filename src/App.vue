@@ -90,7 +90,7 @@ const zoomDisplay = computed(() => `${zoomPercentage.value}%`)
 
 const performanceModeStore = usePerformanceModeStore()
 const designModeStore = useDesignModeStore()
-const { mode: performanceMode, isFull: isFullMode } = storeToRefs(performanceModeStore)
+const { mode: performanceMode, isFull: isFullMode, isView: isViewMode } = storeToRefs(performanceModeStore)
 const { isAuroraDesign } = storeToRefs(designModeStore)
 const showMobileFullMenu = ref(false)
 const performanceModeLabel = computed(() => {
@@ -1264,6 +1264,13 @@ watch(isAuthenticated, (value) => {
     isMobileAuthModalOpen.value = false
   }
 })
+
+// Закрываем боковые панели при входе в режим просмотра
+watch(isViewMode, (viewing) => {
+  if (viewing) {
+    sidePanelsStore.closePanel()
+  }
+})
 watch(isSaveAvailable, (canSave) => {
   if (canSave) {
     startAutoSave()
@@ -1375,7 +1382,7 @@ onBeforeUnmount(() => {
     <template v-if="!isMobileMode">
       <TopMenuButtons
         v-if="isAuthenticated"
-        v-show="!isPencilMode && !showResetPassword"
+        v-show="!isPencilMode && !showResetPassword && !isViewMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
         @toggle-theme="toggleTheme"
@@ -1384,7 +1391,7 @@ onBeforeUnmount(() => {
         @new-structure="handleNewStructure"
       />
       <AppHeader
-        v-show="!isPencilMode && !showResetPassword"
+        v-show="!isPencilMode && !showResetPassword && !isViewMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
         :zoom-display="zoomDisplay"
@@ -1417,7 +1424,7 @@ onBeforeUnmount(() => {
       </button>
       <button
         v-if="isAuthenticated"
-        v-show="!isPencilMode && !showResetPassword"
+        v-show="!isPencilMode && !showResetPassword && !isViewMode"
         class="save-floating-button no-print"
         :class="{ 'save-floating-button--modern': isModernTheme }"
         type="button"
@@ -1597,10 +1604,10 @@ onBeforeUnmount(() => {
       </div>
     </Teleport>
 
-    <!-- Side Panels (desktop always, mobile only in Full mode) -->
+    <!-- Side Panels (desktop always, mobile only in Full mode, hidden in view mode) -->
     <transition name="side-panel-slide">
       <PartnersPanel
-        v-if="isPartnersOpen && (!isMobileMode || isFullMode)"
+        v-if="isPartnersOpen && (!isMobileMode || isFullMode) && !isViewMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
@@ -1608,7 +1615,7 @@ onBeforeUnmount(() => {
 
     <transition name="side-panel-slide">
       <NotesSidePanel
-        v-if="isNotesOpen && (!isMobileMode || isFullMode)"
+        v-if="isNotesOpen && (!isMobileMode || isFullMode) && !isViewMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
@@ -1616,7 +1623,7 @@ onBeforeUnmount(() => {
 
     <transition name="side-panel-slide">
       <CommentsSidePanel
-        v-if="isCommentsOpen && (!isMobileMode || isFullMode)"
+        v-if="isCommentsOpen && (!isMobileMode || isFullMode) && !isViewMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
@@ -1624,7 +1631,7 @@ onBeforeUnmount(() => {
 
     <transition name="side-panel-slide">
       <StickerMessagesPanel
-        v-if="isStickerMessagesOpen && (!isMobileMode || isFullMode)"
+        v-if="isStickerMessagesOpen && (!isMobileMode || isFullMode) && !isViewMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
@@ -1632,14 +1639,14 @@ onBeforeUnmount(() => {
 
     <transition name="side-panel-slide">
       <ImagesPanel
-        v-if="isImagesOpen && (!isMobileMode || isFullMode) && !isPencilMode"
+        v-if="isImagesOpen && (!isMobileMode || isFullMode) && !isPencilMode && !isViewMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />
     </transition>
     <transition name="side-panel-slide">
       <BoardAnchorsPanel
-        v-if="isAnchorsOpen && (!isMobileMode || isFullMode)"
+        v-if="isAnchorsOpen && (!isMobileMode || isFullMode) && !isViewMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
       />

@@ -526,6 +526,7 @@ const handlePvKeyDown = (event) => {
 // Обработчик клика на кружок
 const handleCoinClick = (event) => {
   event.stopPropagation();
+  if (isReadOnly.value || isViewMode.value) return;
 
   const currentLeft = Number.parseInt(pvLeftValue.value, 10);
 
@@ -1081,7 +1082,7 @@ watch(
         <div class="coin-icon-wrapper">
           <svg
             class="coin-icon"
-            :class="{ 'coin-icon--clickable': true }"
+            :class="{ 'coin-icon--clickable': !isViewMode }"
             viewBox="0 0 100 100"
             xmlns="http://www.w3.org/2000/svg"
             @click="handleCoinClick"
