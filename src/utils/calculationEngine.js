@@ -100,7 +100,9 @@ function calculateBalls(cards, lines) {
     }
   });
 
-  lines.forEach(line => {
+  const activeLines = lines.filter(line => !line.locked);
+
+  activeLines.forEach(line => {
     const relation = pickParent(byId, line);
     if (!relation) {
       return;

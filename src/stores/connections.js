@@ -48,10 +48,11 @@ export const useConnectionsStore = defineStore('connections', {
         to: toCardId,
         fromSide: options.fromSide || 'right',
         toSide: options.toSide || 'left',
-        color: options.color || this.defaultLineColor, 
+        color: options.color || this.defaultLineColor,
         thickness: options.thickness || this.defaultLineThickness,
         highlightType: options.highlightType ?? this.defaultHighlightType,
-        animationDuration 
+        animationDuration,
+        locked: !!options.locked
       }
       
       this.connections.push(newConnection)
@@ -297,7 +298,8 @@ export const useConnectionsStore = defineStore('connections', {
             highlightType: Object.prototype.hasOwnProperty.call(connection, 'highlightType')
               ? connection.highlightType
               : this.defaultHighlightType,
-            animationDuration
+            animationDuration,
+            locked: !!connection.locked
           }
         })
         .filter(Boolean)

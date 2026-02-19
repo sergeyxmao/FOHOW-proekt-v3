@@ -114,7 +114,7 @@ export function useActivePv(options) {
       }, ACTIVE_PV_FLASH_MS)
     }
 
-    const relatedConnections = connections.value.filter(connection => connection.from === cardId || connection.to === cardId)
+    const relatedConnections = connections.value.filter(connection => !connection.locked && (connection.from === cardId || connection.to === cardId))
     relatedConnections.forEach(connection => {
       const lineElement = getConnectionElement(connection.id)
       if (!lineElement) {
@@ -184,10 +184,11 @@ export function useActivePv(options) {
 
       if (!parentId) break
 
-      // Находим линию между текущей карточкой и родителем
+      // Находим линию между текущей карточкой и родителем (пропускаем заблокированные)
       const connection = connections.value.find(conn =>
-        (conn.from === currentId && conn.to === parentId) ||
-        (conn.from === parentId && conn.to === currentId)
+        !conn.locked &&
+        ((conn.from === currentId && conn.to === parentId) ||
+        (conn.from === parentId && conn.to === currentId))
       )
 
       if (connection) {

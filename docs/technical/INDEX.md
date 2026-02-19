@@ -222,6 +222,11 @@ systemctl status fohow-api
 Экспорт схем в HTML-файлы — интерактивность, touch support, watermark, pinch-zoom:
 [html-export.md](html-export.md)
 
+### Lock Connection
+
+Блокировка соединений — двойной клик блокирует/разблокирует линию, данные не передаются через заблокированное соединение:
+[LOCK_CONNECTION.md](LOCK_CONNECTION.md)
+
 ### Top Menu
 
 Архитектура верхнего меню — 3 вкладки (Проект, Вид, Элементы), кнопка языка, мобильная версия:

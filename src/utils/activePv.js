@@ -51,7 +51,7 @@ function cloneState(state) {
     localBalance: {
       left: state.localBalance.left,
       right: state.localBalance.right
-    },    
+    },
     balance: {
       left: state.balance.left,
       right: state.balance.right
@@ -64,7 +64,7 @@ function createEmptyState() {
   return {
     activePv: { left: 0, right: 0 },
     activePacks: 0,
-    localBalance: { left: 0, right: 0 },    
+    localBalance: { left: 0, right: 0 },
     balance: { left: 0, right: 0 },
     cycles: 0
   };
@@ -85,7 +85,7 @@ function normalizeState(rawState) {
     localBalance: {
       left: Math.max(0, toInteger(rawState.localBalance?.left ?? rawState.localBalance?.L ?? rawState.localBalance?.l ?? 0)),
       right: Math.max(0, toInteger(rawState.localBalance?.right ?? rawState.localBalance?.R ?? rawState.localBalance?.r ?? 0))
-    },    
+    },
     balance: {
       left: Math.max(0, toInteger(balanceSource.left ?? balanceSource.L ?? balanceSource.l ?? 0)),
       right: Math.max(0, toInteger(balanceSource.right ?? balanceSource.R ?? balanceSource.r ?? 0))
@@ -185,7 +185,7 @@ function serializeState(state) {
   return {
     activePv: { left: state.activePv.left, right: state.activePv.right },
     activePacks: state.activePacks,
-    localBalance: { left: state.localBalance.left, right: state.localBalance.right },    
+    localBalance: { left: state.localBalance.left, right: state.localBalance.right },
     balance: { left: state.balance.left, right: state.balance.right },
     cycles: state.cycles
   };
@@ -351,7 +351,7 @@ function applyAddition(state, side, delta) {
     const extraUnits = Math.floor(remainderSum / ACTIVE_PV_BASE);
     nextUnits += extraUnits;
     state.activePacks += extraUnits;
-    remainderSum -= extraUnits * ACTIVE_PV_BASE;  
+    remainderSum -= extraUnits * ACTIVE_PV_BASE;
   }
 
   state.activePv[side] = remainderSum;
@@ -442,7 +442,7 @@ function applyActivePvClear({ cards = [], meta = {}, cardId }) {
   const rightRemainder = state.activePv.right;
   const leftBalance = state.balance.left;
   const rightBalance = state.balance.right;
-  
+
   if (leftRemainder > 0) {
     applyDeltaInternal({ stateMap, meta, cardId, side: 'left', delta: -leftRemainder, changed });
   }

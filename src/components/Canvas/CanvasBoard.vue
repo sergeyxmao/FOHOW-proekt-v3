@@ -976,7 +976,8 @@ const engineInput = computed(() => {
     startId: connection.from,
     endId: connection.to,
     startSide: connection.fromSide,
-    endSide: connection.toSide
+    endSide: connection.toSide,
+    locked: !!connection.locked
   }));
 
   return {
@@ -1011,6 +1012,22 @@ watch(engineInput, (state) => {
     console.error('Engine recalculation error:', error);
   }
 }, { immediate: true });
+
+/**
+ * Обработчик двойного клика по соединению — блокировка/разблокировка.
+ * Заблокированное соединение работает как удалённое для расчётов,
+ * но остаётся видимым для визуальной связки и авто-раскладки.
+ * Active PV НЕ пересчитывается — при разблокировке линия как новая.
+ */
+const handleLineDblClick = (event, connectionId) => {
+  event.stopPropagation();
+  const connection = connections.value.find(c => c.id === connectionId);
+  if (!connection) return;
+
+  connectionsStore.updateConnection(connectionId, { locked: !connection.locked });
+  // Engine.recalc сработает автоматически через watch на engineInput
+};
+
 const GUIDE_SNAP_THRESHOLD = 10;
 
 const resetActiveGuides = () => {
@@ -1239,6 +1256,29 @@ const connectionPaths = computed(() => {
       // Проверяем, анимирована ли эта линия
       const isAnimated = animatedStickerConnectionIds.value.has(connection.id);
 
+      // Вычисляем середину линии для иконки замка (по реальным точкам пути)
+      let midX = 0;
+      let midY = 0;
+      const pts = geometry.points;
+      if (pts && pts.length >= 2) {
+        // Находим точку на 50% длины ломаной
+        let totalLen = 0;
+        for (let i = 1; i < pts.length; i++) {
+          totalLen += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+        }
+        let half = totalLen / 2;
+        for (let i = 1; i < pts.length; i++) {
+          const segLen = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+          if (half <= segLen) {
+            const t = segLen > 0 ? half / segLen : 0;
+            midX = pts[i - 1].x + (pts[i].x - pts[i - 1].x) * t;
+            midY = pts[i - 1].y + (pts[i].y - pts[i - 1].y) * t;
+            break;
+          }
+          half -= segLen;
+        }
+      }
+
       return {
         id: connection.id,
         d: geometry.d,
@@ -1247,7 +1287,10 @@ const connectionPaths = computed(() => {
         highlightType: isAnimated ? 'animated' : (connection.highlightType || null),
         isAnimated,
         animationDuration: connection.animationDuration ?? connectionsStore.defaultAnimationDuration,
-        flowDirection: 1
+        flowDirection: 1,
+        locked: !!connection.locked,
+        midX,
+        midY
 		};
     })
     .filter(Boolean);
@@ -2948,12 +2991,14 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
         class="line-group"
         :data-connection-id="path.id"
         @click.stop="(event) => handleLineClick(event, path.id)"
+        @dblclick.stop="(event) => handleLineDblClick(event, path.id)"
       >
           <!-- Невидимая область для клика (hitbox) -->
           <path
             :d="path.d"
             class="line-hitbox"
             @click.stop="(event) => handleLineClick(event, path.id)"
+            @dblclick.stop="(event) => handleLineDblClick(event, path.id)"
           />
           <!-- Видимая линия -->
           <path
@@ -2962,6 +3007,7 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
               'line',
               {
                 selected: selectedConnectionIds.includes(path.id),
+                'line--locked': path.locked,
                 'line--balance-highlight': path.highlightType === 'balance',
                 'line--pv-highlight': path.highlightType === 'pv',
                 'line--animated': path.isAnimated
@@ -2970,17 +3016,37 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
             marker-start="url(#marker-dot)"
             marker-end="url(#marker-dot)"
             :style="{
-              '--line-color': path.color,
+              '--line-color': path.locked ? '#dc2626' : path.color,
               '--line-width': `${path.strokeWidth}px`,
               '--line-animation-duration': `${userCardAnimationDuration}ms`,
               '--line-animation-rgb': userCardAnimationColorRgb,
               '--line-animation-color': userCardAnimationColor,
-              color: path.isAnimated ? userCardAnimationColor : path.color,
-              stroke: path.isAnimated ? userCardAnimationColor : path.color,
+              color: path.locked ? '#dc2626' : (path.isAnimated ? userCardAnimationColor : path.color),
+              stroke: path.locked ? '#dc2626' : (path.isAnimated ? userCardAnimationColor : path.color),
               strokeWidth: path.strokeWidth,
               pointerEvents: 'stroke'
             }"
           />
+          <!-- Иконка замка для заблокированных соединений -->
+          <g v-if="path.locked" class="lock-icon-group" :transform="`translate(${path.midX - 16}, ${path.midY - 16})`">
+            <rect
+              width="32"
+              height="32"
+              rx="6"
+              fill="white"
+              stroke="#dc2626"
+              stroke-width="2"
+            />
+            <!-- SVG замок -->
+            <path
+              d="M11 14V11a5 5 0 0 1 10 0v3M10 14h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H10a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z"
+              fill="none"
+              stroke="#dc2626"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </g>
         </g>
 
         <!-- UserCard-соединения с кривыми Безье -->
@@ -3436,6 +3502,17 @@ watch(() => notesStore.pendingFocusCardId, (cardId) => {
   to {
     stroke-dashoffset: 16;
   }
+}
+
+.line--locked {
+  stroke: #dc2626 !important;
+  stroke-dasharray: none !important;
+  filter: drop-shadow(0 0 6px rgba(220, 38, 38, 0.4));
+  opacity: 0.85;
+}
+
+.lock-icon-group {
+  pointer-events: none;
 }
 
 .line--preview {
