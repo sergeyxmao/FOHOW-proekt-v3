@@ -82,7 +82,6 @@ export function registerHelpRoutes(app) {
   // GET /api/help/categories — Все категории со статьями
   // ====================================================
   app.get('/api/help/categories', {
-    preHandler: [authenticateToken],
     schema: {
       tags: ['Help'],
       summary: 'Получить все категории помощи со статьями',
