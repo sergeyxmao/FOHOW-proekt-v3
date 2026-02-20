@@ -8,7 +8,7 @@
  * - PUT    /api/help/articles/:id       — Обновить статью (admin)
  * - DELETE /api/help/articles/:id       — Удалить статью (admin)
  * - POST   /api/help/articles/:id/images — Загрузить изображение (admin)
- * - GET    /api/help/images/:filename   — Раздача изображений
+ * - GET    /api/help/images/:filename   — Раздача изображений (проксирование с Yandex.Disk)
  * - DELETE /api/help/images/:filename   — Удалить изображение (admin)
  */
 
@@ -16,19 +16,60 @@ import { pool } from '../db.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { checkAdmin } from '../middleware/checkAdmin.js'
 import path from 'path'
-import fs from 'fs'
 import { randomBytes } from 'crypto'
-import { fileURLToPath } from 'url'
+import {
+  uploadFile,
+  deleteFile,
+  ensureFolderExists,
+  listFolderContents,
+  getHelpFolderPath,
+  getHelpImagePath
+} from '../services/yandexDiskService.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-const UPLOADS_DIR = path.join(__dirname, '..', 'uploads', 'help')
+/**
+ * In-memory кэш download URL с Yandex.Disk.
+ * Ключ: filename, значение: { href: string, expiresAt: number }
+ * TTL: 1 час (Yandex download URL живут несколько часов)
+ */
+const downloadUrlCache = new Map()
+const DOWNLOAD_URL_TTL_MS = 60 * 60 * 1000 // 1 час
 
-/** Создаёт папку uploads/help если не существует */
-function ensureUploadsDir() {
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true })
+/**
+ * Получить download URL для файла, с использованием кэша
+ * @param {string} ydPath - Путь к файлу на Yandex.Disk
+ * @param {string} cacheKey - Ключ кэша (filename)
+ * @returns {Promise<string>} Download URL
+ */
+async function getDownloadUrl(ydPath, cacheKey) {
+  const cached = downloadUrlCache.get(cacheKey)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.href
   }
+
+  const downloadEndpoint = `https://cloud-api.yandex.net/v1/disk/resources/download?path=${encodeURIComponent(ydPath)}`
+  const response = await fetch(downloadEndpoint, {
+    headers: {
+      Authorization: `OAuth ${process.env.YANDEX_DISK_TOKEN}`
+    }
+  })
+
+  if (!response.ok) {
+    const err = new Error(`Yandex API: ${response.status} ${response.statusText}`)
+    err.status = response.status
+    throw err
+  }
+
+  const data = await response.json()
+  if (!data.href) {
+    throw new Error('Yandex API не вернул href для скачивания')
+  }
+
+  downloadUrlCache.set(cacheKey, {
+    href: data.href,
+    expiresAt: Date.now() + DOWNLOAD_URL_TTL_MS
+  })
+
+  return data.href
 }
 
 /**
@@ -276,7 +317,7 @@ export function registerHelpRoutes(app) {
     schema: {
       tags: ['Help'],
       summary: 'Удалить категорию помощи',
-      description: 'Удаляет категорию и все её статьи (каскадно). Также удаляет изображения статей из uploads/help/.',
+      description: 'Удаляет категорию и все её статьи (каскадно). Также удаляет изображения статей с Yandex.Disk.',
       security: [{ bearerAuth: [] }],
       params: {
         type: 'object',
@@ -302,10 +343,9 @@ export function registerHelpRoutes(app) {
         [id]
       )
 
-      // Удаляем изображения статей из файловой системы
-      ensureUploadsDir()
+      // Удаляем изображения статей с Yandex.Disk
       for (const article of articlesResult.rows) {
-        deleteArticleImages(article.id)
+        await deleteArticleImages(article.id)
       }
 
       // Удаляем категорию (статьи удалятся каскадно)
@@ -488,7 +528,7 @@ export function registerHelpRoutes(app) {
     schema: {
       tags: ['Help'],
       summary: 'Удалить статью помощи',
-      description: 'Удаляет статью и все связанные изображения из uploads/help/.',
+      description: 'Удаляет статью и все связанные изображения с Yandex.Disk.',
       security: [{ bearerAuth: [] }],
       params: {
         type: 'object',
@@ -508,9 +548,8 @@ export function registerHelpRoutes(app) {
     try {
       const { id } = req.params
 
-      // Удаляем изображения статьи
-      ensureUploadsDir()
-      deleteArticleImages(id)
+      // Удаляем изображения статьи с Yandex.Disk
+      await deleteArticleImages(id)
 
       const result = await pool.query(
         'DELETE FROM help_articles WHERE id = $1 RETURNING id',
@@ -536,7 +575,7 @@ export function registerHelpRoutes(app) {
     schema: {
       tags: ['Help'],
       summary: 'Загрузить изображение для статьи помощи',
-      description: 'Загружает изображение в api/uploads/help/. Допустимые форматы: JPEG, PNG, WEBP, GIF. Максимум 5MB.',
+      description: 'Загружает изображение на Yandex.Disk в папку HELP/. Допустимые форматы: JPEG, PNG, WEBP, GIF. Максимум 5MB.',
       security: [{ bearerAuth: [] }],
       consumes: ['multipart/form-data'],
       params: {
@@ -605,10 +644,11 @@ export function registerHelpRoutes(app) {
       const timestamp = Date.now()
       const filename = `article-${articleId}-${timestamp}-${random}${ext}`
 
-      // Сохраняем файл
-      ensureUploadsDir()
-      const filePath = path.join(UPLOADS_DIR, filename)
-      fs.writeFileSync(filePath, buffer)
+      // Загружаем файл на Yandex.Disk
+      const helpFolder = getHelpFolderPath()
+      await ensureFolderExists(helpFolder)
+      const ydPath = getHelpImagePath(filename)
+      await uploadFile(ydPath, buffer, data.mimetype)
 
       const url = `/api/help/images/${filename}`
       return reply.send({ url })
@@ -619,13 +659,13 @@ export function registerHelpRoutes(app) {
   })
 
   // ====================================================
-  // GET /api/help/images/:filename — Раздача изображений
+  // GET /api/help/images/:filename — Раздача изображений (проксирование с Yandex.Disk)
   // ====================================================
   app.get('/api/help/images/:filename', {
     schema: {
       tags: ['Help'],
       summary: 'Получить изображение помощи',
-      description: 'Отдаёт файл изображения из uploads/help/. Без аутентификации.',
+      description: 'Проксирует файл изображения с Yandex.Disk. Без аутентификации. Download URL кэшируется на 1 час.',
       params: {
         type: 'object',
         properties: {
@@ -642,12 +682,51 @@ export function registerHelpRoutes(app) {
 
       // Защита от path traversal
       const sanitized = path.basename(filename)
-      const filePath = path.join(UPLOADS_DIR, sanitized)
+      const ydPath = getHelpImagePath(sanitized)
 
-      if (!fs.existsSync(filePath)) {
-        return reply.code(404).send({ error: 'Изображение не найдено' })
+      // Получить download URL (из кэша или Yandex API)
+      let href
+      try {
+        href = await getDownloadUrl(ydPath, sanitized)
+      } catch (err) {
+        if (err.status === 404) {
+          return reply.code(404).send({ error: 'Изображение не найдено' })
+        }
+        throw err
       }
 
+      // Загрузить файл с временной ссылки Yandex
+      const imageResponse = await fetch(href)
+
+      if (!imageResponse.ok) {
+        // Если временная ссылка протухла, сбрасываем кэш и пробуем ещё раз
+        downloadUrlCache.delete(sanitized)
+        const freshHref = await getDownloadUrl(ydPath, sanitized)
+        const retryResponse = await fetch(freshHref)
+
+        if (!retryResponse.ok) {
+          console.error(`❌ [Help] Ошибка загрузки с Yandex после retry: ${retryResponse.status}`)
+          return reply.code(500).send({ error: 'Ошибка загрузки изображения' })
+        }
+
+        const retryBuffer = await retryResponse.arrayBuffer()
+        const ext = path.extname(sanitized).toLowerCase()
+        const mimeMap = {
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.png': 'image/png',
+          '.webp': 'image/webp',
+          '.gif': 'image/gif'
+        }
+        const contentType = retryResponse.headers.get('content-type') || mimeMap[ext] || 'application/octet-stream'
+
+        reply.header('Content-Type', contentType)
+        reply.header('Cache-Control', 'public, max-age=86400')
+        reply.header('Content-Length', retryBuffer.byteLength)
+        return reply.send(Buffer.from(retryBuffer))
+      }
+
+      const imageBuffer = await imageResponse.arrayBuffer()
       const ext = path.extname(sanitized).toLowerCase()
       const mimeMap = {
         '.jpg': 'image/jpeg',
@@ -656,11 +735,12 @@ export function registerHelpRoutes(app) {
         '.webp': 'image/webp',
         '.gif': 'image/gif'
       }
-      const contentType = mimeMap[ext] || 'application/octet-stream'
+      const contentType = imageResponse.headers.get('content-type') || mimeMap[ext] || 'application/octet-stream'
 
       reply.header('Content-Type', contentType)
       reply.header('Cache-Control', 'public, max-age=86400')
-      return reply.send(fs.readFileSync(filePath))
+      reply.header('Content-Length', imageBuffer.byteLength)
+      return reply.send(Buffer.from(imageBuffer))
     } catch (err) {
       console.error('❌ [Help] Ошибка раздачи изображения:', err)
       return reply.code(500).send({ error: 'Ошибка сервера' })
@@ -675,7 +755,7 @@ export function registerHelpRoutes(app) {
     schema: {
       tags: ['Help'],
       summary: 'Удалить изображение помощи',
-      description: 'Удаляет файл изображения из uploads/help/.',
+      description: 'Удаляет файл изображения с Yandex.Disk.',
       security: [{ bearerAuth: [] }],
       params: {
         type: 'object',
@@ -695,13 +775,20 @@ export function registerHelpRoutes(app) {
     try {
       const { filename } = req.params
       const sanitized = path.basename(filename)
-      const filePath = path.join(UPLOADS_DIR, sanitized)
+      const ydPath = getHelpImagePath(sanitized)
 
-      if (!fs.existsSync(filePath)) {
-        return reply.code(404).send({ error: 'Изображение не найдено' })
+      try {
+        await deleteFile(ydPath)
+      } catch (err) {
+        if (err.status === 404) {
+          return reply.code(404).send({ error: 'Изображение не найдено' })
+        }
+        throw err
       }
 
-      fs.unlinkSync(filePath)
+      // Удаляем из кэша download URL
+      downloadUrlCache.delete(sanitized)
+
       return reply.send({ success: true })
     } catch (err) {
       console.error('❌ [Help] Ошибка удаления изображения:', err)
@@ -711,17 +798,21 @@ export function registerHelpRoutes(app) {
 }
 
 /**
- * Удаляет все изображения статьи из файловой системы
+ * Удаляет все изображения статьи с Yandex.Disk
  * @param {number} articleId
  */
-function deleteArticleImages(articleId) {
+async function deleteArticleImages(articleId) {
   try {
+    const helpFolder = getHelpFolderPath()
+    const files = await listFolderContents(helpFolder)
     const prefix = `article-${articleId}-`
-    const files = fs.readdirSync(UPLOADS_DIR)
-    for (const file of files) {
-      if (file.startsWith(prefix)) {
-        fs.unlinkSync(path.join(UPLOADS_DIR, file))
-      }
+    const articleFiles = files.filter(f => f.name.startsWith(prefix))
+
+    for (const f of articleFiles) {
+      const ydPath = getHelpImagePath(f.name)
+      await deleteFile(ydPath)
+      // Удаляем из кэша download URL
+      downloadUrlCache.delete(f.name)
     }
   } catch (err) {
     console.error(`❌ [Help] Ошибка удаления изображений статьи ${articleId}:`, err)

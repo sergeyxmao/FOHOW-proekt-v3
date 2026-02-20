@@ -159,6 +159,23 @@ function getUserBoardPreviewPath(userId, personalId, boardId) {
 }
 
 /**
+ * Получить путь к папке изображений Help-центра
+ * @returns {string} Путь "{BASE_DIR}/HELP"
+ */
+function getHelpFolderPath() {
+  return `${YANDEX_DISK_BASE_DIR}/HELP`;
+}
+
+/**
+ * Получить путь к файлу изображения Help-центра на Яндекс.Диске
+ * @param {string} filename - Имя файла (например, "article-1-1234567890-abcd.png")
+ * @returns {string} Путь "{BASE_DIR}/HELP/{filename}"
+ */
+function getHelpImagePath(filename) {
+  return `${YANDEX_DISK_BASE_DIR}/HELP/${filename}`;
+}
+
+/**
  * Получить корневой путь для общих (shared) ресурсов
  * @returns {string} Путь "{BASE_DIR}/SHARED"
  */
@@ -498,6 +515,8 @@ export {
   getUserFilePath,
   getUserBoardPreviewsFolderPath,  // ← ДОБАВИТЬ
   getUserBoardPreviewPath,          // ← ДОБАВИТЬ
+  getHelpFolderPath,
+  getHelpImagePath,
   getSharedRootPath,
   getSharedPendingFolderPath,
   getSharedFolderPath,
