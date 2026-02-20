@@ -16,6 +16,10 @@ const props = defineProps({
   isModernTheme: {
     type: Boolean,
     default: false
+  },
+  isHelpOpen: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -26,7 +30,8 @@ const emit = defineEmits([
   'open-boards',
   'export-html',
   'activate-pencil',
-  'open-full-menu'
+  'open-full-menu',
+  'toggle-help'
 ])
 
 const { t } = useI18n()
@@ -253,6 +258,18 @@ watch(
           title="Меню"
         >
           <span class="button-icon">☰</span>
+        </button>
+
+        <!-- Кнопка помощи -->
+        <button
+          v-if="isAuthenticated"
+          class="mobile-header-button mobile-help-button"
+          :class="{ 'mobile-help-button--active': props.isHelpOpen }"
+          type="button"
+          :title="props.isHelpOpen ? 'Закрыть помощь' : 'Помощь'"
+          @click="emit('toggle-help')"
+        >
+          <span class="button-icon">{{ props.isHelpOpen ? '✕' : '?' }}</span>
         </button>
 
         <!-- Light-режим: Отмена / Повтор слева -->
@@ -672,6 +689,23 @@ watch(
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
   border-color: var(--md-sys-color-primary);
+}
+
+/* Help button active */
+.mobile-help-button--active,
+.mobile-help-button--active:hover:not(:disabled),
+.mobile-help-button--active:active:not(:disabled) {
+  background: #ffc107;
+  color: #000;
+  border-color: rgba(255, 193, 7, 0.8);
+}
+
+.mobile-header--dark .mobile-help-button--active,
+.mobile-header--dark .mobile-help-button--active:hover:not(:disabled),
+.mobile-header--dark .mobile-help-button--active:active:not(:disabled) {
+  background: #ffc107;
+  color: #000;
+  border-color: rgba(255, 193, 7, 0.85);
 }
 
 /* --- Button icon --- */

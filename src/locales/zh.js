@@ -464,6 +464,7 @@ export default {
     scheduledPlanTransition: '您将切换到套餐',
     scheduledPlanDays: '天',
     afterSubscriptionEnd: '订阅结束后您将切换到套餐',
+    scheduledPlanPending: '计划切换到套餐',
     hideFeatures: '隐藏功能 ▲',
     showFeatures: '显示功能 ▼',
     availableTariffs: '可用套餐',

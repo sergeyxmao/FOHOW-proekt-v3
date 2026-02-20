@@ -1,124 +1,111 @@
 <template>
   <div class="pricing-page">
     <div class="pricing-container">
-      <!-- Заголовок с анимацией -->
-      <section class="pricing-hero fade-in">
+      <!-- Заголовок -->
+      <section class="pricing-hero">
         <h1 class="pricing-title">Выберите подходящий тариф</h1>
+        <p class="pricing-subtitle">Подберите план, который подходит именно вам</p>
       </section>
 
-      <!-- Переключатель периода оплаты -->
-      <div class="billing-toggle fade-in" style="animation-delay: 0.1s">
-        <button
-          :class="['toggle-btn', { active: billingPeriod === 'monthly' }]"
-          @click="billingPeriod = 'monthly'"
-        >
-          Помесячно
-        </button>
-        <button
-          :class="['toggle-btn', { active: billingPeriod === '3-months' }]"
-          @click="billingPeriod = '3-months'"
-        >
-          3 месяца
-        </button>
-      </div>
-
       <!-- Состояние загрузки -->
-      <div v-if="loading" class="loading">
+      <div v-if="loading" class="pricing-loading">
+        <div class="pricing-spinner"></div>
         <p>Загрузка тарифов...</p>
       </div>
 
       <!-- Сообщение об ошибке -->
-      <div v-if="error" class="error-message">
+      <div v-if="error" class="pricing-error">
         <p>{{ error }}</p>
       </div>
 
       <!-- Сетка с карточками тарифов -->
       <div v-if="!loading && !error" class="pricing-grid">
         <div
-          v-for="(plan, index) in plans"
+          v-for="plan in plans"
           :key="plan.id"
-          :class="['pricing-card', 'fade-in-stagger', {
-            featured: plan.is_featured,
-            'is-current': isCurrentPlan(plan)
-          }]"
-          :style="{ animationDelay: `${index * 0.1}s` }"
+          class="plan-card"
+          :class="{
+            'plan-card--featured': plan.is_featured,
+            'plan-card--current': isCurrentPlan(plan),
+            'plan-card--expanded': isPlanExpanded(plan.id)
+          }"
         >
-          <!-- Плашка "Рекомендуем" -->
-          <div v-if="plan.is_featured" class="featured-badge">
+          <!-- Бейдж "Рекомендуем" -->
+          <div v-if="plan.is_featured && !isCurrentPlan(plan)" class="plan-badge plan-badge--featured">
             Рекомендуем
           </div>
 
-          <!-- Бейдж "Текущий план" -->
-          <div v-if="isCurrentPlan(plan)" class="badge-current">
+          <!-- Бейдж "Ваш текущий план" -->
+          <div v-if="isCurrentPlan(plan)" class="plan-badge plan-badge--current">
             ✓ Ваш текущий план
           </div>
 
-          <div class="card-content">
-            <h2 class="plan-name">{{ plan.name }}</h2>
-            <p class="plan-description">{{ plan.description }}</p>
+          <!-- Название и описание -->
+          <h2 class="plan-name">{{ plan.name }}</h2>
+          <p v-if="plan.description" class="plan-description">{{ plan.description }}</p>
 
-            <div class="price-section">
-              <div class="price">
-                <span class="price-amount">
-                  {{ getDisplayPrice(plan) }}
-                </span>
-                <span class="price-currency">₽</span>
-              </div>
-              <div class="price-period">
-                {{ billingPeriod === 'monthly' ? '/ месяц' : '/ 3 месяца' }}
-              </div>
+          <!-- Цена -->
+          <div class="plan-price">
+            <span class="plan-price-amount">{{ plan.price_monthly || 0 }}</span>
+            <span class="plan-price-period">₽/мес</span>
+          </div>
 
-              <!-- Показать экономию при оплате за 3 месяца -->
-              <div v-if="billingPeriod === '3-months' && getMonthlySavings(plan) > 0" class="savings-badge">
-                Экономия {{ getMonthlySavings(plan) }}₽ за 3 месяца
-              </div>
-            </div>
+          <!-- Разделитель -->
+          <div class="plan-divider"></div>
 
-            <!-- Список возможностей -->
-            <ul class="features-list">
+          <!-- Основные функции (всегда видны) -->
+          <ul class="plan-features plan-features--primary">
+            <li
+              v-for="feature in getPrimaryFeatures(plan.features)"
+              :key="feature.key"
+              :class="{ 'feature-unavailable': !feature.available }"
+            >
+              <span class="feature-icon">{{ feature.available ? '✓' : '✗' }}</span>
+              {{ feature.label }}
+            </li>
+          </ul>
+
+          <!-- Кнопка раскрытия дополнительных функций -->
+          <button
+            v-if="getSecondaryFeatures(plan.features).length > 0"
+            class="btn-expand"
+            @click="togglePlanExpanded(plan.id)"
+          >
+            <span v-if="isPlanExpanded(plan.id)">Скрыть подробности ▲</span>
+            <span v-else>Подробнее ▼</span>
+          </button>
+
+          <!-- Дополнительные функции (раскрываются) -->
+          <div v-if="isPlanExpanded(plan.id)" class="plan-features-expanded">
+            <ul class="plan-features plan-features--secondary">
               <li
-                v-for="feature in getDisplayFeatures(plan.features)"
+                v-for="feature in getSecondaryFeatures(plan.features)"
                 :key="feature.key"
-                class="feature-item"
+                :class="{ 'feature-unavailable': !feature.available }"
               >
-                <svg
-                  v-if="feature.available"
-                  class="feature-icon"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                </svg>
-                <svg
-                  v-else
-                  class="feature-icon unavailable-icon"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
-                </svg>
-                <span :class="{ 'line-through text-gray-400': !feature.available }">
-                  {{ feature.label }}
-                </span>
+                <span class="feature-icon">{{ feature.available ? '✓' : '✗' }}</span>
+                {{ feature.label }}
               </li>
             </ul>
+          </div>
 
-            <!-- Кнопка -->
+          <!-- Кнопка действия -->
+          <div v-if="plan.code_name !== 'guest' && plan.code_name !== 'demo'" class="plan-action">
             <button
               v-if="isCurrentPlan(plan) && (!getPlanButtonState(plan).action || getPlanButtonState(plan).action === 'current')"
-              class="select-plan-btn btn-current"
+              class="btn-plan btn-plan--current"
               disabled
             >
               Текущий план
             </button>
             <button
-              v-else-if="plan.code_name !== 'guest' && plan.code_name !== 'demo' && getPlanButtonState(plan).action !== 'unavailable'"
-              class="select-plan-btn"
+              v-else
+              class="btn-plan"
               :class="{
-                'btn-disabled': getPlanButtonState(plan).disabled,
-                'btn-downgrade': getPlanButtonState(plan).action === 'downgrade' && !getPlanButtonState(plan).disabled,
-                'btn-renew': getPlanButtonState(plan).action === 'renew' && !getPlanButtonState(plan).disabled,
-                'btn-scheduled': getPlanButtonState(plan).action === 'scheduled'
+                'btn-plan--disabled': getPlanButtonState(plan).disabled,
+                'btn-plan--downgrade': getPlanButtonState(plan).action === 'downgrade' && !getPlanButtonState(plan).disabled,
+                'btn-plan--renew': getPlanButtonState(plan).action === 'renew' && !getPlanButtonState(plan).disabled,
+                'btn-plan--scheduled': getPlanButtonState(plan).action === 'scheduled' || getPlanButtonState(plan).action === 'unavailable'
               }"
               :disabled="getPlanButtonState(plan).disabled"
               :title="getPlanButtonState(plan).tooltip"
@@ -129,12 +116,17 @@
           </div>
         </div>
       </div>
+
+      <!-- Ссылка назад -->
+      <div v-if="!loading" class="pricing-back">
+        <a href="/" class="pricing-back-link">← Вернуться на главную</a>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useSubscriptionStore } from '@/stores/subscription'
 import { useUserTariffs } from '@/composables/useUserTariffs'
 
@@ -142,147 +134,30 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://interactive.marketingfo
 
 const subscriptionStore = useSubscriptionStore()
 
-// Извлекаем handleUpgrade и getPlanButtonState из композабла
-const { handleUpgrade, getPlanButtonState } = useUserTariffs({ subscriptionStore })
+const {
+  handleUpgrade,
+  getPlanButtonState,
+  getPrimaryFeatures,
+  getSecondaryFeatures,
+  togglePlanExpanded,
+  isPlanExpanded
+} = useUserTariffs({ subscriptionStore })
 
 const plans = ref([])
-const billingPeriod = ref('monthly')
 const loading = ref(true)
 const error = ref(null)
 
-// Маппинг для человекочитаемых названий функций
-const featureLabels = {
-  // Лимиты
-  'max_boards': (value) => value === -1 ? '∞ Безлимитные доски' : `📊 До ${value} досок`,
-  'max_notes': (value) => value === -1 ? '∞ Безлимитные заметки' : `📝 До ${value} заметок`,
-  'max_stickers': (value) => value === -1 ? '∞ Безлимитные стикеры' : `🎨 До ${value} стикеров`,
-  'max_licenses': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек`,
-  'max_cards_per_board': (value) => value === -1 ? '∞ Безлимитные карточки' : `🗂️ До ${value} карточек на доске`,
-  'max_comments': (value) => value === -1 ? '∞ Безлимитные комментарии' : `💬 До ${value} комментариев`,
-  'max_team_members': (value) => `👥 До ${value} участников`,
-
-  // Булевы функции
-  'can_export_pdf': '📄 Экспорт в PDF',
-  'can_export_png_formats': (value) => {
-    if (Array.isArray(value) && value.length > 0) {
-      return `🖼️ Скачать доску (структуру) как изображение: ${value.join(', ')}`
-    }
-    return '🖼️ Скачать доску (структуру) как изображение'
-  },
-  'can_export_html': '🌐 Поделиться доской (структурой) как веб\u2011страницей',
-  'can_invite_drawing': '✏️ Режим рисования',
-  'can_use_images': '🖼️ Изображения',
-  'can_save_project': '💾 Сохранение проекта',
-  'can_load_project': '📂 Загрузка проекта',
-  'can_share_project': '🔗 Поделиться проектом',
-  'can_share_boards': '🔗 Поделиться досками',
-  'can_duplicate_boards': '📋 Дублирование досок',
-  'can_use_templates': '📑 Готовые шаблоны',
-  'can_invite_members': '👥 Приглашение участников',
-  'can_use_shared_structures': '🏢 Совместные структуры',
-
-  // Поддержка
-  'support_level': (value) => {
-    const levels = {
-      'basic': '📧 Базовая поддержка',
-      'priority': '⚡ Приоритетная поддержка',
-      'dedicated': '🎯 Персональный менеджер'
-    }
-    return levels[value] || value
-  }
-}
-
-// Список важных функций для отображения (в порядке приоритета)
-const importantFeatures = [
-  'max_boards',
-  'max_licenses',
-  'max_notes',
-  'max_stickers',
-  'max_comments',
-  'can_export_png_formats',
-  'can_export_html',
-  'can_invite_drawing',
-  'can_use_images',
-  'can_export_pdf',
-  'can_save_project',
-  'can_load_project',
-  'can_share_project',
-  'can_share_boards',
-  'can_duplicate_boards',
-  'can_use_templates',
-  'can_invite_members',
-  'can_use_shared_structures',
-  'max_team_members',
-  'support_level'
-]
-
-// Функция форматирования
-function formatFeature(key, value) {
-  if (key in featureLabels) {
-    const formatter = featureLabels[key]
-    if (typeof formatter === 'function') {
-      return formatter(value)
-    }
-    return formatter
-  }
-
-  // Если нет в маппинге, пропускаем
-  return null
-}
-
-// Функция для получения отфильтрованных функций
-function getDisplayFeatures(features) {
-  return Object.entries(features)
-    .filter(([key]) => importantFeatures.includes(key))
-    .map(([key, value]) => ({
-      key,
-      label: formatFeature(key, value),
-      available: typeof value === 'boolean' ? value : true
-    }))
-    .filter(f => f.label !== null) // Убрать null
-    .sort((a, b) => {
-      // Сортируем по порядку в importantFeatures
-      return importantFeatures.indexOf(a.key) - importantFeatures.indexOf(b.key)
-    })
-}
-
-// Проверка текущего плана
 function isCurrentPlan(plan) {
   return subscriptionStore.currentPlan?.code_name === plan.code_name
 }
 
-// Вычисление отображаемой цены (с учетом скидки для оплаты за 3 месяца)
-function getDisplayPrice(plan) {
-  if (billingPeriod.value === '3-months') {
-    // Цена за 3 месяца с 10% скидкой
-    const basePrice = plan.price_monthly || 0
-    const threeMonthsPrice = basePrice * 3 * 0.9
-    return Math.round(threeMonthsPrice)
-  }
-  return plan.price_monthly || 0
-}
-
-// Вычисление экономии при оплате за 3 месяца
-function getMonthlySavings(plan) {
-  if (billingPeriod.value === '3-months') {
-    const basePrice = plan.price_monthly || 0
-    const fullThreeMonths = basePrice * 3
-    const discountedThreeMonths = getDisplayPrice(plan)
-    return fullThreeMonths - discountedThreeMonths
-  }
-  return 0
-}
-
-// Загрузка тарифов при монтировании компонента
 onMounted(async () => {
   try {
-    // Загружаем текущий план пользователя (если авторизован)
     const token = localStorage.getItem('token')
     if (token) {
       try {
         await subscriptionStore.loadPlan()
       } catch (err) {
-        // Игнорируем ошибки загрузки плана пользователя
         console.warn('Не удалось загрузить текущий план:', err)
       }
     }
@@ -306,7 +181,6 @@ onMounted(async () => {
         code_name: 'demo',
         description: 'Попробуйте все возможности бесплатно',
         price_monthly: 0,
-        price_yearly: 0,
         features: {
           max_boards: 2,
           max_notes: -1,
@@ -314,12 +188,18 @@ onMounted(async () => {
           max_licenses: -1,
           max_comments: -1,
           can_export_pdf: false,
-          can_export_png: false,
-          can_duplicate_boards: false
+          can_export_png_formats: false,
+          can_export_html: false,
+          can_duplicate_boards: false,
+          can_invite_drawing: true,
+          can_use_images: false,
+          can_save_project: false,
+          can_load_project: false,
+          can_share_project: false,
+          can_share_boards: false
         },
         is_featured: false
       }
-
       loadedPlans = [demoPlan, ...loadedPlans]
     }
 
@@ -333,375 +213,377 @@ onMounted(async () => {
 })
 </script>
 
-<style>
-/* Глобальные стили для публичной страницы pricing */
-body {
-  background: #f5f5f5 !important;
-}
-
-html {
-  background: #f5f5f5 !important;
-}
-</style>
-
 <style scoped>
 .pricing-page {
   min-height: 100vh;
-  padding: 40px 20px;
-  background: #ffffff;
-  position: relative;
-  z-index: 1;
+  min-height: 100dvh;
+  min-width: 320px;
+  padding: 40px 20px 60px;
+  background: rgba(17, 24, 39, 0.97);
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .pricing-container {
   max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
 }
 
+/* Заголовок */
+.pricing-hero {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
 .pricing-title {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
-  text-align: center;
-  color: var(--color-heading);
-  margin-bottom: 40px;
+  color: #fff;
+  margin: 0 0 12px 0;
 }
 
-/* Переключатель периода оплаты */
-.billing-toggle {
-  display: flex;
-  justify-content: center;
-  gap: 0;
-  margin-bottom: 50px;
-}
-
-.toggle-btn {
-  padding: 12px 30px;
+.pricing-subtitle {
   font-size: 16px;
-  font-weight: 500;
-  border: 2px solid var(--color-border);
-  background: var(--color-background);
-  color: var(--color-text);
-  cursor: pointer;
-  transition: all 0.3s ease;
+  color: rgba(148, 163, 184, 0.9);
+  margin: 0;
 }
 
-.toggle-btn:first-child {
-  border-radius: 8px 0 0 8px;
-  border-right: 1px solid var(--color-border);
-}
-
-.toggle-btn:last-child {
-  border-radius: 0 8px 8px 0;
-  border-left: 1px solid var(--color-border);
-}
-
-.toggle-btn:hover {
-  background: var(--color-background-soft);
-}
-
-.toggle-btn.active {
-  background: var(--vt-c-indigo);
-  color: white;
-  border-color: var(--vt-c-indigo);
-}
-
-/* Состояния загрузки и ошибки */
-.loading,
-.error-message {
+/* Загрузка */
+.pricing-loading {
   text-align: center;
-  padding: 40px;
-  font-size: 18px;
+  padding: 60px 20px;
+  color: rgba(148, 163, 184, 0.9);
+  font-size: 16px;
 }
 
-.error-message {
-  color: #e74c3c;
+.pricing-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 193, 7, 0.2);
+  border-top-color: #ffc107;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Ошибка */
+.pricing-error {
+  text-align: center;
+  padding: 40px 20px;
+  color: #fca5a5;
+  font-size: 16px;
 }
 
 /* Сетка тарифов */
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
-  max-width: 1400px;
-  margin: 40px auto 0;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1100px) {
   .pricing-grid {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
 /* Карточка тарифа */
-.pricing-card {
+.plan-card {
   position: relative;
-  background: var(--color-background-soft);
-  border: 2px solid var(--color-border);
-  border-radius: 12px;
-  padding: 30px;
-  transition: all 0.3s ease;
+  padding: 24px 20px;
+  background: rgba(30, 41, 59, 0.85);
+  border: 2px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
+  transition: all 0.3s ease;
 }
 
-.pricing-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  border-color: var(--vt-c-indigo);
+.plan-card:hover {
+  border-color: rgba(255, 193, 7, 0.5);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(255, 193, 7, 0.15);
 }
 
-.pricing-card.featured {
-  border-color: var(--vt-c-indigo);
-  border-width: 3px;
+/* Рекомендуемый тариф */
+.plan-card--featured {
+  border-color: rgba(255, 193, 7, 0.5);
 }
 
-/* Текущий план пользователя */
-.pricing-card.is-current {
-  border: 3px solid #10b981;
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+/* Текущий план */
+.plan-card--current {
+  border-color: #ffc107;
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.12) 0%, rgba(232, 169, 0, 0.08) 100%);
 }
 
-/* Контрастный текст для карточки текущего тарифа */
-.pricing-card.is-current .plan-name {
-  color: #065f46;
-}
-
-.pricing-card.is-current .plan-description {
-  color: #047857;
-}
-
-.pricing-card.is-current .feature-item {
-  color: #047857;
-}
-
-/* Плашка "Рекомендуем" */
-.featured-badge {
-  position: absolute;
-  top: -15px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 8px 20px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-/* Бейдж текущего плана */
-.badge-current {
+/* Бейджи */
+.plan-badge {
   position: absolute;
   top: -12px;
   left: 50%;
   transform: translateX(-50%);
-  background: #10b981;
-  color: white;
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 14px;
+  padding: 4px 16px;
+  border-radius: 12px;
+  font-size: 12px;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  white-space: nowrap;
 }
 
-/* Содержимое карточки */
-.card-content {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+.plan-badge--featured {
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #000;
 }
 
+.plan-badge--current {
+  background: #10b981;
+  color: #fff;
+}
+
+/* Название */
 .plan-name {
-  font-size: 1.8rem;
+  font-size: 22px;
   font-weight: 700;
-  color: var(--color-heading);
-  margin-bottom: 10px;
+  color: #fff;
+  margin: 8px 0 8px 0;
 }
 
+/* Описание */
 .plan-description {
-  color: var(--color-text);
-  margin-bottom: 25px;
+  font-size: 13px;
+  color: rgba(148, 163, 184, 0.9);
+  margin: 0 0 16px 0;
   line-height: 1.5;
-  flex-grow: 0;
 }
 
-/* Секция цены */
-.price-section {
-  margin-bottom: 30px;
-  padding-bottom: 25px;
-  border-bottom: 2px solid var(--color-border);
-}
-
-.price {
+/* Цена */
+.plan-price {
   display: flex;
   align-items: baseline;
-  gap: 5px;
-  margin-bottom: 5px;
+  gap: 6px;
+  margin-bottom: 20px;
 }
 
-.price-amount {
-  font-size: 3rem;
+.plan-price-amount {
+  font-size: 32px;
   font-weight: 700;
-  color: var(--vt-c-indigo);
+  color: #e8a900;
 }
 
-.price-currency {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--vt-c-indigo);
-}
-
-.price-period {
-  font-size: 1rem;
-  color: var(--color-text);
-  opacity: 0.7;
-}
-
-/* Бейдж экономии */
-.savings-badge {
-  margin-top: 12px;
-  padding: 6px 12px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  border-radius: 20px;
+.plan-price-period {
   font-size: 14px;
-  font-weight: 600;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  color: rgba(148, 163, 184, 0.7);
 }
 
-/* Список возможностей */
-.features-list {
+/* Разделитель */
+.plan-divider {
+  height: 1px;
+  background: rgba(148, 163, 184, 0.15);
+  margin-bottom: 16px;
+}
+
+/* Список функций */
+.plan-features {
   list-style: none;
   padding: 0;
-  margin: 0 0 30px 0;
-  flex-grow: 1;
+  margin: 0 0 12px 0;
 }
 
-.feature-item {
+.plan-features li {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 12px;
-  color: var(--color-text);
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: #e2e8f0;
 }
 
-.feature-icon {
-  width: 20px;
-  height: 20px;
-  color: #10b981;
+.plan-features li .feature-icon {
   flex-shrink: 0;
-  margin-top: 2px;
+  font-weight: 600;
+  color: #4CAF50;
 }
 
-/* Недоступная функция */
-.line-through {
+.plan-features li.feature-unavailable {
+  color: rgba(148, 163, 184, 0.5);
   text-decoration: line-through;
 }
 
-.text-gray-400 {
-  color: #9ca3af;
+.plan-features li.feature-unavailable .feature-icon {
+  color: #e74c3c;
 }
 
-.feature-icon.unavailable-icon {
-  color: #ef4444;
+.plan-features--primary {
+  margin-bottom: 8px;
 }
 
-/* Кнопка выбора тарифа */
-.select-plan-btn {
+.plan-features--secondary {
+  padding-top: 8px;
+  border-top: 1px dashed rgba(148, 163, 184, 0.2);
+}
+
+/* Кнопка раскрытия */
+.btn-expand {
   width: 100%;
-  padding: 14px 24px;
-  font-size: 16px;
-  font-weight: 600;
-  color: white;
-  background: var(--vt-c-indigo);
+  padding: 6px 12px;
+  margin-bottom: 12px;
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 6px;
+  color: rgba(148, 163, 184, 0.7);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-expand:hover {
+  border-color: rgba(255, 193, 7, 0.5);
+  color: #e8a900;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Раскрытие функций */
+.plan-features-expanded {
+  animation: expandFeatures 0.3s ease;
+}
+
+@keyframes expandFeatures {
+  from { opacity: 0; max-height: 0; }
+  to { opacity: 1; max-height: 500px; }
+}
+
+.plan-card--expanded {
+  background: rgba(30, 41, 59, 0.95);
+}
+
+/* Кнопка действия */
+.plan-action {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.btn-plan {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #ffc107 0%, #e8a900 100%);
+  color: #000;
   border: none;
   border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  margin-top: auto;
 }
 
-.select-plan-btn:hover {
-  background: #1e2d3d;
+.btn-plan:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(44, 62, 80, 0.3);
+  box-shadow: 0 6px 16px rgba(255, 193, 7, 0.4);
 }
 
-.select-plan-btn:active {
+.btn-plan:active {
   transform: translateY(0);
 }
 
-/* Кнопка текущего плана */
-.btn-current {
-  background: #9ca3af;
+/* Текущий план */
+.btn-plan--current {
+  background: rgba(148, 163, 184, 0.2);
+  color: rgba(148, 163, 184, 0.6);
+  cursor: not-allowed;
+}
+
+.btn-plan--current:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Заблокированная */
+.btn-plan--disabled {
+  background: rgba(148, 163, 184, 0.15);
+  color: rgba(148, 163, 184, 0.5);
   cursor: not-allowed;
   opacity: 0.7;
 }
 
-.btn-current:hover {
-  background: #9ca3af;
+.btn-plan--disabled:hover {
   transform: none;
   box-shadow: none;
 }
 
-/* Заблокированная кнопка */
-.btn-disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-  opacity: 0.6;
+/* Даунгрейд */
+.btn-plan--downgrade {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #000;
 }
 
-.btn-disabled:hover {
-  background: #9ca3af;
-  transform: none;
-  box-shadow: none;
+.btn-plan--downgrade:hover {
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
 }
 
-/* Кнопка даунгрейда */
-.btn-downgrade {
-  background: #f59e0b;
+/* Продление */
+.btn-plan--renew {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #fff;
 }
 
-.btn-downgrade:hover {
-  background: #d97706;
+.btn-plan--renew:hover {
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
 }
 
-/* Кнопка продления */
-.btn-renew {
-  background: #10b981;
-}
-
-.btn-renew:hover {
-  background: #059669;
-}
-
-/* Запланированный тариф */
-.btn-scheduled {
-  background: #6b7280;
+/* Запланированный */
+.btn-plan--scheduled {
+  background: rgba(107, 114, 128, 0.3);
+  color: rgba(148, 163, 184, 0.6);
   cursor: not-allowed;
   opacity: 0.7;
 }
 
-.btn-scheduled:hover {
-  background: #6b7280;
+.btn-plan--scheduled:hover {
   transform: none;
   box-shadow: none;
+}
+
+/* Ссылка назад */
+.pricing-back {
+  text-align: center;
+  margin-top: 40px;
+}
+
+.pricing-back-link {
+  color: rgba(148, 163, 184, 0.7);
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.pricing-back-link:hover {
+  color: #ffc107;
+  text-decoration: none;
 }
 
 /* Адаптивность */
 @media (max-width: 768px) {
+  .pricing-page {
+    padding: 24px 12px 40px;
+  }
+
   .pricing-title {
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
 
   .pricing-grid {
     grid-template-columns: 1fr !important;
+    gap: 16px;
   }
 
-  .toggle-btn {
-    padding: 10px 20px;
-    font-size: 14px;
+  .plan-card {
+    padding: 20px 16px;
   }
 }
 </style>

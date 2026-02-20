@@ -1137,7 +1137,7 @@ export function registerAuthRoutes(app) {
       }
 
       const hash = await bcrypt.hash(newPassword, 10);
-      await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hash, user_id]);
+      await pool.query('UPDATE users SET password = $1, admin_temp_password = NULL WHERE id = $2', [hash, user_id]);
       await pool.query('DELETE FROM password_resets WHERE token = $1', [token]);
 
       return reply.send({ success: true, message: 'Пароль успешно изменен' });

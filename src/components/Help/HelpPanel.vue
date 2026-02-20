@@ -82,6 +82,44 @@ const filteredCategories = computed(() => {
 
 const isSearchActive = computed(() => searchQuery.value.trim().length > 0)
 
+// --- Плоский список всех статей для навигации prev/next ---
+const allArticlesFlat = computed(() => {
+  const result = []
+  for (const cat of categories.value) {
+    for (const art of cat.articles) {
+      result.push({ categoryId: cat.id, articleId: art.id, title: art.title })
+    }
+  }
+  return result
+})
+
+const currentArticleGlobalIndex = computed(() => {
+  if (!currentArticleId.value) return -1
+  return allArticlesFlat.value.findIndex(a => a.articleId === currentArticleId.value)
+})
+
+const prevArticle = computed(() => {
+  const idx = currentArticleGlobalIndex.value
+  if (idx <= 0) return null
+  return allArticlesFlat.value[idx - 1]
+})
+
+const nextArticle = computed(() => {
+  const idx = currentArticleGlobalIndex.value
+  if (idx < 0 || idx >= allArticlesFlat.value.length - 1) return null
+  return allArticlesFlat.value[idx + 1]
+})
+
+function navigateToArticle(catId, artId) {
+  currentCategoryId.value = catId
+  currentArticleId.value = artId
+  // Скроллим контент наверх
+  nextTick(() => {
+    const content = document.querySelector('.help-panel__content')
+    if (content) content.scrollTop = 0
+  })
+}
+
 // --- Загрузка данных ---
 function getAuthHeaders() {
   const token = localStorage.getItem('token') || authStore.token
@@ -752,6 +790,31 @@ function handleContentMouseOut(e) {
         <template v-if="currentArticle">
           <div class="help-article">
 
+            <!-- Навигация prev/next (верх) -->
+            <div v-if="(prevArticle || nextArticle) && !isEditMode" class="help-article-nav">
+              <button
+                v-if="prevArticle"
+                class="help-article-nav__btn help-article-nav__btn--prev"
+                :class="{ 'help-article-nav__btn--modern': isModernTheme }"
+                type="button"
+                @click="navigateToArticle(prevArticle.categoryId, prevArticle.articleId)"
+              >
+                <span class="help-article-nav__arrow">←</span>
+                <span class="help-article-nav__label">{{ prevArticle.title }}</span>
+              </button>
+              <span v-else />
+              <button
+                v-if="nextArticle"
+                class="help-article-nav__btn help-article-nav__btn--next"
+                :class="{ 'help-article-nav__btn--modern': isModernTheme }"
+                type="button"
+                @click="navigateToArticle(nextArticle.categoryId, nextArticle.articleId)"
+              >
+                <span class="help-article-nav__label">{{ nextArticle.title }}</span>
+                <span class="help-article-nav__arrow">→</span>
+              </button>
+            </div>
+
             <!-- Edit mode: toolbar + contenteditable -->
             <template v-if="isEditMode && isAdmin">
               <!-- Toolbar -->
@@ -873,6 +936,31 @@ function handleContentMouseOut(e) {
               <p v-else class="help-panel__empty">
                 Содержимое статьи пока не заполнено.
               </p>
+
+              <!-- Навигация prev/next (низ) -->
+              <div v-if="prevArticle || nextArticle" class="help-article-nav help-article-nav--bottom">
+                <button
+                  v-if="prevArticle"
+                  class="help-article-nav__btn help-article-nav__btn--prev"
+                  :class="{ 'help-article-nav__btn--modern': isModernTheme }"
+                  type="button"
+                  @click="navigateToArticle(prevArticle.categoryId, prevArticle.articleId)"
+                >
+                  <span class="help-article-nav__arrow">←</span>
+                  <span class="help-article-nav__label">{{ prevArticle.title }}</span>
+                </button>
+                <span v-else />
+                <button
+                  v-if="nextArticle"
+                  class="help-article-nav__btn help-article-nav__btn--next"
+                  :class="{ 'help-article-nav__btn--modern': isModernTheme }"
+                  type="button"
+                  @click="navigateToArticle(nextArticle.categoryId, nextArticle.articleId)"
+                >
+                  <span class="help-article-nav__label">{{ nextArticle.title }}</span>
+                  <span class="help-article-nav__arrow">→</span>
+                </button>
+              </div>
             </template>
           </div>
         </template>
@@ -1586,6 +1674,80 @@ function handleContentMouseOut(e) {
 
 .help-img-delete-btn:hover {
   background: rgba(220, 38, 38, 1);
+}
+
+/* Article navigation prev/next */
+.help-article-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.help-article-nav--bottom {
+  margin-bottom: 0;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.help-panel--modern .help-article-nav--bottom {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.help-article-nav__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1.5px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+  max-width: 48%;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.help-article-nav__btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.help-article-nav__btn--modern {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.help-article-nav__btn--modern:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.help-article-nav__btn--next {
+  margin-left: auto;
+  text-align: right;
+}
+
+.help-article-nav__arrow {
+  font-size: 16px;
+  flex-shrink: 0;
+  color: #0f62fe;
+}
+
+.help-panel--modern .help-article-nav__arrow {
+  color: #68abff;
+}
+
+.help-article-nav__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
 }
 
 /* Mobile: fullscreen panel */

@@ -190,7 +190,7 @@ Source в `subscription_history`: `'scheduled_activation'`
 | `api/routes/plans.js` | scheduledPlan в ответе API |
 | `src/stores/subscription.js` | scheduledPlan в хранилище |
 | `src/composables/useUserTariffs.js` | getPlanButtonState + handleUpgrade |
-| `src/views/PricingPage.vue` | Динамические кнопки |
+| `src/views/PricingPage.vue` | Динамические кнопки, тёмная тема с золотыми акцентами (использует useUserTariffs) |
 | `src/components/UserProfile.vue` | Динамические кнопки + отображение запланированного тарифа |
 
 ## Пограничные случаи

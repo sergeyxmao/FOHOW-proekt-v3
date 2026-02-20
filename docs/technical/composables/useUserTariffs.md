@@ -243,7 +243,7 @@ watch(activeTab, (newTab) => {
 ## Связанные файлы
 
 - `src/components/UserProfile.vue` — основной компонент профиля
-- `src/views/PricingPage.vue` — публичная страница тарифов
+- `src/views/PricingPage.vue` — публичная страница тарифов (использует getPrimaryFeatures, getSecondaryFeatures, togglePlanExpanded, isPlanExpanded)
 - `src/views/PaymentSuccessPage.vue` — страница успешной оплаты
 - `src/views/PaymentFailPage.vue` — страница неудачной оплаты
 - `src/stores/subscription.js` — store подписок

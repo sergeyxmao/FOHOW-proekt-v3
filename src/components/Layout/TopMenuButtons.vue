@@ -11,10 +11,14 @@ const props = defineProps({
   isModernTheme: {
     type: Boolean,
     default: false
+  },
+  isHelpOpen: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['activate-pencil', 'toggle-theme', 'clear-canvas', 'new-structure'])
+const emit = defineEmits(['activate-pencil', 'toggle-theme', 'clear-canvas', 'new-structure', 'toggle-help'])
 
 const { t, locale } = useI18n()
 const historyStore = useHistoryStore()
@@ -192,6 +196,17 @@ onBeforeUnmount(() => {
         </div>
       </transition>
     </div>
+
+    <!-- Кнопка помощи -->
+    <button
+      class="top-menu__action-button top-menu__help-button"
+      :class="{ 'top-menu__help-button--active': props.isHelpOpen }"
+      type="button"
+      :title="props.isHelpOpen ? 'Закрыть помощь' : 'Помощь'"
+      @click.stop="emit('toggle-help')"
+    >
+      {{ props.isHelpOpen ? '✕' : '?' }}
+    </button>
   </div>
 </template>
 
@@ -374,6 +389,25 @@ onBeforeUnmount(() => {
 .top-menu--modern .lang-option--active {
   background: #ffc107;
   color: #000000;
+}
+
+.top-menu__help-button {
+  border-radius: 50%;
+  font-size: 20px;
+  font-weight: 700;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+.top-menu__help-button--active {
+  background: #ffc107;
+  color: #000;
+  border-color: rgba(255, 193, 7, 0.8);
+}
+
+.top-menu--modern .top-menu__help-button--active {
+  background: #ffc107;
+  color: #000;
+  border-color: rgba(255, 193, 7, 0.85);
 }
 
 .top-menu-fade-enter-active,

@@ -46,7 +46,6 @@ import BoardAnchorsPanel from './components/Panels/BoardAnchorsPanel.vue'
 import PartnersPanel from './components/Panels/PartnersPanel.vue'  
 import TheNotifications from './components/TheNotifications.vue'
 import SessionExpiredModal from './components/Common/SessionExpiredModal.vue'
-import HelpButton from './components/Help/HelpButton.vue'
 import HelpPanel from './components/Help/HelpPanel.vue'
 import { useSidePanelsStore } from './stores/sidePanels'
 import { useNotificationsStore } from './stores/notifications'
@@ -1388,10 +1387,12 @@ onBeforeUnmount(() => {
         v-show="!isPencilMode && !showResetPassword && !isViewMode"
         class="no-print"
         :is-modern-theme="isModernTheme"
+        :is-help-open="isHelpOpen"
         @toggle-theme="toggleTheme"
         @activate-pencil="handleActivatePencil"
         @clear-canvas="handleClearCanvas"
         @new-structure="handleNewStructure"
+        @toggle-help="isHelpOpen = !isHelpOpen"
       />
       <AppHeader
         v-show="!isPencilMode && !showResetPassword && !isViewMode"
@@ -1445,6 +1446,7 @@ onBeforeUnmount(() => {
         v-show="!isPencilMode && !showResetPassword"
         class="no-print"
         :is-modern-theme="isModernTheme"
+        :is-help-open="isHelpOpen"
         @toggle-theme="toggleTheme"
         @open-profile="handleOpenProfile"
         @open-boards="handleOpenMobileBoards"
@@ -1452,6 +1454,7 @@ onBeforeUnmount(() => {
         @export-html="handleMobileExportHTML"
         @activate-pencil="handleActivatePencil"
         @open-full-menu="handleOpenFullMenu"
+        @toggle-help="isHelpOpen = !isHelpOpen"
       />
       <MobileToolbar
         v-show="!isPencilMode && !showResetPassword"
@@ -1656,13 +1659,6 @@ onBeforeUnmount(() => {
     </transition>
 
     <!-- Help Center -->
-    <HelpButton
-      v-if="isAuthenticated"
-      v-show="!isPencilMode && !showResetPassword"
-      :is-open="isHelpOpen"
-      :is-modern-theme="isModernTheme"
-      @toggle="isHelpOpen = !isHelpOpen"
-    />
     <HelpPanel
       v-if="isHelpOpen && isAuthenticated"
       :is-modern-theme="isModernTheme"

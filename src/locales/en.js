@@ -469,6 +469,7 @@ export default {
     scheduledPlanTransition: 'you will switch to plan',
     scheduledPlanDays: 'days',
     afterSubscriptionEnd: 'After subscription ends you will switch to plan',
+    scheduledPlanPending: 'Scheduled transition to plan',
     hideFeatures: 'Hide features ▲',
     showFeatures: 'Show features ▼',
     availableTariffs: 'Available plans',

@@ -978,11 +978,11 @@
                   </div>
                   <!-- Запланированный тариф -->
                   <div v-if="subscriptionStore.scheduledPlan" class="scheduled-plan-message">
-                    <template v-if="subscriptionStore.scheduledPlan.expiresAt">
-                      {{ t('userProfile.scheduledPlanFrom') }} {{ formatDate(subscriptionStore.currentPlan?.expiresAt) }} {{ t('userProfile.scheduledPlanTransition') }} <strong>{{ subscriptionStore.scheduledPlan.name }}</strong> ({{ getScheduledPlanDays() }} {{ t('userProfile.scheduledPlanDays') }})
+                    <template v-if="subscriptionStore.currentPlan?.expiresAt && subscriptionStore.scheduledPlan.expiresAt">
+                      {{ t('userProfile.scheduledPlanFrom') }} {{ formatDate(subscriptionStore.currentPlan.expiresAt) }} {{ t('userProfile.scheduledPlanTransition') }} <strong>{{ subscriptionStore.scheduledPlan.name }}</strong> ({{ getScheduledPlanDays() }} {{ t('userProfile.scheduledPlanDays') }})
                     </template>
                     <template v-else>
-                      {{ t('userProfile.afterSubscriptionEnd') }} <strong>{{ subscriptionStore.scheduledPlan.name }}</strong>
+                      {{ t('userProfile.scheduledPlanPending') }} <strong>{{ subscriptionStore.scheduledPlan.name }}</strong>
                     </template>
                   </div>
                 </div>
@@ -1104,13 +1104,13 @@
                     </div>
 
                     <button
-                      v-if="plan.code_name !== 'guest' && plan.code_name !== 'demo' && getPlanButtonState(plan).action !== 'unavailable'"
+                      v-if="plan.code_name !== 'guest' && plan.code_name !== 'demo'"
                       class="btn-upgrade"
                       :class="{
                         'btn-upgrade--disabled': getPlanButtonState(plan).disabled,
                         'btn-upgrade--downgrade': getPlanButtonState(plan).action === 'downgrade' && !getPlanButtonState(plan).disabled,
                         'btn-upgrade--renew': getPlanButtonState(plan).action === 'renew' && !getPlanButtonState(plan).disabled,
-                        'btn-upgrade--scheduled': getPlanButtonState(plan).action === 'scheduled'
+                        'btn-upgrade--scheduled': getPlanButtonState(plan).action === 'scheduled' || getPlanButtonState(plan).action === 'unavailable'
                       }"
                       :disabled="getPlanButtonState(plan).disabled"
                       :title="getPlanButtonState(plan).tooltip"

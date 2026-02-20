@@ -15,14 +15,22 @@ export async function authenticateToken(request, reply) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Получаем роль пользователя из БД
+    // Получаем роль и статус блокировки пользователя из БД
     const userResult = await pool.query(
-      'SELECT id, email, role FROM users WHERE id = $1',
+      'SELECT id, email, role, is_blocked FROM users WHERE id = $1',
       [decoded.userId]
     );
 
     if (userResult.rows.length === 0) {
       return reply.code(401).send({ error: 'Пользователь не найден' });
+    }
+
+    // Проверка блокировки аккаунта
+    if (userResult.rows[0].is_blocked) {
+      return reply.code(403).send({
+        error: 'Ваш аккаунт заблокирован. Обратитесь к администратору.',
+        blocked: true
+      });
     }
 
     // Извлекаем signature из токена (последняя часть после второй точки)

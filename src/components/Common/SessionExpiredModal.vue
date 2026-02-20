@@ -8,8 +8,8 @@ const props = defineProps({
   },
   reason: {
     type: String,
-    default: 'forced_logout', // 'forced_logout' | 'session_expired'
-    validator: (value) => ['forced_logout', 'session_expired'].includes(value)
+    default: 'forced_logout', // 'forced_logout' | 'session_expired' | 'account_blocked'
+    validator: (value) => ['forced_logout', 'session_expired', 'account_blocked'].includes(value)
   }
 })
 
@@ -21,34 +21,39 @@ const countdown = ref(AUTO_CLOSE_SECONDS)
 let countdownInterval = null
 
 const title = computed(() => {
+  if (props.reason === 'account_blocked') return 'Аккаунт заблокирован'
   return props.reason === 'forced_logout'
     ? 'Ваша сессия завершена'
     : 'Сессия истекла'
 })
 
 const icon = computed(() => {
+  if (props.reason === 'account_blocked') return '🔒'
   return props.reason === 'forced_logout' ? '⚠️' : '⏱️'
 })
 
 const message = computed(() => {
+  if (props.reason === 'account_blocked') return 'Ваш аккаунт временно заблокирован администратором.'
   return props.reason === 'forced_logout'
     ? 'Обнаружен вход в систему с другого устройства или браузера.'
     : 'Вы не проявляли активность более 1 часа.'
 })
 
 const secondaryMessage = computed(() => {
+  if (props.reason === 'account_blocked') return 'Для разблокировки введите код, полученный от администратора, на странице входа.'
   return props.reason === 'forced_logout'
     ? 'Если это были не вы — немедленно смените пароль в настройках профиля.'
     : 'Пожалуйста, войдите снова.'
 })
 
 const buttonText = computed(() => {
+  if (props.reason === 'account_blocked') return 'Войти'
   return props.reason === 'forced_logout' ? 'Понятно' : 'Войти'
 })
 
 function handleClose() {
   stopCountdown()
-  if (props.reason === 'session_expired') {
+  if (props.reason === 'session_expired' || props.reason === 'account_blocked') {
     emit('login')
   } else {
     emit('close')

@@ -29,8 +29,8 @@ export function initFetchInterceptor() {
   window.fetch = async function (...args) {
     const response = await originalFetch.apply(this, args)
 
-    // Проверяем только 401 ответы
-    if (response.status === 401) {
+    // Проверяем 401 и 403 ответы
+    if (response.status === 401 || response.status === 403) {
       // Клонируем response чтобы прочитать body без потребления оригинала
       const clonedResponse = response.clone()
 
@@ -60,8 +60,28 @@ export function initFetchInterceptor() {
             }, 5000)
           }, 0)
         }
+
+        // Обработка блокировки аккаунта (403 с blocked: true)
+        if (data.blocked && !isForcedLogoutInProgress) {
+          isForcedLogoutInProgress = true
+
+          console.log('[ApiFetch] Аккаунт заблокирован, генерируем событие принудительного выхода')
+
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('session_forced_logout', {
+              detail: {
+                reason: 'account_blocked',
+                message: data.error || 'Ваш аккаунт заблокирован'
+              }
+            }))
+
+            setTimeout(() => {
+              isForcedLogoutInProgress = false
+            }, 5000)
+          }, 0)
+        }
       } catch {
-        // Игнорируем ошибки парсинга JSON (не все 401 имеют JSON body)
+        // Игнорируем ошибки парсинга JSON (не все 401/403 имеют JSON body)
       }
     }
 

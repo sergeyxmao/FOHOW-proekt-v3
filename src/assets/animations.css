@@ -6,7 +6,6 @@
 button,
 a,
 .card,
-.pricing-card,
 .board-card,
 input,
 textarea {
@@ -38,7 +37,6 @@ button:not(:disabled):active,
 }
 
 /* Карточки - увеличение */
-.pricing-card:hover,
 .board-card:hover {
   transform: scale(1.02);
   box-shadow: 0 12px 24px rgba(139, 92, 246, 0.2);

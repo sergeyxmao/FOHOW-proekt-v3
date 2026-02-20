@@ -127,6 +127,23 @@ if (user.is_blocked) {
 
 Фронтенд обрабатывает ответ с `blocked: true` — показывает форму ввода кода разблокировки.
 
+### Проверка блокировки в authenticateToken middleware
+
+**Файл:** `api/middleware/auth.js`
+
+Проверка `is_blocked` добавлена непосредственно в middleware аутентификации. Это значит, что заблокированный пользователь не сможет выполнить **ни один** API-запрос, даже если у него есть валидный JWT-токен.
+
+При блокировке возвращается 403 с `blocked: true`. Глобальный перехватчик fetch (`src/utils/apiFetch.js`) отлавливает этот ответ и генерирует событие `session_forced_logout` с причиной `account_blocked`, что вызывает:
+1. Автосохранение несохранённых изменений
+2. Принудительный logout
+3. Показ модального окна "Аккаунт заблокирован"
+
+### Очистка admin_temp_password
+
+Временный пароль (установленный при сбросе) очищается автоматически при смене пароля пользователем:
+- Через профиль (`PUT /api/profile`) — `admin_temp_password = NULL` в UPDATE-запросе
+- Через восстановление пароля (`POST /api/reset-password`) — `admin_temp_password = NULL` при обновлении пароля
+
 ---
 
 ## Поля в таблице users
@@ -179,6 +196,9 @@ if (user.is_blocked) {
 | `src/stores/admin.js` | Методы blockUser, unblockUser, resetUserPassword |
 | `src/components/LoginForm.vue` | Форма разблокировки по коду |
 | `src/stores/auth.js` | Проброс флага blocked через ошибку |
+| `api/middleware/auth.js` | Проверка is_blocked в middleware аутентификации |
+| `src/utils/apiFetch.js` | Обработка 403 blocked в глобальном перехватчике fetch |
+| `src/components/Common/SessionExpiredModal.vue` | Поддержка причины account_blocked |
 
 ---
 
