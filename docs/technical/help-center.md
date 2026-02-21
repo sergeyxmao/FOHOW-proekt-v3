@@ -11,7 +11,6 @@
 | `src/components/Help/HelpButton.vue` | Плавающая кнопка-триггер «?» / «✕» |
 | `src/components/Help/HelpPanel.vue` | Боковая панель: API-загрузка, редактирование, WYSIWYG, управление |
 | `src/components/Help/HelpImageLightbox.vue` | Полноэкранный просмотр изображений |
-| `src/data/helpData.js` | Справочный файл (не используется, оставлен как backup) |
 | `api/routes/help.js` | API эндпоинты Help-центра (10 маршрутов) |
 | `api/services/yandexDiskService.js` | Функции `getHelpFolderPath()`, `getHelpImagePath()` |
 | `api/scripts/migrate-help-images.js` | Одноразовый скрипт миграции с локальной ФС на Yandex.Disk |
