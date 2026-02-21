@@ -229,7 +229,7 @@ export async function sendWelcomeEmail(email, userName = '') {
   const dashboardUrl = `${process.env.FRONTEND_URL}/boards`;
   const { subject, html } = getWelcomeTemplate({
     userName: userName || email.split('@')[0],
-    demoDays: 7,
+    demoDays: 14,
     dashboardUrl
   });
   return await sendEmail(email, subject, html);

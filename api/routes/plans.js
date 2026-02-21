@@ -208,6 +208,7 @@ export function registerPlanRoutes(app) {
                   description: { type: 'string', nullable: true },
                   price_monthly: { type: 'number', nullable: true },
                   price_yearly: { type: 'number', nullable: true },
+                  price_original: { type: 'number', nullable: true },
                   features: { type: 'object', additionalProperties: true },
                   display_order: { type: 'integer' },
                   is_public: { type: 'boolean' },
@@ -225,7 +226,7 @@ export function registerPlanRoutes(app) {
     try {
       const result = await pool.query(
         `SELECT id, name, code_name, description, price_monthly, price_yearly,
-                features, display_order, is_public, created_at, updated_at
+                price_original, features, display_order, is_public, created_at, updated_at
          FROM subscription_plans
          WHERE is_public = true
          ORDER BY display_order ASC`

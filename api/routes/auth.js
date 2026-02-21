@@ -715,7 +715,7 @@ export function registerAuthRoutes(app) {
     schema: {
       tags: ['Auth'],
       summary: 'Подтверждение email',
-      description: 'Проверяет 6-значный код, активирует аккаунт, назначает Демо-тариф (7 дней) и генерирует personal_id.',
+      description: 'Проверяет 6-значный код, активирует аккаунт, назначает Демо-тариф (14 дней) и генерирует personal_id.',
       body: {
         type: 'object',
         required: ['email', 'code'],
@@ -869,7 +869,7 @@ export function registerAuthRoutes(app) {
         SET email_verified = TRUE,
             plan_id = COALESCE(plan_id, $1),
             subscription_started_at = COALESCE(subscription_started_at, NOW()),
-            subscription_expires_at = COALESCE(subscription_expires_at, NOW() + INTERVAL '7 days'),
+            subscription_expires_at = COALESCE(subscription_expires_at, NOW() + INTERVAL '14 days'),
             personal_id = COALESCE(personal_id, $2),
             office = COALESCE(office, 'RUY000')
         WHERE id = $3
@@ -916,7 +916,7 @@ export function registerAuthRoutes(app) {
       // 8. Создать запись в subscription_history
       await client.query(
         `INSERT INTO subscription_history (user_id, plan_id, start_date, end_date, source, amount_paid, currency)
-         SELECT $1, $2, NOW(), NOW() + INTERVAL '7 days', 'email_verification', 0.00, 'RUB'
+         SELECT $1, $2, NOW(), NOW() + INTERVAL '14 days', 'email_verification', 0.00, 'RUB'
          WHERE NOT EXISTS (
            SELECT 1
            FROM subscription_history

@@ -45,6 +45,10 @@
           <p v-if="plan.description" class="plan-description">{{ plan.description }}</p>
 
           <!-- Цена -->
+          <div v-if="plan.price_original && plan.price_original > (plan.price_monthly || 0)" class="plan-price-original">
+            <span class="plan-price-original-amount">{{ plan.price_original }}</span>
+            <span class="plan-price-original-currency">₽</span>
+          </div>
           <div class="plan-price">
             <span class="plan-price-amount">{{ plan.price_monthly || 0 }}</span>
             <span class="plan-price-period">₽/мес</span>
@@ -169,36 +173,7 @@ onMounted(async () => {
     }
 
     const data = await response.json()
-    let loadedPlans = data.plans || []
-
-    // Добавляем демо-план, если его нет в API
-    const hasDemoPlan = loadedPlans.some(plan => plan.code_name === 'demo')
-
-    if (!hasDemoPlan) {
-      const demoPlan = {
-        id: 0,
-        name: 'Демо',
-        code_name: 'demo',
-        description: 'Попробуйте все возможности бесплатно',
-        price_monthly: 0,
-        features: {
-          max_boards: 2,
-          max_notes: -1,
-          max_stickers: -1,
-          max_licenses: -1,
-          max_comments: -1,
-          can_export_png_formats: false,
-          can_export_html: false,
-          can_duplicate_boards: false,
-          can_invite_drawing: true,
-          can_use_images: false
-        },
-        is_featured: false
-      }
-      loadedPlans = [demoPlan, ...loadedPlans]
-    }
-
-    plans.value = loadedPlans
+    plans.value = data.plans || []
   } catch (err) {
     console.error('Ошибка загрузки тарифов:', err)
     error.value = 'Не удалось загрузить тарифы. Пожалуйста, попробуйте позже.'
@@ -381,6 +356,26 @@ onMounted(async () => {
   height: 1px;
   background: rgba(148, 163, 184, 0.15);
   margin-bottom: 16px;
+}
+
+/* Зачёркнутая цена */
+.plan-price-original {
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+.plan-price-original-amount {
+  font-size: 18px;
+  font-weight: 600;
+  color: #64748b;
+  text-decoration: line-through;
+}
+
+.plan-price-original-currency {
+  font-size: 14px;
+  color: #64748b;
+  text-decoration: line-through;
+  margin-left: 2px;
 }
 
 /* Список функций */
