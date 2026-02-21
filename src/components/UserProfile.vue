@@ -1063,6 +1063,9 @@
                     <h4 class="tariff-card-name">{{ plan.name }}</h4>
                     <p v-if="plan.description" class="tariff-card-description">{{ plan.description }}</p>
                     <p class="tariff-card-price">
+                      <span v-if="plan.price_original && plan.price_original > (plan.price_monthly || 0)" class="price-original">
+                        {{ plan.price_original }}₽
+                      </span>
                       <span class="price-amount">{{ plan.price_monthly || 0 }}</span>
                       <span class="price-period">{{ t('userProfile.perMonth') }}</span>
                     </p>
@@ -4191,6 +4194,14 @@ watch(activeTab, (newTab) => {
 
 .tariff-card-price {
   margin: 0 0 12px 0;
+}
+
+.price-original {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--profile-muted);
+  text-decoration: line-through;
+  margin-right: 6px;
 }
 
 .price-amount {
