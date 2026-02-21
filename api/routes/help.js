@@ -99,6 +99,8 @@ export function registerHelpRoutes(app) {
                   id: { type: 'integer' },
                   icon: { type: 'string' },
                   title: { type: 'string' },
+                  title_en: { type: 'string' },
+                  title_cn: { type: 'string' },
                   sort_order: { type: 'integer' },
                   articles: {
                     type: 'array',
@@ -107,7 +109,11 @@ export function registerHelpRoutes(app) {
                       properties: {
                         id: { type: 'integer' },
                         title: { type: 'string' },
+                        title_en: { type: 'string' },
+                        title_cn: { type: 'string' },
                         content: { type: 'string' },
+                        content_en: { type: 'string' },
+                        content_cn: { type: 'string' },
                         sort_order: { type: 'integer' }
                       }
                     }
@@ -124,11 +130,11 @@ export function registerHelpRoutes(app) {
   }, async (req, reply) => {
     try {
       const catResult = await pool.query(
-        'SELECT id, icon, title, sort_order FROM help_categories ORDER BY sort_order ASC, id ASC'
+        'SELECT id, icon, title, title_en, title_cn, sort_order FROM help_categories ORDER BY sort_order ASC, id ASC'
       )
 
       const artResult = await pool.query(
-        'SELECT id, category_id, title, content, sort_order FROM help_articles ORDER BY sort_order ASC, id ASC'
+        'SELECT id, category_id, title, title_en, title_cn, content, content_en, content_cn, sort_order FROM help_articles ORDER BY sort_order ASC, id ASC'
       )
 
       const articlesByCategory = {}
@@ -139,7 +145,11 @@ export function registerHelpRoutes(app) {
         articlesByCategory[art.category_id].push({
           id: art.id,
           title: art.title,
+          title_en: art.title_en || '',
+          title_cn: art.title_cn || '',
           content: art.content || '',
+          content_en: art.content_en || '',
+          content_cn: art.content_cn || '',
           sort_order: art.sort_order
         })
       }
@@ -148,6 +158,8 @@ export function registerHelpRoutes(app) {
         id: cat.id,
         icon: cat.icon,
         title: cat.title,
+        title_en: cat.title_en || '',
+        title_cn: cat.title_cn || '',
         sort_order: cat.sort_order,
         articles: articlesByCategory[cat.id] || []
       }))
@@ -174,7 +186,9 @@ export function registerHelpRoutes(app) {
         required: ['title', 'icon'],
         properties: {
           title: { type: 'string', minLength: 1, maxLength: 200 },
-          icon: { type: 'string', minLength: 1, maxLength: 10 }
+          icon: { type: 'string', minLength: 1, maxLength: 10 },
+          title_en: { type: 'string', maxLength: 255 },
+          title_cn: { type: 'string', maxLength: 255 }
         }
       },
       response: {
@@ -187,6 +201,8 @@ export function registerHelpRoutes(app) {
                 id: { type: 'integer' },
                 icon: { type: 'string' },
                 title: { type: 'string' },
+                title_en: { type: 'string' },
+                title_cn: { type: 'string' },
                 sort_order: { type: 'integer' }
               }
             }
@@ -200,7 +216,7 @@ export function registerHelpRoutes(app) {
     }
   }, async (req, reply) => {
     try {
-      const { title, icon } = req.body
+      const { title, icon, title_en, title_cn } = req.body
 
       const maxResult = await pool.query(
         'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM help_categories'
@@ -208,8 +224,8 @@ export function registerHelpRoutes(app) {
       const sortOrder = maxResult.rows[0].next_order
 
       const result = await pool.query(
-        'INSERT INTO help_categories (icon, title, sort_order) VALUES ($1, $2, $3) RETURNING id, icon, title, sort_order',
-        [icon, title, sortOrder]
+        'INSERT INTO help_categories (icon, title, title_en, title_cn, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id, icon, title, title_en, title_cn, sort_order',
+        [icon, title, title_en || '', title_cn || '', sortOrder]
       )
 
       return reply.code(201).send({ category: result.rows[0] })
@@ -240,7 +256,9 @@ export function registerHelpRoutes(app) {
         properties: {
           title: { type: 'string', minLength: 1, maxLength: 200 },
           icon: { type: 'string', minLength: 1, maxLength: 10 },
-          sort_order: { type: 'integer' }
+          sort_order: { type: 'integer' },
+          title_en: { type: 'string', maxLength: 255 },
+          title_cn: { type: 'string', maxLength: 255 }
         }
       },
       response: {
@@ -253,6 +271,8 @@ export function registerHelpRoutes(app) {
                 id: { type: 'integer' },
                 icon: { type: 'string' },
                 title: { type: 'string' },
+                title_en: { type: 'string' },
+                title_cn: { type: 'string' },
                 sort_order: { type: 'integer' }
               }
             }
@@ -267,7 +287,7 @@ export function registerHelpRoutes(app) {
   }, async (req, reply) => {
     try {
       const { id } = req.params
-      const { title, icon, sort_order } = req.body
+      const { title, icon, sort_order, title_en, title_cn } = req.body
 
       // Собираем поля для обновления
       const fields = []
@@ -286,6 +306,14 @@ export function registerHelpRoutes(app) {
         fields.push(`sort_order = $${paramIdx++}`)
         values.push(sort_order)
       }
+      if (title_en !== undefined) {
+        fields.push(`title_en = $${paramIdx++}`)
+        values.push(title_en)
+      }
+      if (title_cn !== undefined) {
+        fields.push(`title_cn = $${paramIdx++}`)
+        values.push(title_cn)
+      }
 
       if (fields.length === 0) {
         return reply.code(400).send({ error: 'Нет полей для обновления' })
@@ -293,7 +321,7 @@ export function registerHelpRoutes(app) {
 
       values.push(id)
       const result = await pool.query(
-        `UPDATE help_categories SET ${fields.join(', ')} WHERE id = $${paramIdx} RETURNING id, icon, title, sort_order`,
+        `UPDATE help_categories SET ${fields.join(', ')} WHERE id = $${paramIdx} RETURNING id, icon, title, title_en, title_cn, sort_order`,
         values
       )
 
@@ -379,7 +407,9 @@ export function registerHelpRoutes(app) {
         required: ['category_id', 'title'],
         properties: {
           category_id: { type: 'integer' },
-          title: { type: 'string', minLength: 1, maxLength: 300 }
+          title: { type: 'string', minLength: 1, maxLength: 300 },
+          title_en: { type: 'string', maxLength: 255 },
+          title_cn: { type: 'string', maxLength: 255 }
         }
       },
       response: {
@@ -392,7 +422,11 @@ export function registerHelpRoutes(app) {
                 id: { type: 'integer' },
                 category_id: { type: 'integer' },
                 title: { type: 'string' },
+                title_en: { type: 'string' },
+                title_cn: { type: 'string' },
                 content: { type: 'string' },
+                content_en: { type: 'string' },
+                content_cn: { type: 'string' },
                 sort_order: { type: 'integer' }
               }
             }
@@ -406,7 +440,7 @@ export function registerHelpRoutes(app) {
     }
   }, async (req, reply) => {
     try {
-      const { category_id, title } = req.body
+      const { category_id, title, title_en, title_cn } = req.body
 
       // Проверяем что категория существует
       const catCheck = await pool.query(
@@ -424,8 +458,8 @@ export function registerHelpRoutes(app) {
       const sortOrder = maxResult.rows[0].next_order
 
       const result = await pool.query(
-        'INSERT INTO help_articles (category_id, title, content, sort_order) VALUES ($1, $2, $3, $4) RETURNING id, category_id, title, content, sort_order',
-        [category_id, title, '', sortOrder]
+        'INSERT INTO help_articles (category_id, title, title_en, title_cn, content, content_en, content_cn, sort_order) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, category_id, title, title_en, title_cn, content, content_en, content_cn, sort_order',
+        [category_id, title, title_en || '', title_cn || '', '', '', '', sortOrder]
       )
 
       return reply.code(201).send({ article: result.rows[0] })
@@ -455,7 +489,11 @@ export function registerHelpRoutes(app) {
         type: 'object',
         properties: {
           title: { type: 'string', minLength: 1, maxLength: 300 },
-          content: { type: 'string' }
+          content: { type: 'string' },
+          title_en: { type: 'string', maxLength: 255 },
+          title_cn: { type: 'string', maxLength: 255 },
+          content_en: { type: 'string' },
+          content_cn: { type: 'string' }
         }
       },
       response: {
@@ -468,7 +506,11 @@ export function registerHelpRoutes(app) {
                 id: { type: 'integer' },
                 category_id: { type: 'integer' },
                 title: { type: 'string' },
+                title_en: { type: 'string' },
+                title_cn: { type: 'string' },
                 content: { type: 'string' },
+                content_en: { type: 'string' },
+                content_cn: { type: 'string' },
                 sort_order: { type: 'integer' }
               }
             }
@@ -483,7 +525,7 @@ export function registerHelpRoutes(app) {
   }, async (req, reply) => {
     try {
       const { id } = req.params
-      const { title, content } = req.body
+      const { title, content, title_en, title_cn, content_en, content_cn } = req.body
 
       const fields = []
       const values = []
@@ -497,6 +539,22 @@ export function registerHelpRoutes(app) {
         fields.push(`content = $${paramIdx++}`)
         values.push(content)
       }
+      if (title_en !== undefined) {
+        fields.push(`title_en = $${paramIdx++}`)
+        values.push(title_en)
+      }
+      if (title_cn !== undefined) {
+        fields.push(`title_cn = $${paramIdx++}`)
+        values.push(title_cn)
+      }
+      if (content_en !== undefined) {
+        fields.push(`content_en = $${paramIdx++}`)
+        values.push(content_en)
+      }
+      if (content_cn !== undefined) {
+        fields.push(`content_cn = $${paramIdx++}`)
+        values.push(content_cn)
+      }
 
       if (fields.length === 0) {
         return reply.code(400).send({ error: 'Нет полей для обновления' })
@@ -504,7 +562,7 @@ export function registerHelpRoutes(app) {
 
       values.push(id)
       const result = await pool.query(
-        `UPDATE help_articles SET ${fields.join(', ')} WHERE id = $${paramIdx} RETURNING id, category_id, title, content, sort_order`,
+        `UPDATE help_articles SET ${fields.join(', ')} WHERE id = $${paramIdx} RETURNING id, category_id, title, title_en, title_cn, content, content_en, content_cn, sort_order`,
         values
       )
 
@@ -742,6 +800,79 @@ export function registerHelpRoutes(app) {
       return reply.send(Buffer.from(imageBuffer))
     } catch (err) {
       console.error('❌ [Help] Ошибка раздачи изображения:', err)
+      return reply.code(500).send({ error: 'Ошибка сервера' })
+    }
+  })
+
+  // ====================================================
+  // POST /api/help/translate — Автоперевод через Yandex Translate API (admin)
+  // ====================================================
+  app.post('/api/help/translate', {
+    preHandler: [authenticateToken, checkAdmin],
+    schema: {
+      tags: ['Help'],
+      summary: 'Автоперевод текста через Yandex Translate API',
+      description: 'Переводит текст с русского на указанный язык (en/zh). Требует YANDEX_TRANSLATE_API_KEY и YANDEX_TRANSLATE_FOLDER_ID в env. Только для админа.',
+      security: [{ bearerAuth: [] }],
+      body: {
+        type: 'object',
+        required: ['text', 'target_lang'],
+        properties: {
+          text: { type: 'string', minLength: 1 },
+          target_lang: { type: 'string', enum: ['en', 'zh'] }
+        }
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            translated_text: { type: 'string' }
+          }
+        },
+        400: { type: 'object', properties: { error: { type: 'string' } } },
+        401: { type: 'object', properties: { error: { type: 'string' } } },
+        403: { type: 'object', properties: { error: { type: 'string' } } },
+        500: { type: 'object', properties: { error: { type: 'string' } } },
+        503: { type: 'object', properties: { error: { type: 'string' } } }
+      }
+    }
+  }, async (req, reply) => {
+    try {
+      const apiKey = process.env.YANDEX_TRANSLATE_API_KEY
+      const folderId = process.env.YANDEX_TRANSLATE_FOLDER_ID
+
+      if (!apiKey || !folderId) {
+        return reply.code(503).send({ error: 'Yandex Translate API не настроен' })
+      }
+
+      const { text, target_lang } = req.body
+
+      const response = await fetch('https://translate.api.cloud.yandex.net/translate/v2/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Api-Key ${apiKey}`
+        },
+        body: JSON.stringify({
+          folderId,
+          texts: [text],
+          sourceLanguageCode: 'ru',
+          targetLanguageCode: target_lang
+        })
+      })
+
+      if (!response.ok) {
+        const errBody = await response.text()
+        console.error('❌ [Help] Yandex Translate error:', response.status, errBody)
+        return reply.code(500).send({ error: 'Ошибка Yandex Translate API' })
+      }
+
+      const data = await response.json()
+      const translatedText = data.translations?.[0]?.text || ''
+
+      return reply.send({ translated_text: translatedText })
+    } catch (err) {
+      console.error('❌ [Help] Ошибка автоперевода:', err)
       return reply.code(500).send({ error: 'Ошибка сервера' })
     }
   })

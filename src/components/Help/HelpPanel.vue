@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../../stores/auth'
 import HelpImageLightbox from './HelpImageLightbox.vue'
 
@@ -14,6 +15,8 @@ const emit = defineEmits(['close'])
 
 const authStore = useAuthStore()
 const isAdmin = computed(() => authStore.user?.role === 'admin')
+
+const { locale } = useI18n()
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
@@ -30,6 +33,42 @@ const searchQuery = ref('')
 // --- Режим редактирования ---
 const isEditMode = ref(false)
 const isSavingArticle = ref(false)
+
+// --- Мультиязычность ---
+const editLang = ref('ru') // Язык редактирования: ru | en | cn
+const isTranslating = ref(false) // Спиннер автоперевода
+
+// Маппинг locale интерфейса → суффикс БД
+const localeLangMap = { ru: 'ru', en: 'en', zh: 'cn' }
+
+// Текущий язык для отображения (для обычных пользователей)
+const displayLang = computed(() => localeLangMap[locale.value] || 'ru')
+
+// --- Локализованные значения ---
+function getLocalizedTitle(item, lang) {
+  if (lang === 'en') return item.title_en || item.title
+  if (lang === 'cn') return item.title_cn || item.title
+  return item.title
+}
+
+function getLocalizedContent(article, lang) {
+  if (lang === 'en') return article.content_en || article.content
+  if (lang === 'cn') return article.content_cn || article.content
+  return article.content
+}
+
+// Для режима редактирования — получить raw-значение (без fallback)
+function getEditTitle(item) {
+  if (editLang.value === 'en') return item.title_en || ''
+  if (editLang.value === 'cn') return item.title_cn || ''
+  return item.title
+}
+
+function getEditContent(article) {
+  if (editLang.value === 'en') return article.content_en || ''
+  if (editLang.value === 'cn') return article.content_cn || ''
+  return article.content
+}
 
 // --- Создание категории ---
 const showNewCategoryForm = ref(false)
@@ -60,8 +99,9 @@ const currentArticle = computed(() => {
 })
 
 const panelTitle = computed(() => {
-  if (currentArticle.value) return currentArticle.value.title
-  if (currentCategory.value) return currentCategory.value.title
+  const lang = isEditMode.value ? editLang.value : displayLang.value
+  if (currentArticle.value) return getLocalizedTitle(currentArticle.value, lang)
+  if (currentCategory.value) return getLocalizedTitle(currentCategory.value, lang)
   return 'Помощь'
 })
 
@@ -69,10 +109,11 @@ const filteredCategories = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
   if (!q) return categories.value
 
+  const lang = displayLang.value
   return categories.value
     .map(cat => {
       const matchedArticles = cat.articles.filter(a =>
-        a.title.toLowerCase().includes(q)
+        getLocalizedTitle(a, lang).toLowerCase().includes(q)
       )
       if (matchedArticles.length === 0) return null
       return { ...cat, articles: matchedArticles }
@@ -84,10 +125,11 @@ const isSearchActive = computed(() => searchQuery.value.trim().length > 0)
 
 // --- Плоский список всех статей для навигации prev/next ---
 const allArticlesFlat = computed(() => {
+  const lang = displayLang.value
   const result = []
   for (const cat of categories.value) {
     for (const art of cat.articles) {
-      result.push({ categoryId: cat.id, articleId: art.id, title: art.title })
+      result.push({ categoryId: cat.id, articleId: art.id, title: art.title, localizedTitle: getLocalizedTitle(art, lang) })
     }
   }
   return result
@@ -186,6 +228,7 @@ function toggleEditMode() {
   if (isEditMode.value) {
     // Выходим из режима — перезагружаем данные
     isEditMode.value = false
+    editLang.value = 'ru'
     showNewCategoryForm.value = false
     showNewArticleForm.value = false
     loadCategories()
@@ -291,10 +334,20 @@ async function saveArticleContent() {
     // Post-processing: заменяем <font size="N"> на <span style="font-size: Xpx">
     html = normalizeFontSizes(html)
 
+    // Определяем поле для сохранения по текущему языку редактирования
+    const bodyData = {}
+    if (editLang.value === 'en') {
+      bodyData.content_en = html
+    } else if (editLang.value === 'cn') {
+      bodyData.content_cn = html
+    } else {
+      bodyData.content = html
+    }
+
     const res = await fetch(`${API_URL}/help/articles/${currentArticle.value.id}`, {
       method: 'PUT',
       headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: html })
+      body: JSON.stringify(bodyData)
     })
     if (res.ok) {
       const data = await res.json()
@@ -304,6 +357,8 @@ async function saveArticleContent() {
         const art = cat.articles.find(a => a.id === currentArticle.value.id)
         if (art) {
           art.content = data.article.content
+          art.content_en = data.article.content_en
+          art.content_cn = data.article.content_cn
         }
       }
     }
@@ -320,19 +375,100 @@ async function saveArticleTitle(articleId, newTitle) {
   if (!title) return
 
   try {
-    await fetch(`${API_URL}/help/articles/${articleId}`, {
+    const bodyData = {}
+    if (editLang.value === 'en') {
+      bodyData.title_en = title
+    } else if (editLang.value === 'cn') {
+      bodyData.title_cn = title
+    } else {
+      bodyData.title = title
+    }
+
+    const res = await fetch(`${API_URL}/help/articles/${articleId}`, {
       method: 'PUT',
       headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title })
+      body: JSON.stringify(bodyData)
     })
-    // Обновляем локально
-    const cat = categories.value.find(c => c.id === currentCategoryId.value)
-    if (cat) {
-      const art = cat.articles.find(a => a.id === articleId)
-      if (art) art.title = title
+    if (res.ok) {
+      const data = await res.json()
+      // Обновляем локально
+      const cat = categories.value.find(c => c.id === currentCategoryId.value)
+      if (cat) {
+        const art = cat.articles.find(a => a.id === articleId)
+        if (art) {
+          art.title = data.article.title
+          art.title_en = data.article.title_en
+          art.title_cn = data.article.title_cn
+        }
+      }
     }
   } catch (err) {
     console.error('[HelpPanel] Ошибка сохранения заголовка:', err)
+  }
+}
+
+// --- Автоперевод ---
+async function autoTranslate() {
+  if (!currentArticle.value || editLang.value === 'ru') return
+  const targetLang = editLang.value === 'cn' ? 'zh' : 'en'
+
+  isTranslating.value = true
+  try {
+    const titleRu = currentArticle.value.title
+    const contentRu = currentArticle.value.content
+
+    // Переводим title
+    let translatedTitle = ''
+    if (titleRu) {
+      const res = await fetch(`${API_URL}/help/translate`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: titleRu, target_lang: targetLang })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        translatedTitle = data.translated_text || ''
+      }
+    }
+
+    // Переводим content
+    let translatedContent = ''
+    if (contentRu) {
+      const res = await fetch(`${API_URL}/help/translate`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: contentRu, target_lang: targetLang })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        translatedContent = data.translated_text || ''
+      }
+    }
+
+    // Обновляем в локальных данных (без сохранения на сервер)
+    const cat = categories.value.find(c => c.id === currentCategoryId.value)
+    if (cat) {
+      const art = cat.articles.find(a => a.id === currentArticle.value.id)
+      if (art) {
+        if (editLang.value === 'en') {
+          art.title_en = translatedTitle
+          art.content_en = translatedContent
+        } else {
+          art.title_cn = translatedTitle
+          art.content_cn = translatedContent
+        }
+      }
+    }
+
+    // Обновляем contenteditable
+    if (contentEditableRef.value) {
+      contentEditableRef.value.innerHTML = translatedContent
+    }
+  } catch (err) {
+    console.error('[HelpPanel] Ошибка автоперевода:', err)
+    alert('Не удалось выполнить автоперевод')
+  } finally {
+    isTranslating.value = false
   }
 }
 
@@ -558,6 +694,15 @@ function handleContentMouseOut(e) {
     hoveredImg.value = null
   }
 }
+
+// --- Watch: при смене editLang обновляем contenteditable ---
+watch(editLang, () => {
+  if (currentArticle.value && contentEditableRef.value && isEditMode.value) {
+    nextTick(() => {
+      contentEditableRef.value.innerHTML = getEditContent(currentArticle.value)
+    })
+  }
+})
 </script>
 
 <template>
@@ -585,6 +730,36 @@ function handleContentMouseOut(e) {
           ←
         </button>
         <h2 class="help-panel__title">{{ panelTitle }}</h2>
+
+        <!-- Переключатель языка редактирования (admin, edit mode) -->
+        <div v-if="isAdmin && isEditMode" class="help-lang-switcher">
+          <button
+            v-for="lang in ['ru', 'en', 'cn']"
+            :key="lang"
+            class="help-lang-switcher__btn"
+            :class="[
+              { 'help-lang-switcher__btn--active': editLang === lang },
+              { 'help-lang-switcher__btn--modern': isModernTheme }
+            ]"
+            type="button"
+            @click="editLang = lang"
+          >
+            {{ lang.toUpperCase() }}
+          </button>
+          <!-- Кнопка автоперевода (только для EN/CN) -->
+          <button
+            v-if="editLang !== 'ru' && currentArticleId"
+            class="help-lang-switcher__translate"
+            :class="{ 'help-lang-switcher__translate--modern': isModernTheme }"
+            type="button"
+            title="Автоперевод с русского"
+            :disabled="isTranslating"
+            @click="autoTranslate"
+          >
+            <span v-if="isTranslating" class="help-lang-switcher__spinner" />
+            <span v-else>🔄</span>
+          </button>
+        </div>
 
         <!-- Кнопка режима редактирования (только admin) -->
         <button
@@ -645,7 +820,7 @@ function handleContentMouseOut(e) {
               @click="openCategory(cat.id)"
             >
               <span class="help-category-card__icon">{{ cat.icon }}</span>
-              <span class="help-category-card__title">{{ cat.title }}</span>
+              <span class="help-category-card__title">{{ getLocalizedTitle(cat, isEditMode ? editLang : displayLang) }}</span>
               <span class="help-category-card__arrow">›</span>
             </button>
             <!-- Кнопка удаления категории (edit mode) -->
@@ -711,7 +886,7 @@ function handleContentMouseOut(e) {
             class="help-search-group"
           >
             <div class="help-search-group__title">
-              {{ cat.icon }} {{ cat.title }}
+              {{ cat.icon }} {{ getLocalizedTitle(cat, displayLang) }}
             </div>
             <button
               v-for="article in cat.articles"
@@ -721,7 +896,7 @@ function handleContentMouseOut(e) {
               type="button"
               @click="openArticle(cat.id, article.id)"
             >
-              {{ article.title }}
+              {{ getLocalizedTitle(article, displayLang) }}
             </button>
           </div>
         </template>
@@ -741,7 +916,7 @@ function handleContentMouseOut(e) {
               type="button"
               @click="openArticle(currentCategoryId, article.id)"
             >
-              {{ article.title }}
+              {{ getLocalizedTitle(article, isEditMode ? editLang : displayLang) }}
             </button>
             <!-- Кнопка удаления статьи (edit mode) -->
             <button
@@ -800,7 +975,7 @@ function handleContentMouseOut(e) {
                 @click="navigateToArticle(prevArticle.categoryId, prevArticle.articleId)"
               >
                 <span class="help-article-nav__arrow">←</span>
-                <span class="help-article-nav__label">{{ prevArticle.title }}</span>
+                <span class="help-article-nav__label">{{ prevArticle.localizedTitle }}</span>
               </button>
               <span v-else />
               <button
@@ -810,7 +985,7 @@ function handleContentMouseOut(e) {
                 type="button"
                 @click="navigateToArticle(nextArticle.categoryId, nextArticle.articleId)"
               >
-                <span class="help-article-nav__label">{{ nextArticle.title }}</span>
+                <span class="help-article-nav__label">{{ nextArticle.localizedTitle }}</span>
                 <span class="help-article-nav__arrow">→</span>
               </button>
             </div>
@@ -902,7 +1077,7 @@ function handleContentMouseOut(e) {
                 class="help-article__editable"
                 :class="{ 'help-article__editable--modern': isModernTheme }"
                 contenteditable="true"
-                v-html="currentArticle.content"
+                v-html="getEditContent(currentArticle)"
                 @blur="saveArticleContent"
                 @paste="handlePaste"
                 @click="handleContentClick"
@@ -927,10 +1102,10 @@ function handleContentMouseOut(e) {
             <!-- Read-only mode -->
             <template v-else>
               <div
-                v-if="currentArticle.content"
+                v-if="getLocalizedContent(currentArticle, displayLang)"
                 class="help-article__text"
                 :class="{ 'help-article__text--modern': isModernTheme }"
-                v-html="currentArticle.content"
+                v-html="getLocalizedContent(currentArticle, displayLang)"
                 @click="handleReadonlyContentClick"
               />
               <p v-else class="help-panel__empty">
@@ -947,7 +1122,7 @@ function handleContentMouseOut(e) {
                   @click="navigateToArticle(prevArticle.categoryId, prevArticle.articleId)"
                 >
                   <span class="help-article-nav__arrow">←</span>
-                  <span class="help-article-nav__label">{{ prevArticle.title }}</span>
+                  <span class="help-article-nav__label">{{ prevArticle.localizedTitle }}</span>
                 </button>
                 <span v-else />
                 <button
@@ -957,7 +1132,7 @@ function handleContentMouseOut(e) {
                   type="button"
                   @click="navigateToArticle(nextArticle.categoryId, nextArticle.articleId)"
                 >
-                  <span class="help-article-nav__label">{{ nextArticle.title }}</span>
+                  <span class="help-article-nav__label">{{ nextArticle.localizedTitle }}</span>
                   <span class="help-article-nav__arrow">→</span>
                 </button>
               </div>
@@ -1748,6 +1923,104 @@ function handleContentMouseOut(e) {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 500;
+}
+
+/* Language switcher */
+.help-lang-switcher {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.help-lang-switcher__btn {
+  padding: 3px 8px;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #6b7280;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.help-lang-switcher__btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #374151;
+}
+
+.help-lang-switcher__btn--active {
+  background: #0f62fe;
+  color: #fff;
+  border-color: #0f62fe;
+}
+
+.help-lang-switcher__btn--active:hover {
+  background: #0043ce;
+}
+
+.help-lang-switcher__btn--modern {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #8899b4;
+}
+
+.help-lang-switcher__btn--modern:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #c8d8f0;
+}
+
+.help-lang-switcher__btn--modern.help-lang-switcher__btn--active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.help-lang-switcher__translate {
+  padding: 3px 6px;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.help-lang-switcher__translate:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.help-lang-switcher__translate:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.help-lang-switcher__translate--modern {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.help-lang-switcher__translate--modern:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.help-lang-switcher__spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #0f62fe;
+  border-radius: 50%;
+  animation: help-spin 0.8s linear infinite;
+}
+
+.help-panel--modern .help-lang-switcher__spinner {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-top-color: #68abff;
 }
 
 /* Mobile: fullscreen panel */
