@@ -45,14 +45,19 @@
           <p v-if="plan.description" class="plan-description">{{ plan.description }}</p>
 
           <!-- Цена -->
-          <div v-if="plan.price_original && plan.price_original > (plan.price_monthly || 0)" class="plan-price-original">
-            <span class="plan-price-original-amount">{{ plan.price_original }}</span>
-            <span class="plan-price-original-currency">₽</span>
-          </div>
           <div class="plan-price">
+            <span v-if="plan.price_original && plan.price_monthly && plan.price_original > plan.price_monthly" class="plan-price-old">
+              {{ plan.price_original }}₽
+            </span>
             <span class="plan-price-amount">{{ plan.price_monthly || 0 }}</span>
             <span class="plan-price-period">₽/мес</span>
+            <span v-if="plan.price_original && plan.price_monthly && plan.price_original > plan.price_monthly" class="plan-discount-badge">
+              −{{ Math.round((1 - plan.price_monthly / plan.price_original) * 100) }}%
+            </span>
           </div>
+          <p v-if="plan.price_original && plan.price_monthly && plan.price_original > plan.price_monthly" class="plan-early-access">
+            🔥 Цена раннего доступа
+          </p>
 
           <!-- Разделитель -->
           <div class="plan-divider"></div>
@@ -336,19 +341,53 @@ onMounted(async () => {
 .plan-price {
   display: flex;
   align-items: baseline;
-  gap: 6px;
-  margin-bottom: 20px;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
 }
 
 .plan-price-amount {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 36px;
+  font-weight: 800;
   color: #e8a900;
+  letter-spacing: -1px;
 }
 
 .plan-price-period {
   font-size: 14px;
   color: rgba(148, 163, 184, 0.7);
+  font-weight: 500;
+}
+
+.plan-price-old {
+  font-size: 20px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  opacity: 0.7;
+}
+
+.plan-discount-badge {
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  align-self: center;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+.plan-early-access {
+  font-size: 12px;
+  color: #22c55e;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  letter-spacing: 0.3px;
 }
 
 /* Разделитель */
@@ -356,26 +395,6 @@ onMounted(async () => {
   height: 1px;
   background: rgba(148, 163, 184, 0.15);
   margin-bottom: 16px;
-}
-
-/* Зачёркнутая цена */
-.plan-price-original {
-  text-align: center;
-  margin-bottom: 4px;
-}
-
-.plan-price-original-amount {
-  font-size: 18px;
-  font-weight: 600;
-  color: #64748b;
-  text-decoration: line-through;
-}
-
-.plan-price-original-currency {
-  font-size: 14px;
-  color: #64748b;
-  text-decoration: line-through;
-  margin-left: 2px;
 }
 
 /* Список функций */

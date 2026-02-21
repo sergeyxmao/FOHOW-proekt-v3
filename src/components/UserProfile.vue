@@ -1062,12 +1062,18 @@
                     <div v-if="plan.is_featured" class="tariff-recommended-badge">{{ t('userProfile.recommended') }}</div>
                     <h4 class="tariff-card-name">{{ plan.name }}</h4>
                     <p v-if="plan.description" class="tariff-card-description">{{ plan.description }}</p>
-                    <p class="tariff-card-price">
-                      <span v-if="plan.price_original && plan.price_original > (plan.price_monthly || 0)" class="price-original">
+                    <div class="tariff-card-price">
+                      <span v-if="plan.price_original && plan.price_monthly && plan.price_original > plan.price_monthly" class="price-original">
                         {{ plan.price_original }}₽
                       </span>
                       <span class="price-amount">{{ plan.price_monthly || 0 }}</span>
                       <span class="price-period">{{ t('userProfile.perMonth') }}</span>
+                      <span v-if="plan.price_original && plan.price_monthly && plan.price_original > plan.price_monthly" class="price-discount-badge">
+                        −{{ Math.round((1 - plan.price_monthly / plan.price_original) * 100) }}%
+                      </span>
+                    </div>
+                    <p v-if="plan.price_original && plan.price_monthly && plan.price_original > plan.price_monthly" class="tariff-early-access">
+                      🔥 Цена раннего доступа
                     </p>
 
                     <!-- Основные функции (всегда видны) -->
@@ -4193,7 +4199,11 @@ watch(activeTab, (newTab) => {
 }
 
 .tariff-card-price {
-  margin: 0 0 12px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 0 0 4px 0;
 }
 
 .price-original {
@@ -4201,18 +4211,43 @@ watch(activeTab, (newTab) => {
   font-weight: 600;
   color: var(--profile-muted);
   text-decoration: line-through;
-  margin-right: 6px;
+  text-decoration-thickness: 2px;
+  opacity: 0.7;
 }
 
 .price-amount {
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 800;
   color: #e8a900;
+  letter-spacing: -0.5px;
 }
 
 .price-period {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--profile-muted);
+  font-weight: 500;
+}
+
+.price-discount-badge {
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 6px;
+  border-radius: 5px;
+  letter-spacing: 0.5px;
+  align-self: center;
+  box-shadow: 0 2px 6px rgba(34, 197, 94, 0.25);
+}
+
+.tariff-early-access {
+  font-size: 11px;
+  color: #22c55e;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+  letter-spacing: 0.3px;
 }
 
 .tariff-features {
