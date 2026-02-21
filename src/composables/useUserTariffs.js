@@ -34,11 +34,9 @@ export function useUserTariffs({ subscriptionStore }) {
     'max_notes': (value) => value === -1 ? '∞ Безлимитные заметки' : `📝 До ${value} заметок`,
     'max_stickers': (value) => value === -1 ? '∞ Безлимитные стикеры' : `🎨 До ${value} стикеров`,
     'max_licenses': (value) => value === -1 ? '∞ Безлимитные лицензии' : `🗂️ До ${value} лицензий`,
-    'max_cards_per_board': (value) => value === -1 ? '∞ Безлимитные лицензии' : `🗂️ До ${value} лицензий на доске`,
     'max_comments': (value) => value === -1 ? '∞ Безлимитные комментарии' : `💬 До ${value} комментариев`,
 
     // Булевы функции
-    'can_export_pdf': '📄 Экспорт в PDF',
     'can_export_png_formats': (value) => {
       if (Array.isArray(value) && value.length > 0) {
         return `🖼️ Скачать доску (структуру) как изображение: ${value.join(', ')}`
@@ -61,7 +59,6 @@ export function useUserTariffs({ subscriptionStore }) {
     'can_export_html',
     'can_invite_drawing',
     'can_use_images',
-    'can_export_pdf',
     'can_duplicate_boards'
   ]
 

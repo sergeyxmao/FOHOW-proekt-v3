@@ -187,16 +187,11 @@ onMounted(async () => {
           max_stickers: -1,
           max_licenses: -1,
           max_comments: -1,
-          can_export_pdf: false,
           can_export_png_formats: false,
           can_export_html: false,
           can_duplicate_boards: false,
           can_invite_drawing: true,
-          can_use_images: false,
-          can_save_project: false,
-          can_load_project: false,
-          can_share_project: false,
-          can_share_boards: false
+          can_use_images: false
         },
         is_featured: false
       }

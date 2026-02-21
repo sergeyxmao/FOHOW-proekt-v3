@@ -14,13 +14,21 @@ const isGuestPlan = computed(() => {
   return subscriptionStore.currentPlan?.code_name === 'guest'
 })
 
-const pageFormats = [
+const allFormats = [
   { id: 'a4', label: 'A4', width: 210, height: 297 },
   { id: 'a3', label: 'A3', width: 297, height: 420 }
 ]
 
+const pageFormats = computed(() => {
+  if (isAdmin.value) return allFormats
+  const allowed = subscriptionStore.features?.can_export_png_formats
+  if (!allowed || !Array.isArray(allowed) || allowed.length === 0) return allFormats
+  return allFormats.filter(f => allowed.includes(f.label))
+})
+
 const mode = ref('print')
-const selectedFormat = ref('a3')
+const defaultFormat = pageFormats.value.some(f => f.id === 'a3') ? 'a3' : (pageFormats.value[0]?.id || 'a4')
+const selectedFormat = ref(defaultFormat)
 const selectedOrientation = ref('landscape')
 const hideContent = ref(false)
 const blackAndWhite = ref(false)
@@ -34,7 +42,7 @@ const handleExport = () => {
       blackAndWhite: blackAndWhite.value
     })
   } else {
-    const format = pageFormats.find(f => f.id === selectedFormat.value)
+    const format = pageFormats.value.find(f => f.id === selectedFormat.value)
     emit('export', {
       format: selectedFormat.value,
       width: format.width,
